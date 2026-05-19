@@ -1292,6 +1292,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     // Selling Voucher with Date Range (standalone module - design like Selling Voucher, data separate)
     Route::get('selling-voucher-date-range/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStudentsByCourse'])->name('selling-voucher-date-range.students-by-course');
     Route::get('selling-voucher-date-range/buyer-names', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getBuyerNames'])->name('selling-voucher-date-range.buyer-names');
+    Route::get('selling-voucher-date-range/filter-buyer-names', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'filterBuyerNames'])->name('selling-voucher-date-range.filter-buyer-names');
     Route::get('selling-voucher-date-range/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStoreItems'])->name('selling-voucher-date-range.store.items');
     Route::get('selling-voucher-date-range/datatable', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'datatable'])->name('selling-voucher-date-range.datatable');
     Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);

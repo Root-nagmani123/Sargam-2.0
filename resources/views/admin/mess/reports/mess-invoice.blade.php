@@ -49,8 +49,8 @@
                 </tbody>
             </table>
         </div>
-        <div class="d-flex justify-content-center mt-3">
-            {{ $invoices->links() }}
+        <div class="mt-3">
+            {{ $invoices->links('pagination::bootstrap-5') }}
         </div>
     </div>
 </div>

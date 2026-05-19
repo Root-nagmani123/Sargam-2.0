@@ -2,7 +2,8 @@
     Reusable DataTable with pagination and live auto-search for mess master modules.
     Options: tableId, searchPlaceholder, orderColumn (int|array), orderDir, actionColumnIndex (int|array),
     infoLabel, searchDelay, ordering, pageLength, lengthMenu, responsive (bool), scrollX (bool),
-    searchHighlight (bool), searchHighlightExcludeColumns (int[] — extra columns to skip, merged with action columns).
+    searchHighlight (bool), searchHighlightExcludeColumns (int[] — extra columns to skip, merged with action columns),
+    dom (string|null) — custom DataTables dom layout.
 --}}
 @php
     $tableId = $tableId ?? 'masterTable';
@@ -30,6 +31,7 @@
     $serverSide = isset($serverSide) ? (bool) $serverSide : false;
     $ajaxUrlBase = isset($ajaxUrlBase) ? (string) $ajaxUrlBase : '';
     $serverSideColumnDefs = isset($serverSideColumnDefs) && is_array($serverSideColumnDefs) ? $serverSideColumnDefs : [];
+    $dom = $dom ?? '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>';
 @endphp
 @if($searchHighlight)
 @push('styles')
@@ -242,8 +244,36 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function sellingVouchersServerDtUrl() {
-        var sep = '{{ $ajaxUrlBase }}'.indexOf('?') === -1 ? '?' : '&';
-        return '{{ $ajaxUrlBase }}' + (window.location.search ? (sep + window.location.search.substring(1)) : '');
+        var base = '{{ $ajaxUrlBase }}';
+        var qs = window.location.search ? window.location.search.substring(1) : '';
+        var sep = base.indexOf('?') === -1 ? '?' : '&';
+        return base + (qs ? (sep + qs) : '');
+    }
+
+    function messMasterDtAjax(data, callback) {
+        $.ajax({
+            url: sellingVouchersServerDtUrl(),
+            type: 'GET',
+            data: data,
+            dataType: 'json',
+            cache: false,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).done(function(json) {
+            callback(json);
+        }).fail(function(xhr) {
+            if (xhr && (xhr.status === 401 || xhr.status === 419 || xhr.status === 403)) {
+                window.alert('Your session may have expired. The page will reload so you can sign in again.');
+                window.location.reload();
+                return;
+            }
+            callback({
+                draw: data.draw,
+                recordsTotal: 0,
+                recordsFiltered: 0,
+                data: [],
+                error: 'Could not load table data. Try refreshing the page.'
+            });
+        });
     }
 
     $table.DataTable({
@@ -251,10 +281,7 @@ document.addEventListener('DOMContentLoaded', function() {
         order: order,
         serverSide: true,
         processing: true,
-        ajax: {
-            url: sellingVouchersServerDtUrl(),
-            type: 'GET'
-        },
+        ajax: messMasterDtAjax,
         columns: ajaxColumns,
         pageLength: {{ $pageLength }},
         lengthMenu: lengthMenu,
@@ -262,7 +289,7 @@ document.addEventListener('DOMContentLoaded', function() {
         search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
-        dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        dom: {!! json_encode($dom) !!},
         language: {
             search: '',
             searchPlaceholder: '{{ addslashes($searchPlaceholder) }}',
@@ -297,7 +324,7 @@ document.addEventListener('DOMContentLoaded', function() {
         search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
-        dom: '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
+        dom: {!! json_encode($dom) !!},
         language: {
             search: '',
             searchPlaceholder: '{{ addslashes($searchPlaceholder) }}',
@@ -323,6 +350,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     @endif
+
+    window.messMasterDataTableRegistry = window.messMasterDataTableRegistry || [];
+    if ($.fn.DataTable.isDataTable($table)) {
+        window.messMasterDataTableRegistry.push($table.DataTable());
+    }
 });
 </script>
 @endpush

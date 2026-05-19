@@ -142,14 +142,8 @@
         </table>
     </div>
     @if(isset($reportPage) && $reportPage->hasPages())
-        <div class="ssr-pagination-bar px-3 px-lg-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="text-body-secondary small d-flex align-items-center gap-1">
-                <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">format_list_numbered</span>
-                Showing <span class="fw-semibold text-body">{{ $reportPage->firstItem() }}–{{ $reportPage->lastItem() }}</span> of <span class="fw-semibold text-body">{{ $reportPage->total() }}</span>
-            </div>
-            <div class="ssr-pagination-links">
-                {{ $reportPage->appends(request()->query())->links() }}
-            </div>
+        <div class="ssr-pagination-bar px-3 px-lg-4 py-3 border-top">
+            {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}
         </div>
     @endif
 </div>

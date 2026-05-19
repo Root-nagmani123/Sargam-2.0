@@ -132,8 +132,8 @@
         </div>
 
         <!-- Pagination -->
-        <div class="d-flex justify-content-center mt-3">
-            {{ $items->withQueryString()->links() }}
+        <div class="mt-3">
+            {{ $items->withQueryString()->links('pagination::bootstrap-5') }}
         </div>
 
         <!-- Export Button -->
@@ -149,8 +149,9 @@
 <style>
 @media screen {
     .mess-items-report-scroll {
-        max-height: min(70vh, 720px);
-        overflow: auto;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: min(72vh, calc(100dvh - 12rem));
     }
     .mess-items-report-scroll thead th {
         position: sticky;

@@ -583,8 +583,9 @@ function printStockPurchaseTable() {
 }
 @media screen {
     .stock-purchase-report .stock-purchase-table-wrapper {
-        max-height: min(72vh, 760px);
-        overflow: auto !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        max-height: min(72vh, calc(100dvh - 12rem));
         position: relative;
     }
     /* border-collapse: separate is required for position:sticky to work */

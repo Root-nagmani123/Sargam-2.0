@@ -367,6 +367,33 @@ class SellingVoucherDateRangeController extends Controller
         return response()->json(['buyers' => $buyers]);
     }
 
+    /**
+     * Distinct buyer (client) names for the list filter — respects date/store/status/return filters;
+     * does not require client category when only client type is selected.
+     */
+    public function filterBuyerNames(Request $request)
+    {
+        $filterRequest = Request::create(
+            $request->url(),
+            'GET',
+            collect($request->query())->except(['buyer_name', 'draw', 'start', 'length', 'search'])->all()
+        );
+
+        $buyers = (clone $this->sellingVoucherDateRangeItemRowsBaseQuery($filterRequest))
+            ->whereNotNull('sv.client_name')
+            ->where('sv.client_name', '!=', '')
+            ->select('sv.client_name')
+            ->distinct()
+            ->orderBy('sv.client_name')
+            ->limit(500)
+            ->pluck('client_name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter(fn ($name) => $name !== '')
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
+    }
+
     public function create()
     {
         return redirect()->route('admin.mess.selling-voucher-date-range.index');
@@ -913,6 +940,8 @@ class SellingVoucherDateRangeController extends Controller
 
         return response()->json([
             'store_name' => $report->resolved_store_name,
+            'client_name' => trim((string) ($report->client_name ?? '')),
+            'client_type_slug' => (string) ($report->client_type_slug ?? ''),
             'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
             'items' => $items,
         ]);
@@ -978,10 +1007,34 @@ class SellingVoucherDateRangeController extends Controller
                 ]);
             }
             DB::commit();
-            return redirect()->route('admin.mess.selling-voucher-date-range.index')
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Return updated successfully.',
+                    'client_name' => trim((string) ($report->client_name ?? '')),
+                    'client_type_slug' => (string) ($report->client_type_slug ?? ''),
+                ]);
+            }
+
+            $redirectParams = array_filter(
+                $request->only(['status', 'store', 'client_type', 'client_type_pk', 'start_date', 'end_date', 'return_status']),
+                fn ($value) => $value !== null && $value !== '' && $value !== []
+            );
+            $redirectParams['buyer_name'] = trim((string) ($report->client_name ?? ''));
+            $redirectParams['return_status'] = 'returned';
+
+            return redirect()->route('admin.mess.selling-voucher-date-range.index', $redirectParams)
                 ->with('success', 'Return updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update return: ' . $e->getMessage(),
+                ], 422);
+            }
+
             return back()->withInput()->with('error', 'Failed to update return: ' . $e->getMessage());
         }
     }

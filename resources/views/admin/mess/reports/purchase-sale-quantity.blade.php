@@ -102,6 +102,7 @@
         </div>
         <div class="card-body pt-2 pb-3 px-4">
             <form id="purchaseSaleQuantityFilterForm" method="GET" action="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
+                <input type="hidden" name="refresh" value="1">
                 <div class="row g-3">
                     <div class="col-12 col-sm-6 col-md-6 col-lg-2">
                         <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1">From Date</label>
@@ -377,7 +378,7 @@
                     @endif
                     @if(! empty($section['paginator']) && $section['paginator']->hasPages())
                         <div class="d-flex justify-content-center py-3 px-2 border-top bg-body-tertiary bg-opacity-25 no-print">
-                            {{ $section['paginator']->withQueryString()->links() }}
+                            {{ $section['paginator']->withQueryString()->links('pagination::bootstrap-5') }}
                         </div>
                     @endif
                 </div>
@@ -423,12 +424,10 @@
 
     /* ── Scrollable table body with sticky header ── */
     @media screen {
-        .page-wrapper:has(.purchase-sale-quantity-report) {
-            overflow-x: clip !important;
-        }
         .purchase-sale-quantity-report .psq-scroll-wrapper {
-            max-height: min(72vh, 760px);
-            overflow: auto !important;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: min(72vh, calc(100dvh - 12rem));
             display: block !important;
             position: relative;
         }

@@ -444,11 +444,11 @@ class ReportController extends Controller
         $storeIds = $this->stockSummaryStoreIdsFromRequest($request, $storeType);
         sort($storeIds);
 
-        // This report is expensive to compute; cache the computed dataset for repeated pagination
-        $cacheTtlSeconds = 600; // 10 minutes
+        // This report is expensive to compute; cache the computed dataset for repeated pagination.
+        // `refresh=1` (Apply filters) bypasses cache so long sessions still see current data.
+        $cacheTtlSeconds = 300;
         $cacheKey = 'stock-summary:v3:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
-
-        [$reportData, $selectedStoreName, $cachedTotals] = Cache::remember($cacheKey, $cacheTtlSeconds, function () use ($fromDate, $toDate, $storeIds, $storeType) {
+        $loadReport = function () use ($fromDate, $toDate, $storeIds, $storeType) {
             [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
             $totals = [
                 'opening_amount' => (float) collect($data)->sum('opening_amount'),
@@ -456,8 +456,16 @@ class ReportController extends Controller
                 'sale_amount' => (float) collect($data)->sum('sale_amount'),
                 'closing_amount' => (float) collect($data)->sum('closing_amount'),
             ];
+
             return [$data, $storeName, $totals];
-        });
+        };
+
+        if ($request->boolean('refresh')) {
+            [$reportData, $selectedStoreName, $cachedTotals] = $loadReport();
+            Cache::put($cacheKey, [$reportData, $selectedStoreName, $cachedTotals], $cacheTtlSeconds);
+        } else {
+            [$reportData, $selectedStoreName, $cachedTotals] = Cache::remember($cacheKey, $cacheTtlSeconds, $loadReport);
+        }
 
         // Convert report data to collection for convenient pagination & totals
         $reportCollection = collect($reportData);

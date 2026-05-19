@@ -204,10 +204,11 @@
     }
 
     .stock-balance-report .stock-balance-table-body-scroll {
-        min-height: 100%;
-        max-height: calc(100vh - 320px);
+        min-height: 0;
         -webkit-overflow-scrolling: touch;
-        overflow: auto;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: min(72vh, calc(100dvh - 12rem));
     }
 
     .stock-balance-report .stock-balance-table-head-wrap .stock-balance-table {

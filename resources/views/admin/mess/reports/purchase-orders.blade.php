@@ -94,8 +94,8 @@
             </table>
         </div>
 
-        <div class="d-flex justify-content-center mt-3">
-            {{ $orders->withQueryString()->links() }}
+        <div class="mt-3">
+            {{ $orders->withQueryString()->links('pagination::bootstrap-5') }}
         </div>
     </div>
 </div>

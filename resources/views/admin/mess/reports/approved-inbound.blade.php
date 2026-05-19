@@ -57,8 +57,8 @@
                 </tbody>
             </table>
         </div>
-        <div class="d-flex justify-content-center mt-3">
-            {{ $transactions->withQueryString()->links() }}
+        <div class="mt-3">
+            {{ $transactions->withQueryString()->links('pagination::bootstrap-5') }}
         </div>
     </div>
 </div>

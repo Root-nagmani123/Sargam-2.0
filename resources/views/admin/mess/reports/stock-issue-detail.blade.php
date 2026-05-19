@@ -128,8 +128,8 @@
         </div>
 
         <!-- Pagination -->
-        <div class="d-flex justify-content-center mt-3">
-            {{ $issues->withQueryString()->links() }}
+        <div class="mt-3">
+            {{ $issues->withQueryString()->links('pagination::bootstrap-5') }}
         </div>
 
         <!-- Export Button -->
