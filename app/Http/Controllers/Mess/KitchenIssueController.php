@@ -514,11 +514,9 @@ class KitchenIssueController extends Controller
         }
         $this->applySellingVoucherBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
 
-        // Date filter: default last 30 days when blank; skip default when buyer/category filters target a specific client.
-        $hasTargetedClientFilter = $request->filled('client_type_pk')
-            || trim((string) $request->input('buyer_name', '')) !== '';
+        // Date filter: default last 30 days when blank; skip default when user searches or targets a buyer/category.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
-            if (! $hasTargetedClientFilter) {
+            if (! $this->sellingVoucherShouldSkipDefaultDateWindow($request)) {
                 $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
             }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
@@ -539,6 +537,23 @@ class KitchenIssueController extends Controller
         }
 
         return $q;
+    }
+
+    /**
+     * Skip the default 30-day issue_date window when the user is clearly looking for specific records.
+     */
+    private function sellingVoucherShouldSkipDefaultDateWindow(Request $request): bool
+    {
+        if ($request->filled('client_type_pk') || trim((string) $request->input('buyer_name', '')) !== '') {
+            return true;
+        }
+
+        $searchPayload = $request->input('search');
+        if (is_array($searchPayload) && trim((string) ($searchPayload['value'] ?? '')) !== '') {
+            return true;
+        }
+
+        return false;
     }
 
     /**
