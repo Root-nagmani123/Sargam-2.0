@@ -1728,76 +1728,32 @@ public function getAllRoles()
     return response()->json($roles);
 }
 
-public function assignRoleSave(Request $request){
-    
+public function assignRoleSave(Request $request)
+{
     $request->validate([
-        'user_id' => 'required|integer|exists:users,id',
+        'user_id' => 'required|integer|exists:user_credentials,pk',
         'roles'   => 'nullable|array',
         'roles.*' => 'exists:roles,id',
     ]);
 
-
     try {
+        DB::beginTransaction();
+
         $user = User::findOrFail($request->user_id);
-        if ($request->has('roles')) {
-            $roles = Role::whereIn('id', $request->roles)->pluck('name')->toArray();
-            $user->syncRoles($roles);
-        } else {
-            $user->syncRoles([]); 
-        }
+        $roleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
+        $user->syncRoles($roleNames);
 
-        if (!empty($roleIds)) {
-            foreach ($roleIds as $roleId) {
-                \DB::table('employee_role_mapping')->insert([
-                    'user_credentials_pk'  => $userId,
-                    'user_role_master_pk'  => $roleId,
-                    'active_inactive'      => 1,
-                    'created_date'         => now(),
-                    'updated_date'        => now(),
-                ]);
-                // Get role name for notification
-                $role = UserRoleMaster::find($roleId);
-                if ($role) {
-                    $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
-                }
-            }
-        }
+        DB::commit();
 
-        \DB::commit();
-
+        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
         self::bumpAdminUsersIndexCacheEpoch();
-        
-        // Send notification to the user if roles were assigned
-        if (!empty($assignedRoleNames)) {
-            try {
-                // Get user_id from user_credentials table
-                $userCredential = \DB::table('user_credentials')
-                    ->where('pk', $userId)
-                    ->first();
-                
-                if ($userCredential && $userCredential->user_id) {
-                    $notificationService = app(NotificationService::class);
-                    $roleNames = implode(', ', $assignedRoleNames);
-                    $notificationService->create(
-                        (int)$userCredential->user_id,
-                        'role_assignment',
-                        'Role Assignment',
-                        $userId,
-                        'Role Assigned',
-                        "You have been assigned the following role(s): {$roleNames}."
-                    );
-                }
-            } catch (\Exception $e) {
-                // Log error but don't fail the request
-                \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
-            }
-        }
 
         return redirect()->route('admin.users.index')
-                         ->with('success', 'Roles assigned successfully.');
-
+            ->with('success', 'Roles assigned successfully.');
     } catch (\Exception $e) {
-        return back()->with('error', 'Error: '.$e->getMessage());
+        DB::rollBack();
+
+        return back()->with('error', 'Error: ' . $e->getMessage());
     }
 }
 
