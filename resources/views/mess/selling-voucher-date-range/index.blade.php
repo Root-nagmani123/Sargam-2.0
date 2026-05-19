@@ -177,7 +177,6 @@ $selectedClientType = (string) request()->input('client_type', '');
     @include('components.mess-master-datatables', [
     'tableId' => 'sellingVoucherDateRangeTable',
     'searchPlaceholder' => 'Search person, item, store…',
-    'ordering' => false,
     'actionColumnIndex' => 12,
     'infoLabel' => 'selling vouchers',
     'searchDelay' => 250,

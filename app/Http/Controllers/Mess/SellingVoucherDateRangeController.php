@@ -263,10 +263,10 @@ class SellingVoucherDateRangeController extends Controller
             ? $recordsTotal
             : (clone $filtered)->count('sri.id');
 
-        $rows = (clone $filtered)
-            ->orderByDesc('sv.date_from')
-            ->orderByDesc('sv.id')
-            ->orderByDesc('sri.id')
+        $ordered = clone $filtered;
+        $this->applySellingVoucherDateRangeDatatableOrder($ordered, $request);
+
+        $rows = $ordered
             ->offset($start)
             ->limit($length)
             ->get();
@@ -1043,6 +1043,40 @@ class SellingVoucherDateRangeController extends Controller
     /**
      * @return Builder
      */
+    private function applySellingVoucherDateRangeDatatableOrder(Builder $query, Request $request): void
+    {
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 9);
+        $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
+
+        $sortMap = [
+            0 => 'sv.date_from',
+            1 => 'sri.item_name',
+            2 => 'sri.quantity',
+            3 => 'sri.return_quantity',
+            4 => DB::raw("(CASE
+                WHEN sv.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN mss.sub_store_name
+                WHEN sv.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
+                ELSE 'N/A' END)"),
+            5 => 'sv.client_type_slug',
+            6 => DB::raw("(CASE
+                WHEN sv.client_type_slug IN ('ot', 'course') AND cm.course_name IS NOT NULL THEN cm.course_name
+                ELSE COALESCE(mct.client_name, '') END)"),
+            7 => 'sv.client_name',
+            8 => 'sv.payment_type',
+            9 => 'sv.date_from',
+            10 => 'sv.status',
+            11 => 'sri.return_quantity',
+        ];
+
+        if (isset($sortMap[$orderCol])) {
+            $query->orderBy($sortMap[$orderCol], $orderDir);
+        } else {
+            $query->orderByDesc('sv.date_from');
+        }
+
+        $query->orderByDesc('sv.id')->orderByDesc('sri.id');
+    }
+
     private function sellingVoucherDateRangeItemRowsBaseQuery(Request $request)
     {
         $q = DB::table('sv_date_range_report_items as sri')

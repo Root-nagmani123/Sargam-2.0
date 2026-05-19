@@ -74,4 +74,14 @@ class DataTableSearchHelper
 
         return mb_strtolower(trim($haystack));
     }
+
+    public static function orderColumnIndex(Request $request, int $default = 0): int
+    {
+        return max(0, (int) $request->input('order.0.column', $default));
+    }
+
+    public static function orderDirection(Request $request, string $default = 'asc'): string
+    {
+        return strtolower((string) $request->input('order.0.dir', $default)) === 'desc' ? 'desc' : 'asc';
+    }
 }

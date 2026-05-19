@@ -344,10 +344,10 @@ class KitchenIssueController extends Controller
             ? $recordsTotal
             : (clone $filtered)->count('kii.pk');
 
-        $rows = (clone $filtered)
-            ->orderByDesc('kim.issue_date')
-            ->orderByDesc('kim.pk')
-            ->orderByDesc('kii.pk')
+        $ordered = clone $filtered;
+        $this->applySellingVoucherDatatableOrder($ordered, $request);
+
+        $rows = $ordered
             ->offset($start)
             ->limit($length)
             ->get();
@@ -369,6 +369,44 @@ class KitchenIssueController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
         ]);
+    }
+
+  /**
+     * Apply DataTables column sort to selling voucher item query (action column excluded on frontend).
+     */
+    private function applySellingVoucherDatatableOrder(Builder $query, Request $request): void
+    {
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 9);
+        $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
+        $misLabelSql = $this->messSubcategoryDisplayCoalesceSql();
+
+        $sortMap = [
+            0 => 'kim.issue_date',
+            1 => DB::raw("COALESCE(NULLIF(TRIM(kii.item_name), ''), {$misLabelSql})"),
+            2 => 'kii.quantity',
+            3 => 'kii.return_quantity',
+            4 => DB::raw("(CASE
+                WHEN kim.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN mss.sub_store_name
+                WHEN kim.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
+                ELSE 'N/A' END)"),
+            5 => 'kim.client_type',
+            6 => DB::raw("(CASE
+                WHEN kim.client_type IN (2, 3) AND cm.course_name IS NOT NULL THEN cm.course_name
+                ELSE COALESCE(mct.client_name, '') END)"),
+            7 => 'kim.client_name',
+            8 => 'kim.payment_type',
+            9 => 'kim.issue_date',
+            10 => 'kim.status',
+            11 => 'kii.return_quantity',
+        ];
+
+        if (isset($sortMap[$orderCol])) {
+            $query->orderBy($sortMap[$orderCol], $orderDir);
+        } else {
+            $query->orderByDesc('kim.issue_date');
+        }
+
+        $query->orderByDesc('kim.pk')->orderByDesc('kii.pk');
     }
 
     /**

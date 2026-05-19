@@ -67,9 +67,35 @@ class PurchaseOrderController extends Controller
 
             $recordsFiltered = (clone $query)->count();
 
-            $paged = (clone $query)
-                ->with(['vendor', 'store'])
-                ->latest('po_date');
+            $paged = (clone $query)->with(['vendor', 'store']);
+            $table = (new PurchaseOrder())->getTable();
+            $orderCol = DataTableSearchHelper::orderColumnIndex($request, 1);
+            $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
+
+            switch ($orderCol) {
+                case 0:
+                    $paged->orderBy($table . '.po_date', $orderDir);
+                    break;
+                case 1:
+                    $paged->orderBy($table . '.po_number', $orderDir);
+                    break;
+                case 2:
+                    $paged->leftJoin('mess_vendors as po_sort_v', $table . '.vendor_id', '=', 'po_sort_v.id')
+                        ->orderBy('po_sort_v.name', $orderDir)
+                        ->select($table . '.*');
+                    break;
+                case 3:
+                    $paged->leftJoin('mess_stores as po_sort_s', $table . '.store_id', '=', 'po_sort_s.id')
+                        ->orderBy('po_sort_s.store_name', $orderDir)
+                        ->select($table . '.*');
+                    break;
+                case 4:
+                    $paged->orderBy($table . '.status', $orderDir);
+                    break;
+                default:
+                    $paged->orderByDesc($table . '.po_date');
+            }
+            $paged->orderByDesc($table . '.id');
 
             if ($length !== -1) {
                 $paged->skip($start)->take(max($length, 0));

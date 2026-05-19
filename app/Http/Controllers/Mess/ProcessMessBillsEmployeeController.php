@@ -309,6 +309,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $orderColumn = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortMap = [
+            0 => 'buyer_name',
             1 => 'buyer_name',
             2 => 'combined_invoice_no',
             3 => 'invoice_date_range',

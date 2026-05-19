@@ -2,21 +2,21 @@
 @push('styles')
 <link rel="stylesheet" href="https://cdn.datatables.net/colreorder/1.7.0/css/colReorder.bootstrap5.min.css">
 <style>
-    .mess-col-manager-row.active { background-color: rgba(var(--bs-primary-rgb), 0.08); }
-    .mess-col-manager-row .mess-col-drag { cursor: grab; touch-action: none; }
-    .cursor-grab { cursor: grab; }
-    .mess-col-manager-row.sortable-ghost { opacity: 0.45; }
     .mess-col-hidden { display: none !important; }
-    .mess-column-manager-offcanvas { --bs-offcanvas-width: min(420px, 100vw); }
+    .mess-col-manager-menu { min-width: 12rem; max-height: min(70vh, 320px); overflow-y: auto; }
+    .mess-col-manager-menu .dropdown-item { cursor: default; }
+    .mess-col-manager-menu .form-check-label { cursor: pointer; user-select: none; }
+    .mess-col-manager-dropdown .dropdown-toggle::after { margin-left: 0.35rem; }
+    #masterTable_wrapper .dataTables_filter label,
+    [id$="Table_wrapper"] .dataTables_filter label { margin-bottom: 0; }
     @media (max-width: 575.98px) {
-        .mess-col-manager-toolbar .btn span { font-size: 0; }
-        .mess-col-manager-toolbar .btn .material-symbols-rounded { margin: 0 !important; }
+        .mess-col-manager-dropdown .dropdown-toggle { font-size: 0.875rem; padding: 0.25rem 0.5rem; }
     }
 </style>
 @endpush
 @push('scripts')
+@include('components.mess-datatable-search-helpers')
 <script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.2/Sortable.min.js"></script>
 <script src="{{ asset('admin_assets/js/mess-column-manager.js') }}"></script>
 @endpush
 @endonce

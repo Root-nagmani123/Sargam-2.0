@@ -167,7 +167,6 @@
     @include('components.mess-master-datatables', [
         'tableId' => 'sellingVouchersTable',
         'searchPlaceholder' => 'Search selling vouchers...',
-        'ordering' => false,
         'actionColumnIndex' => 12,
         'infoLabel' => 'selling vouchers',
         'searchDelay' => 0,
