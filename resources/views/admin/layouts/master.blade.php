@@ -1,10 +1,18 @@
 <!DOCTYPE html>
 <html lang="en" data-bs-theme="light">
 @php
-    $activeNavTab = $activeNavTab ?? \App\Services\SidebarMenu\SidebarNavResolver::HOME_TAB;
+    $sidebarMenus = $sidebarMenus ?? collect();
+    if (! isset($activeNavTab)) {
+        $nav = app(\App\Services\SidebarMenu\SidebarNavResolver::class)->resolve();
+        $activeNavTab = $nav['nav_tab'];
+        $activeCategoryId = $activeCategoryId ?? $nav['category_id'];
+        $activeGroupId = $activeGroupId ?? $nav['group_id'];
+    } else {
+        $activeNavTab = $activeNavTab ?? \App\Services\SidebarMenu\SidebarNavResolver::HOME_TAB;
+    }
     $activeCategoryId = $activeCategoryId
         ?? request()->get('category')
-        ?? ($sidebarMenus->first()->id ?? null);
+        ?? ($sidebarMenus->first()?->id);
     $activeGroupId = $activeGroupId ?? null;
     $activeCategory = $sidebarMenus->firstWhere('id', $activeCategoryId)
         ?? $sidebarMenus->first();

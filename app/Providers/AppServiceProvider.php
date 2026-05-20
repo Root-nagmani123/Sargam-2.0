@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Support\FeedbackReportRouteRegistry;
 use App\Services\NotificationService;
+use App\Services\SidebarMenu\MenuService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -28,9 +29,21 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(MenuService $menuService)
     {
         Paginator::useBootstrap();
+
+        view()->composer('*', function ($view) use ($menuService) {
+            if (! auth()->check()) {
+                return;
+            }
+
+            if ($view->offsetExists('sidebarMenus')) {
+                return;
+            }
+
+            $view->with('sidebarMenus', $menuService->getMenus());
+        });
 
         View::composer([
             'admin.feedback.feedback_details',
