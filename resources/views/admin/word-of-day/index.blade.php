@@ -19,22 +19,6 @@
         </div>
     @endif
 
-    <div class="card rounded-4 border-0 shadow-sm mb-4">
-        <div class="card-body">
-            <h6 class="fw-semibold mb-2">How it works</h6>
-            <p class="small text-body-secondary mb-2">
-                <strong>Rotation:</strong> Active rows with <em>no</em> scheduled date cycle in <strong>Sort order</strong> (midnight, app timezone).
-                The starting point is configurable via <code class="small">WORD_OF_DAY_ANCHOR_DATE</code> / <code class="small">config/word_of_the_day.php</code>.
-            </p>
-            <p class="small text-body-secondary mb-2">
-                <strong>Scheduled date:</strong> If set, that row overrides the rotation for that calendar day only.
-            </p>
-            <p class="small text-body-secondary mb-0">
-                The login page caches today’s word until end of day; changes clear the cache automatically.
-            </p>
-        </div>
-    </div>
-
     <div class="row g-4 mb-4">
         <div class="col-lg-7">
             <div class="card rounded-4 border-0 shadow-sm h-100">
