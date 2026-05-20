@@ -2407,6 +2407,14 @@ document.addEventListener('DOMContentLoaded', function() {
         return parts.join('.');
     }
 
+    function getPayNowTotalDueCap(content) {
+        if (!content) return 0;
+        var totalDueRaw = content.getAttribute('data-total-due-amount-raw');
+        if (totalDueRaw === null || totalDueRaw === '') return 0;
+        var totalDue = parseFloat(totalDueRaw);
+        return isNaN(totalDue) || totalDue < 0 ? 0 : totalDue;
+    }
+
     function renderPaymentDetailsContent(data) {
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
         var timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -2524,9 +2532,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (totalDueEl) {
             totalDueEl.textContent = isNaN(totalDue) ? '—' : formatPayDetailAmount(totalDue);
         }
+        var totalDueCap = getPayNowTotalDueCap(content);
         var amountInput = document.getElementById('payNowAmount');
         amountInput.value = isNaN(due) ? '' : due;
-        amountInput.setAttribute('max', (isNaN(due) || due < 0) ? '' : due);
+        amountInput.setAttribute('max', totalDueCap > 0 ? totalDueCap : ((isNaN(due) || due < 0) ? '' : due));
         var pdModal = document.getElementById('paymentDetailsModal');
         if (pdModal && bootstrap.Modal.getInstance(pdModal)) bootstrap.Modal.getInstance(pdModal).hide();
         var payNowModal = document.getElementById('payNowModal');
@@ -2563,8 +2572,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var billId = paymentDetailsBillId;
         if (!billId) { showToast('No bill selected.', 'error'); return; }
         var content = document.getElementById('paymentDetailsContent');
-        var dueRaw = content && content.getAttribute('data-due-amount-raw');
-        var due = dueRaw !== null && dueRaw !== '' ? parseFloat(dueRaw) : 0;
+        var totalDueCap = getPayNowTotalDueCap(content);
         var amountEl = document.getElementById('payNowAmount');
         var modeEl = document.getElementById('payNowPaymentMode');
         var dateEl = document.getElementById('payNowPaymentDate');
@@ -2574,9 +2582,14 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!amount) { showToast('Please enter amount.', 'error'); return; }
         var amountNum = parseFloat(amount);
         if (isNaN(amountNum) || amountNum <= 0) { showToast('Please enter a valid amount.', 'error'); return; }
-        // amountNum = Math.round(amountNum * 100) / 100;
-        // if (amountEl) amountEl.value = amountNum.toFixed(2);
-        if (amountNum > due) { showToast('Payment amount cannot exceed the balance due (₹ ' + (due.toFixed(2)) + ').', 'error'); return; }
+        if (totalDueCap <= 0) {
+            showToast('This bill has no outstanding due amount.', 'error');
+            return;
+        }
+        if (amountNum > totalDueCap) {
+            showToast('Amount cannot exceed total due amount.', 'error');
+            return;
+        }
         // var payload = { amount: amountNum.toFixed(2), payment_mode: paymentMode, payment_date: paymentDate };
         var payload = { amount: amount, payment_mode: paymentMode, payment_date: paymentDate };
         if (paymentMode === 'cheque') {

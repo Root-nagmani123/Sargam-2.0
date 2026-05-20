@@ -2533,23 +2533,22 @@ class ProcessMessBillsEmployeeController extends Controller
             $dateToYmd = $request->filled('date_to')
                 ? $this->parseDate($request->date_to)
                 : now()->endOfMonth()->format('Y-m-d');
-            $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $dateFromYmd, $dateToYmd);
-            $totalDue = $financials['due'];
-            if ($totalDue <= 0) {
+            $actualTotalDue = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $dateToYmd)['due'];
+            if ($actualTotalDue <= 0) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'This bill is already fully paid for the selected period.',
+                    'message' => 'This bill is already fully paid.',
                 ], 400);
             }
-            if ($amount > $totalDue) {
+            if ($amount > $actualTotalDue) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Payment amount cannot exceed the balance due (₹ ' . number_format($totalDue, 2) . ').',
+                    'message' => 'Amount cannot exceed total due amount.',
                 ], 400);
             }
-            $billPeriodDues = $this->computeCombinedBillPeriodDuesByBill($buyerName, $clientTypeSlug, $dateFromYmd, $dateToYmd);
+            $billPeriodDues = $this->computeCombinedBillPeriodDuesByBill($buyerName, $clientTypeSlug, null, $dateToYmd);
             $fifoLines = $this->buildCombinedFifoAllocatedLines($buyerName, $clientTypeSlug, $dateToYmd);
-            $paymentBillKeys = $this->billKeysSortedForPeriodPayment($billPeriodDues, $fifoLines, $dateFromYmd, $dateToYmd);
+            $paymentBillKeys = $this->billKeysSortedForPeriodPayment($billPeriodDues, $fifoLines, null, $dateToYmd);
             $allocationBills = $this->resolveBuyerBillsForPaymentAllocation($buyerName, $clientTypeSlug, $dateToYmd);
             try {
                 DB::beginTransaction();
@@ -2610,6 +2609,14 @@ class ProcessMessBillsEmployeeController extends Controller
                     }
                     $remaining = $this->roundMoney($remaining - $payThis);
                 }
+                if ($this->roundMoney($remaining) > 0) {
+                    DB::rollBack();
+
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Amount cannot exceed total due amount.',
+                    ], 400);
+                }
                 DB::commit();
             } catch (\Illuminate\Database\QueryException $e) {
                 DB::rollBack();
@@ -2624,7 +2631,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $receiverUserId = $this->resolveReceiverUserIdFromAnyBill($bills);
             if ($receiverUserId !== null && $receiverUserId > 0) {
                 try {
-                    $isFullPayment = $remaining <= 0 && $this->isBillFullyPaid($amount, $totalDue);
+                    $isFullPayment = $this->isBillFullyPaid($amount, $actualTotalDue);
                     $dateFromYmd = $request->filled('date_from')
                         ? $this->parseDate($request->date_from)
                         : now()->startOfMonth()->format('Y-m-d');
@@ -2633,7 +2640,7 @@ class ProcessMessBillsEmployeeController extends Controller
                         : now()->endOfMonth()->format('Y-m-d');
                     $paymentVisible = $isFullPayment
                         ? 'Your combined payment of ₹' . number_format($amount, 2) . ' has been successfully completed.'
-                        : '₹' . number_format($amount, 2) . ' payment received. Remaining due: ₹ ' . number_format(max(0, $totalDue - $amount), 2);
+                        : '₹' . number_format($amount, 2) . ' payment received. Remaining due: ₹ ' . number_format(max(0, $actualTotalDue - $amount), 2);
                     $paymentMessage = NotificationService::appendMessCombinedReceiptPayload(
                         $paymentVisible,
                         $id,
@@ -2652,11 +2659,11 @@ class ProcessMessBillsEmployeeController extends Controller
                     report($e);
                 }
             }
-            $remainingDueCombined = $this->billDueAmount($totalDue, $amount);
+            $remainingDueCombined = $this->billDueAmount($actualTotalDue, $amount);
 
             return response()->json([
                 'success' => true,
-                'full_payment' => $this->isBillFullyPaid($amount, $totalDue),
+                'full_payment' => $this->isBillFullyPaid($amount, $actualTotalDue),
                 'message' => $remainingDueCombined <= 0
                     ? 'Payment completed successfully. Confirmation sent to user.'
                     : 'Partial payment recorded. Remaining due: ₹ ' . number_format($remainingDueCombined, 2),
@@ -2676,18 +2683,37 @@ class ProcessMessBillsEmployeeController extends Controller
         $totalAmount = $this->roundMoney((float) $bill->net_total);
         $paidBefore = $this->getBillPaidAmount($bill, !$isKitchenIssue);
         $dueBefore = $this->billDueAmount($totalAmount, $paidBefore);
+        $singleBuyerName = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
+        $singleClientTypeSlug = $isDateRange
+            ? (string) ($bill->client_type_slug ?? 'employee')
+            : $this->getBillClientTypeSlug($bill);
+        $singleDateToYmd = $request->filled('date_to')
+            ? $this->parseDate($request->date_to)
+            : ($bill->issue_date
+                ? ($bill->issue_date instanceof Carbon ? $bill->issue_date->format('Y-m-d') : Carbon::parse($bill->issue_date)->format('Y-m-d'))
+                : now()->format('Y-m-d'));
+        $actualTotalDue = $singleBuyerName !== ''
+            ? $this->computeCombinedBillFinancials($singleBuyerName, $singleClientTypeSlug, null, $singleDateToYmd)['due']
+            : $dueBefore;
 
-        if ($dueBefore <= 0) {
+        if ($actualTotalDue <= 0) {
             return response()->json([
                 'success' => false,
                 'message' => 'This bill is already fully paid!',
             ], 400);
         }
 
+        if ($amount > $actualTotalDue) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Amount cannot exceed total due amount.',
+            ], 400);
+        }
+
         if ($amount > $dueBefore) {
             return response()->json([
                 'success' => false,
-                'message' => 'Payment amount cannot exceed the balance due (₹ ' . number_format($dueBefore, 2) . ').',
+                'message' => 'Payment amount cannot exceed the balance due on this voucher (₹ ' . number_format($dueBefore, 2) . ').',
             ], 400);
         }
 
