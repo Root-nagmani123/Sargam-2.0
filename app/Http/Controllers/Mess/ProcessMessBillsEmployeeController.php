@@ -195,6 +195,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'paid_count' => 0,
             'unpaid_count' => 0,
             'total_amount' => 0.0,
+            'total_due_amount' => 0.0,
         ];
 
         $combinedBills = collect();
@@ -309,6 +310,7 @@ class ProcessMessBillsEmployeeController extends Controller
                     (string) ($cb->client_type_display ?? ''),
                     (string) ($cb->payment_type ?? ''),
                     (string) number_format((float) ($cb->total ?? 0), 2, '.', ''),
+                    (string) number_format((float) ($cb->total_due_amount ?? 0), 2, '.', ''),
                     $statusLabel,
                 ]);
 
@@ -333,8 +335,9 @@ class ProcessMessBillsEmployeeController extends Controller
             3 => 'invoice_date_range',
             4 => 'client_type_display',
             5 => 'total',
-            6 => 'payment_type',
-            7 => 'status',
+            6 => 'total_due_amount',
+            7 => 'payment_type',
+            8 => 'status',
         ];
         if ($orderColumn === 0) {
             $filteredBills = $orderDir === 'desc'
@@ -344,7 +347,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $field = $sortMap[$orderColumn];
             $filteredBills = $filteredBills->sortBy(function ($cb) use ($field) {
                 $value = $cb->{$field} ?? '';
-                if ($field === 'total' || $field === 'status') {
+                if (in_array($field, ['total', 'total_due_amount', 'status'], true)) {
                     return (float) $value;
                 }
 
@@ -357,6 +360,7 @@ class ProcessMessBillsEmployeeController extends Controller
             'paid_count' => $combinedBills->where('status', 2)->count(),
             'unpaid_count' => $combinedBills->count() - $combinedBills->where('status', 2)->count(),
             'total_amount' => (float) $combinedBills->sum('total'),
+            'total_due_amount' => (float) $combinedBills->sum('total_due_amount'),
         ];
 
         $rows = $filteredBills->slice($start, $length)->values();
@@ -378,6 +382,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 e((string) ($cb->invoice_date_range ?? '—')),
                 e((string) ($cb->client_type_display ?? '—')),
                 '₹ ' . number_format((float) ($cb->total ?? 0), 2),
+                '₹ ' . number_format((float) ($cb->total_due_amount ?? 0), 2),
                 e((string) ($cb->payment_type ?? '—')),
                 $statusBadge,
             ];
@@ -1177,6 +1182,9 @@ class ProcessMessBillsEmployeeController extends Controller
             $total = $financials['total'];
             $paid = $financials['paid'];
             $due = $financials['due'];
+            $totalDueAmount = ($buyerName !== '' && $buyerName !== '—' && $dateToYmd)
+                ? $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $dateToYmd)['due']
+                : $due;
 
             // Invoice date range: use line request dates for SV date-range (filtered items); else voucher issue_date (kitchen / header).
             $dateStrings = collect();
@@ -1219,6 +1227,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'total' => $total,
                 'paid' => $paid,
                 'due' => $due,
+                'total_due_amount' => $totalDueAmount,
                 'status' => $status,
                 'payment_type' => $paymentTypeMap[$first->payment_type ?? 1] ?? '—',
                 'first_receipt_id' => $firstReceiptId,
@@ -1533,6 +1542,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 $cb->invoice_date_range ?? '—',
                 $cb->client_type_display ?? '—',
                 '₹ ' . number_format($cb->total ?? 0, 2),
+                '₹ ' . number_format($cb->total_due_amount ?? 0, 2),
                 $cb->payment_type ?? '—',
                 $status,
             ];
@@ -2270,6 +2280,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 'invoice_no' => $invoiceNo,
                 'payment_type' => $cb->payment_type,
                 'total' => number_format($cb->total, 2),
+                'due_amount' => number_format($cb->due, 2),
+                'total_due_amount' => number_format((float) ($cb->total_due_amount ?? 0), 2),
                 'paid_amount' => number_format($cb->paid, 2),
                 'bill_no' => $invoiceNo,
                 'invoice_notification_sent' => $invoiceNotificationSent,
