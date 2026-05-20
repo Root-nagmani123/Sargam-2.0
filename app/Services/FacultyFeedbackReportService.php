@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\CourseCordinatorMaster;
 use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
 use Carbon\Carbon;
@@ -31,18 +32,27 @@ class FacultyFeedbackReportService
     }
 
     /**
-     * Course IDs where the faculty has timetable sessions (enrolled / assigned courses).
+     * Course IDs the faculty may access: timetable assignments plus course/assistant coordinator roles.
      */
     public function getAccessibleCourseIds(int $facultyPk): Collection
     {
-        return DB::table('timetable')
+        $timetableCourseIds = DB::table('timetable')
             ->where(function ($query) use ($facultyPk) {
                 $query->where('faculty_master', $facultyPk)
                     ->orWhereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
                     ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
             })
             ->distinct()
-            ->pluck('course_master_pk')
+            ->pluck('course_master_pk');
+
+        $coordinatorCourseIds = CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
+            $query->where('Coordinator_name', $facultyPk)
+                ->orWhere('Assistant_Coordinator_name', $facultyPk);
+        })
+            ->pluck('courses_master_pk');
+
+        return $timetableCourseIds
+            ->merge($coordinatorCourseIds)
             ->filter()
             ->unique()
             ->values();
