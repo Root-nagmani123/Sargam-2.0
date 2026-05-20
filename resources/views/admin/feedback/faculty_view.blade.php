@@ -1,3 +1,6 @@
+@php
+    $fr = $fr ?? $feedbackReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::forRequest();
+@endphp
 @extends('admin.layouts.master')
 
 @section('title', 'Faculty Feedback with Comments Admin View - Sargam | Lal Bahadur')
@@ -156,7 +159,7 @@ body {
             <div class="card filter-card">
                 <div class="card-header">Options</div>
                 <div class="card-body">
-                    <form method="POST" action="{{ route('admin.feedback.faculty_view') }}" id="filterForm">
+                    <form method="POST" action="{{ $fr['comments_submit'] }}" id="filterForm">
                         @csrf
                         <input type="hidden" name="page" id="pageInput" value="{{ $currentPage ?? 1 }}">
 
@@ -527,7 +530,7 @@ document.addEventListener('DOMContentLoaded', function() {
             params.append('faculty_name', searchTerm);
         }
 
-        fetch(`{{ route('feedback.faculty_suggestions') }}?${params.toString()}`, {
+        fetch(`{{ $fr['comments_suggestions'] }}?${params.toString()}`, {
                 method: 'GET',
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
@@ -679,7 +682,7 @@ function loadFeedbackData(page = 1) {
         formData.append('_token', csrfToken);
     }
 
-    fetch(`{{ route('admin.feedback.faculty_view') }}`, {
+    fetch(`{{ $fr['comments_submit'] }}`, {
             method: 'POST',
             body: formData,
             headers: {
@@ -735,7 +738,7 @@ function loadFeedbackData(page = 1) {
             }
 
             // Update URL to clean version without parameters
-            const cleanUrl = `{{ route('admin.feedback.faculty_view') }}`;
+            const cleanUrl = `{{ $fr['comments'] }}`;
             if (window.location.href !== cleanUrl) {
                 window.history.replaceState({}, '', cleanUrl);
             }
@@ -785,7 +788,7 @@ function exportToExcel() {
         formData.append('_token', csrfToken);
     }
 
-    fetch(`{{ route('admin.feedback.faculty_view.export') }}`, {
+    fetch(`{{ $fr['comments_export'] }}`, {
             method: 'POST',
             body: formData,
             headers: {
@@ -841,7 +844,7 @@ function exportToPDF() {
         formData.append('_token', csrfToken);
     }
 
-    fetch(`{{ route('admin.feedback.faculty_view.export') }}`, {
+    fetch(`{{ $fr['comments_export'] }}`, {
             method: 'POST',
             body: formData,
             headers: {
@@ -885,7 +888,7 @@ function printReport() {
     }
     params.append('page', 'all');
 
-    const printUrl = `{{ route('admin.feedback.faculty_view.print') }}?${params.toString()}`;
+    const printUrl = `{{ $fr['comments_print'] }}?${params.toString()}`;
     window.open(printUrl, '_blank');
 }
 </script>
