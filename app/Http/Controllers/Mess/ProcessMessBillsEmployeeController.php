@@ -1053,6 +1053,11 @@ class ProcessMessBillsEmployeeController extends Controller
 
     public function printReceipt(Request $request, $id)
     {
+        $paymentOnly = $request->boolean('payment_only');
+        $receiptPaymentAmount = $request->filled('amount')
+            ? $this->roundMoney((float) $request->input('amount'))
+            : null;
+
         // Combined bill: single invoice number (CB-...), no individual slip numbers on receipt
         if (is_string($id) && strpos($id, 'combined-') === 0) {
             $filterDateFromYmd = $request->filled('date_from') ? $this->parseDate($request->date_from) : now()->startOfMonth()->format('Y-m-d');
@@ -1076,6 +1081,59 @@ class ProcessMessBillsEmployeeController extends Controller
             $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $filterDateFromYmd, $filterDateToYmd);
             $totalAmount = $financials['total'];
             $paidAmount = $financials['paid'];
+            $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
+            $clientTypeDisplay = $bills[0]->client_type_display ?? ($bills[0]->client_type_label ?? '—');
+            $courseName = null;
+
+            if ($paymentOnly) {
+                try {
+                    $first = $bills[0];
+                    if ($first instanceof SellingVoucherDateRangeReport) {
+                        if (in_array($first->client_type_slug ?? '', ['ot', 'course'], true)) {
+                            $courseName = optional($first->course)->course_name;
+                        }
+                    } elseif ($first instanceof KitchenIssueMaster) {
+                        if (in_array((int) ($first->client_type ?? 0), [KitchenIssueMaster::CLIENT_OT, KitchenIssueMaster::CLIENT_COURSE], true)) {
+                            $courseName = optional($first->course)->course_name;
+                        }
+                    }
+                } catch (\Throwable $e) {
+                    $courseName = null;
+                }
+                $clientNameCourse = $courseName ? trim($buyerName . ' – ' . $courseName) : $buyerName;
+                $bill = (object) [
+                    'items' => collect(),
+                    'client_name' => $buyerName,
+                    'client_name_course' => $clientNameCourse,
+                    'client_type_display' => $clientTypeDisplay,
+                    'clientTypeCategory' => $bills[0]->clientTypeCategory ?? null,
+                    'client_type_label' => $bills[0]->client_type_label ?? null,
+                    'client_type_slug' => $clientTypeSlug,
+                    'resolved_store_name' => '—',
+                    'date_from' => Carbon::parse($filterDateFromYmd),
+                    'date_to' => Carbon::parse($filterDateToYmd),
+                    'issue_date' => null,
+                    'net_total' => $totalAmount,
+                    'reference_number' => null,
+                    'order_by' => null,
+                    'remarks' => null,
+                    'course_name' => $courseName,
+                ];
+                $displayPaid = $receiptPaymentAmount ?? $paidAmount;
+
+                return view('admin.mess.process-mess-bills-employee.print-receipt', [
+                    'bill' => $bill,
+                    'paidAmount' => $displayPaid,
+                    'dueAmount' => $financials['due'],
+                    'totalDueAmount' => $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'],
+                    'paymentStatusLabel' => $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid'),
+                    'invoiceNo' => $invoiceNo,
+                    'receiptNo' => $invoiceNo,
+                    'paymentOnly' => true,
+                    'receiptPaymentAmount' => $displayPaid,
+                ]);
+            }
+
             foreach ($bills as $b) {
                 $storeName = $b->resolved_store_name ?? '—';
                 $storeNames[$storeName] = true;
@@ -1176,6 +1234,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'paymentStatusLabel' => $paymentStatusLabel,
                 'invoiceNo' => $invoiceNo,
                 'receiptNo' => $invoiceNo,
+                'paymentOnly' => false,
             ]);
         }
 
@@ -1238,15 +1297,21 @@ class ProcessMessBillsEmployeeController extends Controller
             ? $this->computeCombinedBillFinancials($singleBuyerName, $singleClientTypeSlug, null, $singleDateToYmd)['due']
             : $dueAmount;
 
-        return view('admin.mess.process-mess-bills-employee.print-receipt', compact(
-            'bill',
-            'paidAmount',
-            'dueAmount',
-            'totalDueAmount',
-            'paymentStatusLabel',
-            'invoiceNo',
-            'receiptNo'
-        ));
+        $displayPaid = $paymentOnly
+            ? ($receiptPaymentAmount ?? $paidAmount)
+            : $paidAmount;
+
+        return view('admin.mess.process-mess-bills-employee.print-receipt', [
+            'bill' => $bill,
+            'paidAmount' => $displayPaid,
+            'dueAmount' => $dueAmount,
+            'totalDueAmount' => $totalDueAmount,
+            'paymentStatusLabel' => $paymentStatusLabel,
+            'invoiceNo' => $invoiceNo,
+            'receiptNo' => $receiptNo,
+            'paymentOnly' => $paymentOnly,
+            'receiptPaymentAmount' => $paymentOnly ? $displayPaid : null,
+        ]);
     }
 
     /**
@@ -2639,13 +2704,14 @@ class ProcessMessBillsEmployeeController extends Controller
                         ? $this->parseDate($request->date_to)
                         : now()->endOfMonth()->format('Y-m-d');
                     $paymentVisible = $isFullPayment
-                        ? 'Your combined payment of ₹' . number_format($amount, 2) . ' has been successfully completed.'
-                        : '₹' . number_format($amount, 2) . ' payment received. Remaining due: ₹ ' . number_format(max(0, $actualTotalDue - $amount), 2);
+                        ? '₹' . number_format($amount, 2) . ' payment received successfully.'
+                        : '₹' . number_format($amount, 2) . ' payment received.';
                     $paymentMessage = NotificationService::appendMessCombinedReceiptPayload(
                         $paymentVisible,
                         $id,
                         $dateFromYmd,
-                        $dateToYmd
+                        $dateToYmd,
+                        $amount
                     );
                     app(NotificationService::class)->create(
                         $receiverUserId,
@@ -2764,25 +2830,33 @@ class ProcessMessBillsEmployeeController extends Controller
 
         if ($receiverUserId !== null && $receiverUserId > 0) {
             try {
-                if ($isFullPayment) {
-                    app(NotificationService::class)->create(
-                        $receiverUserId,
-                        'mess',
-                        'MessPayment',
-                        (int) $billId,
-                        'Payment Successfully Done',
-                        'Your payment of ₹' . number_format($paidAfter, 2) . ' has been successfully completed.'
-                    );
-                } else {
-                    app(NotificationService::class)->create(
-                        $receiverUserId,
-                        'mess',
-                        'MessPayment',
-                        (int) $billId,
-                        'Partial Payment Received',
-                        '₹' . number_format($amount, 2) . ' payment received. ₹' . number_format($remainingDue, 2) . ' is still pending.'
-                    );
-                }
+                $singleBillReceiptId = $isKitchenIssue
+                    ? 'ki-' . (int) $billId
+                    : 'dr-' . (int) $billId;
+                $singleDateFromYmd = $request->filled('date_from')
+                    ? $this->parseDate($request->date_from)
+                    : now()->startOfMonth()->format('Y-m-d');
+                $singleDateToNotify = $request->filled('date_to')
+                    ? $this->parseDate($request->date_to)
+                    : $singleDateToYmd;
+                $paymentVisible = $isFullPayment
+                    ? '₹' . number_format($amount, 2) . ' payment received successfully.'
+                    : '₹' . number_format($amount, 2) . ' payment received.';
+                $paymentMessage = NotificationService::appendMessCombinedReceiptPayload(
+                    $paymentVisible,
+                    $singleBillReceiptId,
+                    $singleDateFromYmd,
+                    $singleDateToNotify,
+                    $amount
+                );
+                app(NotificationService::class)->create(
+                    $receiverUserId,
+                    'mess',
+                    'MessPayment',
+                    (int) $billId,
+                    $isFullPayment ? 'Payment Successfully Done' : 'Partial Payment Received',
+                    $paymentMessage
+                );
             } catch (\Throwable $e) {
                 report($e);
             }

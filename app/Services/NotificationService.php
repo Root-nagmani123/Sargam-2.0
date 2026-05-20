@@ -98,19 +98,24 @@ class NotificationService
         string $visibleMessage,
         string $combinedId,
         string $dateFromYmd,
-        string $dateToYmd
+        string $dateToYmd,
+        ?float $paymentAmount = null
     ): string {
-        $payload = json_encode([
+        $payloadData = [
             'i' => $combinedId,
             'f' => $dateFromYmd,
             't' => $dateToYmd,
-        ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        ];
+        if ($paymentAmount !== null && $paymentAmount > 0) {
+            $payloadData['a'] = round($paymentAmount, 2);
+        }
+        $payload = json_encode($payloadData, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
         return $visibleMessage . self::MESS_COMBINED_RECEIPT_MARKER . base64_encode((string) $payload);
     }
 
     /**
-     * @return array{i: string, f: string, t: string}|null
+     * @return array{i: string, f: string, t: string, a?: float}|null
      */
     public static function parseMessCombinedReceiptPayload(?string $message): ?array
     {
@@ -131,11 +136,16 @@ class NotificationService
             return null;
         }
 
-        return [
+        $parsed = [
             'i' => $data['i'],
             'f' => isset($data['f']) && is_string($data['f']) ? $data['f'] : '',
             't' => isset($data['t']) && is_string($data['t']) ? $data['t'] : '',
         ];
+        if (isset($data['a']) && is_numeric($data['a'])) {
+            $parsed['a'] = (float) $data['a'];
+        }
+
+        return $parsed;
     }
 
     public static function stripMessCombinedReceiptPayloadForDisplay(?string $message): string
@@ -381,15 +391,36 @@ class NotificationService
         $type = strtolower(trim($notification->type ?? ''));
         $moduleName = strtolower(trim($notification->module_name ?? ''));
 
-        // Combined Process Mess Bill: reference_pk was only the first voucher id; open full combined receipt with date range.
+        // Combined Process Mess Bill: reference_pk was only the first voucher id; open receipt with date range.
         if ($type === 'mess' && ($moduleName === 'messinvoicecombined' || $moduleName === 'messpaymentcombined')) {
             $parsed = self::parseMessCombinedReceiptPayload($notification->message);
             if ($parsed !== null && $parsed['i'] !== '') {
                 $query = array_filter([
                     'date_from' => $parsed['f'] !== '' ? $parsed['f'] : null,
                     'date_to' => $parsed['t'] !== '' ? $parsed['t'] : null,
+                    'payment_only' => $moduleName === 'messpaymentcombined' ? '1' : null,
+                    'amount' => ($moduleName === 'messpaymentcombined' && isset($parsed['a']))
+                        ? $parsed['a']
+                        : null,
                 ], static fn ($v) => $v !== null && $v !== '');
                 $url = route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $parsed['i']]);
+
+                return $url . (count($query) > 0 ? '?' . http_build_query($query) : '');
+            }
+        }
+
+        // Single-voucher mess payment: payment-only receipt (no itemized bill).
+        if ($type === 'mess' && $moduleName === 'messpayment') {
+            $parsed = self::parseMessCombinedReceiptPayload($notification->message);
+            $billId = ($parsed !== null && $parsed['i'] !== '')
+                ? $parsed['i']
+                : (string) ($notification->reference_pk ?? '');
+            if ($billId !== '') {
+                $query = array_filter([
+                    'payment_only' => '1',
+                    'amount' => ($parsed !== null && isset($parsed['a'])) ? $parsed['a'] : null,
+                ], static fn ($v) => $v !== null && $v !== '');
+                $url = route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $billId]);
 
                 return $url . (count($query) > 0 ? '?' . http_build_query($query) : '');
             }
