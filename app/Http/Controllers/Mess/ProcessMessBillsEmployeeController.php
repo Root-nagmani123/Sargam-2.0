@@ -598,7 +598,7 @@ class ProcessMessBillsEmployeeController extends Controller
             return $model;
         })->filter()->values();
 
-        $combinedBills = $this->groupBillsByBuyer($bills);
+        $combinedBills = $this->groupBillsByBuyer($bills, $dateFrom, $dateTo);
 
         return [$combinedBills, $bills];
     }
@@ -650,7 +650,7 @@ class ProcessMessBillsEmployeeController extends Controller
      * Returns array of combined bill objects for display and payment.
      * Uses a single combined_invoice_no (e.g. CB-20260312-00123) so slip/receipt shows one invoice like others.
      */
-    private function groupBillsByBuyer($bills): \Illuminate\Support\Collection
+    private function groupBillsByBuyer($bills, ?string $dateFromYmd = null, ?string $dateToYmd = null): \Illuminate\Support\Collection
     {
         $groups = collect($bills)->groupBy(function ($bill) {
             $name = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
@@ -660,21 +660,17 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
-        return $groups->map(function ($group, $key) use ($paymentTypeMap) {
+        return $groups->map(function ($group, $key) use ($paymentTypeMap, $dateFromYmd, $dateToYmd) {
             $first = $group->first();
             $buyerName = trim((string) ($first->client_name ?? ($first->clientTypeCategory->client_name ?? '—')));
             $clientTypeSlug = $this->getBillClientTypeSlug($first);
             $combinedId = 'combined-' . rawurlencode($buyerName) . '-' . $clientTypeSlug;
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
 
-            $total = $this->roundMoney((float) $group->sum(fn ($b) => (float) $b->net_total));
-            $paid = 0.0;
-            foreach ($group as $b) {
-                $isDr = $b instanceof SellingVoucherDateRangeReport;
-                $paid += $this->getBillPaidAmount($b, $isDr);
-            }
-            $paid = $this->roundMoney($paid);
-            $due = $this->billDueAmount($total, $paid);
+            $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $dateFromYmd, $dateToYmd);
+            $total = $financials['total'];
+            $paid = $financials['paid'];
+            $due = $financials['due'];
 
             // Invoice date range: use line request dates for SV date-range (filtered items); else voucher issue_date (kitchen / header).
             $dateStrings = collect();
@@ -701,20 +697,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 ? (Carbon::parse($dateMin)->format('d-m-Y') . ($dateMin !== $dateMax ? ' to ' . Carbon::parse($dateMax)->format('d-m-Y') : ''))
                 : '—';
 
-            $allPaid = $group->every(function ($b) {
-                $isDr = $b instanceof SellingVoucherDateRangeReport;
-
-                return $this->isBillFullyPaid(
-                    $this->getBillPaidAmount($b, $isDr),
-                    (float) $b->net_total
-                );
-            });
-            $anyPaid = $group->contains(function ($b) {
-                $isDr = $b instanceof SellingVoucherDateRangeReport;
-
-                return $this->getBillPaidAmount($b, $isDr) > 0;
-            });
-            $status = $allPaid ? 2 : ($anyPaid ? 1 : 0);
+            $status = $this->isBillFullyPaid($paid, $total) ? 2 : ($paid > 0 ? 1 : 0);
 
             $firstReceiptId = $group->first();
             $firstReceiptId = $firstReceiptId instanceof SellingVoucherDateRangeReport
@@ -1012,7 +995,7 @@ class ProcessMessBillsEmployeeController extends Controller
             return $model;
         })->filter()->values();
 
-        $combinedBills = $this->groupBillsByBuyer($bills);
+        $combinedBills = $this->groupBillsByBuyer($bills, $dateFrom, $dateTo);
 
         // Optional status filter on combined bills for export as well
         if ($statusFilter !== null && $statusFilter !== '') {
@@ -1070,18 +1053,20 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $this->assertCurrentUserCanAccessBills($bills);
             $items = [];
-            $totalAmount = 0.0;
-            $paidAmount = 0.0;
             $storeNames = [];
             $dateMin = null;
             $referenceNumbers = [];
             $orderBys = [];
             $remarksList = [];
             $courseName = null;
+            $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
+            $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
+                ? (string) ($bills[0]->client_type_slug ?? 'employee')
+                : $this->getBillClientTypeSlug($bills[0]);
+            $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $filterDateFromYmd, $filterDateToYmd);
+            $totalAmount = $financials['total'];
+            $paidAmount = $financials['paid'];
             foreach ($bills as $b) {
-                $isDr = $b instanceof SellingVoucherDateRangeReport;
-                $totalAmount += (float) $b->net_total;
-                $paidAmount += $this->getBillPaidAmount($b, $isDr);
                 $storeName = $b->resolved_store_name ?? '—';
                 $storeNames[$storeName] = true;
                 $purchaseDateStr = $b->issue_date ? $b->issue_date->format('d-m-Y') : '—';
@@ -1150,14 +1135,9 @@ class ProcessMessBillsEmployeeController extends Controller
             $referenceNumber = collect($referenceNumbers)->filter()->unique()->implode(', ');
             $orderBy = collect($orderBys)->filter()->unique()->implode(', ');
             $remarks = collect($remarksList)->filter()->unique()->implode(' | ');
-            $totalAmount = $this->roundMoney($totalAmount);
-            $paidAmount = $this->roundMoney($paidAmount);
-            $dueAmount = $this->billDueAmount($totalAmount, $paidAmount);
+            $dueAmount = $financials['due'];
+            $totalDueAmount = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'];
             $paymentStatusLabel = $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
-            $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
-            $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
-                ? (string) ($bills[0]->client_type_slug ?? 'employee')
-                : $this->getBillClientTypeSlug($bills[0]);
             $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
             $clientNameCourse = $courseName ? trim($buyerName . ' – ' . $courseName) : $buyerName;
             $bill = (object) [
@@ -1182,6 +1162,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'bill' => $bill,
                 'paidAmount' => $paidAmount,
                 'dueAmount' => $dueAmount,
+                'totalDueAmount' => $totalDueAmount,
                 'paymentStatusLabel' => $paymentStatusLabel,
                 'invoiceNo' => $invoiceNo,
                 'receiptNo' => $invoiceNo,
@@ -1234,7 +1215,28 @@ class ProcessMessBillsEmployeeController extends Controller
             : 'SV-' . str_pad($bill->pk ?? $bill->id, 6, '0', STR_PAD_LEFT);
         $receiptNo = $invoiceNo;
 
-        return view('admin.mess.process-mess-bills-employee.print-receipt', compact('bill', 'paidAmount', 'dueAmount', 'paymentStatusLabel', 'invoiceNo', 'receiptNo'));
+        $singleBuyerName = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
+        $singleClientTypeSlug = $isDateRange
+            ? (string) ($bill->client_type_slug ?? 'employee')
+            : $this->getBillClientTypeSlug($bill);
+        $singleDateToYmd = $request->filled('date_to')
+            ? $this->parseDate($request->date_to)
+            : ($bill->issue_date
+                ? ($bill->issue_date instanceof Carbon ? $bill->issue_date->format('Y-m-d') : Carbon::parse($bill->issue_date)->format('Y-m-d'))
+                : now()->format('Y-m-d'));
+        $totalDueAmount = $singleBuyerName !== ''
+            ? $this->computeCombinedBillFinancials($singleBuyerName, $singleClientTypeSlug, null, $singleDateToYmd)['due']
+            : $dueAmount;
+
+        return view('admin.mess.process-mess-bills-employee.print-receipt', compact(
+            'bill',
+            'paidAmount',
+            'dueAmount',
+            'totalDueAmount',
+            'paymentStatusLabel',
+            'invoiceNo',
+            'receiptNo'
+        ));
     }
 
     /**
@@ -1307,14 +1309,16 @@ class ProcessMessBillsEmployeeController extends Controller
             $dateFromStr = Carbon::parse($filterDateFromYmd)->format('d-m-Y');
             $dateToStr = Carbon::parse($filterDateToYmd)->format('d-m-Y');
             $items = [];
-            $totalAmount = 0.0;
-            $paidAmount = 0.0;
             $clientTypeDisplay = '';
             $storeNames = [];
+            $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
+            $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
+                ? (string) ($bills[0]->client_type_slug ?? 'employee')
+                : $this->getBillClientTypeSlug($bills[0]);
+            $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $filterDateFromYmd, $filterDateToYmd);
+            $totalAmount = $financials['total'];
+            $paidAmount = $financials['paid'];
             foreach ($bills as $bill) {
-                $isDr = $bill instanceof SellingVoucherDateRangeReport;
-                $totalAmount += (float) $bill->net_total;
-                $paidAmount += $this->getBillPaidAmount($bill, $isDr);
                 $storeName = $bill->resolved_store_name ?? '—';
                 $storeNames[$storeName] = true;
                 $purchaseDate = $bill->issue_date ? $bill->issue_date->format('d-m-Y') : '—';
@@ -1343,13 +1347,8 @@ class ProcessMessBillsEmployeeController extends Controller
                     ];
                 }
             }
-            $totalAmount = $this->roundMoney($totalAmount);
-            $paidAmount = $this->roundMoney($paidAmount);
-            $dueAmount = $this->billDueAmount($totalAmount, $paidAmount);
-            $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '—')));
-            $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
-                ? (string) ($bills[0]->client_type_slug ?? 'employee')
-                : $this->getBillClientTypeSlug($bills[0]);
+            $dueAmount = $financials['due'];
+            $totalDueAmount = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'];
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
 
             // Collect header-level meta fields
@@ -1396,6 +1395,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 'paid_amount' => number_format($paidAmount, 1),
                 'due_amount' => number_format($dueAmount, 1),
                 'due_amount_raw' => $dueAmount,
+                'total_due_amount' => number_format($totalDueAmount, 1),
+                'total_due_amount_raw' => $totalDueAmount,
                 'first_receipt_id' => $firstReceiptId,
                 'reference_number' => $referenceNumber ?: null,
                 'order_by' => $orderBy ?: null,
@@ -1464,6 +1465,19 @@ class ProcessMessBillsEmployeeController extends Controller
             : 'SV-' . str_pad($bill->pk ?? $bill->id, 6, '0', STR_PAD_LEFT);
         $receiptNo = $invoiceNo;
 
+        $singleBuyerName = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
+        $singleClientTypeSlug = $isDateRange
+            ? (string) ($bill->client_type_slug ?? 'employee')
+            : $this->getBillClientTypeSlug($bill);
+        $singleDateToYmd = $request->filled('date_to')
+            ? $this->parseDate($request->date_to)
+            : ($bill->issue_date
+                ? ($bill->issue_date instanceof Carbon ? $bill->issue_date->format('Y-m-d') : Carbon::parse($bill->issue_date)->format('Y-m-d'))
+                : now()->format('Y-m-d'));
+        $totalDueAmount = $singleBuyerName !== ''
+            ? $this->computeCombinedBillFinancials($singleBuyerName, $singleClientTypeSlug, null, $singleDateToYmd)['due']
+            : $dueAmount;
+
         return response()->json([
             'bill_id' => $isDateRange ? 'dr-' . $bill->id : 'ki-' . $bill->pk,
             'receipt_no' => $receiptNo,
@@ -1479,6 +1493,8 @@ class ProcessMessBillsEmployeeController extends Controller
             'paid_amount' => number_format($paidAmount, 1),
             'due_amount' => number_format($dueAmount, 1),
             'due_amount_raw' => $dueAmount,
+            'total_due_amount' => number_format($totalDueAmount, 1),
+            'total_due_amount_raw' => $totalDueAmount,
             'reference_number' => $bill->reference_number ?? null,
             'order_by' => $bill->order_by ?? null,
             'remarks' => $bill->remarks ?? null,
@@ -1487,7 +1503,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
     /**
      * Return JSON data for the ADD modal table (employee bills for date range).
-     * Only shows unpaid bills (status != 2).
+     * Includes approved SV/kitchen vouchers (same as main index); keeps buyers with period due > 0.
      */
     public function modalData(Request $request)
     {
@@ -1522,7 +1538,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 DB::raw("CONVERT('date_range' USING utf8mb4) COLLATE {$unionCollation} as source_type"),
             ])
             ->whereIn('client_type_slug', $dateRangeSlugs)
-            ->where('status', '!=', 2); // Only unpaid bills
+            ->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
 
         if (!empty($clientTypePks)) {
             $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
@@ -1547,7 +1563,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ])
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
-            ->where('status', '!=', 2); // Only unpaid bills
+            ->where('status', '!=', KitchenIssueMaster::STATUS_REJECTED);
 
         if (!empty($clientTypePks)) {
             $kitchenIssueQuery->whereIn('client_type_pk', $clientTypePks);
@@ -1573,6 +1589,18 @@ class ProcessMessBillsEmployeeController extends Controller
             $name = trim((string) ($bill->client_name ?? ''));
             $slug = (string) ($bill->client_type_slug ?? 'employee');
             return $name . '|' . $slug;
+        })->values();
+
+        $groupedRows = $groupedRows->filter(function ($group) use ($dateFrom, $dateTo) {
+            $first = $group->first();
+            $buyerName = trim((string) ($first->client_name ?? ''));
+            if ($buyerName === '') {
+                return false;
+            }
+            $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
+            $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $dateFrom, $dateTo);
+
+            return $financials['due'] > 0;
         })->values();
 
         if ($search !== '') {
@@ -1654,7 +1682,7 @@ class ProcessMessBillsEmployeeController extends Controller
             })->filter();
         })->values();
 
-        $combinedBills = $this->groupBillsByBuyer($pageBills)
+        $combinedBills = $this->groupBillsByBuyer($pageBills, $dateFrom, $dateTo)
             ->sortBy(function ($cb) use ($pageGroupOrder) {
                 $key = trim((string) ($cb->buyer_name ?? '')) . '|' . (string) ($cb->bills->first() ? $this->getBillClientTypeSlug($cb->bills->first()) : 'employee');
                 return $pageGroupOrder[$key] ?? PHP_INT_MAX;
@@ -2092,6 +2120,316 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Load all buyer bills (with line items up to date_to) for FIFO payment allocation.
+     */
+    private function resolveBuyerBillsForPaymentAllocation(string $buyerName, string $clientTypeSlug, ?string $dateToYmd): Collection
+    {
+        $drQuery = SellingVoucherDateRangeReport::with([
+            'items' => function ($itemQ) use ($dateToYmd) {
+                $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, null, $dateToYmd);
+            },
+            'items.itemSubcategory',
+        ])
+            ->where('client_type_slug', $clientTypeSlug)
+            ->where('client_name', $buyerName)
+            ->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applySellingVoucherDateRangeItemIssueDateFilter($drQuery, null, $dateToYmd);
+
+        $kitchenQuery = KitchenIssueMaster::with(['items', 'paymentDetails'])
+            ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
+            ->where('client_type', $this->clientTypeSlugToKitchenId($clientTypeSlug))
+            ->where('client_name', $buyerName);
+        if ($dateToYmd) {
+            $kitchenQuery->where('issue_date', '<=', $dateToYmd);
+        }
+
+        return $drQuery->orderBy('issue_date')->get()
+            ->concat($kitchenQuery->orderBy('issue_date')->get());
+    }
+
+    /**
+     * Net line amount after returns (matches SellingVoucherDateRangeReport::getNetTotalAttribute).
+     */
+    private function lineItemNetAmount($item): float
+    {
+        $qty = (float) ($item->quantity ?? 0);
+        $returnQty = (float) ($item->return_quantity ?? 0);
+        $rate = (float) ($item->rate ?? 0);
+
+        return $this->roundMoney(max(0, $qty - $returnQty) * $rate);
+    }
+
+    /**
+     * Resolve issue_date (Y-m-d) for a line item, falling back to bill header date.
+     */
+    private function lineItemIssueDateYmd($item, $bill): ?string
+    {
+        try {
+            if (! empty($item->issue_date)) {
+                $dt = $item->issue_date instanceof Carbon
+                    ? $item->issue_date
+                    : Carbon::parse($item->issue_date);
+
+                return $dt->format('Y-m-d');
+            }
+        } catch (\Throwable $e) {
+            // ignore malformed dates
+        }
+        if (! empty($bill->issue_date)) {
+            return $bill->issue_date instanceof Carbon
+                ? $bill->issue_date->format('Y-m-d')
+                : Carbon::parse($bill->issue_date)->format('Y-m-d');
+        }
+
+        return null;
+    }
+
+    /**
+     * Stable key for combined-bill payment allocation (matches dr-/ki- receipt ids).
+     */
+    private function billPaymentAllocationKey($bill): string
+    {
+        if ($bill instanceof SellingVoucherDateRangeReport) {
+            return 'dr-' . $bill->id;
+        }
+
+        return 'ki-' . ($bill->pk ?? $bill->id);
+    }
+
+    /**
+     * @return list<array{issue_date_ymd: string, amount: float}>
+     */
+    private function extractLineItemsFromBill($bill): array
+    {
+        $lines = [];
+        if ($bill instanceof SellingVoucherDateRangeReport) {
+            foreach ($bill->items ?? [] as $item) {
+                $amount = $this->lineItemNetAmount($item);
+                if ($amount <= 0) {
+                    continue;
+                }
+                $ymd = $this->lineItemIssueDateYmd($item, $bill);
+                if ($ymd === null) {
+                    continue;
+                }
+                $lines[] = ['issue_date_ymd' => $ymd, 'amount' => $amount];
+            }
+
+            return $lines;
+        }
+        if ($bill instanceof KitchenIssueMaster) {
+            $fallbackYmd = ! empty($bill->issue_date)
+                ? ($bill->issue_date instanceof Carbon
+                    ? $bill->issue_date->format('Y-m-d')
+                    : Carbon::parse($bill->issue_date)->format('Y-m-d'))
+                : null;
+            foreach ($bill->items ?? [] as $item) {
+                $amount = $this->lineItemNetAmount($item);
+                if ($amount <= 0) {
+                    continue;
+                }
+                $ymd = $this->lineItemIssueDateYmd($item, $bill) ?? $fallbackYmd;
+                if ($ymd === null) {
+                    continue;
+                }
+                $lines[] = ['issue_date_ymd' => $ymd, 'amount' => $amount];
+            }
+            if ($lines === [] && $fallbackYmd !== null) {
+                $net = $this->roundMoney((float) $bill->net_total);
+                if ($net > 0) {
+                    $lines[] = ['issue_date_ymd' => $fallbackYmd, 'amount' => $net];
+                }
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
+     * FIFO-allocated line items for a buyer (includes bill_key for payment distribution).
+     *
+     * @return list<array{issue_date_ymd: string, amount: float, allocated_paid: float, bill_key: string}>
+     */
+    private function buildCombinedFifoAllocatedLines(
+        string $buyerName,
+        string $clientTypeSlug,
+        ?string $dateToYmd
+    ): array {
+        $allocationBills = $this->resolveBuyerBillsForPaymentAllocation($buyerName, $clientTypeSlug, $dateToYmd);
+
+        $lineItems = [];
+        $totalPaidPool = 0.0;
+        foreach ($allocationBills as $bill) {
+            $isDr = $bill instanceof SellingVoucherDateRangeReport;
+            $totalPaidPool += $this->getBillPaidAmount($bill, $isDr);
+            $billKey = $this->billPaymentAllocationKey($bill);
+            foreach ($this->extractLineItemsFromBill($bill) as $line) {
+                $line['bill_key'] = $billKey;
+                $lineItems[] = $line;
+            }
+        }
+
+        return $this->allocatePaidAmountFifo($lineItems, $this->roundMoney($totalPaidPool));
+    }
+
+    private function lineItemInDateRange(string $issueDateYmd, ?string $dateFromYmd, ?string $dateToYmd): bool
+    {
+        if ($dateFromYmd && $issueDateYmd < $dateFromYmd) {
+            return false;
+        }
+        if ($dateToYmd && $issueDateYmd > $dateToYmd) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * Per-voucher unpaid balance in the filtered period (after FIFO), keyed by dr-/ki- id.
+     *
+     * @return array<string, float>
+     */
+    private function computeCombinedBillPeriodDuesByBill(
+        string $buyerName,
+        string $clientTypeSlug,
+        ?string $dateFromYmd,
+        ?string $dateToYmd
+    ): array {
+        $lineItems = $this->buildCombinedFifoAllocatedLines($buyerName, $clientTypeSlug, $dateToYmd);
+        $dues = [];
+        foreach ($lineItems as $line) {
+            if (! $this->lineItemInDateRange($line['issue_date_ymd'], $dateFromYmd, $dateToYmd)) {
+                continue;
+            }
+            $unpaid = $this->roundMoney($line['amount'] - (float) ($line['allocated_paid'] ?? 0));
+            if ($unpaid <= 0) {
+                continue;
+            }
+            $key = $line['bill_key'];
+            $dues[$key] = $this->roundMoney(($dues[$key] ?? 0) + $unpaid);
+        }
+
+        return $dues;
+    }
+
+    /**
+     * Bill keys with period due > 0, oldest issue_date first.
+     *
+     * @param  array<string, float>  $billPeriodDues
+     * @return list<string>
+     */
+    private function billKeysSortedForPeriodPayment(array $billPeriodDues, array $fifoLines, ?string $dateFromYmd, ?string $dateToYmd): array
+    {
+        $earliestDate = [];
+        foreach ($fifoLines as $line) {
+            if (! $this->lineItemInDateRange($line['issue_date_ymd'], $dateFromYmd, $dateToYmd)) {
+                continue;
+            }
+            $unpaid = $this->roundMoney($line['amount'] - (float) ($line['allocated_paid'] ?? 0));
+            if ($unpaid <= 0) {
+                continue;
+            }
+            $key = $line['bill_key'];
+            $ymd = $line['issue_date_ymd'];
+            if (! isset($earliestDate[$key]) || $ymd < $earliestDate[$key]) {
+                $earliestDate[$key] = $ymd;
+            }
+        }
+
+        $keys = array_keys(array_filter($billPeriodDues, fn ($due) => $due > 0));
+        usort($keys, function (string $a, string $b) use ($earliestDate): int {
+            $da = $earliestDate[$a] ?? '9999-12-31';
+            $db = $earliestDate[$b] ?? '9999-12-31';
+            $cmp = strcmp($da, $db);
+
+            return $cmp !== 0 ? $cmp : strcmp($a, $b);
+        });
+
+        return $keys;
+    }
+
+    /**
+     * Apply total paid to line items in issue_date order (FIFO).
+     *
+     * @param  list<array{issue_date_ymd: string, amount: float}>  $lineItems
+     * @return list<array{issue_date_ymd: string, amount: float, allocated_paid: float}>
+     */
+    private function allocatePaidAmountFifo(array $lineItems, float $totalPaid): array
+    {
+        usort($lineItems, function (array $a, array $b): int {
+            $cmp = strcmp($a['issue_date_ymd'], $b['issue_date_ymd']);
+
+            return $cmp !== 0 ? $cmp : 0;
+        });
+
+        $remaining = $this->roundMoney($totalPaid);
+        foreach ($lineItems as $index => $line) {
+            $alloc = $this->roundMoney(min($remaining, $line['amount']));
+            $lineItems[$index]['allocated_paid'] = $alloc;
+            $remaining = $this->roundMoney($remaining - $alloc);
+        }
+
+        return $lineItems;
+    }
+
+    /**
+     * Combined bill total / paid / due for a date-filtered statement.
+     * Paid is allocated FIFO across all buyer charges (including before date_from) so due stays consistent.
+     *
+     * @return array{total: float, paid: float, due: float}
+     */
+    private function computeCombinedBillFinancials(
+        string $buyerName,
+        string $clientTypeSlug,
+        ?string $dateFromYmd,
+        ?string $dateToYmd
+    ): array {
+        $lineItems = $this->buildCombinedFifoAllocatedLines($buyerName, $clientTypeSlug, $dateToYmd);
+
+        $total = 0.0;
+        $paid = 0.0;
+        foreach ($lineItems as $line) {
+            if (! $this->lineItemInDateRange($line['issue_date_ymd'], $dateFromYmd, $dateToYmd)) {
+                continue;
+            }
+            $total += $line['amount'];
+            $paid += (float) ($line['allocated_paid'] ?? 0);
+        }
+
+        $total = $this->roundMoney($total);
+        $paid = $this->roundMoney($paid);
+
+        return [
+            'total' => $total,
+            'paid' => $paid,
+            'due' => $this->billDueAmount($total, $paid),
+        ];
+    }
+
+    /**
+     * Resolve dr-/ki- key to bill model from allocation set.
+     *
+     * @param  \Illuminate\Support\Collection<int, SellingVoucherDateRangeReport|KitchenIssueMaster>  $allocationBills
+     */
+    private function resolveBillFromPaymentKey(string $billKey, Collection $allocationBills)
+    {
+        if (preg_match('/^(dr|ki)-(\d+)$/i', $billKey, $m)) {
+            $isDr = strtolower($m[1]) === 'dr';
+            $numericId = (int) $m[2];
+            foreach ($allocationBills as $bill) {
+                if ($isDr && $bill instanceof SellingVoucherDateRangeReport && (int) $bill->id === $numericId) {
+                    return $bill;
+                }
+                if (! $isDr && $bill instanceof KitchenIssueMaster && (int) ($bill->pk ?? $bill->id) === $numericId) {
+                    return $bill;
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * Whether paid amount satisfies the bill total (2-decimal comparison).
      */
     private function isBillFullyPaid(float $paidAmount, float $totalAmount): bool
@@ -2167,36 +2505,58 @@ class ProcessMessBillsEmployeeController extends Controller
         $paymentMode = $request->input('payment_mode', 'cash');
         $paymentDate = $request->filled('payment_date') ? $this->parseDate($request->payment_date) : now()->format('Y-m-d');
 
-        // Combined bill: distribute payment across vouchers (oldest first)
+        // Combined bill: distribute payment across vouchers (oldest first, FIFO period due)
         if (is_string($id) && strpos($id, 'combined-') === 0) {
             $bills = $this->resolveCombinedBillBills($request, $id);
             if (empty($bills)) {
                 return response()->json(['success' => false, 'message' => 'No bills found for this buyer in the selected date range.'], 404);
             }
-            $totalDue = 0.0;
-            foreach ($bills as $b) {
-                $isDr = $b instanceof SellingVoucherDateRangeReport;
-                $paid = $this->getBillPaidAmount($b, $isDr);
-                $totalDue += $this->billDueAmount((float) $b->net_total, $paid);
+            $buyerName = trim((string) ($bills[0]->client_name ?? ($bills[0]->clientTypeCategory->client_name ?? '')));
+            $clientTypeSlug = $bills[0] instanceof SellingVoucherDateRangeReport
+                ? (string) ($bills[0]->client_type_slug ?? 'employee')
+                : $this->getBillClientTypeSlug($bills[0]);
+            $dateFromYmd = $request->filled('date_from')
+                ? $this->parseDate($request->date_from)
+                : now()->startOfMonth()->format('Y-m-d');
+            $dateToYmd = $request->filled('date_to')
+                ? $this->parseDate($request->date_to)
+                : now()->endOfMonth()->format('Y-m-d');
+            $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $dateFromYmd, $dateToYmd);
+            $totalDue = $financials['due'];
+            if ($totalDue <= 0) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This bill is already fully paid for the selected period.',
+                ], 400);
             }
-            $totalDue = $this->roundMoney($totalDue);
             if ($amount > $totalDue) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Payment amount cannot exceed the balance due (₹ ' . number_format($totalDue, 2) . ').',
                 ], 400);
             }
+            $billPeriodDues = $this->computeCombinedBillPeriodDuesByBill($buyerName, $clientTypeSlug, $dateFromYmd, $dateToYmd);
+            $fifoLines = $this->buildCombinedFifoAllocatedLines($buyerName, $clientTypeSlug, $dateToYmd);
+            $paymentBillKeys = $this->billKeysSortedForPeriodPayment($billPeriodDues, $fifoLines, $dateFromYmd, $dateToYmd);
+            $allocationBills = $this->resolveBuyerBillsForPaymentAllocation($buyerName, $clientTypeSlug, $dateToYmd);
             try {
                 DB::beginTransaction();
                 $remaining = $amount;
-                foreach ($bills as $bill) {
-                    if ($remaining <= 0) break;
+                foreach ($paymentBillKeys as $billKey) {
+                    if ($remaining <= 0) {
+                        break;
+                    }
+                    $billDue = $this->roundMoney((float) ($billPeriodDues[$billKey] ?? 0));
+                    if ($billDue <= 0) {
+                        continue;
+                    }
+                    $bill = $this->resolveBillFromPaymentKey($billKey, $allocationBills);
+                    if ($bill === null) {
+                        continue;
+                    }
                     $isDr = $bill instanceof SellingVoucherDateRangeReport;
-                    $billTotal = $this->roundMoney((float) $bill->net_total);
-                    $billPaid = $this->getBillPaidAmount($bill, $isDr);
-                    $billDue = $this->billDueAmount($billTotal, $billPaid);
-                    if ($billDue <= 0) continue;
                     $payThis = $this->roundMoney(min($remaining, $billDue));
+                    $billTotal = $this->roundMoney((float) $bill->net_total);
                     if ($isDr) {
                         SvDateRangePaymentDetail::create([
                             'sv_date_range_report_id' => $bill->id,
