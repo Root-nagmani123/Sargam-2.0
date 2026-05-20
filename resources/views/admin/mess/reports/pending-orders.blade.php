@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
+@include('admin.mess.reports.partials.report-styles')
 <div class="card" style="border-left: 4px solid #004a93;">
     <div class="card-header">
         <h5 class="mb-0">
@@ -13,8 +14,9 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>PO Number</th>
-                        <th>PO Date</th>
+                        @include('admin.mess.reports.partials.report-sno-th')
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'po_number', 'label' => 'PO Number', 'defaultDir' => 'asc'])
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'po_date', 'label' => 'PO Date', 'defaultDir' => 'desc', 'defaultSort' => 'po_date'])
                         <th>Vendor</th>
                         <th>Store</th>
                         <th>Total Amount</th>
@@ -23,8 +25,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($orders as $order)
+                    @forelse($orders as $index => $order)
                         <tr>
+                            <td class="text-center text-muted mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $orders, 'index' => $index])</td>
                             <td>{{ $order->po_number }}</td>
                             <td>{{ $order->po_date ? date('d-M-Y', strtotime($order->po_date)) : 'N/A' }}</td>
                             <td>{{ $order->vendor->vendor_name ?? 'N/A' }}</td>
@@ -39,14 +42,14 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No pending orders found</td>
+                            <td colspan="8" class="text-center text-muted py-4">No pending orders found</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="d-flex justify-content-center mt-3">
-            {{ $orders->links() }}
+        <div class="mt-3">
+            {{ $orders->links('pagination::bootstrap-5') }}
         </div>
     </div>
 </div>

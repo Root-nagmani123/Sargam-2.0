@@ -20,7 +20,8 @@
                     </div>
                 </div>
                 <hr>
-                <table class="table w-100 text-nowrap">
+                <div class="table-responsive">
+                <table id="adminClientTypesTable" class="table w-100 text-nowrap" data-mess-column-manager data-mess-column-skip="4" data-mess-column-title="Client type columns">
                     <thead>
                         <tr>
                             <th>S.No.</th>
@@ -46,6 +47,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
                 <div class="d-flex justify-content-center mt-3">{{ $clientTypes->links() }}</div>
             </div>
         </div>

@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\Mess\SellingVoucherDateRangeReportItem;
 use App\Services\Mess\AvailableQuantityService;
@@ -269,15 +270,15 @@ class SellingVoucherDateRangeController extends Controller
         $filtered = clone $base;
         $this->applySellingVoucherDateRangeItemSearch($filtered, $searchRaw);
 
-        $searchTrimmed = trim($searchRaw);
+        $searchTrimmed = DataTableSearchHelper::normalizeRaw($searchRaw);
         $recordsFiltered = $searchTrimmed === ''
             ? $recordsTotal
             : (clone $filtered)->count('sri.id');
 
-        $rows = (clone $filtered)
-            ->orderByDesc('sv.date_from')
-            ->orderByDesc('sv.id')
-            ->orderByDesc('sri.id')
+        $ordered = clone $filtered;
+        $this->applySellingVoucherDateRangeDatatableOrder($ordered, $request);
+
+        $rows = $ordered
             ->offset($start)
             ->limit($length)
             ->get();
@@ -374,6 +375,33 @@ class SellingVoucherDateRangeController extends Controller
             ->filter(fn ($n) => $n !== '')
             ->unique()
             ->sort()
+            ->values();
+
+        return response()->json(['buyers' => $buyers]);
+    }
+
+    /**
+     * Distinct buyer (client) names for the list filter — respects date/store/status/return filters;
+     * does not require client category when only client type is selected.
+     */
+    public function filterBuyerNames(Request $request)
+    {
+        $filterRequest = Request::create(
+            $request->url(),
+            'GET',
+            collect($request->query())->except(['buyer_name', 'draw', 'start', 'length', 'search'])->all()
+        );
+
+        $buyers = (clone $this->sellingVoucherDateRangeItemRowsBaseQuery($filterRequest))
+            ->whereNotNull('sv.client_name')
+            ->where('sv.client_name', '!=', '')
+            ->select('sv.client_name')
+            ->distinct()
+            ->orderBy('sv.client_name')
+            ->limit(500)
+            ->pluck('client_name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter(fn ($name) => $name !== '')
             ->values();
 
         return response()->json(['buyers' => $buyers]);
@@ -925,6 +953,8 @@ class SellingVoucherDateRangeController extends Controller
 
         return response()->json([
             'store_name' => $report->resolved_store_name,
+            'client_name' => trim((string) ($report->client_name ?? '')),
+            'client_type_slug' => (string) ($report->client_type_slug ?? ''),
             'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
             'items' => $items,
         ]);
@@ -990,10 +1020,34 @@ class SellingVoucherDateRangeController extends Controller
                 ]);
             }
             DB::commit();
-            return redirect()->route('admin.mess.selling-voucher-date-range.index')
+
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Return updated successfully.',
+                    'client_name' => trim((string) ($report->client_name ?? '')),
+                    'client_type_slug' => (string) ($report->client_type_slug ?? ''),
+                ]);
+            }
+
+            $redirectParams = array_filter(
+                $request->only(['status', 'store', 'client_type', 'client_type_pk', 'start_date', 'end_date', 'return_status']),
+                fn ($value) => $value !== null && $value !== '' && $value !== []
+            );
+            $redirectParams['buyer_name'] = trim((string) ($report->client_name ?? ''));
+            $redirectParams['return_status'] = 'returned';
+
+            return redirect()->route('admin.mess.selling-voucher-date-range.index', $redirectParams)
                 ->with('success', 'Return updated successfully.');
         } catch (\Exception $e) {
             DB::rollBack();
+            if ($request->wantsJson() || $request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update return: ' . $e->getMessage(),
+                ], 422);
+            }
+
             return back()->withInput()->with('error', 'Failed to update return: ' . $e->getMessage());
         }
     }
@@ -1001,6 +1055,40 @@ class SellingVoucherDateRangeController extends Controller
     /**
      * @return Builder
      */
+    private function applySellingVoucherDateRangeDatatableOrder(Builder $query, Request $request): void
+    {
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 9);
+        $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
+
+        $sortMap = [
+            0 => 'sv.date_from',
+            1 => 'sri.item_name',
+            2 => 'sri.quantity',
+            3 => 'sri.return_quantity',
+            4 => DB::raw("(CASE
+                WHEN sv.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN mss.sub_store_name
+                WHEN sv.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
+                ELSE 'N/A' END)"),
+            5 => 'sv.client_type_slug',
+            6 => DB::raw("(CASE
+                WHEN sv.client_type_slug IN ('ot', 'course') AND cm.course_name IS NOT NULL THEN cm.course_name
+                ELSE COALESCE(mct.client_name, '') END)"),
+            7 => 'sv.client_name',
+            8 => 'sv.payment_type',
+            9 => 'sv.date_from',
+            10 => 'sv.status',
+            11 => 'sri.return_quantity',
+        ];
+
+        if (isset($sortMap[$orderCol])) {
+            $query->orderBy($sortMap[$orderCol], $orderDir);
+        } else {
+            $query->orderByDesc('sv.date_from');
+        }
+
+        $query->orderByDesc('sv.id')->orderByDesc('sri.id');
+    }
+
     private function sellingVoucherDateRangeItemRowsBaseQuery(Request $request)
     {
         $q = DB::table('sv_date_range_report_items as sri')
@@ -1170,14 +1258,30 @@ class SellingVoucherDateRangeController extends Controller
 
     private function applySellingVoucherDateRangeItemSearch(Builder $q, string $search): void
     {
-        $search = trim($search);
-        if ($search === '') {
+        $tokens = DataTableSearchHelper::tokens($search);
+        if ($tokens === []) {
             return;
         }
 
-        $term = '%' . addcslashes($search, '%_\\') . '%';
-        $needle = strtolower($search);
+        $q->where(function ($outer) use ($tokens) {
+            foreach ($tokens as $token) {
+                $term = DataTableSearchHelper::likePattern($token);
+                $tokenLower = strtolower($token);
 
+                $outer->where(function ($w) use ($term, $token, $tokenLower) {
+                    $w->where('sri.item_name', 'like', $term)
+                        ->orWhere('sv.client_name', 'like', $term)
+                        ->orWhere('mct.client_name', 'like', $term)
+                        ->orWhere('cm.course_name', 'like', $term)
+                        ->orWhere('ms.store_name', 'like', $term)
+                        ->orWhere('mss.sub_store_name', 'like', $term)
+                        ->orWhereRaw(
+                            '(CASE
+                                WHEN sv.client_type_slug IN (?, ?) THEN ?
+                                ELSE COALESCE(mct.client_type, sv.client_type_slug, ?)
+                            END) LIKE ?',
+                            ['ot', 'course', 'course', '', $term]
+                        );
         $q->where(function ($w) use ($term, $needle, $search) {
             $w->where('sri.item_name', 'like', $term)
                 ->orWhere('sv.client_name', 'like', $term)
@@ -1193,30 +1297,32 @@ class SellingVoucherDateRangeController extends Controller
                     ['ot', 'course', 'course', $term]
                 );
 
-            if (is_numeric($search)) {
-                $w->orWhere('sri.quantity', 'like', $term)->orWhere('sri.return_quantity', 'like', $term);
-            }
+                    if (is_numeric($token)) {
+                        $w->orWhere('sri.quantity', 'like', $term)->orWhere('sri.return_quantity', 'like', $term);
+                    }
 
-            if (str_contains($needle, 'credit')) {
-                $w->orWhere('sv.payment_type', 1);
-            }
-            if (str_contains($needle, 'cash')) {
-                $w->orWhere('sv.payment_type', 0);
-            }
-            if (str_contains($needle, 'upi') || str_contains($needle, 'online')) {
-                $w->orWhere('sv.payment_type', 2);
-            }
-            if (str_contains($needle, 'pending')) {
-                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_DRAFT);
-            }
-            if (str_contains($needle, 'approv')) {
-                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_APPROVED);
-            }
-            if (str_contains($needle, 'final')) {
-                $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_FINAL);
-            }
-            if (str_contains($needle, 'return')) {
-                $w->orWhere(DB::raw('COALESCE(sri.return_quantity, 0)'), '>', 0);
+                    if (str_contains($tokenLower, 'credit')) {
+                        $w->orWhere('sv.payment_type', 1);
+                    }
+                    if (str_contains($tokenLower, 'cash')) {
+                        $w->orWhere('sv.payment_type', 0);
+                    }
+                    if (str_contains($tokenLower, 'upi') || str_contains($tokenLower, 'online')) {
+                        $w->orWhere('sv.payment_type', 2);
+                    }
+                    if (str_contains($tokenLower, 'pending')) {
+                        $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_DRAFT);
+                    }
+                    if (str_contains($tokenLower, 'approv')) {
+                        $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_APPROVED);
+                    }
+                    if (str_contains($tokenLower, 'final')) {
+                        $w->orWhere('sv.status', SellingVoucherDateRangeReport::STATUS_FINAL);
+                    }
+                    if (str_contains($tokenLower, 'return')) {
+                        $w->orWhere(DB::raw('COALESCE(sri.return_quantity, 0)'), '>', 0);
+                    }
+                });
             }
         });
     }

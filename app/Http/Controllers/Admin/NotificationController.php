@@ -73,5 +73,42 @@ class NotificationController extends Controller
         $count = $this->notificationService->markAllAsRead($userId);
         return response()->json(['success' => true, 'count' => $count]);
     }
+
+    /**
+     * Return refreshed notification list HTML for desktop and mobile panels.
+     */
+    public function panels()
+    {
+        $context = $this->notificationListContext();
+
+        return response()->json([
+            'success' => true,
+            'unread_count' => $context['unread_count'],
+            'desktop_html' => view('admin.layouts.partials.notification-list-desktop', [
+                'notifications' => $context['notifications'],
+            ])->render(),
+            'mobile_html' => view('admin.layouts.partials.notification-list-mobile', [
+                'notifications' => $context['notifications'],
+            ])->render(),
+        ]);
+    }
+
+    /**
+     * @return array{notifications: \Illuminate\Support\Collection, unread_count: int}
+     */
+    private function notificationListContext(): array
+    {
+        $userId = Auth::user()->user_id ?? null;
+        if (! $userId) {
+            return ['notifications' => collect(), 'unread_count' => 0];
+        }
+
+        $roleFilter = hasRole('Admin') ? 10 : null;
+
+        return [
+            'notifications' => notification()->getNotifications($userId, 10, false, $roleFilter),
+            'unread_count' => notification()->getUnreadCount($userId, $roleFilter),
+        ];
+    }
 }
 

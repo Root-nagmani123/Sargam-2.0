@@ -67,7 +67,7 @@
                     </div>
 
                     <div class="table-responsive">
-                        <table class="table w-100 text-nowrap">
+                        <table id="kitchenIssuesTable" class="table w-100 text-nowrap" data-mess-column-manager data-mess-column-skip="11" data-mess-column-title="Material management columns">
                             <thead>
                                 <tr>
                                     <th>S.No.</th>

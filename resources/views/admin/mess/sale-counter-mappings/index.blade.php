@@ -22,7 +22,8 @@
 
         @if($mappings->count() > 0)
             <div class="table-responsive">
-                <table class="table table-hover align-middle">
+                <div class="table-responsive">
+                <table id="saleCounterMappingsTable" class="table table-hover align-middle" data-mess-column-manager data-mess-column-skip="5">
                     <thead class="table-light">
                         <tr>
                             <th>ID</th>
@@ -76,6 +77,7 @@
                         @endforeach
                     </tbody>
                 </table>
+                </div>
             </div>
 
             <div class="mt-3">

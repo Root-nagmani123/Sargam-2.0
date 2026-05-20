@@ -70,7 +70,7 @@
         @endif
 
         <div class="table-responsive">
-            <table class="table table-hover table-sm">
+            <table id="monthlyBillsTable" class="table table-hover table-sm" data-mess-column-manager data-mess-column-skip="8">
                 <thead class="table-light">
                     <tr>
                         <th>Bill Number</th>
