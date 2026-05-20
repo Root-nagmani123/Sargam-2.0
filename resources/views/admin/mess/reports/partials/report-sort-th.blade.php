@@ -25,8 +25,10 @@
     $params['sort'] = $sortKey;
     $params['sort_dir'] = $nextDir;
     $sortUrl = request()->url() . '?' . http_build_query($params);
+    $rowspanAttr = ! empty($rowspan) ? ' rowspan="' . (int) $rowspan . '"' : '';
+    $filterAttr = $messFilterField ? ' data-mess-filter="' . e($messFilterField) . '"' : '';
 @endphp
-<th class="{{ $thClass }}" scope="col"@if(!empty($rowspan)) rowspan="{{ (int) $rowspan }}"@endif@if($messFilterField) data-mess-filter="{{ $messFilterField }}"@endif>
+<th class="{{ $thClass }}" scope="col"{!! $rowspanAttr !!}{!! $filterAttr !!}>
     <a href="{{ $sortUrl }}" class="mess-report-sort-link text-decoration-none text-reset d-inline-flex align-items-center gap-1">
         <span>{{ $label }}</span>
         @if($isActive)

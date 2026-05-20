@@ -2,6 +2,8 @@
 
 namespace App\Support;
 
+use Illuminate\Http\Request;
+
 /**
  * Shared helpers for DataTables global search (multi-word / space-separated terms).
  */

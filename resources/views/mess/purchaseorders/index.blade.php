@@ -10,7 +10,7 @@
     </div>
     <div class="datatables">
         <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
-            <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:linear-gradient(135deg,#0b4a7e 0%,#1a6fa0 100%);">
+            <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:#004a93;">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
                     <div class="d-flex align-items-center gap-3">
                         <div class="rounded-3 bg-white bg-opacity-15 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.75rem; height: 2.75rem;">
@@ -180,16 +180,6 @@
     .po-ux .letter-spacing-1 { letter-spacing: 0.04em; }
 
     /* ── Navy table header ── */
-    .po-th {
-        background: linear-gradient(135deg, #0b4a7e 0%, #1a6fa0 100%) !important;
-        color: #fff !important;
-        font-weight: 600;
-        font-size: 0.75rem;
-        letter-spacing: 0.06em;
-        white-space: nowrap;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
-    }
 
     /* ── Row hover / transition ── */
     .po-row { transition: background-color .18s ease; }
