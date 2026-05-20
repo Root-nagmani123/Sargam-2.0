@@ -2147,9 +2147,6 @@ class ProcessMessBillsEmployeeController extends Controller
             return $name . '|' . $slug;
         })->values();
 
-        $searchTokens = DataTableSearchHelper::tokens($search);
-        if ($searchTokens !== []) {
-            $groupedRows = $groupedRows->filter(function ($group) use ($searchTokens, $paymentTypeMap) {
         $groupedRows = $groupedRows->filter(function ($group) use ($dateFrom, $dateTo) {
             $first = $group->first();
             $buyerName = trim((string) ($first->client_name ?? ''));
@@ -2162,9 +2159,9 @@ class ProcessMessBillsEmployeeController extends Controller
             return $financials['due'] > 0;
         })->values();
 
-        if ($search !== '') {
-            $needle = mb_strtolower($search);
-            $groupedRows = $groupedRows->filter(function ($group) use ($needle, $paymentTypeMap) {
+        $searchTokens = DataTableSearchHelper::tokens($search);
+        if ($searchTokens !== []) {
+            $groupedRows = $groupedRows->filter(function ($group) use ($searchTokens, $paymentTypeMap) {
                 $first = $group->first();
                 $buyerName = trim((string) ($first->client_name ?? ''));
                 $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');

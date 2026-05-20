@@ -1282,20 +1282,6 @@ class SellingVoucherDateRangeController extends Controller
                             END) LIKE ?',
                             ['ot', 'course', 'course', '', $term]
                         );
-        $q->where(function ($w) use ($term, $needle, $search) {
-            $w->where('sri.item_name', 'like', $term)
-                ->orWhere('sv.client_name', 'like', $term)
-                ->orWhere('mct.client_name', 'like', $term)
-                ->orWhere('cm.course_name', 'like', $term)
-                ->orWhere('ms.store_name', 'like', $term)
-                ->orWhere('mss.sub_store_name', 'like', $term)
-                ->orWhereRaw(
-                    "(CAST((CASE
-                        WHEN sv.client_type_slug IN (?, ?) THEN ?
-                        ELSE COALESCE(mct.client_type, sv.client_type_slug, '')
-                    END) AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE ?",
-                    ['ot', 'course', 'course', $term]
-                );
 
                     if (is_numeric($token)) {
                         $w->orWhere('sri.quantity', 'like', $term)->orWhere('sri.return_quantity', 'like', $term);
