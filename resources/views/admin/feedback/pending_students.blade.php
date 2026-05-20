@@ -1,58 +1,16 @@
-﻿@extends('admin.layouts.master')
+@php
+    $pr = $pendingReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::pendingForRequest();
+    $pageTitle = $pendingPageTitle ?? 'Pending Feedback – Students';
+@endphp
+@extends('admin.layouts.master')
 
-@section('title', 'Pending Feedback - Students')
+@section('title', $pageTitle . ' - Sargam | Lal Bahadur')
 
 @section('setup_content')
-<style>
-    /* --- Course toggle --- */
-    .ps-course-radio + label { background: transparent; color: #495057; border: none !important; font-weight: 600; padding: 8px 24px; border-radius: 8px; cursor: pointer; transition: background .2s,color .2s; }
-    .ps-course-radio:checked + label { background: #1b3a5c !important; color: #fff !important; border-radius: 8px !important; }
-    /* --- Filter toolbar --- */
-    .ps-filter-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
-    .ps-filter-row .btn-outline-secondary { font-size: 0.8125rem; border-radius: 6px; color: #495057; padding: 5px 14px; background: #fff; }
-    .ps-filter-row .form-select { font-size: 0.8125rem; border-radius: 6px; border-color: #dee2e6; }
-    .ps-reset-btn { border: 1.5px solid #dc3545; color: #dc3545; background: transparent; border-radius: 6px; font-size: 0.8125rem; padding: 5px 14px; font-weight: 500; white-space: nowrap; }
-    .ps-reset-btn:hover { background: #dc3545; color: #fff; }
-    .ps-search-btn { background: #f8f9fa; border: 1px solid #dee2e6; border-radius: 6px; width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center; flex-shrink: 0; }
-    .ps-search-btn:hover { background: #e9ecef; }
-    /* --- Table --- */
-    #psTable thead th { background-color: #f8f9fa; font-size: 0.8125rem; font-weight: 600; color: #6c757d; border-bottom: 2px solid #dee2e6; padding: 12px 14px; white-space: nowrap; cursor: pointer; user-select: none; }
-    #psTable thead th:hover { background-color: #e9ecef; }
-    #psTable thead th.sort-active { color: #1b3a5c; }
-    #psTable tbody td { font-size: 0.875rem; padding: 10px 14px; vertical-align: middle; border-bottom: 1px solid #f1f3f5; color: #212529; }
-    #psTable tbody tr:hover td { background-color: #fafbfc; }
-    .ps-name-link { color: #1b3a5c; font-weight: 600; text-decoration: none; cursor: pointer; }
-    .ps-name-link:hover { text-decoration: underline; }
-    /* --- Detail view --- */
-    #studentDetailView { display: none; }
-    #detailTable thead th { background-color: #f8f9fa; font-size: 0.8125rem; font-weight: 600; color: #6c757d; border-bottom: 2px solid #dee2e6; padding: 12px 14px; white-space: nowrap; }
-    #detailTable tbody td { font-size: 0.875rem; padding: 10px 14px; vertical-align: middle; border-bottom: 1px solid #f1f3f5; color: #212529; }
-    #detailTable tbody tr:hover td { background-color: #fafbfc; }
-    .ps-back-btn { background: none; border: none; color: #1b3a5c; padding: 0; font-size: 1.25rem; cursor: pointer; display: inline-flex; align-items: center; }
-    .ps-back-btn:hover { color: #0d2440; }
-    /* --- Pagination --- */
-    .ps-pagination .page-link { color: #1b3a5c; border-radius: 4px !important; margin: 0 2px; border: none; background: transparent; font-size: 0.8125rem; padding: 5px 10px; }
-    .ps-pagination .page-link:hover { background: #f1f3f5; }
-    .ps-pagination .page-item.active .page-link { background-color: #1b3a5c; border-color: #1b3a5c; color: #fff; }
-    .ps-pagination .page-item.disabled .page-link { opacity: .35; }
-    #psPaginationCell { display: flex; align-items: center; flex-wrap: wrap; gap: 2px; }
-    /* --- Loading --- */
-    #psLoadingSpinner { display: none; position: fixed; inset: 0; z-index: 1090; align-items: center; justify-content: center; background: rgba(0,0,0,.06); backdrop-filter: blur(2px); }
-    #psLoadingSpinner.ps-loading { display: flex !important; }
-    .select2-container { display: block !important; }
-    .select2-container--open { z-index: 9999 !important; }
-    .select2-dropdown { z-index: 9999 !important; }
-    .ps-filter-row .select2-container { width: 100% !important; }
-    .ps-filter-row .select2-container--default .select2-selection--single { height: 31px; padding: 0.25rem 0.5rem; font-size: 0.8125rem; border-color: #dee2e6; border-radius: 6px; }
-    .ps-filter-row .select2-container--default .select2-selection--single .select2-selection__rendered { line-height: 1.5; color: #495057; padding-left: 2px; padding-right: 20px; }
-    .ps-filter-row .select2-container--default .select2-selection--single .select2-selection__arrow { height: 29px; }
-    .ps-filter-row .select2-container--default .select2-selection--single .select2-selection__clear { margin-right: 18px; }
-    @media print { .no-print { display: none !important; } }
-</style>
+    <div class="container-fluid px-2 px-sm-3 px-md-4 pb-4 pb-lg-5 pending-feedback-page">
+        <x-breadcrum :title="$pageTitle"></x-breadcrum>
 
-<div class="container-fluid">
-    <x-breadcrum title="Pending Feedback – Students"></x-breadcrum>
-    <x-session_message />
+        <x-session_message />
 
     <div id="psLoadingSpinner">
         <div style="background:#fff;padding:1.5rem 2rem;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);text-align:center;">
@@ -341,27 +299,28 @@ $(document).ready(function() {
             '<div class="text-center py-5 text-muted"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-3 mb-0 small fw-medium">Loading student data...</p></div>'
         );
 
-        $.ajax({
-            url: "{{ route('admin.feedback.pending.grouped') }}",
-            type: "GET",
-            data: params,
-            dataType: 'json',
-            success: function(response) {
-                renderAccordion(response);
-                updateTotalCount(response.total || 0);
-                renderPagination(response);
-            },
-            error: function(xhr, status, error) {
-                console.error('Grouped data error:', error);
-                $('#studentAccordionContainer').html(
-                    '<div class="text-center py-5 text-danger"><span class="material-symbols-rounded d-block mb-2" style="font-size:2.5rem;opacity:.5;">error_outline</span><p class="fw-semibold mb-1">Failed to load data</p><p class="text-muted small">Please try again or adjust your filters.</p></div>'
-                );
-                updateTotalCount(0);
+                $.ajax({
+                    url: "{{ $pr['grouped'] }}",
+                    type: "GET",
+                    data: params,
+                    dataType: 'json',
+                    success: function(response) {
+                        renderAccordion(response);
+                        updateTotalCount(response.total || 0);
+                        renderPagination(response);
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('Grouped data error:', error);
+                        $('#studentAccordionContainer').html(
+                            '<div class="state-empty rounded-4 border border-danger border-opacity-25 bg-danger bg-opacity-10 p-4 p-md-5">' +
+                            '<i class="material-symbols-rounded d-block mb-3 text-danger" style="font-size:2.75rem">error_outline</i>' +
+                            '<p class="fw-semibold text-body mb-1">Failed to load data</p>' +
+                            '<p class="text-body-secondary small mb-0">Please try again or adjust your filters.</p></div>'
+                        );
+                        updateTotalCount(0);
+                    }
+                });
             }
-        });
-    }
-
-    var allStudentsData = [];
 
     function renderAccordion(data) {
         if (!data.students || data.students.length === 0) {
@@ -510,30 +469,59 @@ $(document).ready(function() {
         loadGroupedData();
     });
 
-    $('#filter_course_pk').on('change', function() {
-        var courseId=$(this).val();
-        var $sessionSelect=$('#filter_session_id');
-        if(!courseId) {
-            destroySelect2IfAny($sessionSelect); $sessionSelect.html(originalSessions); initSessionSelect2(); $sessionSelect.val('').trigger('change');
-            loadGroupedData(); return;
-        }
-        destroySelect2IfAny($sessionSelect); $sessionSelect.html('<option value="">Loading sessions...</option>'); initSessionSelect2(); $sessionSelect.val('').trigger('change');
-        $.ajax({
-            url: "{{ route('admin.get.sessions.by.course') }}", type:"GET", data:{course_pk:courseId}, dataType:'json',
-            success: function(response) {
-                var options='<option value="">Session</option>';
-                if(response&&response.length>0) {
-                    $.each(response,function(i,s){ var label=s.subject_topic+(s.START_DATE?' ('+s.START_DATE+')':''); options+='<option value="'+s.pk+'">'+$('<span>').text(label).html()+'</option>'; });
-                } else options='<option value="">No sessions found</option>';
-                destroySelect2IfAny($sessionSelect); $sessionSelect.html(options); initSessionSelect2(); $sessionSelect.val('').trigger('change');
-                loadGroupedData();
-            },
-            error: function() {
-                destroySelect2IfAny($sessionSelect); $sessionSelect.html('<option value="">Error loading sessions</option>'); initSessionSelect2(); $sessionSelect.val('').trigger('change');
-                loadGroupedData();
-            }
-        });
-    });
+            // Course change handler - Load sessions for selected course & reload data
+            $('#filter_course_pk').on('change', function() {
+                var courseId = $(this).val();
+                var $sessionSelect = $('#filter_session_id');
+
+                if (!courseId) {
+                    destroySelect2IfAny($sessionSelect);
+                    $sessionSelect.html(originalSessions);
+                    initSessionSelect2();
+                    $sessionSelect.val('').trigger('change');
+                    loadGroupedData();
+                    return;
+                }
+
+                destroySelect2IfAny($sessionSelect);
+                $sessionSelect.html('<option value="">Loading sessions...</option>');
+                initSessionSelect2();
+                $sessionSelect.val('').trigger('change');
+
+                $.ajax({
+                    url: "{{ $pr['sessions_by_course'] }}",
+                    type: "GET",
+                    data: { course_pk: courseId },
+                    dataType: 'json',
+                    success: function(response) {
+                        var options = '<option value="">— All Sessions —</option>';
+                        if (response && response.length > 0) {
+                            $.each(response, function(index, session) {
+                                var label = session.subject_topic;
+                                if (session.START_DATE) {
+                                    label += ' (' + session.START_DATE + ')';
+                                }
+                                options += '<option value="' + session.pk + '">' + $('<span>').text(label).html() + '</option>';
+                            });
+                        } else {
+                            options = '<option value="">No sessions found</option>';
+                        }
+                        destroySelect2IfAny($sessionSelect);
+                        $sessionSelect.html(options);
+                        initSessionSelect2();
+                        $sessionSelect.val('').trigger('change');
+                        loadGroupedData();
+                    },
+                    error: function(xhr, status, error) {
+                        console.error('AJAX Error:', error);
+                        destroySelect2IfAny($sessionSelect);
+                        $sessionSelect.html('<option value="">Error loading sessions</option>');
+                        initSessionSelect2();
+                        $sessionSelect.val('').trigger('change');
+                        loadGroupedData();
+                    }
+                });
+            });
 
     $('#filter_session_id').on('change', function() { loadGroupedData(); });
 
@@ -552,21 +540,34 @@ $(document).ready(function() {
         $('body').append(form); form.submit(); setTimeout(function(){form.remove();},1000);
     }
 
-    $('#exportPDF').on('click', function(e) { e.preventDefault(); submitExportForm("{{ route('admin.feedback.export.pdf') }}"); });
-    $('#exportExcelSummary').on('click', function(e) { e.preventDefault(); submitExportForm("{{ route('admin.feedback.export.excel') }}"); });
-    $('#exportExcelDetailed').on('click', function(e) { e.preventDefault(); submitExportForm("{{ route('admin.feedback.export.excel.detailed') }}"); });
+            $('#exportPDF').on('click', function(e) {
+                e.preventDefault();
+                submitExportForm("{{ $pr['export_pdf'] }}");
+            });
 
-    $('#detailBackBtn').on('click', function() { hideStudentDetail(); });
-    $('#detailPrintBtn').on('click', function() { window.print(); });
-    $('#detailDownloadBtn').on('click', function() {
-        submitExportForm("{{ route('admin.feedback.export.excel') }}");
-    });
+            $('#exportExcelSummary').on('click', function(e) {
+                e.preventDefault();
+                submitExportForm("{{ $pr['export_excel'] }}");
+            });
 
-    $('#btnPrint').on('click', function(e) {
-        e.preventDefault();
-        var params=$.param({course_pk:$('#filter_course_pk').val(),session_id:$('#filter_session_id').val(),from_date:$('#filter_from_date').val(),to_date:$('#filter_to_date').val(),course_type:currentTab,filter_feedback_state:$('#filter_feedback_state').val()});
-        window.open("{{ route('admin.feedback.print') }}?"+params,'_blank');
-    });
+            $('#exportExcelDetailed').on('click', function(e) {
+                e.preventDefault();
+                submitExportForm("{{ $pr['export_excel_detailed'] }}");
+            });
+
+            // Print — opens the same template in a new window
+            $('#btnPrint').on('click', function(e) {
+                e.preventDefault();
+                var params = $.param({
+                    course_pk: $('#filter_course_pk').val(),
+                    session_id: $('#filter_session_id').val(),
+                    from_date: $('#filter_from_date').val(),
+                    to_date: $('#filter_to_date').val(),
+                    course_type: currentTab,
+                    filter_feedback_state: $('#filter_feedback_state').val()
+                });
+                window.open("{{ $pr['print'] }}?" + params, '_blank');
+            });
 
     // ── Initial load ──
     var activeCourseId='{{ $activeCourse ?? '' }}';

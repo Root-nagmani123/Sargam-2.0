@@ -506,11 +506,45 @@ Route::middleware(['auth'])->group(function () {
 
     //feedback route
     Route::prefix('feedback')->name('feedback.')->group(function () {
-        Route::get('/', [CalendarController::class, 'feedbackList'])->name('get.feedbackList');
+        Route::get('/', [FeedbackController::class, 'facultyPortalIndex'])->name('get.feedbackList');
+        Route::post('/data', [FeedbackController::class, 'facultyPortalData'])->name('portal.data');
+        Route::post('/export', [FeedbackController::class, 'portalExport'])->name('portal.export');
+        Route::get('/print', [FeedbackController::class, 'portalPrint'])->name('portal.print');
         Route::get('/event-feedback/{id}', [CalendarController::class, 'getEventFeedback']);
         Route::get('/student-feedback', [CalendarController::class, 'studentFeedback'])->name('get.studentFeedback');
         Route::post('/submit-feedback', [CalendarController::class, 'submitFeedback'])->name('submit.feedback');
     });
+
+    // Faculty session feedback reports (same reports as admin, scoped to faculty courses)
+    Route::middleware([\App\Http\Middleware\EnsureFacultyPortalUser::class])
+        ->prefix('faculty/session-feedback')
+        ->name('faculty.session_feedback.')
+        ->controller(\App\Http\Controllers\Faculty\SessionFeedbackReportController::class)
+        ->group(function () {
+            Route::get('/details', 'details')->name('details');
+            Route::get('/details/grouped', 'detailsGrouped')->name('details.grouped');
+            Route::get('/details/sessions-by-course', 'detailsSessionsByCourse')->name('details.sessions_by_course');
+            Route::post('/details/export/pdf', 'detailsExportPdf')->name('details.export.pdf');
+            Route::post('/details/export/excel', 'detailsExportExcel')->name('details.export.excel');
+            Route::post('/details/export/excel-detailed', 'detailsExportExcelDetailed')->name('details.export.excel_detailed');
+            Route::get('/details/print', 'detailsPrint')->name('details.print');
+            Route::get('/comments', 'commentsIndex')->name('comments');
+            Route::post('/comments', 'comments')->name('comments.submit');
+            Route::post('/comments/export', 'commentsExport')->name('comments.export');
+            Route::get('/comments/print', 'commentsPrint')->name('comments.print');
+            Route::get('/comments/suggestions', 'commentsSuggestions')->name('comments.suggestions');
+            Route::get('/average', 'average')->name('average');
+            Route::get('/average/export-excel', 'averageExportExcel')->name('average.export.excel');
+            Route::get('/average/export-pdf', 'averageExportPdf')->name('average.export.pdf');
+            Route::get('/average/print', 'averagePrint')->name('average.print');
+            Route::get('/database', 'database')->name('database');
+            Route::get('/database/courses', 'databaseCourses')->name('database.courses');
+            Route::get('/database/data', 'databaseData')->name('database.data');
+            Route::get('/database/print', 'databasePrint')->name('database.print');
+            Route::get('/database/export-pdf', 'databaseExportPdf')->name('database.export.pdf');
+            Route::get('/database/export-excel', 'databaseExportExcel')->name('database.export.excel');
+        });
+
     // MDO/Escort Exemption Routes
     Route::prefix('mdo-escrot-exemption')->name('mdo-escrot-exemption.')->controller(MDOEscrotExemptionController::class)->group(function () {
         Route::get('/', 'index')->name('index');

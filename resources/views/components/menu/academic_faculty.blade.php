@@ -161,49 +161,36 @@
                                 </li>
                             </ul>
 
-                            {{-- Faculty menu items --}}
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('calendar.index') }}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">calendar_today</i>
-                                    <span class="hide-menu">My Time Table</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('timetable-report.index') }}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">summarize</i>
-                                    <span class="hide-menu">Timetable Session Report</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('attendance.user_attendance.index') }}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">fact_check</i>
-                                    <span class="hide-menu">OT - Attendance</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('faculty.mdo.escort.exception.view') }}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">supervisor_account</i>
-                                    <span class="hide-menu">OT - MDO / Escort Duty</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('medical.exception.faculty.view') }}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">local_hospital</i>
-                                    <span class="hide-menu">OT - Medical Exemption</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{ route('faculty.notice.memo.view') }}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">mail</i>
-                                    <span class="hide-menu">OT - Memo / Notice</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1" href="{{route('feedback.get.feedbackList')}}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">feedback</i>
-                                    <span class="hide-menu">My Feedback</span>
-                                </a>
-                            </li>
+
+                            <!-- faculty menu start -->
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('calendar.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">My Time Table</span>
+                                </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('timetable-report.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Timetable Session Report</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('attendance.user_attendance.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">OT - Attendance</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.mdo.escort.exception.view') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">OT - MDO / Escort Duty</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('medical.exception.faculty.view') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">OT - Medical Exemption</span>
+                                </a></li>
+                                  <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.notice.memo.view') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">OT - Memo / Notice</span>
+                                </a></li>
+ <li class="sidebar-item"><a class="sidebar-link" href="{{route('feedback.get.feedbackList')}}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">My Feedback</span>
+                                </a></li>
+                                @if (is_faculty_portal_user())
+                                    @include('components.menu.partials.faculty_session_feedback_report_menu', [
+                                        'reportCollapseId' => 'facultySessionFeedbackReportAcademics',
+                                    ])
+                                @endif
+
+                            <!-- faculty menu end -->
 
                             {{-- OT menu items --}}
                             <li class="sidebar-item mb-1">

@@ -1,4 +1,7 @@
-﻿@extends('admin.layouts.master')
+@php
+    $fr = $fr ?? $feedbackReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::forRequest();
+@endphp
+@extends('admin.layouts.master')
 
 @section('title', 'Feedback Database - Sargam | Lal Bahadur')
 
@@ -197,13 +200,13 @@
 @endsection
 
 @section('scripts')
-<script>
-    const FEEDBACK_DB_EXPORT_ROUTES = {
-        print: @json(route('admin.feedback.database.print')),
-        pdf:   @json(route('admin.feedback.database.export.pdf')),
-        excel: @json(route('admin.feedback.database.export.excel')),
-    };
-    const FEEDBACK_DB_COURSES_URL = @json(route('admin.feedback.database.courses'));
+    <script>
+        const FEEDBACK_DB_EXPORT_ROUTES = {
+            print: @json($fr['database_print']),
+            pdf: @json($fr['database_export_pdf']),
+            excel: @json($fr['database_export_excel']),
+        };
+        const FEEDBACK_DB_COURSES_URL = @json($fr['database_courses']);
 
     $(document).ready(function() {
         if (window.feedbackPageLoaded) return;
@@ -395,23 +398,42 @@
             $('#paginationSection').hide();
         }
 
-        function loadFeedbackData() {
-            if (!currentFilters.course_id) { showInitialMessage(); syncFeedbackDbExportLinks(); return; }
-            showLoading(true);
-            const params = new URLSearchParams({...currentFilters, page: currentPage, per_page: perPage});
-            fetch('/faculty/database/data?'+params.toString())
-            .then(r => r.json())
-            .then(data => {
-                if (data.success) { renderTable(data.data); updatePagination(data); }
-                else showErrorMessage(data.error || 'Error loading data');
-                showLoading(false); syncFeedbackDbExportLinks();
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                showErrorMessage('Error loading data. Please try again.');
-                showLoading(false); syncFeedbackDbExportLinks();
-            });
-        }
+            function loadFeedbackData() {
+                if (!currentFilters.course_id) {
+                    showInitialMessage();
+                    syncFeedbackDbExportLinks();
+                    return;
+                }
+
+                showLoading(true);
+
+                const params = new URLSearchParams({
+                    ...currentFilters,
+                    page: currentPage,
+                    per_page: perPage
+                });
+
+                const apiUrl = `{{ $fr['database_data'] }}?${params.toString()}`;
+
+                fetch(apiUrl)
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            renderTable(data.data);
+                            updatePagination(data);
+                        } else {
+                            showErrorMessage(data.error || 'Error loading data');
+                        }
+                        showLoading(false);
+                        syncFeedbackDbExportLinks();
+                    })
+                    .catch(error => {
+                        console.error('Error loading feedback data:', error);
+                        showErrorMessage('Error loading data. Please try again.');
+                        showLoading(false);
+                        syncFeedbackDbExportLinks();
+                    });
+            }
 
         function renderTable(data) {
             const tbody = $('#feedbackTableBody');

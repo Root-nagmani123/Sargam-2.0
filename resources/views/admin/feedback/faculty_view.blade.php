@@ -1,4 +1,7 @@
-﻿@extends('admin.layouts.master')
+@php
+    $fr = $fr ?? $feedbackReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::forRequest();
+@endphp
+@extends('admin.layouts.master')
 
 @section('title', 'Average Rating - Course / Topic wise - Sargam | Lal Bahadur')
 
@@ -41,59 +44,47 @@
 
 <div class="container-fluid">
     <x-breadcrum title="Average Rating - Course / Topic wise"></x-breadcrum>
+    <div class="row g-3">
 
-    <div id="fvLoadingSpinner">
-        <div style="background:#fff;padding:1.5rem 2rem;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);text-align:center;">
-            <div class="spinner-border text-primary mb-3" role="status" style="width:2.5rem;height:2.5rem;"><span class="visually-hidden">Loading...</span></div>
-            <p class="mb-0 fw-medium text-secondary small">Loading feedback data...</p>
-        </div>
-    </div>
+        <!-- LEFT FILTER PANEL -->
+        <aside class="col-lg-3 col-md-4">
+            <div class="card filter-card">
+                <div class="card-header">Options</div>
+                <div class="card-body">
+                    <form method="POST" action="{{ $fr['comments_submit'] }}" id="filterForm">
+                        @csrf
+                        <input type="hidden" name="page" id="pageInput" value="{{ $currentPage ?? 1 }}">
 
-    {{-- Top toolbar --}}
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 no-print">
-        <div class="d-flex align-items-center" role="group" aria-label="Course status">
-            <input class="btn-check fv-course-radio" type="radio" name="course_type" value="current"
-                id="fvCurrent" autocomplete="off" {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
-            <label for="fvCurrent">Active</label>
-            <input class="btn-check fv-course-radio" type="radio" name="course_type" value="archived"
-                id="fvArchived" autocomplete="off" {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
-            <label for="fvArchived">Archived</label>
-        </div>
-        <div class="d-flex align-items-center gap-3">
-            <button type="button" class="btn btn-outline-primary text-decoration-none d-inline-flex align-items-center gap-1" onclick="printReport()">
-                <span class="material-symbols-rounded" style="font-size:18px;">print</span>
-                <span class="fw-semibold">Print</span>
-            </button>
-            <button type="button" class="btn btn-outline-primary text-decoration-none d-inline-flex align-items-center gap-1" onclick="exportToExcel()">
-                <span class="material-symbols-rounded" style="font-size:18px;">download</span>
-                <span class="fw-semibold">Download</span>
-            </button>
-        </div>
-    </div>
+                        <fieldset class="mb-3">
+                            <legend class="fs-6 fw-semibold">Course Status</legend>
+                            <div class="form-check">
+                                <input class="form-check-input course-type-radio" type="radio" name="course_type"
+                                    value="current" id="current"
+                                    {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="current">Current Courses</label>
+                            </div>
+                            <div class="form-check">
+                                <input class="form-check-input course-type-radio" type="radio" name="course_type"
+                                    value="archived" id="archived"
+                                    {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
+                                <label class="form-check-label" for="archived">Archived Courses</label>
+                            </div>
+                        </fieldset>
 
-    <div class="card shadow-sm border-0 rounded-3">
-        <div class="card-body p-3 p-lg-4">
-
-            {{-- Filter bar --}}
-            <div class="fv-filter-row mb-3 no-print">
-                <span class="text-muted fw-semibold small">Filters</span>
-
-                {{-- Program Name --}}
-                <select class="form-select form-select-sm" id="programSelect" style="max-width:175px;">
-                    <option value="">Program Na...</option>
-                    @php $programs = $programs ?? collect([]); $currentProgram = $currentProgram ?? ''; @endphp
-                    @foreach ($programs as $key => $program)
-                        <option value="{{ $key }}" {{ $currentProgram == $key ? 'selected' : '' }}>{{ $program }}</option>
-                    @endforeach
-                </select>
-
-                {{-- Time Period --}}
-                <div class="dropdown">
-                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Time Period</button>
-                    <div class="dropdown-menu p-3" style="min-width:300px;">
-                        <div class="mb-2">
-                            <label class="form-label small fw-semibold mb-1">From</label>
-                            <input type="date" id="fvFromDate" class="form-control form-control-sm" value="{{ $fromDate ?? '' }}">
+                        <div class="mb-3">
+                            <label class="form-label">Program Name</label>
+                            <select class="form-select" name="program_id" id="programSelect">
+                                <option value="">All Programs</option>
+                                @php
+                                $programs = $programs ?? collect([]);
+                                $currentProgram = $currentProgram ?? '';
+                                @endphp
+                                @foreach ($programs as $key => $program)
+                                <option value="{{ $key }}" {{ $currentProgram == $key ? 'selected' : '' }}>
+                                    {{ $program }}
+                                </option>
+                                @endforeach
+                            </select>
                         </div>
                         <div>
                             <label class="form-label small fw-semibold mb-1">To</label>
@@ -242,74 +233,197 @@
 </div>
 
 <script>
-var fvSyncForm = function() {
-    var courseType = document.querySelector('.fv-course-radio:checked');
-    document.getElementById('fvHiddenCourseType').value = courseType ? courseType.value : 'current';
-    document.getElementById('fvHiddenProgram').value    = document.getElementById('programSelect')?.value || '';
-    document.getElementById('fvHiddenFrom').value       = document.getElementById('fvFromDate')?.value   || '';
-    document.getElementById('fvHiddenTo').value         = document.getElementById('fvToDate')?.value     || '';
-    document.getElementById('fvHiddenFaculty').value    = document.getElementById('facultySearch')?.value || '';
-    document.querySelectorAll('#filterForm input[name="faculty_type[]"]').forEach(function(el) { el.remove(); });
-    document.querySelectorAll('.faculty-type-checkbox:checked').forEach(function(cb) {
-        var inp = document.createElement('input');
-        inp.type = 'hidden'; inp.name = 'faculty_type[]'; inp.value = cb.value;
-        document.getElementById('filterForm').appendChild(inp);
-    });
-};
+document.addEventListener('DOMContentLoaded', function() {
+    const filterForm = document.getElementById('filterForm');
+    const facultySearch = document.getElementById('facultySearch');
+    const suggestionsList = document.getElementById('facultySuggestions');
+    const facultyTypeCheckboxes = document.querySelectorAll('.faculty-type-checkbox');
+    const courseTypeRadios = document.querySelectorAll('.course-type-radio');
+    const programSelect = document.getElementById('programSelect');
+    const resetButton = document.getElementById('resetButton');
+    const pageInput = document.getElementById('pageInput');
+    let debounceTimer;
 
-function fvUpdateBottomRow(currentPage, totalPages, totalRecords) {
-    var cell = document.getElementById('fvPaginationCell');
-    var info = document.getElementById('fvTotalInfo');
-    if (info) info.textContent = 'of ' + totalRecords + ' items';
-    if (!cell) return;
-    if (totalPages <= 1) { cell.innerHTML = ''; return; }
-    var items = '';
-    items += '<li class="page-item ' + (currentPage==1?'disabled':'') + '"><a class="page-link" href="javascript:void(0)" onclick="goToPage(1)">&#171;</a></li>';
-    items += '<li class="page-item ' + (currentPage==1?'disabled':'') + '"><a class="page-link" href="javascript:void(0)" onclick="goToPage('+(currentPage-1)+')">&#8249;</a></li>';
-    var start = Math.max(1, currentPage-2), end = Math.min(totalPages, currentPage+2);
-    if (start > 1) items += '<li class="page-item disabled"><a class="page-link">&#8230;</a></li>';
-    for (var i = start; i <= end; i++) {
-        items += '<li class="page-item '+(i==currentPage?'active':'')+'"><a class="page-link" href="javascript:void(0)" onclick="goToPage('+i+')">'+i+'</a></li>';
+    // Function to reload programs based on course type
+    function reloadPrograms() {
+        const courseType = document.querySelector('input[name="course_type"]:checked')?.value || 'archived';
+
+        // Show loading state for program dropdown
+        programSelect.innerHTML = '<option value="">Loading programs...</option>';
+        programSelect.disabled = true;
+
+        // Reset to page 1 when course type changes
+        goToPage(1);
     }
-    if (end < totalPages) items += '<li class="page-item disabled"><a class="page-link">&#8230;</a></li>';
-    items += '<li class="page-item '+(currentPage==totalPages?'disabled':'')+'"><a class="page-link" href="javascript:void(0)" onclick="goToPage('+(currentPage+1)+')">&#8250;</a></li>';
-    items += '<li class="page-item '+(currentPage==totalPages?'disabled':'')+'"><a class="page-link" href="javascript:void(0)" onclick="goToPage('+totalPages+')">&#187;</a></li>';
-    cell.innerHTML = '<ul class="pagination fv-pagination flex-wrap gap-1 mb-0">'+items+'</ul>';
-}
 
-function updateFacultySuggestions() {
-    var facultySearch = document.getElementById('facultySearch');
-    var suggestionsList = document.getElementById('facultySuggestions');
-    var selectedTypes = Array.from(document.querySelectorAll('.faculty-type-checkbox:checked')).map(function(cb){ return cb.value; });
-    if (selectedTypes.length === 0) { if (suggestionsList) suggestionsList.style.display='none'; return; }
-    var params = new URLSearchParams();
-    selectedTypes.forEach(function(t){ params.append('faculty_type[]', t); });
-    var q = facultySearch ? facultySearch.value.trim() : '';
-    if (q) params.append('faculty_name', q);
-    fetch('{{ route('feedback.faculty_suggestions') }}?'+params.toString(), {
-        method:'GET', headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'}
-    })
-    .then(function(r){ return r.json(); })
-    .then(function(data){
-        if (data.success && data.faculties && data.faculties.length > 0) {
-            suggestionsList.innerHTML = data.faculties.map(function(f){
-                return '<div class="suggestion-item" data-value="'+f.full_name+'">'+f.full_name+'<span class="faculty-type-badge ms-2">'+f.faculty_type_display+'</span></div>';
-            }).join('');
-        } else {
-            suggestionsList.innerHTML = '<div class="suggestion-item text-muted small">No faculty found</div>';
+    // Show/hide suggestions based on faculty type selection
+    function updateFacultySuggestions() {
+        const selectedTypes = Array.from(facultyTypeCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+
+        if (selectedTypes.length === 0) {
+            suggestionsList.style.display = 'none';
+            return;
         }
-        suggestionsList.style.display = 'block';
-    })
-    .catch(function(){ if (suggestionsList) suggestionsList.style.display='none'; });
-}
 
-function loadFeedbackData(page) {
-    page = page || 1;
-    var spinner = document.getElementById('fvLoadingSpinner');
-    var contentContainer = document.getElementById('contentContainer');
-    var programSelect = document.getElementById('programSelect');
-    var form = document.getElementById('filterForm');
-    var pageInput = document.getElementById('pageInput');
+        const searchTerm = facultySearch.value.trim();
+
+        // Debounce to avoid too many requests
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            fetchFacultySuggestions(selectedTypes, searchTerm);
+        }, 300);
+    }
+
+    // Fetch faculty suggestions from server
+    function fetchFacultySuggestions(selectedTypes, searchTerm = '') {
+        const params = new URLSearchParams();
+
+        selectedTypes.forEach(type => {
+            params.append('faculty_type[]', type);
+        });
+
+        if (searchTerm) {
+            params.append('faculty_name', searchTerm);
+        }
+
+        fetch(`{{ $fr['comments_suggestions'] }}?${params.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                return response.json();
+            })
+            .then(data => {
+                if (data.success && data.faculties && data.faculties.length > 0) {
+                    suggestionsList.innerHTML = '';
+                    data.faculties.forEach(faculty => {
+                        const item = document.createElement('div');
+                        item.className = 'suggestion-item';
+                        item.textContent = faculty.full_name;
+                        item.setAttribute('data-value', faculty.full_name);
+
+                        const badge = document.createElement('span');
+                        badge.className = 'faculty-type-badge ms-2';
+                        badge.textContent = faculty.faculty_type_display;
+                        item.appendChild(badge);
+
+                        item.addEventListener('click', function() {
+                            facultySearch.value = this.getAttribute('data-value');
+                            suggestionsList.style.display = 'none';
+                            goToPage(1); // Reset to page 1
+                        });
+
+                        suggestionsList.appendChild(item);
+                    });
+                    suggestionsList.style.display = 'block';
+                } else {
+                    suggestionsList.innerHTML =
+                        '<div class="suggestion-item text-muted">No faculty found</div>';
+                    suggestionsList.style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching suggestions:', error);
+                suggestionsList.innerHTML =
+                    '<div class="suggestion-item text-muted">Error loading suggestions</div>';
+                suggestionsList.style.display = 'block';
+            });
+    }
+
+    // Toggle suggestions dropdown
+    facultySearch.addEventListener('focus', function() {
+        const selectedTypes = Array.from(facultyTypeCheckboxes)
+            .filter(cb => cb.checked)
+            .map(cb => cb.value);
+
+        if (selectedTypes.length > 0) {
+            updateFacultySuggestions();
+        }
+    });
+
+    facultySearch.addEventListener('input', updateFacultySuggestions);
+
+    // Hide suggestions when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!facultySearch.contains(event.target) && !suggestionsList.contains(event.target)) {
+            suggestionsList.style.display = 'none';
+        }
+    });
+
+    // Course type radio change
+    courseTypeRadios.forEach(radio => {
+        radio.addEventListener('change', function() {
+            reloadPrograms();
+        });
+    });
+
+    // Faculty type checkbox change
+    facultyTypeCheckboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            facultySearch.value = ''; // Clear faculty search when type changes
+            updateFacultySuggestions();
+            goToPage(1); // Reset to page 1
+        });
+    });
+
+    // Form submission via AJAX - prevent default and handle via AJAX
+    filterForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        goToPage(1); // Always start from page 1 on form submit
+    });
+
+    // Reset button - reset form without page refresh
+    resetButton.addEventListener('click', function() {
+        // Reset form values
+        filterForm.reset();
+
+        // Set default course type to archived
+        document.querySelector('input[name="course_type"][value="archived"]').checked = true;
+
+        // Clear suggestions
+        facultySearch.value = '';
+        suggestionsList.innerHTML = '';
+        suggestionsList.style.display = 'none';
+
+        // Reset program dropdown to show all programs
+        programSelect.innerHTML = '<option value="">Loading programs...</option>';
+        programSelect.disabled = true;
+
+        // Reset page to 1
+        pageInput.value = 1;
+
+        // Load data with reset filters (go to page 1)
+        goToPage(1);
+    });
+
+    // Auto-load on filter change
+    const filterInputs = document.querySelectorAll(
+        '#filterForm select[name="program_id"], #filterForm input[type="date"]');
+    filterInputs.forEach(input => {
+        input.addEventListener('change', function() {
+            goToPage(1); // Reset to page 1 when filters change
+        });
+    });
+
+    // Load initial data with current page
+    loadFeedbackData({{ $currentPage ?? 1 }});
+});
+
+// Function to load feedback data with current filters
+function loadFeedbackData(page = 1) {
+    const loadingSpinner = document.getElementById('loadingSpinner');
+    const contentContainer = document.getElementById('contentContainer');
+    const programSelect = document.getElementById('programSelect');
+    const form = document.getElementById('filterForm');
+    const pageInput = document.getElementById('pageInput');
 
     spinner.classList.add('fv-loading');
     contentContainer.style.opacity = '0.5';
@@ -319,14 +433,23 @@ function loadFeedbackData(page) {
     var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
     if (csrfToken) formData.append('_token', csrfToken);
 
-    fetch('{{ route('admin.feedback.faculty_view') }}', {
-        method: 'POST',
-        body: formData,
-        headers: {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html'}
-    })
-    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.text(); })
-    .then(function(html){
-        var doc = new DOMParser().parseFromString(html, 'text/html');
+    fetch(`{{ $fr['comments_submit'] }}`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'Accept': 'text/html'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.text();
+        })
+        .then(html => {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
 
         // Update programs dropdown (original logic)
         var newSel = doc.getElementById('programSelect');
@@ -338,31 +461,46 @@ function loadFeedbackData(page) {
             }
         }
 
-        // Update content
-        var newContent = doc.querySelector('#contentContainer');
-        if (newContent) contentContainer.innerHTML = newContent.innerHTML;
+            // Update content
+            const newContent = doc.querySelector('#contentContainer');
+            const newRefreshTime = doc.querySelector('.card-header small');
 
-        // Read pagination from embedded meta
-        var meta = contentContainer.querySelector('#fvMeta');
-        if (meta) {
-            fvUpdateBottomRow(
-                parseInt(meta.dataset.page)  || 1,
-                parseInt(meta.dataset.pages) || 0,
-                parseInt(meta.dataset.total) || 0
-            );
-        }
+            if (newContent) {
+                contentContainer.innerHTML = newContent.innerHTML;
+            }
 
-        spinner.classList.remove('fv-loading');
-        contentContainer.style.opacity = '1';
-    })
-    .catch(function(err){
-        console.error('Error:', err);
-        contentContainer.innerHTML = '<div class="alert alert-danger text-center">Error loading data. Please try again.</div>';
-        spinner.classList.remove('fv-loading');
-        contentContainer.style.opacity = '1';
-    });
+            if (newRefreshTime) {
+                const refreshElement = document.querySelector('.card-header small');
+                if (refreshElement) {
+                    refreshElement.textContent = newRefreshTime.textContent;
+                }
+            }
+
+            // Update page input with current page from response
+            const newPageInput = doc.getElementById('pageInput');
+            if (newPageInput) {
+                pageInput.value = newPageInput.value;
+            }
+
+            // Update URL to clean version without parameters
+            const cleanUrl = `{{ $fr['comments'] }}`;
+            if (window.location.href !== cleanUrl) {
+                window.history.replaceState({}, '', cleanUrl);
+            }
+
+            loadingSpinner.style.display = 'none';
+            contentContainer.style.display = 'block';
+        })
+        .catch(error => {
+            console.error('Error loading feedback data:', error);
+            loadingSpinner.style.display = 'none';
+            contentContainer.style.display = 'block';
+            contentContainer.innerHTML =
+                '<div class="alert alert-danger text-center">Error loading data. Please try again.</div>';
+        });
 }
 
+// Simple pagination function - go to specific page
 function goToPage(pageNumber) {
     fvSyncForm();
     loadFeedbackData(pageNumber);
@@ -375,17 +513,47 @@ function exportToExcel() {
     var formData = new FormData(form);
     formData.append('export_type', 'excel');
     formData.append('page', 'all');
-    var tok = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (tok) formData.append('_token', tok);
-    fetch('{{ route('admin.feedback.faculty_view.export') }}', {method:'POST',body:formData,headers:{'X-Requested-With':'XMLHttpRequest'}})
-    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.blob(); })
-    .then(function(blob){
-        var url=URL.createObjectURL(blob); var a=document.createElement('a');
-        a.href=url; a.download='faculty_feedback_'+new Date().toISOString().split('T')[0]+'.xlsx';
-        document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); a.remove();
-        spinner.classList.remove('fv-loading');
-    })
-    .catch(function(){ spinner.classList.remove('fv-loading'); alert('Error exporting to Excel. Please try again.'); });
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        formData.append('_token', csrfToken);
+    }
+
+    fetch(`{{ $fr['comments_export'] }}`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `faculty_feedback_${new Date().toISOString().split('T')[0]}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            // Reset loading message
+            loadingSpinner.style.display = 'none';
+            loadingSpinner.querySelector('p').textContent = 'Loading feedback data...';
+        })
+        .catch(error => {
+            console.error('Error exporting to Excel:', error);
+            loadingSpinner.style.display = 'none';
+            loadingSpinner.querySelector('p').textContent = 'Loading feedback data...';
+            alert('Error exporting to Excel. Please try again.');
+        });
 }
 
 function exportToPDF() {
@@ -394,18 +562,45 @@ function exportToPDF() {
     spinner.classList.add('fv-loading');
     var formData = new FormData(form);
     formData.append('export_type', 'pdf');
-    formData.append('page', 'all');
-    var tok = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-    if (tok) formData.append('_token', tok);
-    fetch('{{ route('admin.feedback.faculty_view.export') }}', {method:'POST',body:formData,headers:{'X-Requested-With':'XMLHttpRequest'}})
-    .then(function(r){ if (!r.ok) throw new Error(r.status); return r.blob(); })
-    .then(function(blob){
-        var url=URL.createObjectURL(blob); var a=document.createElement('a');
-        a.href=url; a.download='faculty_feedback_'+new Date().toISOString().split('T')[0]+'.pdf';
-        document.body.appendChild(a); a.click(); URL.revokeObjectURL(url); a.remove();
-        spinner.classList.remove('fv-loading');
-    })
-    .catch(function(){ spinner.classList.remove('fv-loading'); alert('Error exporting to PDF. Please try again.'); });
+    formData.append('page', 'all'); // Export all pages
+
+    // Add CSRF token
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
+    if (csrfToken) {
+        formData.append('_token', csrfToken);
+    }
+
+    fetch(`{{ $fr['comments_export'] }}`, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            // Create download link
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `faculty_feedback_${new Date().toISOString().split('T')[0]}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+
+            loadingSpinner.style.display = 'none';
+        })
+        .catch(error => {
+            console.error('Error exporting to PDF:', error);
+            loadingSpinner.style.display = 'none';
+            alert('Error exporting to PDF. Please try again.');
+        });
 }
 
 function printReport() {
@@ -414,63 +609,9 @@ function printReport() {
     var params = new URLSearchParams();
     for (var pair of formData.entries()) params.append(pair[0], pair[1]);
     params.append('page', 'all');
-    window.open('{{ route('admin.feedback.faculty_view.print') }}?'+params.toString(), '_blank');
+
+    const printUrl = `{{ $fr['comments_print'] }}?${params.toString()}`;
+    window.open(printUrl, '_blank');
 }
-
-document.addEventListener('DOMContentLoaded', function() {
-    var facultySearch = document.getElementById('facultySearch');
-    var suggestionsList = document.getElementById('facultySuggestions');
-    var resetButton = document.getElementById('resetButton');
-    var applyBtn = document.getElementById('applyFiltersBtn');
-    var programSelect = document.getElementById('programSelect');
-    var debounceTimer;
-
-    document.querySelectorAll('.fv-course-radio').forEach(function(r){
-        r.addEventListener('change', function(){ fvSyncForm(); goToPage(1); });
-    });
-    [programSelect, document.getElementById('fvFromDate'), document.getElementById('fvToDate')].forEach(function(el){
-        if (el) el.addEventListener('change', function(){ fvSyncForm(); goToPage(1); });
-    });
-    document.querySelectorAll('.faculty-type-checkbox').forEach(function(cb){
-        cb.addEventListener('change', function(){
-            if (facultySearch) facultySearch.value = '';
-            fvSyncForm(); updateFacultySuggestions(); goToPage(1);
-        });
-    });
-    if (facultySearch && suggestionsList) {
-        facultySearch.addEventListener('focus', function(){
-            if (Array.from(document.querySelectorAll('.faculty-type-checkbox')).some(function(cb){ return cb.checked; })) updateFacultySuggestions();
-        });
-        facultySearch.addEventListener('input', function(){ clearTimeout(debounceTimer); debounceTimer=setTimeout(updateFacultySuggestions,300); });
-        document.addEventListener('click', function(e){
-            if (!facultySearch.contains(e.target) && !suggestionsList.contains(e.target)) suggestionsList.style.display='none';
-        });
-        suggestionsList.addEventListener('click', function(e){
-            var item = e.target.closest('.suggestion-item');
-            if (item && item.getAttribute('data-value')) {
-                facultySearch.value = item.getAttribute('data-value');
-                suggestionsList.style.display = 'none';
-                fvSyncForm(); goToPage(1);
-            }
-        });
-    }
-    if (applyBtn) applyBtn.addEventListener('click', function(){ fvSyncForm(); goToPage(1); });
-    var perPageSel = document.getElementById('fvPerPage');
-    if (perPageSel) perPageSel.addEventListener('change', function(){ fvSyncForm(); goToPage(1); });
-    resetButton.addEventListener('click', function(){
-        document.querySelectorAll('.fv-course-radio').forEach(function(r){ r.checked=(r.value==='current'); });
-        document.querySelectorAll('.faculty-type-checkbox').forEach(function(cb){ cb.checked=false; });
-        if (programSelect) programSelect.value='';
-        var fromEl=document.getElementById('fvFromDate'), toEl=document.getElementById('fvToDate');
-        if (fromEl) fromEl.value=''; if (toEl) toEl.value='';
-        if (facultySearch) facultySearch.value='';
-        if (suggestionsList) suggestionsList.style.display='none';
-        fvSyncForm(); goToPage(1);
-    });
-
-    fvSyncForm();
-    fvUpdateBottomRow({{ $currentPage ?? 1 }}, {{ $totalPages ?? 0 }}, {{ $totalRecords ?? 0 }});
-    loadFeedbackData({{ $currentPage ?? 1 }});
-});
 </script>
 @endsection

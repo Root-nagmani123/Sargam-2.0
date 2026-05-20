@@ -1,4 +1,7 @@
-﻿@extends('admin.layouts.master')
+@php
+    $fr = $fr ?? $feedbackReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::forRequest();
+@endphp
+@extends('admin.layouts.master')
 
 @section('title', 'Faculty Feedback with Comments All Details - Sargam | Lal Bahadur')
 
@@ -393,102 +396,230 @@
                     </div>
                 </div>
 
-                {{-- Faculty Name search --}}
-                <div class="suggestions-container" style="max-width:220px;">
-                    <input type="text" id="facultySearch" class="form-control form-control-sm" name="faculty_name"
-                        value="{{ $currentFaculty ?? '' }}" placeholder="Search faculty…" autocomplete="off">
-                    <div class="suggestions-list shadow" id="facultySuggestions">
-                        @if ($facultySuggestions->isNotEmpty())
-                        @foreach ($facultySuggestions as $faculty)
-                        <div class="suggestion-item" data-value="{{ $faculty->full_name }}">
-                            {{ $faculty->full_name }}
-                            @php
-                            $typeMap = ['1' => 'Internal', '2' => 'Guest'];
-                            $typeDisplay = $typeMap[$faculty->faculty_type] ?? ucfirst($faculty->faculty_type);
-                            @endphp
-                            <span class="faculty-type-badge ms-2">{{ $typeDisplay }}</span>
+                        <div class="col-12 col-md-6 col-xl suggestions-container">
+                            <label for="facultySearch" class="form-label fw-semibold small mb-1">Faculty name</label>
+                            <input type="text" id="facultySearch" class="form-control shadow-sm" name="faculty_name"
+                                value="{{ $currentFaculty ?? '' }}" placeholder="Search by name…" autocomplete="off" />
+                            <div class="suggestions-list shadow" id="facultySuggestions">
+                                @if ($facultySuggestions->isNotEmpty())
+                                    @foreach ($facultySuggestions as $faculty)
+                                        <div class="suggestion-item" data-value="{{ $faculty->full_name }}">
+                                            {{ $faculty->full_name }}
+                                            @php
+                                                $typeMap = ['1' => 'Internal', '2' => 'Guest'];
+                                                $typeDisplay =
+                                                    $typeMap[$faculty->faculty_type] ?? ucfirst($faculty->faculty_type);
+                                            @endphp
+                                            <span class="faculty-type-badge ms-2">{{ $typeDisplay }}</span>
+                                        </div>
+                                    @endforeach
+                                @else
+                                    <div class="suggestion-item text-muted small">No faculty found</div>
+                                @endif
+                            </div>
                         </div>
-                        @endforeach
-                        @else
-                        <div class="suggestion-item text-muted small">No faculty found</div>
-                        @endif
+                    @endif
+                </div>
+
+                <hr class="border-opacity-50 my-4">
+
+                <div class="d-flex flex-wrap align-items-center gap-2 pt-1">
+                    <div class="btn-group shadow-sm rounded-2" role="group" aria-label="Print or download PDF">
+                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printFeedbackDetails()" title="Print report or choose Save as PDF in print dialog">
+                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
+                            <span>Print</span>
+                        </button>
+                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-end-2" onclick="exportToPDF()" title="Download PDF">
+                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">picture_as_pdf</span>
+                            <span>PDF</span>
+                        </button>
                     </div>
+                    <button type="button" class="btn btn-success btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" onclick="exportToExcel()" title="Export to Excel">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
+                        <span>Export Excel</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" id="resetButton">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
+                        <span>Reset filters</span>
+                    </button>
+                    @if (empty($hidePendingFeedbackAdminLink))
+                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-warning btn-sm text-dark rounded-2 d-inline-flex align-items-center gap-1 px-3">
+                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">pending_actions</span>
+                        <span>Pending feedback (students)</span>
+                    </a>
+                    @endif
                 </div>
-                @endif
-
-                {{-- Reset Filters --}}
-                <button type="button" class="fb-reset-btn" id="resetButton">Reset Filters</button>
-
-                {{-- Search icon --}}
-                <button type="button" class="fb-search-btn ms-auto" title="Search">
-                    <span class="material-symbols-rounded" style="font-size:18px;color:#6c757d;">search</span>
-                </button>
-            </div>
-            <div id="contentContainer">
-                @if ($groupedData->isEmpty())
-                <div class="empty-state text-center py-5 px-3 rounded-3 bg-body-secondary bg-opacity-25">
-                    <i class="fas fa-clipboard-list d-block mb-3 text-body-secondary"></i>
-                    <h5 class="fw-semibold text-body-secondary">No feedback data found</h5>
-                    <p class="text-muted small mb-0 mx-auto" style="max-width: 28rem;">Try adjusting your filters or
-                        program selection to see results.</p>
-                </div>
-                @else
-                <div class="table-responsive">
-                    <table class="table table-hover align-middle mb-0" id="fbTable">
-                        <thead>
-                            <tr>
-                                <th style="width:55px">S. No.</th>
-                                <th>OT Code</th>
-                                <th>OT Name</th>
-                                <th>Program Name</th>
-                                <th>Content</th>
-                                <th>Presentation</th>
-                                <th>Remarks</th>
-                                <th>Feedback Date</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @php $rowNum = 0; @endphp
-                            @foreach ($groupedData as $groupKey => $group)
-                            @php [$programName] = explode('|', $groupKey); @endphp
-                            @foreach ($group as $item)
-                            @php $rowNum++; @endphp
-                            <tr>
-                                <td>{{ $rowNum }}</td>
-                                <td>{{ $item['ot_code'] }}</td>
-                                <td>{{ $item['ot_name'] }}</td>
-                                <td>{{ $programName }}</td>
-                                <td><span class="text-muted small">{{ $item['content'] }}/10</span></td>
-                                <td><span class="text-muted small">{{ $item['presentation'] }}/10</span></td>
-                                <td>{{ $item['remark'] ?: '-' }}</td>
-                                <td>{{ $item['feedback_date'] }}</td>
-                            </tr>
-                            @endforeach
-                            @endforeach
-                        </tbody>
-                    </table>
-                </div>
-                @endif
-            </div>
-            {{-- Bottom row: pagination + per-page + total --}}
-        <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 no-print" id="fbBottomRow">
-            <div id="fbPaginationCell"></div>
-            <div class="d-flex align-items-center gap-1">
-                <span class="text-muted small">Showing</span>
-                <select id="fbPerPage" class="form-select form-select-sm" style="width:78px;">
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                    <option value="200">200</option>
-                </select>
-                <span id="fbTotalInfo" class="text-muted small">of 0 items</span>
             </div>
         </div>
 
-    </div>
-</div>
-</div>
+        <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
+                <div class="card-header bg-body-secondary bg-opacity-75 border-bottom py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2 no-print">
+                    <span class="feedback-page-title mb-0">Faculty Feedback with Comments — All Details</span>
+                    <small class="text-body-secondary" id="feedbackRefreshTime">Data refreshed: {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</small>
+                </div>
+
+                <div class="card-body p-0 p-md-3 p-lg-4">
+                    <div id="contentContainer" class="px-2 px-md-0">
+                    @if ($groupedData->isEmpty())
+                        <div class="empty-state text-center py-5 px-3 rounded-3 bg-body-secondary bg-opacity-25 border border-dashed">
+                            <i class="fas fa-clipboard-list d-block mb-3 text-body-secondary"></i>
+                            <h5 class="fw-semibold text-body-secondary">No feedback data found</h5>
+                            <p class="text-muted small mb-0 mx-auto" style="max-width: 28rem;">Try adjusting your filters or program selection to see results.</p>
+                        </div>
+                    @else
+                        @foreach ($groupedData as $groupKey => $group)
+                            @php
+                                [$programName, $facultyName, $topicName] = explode('|', $groupKey);
+                                $firstRecord = $group->first();
+                            @endphp
+
+                            <div class="session-header feedback-session-card card border-0 shadow-sm mb-4">
+                                <div class="card-body p-3 p-md-4">
+                                    <div class="row g-3">
+                                        <div class="col-md-4">
+                                            <div class="small text-uppercase text-muted fw-semibold mb-1">Course</div>
+                                            <div class="fw-semibold text-body">{{ $programName }}</div>
+                                            <div class="mt-2">
+                                                <span class="session-badge">{{ $firstRecord['course_status'] ?? 'Unknown' }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="small text-uppercase text-muted fw-semibold mb-1">Faculty</div>
+                                            <div class="fw-semibold text-body">{{ $facultyName }}</div>
+                                            <div class="mt-2">
+                                                <span class="faculty-type-badge">{{ $firstRecord['faculty_type'] ?? '' }}</span>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-4">
+                                            <div class="small text-uppercase text-muted fw-semibold mb-1">Topic</div>
+                                            <div class="fw-semibold text-body">{{ $topicName }}</div>
+                                            @if (!empty($firstRecord['start_date']))
+                                                <div class="small text-muted mt-2">
+                                                    <i class="fas fa-clock me-1 opacity-75"></i>
+                                                    <span class="fw-medium text-body-secondary">Session:</span>
+                                                    {{ $firstRecord['start_date'] }}
+                                                    @if (!empty($firstRecord['end_date']))
+                                                        <span class="text-muted">– {{ $firstRecord['end_date'] }}</span>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="table-responsive mb-4 rounded-3 border shadow-sm">
+                                <table class="table table-hover table-sm align-middle mb-0">
+                                    <thead class="table-light">
+                                        <tr class="small text-uppercase text-secondary">
+                                            <th scope="col" class="ps-3" style="width: 4%;">#</th>
+                                            <th scope="col" style="width: 18%;">OT name</th>
+                                            <th scope="col" style="width: 10%;">OT code</th>
+                                            <th scope="col" class="text-center" style="width: 10%;">Content</th>
+                                            <th scope="col" class="text-center" style="width: 10%;">Presentation</th>
+                                            <th scope="col" style="width: 33%;">Remarks</th>
+                                            <th scope="col" class="pe-3" style="width: 15%;">Feedback date</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="small">
+                                        @foreach ($group as $index => $item)
+                                            <tr>
+                                                <td class="ps-3 text-body-secondary">{{ $loop->iteration }}</td>
+                                                <td class="fw-medium">{{ $item['ot_name'] }}</td>
+                                                <td><code class="small bg-body-secondary px-2 py-1 rounded">{{ $item['ot_code'] }}</code></td>
+                                                <td class="text-center">
+                                                    <span class="rating-badge rating-{{ $item['content'] }}">
+                                                        {{ $item['content'] }}
+                                                    </span>
+                                                </td>
+                                                <td class="text-center">
+                                                    <span class="rating-badge rating-{{ $item['presentation'] }}">
+                                                        {{ $item['presentation'] }}
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    @if (!empty($item['remark']))
+                                                        <div class="remark-text">{{ $item['remark'] }}</div>
+                                                    @else
+                                                        <span class="text-muted fst-italic">No remarks</span>
+                                                    @endif
+                                                </td>
+                                                <td class="pe-3">
+                                                    <small class="text-body-secondary">{{ $item['feedback_date'] }}</small>
+                                                </td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <hr class="my-4 text-secondary opacity-25">
+                        @endforeach
+
+                        <!-- Pagination -->
+                        @if ($totalRecords > 10)
+                            <nav aria-label="Feedback pagination" class="pb-2">
+                                <ul class="pagination feedback-pagination flex-wrap justify-content-center gap-1 mb-0">
+                                    <!-- First Page -->
+                                    <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
+                                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)"
+                                            aria-label="First">
+                                            <i class="fas fa-angle-double-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Previous Page -->
+                                    <li class="page-item {{ $currentPage == 1 ? 'disabled' : '' }}">
+                                        <a class="page-link" href="javascript:void(0)"
+                                            onclick="goToPage({{ $currentPage - 1 }})" aria-label="Previous">
+                                            <i class="fas fa-angle-left"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Page Numbers -->
+                                    @php
+                                        $startPage = max(1, $currentPage - 2);
+                                        $endPage = min($totalPages, $currentPage + 2);
+                                    @endphp
+
+                                    @for ($i = $startPage; $i <= $endPage; $i++)
+                                        <li class="page-item {{ $i == $currentPage ? 'active' : '' }}">
+                                            <a class="page-link" href="javascript:void(0)"
+                                                onclick="goToPage({{ $i }})">{{ $i }}</a>
+                                        </li>
+                                    @endfor
+
+                                    <!-- Next Page -->
+                                    <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
+                                        <a class="page-link" href="javascript:void(0)"
+                                            onclick="goToPage({{ $currentPage + 1 }})" aria-label="Next">
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+
+                                    <!-- Last Page -->
+                                    <li class="page-item {{ $currentPage == $totalPages ? 'disabled' : '' }}">
+                                        <a class="page-link" href="javascript:void(0)"
+                                            onclick="goToPage({{ $totalPages }})" aria-label="Last">
+                                            <i class="fas fa-angle-double-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+
+                            <div class="text-center text-body-secondary mt-3">
+                                <small class="badge rounded-pill text-bg-light border fw-normal px-3 py-2">
+                                    Showing <strong class="text-body">{{ ($currentPage - 1) * 10 + 1 }}</strong>
+                                    – <strong class="text-body">{{ min($currentPage * 10, $totalRecords) }}</strong>
+                                    of <strong class="text-body">{{ $totalRecords }}</strong> records
+                                </small>
+                            </div>
+                        @endif
+                    @endif
+                    </div>
+                </div>
+            </div>
+        </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -549,38 +680,38 @@ document.addEventListener('DOMContentLoaded', function() {
 
         console.log('Loading data with params:', params.toString()); // Debug log
 
-        // Make AJAX request - GET with query parameters
-        fetch('{{ route('admin.feedback.feedback_details') }}?' + params.toString(), {
-                    method: 'GET',
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest',
-                        'Accept': 'application/json'
-                    }
-                })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    // Make AJAX request - GET with query parameters
+                    fetch('{{ $fr['details'] }}?' + params.toString(), {
+                            method: 'GET',
+                            headers: {
+                                'X-Requested-With': 'XMLHttpRequest',
+                                'Accept': 'application/json'
+                            }
+                        })
+                        .then(response => {
+                            if (!response.ok) {
+                                throw new Error(`HTTP error! status: ${response.status}`);
+                            }
+                            return response.json();
+                        })
+                        .then(data => {
+                            console.log('Data received:', data); // Debug log
+                            if (data.success) {
+                                updateContent(data);
+                                updateFilters(data);
+                            } else {
+                                throw new Error(data.error || 'Failed to load data');
+                            }
+                        })
+                        .catch(error => {
+                            console.error('Error loading feedback data:', error);
+                            showError('Error loading data. Please try again.');
+                        })
+                        .finally(() => {
+                            loadingSpinner.classList.remove('feedback-loading-visible');
+                            contentContainer.style.opacity = '1';
+                        });
                 }
-                return response.json();
-            })
-            .then(data => {
-                console.log('Data received:', data); // Debug log
-                if (data.success) {
-                    updateContent(data);
-                    updateFilters(data);
-                } else {
-                    throw new Error(data.error || 'Failed to load data');
-                }
-            })
-            .catch(error => {
-                console.error('Error loading feedback data:', error);
-                showError('Error loading data. Please try again.');
-            })
-            .finally(() => {
-                loadingSpinner.classList.remove('feedback-loading-visible');
-                contentContainer.style.opacity = '1';
-            });
-    }
 
     // Function to update content with new data
     function updateContent(data) {
@@ -738,13 +869,13 @@ document.addEventListener('DOMContentLoaded', function() {
             selectedTypes.forEach(type => params.append('faculty_type[]', type));
             if (searchTerm) params.append('faculty_name', searchTerm);
 
-            fetch('{{ route('feedback.faculty_suggestions') }}?' + params.toString())
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success && data.faculties.length > 0) {
-                        let suggestions = '';
-                        data.faculties.forEach(faculty => {
-                            suggestions += `
+                        fetch('{{ $fr['comments_suggestions'] }}?' + params.toString())
+                            .then(response => response.json())
+                            .then(data => {
+                                if (data.success && data.faculties.length > 0) {
+                                    let suggestions = '';
+                                    data.faculties.forEach(faculty => {
+                                        suggestions += `
                                 <div class="suggestion-item" data-value="${faculty.full_name}">
                                     ${faculty.full_name}
                                     <span class="faculty-type-badge ms-2">${faculty.faculty_type_display}</span>
@@ -1012,11 +1143,11 @@ function exportToExcel() {
         params.append('_token', csrfToken);
     }
 
-    // Submit form
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ route('admin.feedback.feedback_details.export') }}';
-    form.style.display = 'none';
+                // Submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ $fr['details_export'] }}';
+                form.style.display = 'none';
 
     // Add all parameters as hidden inputs
     params.forEach((value, key) => {
@@ -1064,11 +1195,11 @@ function exportToPDF() {
         params.append('_token', csrfToken);
     }
 
-    // Submit form
-    const form = document.createElement('form');
-    form.method = 'POST';
-    form.action = '{{ route('admin.feedback.feedback_details.export') }}';
-    form.style.display = 'none';
+                // Submit form
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '{{ $fr['details_export'] }}';
+                form.style.display = 'none';
 
     // Add all parameters as hidden inputs
     params.forEach((value, key) => {

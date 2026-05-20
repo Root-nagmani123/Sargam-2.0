@@ -26,12 +26,14 @@ use App\Exports\PendingFeedbackExport;
 use App\Exports\FacultyFeedback_AvgExport;
 use App\Exports\PendingFeedbackSummaryExport;
 use App\Exports\FeedbackDatabaseExport;
-
-
-
+use App\Services\FacultyFeedbackReportService;
+use App\Http\Controllers\Admin\Concerns\ScopesSessionFeedbackReports;
+use App\Support\FeedbackReportRouteRegistry;
 
 class FeedbackController extends Controller
 {
+    use ScopesSessionFeedbackReports;
+
     public function __construct()
     {
         $this->middleware('auth');
@@ -64,42 +66,6 @@ class FeedbackController extends Controller
 
             return view('admin.feedback.feedback_database', compact('courses', 'faculties', 'courseType'));
         }
-    }
-
-    /**
-     * Program list for Feedback Database — same rules as Faculty Feedback Average (current vs archived).
-     */
-    private function coursesForFeedbackDatabase(string $courseType)
-    {
-        $userId = auth()->id();
-        $data_course_id = get_Role_by_course();
-        $currentDate = now()->toDateString();
-
-        $coursesQuery = CourseMaster::where('active_inactive', 1)
-            ->when($courseType === 'current', function ($q) use ($currentDate) {
-                $q->where(function ($q2) use ($currentDate) {
-                    $q2->whereNull('end_date')
-                        ->orWhereDate('end_date', '>=', $currentDate);
-                });
-            })
-            ->when($courseType === 'archived', function ($q) use ($currentDate) {
-                $q->whereDate('end_date', '<', $currentDate);
-            });
-
-        if (! empty($data_course_id)) {
-            $coursesQuery->whereIn('pk', $data_course_id);
-        }
-
-        if (auth()->user()->role == 'student') {
-            $coursesQuery->whereHas('students', function ($q) use ($userId) {
-                $q->where('student_master_pk', $userId)
-                    ->where('active_inactive', 1);
-            });
-        }
-
-        return $coursesQuery->select('pk', 'course_name')
-            ->orderBy('course_name')
-            ->get();
     }
 
     /**
@@ -193,6 +159,8 @@ class FeedbackController extends Controller
                 'per_page'     => 'nullable|integer',
                 'page'         => 'nullable|integer',
             ]);
+
+            $this->assertFacultyReportCourseAccess($request, (int) $validated['course_id']);
 
             /* ---------------- Base Query ---------------- */
             $query = $this->baseDatabaseQuery($request);
@@ -499,9 +467,6 @@ class FeedbackController extends Controller
 
     public function showFacultyAverage(Request $request)
     {
-        // dd($request->all());
-        $data_course_id =  get_Role_by_course();
-
         // Get filter parameters with defaults
         $programName = $request->input('program_name');
         $facultyName = $request->input('faculty_name');
@@ -524,16 +489,22 @@ class FeedbackController extends Controller
             ->when($courseType === 'archived', function ($q) use ($currentDate) {
                 $q->whereDate('end_date', '<', $currentDate);
             })
-            ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
-                $query->whereIn('pk', $data_course_id);
-            })
             ->orderBy('course_name');
+
+        $this->applyFeedbackReportCourseScopeOnPrograms($programsQuery);
 
         $programs = $programsQuery->pluck('course_name', 'pk');
 
         // Default fallback if no programs found
         if ($programs->isEmpty()) {
             $programs = collect([]); // Empty collection instead of dummy data
+        }
+
+        if ($this->isFacultySessionFeedbackReport() && ! $request->filled('program_name')) {
+            $defaultProgram = $this->defaultProgramIdForFacultyReport($courseType);
+            if ($defaultProgram && $programs->has($defaultProgram)) {
+                $programName = $defaultProgram;
+            }
         }
 
         // 2. Get faculties from faculty_master
@@ -594,8 +565,11 @@ class FeedbackController extends Controller
 
         // Apply filters
         if (!empty($programName)) {
+            $this->assertFacultyReportProgramAccess((int) $programName);
             $query->where('cm.pk', $programName);
         }
+
+        $this->applyFeedbackReportCourseScope($query);
 
         $currentProgramName = null;
         if (!empty($programName) && $programs->has($programName)) {
@@ -737,8 +711,6 @@ class FeedbackController extends Controller
     public function exportExcel(Request $request)
     {
         // Get filter parameters
-        $data_course_id = get_Role_by_course();
-
         $programName = $request->input('program_name');
         $facultyName = $request->input('faculty_name');
         $fromDate = $request->input('from_date');
@@ -759,10 +731,9 @@ class FeedbackController extends Controller
             ->when($courseType === 'archived', function ($q) use ($currentDate) {
                 $q->whereDate('end_date', '<', $currentDate);
             })
-            ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
-                $query->whereIn('pk', $data_course_id);
-            })
             ->orderBy('course_name');
+
+        $this->applyFeedbackReportCourseScopeOnPrograms($programsQuery);
 
         $programs = $programsQuery->pluck('course_name', 'pk');
 
@@ -803,8 +774,11 @@ class FeedbackController extends Controller
 
         // Apply filters
         if (!empty($programName)) {
+            $this->assertFacultyReportProgramAccess((int) $programName);
             $query->where('cm.pk', $programName);
         }
+
+        $this->applyFeedbackReportCourseScope($query);
 
         if ($facultyName && $facultyName !== 'All Faculty') {
             $query->where('tf.faculty_pk', $facultyName);
@@ -904,8 +878,6 @@ class FeedbackController extends Controller
     public function exportPdf(Request $request)
     {
         // Get filter parameters
-        $data_course_id = get_Role_by_course();
-
         $programName = $request->input('program_name');
         $facultyName = $request->input('faculty_name');
         $fromDate = $request->input('from_date');
@@ -926,10 +898,9 @@ class FeedbackController extends Controller
             ->when($courseType === 'archived', function ($q) use ($currentDate) {
                 $q->whereDate('end_date', '<', $currentDate);
             })
-            ->when(!empty($data_course_id), function ($query) use ($data_course_id) {
-                $query->whereIn('pk', $data_course_id);
-            })
             ->orderBy('course_name');
+
+        $this->applyFeedbackReportCourseScopeOnPrograms($programsQuery);
 
         $programs = $programsQuery->pluck('course_name', 'pk');
 
@@ -981,8 +952,11 @@ class FeedbackController extends Controller
 
         // Apply filters (EXACT same as showFacultyAverage)
         if (!empty($programName)) {
+            $this->assertFacultyReportProgramAccess((int) $programName);
             $query->where('cm.pk', $programName);
         }
+
+        $this->applyFeedbackReportCourseScope($query);
 
         $currentProgramName = null;
         if (!empty($programName) && $programs->has($programName)) {
@@ -1115,7 +1089,6 @@ class FeedbackController extends Controller
     public function printFacultyAverage(Request $request)
     {
         try {
-            $data_course_id = get_Role_by_course();
             $programName = $request->input('program_name');
             $facultyName = $request->input('faculty_name');
             $fromDate = $request->input('from_date');
@@ -1127,8 +1100,8 @@ class FeedbackController extends Controller
                 ->where('active_inactive', 1)
                 ->when($courseType === 'current', fn($q) => $q->where(fn($q2) => $q2->whereNull('end_date')->orWhereDate('end_date', '>=', $currentDate)))
                 ->when($courseType === 'archived', fn($q) => $q->whereDate('end_date', '<', $currentDate))
-                ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
                 ->orderBy('course_name');
+            $this->applyFeedbackReportCourseScopeOnPrograms($programsQuery);
             $programs = $programsQuery->pluck('course_name', 'pk');
 
             $faculties = DB::table('faculty_master')->select('full_name as name', 'pk')->orderBy('full_name')->pluck('name', 'pk');
@@ -1160,7 +1133,11 @@ class FeedbackController extends Controller
                 ->where('tf.is_submitted', 1)->whereNotNull('tf.presentation')->whereNotNull('tf.content')
                 ->groupBy('tf.faculty_pk', 'tf.topic_name', 'cm.course_name', 'fm.full_name', 'tt.START_DATE', 'tt.class_session');
 
-            if (!empty($programName)) $query->where('cm.pk', $programName);
+            if (!empty($programName)) {
+                $this->assertFacultyReportProgramAccess((int) $programName);
+                $query->where('cm.pk', $programName);
+            }
+            $this->applyFeedbackReportCourseScope($query);
             $currentProgramName = (!empty($programName) && $programs->has($programName)) ? $programs[$programName] : null;
             if ($facultyName && $facultyName !== 'All Faculty') $query->where('tf.faculty_pk', $facultyName);
             if ($fromDate) $query->whereDate('tf.created_date', '>=', $fromDate);
@@ -1212,6 +1189,146 @@ class FeedbackController extends Controller
 
 
 
+    /**
+     * Faculty portal: session feedback for logged-in faculty (own feedback, enrolled courses).
+     */
+    public function facultyPortalIndex(FacultyFeedbackReportService $reportService)
+    {
+        $reportService->assertFacultyRole();
+
+        $facultyPk = $reportService->resolveFacultyPk();
+        if (! $facultyPk) {
+            return view('admin.feedback.index', [
+                'facultyMissing' => true,
+                'programs' => collect(),
+                'currentProgram' => null,
+                'courseType' => 'current',
+            ]);
+        }
+
+        $courseType = request('course_type', 'current');
+        $currentProgram = $reportService->getDefaultProgramId($facultyPk);
+
+        return view('admin.feedback.index', [
+            'facultyMissing' => false,
+            'programs' => $reportService->getPrograms($facultyPk, $courseType),
+            'currentProgram' => $currentProgram,
+            'courseType' => $courseType,
+        ]);
+    }
+
+    public function facultyPortalData(Request $request, FacultyFeedbackReportService $reportService)
+    {
+        $reportService->assertFacultyRole();
+
+        $facultyPk = $reportService->resolveFacultyPk();
+        if (! $facultyPk) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Faculty profile not linked to your account.',
+            ], 403);
+        }
+
+        $courseType = $request->input('course_type', 'current');
+        $filters = $this->portalFiltersFromRequest($request);
+        $filters['page'] = $request->input('page', 1);
+        $filters['per_page'] = 1;
+
+        $report = $reportService->getPaginatedReport($facultyPk, $filters);
+        $programs = $reportService->getPrograms($facultyPk, $courseType);
+
+        $html = view('admin.feedback.partials.portal_results', [
+            'feedbackData' => $report['items'],
+            'currentPage' => $report['currentPage'],
+            'totalPages' => $report['totalPages'],
+            'totalRecords' => $report['totalRecords'],
+        ])->render();
+
+        return response()->json([
+            'success' => true,
+            'html' => $html,
+            'currentPage' => $report['currentPage'],
+            'totalPages' => $report['totalPages'],
+            'totalRecords' => $report['totalRecords'],
+            'programs' => $programs,
+            'refreshTime' => now()->format('d-M-Y H:i'),
+        ]);
+    }
+
+    public function portalExport(Request $request, FacultyFeedbackReportService $reportService)
+    {
+        $reportService->assertFacultyRole();
+
+        $viewerFacultyPk = $reportService->resolveFacultyPk();
+        if (! $viewerFacultyPk) {
+            return response()->json(['success' => false, 'message' => 'Faculty profile not linked.'], 403);
+        }
+
+        $filters = $this->portalFiltersFromRequest($request);
+        $exportType = $request->input('export_type', 'excel');
+        $processedData = $reportService->getExportSpreadsheetRows($viewerFacultyPk, $filters);
+        $filterMeta = $reportService->buildPortalExportFiltersMeta($viewerFacultyPk, $filters);
+
+        if ($exportType === 'excel') {
+            return $this->exportExcelWithDesign($processedData, $request);
+        }
+
+        $pdf = Pdf::loadView('admin.feedback.faculty_feedback_export', [
+            'feedbackData' => $processedData,
+            'filters' => $filterMeta,
+            'export_date' => now()->format('d-M-Y H:i'),
+        ])
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont' => 'Arial',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'isPhpEnabled' => true,
+                'dpi' => 96,
+                'margin_top' => 15,
+                'margin_right' => 15,
+                'margin_bottom' => 15,
+                'margin_left' => 15,
+            ]);
+
+        return $pdf->download('my_session_feedback_'.date('Y_m_d').'.pdf');
+    }
+
+    public function portalPrint(Request $request, FacultyFeedbackReportService $reportService)
+    {
+        $reportService->assertFacultyRole();
+
+        $viewerFacultyPk = $reportService->resolveFacultyPk();
+        if (! $viewerFacultyPk) {
+            return redirect()->route('feedback.get.feedbackList')
+                ->with('error', 'Faculty profile not linked to your account.');
+        }
+
+        $filters = $this->portalFiltersFromRequest($request);
+        $processedData = $reportService->getExportSpreadsheetRows($viewerFacultyPk, $filters);
+        $filterMeta = $reportService->buildPortalExportFiltersMeta($viewerFacultyPk, $filters);
+
+        return view('admin.feedback.faculty_feedback_export', [
+            'feedbackData' => $processedData,
+            'filters' => $filterMeta,
+            'export_date' => now()->format('d-M-Y H:i'),
+            'mode' => 'print',
+        ]);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function portalFiltersFromRequest(Request $request): array
+    {
+        return [
+            'course_type' => $request->input('course_type', 'current'),
+            'program_id' => $request->input('program_id', ''),
+            'from_date' => $request->input('from_date', ''),
+            'to_date' => $request->input('to_date', ''),
+        ];
+    }
+
     public function facultyView(Request $request)
     {
         // Handle POST requests (form submissions)
@@ -1239,8 +1356,6 @@ class FeedbackController extends Controller
         if (is_string($facultyType)) {
             $facultyType = [$facultyType];
         }
-        $data_course_id =  get_Role_by_course();
-
         // Get programs based on course type - THIS MUST BE OUTSIDE THE IF/ELSE
         $programsQuery = DB::table('course_master')
             ->select('pk as id', 'course_name', 'active_inactive', 'start_year', 'end_date');
@@ -1254,9 +1369,8 @@ class FeedbackController extends Controller
                     ->orWhereDate('end_date', '<', Carbon::today());
             });
         }
-        if (!empty($data_course_id)) {
-            $programsQuery->whereIn('pk', $data_course_id);
-        }
+
+        $this->applyFeedbackReportCourseScopeOnPrograms($programsQuery);
 
         $programs = $programsQuery->orderBy('course_name')
             ->pluck('course_name', 'id');
@@ -1324,15 +1438,14 @@ class FeedbackController extends Controller
              END SEPARATOR "|||") as remarks')
             );
         $query->where('tf.is_submitted', 1);
-        if (!empty($data_course_id)) {
-            $query->whereIn('cm.pk', $data_course_id);
-        }
+        $this->applyFeedbackReportCourseScope($query);
 
         // Group by - ADD class_session to group by
         $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
         // Apply filters
         if ($programId && $programId !== '') {
+            $this->assertFacultyReportProgramAccess((int) $programId);
             $query->where('cm.pk', $programId);
         }
 
@@ -1656,7 +1769,6 @@ class FeedbackController extends Controller
         if (is_string($facultyType)) {
             $facultyType = [$facultyType];
         }
-        $data_course_id = get_Role_by_course();
         $facultyTypeMap = [
             '1' => 'Internal',
             '2' => 'Guest',
@@ -1699,12 +1811,12 @@ class FeedbackController extends Controller
             )
             ->where('tf.is_submitted', 1);
 
-        if (!empty($data_course_id)) {
-            $query->whereIn('cm.pk', $data_course_id);
-        }
+        $this->applyFeedbackReportCourseScope($query);
+
         $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
         if ($programId && $programId !== '') {
+            $this->assertFacultyReportProgramAccess((int) $programId);
             $query->where('cm.pk', $programId);
         }
 
@@ -1949,7 +2061,6 @@ class FeedbackController extends Controller
             if (is_string($facultyType)) {
                 $facultyType = [$facultyType];
             }
-            $data_course_id = get_Role_by_course();
             $facultyTypeMap = ['1' => 'Internal', '2' => 'Guest'];
 
             $query = DB::table('topic_feedback as tf')
@@ -1984,12 +2095,12 @@ class FeedbackController extends Controller
                 )
                 ->where('tf.is_submitted', 1);
 
-            if (!empty($data_course_id)) {
-                $query->whereIn('cm.pk', $data_course_id);
-            }
+            $this->applyFeedbackReportCourseScope($query);
+
             $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
             if ($programId && $programId !== '') {
+                $this->assertFacultyReportProgramAccess((int) $programId);
                 $query->where('cm.pk', $programId);
             }
             if ($facultyName && $facultyName !== 'All Faculty') {
@@ -2446,7 +2557,7 @@ class FeedbackController extends Controller
 
         // \Log::info('Feedback Details Request: ', $request->all());
         try {
-            $data_course_id =  get_Role_by_course();
+            $data_course_id = get_Role_by_course();
             // Get filter parameters with defaults
             $programId = $request->input('program_id', '');
             $facultyName = $request->input('faculty_name', '');
@@ -2468,9 +2579,6 @@ class FeedbackController extends Controller
             if ($courseType === 'current') {
                 $programsQuery->where('active_inactive', 1)
                     ->whereDate('end_date', '>=', Carbon::today());
-                if (!empty($data_course_id)) {
-                    $programsQuery->whereIn('pk', $data_course_id);
-                }
             } else {
                 $programsQuery->where(function ($query) {
                     $query->where('active_inactive', 0)
@@ -2478,8 +2586,7 @@ class FeedbackController extends Controller
                 });
             }
 
-
-
+            $this->applyFeedbackReportCourseScopeOnPrograms($programsQuery);
 
             $programs = $programsQuery->orderBy('course_name')
                 ->pluck('course_name', 'id');
@@ -2492,11 +2599,14 @@ class FeedbackController extends Controller
             // AJAX requests keep empty program_id so "All Programs" still works after reset.
             if (
                 ($programId === '' || $programId === null)
-                && $courseType === 'current'
                 && $programs->isNotEmpty()
                 && ! $request->ajax()
             ) {
-                $programId = $this->defaultProgramIdForCurrentCourseFeedbackList($programs, $data_course_id);
+                if ($this->isFacultySessionFeedbackReport()) {
+                    $programId = $this->defaultProgramIdForFacultyReport($courseType) ?? '';
+                } elseif ($courseType === 'current') {
+                    $programId = $this->defaultProgramIdForCurrentCourseFeedbackList($programs, $data_course_id);
+                }
             }
 
             // print_r($programs->toArray());die;
@@ -2566,18 +2676,17 @@ class FeedbackController extends Controller
                 )
 
                 ->where('tf.is_submitted', 1);
-            if (!empty($data_course_id)) {
-                $query->whereIn('cm.pk', $data_course_id);
-            }
+
+            $this->applyFeedbackReportCourseScope($query);
+
             $query->whereNotNull('tf.presentation')
                 ->whereNotNull('tf.content')
                 ->where('tf.presentation', '!=', '')
                 ->where('tf.content', '!=', '');
 
-            // Rest of the method remains the same...
-
             // Apply filters
             if ($programId && $programId !== '') {
+                $this->assertFacultyReportProgramAccess((int) $programId);
                 $query->where('cm.pk', $programId);
             }
 
@@ -2607,7 +2716,11 @@ class FeedbackController extends Controller
                 $query->where('cm.active_inactive', 1)
                     ->whereDate('cm.end_date', '>=', Carbon::today());
             }
-            if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
+
+            if (
+                ! $this->isFacultySessionFeedbackReport()
+                && (hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+            ) {
                 $facultyPk = (Auth::user()->user_id);
                 $query->where('fm.employee_master_pk', $facultyPk);
             }
@@ -2795,8 +2908,11 @@ class FeedbackController extends Controller
                 ->where('tf.presentation', '!=', '')
                 ->where('tf.content', '!=', '');
 
+            $this->applyFeedbackReportCourseScope($query);
+
             // Apply filters
             if ($programId && $programId !== '') {
+                $this->assertFacultyReportProgramAccess((int) $programId);
                 $query->where('cm.pk', $programId);
             }
 
@@ -3205,59 +3321,130 @@ class FeedbackController extends Controller
     public function pendingStudents()
     {
         try {
-            // Get active courses (currently running: end_date >= today)
-            $activeCourses = Cache::remember('pending_feedback_active_courses', 3600, function () {
-                return DB::table('course_master')
-                    ->where('active_inactive', 1)
-                    ->whereDate('end_date', '>=', now()->toDateString())
-                    ->orderBy('course_name')
-                    ->pluck('course_name', 'pk');
-            });
-
-            // Get archived courses (ended or deactivated)
-            $archiveCourses = Cache::remember('pending_feedback_archive_courses', 3600, function () {
-                return DB::table('course_master')
-                    ->where(function ($q) {
-                        $q->whereDate('end_date', '<', now()->toDateString())
-                          ->orWhere('active_inactive', 0);
-                    })
-                    ->orderBy('course_name')
-                    ->pluck('course_name', 'pk');
-            });
-
-            // Keep combined courses for backward compat
+            $courseLists = $this->resolvePendingStudentsCourseLists();
+            $activeCourses = $courseLists['active'];
+            $archiveCourses = $courseLists['archive'];
             $courses = $activeCourses;
+            $sessions = $this->resolvePendingStudentsSessionOptions();
+            $activeCourse = $this->resolvePendingStudentsDefaultCourseId();
 
-            $sessions = Cache::remember('pending_feedback_sessions', 3600, function () {
-                return DB::table('timetable')
-                    ->select('pk', 'subject_topic', 'START_DATE')
-                    ->where('active_inactive', 1)
-                    ->where('feedback_checkbox', 1)
-                    ->orderBy('START_DATE', 'desc')
-                    ->get()
-                    ->mapWithKeys(function ($item) {
-                        $label = $item->subject_topic;
-                        if ($item->START_DATE) {
-                            $label .= ' (' . date('d-m-Y', strtotime($item->START_DATE)) . ')';
-                        }
-                        return [$item->pk => $label];
-                    });
-            });
-
-            // Determine active course (latest course with pending feedback sessions)
-            $activeCourse = DB::table('timetable as t')
-                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-                ->where('t.feedback_checkbox', 1)
-                ->where('t.START_DATE', '<=', now())
-                ->where('c.active_inactive', 1)
-                ->orderBy('t.START_DATE', 'desc')
-                ->value('c.pk');
-
-            return view('admin.feedback.pending_students', compact('courses', 'activeCourses', 'archiveCourses', 'sessions', 'activeCourse'));
+            return view('admin.feedback.pending_students', [
+                'courses' => $courses,
+                'activeCourses' => $activeCourses,
+                'archiveCourses' => $archiveCourses,
+                'sessions' => $sessions,
+                'activeCourse' => $activeCourse,
+                'pendingReportRoutes' => FeedbackReportRouteRegistry::pendingForRequest(),
+                'pendingPageTitle' => $this->isFacultySessionFeedbackReport()
+                    ? 'Faculty Feedback with OT Details'
+                    : 'Pending Feedback – Students',
+                'isFacultySessionFeedbackReport' => $this->isFacultySessionFeedbackReport(),
+            ]);
         } catch (\Exception $e) {
             \Log::error('Pending Students View Error: ' . $e->getMessage());
             return back()->with('error', 'Error loading page: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * @return array{active: \Illuminate\Support\Collection<int, string>, archive: \Illuminate\Support\Collection<int, string>}
+     */
+    private function resolvePendingStudentsCourseLists(): array
+    {
+        if ($this->isFacultySessionFeedbackReport()) {
+            $facultyPk = (int) request()->attributes->get('faculty_report_faculty_pk');
+            $service = app(FacultyFeedbackReportService::class);
+
+            return [
+                'active' => $service->getPrograms($facultyPk, 'current'),
+                'archive' => $service->getPrograms($facultyPk, 'archived'),
+            ];
+        }
+
+        $activeCourses = Cache::remember('pending_feedback_active_courses', 3600, function () {
+            return DB::table('course_master')
+                ->where('active_inactive', 1)
+                ->whereDate('end_date', '>=', now()->toDateString())
+                ->orderBy('course_name')
+                ->pluck('course_name', 'pk');
+        });
+
+        $archiveCourses = Cache::remember('pending_feedback_archive_courses', 3600, function () {
+            return DB::table('course_master')
+                ->where(function ($q) {
+                    $q->whereDate('end_date', '<', now()->toDateString())
+                        ->orWhere('active_inactive', 0);
+                })
+                ->orderBy('course_name')
+                ->pluck('course_name', 'pk');
+        });
+
+        return [
+            'active' => $activeCourses,
+            'archive' => $archiveCourses,
+        ];
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, string>
+     */
+    private function resolvePendingStudentsSessionOptions()
+    {
+        if ($this->isFacultySessionFeedbackReport()) {
+            $scoped = $this->facultyReportCourseIds() ?? [];
+
+            if ($scoped === []) {
+                return collect();
+            }
+
+            return DB::table('timetable')
+                ->select('pk', 'subject_topic', 'START_DATE')
+                ->whereIn('course_master_pk', $scoped)
+                ->where('active_inactive', 1)
+                ->where('feedback_checkbox', 1)
+                ->orderBy('START_DATE', 'desc')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    $label = $item->subject_topic;
+                    if ($item->START_DATE) {
+                        $label .= ' (' . date('d-m-Y', strtotime($item->START_DATE)) . ')';
+                    }
+
+                    return [$item->pk => $label];
+                });
+        }
+
+        return Cache::remember('pending_feedback_sessions', 3600, function () {
+            return DB::table('timetable')
+                ->select('pk', 'subject_topic', 'START_DATE')
+                ->where('active_inactive', 1)
+                ->where('feedback_checkbox', 1)
+                ->orderBy('START_DATE', 'desc')
+                ->get()
+                ->mapWithKeys(function ($item) {
+                    $label = $item->subject_topic;
+                    if ($item->START_DATE) {
+                        $label .= ' (' . date('d-m-Y', strtotime($item->START_DATE)) . ')';
+                    }
+
+                    return [$item->pk => $label];
+                });
+        });
+    }
+
+    private function resolvePendingStudentsDefaultCourseId(): ?int
+    {
+        if ($this->isFacultySessionFeedbackReport()) {
+            return $this->defaultProgramIdForFacultyReport('current');
+        }
+
+        return DB::table('timetable as t')
+            ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+            ->where('t.feedback_checkbox', 1)
+            ->where('t.START_DATE', '<=', now())
+            ->where('c.active_inactive', 1)
+            ->orderBy('t.START_DATE', 'desc')
+            ->value('c.pk');
     }
 
     /**
@@ -3299,7 +3486,10 @@ class FeedbackController extends Controller
             ->where('t.feedback_checkbox', 1)
             ->where('t.START_DATE', '<=', now());
 
+        $this->applyFeedbackReportCourseScope($query, 'c.pk');
+
         if ($request->filled('course_pk')) {
+            $this->assertFacultyReportProgramAccess((int) $request->course_pk);
             $query->where('t.course_master_pk', $request->course_pk);
         } elseif ($request->input('course_type') === 'archive') {
             $query->where(function ($q) {
@@ -3496,13 +3686,18 @@ class FeedbackController extends Controller
                 return response()->json([]);
             }
 
-            $sessions = DB::table('timetable')
+            $this->assertFacultyReportProgramAccess((int) $courseId);
+
+            $sessionsQuery = DB::table('timetable')
                 ->select('pk', 'subject_topic', 'START_DATE')
                 ->where('course_master_pk', $courseId)
                 ->where('active_inactive', 1)
                 ->where('feedback_checkbox', 1)
-                ->orderBy('START_DATE', 'desc')
-                ->get()
+                ->orderBy('START_DATE', 'desc');
+
+            $this->applyFeedbackReportCourseScope($sessionsQuery, 'course_master_pk');
+
+            $sessions = $sessionsQuery->get()
                 ->map(function ($item) {
                     $item->label = $item->subject_topic;
                     if ($item->START_DATE) {
