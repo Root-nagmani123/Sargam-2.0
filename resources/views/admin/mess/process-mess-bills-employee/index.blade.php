@@ -174,6 +174,14 @@
                             <option value="paid" {{ $currentStatus === 'paid' ? 'selected' : '' }}>Paid</option>
                         </select>
                     </div>
+                    <div class="col-md-3">
+                        <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">mail</i>Invoice Sent</label>
+                        @php $currentInvoiceSent = $invoiceSentFilter ?? (request()->has('invoice_sent') ? request('invoice_sent') : 'sent'); @endphp
+                        <select name="invoice_sent" id="filterInvoiceSent" class="form-select">
+                            <option value="">All</option>
+                            <option value="sent" {{ ($currentInvoiceSent ?? '') === 'sent' ? 'selected' : '' }}>Invoice Sent</option>
+                        </select>
+                    </div>
                     <div class="col-md-2 d-flex gap-1">
                         <button type="submit" class="btn btn-primary  flex-grow-1">
                             <i class="material-symbols-rounded align-middle">filter_list</i>
@@ -207,9 +215,16 @@
                     <input type="hidden" name="buyer_name[]" value="{{ $selectedBuyerName }}">
                 @endforeach
                 <input type="hidden" name="status" value="{{ $statusFilter ?? request('status') }}">
+                <input type="hidden" name="invoice_sent" value="{{ $invoiceSentFilter ?? (request()->has('invoice_sent') ? request('invoice_sent') : 'sent') }}">
                 <div class="d-flex flex-wrap justify-content-end align-items-right mb-3 gap-2">
                     <div class="d-flex align-items-center gap-2">
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query(request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search'])) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
+                        @php
+                            $exportQuery = request()->only(['date_from', 'date_to', 'client_type', 'client_type_pk', 'buyer_name', 'status', 'search']);
+                            $exportQuery['invoice_sent'] = request()->has('invoice_sent')
+                                ? request('invoice_sent')
+                                : ($invoiceSentFilter ?? 'sent');
+                        @endphp
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>
@@ -1008,6 +1023,24 @@ document.addEventListener('DOMContentLoaded', function() {
         toastEl.addEventListener('hidden.bs.toast', function() { toastEl.remove(); });
     }
 
+    /** All selected values from a native multi-select or Choices.js instance. */
+    function getChoicesMultiValues(el) {
+        if (!el) return [];
+        if (el.choicesInstance && typeof el.choicesInstance.getValue === 'function') {
+            var raw = el.choicesInstance.getValue(true);
+            if (Array.isArray(raw)) {
+                return raw.map(function (v) { return String(v || '').trim(); }).filter(Boolean);
+            }
+            if (raw != null && raw !== '') {
+                return [String(raw).trim()];
+            }
+            return [];
+        }
+        return Array.from(el.selectedOptions || []).map(function (opt) {
+            return String(opt.value || '').trim();
+        }).filter(Boolean);
+    }
+
     function loadModalBills(page) {
         var requestedPage = parseInt(page, 10);
         modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
@@ -1016,18 +1049,20 @@ document.addEventListener('DOMContentLoaded', function() {
         var bn = document.getElementById('modal_buyer_name');
         var dateFrom = getModalDateYmd('modal_date_from');
         var dateTo = getModalDateYmd('modal_date_to');
-        var clientType = (ct && ct.value) ? ct.value : '';
-        var clientTypePk = (ctp && ctp.value) ? ctp.value : '';
+        var clientTypes = getChoicesMultiValues(ct);
+        var clientTypePks = getChoicesMultiValues(ctp);
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
         var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
-        var buyerNames = bn
-            ? Array.from(bn.selectedOptions || []).map(function (o) { return String(o.value || '').trim(); }).filter(Boolean)
-            : [];
+        var buyerNames = getChoicesMultiValues(bn);
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
         url += '&page=' + encodeURIComponent(modalBillsCurrentPage) + '&per_page=' + encodeURIComponent(perPage);
         if (modalSearch) url += '&search=' + encodeURIComponent(modalSearch);
-        if (clientType) url += '&client_type=' + encodeURIComponent(clientType);
-        if (clientTypePk) url += '&client_type_pk=' + encodeURIComponent(clientTypePk);
+        clientTypes.forEach(function (type) {
+            url += '&client_type[]=' + encodeURIComponent(type);
+        });
+        clientTypePks.forEach(function (pk) {
+            url += '&client_type_pk[]=' + encodeURIComponent(pk);
+        });
         if (buyerNames.length) {
             buyerNames.forEach(function (name) {
                 url += '&buyer_name[]=' + encodeURIComponent(name);
@@ -1047,7 +1082,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Also refresh Buyer Name dropdown in modal based on loaded bills.
                 // IMPORTANT: Only do this when no client type is selected, otherwise it
                 // overrides the dependent "Client Type -> Buyer Name" behavior.
-                if (clientType || modalBillsCurrentPage > 1 || modalSearch) {
+                if (clientTypes.length > 0 || modalBillsCurrentPage > 1 || modalSearch) {
                     return;
                 }
                 try {
@@ -1127,6 +1162,26 @@ document.addEventListener('DOMContentLoaded', function() {
         if (pageLi) pageLi.classList.add('disabled');
     }
 
+    function formatInvoiceNotificationStatusCell(b) {
+        if (!b || !b.invoice_notification_sent) {
+            return '<span class="text-muted small">—</span>';
+        }
+        var readBadge = b.invoice_notification_read
+            ? '<span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle fw-semibold">Read</span>'
+            : '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle fw-semibold">Unread</span>';
+        return '<div class="d-flex flex-column align-items-center gap-1">' +
+            '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>' +
+            readBadge +
+            '</div>';
+    }
+
+    function formatInvoiceNotificationStatusText(b) {
+        if (!b || !b.invoice_notification_sent) {
+            return '—';
+        }
+        return 'Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread');
+    }
+
     function renderModalTable() {
         var tbody = document.getElementById('modalBillsTableBody');
         var modalSelectAllEl = document.getElementById('modalSelectAll');
@@ -1149,9 +1204,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     var receiptDt = b.date_to || getModalDateYmd('modal_date_to') || '';
                     printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'date_from=' + encodeURIComponent(receiptDf) + '&date_to=' + encodeURIComponent(receiptDt);
                 }
-                var statusCell = b.invoice_notification_sent
-                    ? '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>'
-                    : '<span class="text-muted small">—</span>';
+                var statusCell = formatInvoiceNotificationStatusCell(b);
                 var invoiceSent = !!b.invoice_notification_sent;
                 var invoiceBtnClass = invoiceSent ? 'btn btn-outline-secondary generate-invoice-btn' : 'btn btn-outline-primary generate-invoice-btn';
                 var invoiceBtnAttrs = 'data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="' + (invoiceSent ? 'Invoice already sent' : 'Generate Invoice') + '"' + (invoiceSent ? ' disabled data-invoice-sent="1"' : '');
@@ -1348,13 +1401,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var modalPkToClientGroupKey = {};
 
         function fillModalClientTypePk() {
-            // Get selected slugs (now multiselect)
-            var selectedSlugs = [];
-            if (modalClientType.choicesInstance) {
-                selectedSlugs = modalClientType.choicesInstance.getValue(true);
-            } else {
-                selectedSlugs = Array.from(modalClientType.selectedOptions).map(function(opt) { return opt.value; });
-            }
+            var selectedSlugs = getChoicesMultiValues(modalClientType);
             
             modalClientTypePk.innerHTML = '';
 
@@ -1412,21 +1459,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function fillModalBuyerNames() {
-            // Get selected slugs (now multiselect)
-            var selectedSlugs = [];
-            if (modalClientType.choicesInstance) {
-                selectedSlugs = modalClientType.choicesInstance.getValue(true);
-            } else {
-                selectedSlugs = Array.from(modalClientType.selectedOptions).map(function(opt) { return opt.value; });
-            }
-            
-            // Get selected pks (now multiselect)
-            var selectedPks = [];
-            if (modalClientTypePk.choicesInstance) {
-                selectedPks = modalClientTypePk.choicesInstance.getValue(true);
-            } else {
-                selectedPks = Array.from(modalClientTypePk.selectedOptions).map(function(opt) { return opt.value; });
-            }
+            var selectedSlugs = getChoicesMultiValues(modalClientType);
+            var selectedPks = getChoicesMultiValues(modalClientTypePk);
             
             modalBuyerName.innerHTML = '';
 
@@ -1690,8 +1724,17 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         }
 
-        modalClientType.addEventListener('change', fillModalClientTypePk);
+        function scheduleFillModalClientTypePk() {
+            setTimeout(fillModalClientTypePk, 0);
+        }
+
+        modalClientType.addEventListener('change', scheduleFillModalClientTypePk);
         modalClientTypePk.addEventListener('change', fillModalBuyerNames);
+        ['addItem', 'removeItem'].forEach(function (eventName) {
+            modalClientType.addEventListener(eventName, scheduleFillModalClientTypePk);
+        });
+
+        window.fillModalClientTypePk = fillModalClientTypePk;
 
         // Note: Initial fill is now called when modal is shown (after Choices.js init)
     })();
@@ -2327,10 +2370,10 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    function formatAmountTwoDecimals(value) {
-        var num = parseFloat(value);
-        return isNaN(num) ? '0.00' : num.toFixed(2);
-    }
+    // function formatAmountTwoDecimals(value) {
+    //     var num = parseFloat(value);
+    //     return isNaN(num) ? '0.00' : num.toFixed(2);
+    // }
 
     function renderPaymentDetailsContent(data) {
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
@@ -2377,9 +2420,9 @@ document.addEventListener('DOMContentLoaded', function() {
             '<div class="receipt-bottom">' +
             '<div></div>' +
             '<div class="payment-summary">' +
-            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.paid_amount) + '</span></div>' +
-            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.total_amount) + '</span></div>' +
-            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + formatAmountTwoDecimals(data.due_amount) + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + (data.paid_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + (data.total_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + (data.due_amount || '0.0') + '</span></div>' +
             '</div>' +
             '</div>';
         return html;
@@ -2439,7 +2482,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var dueRaw = content && content.getAttribute('data-due-amount-raw');
         var due = dueRaw !== null && dueRaw !== '' ? parseFloat(dueRaw) : 0;
         var amountInput = document.getElementById('payNowAmount');
-        amountInput.value = isNaN(due) ? '' : due.toFixed(2);
+        amountInput.value = isNaN(due) ? '' : due;
         amountInput.setAttribute('max', (isNaN(due) || due < 0) ? '' : due);
         var pdModal = document.getElementById('paymentDetailsModal');
         if (pdModal && bootstrap.Modal.getInstance(pdModal)) bootstrap.Modal.getInstance(pdModal).hide();
@@ -2488,10 +2531,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!amount) { showToast('Please enter amount.', 'error'); return; }
         var amountNum = parseFloat(amount);
         if (isNaN(amountNum) || amountNum <= 0) { showToast('Please enter a valid amount.', 'error'); return; }
-        amountNum = Math.round(amountNum * 100) / 100;
-        if (amountEl) amountEl.value = amountNum.toFixed(2);
+        // amountNum = Math.round(amountNum * 100) / 100;
+        // if (amountEl) amountEl.value = amountNum.toFixed(2);
         if (amountNum > due) { showToast('Payment amount cannot exceed the balance due (₹ ' + (due.toFixed(2)) + ').', 'error'); return; }
-        var payload = { amount: amountNum.toFixed(2), payment_mode: paymentMode, payment_date: paymentDate };
+        // var payload = { amount: amountNum.toFixed(2), payment_mode: paymentMode, payment_date: paymentDate };
+        var payload = { amount: amount, payment_mode: paymentMode, payment_date: paymentDate };
         if (paymentMode === 'cheque') {
             payload.bank_name = (document.getElementById('payNowBankName') || {}).value || '';
             payload.cheque_number = (document.getElementById('payNowChequeNumber') || {}).value || '';
@@ -2746,7 +2790,7 @@ function printProcessMessBillsTable() {
             '<td>' + (b.invoice_no || '—') + '</td>' +
             '<td>' + (b.payment_type || '—') + '</td>' +
             '<td class="text-end">' + (b.total || '0') + '</td>' +
-            '<td>' + (b.invoice_notification_sent ? 'Invoice Sent' : '—') + '</td>' +
+            '<td>' + (b && b.invoice_notification_sent ? ('Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread')) : '—') + '</td>' +
             '</tr>';
     }).join('');
 

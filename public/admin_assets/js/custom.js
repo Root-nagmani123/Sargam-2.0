@@ -302,24 +302,6 @@ function deleteConfirm(id) {
 
 document.addEventListener('DOMContentLoaded', function () {
 
-    $('input[name="photo"]').on('change', function () {
-        console.log('Photo input changed');
-
-        const input = this;
-        const preview = $('#photoPreview');
-
-        if (input.files && input.files[0]) {
-            const reader = new FileReader();
-
-            reader.onload = function (e) {
-                preview.attr('src', e.target.result).removeClass('d-none');
-            };
-
-            reader.readAsDataURL(input.files[0]);
-        }
-    });
-
-
     $('input[name="landline"], input[name="mobile"]').on('input', function () {
         this.value = this.value.replace(/\D/g, '');
     });
@@ -402,6 +384,15 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        // Check if photo validation error is visible (file size or format issue)
+        const $photoErrorMsg = $('#photoErrorMessage, #photoErrorMessageBasic').not('.d-none');
+        if ($photoErrorMsg.length) {
+            $btn.prop('disabled', false);
+            toastr.error('Please select a valid photo file before saving.');
+            $('html, body').animate({ scrollTop: $photoErrorMsg.first().offset().top - 150 }, 400);
+            return;
+        }
+
         let facultyType = $('select[name="facultytype"]').val();
         let appellation = $('select[name="appellation"]').val();
         let firstName = $('input[name="firstName"]').val();
@@ -454,6 +445,33 @@ document.addEventListener('DOMContentLoaded', function () {
 
         if (photoInput && photoInput.files.length > 0) {
             const photo = photoInput.files[0];
+            const allowedPhotoTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            const maxPhotoSize = 2 * 1024 * 1024; // 2 MB
+
+            if (!allowedPhotoTypes.includes(photo.type)) {
+                $btn.prop('disabled', false);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Unsupported Format',
+                    text: 'Only JPG and PNG image formats are allowed for the photo.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#d33'
+                });
+                return;
+            }
+
+            if (photo.size > maxPhotoSize) {
+                $btn.prop('disabled', false);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'File Too Large',
+                    text: 'Photo file size must not exceed 2 MB.',
+                    confirmButtonText: 'OK',
+                    confirmButtonColor: '#d33'
+                });
+                return;
+            }
+
             formData.append('photo', photo);
         }
         // document is file

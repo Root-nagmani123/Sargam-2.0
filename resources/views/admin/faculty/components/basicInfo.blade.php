@@ -334,9 +334,16 @@
             label="Photo Upload:"
             placeholder="Photo upload :"
             formLabelClass="form-label"
-
-            helperSmallText="Please upload a recent passport-sized photo"
+            accept="image/jpeg,image/png"
+            helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG only)"
             />
+
+            <!-- File Validation Message -->
+            <div id="photoErrorMessageBasic" class="alert alert-danger alert-dismissible fade mt-2 d-none" role="alert">
+                <i class="material-icons align-middle me-2">error</i>
+                <span id="photoErrorTextBasic"></span>
+                <button type="button" class="btn-close photo-close-btn-basic" aria-label="Close"></button>
+            </div>
 
             @if(!empty($faculty->photo_uplode_path))
             <br/>

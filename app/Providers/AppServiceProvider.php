@@ -2,12 +2,11 @@
 
 namespace App\Providers;
 
-use Illuminate\Support\ServiceProvider;
-use Illuminate\Pagination\Paginator;
+use App\Support\FeedbackReportRouteRegistry;
 use App\Services\NotificationService;
-use App\Services\SidebarMenu\MenuService;
-use App\Services\SidebarMenu\SidebarNavResolver;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
+use Illuminate\Support\ServiceProvider;
 
 
 class AppServiceProvider extends ServiceProvider
@@ -29,36 +28,27 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot(MenuService $menuService)
+    public function boot()
     {
         Paginator::useBootstrap();
 
-        view()->composer('*', function ($view) use ($menuService) {
-            if (!auth()->check()) {
+        View::composer([
+            'admin.feedback.feedback_details',
+            'admin.feedback.faculty_view',
+            'admin.feedback.faculty_average',
+            'admin.feedback.feedback_database',
+            'admin.feedback.pending_students',
+        ], function ($view) {
+            if (View::shared('fr', null) !== null) {
                 return;
             }
 
-            $view->with('sidebarMenus', $menuService->getMenus());
+            $routes = FeedbackReportRouteRegistry::forRequest();
+            $view->with('fr', $routes);
 
-            static $navShared = false;
-            if ($navShared) {
-                return;
+            if (View::shared('feedbackReportRoutes', null) === null) {
+                $view->with('feedbackReportRoutes', $routes);
             }
-            $navShared = true;
-
-            $resolver = app(SidebarNavResolver::class);
-            $navContext = $resolver->resolve();
-            $activeNavTab = $navContext['nav_tab'] ?? SidebarNavResolver::HOME_TAB;
-            $sidebarContentSection = $resolver->contentSectionForSlug($navContext['category_slug'] ?? 'home');
-
-            View::share([
-                'navContext' => $navContext,
-                'activeNavTab' => $activeNavTab,
-                'activeCategoryId' => $navContext['category_id'],
-                'activeGroupId' => $navContext['group_id'],
-                'sidebarContentSection' => $sidebarContentSection,
-            ]);
         });
-
     }
 }

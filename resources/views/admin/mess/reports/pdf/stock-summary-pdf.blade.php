@@ -30,7 +30,7 @@
 
         body {
             font-family: DejaVu Sans, Arial, sans-serif;
-            font-size: 11px;
+            font-size: 13px;
             color: #222;
             background: white;
             position: relative;
@@ -115,7 +115,7 @@
             max-width: 100%;
             table-layout: fixed;
             border-collapse: collapse;
-            font-size: 9px;
+            font-size: 11px;
             margin-top: 4px;
             page-break-inside: auto;
         }
@@ -150,13 +150,13 @@
         }
 
         .no-data {
-            font-size: 12px;
+            font-size: 14px;
             margin-top: 8px;
         }
 
         .footer {
             border-top: 1px solid #dee2e6;
-            font-size: 10px;
+            font-size: 12px;
             color: #666;
             text-align: center;
             padding-top: 6px;

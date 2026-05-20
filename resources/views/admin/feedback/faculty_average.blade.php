@@ -1,9 +1,12 @@
+@php
+    $fr = $fr ?? $feedbackReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::forRequest();
+@endphp
 @extends('admin.layouts.master')
 
 @section('title', 'Faculty Feedback Average - Sargam | Lal Bahadur')
 
 @section('setup_content')
-    <style>
+<style>
         /* ── Variables ── */
         :root {
             --fb-primary: #0b4f8a;
@@ -191,7 +194,7 @@
                         <i class="fas fa-sliders-h"></i> Filters
                     </div>
                     <div class="card-body">
-                        <form method="GET" action="{{ route('feedback.average') }}" id="filterForm">
+                        <form method="GET" action="{{ $fr['average'] }}" id="filterForm">
                             <fieldset class="mb-3">
                                 <legend class="fs-6 fw-semibold">Course Status</legend>
                                 <div class="form-check">
@@ -265,25 +268,13 @@
                         </span>
                         <div class="export-btn-group d-flex flex-wrap gap-2">
                             <!-- Excel Export -->
-                            <a href="{{ route('feedback.average.export.excel', [
-                                'course_type' => $courseType,
-                                'program_name' => $currentProgram,
-                                'faculty_name' => $currentFaculty,
-                                'from_date' => $fromDate,
-                                'to_date' => $toDate,
-                            ]) }}"
-                                class="btn btn-outline-success btn-sm" target="_blank" title="Export to Excel">
+                            <a href="{{ $fr['average_export_excel'] }}?{{ http_build_query(array_filter(['course_type' => $courseType ?? 'current', 'program_name' => $currentProgram ?? '', 'faculty_name' => $currentFaculty ?? '', 'from_date' => $fromDate ?? '', 'to_date' => $toDate ?? ''])) }}"
+                                class="btn btn-outline-success btn-sm export-excel-link" target="_blank" title="Export to Excel">
                                 <i class="fas fa-file-excel"></i> Excel
                             </a>
 
                             <!-- PDF Export -->
-                            <a href="{{ route('feedback.average.export.pdf', [
-                                'course_type' => $courseType,
-                                'program_name' => $currentProgram,
-                                'faculty_name' => $currentFaculty,
-                                'from_date' => $fromDate,
-                                'to_date' => $toDate,
-                            ]) }}"
+                            <a href="{{ $fr['average_export_pdf'] }}?{{ http_build_query(array_filter(['course_type' => $courseType ?? 'current', 'program_name' => $currentProgram ?? '', 'faculty_name' => $currentFaculty ?? '', 'from_date' => $fromDate ?? '', 'to_date' => $toDate ?? ''])) }}"
                                 class="btn btn-outline-danger btn-sm" target="_blank" title="Export to PDF">
                                 <i class="fas fa-file-pdf"></i> PDF
                             </a>
@@ -409,7 +400,7 @@
             for (const [key, value] of formData.entries()) {
                 params.append(key, value);
             }
-            const printUrl = `{{ route('feedback.average.print') }}?${params.toString()}`;
+            const printUrl = `{{ $fr['average_print'] }}?${params.toString()}`;
             window.open(printUrl, '_blank');
         }
 
@@ -423,8 +414,8 @@
             const toDate = document.querySelector('input[name="to_date"]')?.value || '';
 
             // Get the base URLs
-            const excelBaseUrl = "{{ route('feedback.average.export.excel') }}";
-            const pdfBaseUrl = "{{ route('feedback.average.export.pdf') }}";
+            const excelBaseUrl = "{{ $fr['average_export_excel'] }}";
+            const pdfBaseUrl = "{{ $fr['average_export_pdf'] }}";
 
             // Find all export links
             const exportLinks = document.querySelectorAll('.export-btn-group a');
@@ -482,7 +473,7 @@
             params.append('_', Date.now());
 
             // Make AJAX request
-            fetch(`{{ route('feedback.average') }}?${params.toString()}`, {
+            fetch(`{{ $fr['average'] }}?${params.toString()}`, {
                     headers: {
                         'X-Requested-With': 'XMLHttpRequest',
                         'Cache-Control': 'no-cache'
@@ -558,7 +549,7 @@
 
         // Function to load programs when course type changes
         function loadProgramsByCourseType(courseType) {
-            fetch(`{{ route('feedback.average') }}?course_type=${courseType}&_=${Date.now()}`, {
+            fetch(`{{ $fr['average'] }}?course_type=${courseType}&_=${Date.now()}`, {
                     headers: {
                         'Cache-Control': 'no-cache'
                     }
