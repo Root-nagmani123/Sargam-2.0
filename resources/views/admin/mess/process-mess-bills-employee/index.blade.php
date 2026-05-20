@@ -37,63 +37,86 @@
     </div>
 
     {{-- Summary cards --}}
-    <div class="no-print">
-    @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0]; @endphp
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4 animate__animated animate__fadeIn">
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-primary" style="font-size: 2rem;">description</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</div>
+    <div class="no-print process-mess-stats-section mb-4">
+        @php
+            $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0];
+            $statsPaidPct = ($stats['total_bills'] ?? 0) > 0
+                ? (int) round((($stats['paid_count'] ?? 0) / $stats['total_bills']) * 100)
+                : 0;
+        @endphp
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h2 class="h6 mb-0 text-uppercase fw-semibold text-body-secondary d-flex align-items-center gap-2">
+                <span class="material-symbols-rounded text-primary" style="font-size: 1.35rem;" aria-hidden="true">insights</span>
+                <span>Bill overview</span>
+            </h2>
+            <span class="badge text-bg-light border text-body-secondary fw-normal px-3 py-2 rounded-pill">
+                <span class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;" aria-hidden="true">date_range</span>
+                {{ $dateFromDisplay }} – {{ $dateToDisplay }}
+            </span>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 g-lg-4 animate__animated animate__fadeIn" role="list" aria-label="Bill statistics">
+            <div class="col" role="listitem">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-primary bg-primary-subtle bg-opacity-25">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                        <div class="flex-shrink-0 rounded-circle bg-primary text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
+                            <span class="material-symbols-rounded">description</span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total bills</p>
+                            <p class="fs-3 fw-bold text-primary mb-1 lh-1 tabular-nums" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</p>
+                            <p class="small text-body-secondary mb-0">Combined invoices in range</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-warning bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-warning" style="font-size: 2rem;">schedule</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-success bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-success" style="font-size: 2rem;">check_circle</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</div>
+            <div class="col" role="listitem">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-warning bg-warning-subtle bg-opacity-25">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                        <div class="flex-shrink-0 rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
+                            <span class="material-symbols-rounded">pending_actions</span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Unpaid</p>
+                            <p class="fs-3 fw-bold text-warning-emphasis mb-1 lh-1 tabular-nums" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</p>
+                            <p class="small text-body-secondary mb-0">Awaiting payment</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-info" style="font-size: 2rem;">payments</i>
+            <div class="col" role="listitem">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-success bg-success-subtle bg-opacity-25">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                        <div class="flex-shrink-0 rounded-circle bg-success text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
+                            <span class="material-symbols-rounded">check_circle</span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                <p class="text-body-secondary small text-uppercase fw-semibold mb-0 lh-sm">Paid</p>
+                                <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle" id="process-mess-stats-paid-pct">{{ $statsPaidPct }}% cleared</span>
+                            </div>
+                            <p class="fs-3 fw-bold text-success mb-1 lh-1 tabular-nums" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</p>
+                            <p class="small text-body-secondary mb-0">Fully settled bills</p>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</div>
+                </div>
+            </div>
+            <div class="col" role="listitem">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-info bg-info-subtle bg-opacity-25">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                        <div class="flex-shrink-0 rounded-circle bg-info text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
+                            <span class="material-symbols-rounded">payments</span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total amount</p>
+                            <p class="fs-3 fw-bold text-info-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</p>
+                            <p class="small text-body-secondary mb-0">Bill value for period</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    </div>
+
 
     {{-- Filters card --}}
     <div class="card border-0 shadow mb-4 no-print" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
@@ -300,33 +323,16 @@
             </div>
         </div>
     </div>
-</div>
-
-@include('components.mess-master-datatables', [
-    'tableId' => 'processMessBillsTable',
-    'searchPlaceholder' => 'Search name or invoice no.',
-    'orderColumn' => [[0, 'asc']],
-    'actionColumnIndex' => 8,
-    'infoLabel' => 'bills',
-    'serverSide' => true,
-    'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
-    'columnManager' => true,
-    'columnManagerLocked' => [0],
-    'columnManagerTitle' => 'Process Mess Bills columns',
-])
+    </div>
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof window.jQuery === 'undefined') return;
-    var $ = window.jQuery;
-    var $table = $('#processMessBillsTable');
-    if (!$table.length) return;
-    $table.on('xhr.dt', function(e, settings, json) {
+(function () {
+    function applyProcessMessBillStats(json) {
         if (!json || !json.stats) return;
         var s = json.stats;
-        var fmtInt = function(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
-        var fmtAmt = function(n) {
+        var fmtInt = function (n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+        var fmtAmt = function (n) {
             var x = Number(n) || 0;
             var parts = x.toFixed(2).split('.');
             parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -336,14 +342,56 @@ document.addEventListener('DOMContentLoaded', function() {
         var elUnpaid = document.getElementById('process-mess-stats-unpaid');
         var elPaid = document.getElementById('process-mess-stats-paid');
         var elAmt = document.getElementById('process-mess-stats-total-amount');
+        var elPaidPct = document.getElementById('process-mess-stats-paid-pct');
         if (elTotal) elTotal.textContent = fmtInt(s.total_bills);
         if (elUnpaid) elUnpaid.textContent = fmtInt(s.unpaid_count);
         if (elPaid) elPaid.textContent = fmtInt(s.paid_count);
         if (elAmt) elAmt.textContent = '₹ ' + fmtAmt(s.total_amount);
+        if (elPaidPct) {
+            var total = Number(s.total_bills) || 0;
+            var paid = Number(s.paid_count) || 0;
+            elPaidPct.textContent = (total > 0 ? Math.round((paid / total) * 100) : 0) + '% cleared';
+        }
+    }
+
+    window.applyProcessMessBillStats = applyProcessMessBillStats;
+
+    function bindProcessMessBillStatsListener() {
+        if (typeof window.jQuery === 'undefined') return;
+        var $ = window.jQuery;
+        var $table = $('#processMessBillsTable');
+        if (!$table.length) return;
+
+        $table.off('xhr.dt.processMessStats').on('xhr.dt.processMessStats', function (e, settings, json) {
+            applyProcessMessBillStats(json);
+        });
+
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
+            applyProcessMessBillStats($table.DataTable().settings()[0].json);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', bindProcessMessBillStatsListener);
+    document.addEventListener('DOMContentLoaded', function () {
+        setTimeout(bindProcessMessBillStatsListener, 0);
     });
-});
+})();
 </script>
 @endpush
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'processMessBillsTable',
+    'searchPlaceholder' => 'Search name or invoice no.',
+    'orderColumn' => [[0, 'asc']],
+    'actionColumnIndex' => 8,
+    'infoLabel' => 'bills',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
+    'ajaxJsonCallback' => 'applyProcessMessBillStats',
+    'columnManager' => true,
+    'columnManagerLocked' => [0],
+    'columnManagerTitle' => 'Process Mess Bills columns',
+])
 
 {{-- Toast container for feedback --}}
 <div class="toast-container position-fixed bottom-0 end-0 p-3 no-print" id="processBillsToastContainer"></div>
@@ -561,6 +609,23 @@ document.addEventListener('DOMContentLoaded', function() {
     @page {
         margin: 12mm;
         size: auto;
+    }
+}
+
+/* Summary stat cards */
+.process-mess-stats-section .process-mess-stat-icon {
+    width: 3rem;
+    height: 3rem;
+}
+.process-mess-stats-section .process-mess-stat-icon .material-symbols-rounded {
+    font-size: 1.5rem;
+}
+.process-mess-stats-section .card {
+    --bs-card-spacer-y: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .process-mess-stats-section .hover-lift:hover {
+        transform: none;
     }
 }
 

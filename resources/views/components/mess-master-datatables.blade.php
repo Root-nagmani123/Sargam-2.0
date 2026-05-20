@@ -40,6 +40,7 @@
     $columnManager = isset($columnManager) ? (bool) $columnManager : true;
     $columnManagerTitle = $columnManagerTitle ?? 'Manage Columns';
     $columnManagerLocked = isset($columnManagerLocked) ? (array) $columnManagerLocked : [];
+    $ajaxJsonCallback = isset($ajaxJsonCallback) ? (string) $ajaxJsonCallback : '';
 @endphp
 @if($columnManager)
     @include('components.mess-column-manager', ['tableId' => $tableId, 'title' => $columnManagerTitle])
@@ -88,6 +89,18 @@ document.addEventListener('DOMContentLoaded', function() {
     var columnDefsMerged = {!! json_encode(array_values(array_merge($columnDefs, $serverSideColumnDefs))) !!};
     var lengthMenu = {!! json_encode($lengthMenu) !!};
     var messDtNonOrderableColumns = {!! json_encode(array_values($actionColumnIndices)) !!};
+    var messDtAjaxJsonCallbackName = {!! json_encode($ajaxJsonCallback) !!};
+
+    function messMasterInvokeAjaxJsonCallback(settings) {
+        if (!messDtAjaxJsonCallbackName) return;
+        try {
+            var json = new $.fn.dataTable.Api(settings).ajax.json();
+            var fn = window[messDtAjaxJsonCallbackName];
+            if (json && typeof fn === 'function') {
+                fn(json);
+            }
+        } catch (e) {}
+    }
 
     @if ($serverSide && $ajaxUrlBase !== '')
     var columnCount = $firstHeaderRow.children('th,td').length;
@@ -178,11 +191,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (typeof window.messDataTableBindSearchInputTrim === 'function') {
                 try { window.messDataTableBindSearchInputTrim(new $.fn.dataTable.Api(settings)); } catch (e) {}
             }
+            messMasterInvokeAjaxJsonCallback(settings);
         },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
             }
+            messMasterInvokeAjaxJsonCallback(settings);
             @if ($searchHighlight)
             if (typeof window.messDataTableApplySearchHighlight === 'function') {
                 try {
@@ -224,11 +239,13 @@ document.addEventListener('DOMContentLoaded', function() {
             if (typeof window.messDataTableBindSearchInputTrim === 'function') {
                 try { window.messDataTableBindSearchInputTrim(new $.fn.dataTable.Api(settings)); } catch (e) {}
             }
+            messMasterInvokeAjaxJsonCallback(settings);
         },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
             }
+            messMasterInvokeAjaxJsonCallback(settings);
             @if ($searchHighlight)
             if (typeof window.messDataTableApplySearchHighlight === 'function') {
                 try {
