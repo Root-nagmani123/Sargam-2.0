@@ -204,7 +204,7 @@
         display: inline-block;
     }
     .low-stock-report .mess-official-line-1 {
-        font-size: 0.7rem;
+        font-size: 0.82rem;
         color: #004a93;
         letter-spacing: 0.04em;
         line-height: 1.3;
@@ -216,7 +216,7 @@
         margin-top: 2px;
     }
     .low-stock-report .mess-official-line-3 {
-        font-size: 0.8rem;
+        font-size: 0.95rem;
         color: #5c6370;
         line-height: 1.3;
         margin-top: 2px;
