@@ -39,6 +39,7 @@ class ProcessMessBillsExport implements FromCollection, WithHeadings, WithCustom
             'Invoice Date',
             'Client Type',
             'Total',
+            'Total Due Amount',
             'Payment Type',
             'Status',
         ];
@@ -57,23 +58,23 @@ class ProcessMessBillsExport implements FromCollection, WithHeadings, WithCustom
 
                 // Report header (rows 1-4)
                 $sheet->setCellValue('A1', 'Process Mess Bills');
-                $sheet->mergeCells('A1:H1');
+                $sheet->mergeCells('A1:I1');
                 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
                 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A2', 'Period: ' . $this->dateFrom . ' to ' . $this->dateTo);
-                $sheet->mergeCells('A2:H2');
+                $sheet->mergeCells('A2:I2');
                 $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A3', 'Generated on: ' . now()->format('d-m-Y H:i:s'));
-                $sheet->mergeCells('A3:H3');
+                $sheet->mergeCells('A3:I3');
                 $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 // Blank row
                 $sheet->setCellValue('A4', '');
 
                 // Column headers styling (row 5)
-                $lastCol = 'H';
+                $lastCol = 'I';
                 $sheet->getStyle('A5:' . $lastCol . '5')
                     ->applyFromArray([
                         'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],

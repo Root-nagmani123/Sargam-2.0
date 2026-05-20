@@ -38,8 +38,8 @@
 
     {{-- Summary cards --}}
     <div class="no-print">
-    @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0]; @endphp
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4 animate__animated animate__fadeIn">
+    @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0, 'total_due_amount' => 0]; @endphp
+    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeIn">
         <div class="col">
             <div class="card border-0 shadow h-100 hover-lift transition-all">
                 <div class="card-body d-flex align-items-center gap-3">
@@ -88,6 +88,19 @@
                     <div>
                         <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
                         <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col">
+            <div class="card border-0 shadow h-100 hover-lift transition-all">
+                <div class="card-body d-flex align-items-center gap-3">
+                    <div class="rounded-3 bg-danger bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
+                        <i class="material-symbols-rounded text-danger" style="font-size: 2rem;">account_balance_wallet</i>
+                    </div>
+                    <div>
+                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Due Amount</div>
+                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-due-amount">₹ {{ number_format($stats['total_due_amount'] ?? 0, 2) }}</div>
                     </div>
                 </div>
             </div>
@@ -246,6 +259,7 @@
                             <th class="text-nowrap py-2">Invoice Date</th>
                             <th class="text-nowrap py-2">Client Type</th>
                             <th class="text-nowrap py-2 text-end">Total</th>
+                            <th class="text-nowrap py-2 text-end">Total Due Amount</th>
                             <th class="text-nowrap py-2">Payment Type</th>
                             <th class="text-nowrap py-2">Status</th>
                             <th class="text-nowrap py-2 text-center no-print">Actions</th>
@@ -264,6 +278,7 @@
                                 <td>{{ $cb->invoice_date_range ?? '—' }}</td>
                                 <td>{{ $cb->client_type_display ?? '—' }}</td>
                                 <td class="text-end fw-semibold">₹ {{ number_format($cb->total ?? 0, 2) }}</td>
+                                <td class="text-end fw-semibold">₹ {{ number_format($cb->total_due_amount ?? 0, 2) }}</td>
                                 <td>{{ $cb->payment_type ?? '—' }}</td>
                                 <td>
                                     @if(($cb->status ?? 0) == 2)
@@ -284,7 +299,7 @@
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
+                                <td colspan="10" class="text-center py-5 text-muted">
                                     <i class="material-symbols-rounded d-block mb-3 text-primary" style="font-size: 4rem;">inbox</i>
                                     <div class="fw-semibold fs-5 mb-1">No bills found</div>
                                     <div class="small">Try adjusting your filters or date range</div>
@@ -302,7 +317,7 @@
     'tableId' => 'processMessBillsTable',
     'searchPlaceholder' => 'Search name or invoice no.',
     'orderColumn' => [[0, 'asc']],
-    'actionColumnIndex' => 8,
+    'actionColumnIndex' => 9,
     'infoLabel' => 'bills',
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
@@ -329,10 +344,12 @@ document.addEventListener('DOMContentLoaded', function() {
         var elUnpaid = document.getElementById('process-mess-stats-unpaid');
         var elPaid = document.getElementById('process-mess-stats-paid');
         var elAmt = document.getElementById('process-mess-stats-total-amount');
+        var elDueAmt = document.getElementById('process-mess-stats-total-due-amount');
         if (elTotal) elTotal.textContent = fmtInt(s.total_bills);
         if (elUnpaid) elUnpaid.textContent = fmtInt(s.unpaid_count);
         if (elPaid) elPaid.textContent = fmtInt(s.paid_count);
         if (elAmt) elAmt.textContent = '₹ ' + fmtAmt(s.total_amount);
+        if (elDueAmt) elDueAmt.textContent = '₹ ' + fmtAmt(s.total_due_amount);
     });
 });
 </script>
@@ -397,6 +414,10 @@ document.addEventListener('DOMContentLoaded', function() {
                             <input type="text" name="cheque_number" id="payNowChequeNumber" class="payment-detail-input form-control " placeholder="Cheque Number" autocomplete="off">
                             <label class="payment-detail-label">Cheque Date</label>
                             <input type="text" name="cheque_date" id="payNowChequeDate" class="payment-detail-input form-control " value="{{ now()->format('d-m-Y') }}" placeholder="dd-mm-yyyy" autocomplete="off">
+                        </div>
+                        <div class="payment-detail-row payment-detail-total-due-row">
+                            <span class="payment-detail-label">Total Due Amount</span>
+                            <span id="payNowTotalDueAmount" class="payment-detail-total-due-value">—</span>
                         </div>
                         <div class="payment-detail-row">
                             <label class="payment-detail-label">Amount</label>
@@ -467,6 +488,7 @@ document.addEventListener('DOMContentLoaded', function() {
 .payment-detail-row .payment-detail-label { font-weight: 600; color: #333; font-size: 0.9rem; }
 .payment-detail-row .payment-detail-input { background: #faf9f6; border: 1px solid #ccc; border-radius: 4px; padding: 0.4rem 0.5rem; font-size: 0.9rem; }
 .payment-detail-row .payment-detail-input:focus { background: #fff; border-color: #0a3d6b; outline: none; }
+.payment-detail-total-due-row .payment-detail-total-due-value { grid-column: span 3; font-weight: 700; font-size: 1rem; color: #0a3d6b; }
 .payment-detail-cheque-row { display: none; }
 .payment-detail-modal.payment-mode-cheque .payment-detail-cheque-row { display: grid; }
 .payment-detail-bank-wrap { display: none; grid-column: span 2; grid-template-columns: 1fr 1fr; gap: 0.5rem 0.75rem; align-items: center; }
@@ -736,6 +758,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <th class="text-nowrap py-3 fw-semibold">Invoice No.</th>
                                 <th class="text-nowrap py-3 fw-semibold">Payment Type</th>
                                 <th class="text-nowrap py-3 fw-semibold text-end">Total</th>
+                                <th class="text-nowrap py-3 fw-semibold text-end">Total Due Amount</th>
                                 <th class="text-nowrap py-3 fw-semibold text-center">Status</th>
                                 <th class="text-nowrap py-3 fw-semibold text-center">Actions</th>
                                 <th class="text-nowrap py-3 fw-semibold text-center">Receipt</th>
@@ -743,7 +766,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         </thead>
                         <tbody id="modalBillsTableBody">
                             <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
+                                <td colspan="10" class="text-center py-5 text-muted">
                                     <i class="material-symbols-rounded d-block mb-2 text-primary" style="font-size: 3rem;">description</i>
                                     <div class="fw-semibold">Select date range and click <strong class="text-primary">Load Bills</strong> to load unpaid bills.</div>
                                 </td>
@@ -1194,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var pageData = filtered;
 
         if (pageData.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="9" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
+            tbody.innerHTML = '<tr><td colspan="10" class="text-center py-4 text-muted">No unpaid bills found. Adjust date range and click Load Bills.</td></tr>';
         } else {
             tbody.innerHTML = pageData.map(function(b, i) {
                 var sn = b.sno || (start + i + 1);
@@ -1215,6 +1238,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<td>' + (b.invoice_no || '—') + '</td>' +
                     '<td>' + (b.payment_type || '—') + '</td>' +
                     '<td class="text-end">' + (b.total || '0') + '</td>' +
+                    '<td class="text-end fw-semibold">' + (b.total_due_amount || '0.00') + '</td>' +
                     '<td class="text-center">' + statusCell + '</td>' +
                     '<td class="text-center"><div class="btn-group btn-group-sm">' +
                     '<button type="button" class="' + invoiceBtnClass + '" ' + invoiceBtnAttrs + '>Invoice</button>' +
@@ -2375,6 +2399,14 @@ document.addEventListener('DOMContentLoaded', function() {
     //     return isNaN(num) ? '0.00' : num.toFixed(2);
     // }
 
+    function formatPayDetailAmount(value) {
+        var num = parseFloat(value);
+        if (isNaN(num)) return '0.00';
+        var parts = num.toFixed(2).split('.');
+        parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+        return parts.join('.');
+    }
+
     function renderPaymentDetailsContent(data) {
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
         var timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
@@ -2451,6 +2483,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
                 content.innerHTML = renderPaymentDetailsContent(data);
                 content.setAttribute('data-due-amount-raw', data.due_amount_raw != null ? data.due_amount_raw : data.due_amount || 0);
+                var totalDueRaw = data.total_due_amount_raw != null
+                    ? data.total_due_amount_raw
+                    : (parseFloat(String(data.total_due_amount || '0').replace(/,/g, '')) || 0);
+                content.setAttribute('data-total-due-amount-raw', totalDueRaw);
                 if (data.first_receipt_id) content.setAttribute('data-first-receipt-id', data.first_receipt_id);
                 else content.removeAttribute('data-first-receipt-id');
                 var pdModal = document.getElementById('paymentDetailsModal');
@@ -2482,6 +2518,12 @@ document.addEventListener('DOMContentLoaded', function() {
         var content = document.getElementById('paymentDetailsContent');
         var dueRaw = content && content.getAttribute('data-due-amount-raw');
         var due = dueRaw !== null && dueRaw !== '' ? parseFloat(dueRaw) : 0;
+        var totalDueRaw = content && content.getAttribute('data-total-due-amount-raw');
+        var totalDue = totalDueRaw !== null && totalDueRaw !== '' ? parseFloat(totalDueRaw) : NaN;
+        var totalDueEl = document.getElementById('payNowTotalDueAmount');
+        if (totalDueEl) {
+            totalDueEl.textContent = isNaN(totalDue) ? '—' : formatPayDetailAmount(totalDue);
+        }
         var amountInput = document.getElementById('payNowAmount');
         amountInput.value = isNaN(due) ? '' : due;
         amountInput.setAttribute('max', (isNaN(due) || due < 0) ? '' : due);
@@ -2638,7 +2680,7 @@ function printProcessMessBillsMainTable() {
     }
 
     // Remove action column (last column) for print
-    var actionColIdx = 8;
+    var actionColIdx = 9;
 
     var originalThead = table.querySelector('thead');
     var headerCells = originalThead ? Array.from(originalThead.querySelectorAll('tr th')) : [];
@@ -2651,7 +2693,7 @@ function printProcessMessBillsMainTable() {
         return '<tr>' + filteredCells.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
     }).join('');
 
-    var columnsCount = printHeaderCells.length || 8;
+    var columnsCount = printHeaderCells.length || 9;
     var title = 'Process Mess Bills - Employee';
     var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
 
@@ -2776,8 +2818,8 @@ function printProcessMessBillsTable() {
     var originalThead = table.querySelector('thead');
     var headerRow = originalThead ? originalThead.querySelector('tr') : null;
     var headerCells = headerRow ? Array.from(headerRow.children) : [];
-    // Remove Checkbox (0), Actions (7) and Receipt (8) columns from print
-    var removeIdx = { 0: true, 7: true, 8: true };
+    // Remove Checkbox (0), Actions (8) and Receipt (9) columns from print
+    var removeIdx = { 0: true, 8: true, 9: true };
     var printHeaderCells = headerCells.filter(function (_, idx) { return !removeIdx[idx]; });
     var columnsCount = printHeaderCells.length || 7;
     var columnHeadHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
@@ -2791,6 +2833,7 @@ function printProcessMessBillsTable() {
             '<td>' + (b.invoice_no || '—') + '</td>' +
             '<td>' + (b.payment_type || '—') + '</td>' +
             '<td class="text-end">' + (b.total || '0') + '</td>' +
+            '<td class="text-end">' + (b.total_due_amount || '0.00') + '</td>' +
             '<td>' + (b && b.invoice_notification_sent ? ('Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread')) : '—') + '</td>' +
             '</tr>';
     }).join('');
