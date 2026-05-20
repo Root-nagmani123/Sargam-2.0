@@ -117,6 +117,9 @@ document.addEventListener('DOMContentLoaded', function() {
         return base + (qs ? (sep + qs) : '');
     }
 
+    window.messMasterDataTableAjaxUrlByTable = window.messMasterDataTableAjaxUrlByTable || {};
+    window.messMasterDataTableAjaxUrlByTable['{{ $tableId }}'] = sellingVouchersServerDtUrl;
+
     function messMasterDtAjax(data, callback) {
         $.ajax({
             url: sellingVouchersServerDtUrl(),

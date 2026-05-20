@@ -357,6 +357,521 @@
                 }
             });
             return indexes;
+        },
+
+        /** Visible column indexes, or all non-skipped columns if manager not initialized. */
+        resolveExportIndexes: function (tableId) {
+            var visible = this.getVisibleIndexes(tableId);
+            if (visible && visible.length) {
+                return visible;
+            }
+            var table = document.getElementById(tableId);
+            if (!table) return [];
+            var mgr = this.get(tableId);
+            var skipSet = {};
+            if (mgr) {
+                mgr.skipColumns.forEach(function (i) { skipSet[i] = true; });
+            }
+            var headers = table.querySelectorAll('thead tr').length
+                ? table.querySelector('thead tr').querySelectorAll('th, td')
+                : [];
+            var indexes = [];
+            for (var i = 0; i < headers.length; i++) {
+                if (skipSet[i]) continue;
+                var h = (headers[i].textContent || '').trim().toLowerCase();
+                if (h === 'actions' || h === 'action') continue;
+                indexes.push(i);
+            }
+            return indexes;
+        },
+
+        appendVisibleColumnsToUrl: function (url, tableId) {
+            var indexes = this.resolveExportIndexes(tableId);
+            if (!indexes.length) return url;
+            var sep = url.indexOf('?') >= 0 ? '&' : '?';
+            return url + sep + 'visible_columns=' + encodeURIComponent(indexes.join(','));
+        },
+
+        _stripHtml: function (html) {
+            if (typeof window.messDataTableStripHtmlForSearch === 'function') {
+                return window.messDataTableStripHtmlForSearch(html);
+            }
+            var d = document.createElement('div');
+            d.innerHTML = String(html || '');
+            return (d.textContent || d.innerText || '').trim();
+        },
+
+        extractTableData: function (tableId, options) {
+            options = options || {};
+            var table = document.getElementById(tableId);
+            if (!table) return null;
+
+            var mgr = this.get(tableId);
+            var visibleIndexes = this.resolveExportIndexes(tableId);
+            if (!visibleIndexes.length) return null;
+
+            var headerCells = [];
+            var theadRow = table.querySelector('thead tr');
+            if (theadRow) {
+                headerCells = Array.from(theadRow.querySelectorAll('th, td'));
+            }
+
+            var headers = visibleIndexes.map(function (i) {
+                var th = headerCells[i];
+                var label = '';
+                if (th) {
+                    label = (th.getAttribute('data-mess-col-original') || th.textContent || '').trim();
+                }
+                if (mgr && mgr.state && mgr.state.labels && mgr.state.labels[String(i)]) {
+                    label = mgr.state.labels[String(i)];
+                }
+                return label;
+            });
+
+            var rowsData = [];
+            if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + tableId)) {
+                var dt = $('#' + tableId).DataTable();
+                var scope = options.allPages === false ? 'current' : { search: 'applied' };
+                rowsData = dt.rows(scope).data().toArray();
+            } else {
+                rowsData = Array.from(table.querySelectorAll('tbody tr'))
+                    .filter(function (tr) {
+                        var cells = tr.querySelectorAll('th, td');
+                        return cells.length && !tr.querySelector('td[colspan], th[colspan]');
+                    })
+                    .map(function (tr) {
+                        return Array.from(tr.children).map(function (td) { return td.innerHTML; });
+                    });
+            }
+
+            var self = this;
+            var preserveHtml = !!options.preserveHtml;
+            var rows = rowsData.map(function (row) {
+                var cells = Array.isArray(row) ? row : Array.from(row);
+                return visibleIndexes.map(function (i) {
+                    var val = cells[i] != null ? cells[i] : '';
+                    return preserveHtml ? String(val) : self._stripHtml(val);
+                });
+            });
+
+            return {
+                headers: headers,
+                rows: rows,
+                visibleIndexes: visibleIndexes
+            };
+        },
+
+        exportCsv: function (tableId, options) {
+            options = options || {};
+            var data = this.extractTableData(tableId, options);
+            if (!data || !data.headers.length) {
+                if (window.alert) window.alert('No data to export.');
+                return;
+            }
+
+            function csvEscape(val) {
+                var s = String(val == null ? '' : val);
+                if (/[",\n\r]/.test(s)) {
+                    return '"' + s.replace(/"/g, '""') + '"';
+                }
+                return s;
+            }
+
+            var lines = [];
+            lines.push(data.headers.map(csvEscape).join(','));
+            data.rows.forEach(function (row) {
+                lines.push(row.map(csvEscape).join(','));
+            });
+
+            var blob = new Blob(['\ufeff' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+            var link = document.createElement('a');
+            var filename = options.filename || (tableId + '-export.csv');
+            link.href = URL.createObjectURL(blob);
+            link.download = filename;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(link.href);
+        },
+
+        _isServerSideDataTable: function (dt) {
+            if (!dt) return false;
+            var settings = dt.settings()[0];
+            if (!settings) return false;
+            if (settings.oInit && settings.oInit.serverSide) return true;
+            if (settings.oFeatures && settings.oFeatures.bServerSide) return true;
+            return false;
+        },
+
+        _buildPrintAjaxParams: function (dt) {
+            var info = dt.page.info();
+            var params = {};
+            try {
+                if (dt.ajax && typeof dt.ajax.params === 'function') {
+                    params = $.extend(true, {}, dt.ajax.params());
+                }
+            } catch (e) {}
+            if (!params || typeof params !== 'object') {
+                params = {};
+            }
+            var settings = dt.settings()[0];
+            params.draw = params.draw || ((settings && settings.iDraw) ? settings.iDraw + 1 : 1);
+            params.start = 0;
+            params.length = Math.max(info.recordsDisplay || 0, 1);
+            params.for_print = 1;
+            if (!params.search) {
+                params.search = { value: dt.search(), regex: false };
+            }
+            if (!params.order || !params.order.length) {
+                var ord = dt.order();
+                if (ord && ord.length) {
+                    params.order = ord.map(function (item) {
+                        return { column: item[0], dir: item[1] };
+                    });
+                }
+            }
+            return params;
+        },
+
+        _resolveDataTableAjaxUrl: function (tableId) {
+            var registry = window.messMasterDataTableAjaxUrlByTable || {};
+            if (registry[tableId] && typeof registry[tableId] === 'function') {
+                return registry[tableId]();
+            }
+            if (typeof window.messMasterDataTableAjaxUrl === 'function') {
+                return window.messMasterDataTableAjaxUrl();
+            }
+            return window.location.pathname + (window.location.search || '');
+        },
+
+        /** Fetch all filtered rows for print (handles server-side DataTables). */
+        fetchDataTableRowsForPrint: function (tableId, done) {
+            var table = document.getElementById(tableId);
+            if (!table) {
+                done([]);
+                return;
+            }
+            var dt = null;
+            if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + tableId)) {
+                dt = $('#' + tableId).DataTable();
+            }
+            if (!dt) {
+                var domRows = Array.from(table.querySelectorAll('tbody tr'))
+                    .filter(function (tr) {
+                        return tr.querySelectorAll('th, td').length && !tr.querySelector('td[colspan], th[colspan]');
+                    })
+                    .map(function (tr) {
+                        return Array.from(tr.children).map(function (td) { return td.innerHTML; });
+                    });
+                done(domRows);
+                return;
+            }
+            if (!this._isServerSideDataTable(dt)) {
+                done(dt.rows({ search: 'applied' }).data().toArray());
+                return;
+            }
+            var self = this;
+            $.ajax({
+                url: self._resolveDataTableAjaxUrl(tableId),
+                type: 'GET',
+                data: self._buildPrintAjaxParams(dt),
+                dataType: 'json',
+                cache: false,
+                headers: { 'X-Requested-With': 'XMLHttpRequest' }
+            }).done(function (json) {
+                done(json && Array.isArray(json.data) ? json.data : []);
+            }).fail(function () {
+                done(dt.rows({ search: 'applied' }).data().toArray());
+            });
+        },
+
+        _fetchServerSidePrintRows: function (dt, done) {
+            var tableId = dt.table().node().id;
+            this.fetchDataTableRowsForPrint(tableId || '', done);
+        },
+
+        _buildDataTablePrintHtml: function (tableId, rowsData, options) {
+            options = options || {};
+            var table = document.getElementById(tableId);
+            var dt = null;
+            if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + tableId)) {
+                dt = $('#' + tableId).DataTable();
+            }
+
+            var printColIndexes = this.resolveExportIndexes(tableId);
+            if (!printColIndexes.length && table) {
+                var headerCount = table.querySelectorAll('thead tr').length
+                    ? table.querySelector('thead tr').querySelectorAll('th, td').length
+                    : 0;
+                for (var i = 0; i < headerCount; i++) {
+                    printColIndexes.push(i);
+                }
+            }
+
+            var headerHtml = '<tr>' + printColIndexes.map(function (idx) {
+                if (dt) {
+                    return '<th>' + $(dt.column(idx).header()).html() + '</th>';
+                }
+                var th = table && table.querySelectorAll('thead tr th, thead tr td')[idx];
+                return '<th>' + (th ? th.innerHTML : '') + '</th>';
+            }).join('') + '</tr>';
+
+            var bodyRowsHtml = (rowsData || []).map(function (row) {
+                var cells = Array.isArray(row) ? row : Array.from(row);
+                return '<tr>' + printColIndexes.map(function (idx) {
+                    return '<td>' + (cells[idx] != null ? cells[idx] : '') + '</td>';
+                }).join('') + '</tr>';
+            }).join('');
+
+            return {
+                headerHtml: headerHtml,
+                bodyRowsHtml: bodyRowsHtml,
+                columnsCount: printColIndexes.length || 1
+            };
+        },
+
+        _openRichPrintWindow: function (htmlParts, options) {
+            options = options || {};
+            var columnsCount = htmlParts.columnsCount || 1;
+            var title = options.title || 'Report';
+            var periodText = options.periodText || '';
+            var emblemUrl = options.emblemUrl || 'https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg';
+            var logoUrl = options.logoUrl || 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
+            var printedOn = new Date().toLocaleDateString() + ' ' + new Date().toLocaleTimeString();
+
+            var printableTable =
+                '<table class="table table-sm table-bordered align-middle mb-0">' +
+                '<thead>' +
+                '<tr><th colspan="' + columnsCount + '">' +
+                '<div class="d-flex justify-content-between align-items-center mb-2 lbsnaa-header">' +
+                '<div class="d-flex align-items-center gap-2">' +
+                '<img src="' + emblemUrl + '" alt="India Emblem" height="40">' +
+                '<div>' +
+                '<div class="brand-line-1">Government of India</div>' +
+                '<div class="brand-line-2">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
+                '<div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>' +
+                '</div>' +
+                '</div>' +
+                '<div><img src="' + logoUrl + '" alt="LBSNAA Logo" height="40"></div>' +
+                '</div>' +
+                '<div class="d-flex flex-wrap justify-content-between align-items-center report-meta">' +
+                '<span><strong>' + title + '</strong></span>' +
+                (periodText ? '<span>' + periodText + '</span>' : '') +
+                '<span><strong>Printed on:</strong> ' + printedOn + '</span>' +
+                '</div></th></tr>' +
+                htmlParts.headerHtml +
+                '</thead><tbody>' + htmlParts.bodyRowsHtml + '</tbody></table>';
+
+            var printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                window.print();
+                return;
+            }
+
+            printWindow.document.open();
+            printWindow.document.write(
+                '<!doctype html><html lang="en"><head><meta charset="utf-8">' +
+                '<meta name="viewport" content="width=device-width, initial-scale=1">' +
+                '<title>' + String(title).replace(/</g, '&lt;') + ' - OFFICER\'S MESS LBSNAA MUSSOORIE</title>' +
+                '<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">' +
+                '<style>' +
+                'body{font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:10px;margin:0;padding:0;-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                '.lbsnaa-header{border-bottom:2px solid #004a93;padding-bottom:.75rem;margin-bottom:1rem;}' +
+                '.brand-line-1{font-size:.85rem;text-transform:uppercase;letter-spacing:.06em;color:#004a93;}' +
+                '.brand-line-2{font-size:1.1rem;font-weight:700;text-transform:uppercase;color:#222;}' +
+                '.brand-line-3{font-size:.8rem;color:#555;}' +
+                '.report-meta{font-size:.8rem;margin-bottom:.75rem;}' +
+                '.report-meta span{display:inline-block;margin-right:1.5rem;}' +
+                '.container-fluid{padding:0!important;margin:0!important;max-width:100%!important;}' +
+                'table{width:100%;border-collapse:collapse;table-layout:fixed;font-size:9px;}' +
+                'th,td{padding:4px 6px;border:1px solid #dee2e6;white-space:normal!important;word-break:break-word;overflow-wrap:anywhere;vertical-align:top;}' +
+                'thead th{background:#f8f9fa;font-weight:600;}' +
+                '.table,.table *{white-space:normal!important;}' +
+                '.table-responsive{overflow:visible!important;}' +
+                'thead{display:table-header-group;}' +
+                '.badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
+                '@page{size:A4 landscape;margin:8mm;}' +
+                '@media print{body{margin:0;}}' +
+                (options.extraCss || '') +
+                '</style></head><body>' +
+                '<div class="container-fluid"><div class="table-responsive">' + printableTable + '</div></div>' +
+                '<script>window.addEventListener("load",function(){window.print();});<\/script></body></html>'
+            );
+            printWindow.document.close();
+        },
+
+        /** Rich print: visible columns only, HTML preserved, all filtered rows (server-side). */
+        printDataTable: function (tableId, options) {
+            options = options || {};
+            var self = this;
+            var table = document.getElementById(tableId);
+            if (!table) {
+                window.print();
+                return;
+            }
+
+            var dt = null;
+            if ($ && $.fn.DataTable && $.fn.DataTable.isDataTable('#' + tableId)) {
+                dt = $('#' + tableId).DataTable();
+            }
+
+            function finish(rowsData) {
+                var parts = self._buildDataTablePrintHtml(tableId, rowsData, options);
+                if (options.template === 'simple') {
+                    self.printTable(tableId, $.extend({}, options, { rowsData: rowsData }));
+                    return;
+                }
+                self._openRichPrintWindow(parts, options);
+            }
+
+            if (dt && self._isServerSideDataTable(dt)) {
+                self.fetchDataTableRowsForPrint(tableId, finish);
+                return;
+            }
+
+            var rowsData = [];
+            if (dt) {
+                rowsData = dt.rows({ search: 'applied' }).data().toArray();
+            } else {
+                rowsData = Array.from(table.querySelectorAll('tbody tr'))
+                    .filter(function (tr) {
+                        return tr.querySelectorAll('th, td').length && !tr.querySelector('td[colspan], th[colspan]');
+                    })
+                    .map(function (tr) {
+                        return Array.from(tr.children).map(function (td) { return td.innerHTML; });
+                    });
+            }
+            finish(rowsData);
+        },
+
+        printTable: function (tableId, options) {
+            options = options || {};
+            var table = document.getElementById(tableId);
+            if (!table) {
+                window.print();
+                return;
+            }
+
+            if (options.template === 'lbsnaa' || options.rich === true) {
+                this.printDataTable(tableId, options);
+                return;
+            }
+
+            var rowsData = options.rowsData;
+            var data;
+            if (rowsData) {
+                data = this._buildDataTablePrintHtml(tableId, rowsData, options);
+                data = {
+                    headers: [],
+                    rows: [],
+                    visibleIndexes: [],
+                    headerHtml: data.headerHtml,
+                    bodyRowsHtml: data.bodyRowsHtml,
+                    columnsCount: data.columnsCount
+                };
+            } else {
+                data = this.extractTableData(tableId, { allPages: true, preserveHtml: !!options.preserveHtml });
+            }
+
+            if (!data || (!data.headers && !data.headerHtml)) {
+                window.print();
+                return;
+            }
+
+            var headerHtml = data.headerHtml || (
+                '<tr>' + data.headers.map(function (h) {
+                    return '<th>' + String(h).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+                }).join('') + '</tr>'
+            );
+
+            var bodyRowsHtml = data.bodyRowsHtml || data.rows.map(function (row) {
+                return '<tr>' + row.map(function (cell) {
+                    return '<td>' + String(cell).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</td>';
+                }).join('') + '</tr>';
+            }).join('');
+
+            var columnsCount = data.columnsCount || data.headers.length;
+            var title = options.title || 'Report';
+            var metaHtml = options.metaHtml || '';
+            var printableTable =
+                '<table class="table table-sm table-bordered align-middle mb-0">' +
+                '<thead>' +
+                (options.brandHeaderHtml || '') +
+                (metaHtml ? '<tr><th colspan="' + columnsCount + '">' + metaHtml + '</th></tr>' : '') +
+                headerHtml +
+                '</thead><tbody>' + bodyRowsHtml + '</tbody></table>';
+
+            var printWindow = window.open('', '_blank');
+            if (!printWindow) {
+                window.print();
+                return;
+            }
+
+            var extraCss = options.extraCss || '';
+            printWindow.document.open();
+            printWindow.document.write(
+                '<!doctype html><html lang="en"><head><meta charset="utf-8"><title>' +
+                String(title).replace(/</g, '&lt;') +
+                '</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">' +
+                '<style>body{font-family:system-ui,sans-serif;font-size:10px;margin:12px;}' +
+                'table{width:100%;border-collapse:collapse;} th,td{border:1px solid #dee2e6;padding:4px 6px;}' +
+                'thead th{background:#f8f9fa;font-weight:600;}' + extraCss + '</style></head><body>' +
+                printableTable +
+                '<script>window.addEventListener("load",function(){window.print();});<\/script></body></html>'
+            );
+            printWindow.document.close();
+        },
+
+        wireExportControls: function () {
+            if (this._exportControlsWired) return;
+            this._exportControlsWired = true;
+            var self = this;
+
+            document.addEventListener('click', function (e) {
+                var excelBtn = e.target.closest('[data-mess-excel-export]');
+                if (excelBtn) {
+                    var tableId = excelBtn.getAttribute('data-mess-excel-export') ||
+                        excelBtn.getAttribute('data-mess-table-id');
+                    if (!tableId) return;
+                    var href = excelBtn.getAttribute('href');
+                    if (href && href !== '#' && href.indexOf('javascript') !== 0) {
+                        e.preventDefault();
+                        window.location.href = self.appendVisibleColumnsToUrl(href, tableId);
+                        return;
+                    }
+                    e.preventDefault();
+                    self.exportCsv(tableId, {
+                        filename: excelBtn.getAttribute('data-filename') || (tableId + '.csv')
+                    });
+                    return;
+                }
+
+                var printBtn = e.target.closest('[data-mess-print-table]');
+                if (printBtn) {
+                    var printTableId = printBtn.getAttribute('data-mess-print-table');
+                    if (!printTableId) return;
+                    e.preventDefault();
+                    var opts = {
+                        title: printBtn.getAttribute('data-print-title') || 'Report',
+                        metaHtml: printBtn.getAttribute('data-print-meta') || '',
+                        periodText: printBtn.getAttribute('data-print-period') || '',
+                        template: printBtn.getAttribute('data-mess-print-template') || ''
+                    };
+                    if (opts.template === 'lbsnaa' || printBtn.getAttribute('data-print-brand') === '1') {
+                        opts.template = 'lbsnaa';
+                        self.printDataTable(printTableId, opts);
+                    } else {
+                        self.printTable(printTableId, opts);
+                    }
+                }
+            });
         }
     };
+
+    window.MessColumnManager.wireExportControls();
+
+    $(document).on('mess:columns:saved', function () {
+        /* Column prefs updated — print/export helpers read state on each action. */
+    });
 })(window, window.jQuery);

@@ -225,7 +225,10 @@
                                 ? request('invoice_sent')
                                 : ($invoiceSentFilter ?? 'sent');
                         @endphp
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}"
+                           class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3"
+                           title="Export to Excel"
+                           data-mess-excel-export="processMessBillsTable">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>
@@ -2620,54 +2623,56 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 function printProcessMessBillsMainTable() {
-    var table = document.getElementById('processMessBillsTable');
-    if (!table) { window.print(); return; }
+    var tableId = 'processMessBillsTable';
+    var table = document.getElementById(tableId);
+    if (!table) {
+        window.print();
+        return;
+    }
 
-    // Use DataTables API so print includes ALL filtered rows, not just current page
-    var dt = null;
-    try {
-        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#processMessBillsTable')) {
-            dt = window.jQuery('#processMessBillsTable').DataTable();
+    function openPrintWindow(rowsData) {
+        var dt = null;
+        try {
+            if (window.jQuery && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#' + tableId)) {
+                dt = window.jQuery('#' + tableId).DataTable();
+            }
+        } catch (e) {}
+
+        var printColIndexes = [];
+        if (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function') {
+            printColIndexes = window.MessColumnManager.resolveExportIndexes(tableId) || [];
         }
-    } catch (e) {}
+        if (!printColIndexes.length) {
+            printColIndexes = [0, 1, 2, 3, 4, 5, 6, 7];
+        }
 
-    var rowsData = [];
-    if (dt) {
-        rowsData = dt.rows({ search: 'applied' }).data().toArray();
-    } else {
-        rowsData = Array.from(table.querySelectorAll('tbody tr')).map(function (tr) {
-            return Array.from(tr.children).map(function (td) { return td.innerHTML; });
-        });
-    }
-
-    var actionColIdx = 8;
-    var visibleIndexes = null;
-    if (window.MessColumnManager && typeof window.MessColumnManager.getVisibleIndexes === 'function') {
-        visibleIndexes = window.MessColumnManager.getVisibleIndexes('processMessBillsTable');
-    }
-
-    var originalThead = table.querySelector('thead');
-    var headerCells = originalThead ? Array.from(originalThead.querySelectorAll('tr th')) : [];
-
-    var printColIndexes = visibleIndexes && visibleIndexes.length
-        ? visibleIndexes
-        : headerCells.map(function (_, idx) { return idx; }).filter(function (idx) { return idx !== actionColIdx; });
-
-    var printHeaderCells = printColIndexes.map(function (idx) { return headerCells[idx]; }).filter(Boolean);
-    var headerHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
-
-    var bodyRowsHtml = rowsData.map(function (row) {
-        var cells = Array.isArray(row) ? row : (row && row.length != null ? Array.from(row) : []);
-        return '<tr>' + printColIndexes.map(function (idx) {
-            return '<td>' + (cells[idx] != null ? cells[idx] : '') + '</td>';
+        var headerHtml = '<tr>' + printColIndexes.map(function (idx) {
+            if (dt) {
+                return '<th>' + window.jQuery(dt.column(idx).header()).html() + '</th>';
+            }
+            var ths = table.querySelectorAll('thead tr th, thead tr td');
+            return '<th>' + (ths[idx] ? ths[idx].innerHTML : '') + '</th>';
         }).join('') + '</tr>';
-    }).join('');
 
-    var columnsCount = printHeaderCells.length || 8;
-    var title = 'Process Mess Bills - Employee';
-    var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
+        var bodyRowsHtml = (rowsData || []).map(function (row) {
+            var cells = Array.isArray(row) ? row : (row && row.length != null ? Array.from(row) : []);
+            return '<tr>' + printColIndexes.map(function (idx) {
+                return '<td>' + (cells[idx] != null ? cells[idx] : '') + '</td>';
+            }).join('') + '</tr>';
+        }).join('');
 
-    var printableTable = `
+        if (!bodyRowsHtml) {
+            if (window.alert) {
+                window.alert('No data to print.');
+            }
+            return;
+        }
+
+        var columnsCount = printColIndexes.length || 8;
+        var title = 'Process Mess Bills - Employee';
+        var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
+
+        var printableTable = `
       <table class="table table-sm table-bordered align-middle mb-0">
         <thead>
           <tr>
@@ -2681,7 +2686,7 @@ function printProcessMessBillsMainTable() {
                     <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
                   </div>
                 </div>
-                <div class="d-none d-print-block">
+                <div>
                   <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
                 </div>
               </div>
@@ -2699,11 +2704,15 @@ function printProcessMessBillsMainTable() {
         </tbody>
       </table>`;
 
-    var printWindow = window.open('', '_blank');
-    if (!printWindow) { window.print(); return; }
 
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html>
+        var printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            window.print();
+            return;
+        }
+
+        printWindow.document.open();
+        printWindow.document.write(`<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -2743,6 +2752,7 @@ function printProcessMessBillsMainTable() {
     .table, .table * { white-space: normal !important; }
     .table-responsive { overflow: visible !important; }
     thead { display: table-header-group; }
+    .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     @page { size: A4 landscape; margin: 8mm; }
     @media print { body { margin: 0; } }
   </style>
@@ -2759,7 +2769,21 @@ function printProcessMessBillsMainTable() {
   <\/script>
 </body>
 </html>`);
-    printWindow.document.close();
+        printWindow.document.close();
+    }
+
+    if (window.MessColumnManager && typeof window.MessColumnManager.fetchDataTableRowsForPrint === 'function') {
+        window.MessColumnManager.fetchDataTableRowsForPrint(tableId, openPrintWindow);
+        return;
+    }
+
+    var rowsData = [];
+    try {
+        if (window.jQuery && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#' + tableId)) {
+            rowsData = window.jQuery('#' + tableId).DataTable().rows({ search: 'applied' }).data().toArray();
+        }
+    } catch (e) {}
+    openPrintWindow(rowsData);
 }
 
 function printProcessMessBillsTable() {

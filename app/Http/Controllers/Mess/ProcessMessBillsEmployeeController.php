@@ -269,9 +269,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $draw = (int) $request->input('draw', 1);
         $start = max(0, (int) $request->input('start', 0));
         $length = (int) $request->input('length', 10);
-        if ($length < 1 || $length > 100) {
-            $length = 10;
-        }
+        $forPrint = $request->boolean('for_print') || $request->input('for_print') === '1';
 
         $recordsTotal = $combinedBills->count();
 
@@ -305,6 +303,13 @@ class ProcessMessBillsEmployeeController extends Controller
         }
 
         $recordsFiltered = $filteredBills->count();
+
+        if ($forPrint) {
+            $start = 0;
+            $length = min(max(1, $recordsFiltered), 10000);
+        } elseif ($length < 1 || $length > 100) {
+            $length = 10;
+        }
 
         $orderColumn = (int) $request->input('order.0.column', 0);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
@@ -1036,10 +1041,15 @@ class ProcessMessBillsEmployeeController extends Controller
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
         $statusMap = [0 => 'Unpaid', 1 => 'Pending', 2 => 'Paid'];
 
+        $visibleIndexes = ProcessMessBillsExport::parseVisibleColumnIndexes(
+            $request->query('visible_columns')
+        );
+        $headings = ProcessMessBillsExport::headingsForIndexes($visibleIndexes);
+
         $rows = [];
         foreach ($combinedBills as $index => $cb) {
             $status = $statusMap[$cb->status ?? 0] ?? '—';
-            $rows[] = [
+            $fullRow = [
                 $index + 1,
                 $cb->buyer_name ?? '—',
                 $cb->combined_invoice_no ?? '—',
@@ -1049,6 +1059,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 $cb->payment_type ?? '—',
                 $status,
             ];
+            $rows[] = ProcessMessBillsExport::filterRowByIndexes($fullRow, $visibleIndexes);
         }
 
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : Carbon::parse($dateFrom)->format('d-m-Y');
@@ -1056,7 +1067,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $fileName = 'process-mess-bills-' . $dateFrom . '-to-' . $dateTo . '-' . now()->format('Y-m-d_His') . '.xlsx';
         return Excel::download(
-            new ProcessMessBillsExport($rows, $effectiveDateFrom, $effectiveDateTo),
+            new ProcessMessBillsExport($rows, $effectiveDateFrom, $effectiveDateTo, $headings),
             $fileName
         );
     }
