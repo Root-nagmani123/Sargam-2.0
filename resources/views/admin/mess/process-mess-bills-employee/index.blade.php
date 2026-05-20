@@ -2611,7 +2611,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             if (invoiceBtn.disabled || invoiceBtn.getAttribute('data-invoice-sent') === '1') {
-                showToast('Already sent invoice.', 'error');
+                showToast('Invoice notification already sent for this date range.', 'error');
                 return;
             }
             var billId = invoiceBtn.getAttribute('data-bill-id');
@@ -2647,12 +2647,12 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         var skipped = ids.length - toSend.length;
         if (toSend.length === 0) {
-            showToast('Already sent invoice.', 'error');
+            showToast('Invoice notification already sent for this date range.', 'error');
             return;
         }
         if (!confirm('Generate invoice for ' + toSend.length + ' selected bill(s)?')) return;
         if (skipped > 0) {
-            showToast('Skipping ' + skipped + ' bill(s): already sent invoice.', 'error');
+            showToast('Skipping ' + skipped + ' bill(s): already sent for this date range.', 'error');
         }
         toSend.forEach(function(id) {
             doGenerateInvoice(id, '', null);

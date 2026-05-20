@@ -156,7 +156,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
             }
 
-            $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter);
+            $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter, $dateFrom, $dateTo);
 
             return $this->processMessBillsDatatableResponse(
                 $request,
@@ -731,13 +731,89 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * For modal rows: map "receiver_user_id|combined_id" => ['read' => bool] when a MessInvoiceCombined notification exists.
+     * True when a prior MessInvoiceCombined notification already covers the requested filter range (inclusive).
+     */
+    private function messInvoiceFilterRangeCoveredBySentRange(
+        string $sentFromYmd,
+        string $sentToYmd,
+        string $reqFromYmd,
+        string $reqToYmd
+    ): bool {
+        if ($sentFromYmd === '' || $sentToYmd === '' || $reqFromYmd === '' || $reqToYmd === '') {
+            return false;
+        }
+        try {
+            $sentFrom = Carbon::parse($sentFromYmd)->startOfDay();
+            $sentTo = Carbon::parse($sentToYmd)->startOfDay();
+            $reqFrom = Carbon::parse($reqFromYmd)->startOfDay();
+            $reqTo = Carbon::parse($reqToYmd)->startOfDay();
+        } catch (\Throwable $e) {
+            return false;
+        }
+
+        return $sentFrom->lte($reqFrom) && $sentTo->gte($reqTo);
+    }
+
+    /**
+     * @return array<string, list<array{f: string, t: string, read: bool}>>
+     */
+    private function messCombinedInvoiceSentRangesByReceiver(array $receiverIds): array
+    {
+        $receiverIds = array_values(array_unique(array_filter(array_map('intval', $receiverIds), static fn (int $id) => $id > 0)));
+        if ($receiverIds === []) {
+            return [];
+        }
+
+        $byKey = [];
+        $notifications = Notification::query()
+            ->where('type', 'mess')
+            ->where('module_name', 'MessInvoiceCombined')
+            ->whereIn('receiver_user_id', $receiverIds)
+            ->orderByDesc('pk')
+            ->get(['receiver_user_id', 'message', 'is_read']);
+
+        foreach ($notifications as $n) {
+            $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
+            if ($parsed === null || $parsed['i'] === '') {
+                continue;
+            }
+            $sentFrom = trim((string) ($parsed['f'] ?? ''));
+            $sentTo = trim((string) ($parsed['t'] ?? ''));
+            if ($sentFrom === '' || $sentTo === '') {
+                continue;
+            }
+            $rid = (int) $n->receiver_user_id;
+            if ($rid <= 0) {
+                continue;
+            }
+            $mapKey = $rid . '|' . $parsed['i'];
+            $byKey[$mapKey] ??= [];
+            $byKey[$mapKey][] = [
+                'f' => $sentFrom,
+                't' => $sentTo,
+                'read' => (int) $n->is_read === 1,
+            ];
+        }
+
+        return $byKey;
+    }
+
+    /**
+     * For modal rows: map "receiver_user_id|combined_id" => ['read' => bool] when a MessInvoiceCombined
+     * notification already covers the current filter date range.
      *
      * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
      * @return array<string, array{read: bool}>
      */
-    private function messCombinedInvoiceNotificationSentKeys($combinedBills): array
-    {
+    private function messCombinedInvoiceNotificationSentKeys(
+        $combinedBills,
+        ?string $dateFromYmd = null,
+        ?string $dateToYmd = null
+    ): array {
+        if ($dateFromYmd === null || $dateToYmd === null || $dateFromYmd === '' || $dateToYmd === '') {
+            return [];
+        }
+
         $receiverIds = [];
         foreach ($combinedBills as $cb) {
             $rid = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
@@ -745,30 +821,26 @@ class ProcessMessBillsEmployeeController extends Controller
                 $receiverIds[] = $rid;
             }
         }
-        $receiverIds = array_values(array_unique($receiverIds));
-        if ($receiverIds === []) {
+        $sentRangesByKey = $this->messCombinedInvoiceSentRangesByReceiver($receiverIds);
+        if ($sentRangesByKey === []) {
             return [];
         }
 
         $keys = [];
-        $notifications = Notification::query()
-            ->where('type', 'mess')
-            ->where('module_name', 'MessInvoiceCombined')
-            ->whereIn('receiver_user_id', $receiverIds)
-            ->orderByDesc('pk')
-            ->get(['pk', 'receiver_user_id', 'message', 'is_read']);
-
-        foreach ($notifications as $n) {
-            $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
-            if ($parsed === null || $parsed['i'] === '') {
+        foreach ($combinedBills as $cb) {
+            $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+            if ($receiverId === null || $receiverId <= 0) {
                 continue;
             }
-            $rid = (int) $n->receiver_user_id;
-            $mapKey = $rid . '|' . $parsed['i'];
-            if ($rid > 0 && ! isset($keys[$mapKey])) {
-                $keys[$mapKey] = [
-                    'read' => (int) $n->is_read === 1,
-                ];
+            $mapKey = $receiverId . '|' . $cb->combined_id;
+            if (! isset($sentRangesByKey[$mapKey])) {
+                continue;
+            }
+            foreach ($sentRangesByKey[$mapKey] as $sent) {
+                if ($this->messInvoiceFilterRangeCoveredBySentRange($sent['f'], $sent['t'], $dateFromYmd, $dateToYmd)) {
+                    $keys[$mapKey] = ['read' => $sent['read']];
+                    break;
+                }
             }
         }
 
@@ -790,17 +862,22 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * When invoice_sent=sent, keep only combined bills with a MessInvoiceCombined notification.
+     * When invoice_sent=sent, keep only combined bills with a MessInvoiceCombined notification
+     * that covers the active filter date range.
      *
      * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
      */
-    private function filterCombinedBillsByInvoiceSent(Collection $combinedBills, ?string $invoiceSentFilter): Collection
-    {
+    private function filterCombinedBillsByInvoiceSent(
+        Collection $combinedBills,
+        ?string $invoiceSentFilter,
+        ?string $dateFromYmd = null,
+        ?string $dateToYmd = null
+    ): Collection {
         if ($invoiceSentFilter !== 'sent') {
             return $combinedBills;
         }
 
-        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
+        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills, $dateFromYmd, $dateToYmd);
 
         return $combinedBills->filter(function ($cb) use ($invoiceSentKeys) {
             $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
@@ -830,23 +907,26 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * True if a MessInvoiceCombined notification exists for this combined id and receiver.
+     * True if a MessInvoiceCombined notification already covers this combined id, receiver, and date range.
      */
-    private function messCombinedInvoiceAlreadySent(int $receiverUserId, string $combinedId): bool
-    {
-        if ($receiverUserId <= 0 || $combinedId === '') {
+    private function messCombinedInvoiceAlreadySent(
+        int $receiverUserId,
+        string $combinedId,
+        string $dateFromYmd,
+        string $dateToYmd
+    ): bool {
+        if ($receiverUserId <= 0 || $combinedId === '' || $dateFromYmd === '' || $dateToYmd === '') {
             return false;
         }
 
-        $notifications = Notification::query()
-            ->where('type', 'mess')
-            ->where('module_name', 'MessInvoiceCombined')
-            ->where('receiver_user_id', $receiverUserId)
-            ->get(['message']);
+        $mapKey = $receiverUserId . '|' . $combinedId;
+        $sentRangesByKey = $this->messCombinedInvoiceSentRangesByReceiver([$receiverUserId]);
+        if (! isset($sentRangesByKey[$mapKey])) {
+            return false;
+        }
 
-        foreach ($notifications as $n) {
-            $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
-            if ($parsed !== null && $parsed['i'] === $combinedId) {
+        foreach ($sentRangesByKey[$mapKey] as $sent) {
+            if ($this->messInvoiceFilterRangeCoveredBySentRange($sent['f'], $sent['t'], $dateFromYmd, $dateToYmd)) {
                 return true;
             }
         }
@@ -1021,7 +1101,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 $combinedBills = $combinedBills->where('status', $normalized)->values();
             }
         }
-        $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter);
+        $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter, $dateFrom, $dateTo);
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
         $statusMap = [0 => 'Unpaid', 1 => 'Pending', 2 => 'Paid'];
 
@@ -1764,7 +1844,7 @@ class ProcessMessBillsEmployeeController extends Controller
             })
             ->values();
 
-        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
+        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills, $dateFrom, $dateTo);
 
         $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap, $invoiceSentKeys, $dateFrom, $dateTo, $offset) {
             $invoiceNo = $cb->combined_invoice_no ?? ('CB-' . date('Ymd') . '-' . str_pad((string) ($index + 1), 5, '0', STR_PAD_LEFT));
@@ -1830,18 +1910,18 @@ class ProcessMessBillsEmployeeController extends Controller
                     'message' => 'Invoice generated, but notification could not be sent because user mapping was not found.',
                 ], 422);
             }
-            if ($this->messCombinedInvoiceAlreadySent((int) $receiverUserId, (string) $id)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Already sent invoice.',
-                ], 422);
-            }
             $dateFromYmd = $request->filled('date_from')
                 ? $this->parseDate($request->date_from)
                 : now()->startOfMonth()->format('Y-m-d');
             $dateToYmd = $request->filled('date_to')
                 ? $this->parseDate($request->date_to)
                 : now()->endOfMonth()->format('Y-m-d');
+            if ($this->messCombinedInvoiceAlreadySent((int) $receiverUserId, (string) $id, $dateFromYmd, $dateToYmd)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Invoice notification already sent for this date range.',
+                ], 422);
+            }
             $invoiceMessage = NotificationService::appendMessCombinedReceiptPayload(
                 'Your combined mess bill is pending. Please review and pay via Process Mess Bills.',
                 $id,
