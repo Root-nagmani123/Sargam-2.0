@@ -99,13 +99,17 @@ class NotificationService
         string $combinedId,
         string $dateFromYmd,
         string $dateToYmd,
-        ?float $paymentAmount = null
+        ?float $paymentAmount = null,
+        ?array $notifiedLineItemKeys = null
     ): string {
         $payloadData = [
             'i' => $combinedId,
             'f' => $dateFromYmd,
             't' => $dateToYmd,
         ];
+        if ($notifiedLineItemKeys !== null && $notifiedLineItemKeys !== []) {
+            $payloadData['n'] = array_values(array_unique(array_map('strval', $notifiedLineItemKeys)));
+        }
         if ($paymentAmount !== null && $paymentAmount > 0) {
             $payloadData['a'] = round($paymentAmount, 2);
         }
@@ -143,6 +147,14 @@ class NotificationService
         ];
         if (isset($data['a']) && is_numeric($data['a'])) {
             $parsed['a'] = (float) $data['a'];
+        }
+        if (isset($data['n']) && is_array($data['n'])) {
+            $parsed['n'] = array_values(array_filter(array_map(
+                static fn ($k) => is_string($k) || is_numeric($k) ? (string) $k : '',
+                $data['n']
+            )));
+        } else {
+            $parsed['n'] = [];
         }
 
         return $parsed;

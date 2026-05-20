@@ -171,7 +171,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
             }
 
-            $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter);
+            $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter, $dateFrom, $dateTo);
 
             return $this->processMessBillsDatatableResponse(
                 $request,
@@ -1237,47 +1237,275 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * For modal rows: map "receiver_user_id|combined_id" => ['read' => bool] when a MessInvoiceCombined notification exists.
+     * Stable keys for mess bill line items (SV date-range item id or kitchen issue item pk).
      *
-     * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
-     * @return array<string, array{read: bool}>
+     * @param  array<int, SellingVoucherDateRangeReport|KitchenIssueMaster>  $bills
+     * @return array<int, string>
      */
-    private function messCombinedInvoiceNotificationSentKeys($combinedBills): array
+    private function collectMessBillLineItemKeys(array $bills): array
     {
-        $receiverIds = [];
-        foreach ($combinedBills as $cb) {
-            $rid = isset($cb->receiver_user_id) && (int) $cb->receiver_user_id > 0
-                ? (int) $cb->receiver_user_id
-                : $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
-            if ($rid !== null && $rid > 0) {
-                $receiverIds[] = $rid;
+        $keys = [];
+        foreach ($bills as $b) {
+            if ($b instanceof SellingVoucherDateRangeReport) {
+                foreach ($b->items ?? [] as $item) {
+                    $id = (int) ($item->id ?? 0);
+                    if ($id > 0) {
+                        $keys[] = 'dr-' . $id;
+                    }
+                }
+            } elseif ($b instanceof KitchenIssueMaster) {
+                $items = $b->relationLoaded('items') ? $b->items : collect();
+                if ($items->isNotEmpty()) {
+                    foreach ($items as $item) {
+                        $pk = (int) ($item->pk ?? 0);
+                        if ($pk > 0) {
+                            $keys[] = 'ki-' . $pk;
+                        }
+                    }
+                } else {
+                    $masterPk = (int) ($b->pk ?? 0);
+                    if ($masterPk > 0) {
+                        $keys[] = 'ki-bill-' . $masterPk;
+                    }
+                }
             }
         }
-        $receiverIds = array_values(array_unique($receiverIds));
-        if ($receiverIds === []) {
+
+        return array_values(array_unique($keys));
+    }
+
+    /**
+     * For notifications created before line-item tracking: items issued on/before notification date.
+     *
+     * @param  array<int, SellingVoucherDateRangeReport|KitchenIssueMaster>  $bills
+     * @return array<int, string>
+     */
+    private function collectMessBillLineItemKeysIssuedOnOrBefore(array $bills, string $onOrBeforeYmd): array
+    {
+        $keys = [];
+        foreach ($bills as $b) {
+            if ($b instanceof SellingVoucherDateRangeReport) {
+                foreach ($b->items ?? [] as $item) {
+                    $issueYmd = null;
+                    if (! empty($item->issue_date)) {
+                        try {
+                            $issueYmd = $item->issue_date instanceof Carbon
+                                ? $item->issue_date->format('Y-m-d')
+                                : Carbon::parse($item->issue_date)->format('Y-m-d');
+                        } catch (\Throwable $e) {
+                            $issueYmd = null;
+                        }
+                    }
+                    if ($issueYmd !== null && $issueYmd <= $onOrBeforeYmd) {
+                        $id = (int) ($item->id ?? 0);
+                        if ($id > 0) {
+                            $keys[] = 'dr-' . $id;
+                        }
+                    }
+                }
+            } elseif ($b instanceof KitchenIssueMaster) {
+                $billIssueYmd = null;
+                if (! empty($b->issue_date)) {
+                    try {
+                        $billIssueYmd = $b->issue_date instanceof Carbon
+                            ? $b->issue_date->format('Y-m-d')
+                            : Carbon::parse($b->issue_date)->format('Y-m-d');
+                    } catch (\Throwable $e) {
+                        $billIssueYmd = null;
+                    }
+                }
+                if ($billIssueYmd === null || $billIssueYmd > $onOrBeforeYmd) {
+                    continue;
+                }
+                $items = $b->relationLoaded('items') ? $b->items : collect();
+                if ($items->isNotEmpty()) {
+                    foreach ($items as $item) {
+                        $pk = (int) ($item->pk ?? 0);
+                        if ($pk > 0) {
+                            $keys[] = 'ki-' . $pk;
+                        }
+                    }
+                } else {
+                    $masterPk = (int) ($b->pk ?? 0);
+                    if ($masterPk > 0) {
+                        $keys[] = 'ki-bill-' . $masterPk;
+                    }
+                }
+            }
+        }
+
+        return array_values(array_unique($keys));
+    }
+
+    private function messCombinedDateRangesOverlap(string $fromA, string $toA, string $fromB, string $toB): bool
+    {
+        if ($fromA === '' || $toA === '' || $fromB === '' || $toB === '') {
+            return true;
+        }
+
+        return $fromA <= $toB && $fromB <= $toA;
+    }
+
+    /**
+     * Union of line-item keys already notified for this buyer/combined bill (overlapping statement ranges).
+     *
+     * @param  array<int, SellingVoucherDateRangeReport|KitchenIssueMaster>|null  $billsForLegacy
+     * @return array<int, string>
+     */
+    private function getMessCombinedNotifiedLineItemKeys(
+        int $receiverUserId,
+        string $combinedId,
+        string $dateFromYmd,
+        string $dateToYmd,
+        ?array $billsForLegacy = null
+    ): array {
+        if ($receiverUserId <= 0 || $combinedId === '') {
             return [];
         }
 
-        $keys = [];
+        $notified = [];
         $notifications = Notification::query()
             ->where('type', 'mess')
             ->where('module_name', 'MessInvoiceCombined')
-            ->whereIn('receiver_user_id', $receiverIds)
+            ->where('receiver_user_id', $receiverUserId)
             ->orderByDesc('pk')
-            ->get(['pk', 'receiver_user_id', 'message', 'is_read']);
+            ->get(['message', 'created_at']);
 
         foreach ($notifications as $n) {
             $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
-            if ($parsed === null || $parsed['i'] === '') {
+            if ($parsed === null || $parsed['i'] !== $combinedId) {
                 continue;
             }
-            $rid = (int) $n->receiver_user_id;
-            $mapKey = $rid . '|' . $parsed['i'];
-            if ($rid > 0 && ! isset($keys[$mapKey])) {
-                $keys[$mapKey] = [
-                    'read' => (int) $n->is_read === 1,
-                ];
+            $nf = (string) ($parsed['f'] ?? '');
+            $nt = (string) ($parsed['t'] ?? '');
+            if (! $this->messCombinedDateRangesOverlap($nf, $nt, $dateFromYmd, $dateToYmd)) {
+                continue;
             }
+            $itemKeys = $parsed['n'] ?? [];
+            if ($itemKeys === []) {
+                if ($billsForLegacy !== null && $n->created_at) {
+                    $cutoffYmd = $n->created_at instanceof Carbon
+                        ? $n->created_at->format('Y-m-d')
+                        : Carbon::parse($n->created_at)->format('Y-m-d');
+                    foreach ($this->collectMessBillLineItemKeysIssuedOnOrBefore($billsForLegacy, $cutoffYmd) as $legacyKey) {
+                        $notified[$legacyKey] = true;
+                    }
+                }
+
+                continue;
+            }
+            foreach ($itemKeys as $key) {
+                if ($key !== '') {
+                    $notified[$key] = true;
+                }
+            }
+        }
+
+        return array_keys($notified);
+    }
+
+    /**
+     * @param  array<int, SellingVoucherDateRangeReport|KitchenIssueMaster>  $bills
+     * @return array{sent: bool, fully_sent: bool, partial: bool, pending_count: int, read: bool}
+     */
+    private function resolveMessCombinedInvoiceNotificationStatus(
+        int $receiverUserId,
+        string $combinedId,
+        string $dateFromYmd,
+        string $dateToYmd,
+        array $bills
+    ): array {
+        $currentKeys = $this->collectMessBillLineItemKeys($bills);
+        $notifiedKeys = $this->getMessCombinedNotifiedLineItemKeys(
+            $receiverUserId,
+            $combinedId,
+            $dateFromYmd,
+            $dateToYmd,
+            $bills
+        );
+
+        $notifiedSet = array_fill_keys($notifiedKeys, true);
+        $pendingCount = 0;
+        foreach ($currentKeys as $key) {
+            if (! isset($notifiedSet[$key])) {
+                $pendingCount++;
+            }
+        }
+
+        $sent = count($notifiedKeys) > 0;
+        $fullySent = $currentKeys !== [] && $pendingCount === 0;
+        $partial = $sent && ! $fullySent && $pendingCount > 0;
+
+        return [
+            'sent' => $sent,
+            'fully_sent' => $fullySent,
+            'partial' => $partial,
+            'pending_count' => $pendingCount,
+            'read' => $sent ? $this->messCombinedInvoiceLatestRead($receiverUserId, $combinedId) : false,
+        ];
+    }
+
+    private function messCombinedInvoiceLatestRead(int $receiverUserId, string $combinedId): bool
+    {
+        $notifications = Notification::query()
+            ->where('type', 'mess')
+            ->where('module_name', 'MessInvoiceCombined')
+            ->where('receiver_user_id', $receiverUserId)
+            ->orderByDesc('pk')
+            ->get(['message', 'is_read']);
+
+        foreach ($notifications as $n) {
+            $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
+            if ($parsed !== null && $parsed['i'] === $combinedId) {
+                return (int) $n->is_read === 1;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * For modal rows: map "receiver_user_id|combined_id" => notification status.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
+     * @param  string|null  $dateFromYmd
+     * @param  string|null  $dateToYmd
+     * @return array<string, array{read: bool, fully_sent: bool, partial: bool, pending_count: int}>
+     */
+    private function messCombinedInvoiceNotificationSentKeys(
+        $combinedBills,
+        ?string $dateFromYmd = null,
+        ?string $dateToYmd = null
+    ): array {
+        $dateFromYmd = $dateFromYmd ?? now()->startOfMonth()->format('Y-m-d');
+        $dateToYmd = $dateToYmd ?? now()->endOfMonth()->format('Y-m-d');
+        $keys = [];
+
+        foreach ($combinedBills as $cb) {
+            $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+            if ($receiverId === null || $receiverId <= 0) {
+                continue;
+            }
+            $mapKey = $receiverId . '|' . $cb->combined_id;
+            if (isset($keys[$mapKey])) {
+                continue;
+            }
+            $status = $this->resolveMessCombinedInvoiceNotificationStatus(
+                (int) $receiverId,
+                (string) $cb->combined_id,
+                $dateFromYmd,
+                $dateToYmd,
+                $cb->bills->all()
+            );
+            if (! $status['sent']) {
+                continue;
+            }
+            $keys[$mapKey] = [
+                'read' => $status['read'],
+                'fully_sent' => $status['fully_sent'],
+                'partial' => $status['partial'],
+                'pending_count' => $status['pending_count'],
+            ];
         }
 
         return $keys;
@@ -1302,13 +1530,17 @@ class ProcessMessBillsEmployeeController extends Controller
      *
      * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
      */
-    private function filterCombinedBillsByInvoiceSent(Collection $combinedBills, ?string $invoiceSentFilter): Collection
-    {
+    private function filterCombinedBillsByInvoiceSent(
+        Collection $combinedBills,
+        ?string $invoiceSentFilter,
+        ?string $dateFromYmd = null,
+        ?string $dateToYmd = null
+    ): Collection {
         if ($invoiceSentFilter !== 'sent') {
             return $combinedBills;
         }
 
-        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
+        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills, $dateFromYmd, $dateToYmd);
 
         return $combinedBills->filter(function ($cb) use ($invoiceSentKeys) {
             $receiverId = isset($cb->receiver_user_id) && (int) $cb->receiver_user_id > 0
@@ -1337,31 +1569,6 @@ class ProcessMessBillsEmployeeController extends Controller
             ->where('receiver_user_id', $receiverUserId)
             ->where('reference_pk', $referencePk)
             ->exists();
-    }
-
-    /**
-     * True if a MessInvoiceCombined notification exists for this combined id and receiver.
-     */
-    private function messCombinedInvoiceAlreadySent(int $receiverUserId, string $combinedId): bool
-    {
-        if ($receiverUserId <= 0 || $combinedId === '') {
-            return false;
-        }
-
-        $notifications = Notification::query()
-            ->where('type', 'mess')
-            ->where('module_name', 'MessInvoiceCombined')
-            ->where('receiver_user_id', $receiverUserId)
-            ->get(['message']);
-
-        foreach ($notifications as $n) {
-            $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
-            if ($parsed !== null && $parsed['i'] === $combinedId) {
-                return true;
-            }
-        }
-
-        return false;
     }
 
     /**
@@ -1523,7 +1730,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 $combinedBills = $combinedBills->where('status', $normalized)->values();
             }
         }
-        $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter);
+        $combinedBills = $this->filterCombinedBillsByInvoiceSent($combinedBills, $invoiceSentFilter, $dateFrom, $dateTo);
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
         $statusMap = [0 => 'Unpaid', 1 => 'Pending', 2 => 'Paid'];
 
@@ -2322,19 +2529,24 @@ class ProcessMessBillsEmployeeController extends Controller
             })
             ->values();
 
-        $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
-
-        $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap, $invoiceSentKeys, $dateFrom, $dateTo, $offset) {
+        $rows = $combinedBills->map(function ($cb, $index) use ($paymentTypeMap, $dateFrom, $dateTo, $offset) {
             $invoiceNo = $cb->combined_invoice_no ?? ('CB-' . date('Ymd') . '-' . str_pad((string) ($index + 1), 5, '0', STR_PAD_LEFT));
             $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
-            $sentKey = ($receiverId !== null && $receiverId > 0)
-                ? $receiverId . '|' . $cb->combined_id
-                : null;
-            $notificationStatus = ($sentKey !== null && isset($invoiceSentKeys[$sentKey]))
-                ? $invoiceSentKeys[$sentKey]
-                : null;
-            $invoiceNotificationSent = $notificationStatus !== null;
-            $invoiceNotificationRead = $notificationStatus !== null && ($notificationStatus['read'] ?? false);
+            $notificationStatus = ($receiverId !== null && $receiverId > 0)
+                ? $this->resolveMessCombinedInvoiceNotificationStatus(
+                    (int) $receiverId,
+                    (string) $cb->combined_id,
+                    $dateFrom,
+                    $dateTo,
+                    $cb->bills->all()
+                )
+                : [
+                    'sent' => false,
+                    'fully_sent' => false,
+                    'partial' => false,
+                    'pending_count' => 0,
+                    'read' => false,
+                ];
 
             return [
                 'id' => $cb->combined_id,
@@ -2349,8 +2561,11 @@ class ProcessMessBillsEmployeeController extends Controller
                 'total_due_amount' => number_format((float) ($cb->total_due_amount ?? 0), 2),
                 'paid_amount' => number_format($cb->paid, 2),
                 'bill_no' => $invoiceNo,
-                'invoice_notification_sent' => $invoiceNotificationSent,
-                'invoice_notification_read' => $invoiceNotificationRead,
+                'invoice_notification_sent' => $notificationStatus['sent'],
+                'invoice_notification_fully_sent' => $notificationStatus['fully_sent'],
+                'invoice_notification_partial' => $notificationStatus['partial'],
+                'invoice_notification_pending_count' => $notificationStatus['pending_count'],
+                'invoice_notification_read' => $notificationStatus['read'],
                 // Same range used for this row; receipt/print must pass these or server defaults to current month.
                 'date_from' => $dateFrom,
                 'date_to' => $dateTo,
@@ -2388,23 +2603,38 @@ class ProcessMessBillsEmployeeController extends Controller
                     'message' => 'Invoice generated, but notification could not be sent because user mapping was not found.',
                 ], 422);
             }
-            if ($this->messCombinedInvoiceAlreadySent((int) $receiverUserId, (string) $id)) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Already sent invoice.',
-                ], 422);
-            }
             $dateFromYmd = $request->filled('date_from')
                 ? $this->parseDate($request->date_from)
                 : now()->startOfMonth()->format('Y-m-d');
             $dateToYmd = $request->filled('date_to')
                 ? $this->parseDate($request->date_to)
                 : now()->endOfMonth()->format('Y-m-d');
+            $allLineKeys = $this->collectMessBillLineItemKeys($bills);
+            $notifiedLineKeys = $this->getMessCombinedNotifiedLineItemKeys(
+                (int) $receiverUserId,
+                (string) $id,
+                $dateFromYmd,
+                $dateToYmd,
+                $bills
+            );
+            $pendingLineKeys = array_values(array_diff($allLineKeys, $notifiedLineKeys));
+            if ($pendingLineKeys === []) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Already sent invoice for all items in this date range.',
+                ], 422);
+            }
+            $isFollowUp = count($notifiedLineKeys) > 0;
+            $visibleMessage = $isFollowUp
+                ? 'New mess charges have been added to your bill. Please review and pay.'
+                : 'Your combined mess bill is pending. Please review and pay via Process Mess Bills.';
             $invoiceMessage = NotificationService::appendMessCombinedReceiptPayload(
-                'Your combined mess bill is pending. Please review and pay via Process Mess Bills.',
+                $visibleMessage,
                 $id,
                 $dateFromYmd,
-                $dateToYmd
+                $dateToYmd,
+                null,
+                $pendingLineKeys
             );
             try {
                 app(NotificationService::class)->create(
@@ -2427,9 +2657,12 @@ class ProcessMessBillsEmployeeController extends Controller
 
             return response()->json([
                 'success' => true,
-                'message' => 'Invoice notification sent for combined bill.',
+                'message' => $isFollowUp
+                    ? 'Invoice notification sent for ' . count($pendingLineKeys) . ' new item(s).'
+                    : 'Invoice notification sent for combined bill.',
                 'bill_id' => $id,
                 'client_name' => $clientName,
+                'pending_items_notified' => count($pendingLineKeys),
             ]);
         }
 

@@ -1481,8 +1481,15 @@ document.addEventListener('DOMContentLoaded', function() {
         var readBadge = b.invoice_notification_read
             ? '<span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle fw-semibold">Read</span>'
             : '<span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle fw-semibold">Unread</span>';
+        var partialBadge = b.invoice_notification_partial
+            ? '<span class="badge rounded-pill bg-primary-subtle text-primary border border-primary-subtle fw-semibold">New items (' + (b.invoice_notification_pending_count || 0) + ')</span>'
+            : '';
+        var sentLabel = b.invoice_notification_fully_sent
+            ? 'Invoice Sent'
+            : 'Invoice Sent (partial)';
         return '<div class="d-flex flex-column align-items-center gap-1">' +
-            '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">Invoice Sent</span>' +
+            '<span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle fw-semibold">' + sentLabel + '</span>' +
+            partialBadge +
             readBadge +
             '</div>';
     }
@@ -1491,7 +1498,13 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!b || !b.invoice_notification_sent) {
             return '—';
         }
-        return 'Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread');
+        var partial = b.invoice_notification_partial ? ' · New items pending' : '';
+        return 'Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread') + partial;
+    }
+
+    function canSendInvoiceNotification(b) {
+        if (!b) return true;
+        return !b.invoice_notification_fully_sent;
     }
     window.formatInvoiceNotificationStatusText = formatInvoiceNotificationStatusText;
 
@@ -1574,9 +1587,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'date_from=' + encodeURIComponent(receiptDf) + '&date_to=' + encodeURIComponent(receiptDt);
                 }
                 var statusCell = formatInvoiceNotificationStatusCell(b);
-                var invoiceSent = !!b.invoice_notification_sent;
-                var invoiceBtnClass = invoiceSent ? 'btn btn-outline-secondary generate-invoice-btn' : 'btn btn-outline-primary generate-invoice-btn';
-                var invoiceBtnAttrs = 'data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="' + (invoiceSent ? 'Invoice already sent' : 'Generate Invoice') + '"' + (invoiceSent ? ' disabled data-invoice-sent="1"' : '');
+                var invoiceFullySent = !!b.invoice_notification_fully_sent;
+                var invoiceBtnClass = invoiceFullySent ? 'btn btn-outline-secondary generate-invoice-btn' : 'btn btn-outline-primary generate-invoice-btn';
+                var invoiceBtnTitle = invoiceFullySent
+                    ? 'Invoice already sent for all items in this range'
+                    : (b.invoice_notification_partial ? 'Send invoice for new item(s)' : 'Generate Invoice');
+                var invoiceBtnAttrs = 'data-bill-id="' + b.id + '" data-buyer-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '" title="' + invoiceBtnTitle + '"' + (invoiceFullySent ? ' disabled data-invoice-sent="1"' : '');
                 return '<tr class="' + (i % 2 === 0 ? 'table-light' : '') + '">' +
                     '<td><input type="checkbox" class="form-check-input modal-bill-check" data-id="' + b.id + '" data-name="' + (b.buyer_name || '').replace(/"/g, '&quot;') + '"></td>' +
                     '<td>' + sn + '</td>' +
@@ -2980,7 +2996,7 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             if (invoiceBtn.disabled || invoiceBtn.getAttribute('data-invoice-sent') === '1') {
-                showToast('Already sent invoice.', 'error');
+                showToast('Already sent invoice for all items in this date range.', 'error');
                 return;
             }
             var billId = invoiceBtn.getAttribute('data-bill-id');
@@ -3012,16 +3028,16 @@ document.addEventListener('DOMContentLoaded', function() {
         if (ids.length === 0) { showToast('Select at least one bill.', 'error'); return; }
         var toSend = ids.filter(function(id) {
             var b = (modalBillsData || []).find(function(x) { return String(x.id) === String(id); });
-            return !b || !b.invoice_notification_sent;
+            return canSendInvoiceNotification(b);
         });
         var skipped = ids.length - toSend.length;
         if (toSend.length === 0) {
-            showToast('Already sent invoice.', 'error');
+            showToast('Already sent invoice for all items in the selected date range.', 'error');
             return;
         }
         if (!confirm('Generate invoice for ' + toSend.length + ' selected bill(s)?')) return;
         if (skipped > 0) {
-            showToast('Skipping ' + skipped + ' bill(s): already sent invoice.', 'error');
+            showToast('Skipping ' + skipped + ' bill(s): all items already notified.', 'error');
         }
         toSend.forEach(function(id) {
             doGenerateInvoice(id, '', null);
