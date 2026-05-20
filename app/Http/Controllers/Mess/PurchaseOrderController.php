@@ -102,42 +102,48 @@ class PurchaseOrderController extends Controller
             }
 
             $purchaseOrders = $paged->get();
+            $forPrint = $request->boolean('for_print');
             $canDeletePurchaseOrder = function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin'));
             $rowStart = $start + 1;
 
-            $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart) {
+            $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart, $forPrint) {
                 $statusBadgeClass = $po->status === 'approved'
                     ? 'text-bg-success'
                     : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
 
-                $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
-                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
-                    . '</button>';
-                $editBtn = '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="Edit">'
-                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
-                    . '</button>';
-                $deleteForm = '';
-
-                if ($canDeletePurchaseOrder) {
-                    $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
-                    $csrf = csrf_token();
-                    $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
-                        . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
-                        . '<input type="hidden" name="_method" value="DELETE">'
-                        . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
-                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
-                        . '</button>'
-                        . '</form>';
-                }
-
-                return [
+                $row = [
                     '<span class="ps-4 d-inline-block text-body-secondary fw-medium">' . ($rowStart + $index) . '</span>',
                     '<span class="fw-semibold text-body">' . e($po->po_number) . '</span>',
                     '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
                     '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
                     '<span class="badge rounded-pill ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',
-                    '<div class="d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $deleteForm . '</div>',
                 ];
+
+                if (! $forPrint) {
+                    $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
+                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
+                        . '</button>';
+                    $editBtn = '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="Edit">'
+                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
+                        . '</button>';
+                    $deleteForm = '';
+
+                    if ($canDeletePurchaseOrder) {
+                        $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
+                        $csrf = csrf_token();
+                        $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
+                            . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
+                            . '<input type="hidden" name="_method" value="DELETE">'
+                            . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
+                            . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
+                            . '</button>'
+                            . '</form>';
+                    }
+
+                    $row[] = '<div class="po-actions-cell d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+                }
+
+                return $row;
             })->values()->all();
 
             return response()->json([

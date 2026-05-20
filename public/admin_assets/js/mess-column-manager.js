@@ -360,6 +360,92 @@
         },
 
         /** Normalize a DataTables row (array or numeric-key object) to a cell array. */
+        /** Hide Material icon ligature text in print popups (font often unavailable). */
+        MESS_PRINT_SUPPRESS_ICON_CSS:
+            'i[class*="material"],span[class*="material"],.material-symbols-rounded,.material-icons,' +
+            '.material-symbol-rounded,.mess-report-sort-icon{display:none!important;font-size:0!important;' +
+            'width:0!important;height:0!important;overflow:hidden!important;visibility:hidden!important;' +
+            'color:transparent!important;line-height:0!important;}' +
+            '.mess-report-sort-link{text-decoration:none;color:inherit;}' +
+            '.po-action-btn,.btn-view-sv,.btn-edit-sv,.btn-return-sv,.po-actions-cell,button[aria-label]{display:none!important;}',
+
+        _cleanupMaterialLigatureText: function (html) {
+            if (html == null || html === '') {
+                return '';
+            }
+            var ligatures =
+                'visibility|edit|delete|print|add|save|close|view_column|receipt_long|inventory_2|assignment|' +
+                'attach_file|filter_list|tune|unfold_more|arrow_upward|arrow_downward|restart_alt|filter_alt|' +
+                'local_shipping|storefront|check_circle';
+            var reBetweenTags = new RegExp('>\\s*(' + ligatures + ')\\s*<', 'gi');
+            var reAfterTag = new RegExp('(<[^>]+>)\\s*(' + ligatures + ')\\s*(?=<)', 'gi');
+            return String(html)
+                .replace(reBetweenTags, '><')
+                .replace(reAfterTag, '$1');
+        },
+
+        _sanitizeHtmlForPrint: function (html) {
+            if (html == null || html === '') {
+                return '';
+            }
+            var htmlStr = String(html);
+            if (typeof document === 'undefined') {
+                return htmlStr;
+            }
+            var wrap = document.createElement('div');
+            wrap.innerHTML = htmlStr;
+            wrap.querySelectorAll(
+                'i[class*="material"], span[class*="material"], .material-symbols-rounded, .material-icons, ' +
+                '.material-symbol-rounded, .mess-report-sort-icon, .po-action-btn, .btn-view-sv, .btn-edit-sv, ' +
+                '.btn-return-sv, .po-actions-cell'
+            ).forEach(function (el) {
+                el.remove();
+            });
+            wrap.querySelectorAll('.card-header .rounded-3, .card-header .rounded-2').forEach(function (box) {
+                var text = (box.textContent || '').replace(/\s+/g, '').toLowerCase();
+                if (!text || /^(visibility|edit|delete|print|add|view_column|receipt_long|inventory_2|assignment|attach_file)$/.test(text)) {
+                    box.remove();
+                }
+            });
+            wrap.querySelectorAll('button').forEach(function (btn) {
+                var hasIcon = btn.querySelector(
+                    '.material-symbols-rounded, .material-icons, .material-symbol-rounded'
+                );
+                if (hasIcon && !(btn.textContent || '').replace(/\s+/g, '').replace(/visibility|edit|delete|print|add|save/gi, '').length) {
+                    btn.remove();
+                }
+            });
+            wrap.querySelectorAll('form.d-inline, form.d-inline-block, form.m-0').forEach(function (form) {
+                if (!form.textContent || !form.textContent.replace(/\s+/g, '').length) {
+                    form.remove();
+                }
+            });
+            return this._cleanupMaterialLigatureText(wrap.innerHTML.trim());
+        },
+
+        _printHeaderCellHtml: function (dt, idx, table) {
+            var th = dt ? dt.column(idx).header() : null;
+            if (!th && table) {
+                var headerRow = table.querySelector('thead tr');
+                if (headerRow) {
+                    th = headerRow.querySelectorAll('th, td')[idx];
+                }
+            }
+            if (!th) {
+                return '<th></th>';
+            }
+            var original = th.getAttribute && th.getAttribute('data-mess-col-original');
+            if (original) {
+                return '<th>' + $('<div>').text(String(original).trim()).html() + '</th>';
+            }
+            var clone = $(th).clone();
+            clone.find(
+                '.material-symbols-rounded, .material-icons, .material-symbol-rounded, .mess-report-sort-icon'
+            ).remove();
+            var label = (clone.text() || '').replace(/\s+/g, ' ').trim();
+            return '<th>' + $('<div>').text(label).html() + '</th>';
+        },
+
         dataTableRowToCells: function (row) {
             if (row == null) {
                 return [];
@@ -456,7 +542,14 @@
                 var th = headerCells[i];
                 var label = '';
                 if (th) {
-                    label = (th.getAttribute('data-mess-col-original') || th.textContent || '').trim();
+                    label = (th.getAttribute('data-mess-col-original') || '').trim();
+                    if (!label) {
+                        var clone = th.cloneNode(true);
+                        clone.querySelectorAll(
+                            '.material-symbols-rounded, .material-icons, .mess-report-sort-icon'
+                        ).forEach(function (el) { el.remove(); });
+                        label = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+                    }
                 }
                 if (mgr && mgr.state && mgr.state.labels && mgr.state.labels[String(i)]) {
                     label = mgr.state.labels[String(i)];
@@ -486,7 +579,7 @@
                 var cells = Array.isArray(row) ? row : Array.from(row);
                 return visibleIndexes.map(function (i) {
                     var val = cells[i] != null ? cells[i] : '';
-                    return preserveHtml ? String(val) : self._stripHtml(val);
+                    return preserveHtml ? self._sanitizeHtmlForPrint(val) : self._stripHtml(val);
                 });
             });
 
@@ -557,7 +650,9 @@
             }
             params.draw = params.draw || ((settings && settings.iDraw) ? settings.iDraw + 1 : 1);
             params.start = 0;
-            params.length = Math.max(info.recordsFiltered || info.recordsDisplay || 0, 1);
+            var printMaxRows = 500;
+            var filtered = info.recordsFiltered || info.recordsDisplay || 0;
+            params.length = Math.min(Math.max(filtered, 1), printMaxRows);
             params.for_print = 1;
             if (!params.search) {
                 params.search = { value: dt.search(), regex: false };
@@ -648,19 +743,16 @@
                 }
             }
 
+            var self = this;
             var headerHtml = '<tr>' + printColIndexes.map(function (idx) {
-                if (dt) {
-                    return '<th>' + $(dt.column(idx).header()).html() + '</th>';
-                }
-                var th = table && table.querySelectorAll('thead tr th, thead tr td')[idx];
-                return '<th>' + (th ? th.innerHTML : '') + '</th>';
+                return self._printHeaderCellHtml(dt, idx, table);
             }).join('') + '</tr>';
 
-            var self = this;
             var bodyRowsHtml = (rowsData || []).map(function (row) {
                 var cells = self.dataTableRowToCells(row);
                 return '<tr>' + printColIndexes.map(function (idx) {
-                    return '<td>' + (cells[idx] != null ? cells[idx] : '') + '</td>';
+                    var cell = cells[idx] != null ? cells[idx] : '';
+                    return '<td>' + self._sanitizeHtmlForPrint(cell) + '</td>';
                 }).join('') + '</tr>';
             }).join('');
 
@@ -733,6 +825,7 @@
                 '.badge{-webkit-print-color-adjust:exact;print-color-adjust:exact;}' +
                 '@page{size:A4 landscape;margin:8mm;}' +
                 '@media print{body{margin:0;}}' +
+                this.MESS_PRINT_SUPPRESS_ICON_CSS +
                 (options.extraCss || '') +
                 '</style></head><body>' +
                 '<div class="container-fluid"><div class="table-responsive">' + printableTable + '</div></div>' +
@@ -856,7 +949,8 @@
                 '</title><link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">' +
                 '<style>body{font-family:system-ui,sans-serif;font-size:10px;margin:12px;}' +
                 'table{width:100%;border-collapse:collapse;} th,td{border:1px solid #dee2e6;padding:4px 6px;}' +
-                'thead th{background:#f8f9fa;font-weight:600;}' + extraCss + '</style></head><body>' +
+                'thead th{background:#f8f9fa;font-weight:600;}' +
+                this.MESS_PRINT_SUPPRESS_ICON_CSS + extraCss + '</style></head><body>' +
                 printableTable +
                 '<script>window.addEventListener("load",function(){window.print();});<\/script></body></html>'
             );

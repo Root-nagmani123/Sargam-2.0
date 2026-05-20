@@ -19,6 +19,7 @@ use App\Support\DataTableSearchHelper;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Facades\Excel;
@@ -31,6 +32,12 @@ class ProcessMessBillsEmployeeController extends Controller
 {
     /** Client type slugs used in SellingVoucherDateRangeReport */
     private const ALLOWED_CLIENT_SLUGS = ['employee', 'ot', 'course', 'other'];
+
+    /** Cache grouped bills so DataTables page/sort/search does not re-query the union on every request. */
+    private const COMBINED_BILLS_CACHE_TTL_SECONDS = 120;
+
+    /** Max rows returned for print/export (avoids multi‑MB JSON responses). */
+    private const PRINT_MAX_ROWS = 500;
 
     /** Client type constants for KitchenIssueMaster (Employee, OT, Course, Other) */
     private const ALLOWED_KITCHEN_CLIENT_TYPES = [
@@ -135,11 +142,18 @@ class ProcessMessBillsEmployeeController extends Controller
         $effectiveDateToYmd = $dateTo;
 
         if ($isDataTableRequest) {
-            [$combinedBills] = $this->queryAndGroupBillsForProcessIndex(
+            [$combinedBills] = $this->getCombinedBillsForProcessIndexCached(
                 $dateFrom,
                 $dateTo,
                 $dateRangeQuery,
-                $kitchenIssueQuery
+                $kitchenIssueQuery,
+                [
+                    'client_types' => $clientTypes,
+                    'client_type_pks' => $clientTypePks,
+                    'buyer_names' => $buyerNames,
+                    'status_filter' => $statusFilter,
+                    'invoice_sent_filter' => $invoiceSentFilter,
+                ]
             );
 
             if ($statusFilter !== null && $statusFilter !== '') {
@@ -306,7 +320,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         if ($forPrint) {
             $start = 0;
-            $length = min(max(1, $recordsFiltered), 10000);
+            $length = min(max(1, $recordsFiltered), self::PRINT_MAX_ROWS);
         } elseif ($length < 1 || $length > 100) {
             $length = 10;
         }
@@ -357,18 +371,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 $statusBadge = '<span class="badge rounded-pill text-bg-secondary shadow-sm px-3 py-2">○ Unpaid</span>';
             }
 
-            $receiptUrl = route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id])
-                . '?date_from=' . rawurlencode($effectiveDateFromYmd)
-                . '&date_to=' . rawurlencode($effectiveDateToYmd);
-
-            $actionHtml = '<a href="' . e($receiptUrl) . '" target="_blank"'
-                . ' class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center justify-content-center gap-1 px-3"'
-                . ' title="Print receipt (' . e((string) ($cb->combined_invoice_no ?? 'Invoice')) . ')">'
-                . '<i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>'
-                . '<span class="d-none d-sm-inline">Receipt</span>'
-                . '</a>';
-
-            $data[] = [
+            $row = [
                 (string) ($start + $idx + 1),
                 e((string) ($cb->buyer_name ?? '—')),
                 e((string) ($cb->combined_invoice_no ?? '—')),
@@ -377,17 +380,107 @@ class ProcessMessBillsEmployeeController extends Controller
                 '₹ ' . number_format((float) ($cb->total ?? 0), 2),
                 e((string) ($cb->payment_type ?? '—')),
                 $statusBadge,
-                $actionHtml,
             ];
+
+            if (! $forPrint) {
+                $receiptUrl = route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id])
+                    . '?date_from=' . rawurlencode($effectiveDateFromYmd)
+                    . '&date_to=' . rawurlencode($effectiveDateToYmd);
+
+                $row[] = '<a href="' . e($receiptUrl) . '" target="_blank"'
+                    . ' class="btn btn-sm btn-outline-primary shadow-sm d-inline-flex align-items-center justify-content-center gap-1 px-3"'
+                    . ' title="Print receipt (' . e((string) ($cb->combined_invoice_no ?? 'Invoice')) . ')">'
+                    . '<i class="material-symbols-rounded" style="font-size: 1.1rem;">receipt</i>'
+                    . '<span class="d-none d-sm-inline">Receipt</span>'
+                    . '</a>';
+            }
+
+            $data[] = $row;
         }
 
-        return response()->json([
+        $payload = [
             'draw' => $draw,
             'recordsTotal' => $recordsTotal,
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
-            'stats' => $statsPayload,
-        ]);
+        ];
+
+        if (! $forPrint) {
+            $payload['stats'] = $statsPayload;
+        } elseif ($recordsFiltered > self::PRINT_MAX_ROWS) {
+            $payload['print_truncated'] = true;
+            $payload['print_max_rows'] = self::PRINT_MAX_ROWS;
+        }
+
+        return response()->json($payload);
+    }
+
+    private function processMessBillsCombinedCacheVersion(): int
+    {
+        return (int) Cache::get('process_mess_bills_combined_cache_version', 1);
+    }
+
+    private function bumpProcessMessBillsCombinedCache(): void
+    {
+        if (! Cache::has('process_mess_bills_combined_cache_version')) {
+            Cache::put('process_mess_bills_combined_cache_version', 2, self::COMBINED_BILLS_CACHE_TTL_SECONDS * 10);
+
+            return;
+        }
+
+        Cache::increment('process_mess_bills_combined_cache_version');
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     */
+    private function combinedBillsCacheKey(string $dateFrom, string $dateTo, array $filters): string
+    {
+        return 'process_mess_bills_combined_v2:'
+            . $this->processMessBillsCombinedCacheVersion()
+            . ':'
+            . md5(json_encode([
+                'from' => $dateFrom,
+                'to' => $dateTo,
+                'client_types' => $filters['client_types'] ?? [],
+                'client_type_pks' => $filters['client_type_pks'] ?? [],
+                'buyer_names' => $filters['buyer_names'] ?? [],
+                'status_filter' => $filters['status_filter'] ?? null,
+                'invoice_sent_filter' => $filters['invoice_sent_filter'] ?? null,
+            ]));
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @return array{0: \Illuminate\Support\Collection}
+     */
+    private function getCombinedBillsForProcessIndexCached(
+        string $dateFrom,
+        string $dateTo,
+        $dateRangeQuery,
+        $kitchenIssueQuery,
+        array $filters
+    ): array {
+        $cacheKey = $this->combinedBillsCacheKey($dateFrom, $dateTo, $filters);
+
+        $combinedBills = Cache::remember(
+            $cacheKey,
+            self::COMBINED_BILLS_CACHE_TTL_SECONDS,
+            function () use ($dateFrom, $dateTo, $dateRangeQuery, $kitchenIssueQuery) {
+                return $this->queryAndGroupBillsForProcessIndex(
+                    $dateFrom,
+                    $dateTo,
+                    $dateRangeQuery,
+                    $kitchenIssueQuery
+                )[0];
+            }
+        );
+
+        if ($combinedBills instanceof Collection) {
+            return [$combinedBills];
+        }
+
+        return [collect($combinedBills)];
     }
 
     /**
@@ -1828,6 +1921,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 ], 500);
             }
             $clientName = trim((string) ($first->client_name ?? ($first->clientTypeCategory->client_name ?? '—')));
+            $this->bumpProcessMessBillsCombinedCache();
+
             return response()->json([
                 'success' => true,
                 'message' => 'Invoice notification sent for combined bill.',
@@ -1868,6 +1963,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 'message' => 'Invoice generated, but notification could not be saved.',
             ], 500);
         }
+
+        $this->bumpProcessMessBillsCombinedCache();
 
         return response()->json([
             'success' => true,
@@ -2349,6 +2446,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
             }
             $remainingDueCombined = $this->billDueAmount($totalDue, $amount);
+            $this->bumpProcessMessBillsCombinedCache();
 
             return response()->json([
                 'success' => true,
@@ -2457,6 +2555,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 report($e);
             }
         }
+
+        $this->bumpProcessMessBillsCombinedCache();
 
         return response()->json([
             'success' => true,

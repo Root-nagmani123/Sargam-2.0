@@ -264,17 +264,17 @@
             </form>
 
             <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="processMessBillsTable">
+                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th"><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
-                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th mess-th-sorted"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
-                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th"><span class="d-inline-flex align-items-center gap-1"><span>Slip No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
-                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th"><span class="d-inline-flex align-items-center gap-1"><span>Invoice Date</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
-                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th"><span class="d-inline-flex align-items-center gap-1"><span>Client Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
-                            <th class="text-nowrap py-2 text-end mess-sort-th mess-report-sort-th"><span class="d-inline-flex align-items-center gap-1"><span>Total</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
-                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th"><span class="d-inline-flex align-items-center gap-1"><span>Payment Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
-                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th"><span class="d-inline-flex align-items-center gap-1"><span>Status</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="S.No."><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th mess-th-sorted" data-mess-col-original="Buyer Name"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Slip No."><span class="d-inline-flex align-items-center gap-1"><span>Slip No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Invoice Date"><span class="d-inline-flex align-items-center gap-1"><span>Invoice Date</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Client Type"><span class="d-inline-flex align-items-center gap-1"><span>Client Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 text-end mess-sort-th mess-report-sort-th" data-mess-col-original="Total"><span class="d-inline-flex align-items-center gap-1"><span>Total</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Payment Type"><span class="d-inline-flex align-items-center gap-1"><span>Payment Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Status"><span class="d-inline-flex align-items-center gap-1"><span>Status</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                             <th class="text-nowrap py-2 text-center no-print">Actions</th>
                         </tr>
                     </thead>
@@ -372,9 +372,6 @@
     }
 
     document.addEventListener('DOMContentLoaded', bindProcessMessBillStatsListener);
-    document.addEventListener('DOMContentLoaded', function () {
-        setTimeout(bindProcessMessBillStatsListener, 0);
-    });
 })();
 </script>
 @endpush
@@ -385,6 +382,7 @@
     'orderColumn' => [[1, 'asc']],
     'actionColumnIndex' => 8,
     'infoLabel' => 'bills',
+    'searchDelay' => 500,
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
     'ajaxJsonCallback' => 'applyProcessMessBillStats',
@@ -410,6 +408,26 @@ function applyMessSortHeaderIcon(th, isActive, sortDir) {
     }
 }
 window.applyMessSortHeaderIcon = applyMessSortHeaderIcon;
+
+/** Column title for print/export — never include Material icon ligature text. */
+function messPrintThLabel(th) {
+    if (!th) {
+        return '';
+    }
+    var label = (th.getAttribute('data-mess-col-original') || '').trim();
+    if (label) {
+        return label;
+    }
+    var clone = th.cloneNode(true);
+    clone.querySelectorAll(
+        '.mess-report-sort-icon, .material-symbols-rounded, .material-icons, i[class*="material"]'
+    ).forEach(function (el) {
+        el.remove();
+    });
+    label = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    return label.replace(/\s+(unfold_more|arrow_upward|arrow_downward)$/i, '');
+}
+window.messPrintThLabel = messPrintThLabel;
 
 function syncProcessMessBillsTableSortIcons() {
     if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
@@ -726,6 +744,13 @@ document.addEventListener('DOMContentLoaded', function () {
     @page {
         margin: 12mm;
         size: auto;
+    }
+    .mess-report-sort-icon,
+    .process-mess-bills-employee-report .material-symbols-rounded,
+    .process-mess-bills-employee-report i[class*="material"] {
+        display: none !important;
+        font-size: 0 !important;
+        visibility: hidden !important;
     }
 }
 
@@ -2917,177 +2942,17 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 function printProcessMessBillsMainTable() {
-    var tableId = 'processMessBillsTable';
-    var table = document.getElementById(tableId);
-    if (!table) {
-        window.print();
+    if (window.MessColumnManager && typeof window.MessColumnManager.printDataTable === 'function') {
+        window.MessColumnManager.printDataTable('processMessBillsTable', {
+            template: 'lbsnaa',
+            title: 'Process Mess Bills - Employee',
+            periodText: 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}'
+        });
         return;
     }
-
-    function openPrintWindow(rowsData) {
-        var dt = null;
-        try {
-            if (window.jQuery && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#' + tableId)) {
-                dt = window.jQuery('#' + tableId).DataTable();
-            }
-        } catch (e) {}
-
-        var printColIndexes = [];
-        if (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function') {
-            printColIndexes = window.MessColumnManager.resolveExportIndexes(tableId) || [];
-        }
-        if (!printColIndexes.length) {
-            printColIndexes = [0, 1, 2, 3, 4, 5, 6, 7];
-        }
-
-        var headerHtml = '<tr>' + printColIndexes.map(function (idx) {
-            if (dt) {
-                return '<th>' + window.jQuery(dt.column(idx).header()).html() + '</th>';
-            }
-            var ths = table.querySelectorAll('thead tr th, thead tr td');
-            return '<th>' + (ths[idx] ? ths[idx].innerHTML : '') + '</th>';
-        }).join('') + '</tr>';
-
-        var rowToCells = (window.MessColumnManager && typeof window.MessColumnManager.dataTableRowToCells === 'function')
-            ? function (row) { return window.MessColumnManager.dataTableRowToCells(row); }
-            : function (row) {
-                if (Array.isArray(row)) return row;
-                if (row && typeof row === 'object') {
-                    var keys = Object.keys(row).filter(function (k) { return /^\d+$/.test(k); }).sort(function (a, b) { return Number(a) - Number(b); });
-                    if (keys.length) return keys.map(function (k) { return row[k]; });
-                }
-                return [];
-            };
-        var bodyRowsHtml = (rowsData || []).map(function (row) {
-            var cells = rowToCells(row);
-            return '<tr>' + printColIndexes.map(function (idx) {
-                return '<td>' + (cells[idx] != null ? cells[idx] : '') + '</td>';
-            }).join('') + '</tr>';
-        }).join('');
-
-        if (!bodyRowsHtml) {
-            if (window.alert) {
-                window.alert('No data to print.');
-            }
-            return;
-        }
-
-        var columnsCount = printColIndexes.length || 8;
-        var title = 'Process Mess Bills - Employee';
-        var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
-
-        var printableTable = `
-      <table class="table table-sm table-bordered align-middle mb-0">
-        <thead>
-          <tr>
-            <th colspan="${columnsCount}">
-              <div class="d-flex justify-content-between align-items-center mb-2 lbsnaa-header">
-                <div class="d-flex align-items-center gap-2">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
-                  <div>
-                    <div class="brand-line-1">Government of India</div>
-                    <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                    <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-                  </div>
-                </div>
-                <div>
-                  <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
-                </div>
-              </div>
-              <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">
-                <span><strong>${title}</strong></span>
-                <span>${periodText}</span>
-                <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
-              </div>
-            </th>
-          </tr>
-          ${headerHtml}
-        </thead>
-        <tbody>
-          ${bodyRowsHtml}
-        </tbody>
-      </table>`;
-
-
-        var printWindow = window.open('', '_blank');
-        if (!printWindow) {
-            window.print();
-            return;
-        }
-
-        printWindow.document.open();
-        printWindow.document.write(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 10px;
-      margin: 0;
-      padding: 0;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+    if (window.alert) {
+        window.alert('Print is not available. Please refresh the page and try again.');
     }
-    .lbsnaa-header {
-      border-bottom: 2px solid #004a93;
-      padding-bottom: .75rem;
-      margin-bottom: 1rem;
-    }
-    .brand-line-1 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: #004a93; }
-    .brand-line-2 { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; color: #222; }
-    .brand-line-3 { font-size: .8rem; color: #555; }
-    .report-meta { font-size: .8rem; margin-bottom: .75rem; }
-    .report-meta span { display: inline-block; margin-right: 1.5rem; }
-    .container-fluid { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; }
-    th, td {
-      padding: 4px 6px;
-      border: 1px solid #dee2e6;
-      white-space: normal !important;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      vertical-align: top;
-    }
-    thead th { background: #f8f9fa; font-weight: 600; }
-    .table, .table * { white-space: normal !important; }
-    .table-responsive { overflow: visible !important; }
-    thead { display: table-header-group; }
-    .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    @page { size: A4 landscape; margin: 8mm; }
-    @media print { body { margin: 0; } }
-  </style>
-</head>
-<body>
-  <div class="container-fluid">
-    <div class="table-responsive">
-      ${printableTable}
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener('load', function() { window.print(); });
-  <\/script>
-</body>
-</html>`);
-        printWindow.document.close();
-    }
-
-    if (window.MessColumnManager && typeof window.MessColumnManager.fetchDataTableRowsForPrint === 'function') {
-        window.MessColumnManager.fetchDataTableRowsForPrint(tableId, openPrintWindow);
-        return;
-    }
-
-    var rowsData = [];
-    try {
-        if (window.jQuery && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#' + tableId)) {
-            rowsData = window.jQuery('#' + tableId).DataTable().rows({ search: 'applied' }).data().toArray();
-        }
-    } catch (e) {}
-    openPrintWindow(rowsData);
 }
 
 function printProcessMessBillsTable() {
@@ -3123,8 +2988,10 @@ function printProcessMessBillsTable() {
         var columnsCount = printColIndexes.length || 7;
         var columnHeadHtml = '<tr>' + printColIndexes.map(function (idx) {
             var th = headerCells[idx];
-            var label = th ? (th.getAttribute('data-mess-col-original') || th.textContent || '').trim() : '';
-            return '<th>' + label + '</th>';
+            var label = typeof window.messPrintThLabel === 'function'
+                ? window.messPrintThLabel(th)
+                : (th ? (th.textContent || '').trim() : '');
+            return '<th>' + label.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
         }).join('') + '</tr>';
 
         function modalBillPrintCell(b, idx, sn) {
@@ -3239,6 +3106,7 @@ function printProcessMessBillsTable() {
     thead { display: table-header-group; }
     @page { size: A4 landscape; margin: 8mm; }
     @media print { body { margin: 0; } }
+    ${(window.MessColumnManager && window.MessColumnManager.MESS_PRINT_SUPPRESS_ICON_CSS) || ''}
   </style>
 </head>
 <body>

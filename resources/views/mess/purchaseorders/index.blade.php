@@ -2,7 +2,7 @@
 @section('title', 'Purchase Orders')
 @section('content')
 @php
-    $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
+$canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid py-3 py-md-4 po-ux">
     <div class="no-print">
@@ -11,38 +11,60 @@
     <div class="datatables">
         <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
             <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:#004a93;">
-                <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
+                <div
+                    class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
                     <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-white bg-opacity-15 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0" style="width: 2.75rem; height: 2.75rem;">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.4rem;" aria-hidden="true">receipt_long</i>
+                        <div class="rounded-3 bg-white bg-opacity-15 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0"
+                            style="width: 2.75rem; height: 2.75rem;">
+                            <i class="material-icons material-symbol-rounded" style="font-size: 1.4rem;"
+                                aria-hidden="true">receipt_long</i>
                         </div>
                         <div>
                             <h4 class="mb-0 fw-bold text-white">Purchase Orders</h4>
                             <p class="mb-0 text-white-50 small">Filter, view, or create a new purchase order</p>
                         </div>
                     </div>
-                    <button type="button" class="btn btn-light text-primary px-4 py-2 rounded-2 d-inline-flex align-items-center gap-2 shadow-sm fw-semibold po-btn-create" data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-                        <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">add</i>
-                        <span class="d-none d-sm-inline">Create Purchase Order</span>
-                        <span class="d-inline d-sm-none">New</span>
-                    </button>
+                    <div class="d-flex flex-wrap align-items-center gap-2">
+                        <button type="button"
+                            class="btn btn-outline-light px-3 py-2 rounded-2 d-inline-flex align-items-center gap-2 fw-semibold"
+                            id="poPrintListBtn" title="Print purchase order list">
+                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
+                                aria-hidden="true">print</i>
+                            <span class="d-none d-sm-inline">Print List</span>
+                        </button>
+                        <button type="button"
+                            class="btn btn-light text-primary px-4 py-2 rounded-2 d-inline-flex align-items-center gap-2 shadow-sm fw-semibold po-btn-create"
+                            data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
+                                aria-hidden="true">add</i>
+                            <span class="d-none d-sm-inline">Create Purchase Order</span>
+                            <span class="d-inline d-sm-none">New</span>
+                        </button>
+                    </div>
                 </div>
             </div>
             <div class="card-body p-3 p-md-4">
                 @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show shadow-lg border-0 rounded-4 d-flex align-items-start gap-3 bg-gradient" role="alert" style="background: linear-gradient(135deg, #d1f4e0 0%, #a8e6cf 100%); border-left: 4px solid #28a745 !important;">
-                        <i class="material-icons material-symbol-rounded flex-shrink-0 text-success" style="font-size: 1.5rem;" aria-hidden="true">check_circle</i>
-                        <div class="flex-grow-1 fw-medium">{{ session('success') }}</div>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
+                <div class="alert alert-success alert-dismissible fade show shadow-lg border-0 rounded-4 d-flex align-items-start gap-3 bg-gradient"
+                    role="alert"
+                    style="background: linear-gradient(135deg, #d1f4e0 0%, #a8e6cf 100%); border-left: 4px solid #28a745 !important;">
+                    <i class="material-icons material-symbol-rounded flex-shrink-0 text-success"
+                        style="font-size: 1.5rem;" aria-hidden="true">check_circle</i>
+                    <div class="flex-grow-1 fw-medium">{{ session('success') }}</div>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
                 @endif
 
                 {{-- Filters --}}
-                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}" class="card border-0 shadow-sm rounded-3 mb-4 no-print po-filter-card" aria-label="Purchase order list filters">
-                    <div class="card-header bg-white border-bottom border-light-subtle py-3 px-3 px-md-4 position-relative" style="border-top:3px solid #0b4a7e !important;">
+                <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}"
+                    class="card border-0 shadow-sm rounded-3 mb-4 no-print po-filter-card"
+                    aria-label="Purchase order list filters">
+                    <div class="card-header bg-white border-bottom border-light-subtle py-3 px-3 px-md-4 position-relative"
+                        style="border-top:3px solid #0b4a7e !important;">
                         <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
                             <div class="d-flex align-items-center gap-2">
-                                <span class="material-symbols-rounded text-primary" style="font-size:1.5rem;" aria-hidden="true">tune</span>
+                                <span class="material-symbols-rounded text-primary" style="font-size:1.5rem;"
+                                    aria-hidden="true">tune</span>
                                 <div>
                                     <h6 class="mb-0 fw-semibold text-body">Refine Results</h6>
                                     <p class="mb-0 small text-body-secondary">Filter by period, vendor & store</p>
@@ -55,29 +77,43 @@
                             <div class="col-12 col-lg-5 col-xl-4">
                                 <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
                                     <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span class="badge rounded-pill bg-primary-subtle text-primary-emphasis fw-semibold px-3" style="font-size: 0.7rem; letter-spacing: 0.06em;">Period</span>
+                                        <span
+                                            class="badge rounded-pill bg-primary-subtle text-primary-emphasis fw-semibold px-3"
+                                            style="font-size: 0.7rem; letter-spacing: 0.06em;">Period</span>
                                         <span class="small text-body-secondary">Order date range</span>
                                     </div>
                                     <div class="row g-3">
                                         <div class="col-sm-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark" for="poFilterDateFrom">From</label>
+                                            <label class="form-label fw-bold small mb-2 text-dark"
+                                                for="poFilterDateFrom">From</label>
                                             <div class="rounded-3 overflow-hidden">
                                                 <div class="input-group input-group-sm shadow">
-                                                    <span class="input-group-text bg-light border-end-0 px-3" id="poFilterDateFrom-addon">
-                                                        <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.125rem;" aria-hidden="true">event</i>
+                                                    <span class="input-group-text bg-light border-end-0 px-3"
+                                                        id="poFilterDateFrom-addon">
+                                                        <i class="material-icons material-symbol-rounded text-primary"
+                                                            style="font-size: 1.125rem;" aria-hidden="true">event</i>
                                                     </span>
-                                                    <input type="date" name="date_from" id="poFilterDateFrom" class="form-control border-start-0 ps-0" value="{{ $filterDateFrom }}" aria-describedby="poFilterDateFrom-addon">
+                                                    <input type="date" name="date_from" id="poFilterDateFrom"
+                                                        class="form-control border-start-0 ps-0"
+                                                        value="{{ $filterDateFrom }}"
+                                                        aria-describedby="poFilterDateFrom-addon">
                                                 </div>
                                             </div>
                                         </div>
                                         <div class="col-sm-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark" for="poFilterDateTo">To</label>
+                                            <label class="form-label fw-bold small mb-2 text-dark"
+                                                for="poFilterDateTo">To</label>
                                             <div class="rounded-3 overflow-hidden">
                                                 <div class="input-group input-group-sm shadow">
-                                                    <span class="input-group-text bg-light border-end-0 px-3" id="poFilterDateTo-addon">
-                                                        <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.125rem;" aria-hidden="true">event</i>
+                                                    <span class="input-group-text bg-light border-end-0 px-3"
+                                                        id="poFilterDateTo-addon">
+                                                        <i class="material-icons material-symbol-rounded text-primary"
+                                                            style="font-size: 1.125rem;" aria-hidden="true">event</i>
                                                     </span>
-                                                    <input type="date" name="date_to" id="poFilterDateTo" class="form-control border-start-0 ps-0" value="{{ $filterDateTo }}" aria-describedby="poFilterDateTo-addon">
+                                                    <input type="date" name="date_to" id="poFilterDateTo"
+                                                        class="form-control border-start-0 ps-0"
+                                                        value="{{ $filterDateTo }}"
+                                                        aria-describedby="poFilterDateTo-addon">
                                                 </div>
                                             </div>
                                         </div>
@@ -87,54 +123,87 @@
                             <div class="col-12 col-lg-7 col-xl-8">
                                 <div class="h-100 rounded-3 border border-light-subtle bg-white p-3 p-md-4">
                                     <div class="d-flex align-items-center gap-2 mb-3">
-                                        <span class="badge rounded-pill bg-success-subtle text-success-emphasis fw-semibold px-3" style="font-size: 0.7rem; letter-spacing: 0.06em;">Scope</span>
-                                        <span class="small text-body-secondary">Vendors & stores <span class="d-none d-sm-inline">(leave blank for all)</span></span>
+                                        <span
+                                            class="badge rounded-pill bg-success-subtle text-success-emphasis fw-semibold px-3"
+                                            style="font-size: 0.7rem; letter-spacing: 0.06em;">Scope</span>
+                                        <span class="small text-body-secondary">Vendors & stores <span
+                                                class="d-none d-sm-inline">(leave blank for all)</span></span>
                                     </div>
                                     <div class="row g-3 align-items-start">
                                         <div class="col-12 col-md-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark" for="poFilterVendor">Vendors</label>
-                                            <div class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
-                                                <span class="input-group-text bg-light border-end-0" id="poFilterVendor-addon" aria-hidden="true">
-                                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.125rem;">local_shipping</i>
+                                            <label class="form-label fw-bold small mb-2 text-dark"
+                                                for="poFilterVendor">Vendors</label>
+                                            <div
+                                                class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
+                                                <span class="input-group-text bg-light border-end-0"
+                                                    id="poFilterVendor-addon" aria-hidden="true">
+                                                    <i class="material-icons material-symbol-rounded text-primary"
+                                                        style="font-size: 1.125rem;">local_shipping</i>
                                                 </span>
-                                                <select name="vendor_id[]" id="poFilterVendor" multiple class="form-select form-select-sm rounded-0 border-start-0 po-filter-ts-vendor" data-placeholder="All vendors" aria-label="Filter by one or more vendors" aria-describedby="poFilterVendor-addon">
+                                                <select name="vendor_id[]" id="poFilterVendor" multiple
+                                                    class="form-select form-select-sm rounded-0 border-start-0 po-filter-ts-vendor"
+                                                    data-placeholder="All vendors"
+                                                    aria-label="Filter by one or more vendors"
+                                                    aria-describedby="poFilterVendor-addon">
                                                     @foreach($vendors as $v)
-                                                        <option value="{{ $v->id }}" {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>{{ $v->name }}</option>
+                                                    <option value="{{ $v->id }}"
+                                                        {{ in_array((int) $v->id, $filterVendorIds ?? [], true) ? 'selected' : '' }}>
+                                                        {{ $v->name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="form-text mt-1 mb-0 fst-italic">All vendors when none selected. Type to search.</div>
+                                            <div class="form-text mt-1 mb-0 fst-italic">All vendors when none selected.
+                                                Type to search.</div>
                                         </div>
                                         <div class="col-12 col-md-6">
-                                            <label class="form-label fw-bold small mb-2 text-dark" for="poFilterStore">Stores</label>
-                                            <div class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
-                                                <span class="input-group-text bg-light border-end-0" id="poFilterStore-addon" aria-hidden="true">
-                                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size: 1.125rem;">storefront</i>
+                                            <label class="form-label fw-bold small mb-2 text-dark"
+                                                for="poFilterStore">Stores</label>
+                                            <div
+                                                class="input-group input-group-sm shadow rounded-3 po-filter-multiselect-wrap">
+                                                <span class="input-group-text bg-light border-end-0"
+                                                    id="poFilterStore-addon" aria-hidden="true">
+                                                    <i class="material-icons material-symbol-rounded text-primary"
+                                                        style="font-size: 1.125rem;">storefront</i>
                                                 </span>
-                                                <select name="store_id[]" id="poFilterStore" multiple class="form-select form-select-sm rounded-0 border-start-0" data-placeholder="All stores" aria-label="Filter by one or more stores" aria-describedby="poFilterStore-addon">
+                                                <select name="store_id[]" id="poFilterStore" multiple
+                                                    class="form-select form-select-sm rounded-0 border-start-0"
+                                                    data-placeholder="All stores"
+                                                    aria-label="Filter by one or more stores"
+                                                    aria-describedby="poFilterStore-addon">
                                                     @foreach($stores as $s)
-                                                        <option value="{{ $s->id }}" {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>{{ $s->store_name }}</option>
+                                                    <option value="{{ $s->id }}"
+                                                        {{ in_array((int) $s->id, $filterStoreIds ?? [], true) ? 'selected' : '' }}>
+                                                        {{ $s->store_name }}</option>
                                                     @endforeach
                                                 </select>
                                             </div>
-                                            <div class="form-text mt-1 mb-0 fst-italic">All stores when none selected. Type to search.</div>
+                                            <div class="form-text mt-1 mb-0 fst-italic">All stores when none selected.
+                                                Type to search.</div>
                                         </div>
                                     </div>
                                 </div>
                             </div>
                             <div class="col-12">
-                                <div class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top">
+                                <div
+                                    class="d-flex flex-column flex-md-row flex-wrap align-items-stretch align-items-md-center justify-content-between gap-3 pt-3 mt-2 border-top">
                                     <div class="d-flex flex-wrap gap-2">
-                                        <button type="submit" class="btn btn-primary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">filter_alt</i>
+                                        <button type="submit"
+                                            class="btn btn-primary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 shadow-sm fw-semibold">
+                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
+                                                aria-hidden="true">filter_alt</i>
                                             <span>Apply filters</span>
                                         </button>
-                                        <a href="{{ route('admin.mess.purchaseorders.index') }}" class="btn btn-outline-secondary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold">
-                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;" aria-hidden="true">restart_alt</i>
+                                        <a href="{{ route('admin.mess.purchaseorders.index') }}"
+                                            class="btn btn-outline-secondary rounded-2 d-inline-flex align-items-center justify-content-center gap-2 px-4 py-2 fw-semibold">
+                                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
+                                                aria-hidden="true">restart_alt</i>
                                             <span>Clear</span>
                                         </a>
                                     </div>
-                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0 fst-italic" style="max-width: 28rem;">Tip: use the search field in each dropdown to find vendors or stores. Remove chips to clear a selection; leave both empty for all.</p>
+                                    <p class="mb-0 small text-body-secondary text-center text-md-end ms-md-auto flex-shrink-0 fst-italic"
+                                        style="max-width: 28rem;">Tip: use the search field in each dropdown to find
+                                        vendors or stores. Remove chips to clear a selection; leave both empty for all.
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -143,33 +212,38 @@
 
                 {{-- Printable area: isolation in @media print shows only header + table (LBSNAA branding + list) --}}
                 <div class="po-print-area">
-                {{-- Print header: LBSNAA / Sargam branding (shown only when printing) --}}
-                <div class="print-only report-header text-center mb-3" style="display: none;">
-                    <div class="logo-container mb-2 d-flex justify-content-center align-items-center gap-3 flex-wrap">
-                        <img src="{{ asset('images/ashoka.webp') }}" alt="" class="po-print-emblem" width="52" height="52" style="height: 52px; width: auto; object-fit: contain;">
-                        <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Lal Bahadur Shastri National Academy of Administration" class="po-print-wordmark" style="height: 44px; width: auto;">
+                    {{-- Print header: LBSNAA / Sargam branding (shown only when printing) --}}
+                    <div class="print-only report-header text-center mb-3" style="display: none;">
+                        <div
+                            class="logo-container mb-2 d-flex justify-content-center align-items-center gap-3 flex-wrap">
+                            <img src="{{ asset('images/ashoka.webp') }}" alt="" class="po-print-emblem" width="52"
+                                height="52" style="height: 52px; width: auto; object-fit: contain;">
+                            <img src="{{ asset('admin_assets/images/logos/logo.svg') }}"
+                                alt="Lal Bahadur Shastri National Academy of Administration" class="po-print-wordmark"
+                                style="height: 44px; width: auto;">
+                        </div>
+                        <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
+                        <p class="small text-muted mb-2 mb-md-3">Sargam 2.0</p>
+                        <div class="report-title-bar">Purchase Orders</div>
+                        <div class="report-print-date small text-muted mt-1">Printed on
+                            {{ now()->format('d-m-Y, h:i A') }}</div>
                     </div>
-                    <h3 class="report-mess-title mb-1">OFFICER'S MESS LBSNAA MUSSOORIE</h3>
-                    <p class="small text-muted mb-2 mb-md-3">Sargam 2.0</p>
-                    <div class="report-title-bar">Purchase Orders</div>
-                    <div class="report-print-date small text-muted mt-1">Printed on {{ now()->format('d-m-Y, h:i A') }}</div>
-                </div>
 
-                <div class="table-responsive">
-                    <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100 po-data-table">
-                        <thead>
-                            <tr class="small">
-                                <th scope="col" class="po-th border-0 py-3 ps-4">#</th>
-                                <th scope="col" class="po-th border-0 py-3">Order No.</th>
-                                <th scope="col" class="po-th border-0 py-3">Vendor</th>
-                                <th scope="col" class="po-th border-0 py-3">Store</th>
-                                <th scope="col" class="po-th border-0 py-3">Status</th>
-                                <th scope="col" class="po-th border-0 py-3 pe-4 text-end d-print-none">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody></tbody>
-                    </table>
-                </div>
+                    <div class="table-responsive">
+                        <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100 po-data-table">
+                            <thead>
+                                <tr class="small">
+                                    <th scope="col" class="po-th border-0 py-3 ps-4">#</th>
+                                    <th scope="col" class="po-th border-0 py-3">Order No.</th>
+                                    <th scope="col" class="po-th border-0 py-3">Vendor</th>
+                                    <th scope="col" class="po-th border-0 py-3">Store</th>
+                                    <th scope="col" class="po-th border-0 py-3">Status</th>
+                                    <th scope="col" class="po-th border-0 py-3 pe-4 text-end d-print-none">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
                 </div>{{-- /.po-print-area --}}
             </div>
         </div>
@@ -177,186 +251,336 @@
 </div>
 
 <style>
-    .po-ux .letter-spacing-1 { letter-spacing: 0.04em; }
+.po-ux .letter-spacing-1 {
+    letter-spacing: 0.04em;
+}
 
-    /* ── Navy table header ── */
+/* ── Navy table header ── */
 
-    /* ── Row hover / transition ── */
-    .po-row { transition: background-color .18s ease; }
-    .po-row:hover { background-color: rgba(11,74,126,.04) !important; }
+/* ── Row hover / transition ── */
+.po-row {
+    transition: background-color .18s ease;
+}
 
-    /* ── Action buttons ── */
-    .po-action-btn {
-        width: 2rem; height: 2rem;
-        display: inline-flex; align-items: center; justify-content: center;
-        padding: 0; transition: all .2s ease;
+.po-row:hover {
+    background-color: rgba(11, 74, 126, .04) !important;
+}
+
+/* ── Action buttons ── */
+.po-action-btn {
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    transition: all .2s ease;
+}
+
+.po-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .12);
+}
+
+/* ── Create button hover ── */
+.po-btn-create {
+    transition: all .25s ease;
+}
+
+.po-btn-create:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 255, 255, .25);
+}
+
+/* ── Fade-in animation ── */
+@keyframes po-fade-in {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
     }
-    .po-action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 6px rgba(0,0,0,.12); }
 
-    /* ── Create button hover ── */
-    .po-btn-create { transition: all .25s ease; }
-    .po-btn-create:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(255,255,255,.25); }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
 
-    /* ── Fade-in animation ── */
-    @keyframes po-fade-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
-    .po-ux .datatables { animation: po-fade-in .4s ease-out; }
-    .po-filter-card { animation: po-fade-in .35s ease-out; }
+.po-ux .datatables {
+    animation: po-fade-in .4s ease-out;
+}
 
-    @media (max-width: 575.98px) {
-        .po-ux .datatables .table thead th { font-size: 0.65rem; }
+.po-filter-card {
+    animation: po-fade-in .35s ease-out;
+}
+
+@media (max-width: 575.98px) {
+    .po-ux .datatables .table thead th {
+        font-size: 0.65rem;
+    }
+}
+
+/* ── Modal form field focus — navy ring ── */
+#createPurchaseOrderModal .form-control:focus,
+#createPurchaseOrderModal .form-select:focus {
+    border-color: #0b4a7e !important;
+    box-shadow: 0 0 0 .2rem rgba(11, 74, 126, .15);
+}
+
+/* Print header – standard level (matches category-wise-print-slip) */
+.report-mess-title {
+    color: #1a1a1a;
+    font-size: 1.25rem;
+    font-weight: bold;
+}
+
+.report-title-bar {
+    background-color: #004a93;
+    color: #fff;
+    padding: 8px 16px;
+    font-size: 0.95rem;
+    border-radius: 4px;
+    display: inline-block;
+}
+
+.report-print-date {
+    color: #6c757d;
+}
+
+@media print {
+
+    html,
+    body {
+        background: #fff !important;
+        height: auto !important;
     }
 
-    /* ── Modal form field focus — navy ring ── */
-    #createPurchaseOrderModal .form-control:focus,
-    #createPurchaseOrderModal .form-select:focus {
-        border-color: #0b4a7e !important;
-        box-shadow: 0 0 0 .2rem rgba(11,74,126,.15);
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        position: relative !important;
     }
-    /* Print header – standard level (matches category-wise-print-slip) */
+
+    /* Remove app chrome from layout flow (visibility:hidden still reserves space) */
+    .sargam-loader,
+    #sargamLoader,
+    .topbar,
+    header.topbar,
+    .left-sidebar,
+    .side-mini-panel,
+    aside.side-mini-panel,
+    #sidebarTabContent,
+    .navbar,
+    #mainNavbarContent>.tab-pane:not(.show.active) {
+        display: none !important;
+    }
+
+    .page-wrapper,
+    .body-wrapper,
+    #main-content,
+    .tab-content {
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+    }
+
+    .no-print {
+        display: none !important;
+    }
+
+    /* Hide chrome without visibility:hidden (that forced icon ligature text to print) */
+    .po-ux>.no-print,
+    .po-ux .card-header,
+    .po-ux .po-filter-card,
+    .po-ux .alert,
+    .po-ux .mess-col-manager-dropdown,
+    .po-ux .dataTables_length,
+    .po-ux .dataTables_filter,
+    .po-ux .dataTables_info,
+    .po-ux .dataTables_paginate,
+    #purchaseOrdersTable_wrapper table:not(#purchaseOrdersTable),
+    #purchaseOrdersTable_wrapper .DTCR_clonedTable,
+    #purchaseOrdersTable_wrapper .dt-order-columns {
+        display: none !important;
+    }
+
+    .po-ux .card,
+    .po-ux .card-body,
+    .po-print-area {
+        border: 0 !important;
+        box-shadow: none !important;
+        margin: 0 !important;
+        padding: 0 12px !important;
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    .print-only {
+        display: block !important;
+    }
+
+    .report-header {
+        margin-top: 0;
+        border-bottom: 2px solid #004a93;
+        padding-bottom: 12px;
+        margin-bottom: 20px;
+    }
+
+    .logo-container {
+        margin-bottom: 12px;
+    }
+
+    .logo-container .po-print-emblem {
+        height: 52px !important;
+        width: auto !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .logo-container .po-print-wordmark {
+        height: 44px !important;
+        width: auto !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
     .report-mess-title {
+        font-size: 18px;
+        font-weight: 700;
         color: #1a1a1a;
-        font-size: 1.25rem;
-        font-weight: bold;
+        margin-bottom: 8px;
     }
+
     .report-title-bar {
-        background-color: #004a93;
-        color: #fff;
-        padding: 8px 16px;
-        font-size: 0.95rem;
-        border-radius: 4px;
+        font-size: 14px;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
         display: inline-block;
+        background-color: #004a93 !important;
     }
-    .report-print-date { color: #6c757d; }
 
-    @media print {
-        html, body {
-            background: #fff !important;
-            height: auto !important;
-        }
-        body { margin: 0 !important; padding: 0 !important; position: relative !important; }
-
-        /* Remove app chrome from layout flow (visibility:hidden still reserves space) */
-        .sargam-loader,
-        #sargamLoader,
-        .topbar,
-        header.topbar,
-        .left-sidebar,
-        .side-mini-panel,
-        aside.side-mini-panel,
-        #sidebarTabContent,
-        .navbar,
-        #mainNavbarContent > .tab-pane:not(.show.active) {
-            display: none !important;
-        }
-
-        .page-wrapper,
-        .body-wrapper,
-        #main-content,
-        .tab-content {
-            margin: 0 !important;
-            padding: 0 !important;
-            border: none !important;
-            box-shadow: none !important;
-        }
-
-        .no-print { display: none !important; }
-
-        /* Only show the purchase-order list region; hide everything else */
-        body * {
-            visibility: hidden;
-        }
-        .po-print-area,
-        .po-print-area * {
-            visibility: visible !important;
-        }
-        .po-print-area {
-            position: absolute;
-            left: 0 !important;
-            top: 0 !important;
-            width: 100%;
-            max-width: 100%;
-            padding: 0 12px;
-            box-sizing: border-box;
-        }
-
-        .print-only { display: block !important; }
-        .dataTables_length,
-        .dataTables_filter,
-        .dataTables_info,
-        .dataTables_paginate { display: none !important; }
-
-        .report-header { margin-top: 0; border-bottom: 2px solid #004a93; padding-bottom: 12px; margin-bottom: 20px; }
-        .logo-container { margin-bottom: 12px; }
-        .logo-container .po-print-emblem { height: 52px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .logo-container .po-print-wordmark { height: 44px !important; width: auto !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-        .report-mess-title { font-size: 18px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; }
-        .report-title-bar { font-size: 14px; -webkit-print-color-adjust: exact; print-color-adjust: exact; display: inline-block; background-color: #004a93 !important; }
-        .report-print-date { font-size: 11px; color: #6c757d; margin-top: 8px; }
-        
-        /* Table styling for print */
-        .table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            font-size: 12px;
-            page-break-inside: auto;
-        }
-        .table thead th {
-            background-color: #004a93 !important;
-            color: #fff !important;
-            font-weight: 600;
-            padding: 10px 8px;
-            border: 1px solid #003d7a;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        .table tbody td {
-            padding: 8px;
-            border: 1px solid #dee2e6;
-            color: #212529;
-        }
-        .table tbody tr:nth-child(even) {
-            background-color: #f8f9fa !important;
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-        }
-        
-        /* Badge colors in print */
-        .badge {
-            -webkit-print-color-adjust: exact;
-            print-color-adjust: exact;
-            padding: 4px 10px;
-            font-size: 11px;
-            border-radius: 4px;
-        }
-        .bg-success { background-color: #28a745 !important; color: #fff !important; }
-        .bg-danger { background-color: #dc3545 !important; color: #fff !important; }
-        .bg-warning { background-color: #ffc107 !important; color: #212529 !important; }
-        .bg-primary { background-color: #004a93 !important; color: #fff !important; }
-        .text-bg-success { background-color: #28a745 !important; color: #fff !important; }
-        .text-bg-danger { background-color: #dc3545 !important; color: #fff !important; }
-        .text-bg-warning { background-color: #ffc107 !important; color: #212529 !important; }
-        .text-bg-primary { background-color: #004a93 !important; color: #fff !important; }
-        
-        /* Hide unnecessary elements */
-        .card { box-shadow: none; border: none; }
-        .datatables { margin: 0; }
-        
-        /* Page breaks */
-        @page { 
-            size: A4; 
-            margin: 15mm; 
-        }
+    .report-print-date {
+        font-size: 11px;
+        color: #6c757d;
+        margin-top: 8px;
     }
+
+    /* Table styling for print */
+    .table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 12px;
+        page-break-inside: auto;
+    }
+
+    .table thead th {
+        background-color: #004a93 !important;
+        color: #fff !important;
+        font-weight: 600;
+        padding: 10px 8px;
+        border: 1px solid #003d7a;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .table tbody td {
+        padding: 8px;
+        border: 1px solid #dee2e6;
+        color: #212529;
+    }
+
+    .table tbody tr:nth-child(even) {
+        background-color: #f8f9fa !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    /* Badge colors in print */
+    .badge {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+        padding: 4px 10px;
+        font-size: 11px;
+        border-radius: 4px;
+    }
+
+    .bg-success {
+        background-color: #28a745 !important;
+        color: #fff !important;
+    }
+
+    .bg-danger {
+        background-color: #dc3545 !important;
+        color: #fff !important;
+    }
+
+    .bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+
+    .bg-primary {
+        background-color: #004a93 !important;
+        color: #fff !important;
+    }
+
+    .text-bg-success {
+        background-color: #28a745 !important;
+        color: #fff !important;
+    }
+
+    .text-bg-danger {
+        background-color: #dc3545 !important;
+        color: #fff !important;
+    }
+
+    .text-bg-warning {
+        background-color: #ffc107 !important;
+        color: #212529 !important;
+    }
+
+    .text-bg-primary {
+        background-color: #004a93 !important;
+        color: #fff !important;
+    }
+
+    #purchaseOrdersTable th.d-print-none,
+    #purchaseOrdersTable td.po-actions-col,
+    #purchaseOrdersTable td:has(.po-action-btn),
+    #purchaseOrdersTable .po-action-btn,
+    #purchaseOrdersTable .po-actions-cell,
+    #purchaseOrdersTable i.material-icons,
+    #purchaseOrdersTable i.material-symbol-rounded,
+    #purchaseOrdersTable i[class*="material"] {
+        display: none !important;
+    }
+
+    /* Hide unnecessary elements */
+    .card {
+        box-shadow: none;
+        border: none;
+    }
+
+    .datatables {
+        margin: 0;
+    }
+
+    /* Page breaks */
+    @page {
+        size: A4;
+        margin: 15mm;
+    }
+}
 </style>
 
 @include('components.mess-master-datatables', [
-    'tableId' => 'purchaseOrdersTable',
-    'searchPlaceholder' => 'Search purchase orders...',
-    'orderColumn' => 1,
-    'actionColumnIndex' => 5,
-    'infoLabel' => 'purchase orders',
-    'serverSide' => true,
-    'ajaxUrlBase' => route('admin.mess.purchaseorders.index')
+'tableId' => 'purchaseOrdersTable',
+'searchPlaceholder' => 'Search purchase orders...',
+'orderColumn' => 1,
+'actionColumnIndex' => 5,
+'infoLabel' => 'purchase orders',
+'serverSide' => true,
+'ajaxUrlBase' => route('admin.mess.purchaseorders.index')
 ])
 @include('mess.partials.modal-dropdown-stability')
 
@@ -364,29 +588,119 @@
 <script>
 (function() {
     var poListPrintRestore = null;
-    window.addEventListener('beforeprint', function() {
+    var PO_ACTION_COL_INDEX = 5;
+
+    function poMarkActionColumnCells() {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
+        var $t = window.jQuery('#purchaseOrdersTable');
+        if (!$t.length || !window.jQuery.fn.DataTable.isDataTable($t)) return;
+        $t.DataTable().cells(null, PO_ACTION_COL_INDEX).nodes().to$().addClass('po-actions-col');
+    }
+
+    if (typeof window.jQuery !== 'undefined') {
+        window.jQuery(document).on('init.dt draw.dt', '#purchaseOrdersTable', poMarkActionColumnCells);
+    }
+
+    window.PO_PRINT_SUPPRESS_ICON_CSS =
+        'i[class*="material"],span[class*="material"],.material-icons,.material-symbol-rounded,' +
+        '.material-symbols-rounded{display:none!important;font-size:0!important;width:0!important;height:0!important;' +
+        'overflow:hidden!important;visibility:hidden!important;color:transparent!important;line-height:0!important;}' +
+        '.po-action-btn,.po-actions-cell,.modal-footer,.modal-header button{display:none!important;}';
+
+    window.poSanitizePrintDom = function (root) {
+        if (!root) {
+            return '';
+        }
+        root.querySelectorAll(
+            'i[class*="material"], span[class*="material"], .material-icons, .material-symbol-rounded, ' +
+            '.material-symbols-rounded'
+        ).forEach(function (el) {
+            el.remove();
+        });
+        root.querySelectorAll('.modal-header, .modal-footer').forEach(function (el) {
+            el.remove();
+        });
+        root.querySelectorAll('button').forEach(function (el) {
+            el.remove();
+        });
+        root.querySelectorAll('.card-header .rounded-3, .card-header .rounded-2').forEach(function (box) {
+            var text = (box.textContent || '').replace(/\s+/g, '').toLowerCase();
+            if (!text || /^(visibility|edit|delete|print|add|view_column|receipt_long|inventory_2|assignment|attach_file)$/.test(text)) {
+                box.remove();
+            }
+        });
+        var html = root.innerHTML;
+        if (window.MessColumnManager && typeof window.MessColumnManager._cleanupMaterialLigatureText === 'function') {
+            html = window.MessColumnManager._cleanupMaterialLigatureText(html);
+        } else {
+            html = html.replace(
+                />\s*(visibility|edit|delete|print|add|view_column|receipt_long|inventory_2|assignment|attach_file|unfold_more|arrow_upward|arrow_downward)\s*</gi,
+                '><'
+            );
+        }
+        return html;
+    };
+
+    function poHidePrintArtifacts() {
+        var root = document.querySelector('.po-print-area');
+        if (!root) return;
+        root.querySelectorAll(
+            'i.material-icons, i.material-symbol-rounded, i.material-symbols-rounded, i[class*="material"]'
+        ).forEach(function(icon) {
+            icon.remove();
+        });
+        root.querySelectorAll('.po-action-btn, .po-actions-cell').forEach(function(el) {
+            el.remove();
+        });
+        root.querySelectorAll('th.d-print-none, td.po-actions-col').forEach(function(cell) {
+            cell.style.setProperty('display', 'none', 'important');
+        });
+        var wrapper = document.getElementById('purchaseOrdersTable_wrapper');
+        if (wrapper) {
+            wrapper.querySelectorAll('table:not(#purchaseOrdersTable)').forEach(function(tbl) {
+                tbl.style.setProperty('display', 'none', 'important');
+            });
+        }
+    }
+
+    function poPrepareBrowserPrint() {
         if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
         var $t = window.jQuery('#purchaseOrdersTable');
         if (!$t.length || !window.jQuery.fn.DataTable.isDataTable($t)) return;
         var dt = $t.DataTable();
-        var info = dt.page.info();
-        poListPrintRestore = { length: info.length, page: info.page };
-        dt.page.len(-1).draw(false);
-    });
-    window.addEventListener('afterprint', function() {
+        poListPrintRestore = {
+            actionVisible: dt.column(PO_ACTION_COL_INDEX).visible()
+        };
+        dt.column(PO_ACTION_COL_INDEX).visible(false);
+        poHidePrintArtifacts();
+    }
+
+    function poRestoreAfterBrowserPrint() {
         if (!poListPrintRestore) return;
         if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
             poListPrintRestore = null;
             return;
         }
         var $t = window.jQuery('#purchaseOrdersTable');
-        if (!$t.length || !window.jQuery.fn.DataTable.isDataTable($t)) {
-            poListPrintRestore = null;
+        if ($t.length && window.jQuery.fn.DataTable.isDataTable($t)) {
+            $t.DataTable().column(PO_ACTION_COL_INDEX).visible(poListPrintRestore.actionVisible);
+        }
+        poListPrintRestore = null;
+    }
+
+    window.addEventListener('beforeprint', poPrepareBrowserPrint);
+    window.addEventListener('afterprint', poRestoreAfterBrowserPrint);
+
+    document.getElementById('poPrintListBtn')?.addEventListener('click', function() {
+        if (!window.MessColumnManager || typeof window.MessColumnManager.printDataTable !== 'function') {
+            window.print();
             return;
         }
-        var dt = $t.DataTable();
-        dt.page.len(poListPrintRestore.length).page(poListPrintRestore.page).draw(false);
-        poListPrintRestore = null;
+        window.MessColumnManager.printDataTable('purchaseOrdersTable', {
+            template: 'lbsnaa',
+            title: 'Purchase Orders',
+            periodText: document.title || ''
+        });
     });
 })();
 </script>
@@ -405,23 +719,51 @@
     max-height: calc(100dvh - 2rem);
     margin: 1rem auto;
 }
+
 #createPurchaseOrderModal .modal-content {
     max-height: calc(100dvh - 2rem);
     display: flex;
     flex-direction: column;
 }
+
 #createPurchaseOrderModal .modal-body {
     flex: 1 1 auto;
     min-height: 0;
     overflow-y: auto;
     max-height: calc(100dvh - 10rem);
 }
-#editPurchaseOrderModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
-#editPurchaseOrderModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
-#editPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
-#viewPurchaseOrderModal .modal-dialog { max-height: calc(100dvh - 2rem); margin: 1rem auto; }
-#viewPurchaseOrderModal .modal-content { max-height: calc(100dvh - 2rem); display: flex; flex-direction: column; }
-#viewPurchaseOrderModal .modal-body { overflow-y: auto; max-height: calc(100dvh - 10rem); }
+
+#editPurchaseOrderModal .modal-dialog {
+    max-height: calc(100dvh - 2rem);
+    margin: 1rem auto;
+}
+
+#editPurchaseOrderModal .modal-content {
+    max-height: calc(100dvh - 2rem);
+    display: flex;
+    flex-direction: column;
+}
+
+#editPurchaseOrderModal .modal-body {
+    overflow-y: auto;
+    max-height: calc(100dvh - 10rem);
+}
+
+#viewPurchaseOrderModal .modal-dialog {
+    max-height: calc(100dvh - 2rem);
+    margin: 1rem auto;
+}
+
+#viewPurchaseOrderModal .modal-content {
+    max-height: calc(100dvh - 2rem);
+    display: flex;
+    flex-direction: column;
+}
+
+#viewPurchaseOrderModal .modal-body {
+    overflow-y: auto;
+    max-height: calc(100dvh - 10rem);
+}
 
 #createPurchaseOrderModal .modal-dialog,
 #editPurchaseOrderModal .modal-dialog,
@@ -429,7 +771,9 @@
     width: calc(100vw - 1rem);
     max-width: min(var(--bs-modal-width), calc(100vw - 1rem));
 }
+
 @media (min-width: 576px) {
+
     #createPurchaseOrderModal .modal-dialog,
     #editPurchaseOrderModal .modal-dialog,
     #viewPurchaseOrderModal .modal-dialog {
@@ -524,7 +868,7 @@
     padding: 0;
 }
 
-.ts-control > input {
+.ts-control>input {
     color: #333;
     font-size: 14px;
     padding: 4px 0;
@@ -611,46 +955,56 @@
     background-color: #f8f9fa;
     font-style: italic;
 }
-.po-item-select + .choices .choices__inner {
+
+.po-item-select+.choices .choices__inner {
     min-height: calc(1.5em + 0.75rem + 4px);
     border-radius: 0.375rem;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
+
 .ts-wrapper.choices[data-type*="select-multiple"] .choices__inner {
     padding: 0.375rem 0.75rem;
     border-width: 2px;
 }
-.form-select-sm + .choices .choices__inner {
+
+.form-select-sm+.choices .choices__inner {
     min-height: calc(1.5em + 0.75rem + 4px);
     padding: 0.375rem 0.75rem;
     font-size: 0.875rem;
     border-radius: 0.375rem;
     box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
 }
-.po-filter-multi + .choices .choices__inner {
+
+.po-filter-multi+.choices .choices__inner {
     min-height: 3rem;
     border-width: 2px;
 }
+
 .po-ux .po-filter-multiselect-wrap .input-group-text {
     background-color: #f8f9fa;
     border-color: #dee2e6;
     border-width: 2px;
 }
+
 .po-ux .po-filter-card {
     overflow: visible;
 }
+
 .po-ux .po-filter-card .card-body,
 .po-ux .po-filter-card .card-header {
     overflow: visible;
 }
+
 .po-ux .po-filter-multiselect-wrap {
     overflow: visible;
 }
+
 .po-ux .po-filter-multiselect-wrap .ts-wrapper {
     flex: 1 1 auto;
     min-width: 0;
     width: 1%;
 }
+
 .po-ux .po-filter-multiselect-wrap .ts-control {
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
@@ -658,39 +1012,54 @@
     font-size: .875rem;
     border-left-width: 0;
 }
+
 .choices__list--multiple .choices__item {
-        background-color: var(--bs-primary) !important;
-        border: none !important;
-        border-radius: var(--bs-border-radius-pill) !important;
-        color: #fff !important;
-        font-size: .8rem !important;
-        padding: .25rem .625rem !important;
-        font-weight: 500 !important;
-    }
-    .choices__list--multiple .choices__item:hover { opacity: .85; }
-    /* ========================================
+    background-color: var(--bs-primary) !important;
+    border: none !important;
+    border-radius: var(--bs-border-radius-pill) !important;
+    color: #fff !important;
+    font-size: .8rem !important;
+    padding: .25rem .625rem !important;
+    font-weight: 500 !important;
+}
+
+.choices__list--multiple .choices__item:hover {
+    opacity: .85;
+}
+
+/* ========================================
        Native Bootstrap Select / Input tweaks
        ======================================== */
-    .form-select,
-    .form-control {
-        transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
-    }
-    .form-control[type="file"] { cursor: pointer; }
+.form-select,
+.form-control {
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
 
-    /* ========================================
+.form-control[type="file"] {
+    cursor: pointer;
+}
+
+/* ========================================
        Minimal UI polish
        ======================================== */
-    .modal-body { scroll-behavior: smooth; }
+.modal-body {
+    scroll-behavior: smooth;
+}
 </style>
-<div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel" aria-hidden="true">
+<div class="modal fade" id="createPurchaseOrderModal" tabindex="-1" aria-labelledby="createPurchaseOrderModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content border-0 shadow rounded-3">
-            <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('admin.mess.purchaseorders.store') }}" id="createPOForm"
+                enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4" style="border-top:4px solid #0b4a7e !important;">
+                <div class="modal-header bg-white border-bottom border-light-subtle py-3 px-4"
+                    style="border-top:4px solid #0b4a7e !important;">
                     <div>
-                        <h5 class="modal-title fw-semibold mb-0 text-body" id="createPurchaseOrderModalLabel">Create Purchase Order</h5>
-                        <p class="mb-0 small text-body-secondary">Fields marked <span class="text-danger">*</span> are required</p>
+                        <h5 class="modal-title fw-semibold mb-0 text-body" id="createPurchaseOrderModalLabel">Create
+                            Purchase Order</h5>
+                        <p class="mb-0 small text-body-secondary">Fields marked <span class="text-danger">*</span> are
+                            required</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
@@ -702,35 +1071,40 @@
                         <div class="col-12">
                             <div class="card border border-light-subtle h-100 rounded-3">
                                 <div class="card-header bg-white py-2 px-3 d-flex align-items-center gap-2">
-                                    <i class="material-icons material-symbol-rounded text-primary" style="font-size:1.15rem;" aria-hidden="true">assignment</i>
+                                    <i class="material-icons material-symbol-rounded text-primary"
+                                        style="font-size:1.15rem;" aria-hidden="true">assignment</i>
                                     <span class="fw-semibold small text-body">Order Details</span>
                                 </div>
                                 <div class="card-body p-3 bg-white">
                                     <div class="row g-3">
                                         <div class="col-md-4">
                                             <label class="form-label small mb-1">Order number</label>
-                                            <input type="text" class="form-control form-control-sm bg-body-secondary" value="{{ $po_number }}" readonly>
+                                            <input type="text" class="form-control form-control-sm bg-body-secondary"
+                                                value="{{ $po_number }}" readonly>
                                             <div class="form-text">Auto-generated</div>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label small mb-1">Order date <span class="text-danger">*</span></label>
-                                            <input type="date" name="po_date" class="form-control form-control-sm" value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
+                                            <label class="form-label small mb-1">Order date <span
+                                                    class="text-danger">*</span></label>
+                                            <input type="date" name="po_date" class="form-control form-control-sm"
+                                                value="{{ date('Y-m-d') }}" max="{{ date('Y-m-d') }}" required>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small mb-1">Store</label>
                                             <select name="store_id" class="form-select form-select-sm">
                                                 <option value="">Select Store</option>
                                                 @foreach($stores as $store)
-                                                    <option value="{{ $store->id }}">{{ $store->store_name }}</option>
+                                                <option value="{{ $store->id }}">{{ $store->store_name }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
                                         <div class="col-md-4">
-                                            <label class="form-label small mb-1">Vendor <span class="text-danger">*</span></label>
+                                            <label class="form-label small mb-1">Vendor <span
+                                                    class="text-danger">*</span></label>
                                             <select name="vendor_id" class="form-select form-select-sm" required>
                                                 <option value="">Select Vendor</option>
                                                 @foreach($vendors as $vendor)
-                                                    <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
+                                                <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
@@ -739,38 +1113,46 @@
                                             <select name="payment_code" class="form-select form-select-sm">
                                                 <option value="">Select Payment Mode</option>
                                                 @foreach($paymentModes as $value => $label)
-                                                    <option value="{{ $value }}">{{ $label }}</option>
+                                                <option value="{{ $value }}">{{ $label }}</option>
                                                 @endforeach
                                             </select>
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small mb-1">Bill / invoice no.</label>
-                                            <input type="text" name="bill_no" class="form-control form-control-sm" maxlength="100" placeholder="Optional">
+                                            <input type="text" name="bill_no" class="form-control form-control-sm"
+                                                maxlength="100" placeholder="Optional">
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small mb-1">Bill date</label>
-                                            <input type="date" name="bill_date" class="form-control form-control-sm" max="{{ date('Y-m-d') }}">
+                                            <input type="date" name="bill_date" class="form-control form-control-sm"
+                                                max="{{ date('Y-m-d') }}">
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small mb-1">Challan / reference</label>
-                                            <input type="text" name="challan_no" class="form-control form-control-sm" maxlength="100" placeholder="Optional">
+                                            <input type="text" name="challan_no" class="form-control form-control-sm"
+                                                maxlength="100" placeholder="Optional">
                                         </div>
                                         <div class="col-md-4">
                                             <label class="form-label small mb-1">Challan date</label>
-                                            <input type="date" name="challan_date" class="form-control form-control-sm" max="{{ date('Y-m-d') }}">
+                                            <input type="date" name="challan_date" class="form-control form-control-sm"
+                                                max="{{ date('Y-m-d') }}">
                                         </div>
                                     </div>
                                     <hr class="my-2">
                                     <div class="bg-white py-2 px-3 d-flex align-items-center gap-2 mt-2">
-                                    <i class="material-icons material-symbol-rounded text-success" style="font-size:1.15rem;" aria-hidden="true">attach_file</i>
-                                    <span class="fw-semibold small text-body">Bill Upload</span>
-                                    <span class="badge bg-body-secondary text-body-secondary ms-auto" style="font-size:.65rem;">Optional</span>
-                                </div>
+                                        <i class="material-icons material-symbol-rounded text-success"
+                                            style="font-size:1.15rem;" aria-hidden="true">attach_file</i>
+                                        <span class="fw-semibold small text-body">Bill Upload</span>
+                                        <span class="badge bg-body-secondary text-body-secondary ms-auto"
+                                            style="font-size:.65rem;">Optional</span>
+                                    </div>
                                     <div class="mb-auto">
                                         <label class="form-label small mb-1">Attachment</label>
-                                        <input type="file" name="bill_file" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
+                                        <input type="file" name="bill_file" class="form-control form-control-sm"
+                                            accept=".pdf,.jpg,.jpeg,.png,.webp" id="createBillFileInput">
                                         <div class="form-text">PDF, JPG, PNG, WEBP · max 5 MB</div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2" id="createBillClearBtn">Remove file</button>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2"
+                                            id="createBillClearBtn">Remove file</button>
                                     </div>
                                 </div>
                             </div>
@@ -779,55 +1161,86 @@
 
                     {{-- Item Details --}}
                     <div class="card border border-light-subtle mb-0 rounded-3">
-                        <div class="card-header bg-white py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <div
+                            class="card-header bg-white py-2 px-3 d-flex flex-wrap justify-content-between align-items-center gap-2">
                             <div class="d-flex align-items-center gap-2">
-                                <i class="material-icons material-symbol-rounded text-warning" style="font-size:1.15rem;" aria-hidden="true">inventory_2</i>
+                                <i class="material-icons material-symbol-rounded text-warning"
+                                    style="font-size:1.15rem;" aria-hidden="true">inventory_2</i>
                                 <span class="fw-semibold small text-body">Line Items</span>
                             </div>
-                            <button type="button" class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2" id="addPoItemRow">
-                                <i class="material-icons material-symbol-rounded" style="font-size:.9rem;">add</i> Add line
+                            <button type="button"
+                                class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2"
+                                id="addPoItemRow">
+                                <i class="material-icons material-symbol-rounded" style="font-size:.9rem;">add</i> Add
+                                line
                             </button>
                         </div>
                         <div class="card-body p-0 bg-white">
                             <div class="po-item-details-table-wrap">
-                            <div class="table-responsive">
-                                <table class="table table-sm mb-0 align-middle" id="poItemsTable">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col" style="width:180px;" class="fw-semibold small py-2 ps-3">Item <span class="text-danger">*</span></th>
-                                            <th scope="col" style="width:150px;" class="fw-semibold small py-2">Unit</th>
-                                            <th scope="col" class="fw-semibold small py-2">Code</th>
-                                            <th scope="col" class="fw-semibold small py-2">Qty <span class="text-danger">*</span></th>
-                                            <th scope="col" class="fw-semibold small py-2">Rate <span class="text-danger">*</span></th>
-                                            <th scope="col" class="fw-semibold small py-2">Tax %</th>
-                                            <th scope="col" class="fw-semibold small py-2">Line total</th>
-                                            <th scope="col" class="fw-semibold small py-2 pe-3 text-center" style="width:2.5rem;"></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="poItemsBody">
-                                        <tr class="po-item-row">
-                                            <td class="py-1 ps-3">
-                                                <select name="items[0][item_subcategory_id]" class="form-select form-select-sm po-item-select" required aria-label="Select item">
-                                                    <option value="">Select Item</option>
-                                                    @foreach($itemSubcategories as $sub)
-                                                        <option value="{{ $sub['id'] }}" data-unit="{{ e($sub['unit_measurement']) }}" data-code="{{ e($sub['item_code']) }}">{{ $sub['item_name'] }}</option>
-                                                    @endforeach
-                                                </select>
-                                            </td>
-                                            <td class="py-1"><input type="text" name="items[0][unit]" class="form-control form-control-sm po-unit bg-body-secondary" readonly placeholder="—"></td>
-                                            <td class="py-1"><input type="text" name="items[0][item_code_display]" class="form-control form-control-sm po-item-code bg-body-secondary" readonly placeholder="—"></td>
-                                            <td class="py-1"><input type="text" name="items[0][quantity]" class="form-control form-control-sm po-qty" required></td>
-                                            <td class="py-1"><input type="text" name="items[0][unit_price]" class="form-control form-control-sm po-unit-price" required></td>
-                                            <td class="py-1"><input type="text" name="items[0][tax_percent]" class="form-control form-control-sm po-tax"></td>
-                                            <td class="py-1"><input type="text" name="items[0][total_display]" class="form-control form-control-sm po-line-total bg-body-secondary" readonly></td>
-                                            <td class="py-1 text-center"><button type="button" class="btn btn-sm btn-outline-danger po-remove-row" disabled title="Remove line"><i class="material-icons material-symbol-rounded" style="font-size:.85rem;">close</i></button></td>
-                                        </tr>
-                                    </tbody>
-                                </table>
-                            </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm mb-0 align-middle" id="poItemsTable">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col" style="width:180px;"
+                                                    class="fw-semibold small py-2 ps-3">Item <span
+                                                        class="text-danger">*</span></th>
+                                                <th scope="col" style="width:150px;" class="fw-semibold small py-2">Unit
+                                                </th>
+                                                <th scope="col" class="fw-semibold small py-2">Code</th>
+                                                <th scope="col" class="fw-semibold small py-2">Qty <span
+                                                        class="text-danger">*</span></th>
+                                                <th scope="col" class="fw-semibold small py-2">Rate <span
+                                                        class="text-danger">*</span></th>
+                                                <th scope="col" class="fw-semibold small py-2">Tax %</th>
+                                                <th scope="col" class="fw-semibold small py-2">Line total</th>
+                                                <th scope="col" class="fw-semibold small py-2 pe-3 text-center"
+                                                    style="width:2.5rem;"></th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="poItemsBody">
+                                            <tr class="po-item-row">
+                                                <td class="py-1 ps-3">
+                                                    <select name="items[0][item_subcategory_id]"
+                                                        class="form-select form-select-sm po-item-select" required
+                                                        aria-label="Select item">
+                                                        <option value="">Select Item</option>
+                                                        @foreach($itemSubcategories as $sub)
+                                                        <option value="{{ $sub['id'] }}"
+                                                            data-unit="{{ e($sub['unit_measurement']) }}"
+                                                            data-code="{{ e($sub['item_code']) }}">
+                                                            {{ $sub['item_name'] }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                </td>
+                                                <td class="py-1"><input type="text" name="items[0][unit]"
+                                                        class="form-control form-control-sm po-unit bg-body-secondary"
+                                                        readonly placeholder="—"></td>
+                                                <td class="py-1"><input type="text" name="items[0][item_code_display]"
+                                                        class="form-control form-control-sm po-item-code bg-body-secondary"
+                                                        readonly placeholder="—"></td>
+                                                <td class="py-1"><input type="text" name="items[0][quantity]"
+                                                        class="form-control form-control-sm po-qty" required></td>
+                                                <td class="py-1"><input type="text" name="items[0][unit_price]"
+                                                        class="form-control form-control-sm po-unit-price" required>
+                                                </td>
+                                                <td class="py-1"><input type="text" name="items[0][tax_percent]"
+                                                        class="form-control form-control-sm po-tax"></td>
+                                                <td class="py-1"><input type="text" name="items[0][total_display]"
+                                                        class="form-control form-control-sm po-line-total bg-body-secondary"
+                                                        readonly></td>
+                                                <td class="py-1 text-center"><button type="button"
+                                                        class="btn btn-sm btn-outline-danger po-remove-row" disabled
+                                                        title="Remove line"><i
+                                                            class="material-icons material-symbol-rounded"
+                                                            style="font-size:.85rem;">close</i></button></td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-body-tertiary d-flex justify-content-end align-items-center py-2 px-3">
+                        <div
+                            class="card-footer bg-body-tertiary d-flex justify-content-end align-items-center py-2 px-3">
                             <span class="text-body-secondary small me-2">Grand Total:</span>
                             <span class="fs-5 fw-bold text-primary" id="poGrandTotal">₹0.00</span>
                         </div>
@@ -845,24 +1258,31 @@
 </div>
 
 {{-- Edit Purchase Order Modal --}}
-<div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel" aria-hidden="true">
+<div class="modal fade" id="editPurchaseOrderModal" tabindex="-1" aria-labelledby="editPurchaseOrderModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-lg-down modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-4">
             <form method="POST" id="editPOForm" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);">
+                <div class="modal-header border-0 border-bottom py-3 px-4 bg-gradient"
+                    style="background: linear-gradient(135deg, #fff3cd 0%, #ffe69c 100%);">
                     <div>
-                        <h5 class="modal-title fw-bold mb-1 text-dark" id="editPurchaseOrderModalLabel">Edit purchase order</h5>
+                        <h5 class="modal-title fw-bold mb-1 text-dark" id="editPurchaseOrderModalLabel">Edit purchase
+                            order</h5>
                         <p class="mb-0 small text-body-secondary fw-medium">Update header, bill, and line items</p>
                     </div>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body px-3 px-md-4 py-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
+                <div class="modal-body px-3 px-md-4 py-4"
+                    style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
                     <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
-                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">assignment</i>
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2"
+                            style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                                style="width: 2.25rem; height: 2.25rem;">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;"
+                                    aria-hidden="true">assignment</i>
                             </div>
                             <h6 class="mb-0 fw-bold text-dark">Order details</h6>
                         </div>
@@ -870,78 +1290,109 @@
                             <div class="row g-3">
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold small mb-2 text-dark">Order number</label>
-                                    <input type="text" id="editPoNumber" class="form-control form-control-lg rounded-3 bg-light border-0 shadow" readonly>
+                                    <input type="text" id="editPoNumber"
+                                        class="form-control form-control-lg rounded-3 bg-light border-0 shadow"
+                                        readonly>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Order date <span class="text-danger">*</span></label>
-                                    <input type="date" name="po_date" id="editPoDate" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}" required>
+                                    <label class="form-label fw-bold small mb-2 text-dark">Order date <span
+                                            class="text-danger">*</span></label>
+                                    <input type="date" name="po_date" id="editPoDate"
+                                        class="form-control form-control-lg rounded-3 shadow border-2"
+                                        max="{{ date('Y-m-d') }}" required>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold small mb-2 text-dark">Store</label>
-                                    <select name="store_id" id="editStoreId" class="form-select form-select-lg rounded-3 shadow border-2">
+                                    <select name="store_id" id="editStoreId"
+                                        class="form-select form-select-lg rounded-3 shadow border-2">
                                         <option value="">Select Store</option>
                                         @foreach($stores as $store)
-                                            <option value="{{ $store->id }}">{{ $store->store_name }}</option>
+                                        <option value="{{ $store->id }}">{{ $store->store_name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="col-md-4">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Vendor <span class="text-danger">*</span></label>
-                                    <select name="vendor_id" id="editVendorId" class="form-select form-select-lg rounded-3 shadow border-2" required>
+                                    <label class="form-label fw-bold small mb-2 text-dark">Vendor <span
+                                            class="text-danger">*</span></label>
+                                    <select name="vendor_id" id="editVendorId"
+                                        class="form-select form-select-lg rounded-3 shadow border-2" required>
                                         <option value="">Select Vendor</option>
                                         @foreach($vendors as $vendor)
-                                            <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
+                                        <option value="{{ $vendor->id }}">{{ $vendor->name }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold small mb-2 text-dark">Payment mode</label>
-                                    <select name="payment_code" id="editPaymentCode" class="form-select form-select-lg rounded-3 shadow border-2">
+                                    <select name="payment_code" id="editPaymentCode"
+                                        class="form-select form-select-lg rounded-3 shadow border-2">
                                         <option value="">Select Payment Mode</option>
                                         @foreach($paymentModes as $value => $label)
-                                            <option value="{{ $value }}">{{ $label }}</option>
+                                        <option value="{{ $value }}">{{ $label }}</option>
                                         @endforeach
                                     </select>
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold small mb-2 text-dark">Bill / invoice no.</label>
-                                    <input type="text" name="bill_no" id="editBillNo" class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100" placeholder="Optional">
+                                    <input type="text" name="bill_no" id="editBillNo"
+                                        class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100"
+                                        placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold small mb-2 text-dark">Bill date</label>
-                                    <input type="date" name="bill_date" id="editBillDate" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}">
+                                    <input type="date" name="bill_date" id="editBillDate"
+                                        class="form-control form-control-lg rounded-3 shadow border-2"
+                                        max="{{ date('Y-m-d') }}">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold small mb-2 text-dark">Challan / reference</label>
-                                    <input type="text" name="challan_no" id="editChallanNo" class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100" placeholder="Optional">
+                                    <input type="text" name="challan_no" id="editChallanNo"
+                                        class="form-control form-control-lg rounded-3 shadow border-2" maxlength="100"
+                                        placeholder="Optional">
                                 </div>
                                 <div class="col-md-4">
                                     <label class="form-label fw-bold small mb-2 text-dark">Challan date</label>
-                                    <input type="date" name="challan_date" id="editChallanDate" class="form-control form-control-lg rounded-3 shadow border-2" max="{{ date('Y-m-d') }}">
+                                    <input type="date" name="challan_date" id="editChallanDate"
+                                        class="form-control form-control-lg rounded-3 shadow border-2"
+                                        max="{{ date('Y-m-d') }}">
                                 </div>
                             </div>
                         </div>
                     </div>
                     {{-- Bill / Attachment (Upload) --}}
-                    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden" style="border-left: 4px solid var(--bs-warning) !important;">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);">
-                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.25rem; height: 2.25rem;">
-                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;" aria-hidden="true">attach_file</i>
+                    <div class="card border-0 shadow-lg mb-4 rounded-4 overflow-hidden"
+                        style="border-left: 4px solid var(--bs-warning) !important;">
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex align-items-center gap-2"
+                            style="background: linear-gradient(135deg, #ffffff 0%, #fff9e6 100%);">
+                            <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                                style="width: 2.25rem; height: 2.25rem;">
+                                <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;"
+                                    aria-hidden="true">attach_file</i>
                             </div>
                             <h6 class="mb-0 fw-bold text-dark">Bill upload</h6>
-                            <span class="badge rounded-1 bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
+                            <span
+                                class="badge rounded-1 bg-secondary bg-opacity-25 text-secondary border-0 ms-auto fw-semibold px-3">Optional</span>
                         </div>
                         <div class="card-body p-3 p-md-4 bg-white">
                             <div class="row">
                                 <div class="col-md-12">
-                                    <label class="form-label fw-bold small mb-2 text-dark">Attachment <span class="text-body-secondary fw-normal fst-italic">· leave blank to keep current file</span></label>
-                                    <div class="d-flex align-items-center border rounded-3 px-3 py-2 bg-white gap-2 shadow" style="min-height: 42px;">
-                                        <span id="editCurrentBillPath" class="flex-grow-1 text-muted small text-truncate me-2" style="min-width: 0;">No file chosen</span>
-                                        <label class="mb-0 btn btn-outline-secondary py-1 px-3 rounded-1 fw-semibold" style="cursor: pointer; transition: all 0.3s ease;">
+                                    <label class="form-label fw-bold small mb-2 text-dark">Attachment <span
+                                            class="text-body-secondary fw-normal fst-italic">· leave blank to keep
+                                            current file</span></label>
+                                    <div class="d-flex align-items-center border rounded-3 px-3 py-2 bg-white gap-2 shadow"
+                                        style="min-height: 42px;">
+                                        <span id="editCurrentBillPath"
+                                            class="flex-grow-1 text-muted small text-truncate me-2"
+                                            style="min-width: 0;">No file chosen</span>
+                                        <label class="mb-0 btn btn-outline-secondary py-1 px-3 rounded-1 fw-semibold"
+                                            style="cursor: pointer; transition: all 0.3s ease;">
                                             Choose file
-                                            <input type="file" name="bill_file" class="d-none" accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
+                                            <input type="file" name="bill_file" class="d-none"
+                                                accept=".pdf,.jpg,.jpeg,.png,.webp" id="editBillFileInput">
                                         </label>
-                                        <button type="button" class="btn btn-outline-danger py-1 px-3 rounded-1 fw-semibold" id="editBillClearBtn" style="transition: all 0.3s ease;">
+                                        <button type="button"
+                                            class="btn btn-outline-danger py-1 px-3 rounded-1 fw-semibold"
+                                            id="editBillClearBtn" style="transition: all 0.3s ease;">
                                             Remove
                                         </button>
                                     </div>
@@ -952,50 +1403,71 @@
                         </div>
                     </div>
                     <div class="card border-0 shadow-lg mb-2 rounded-4 overflow-hidden">
-                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                        <div class="card-header bg-gradient border-bottom py-3 px-4 d-flex flex-wrap justify-content-between align-items-center gap-3"
+                            style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
                             <div class="d-flex align-items-center gap-3">
-                                <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
-                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;" aria-hidden="true">inventory_2</i>
+                                <div class="rounded-3 bg-warning bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                                    style="width: 2.5rem; height: 2.5rem;">
+                                    <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;"
+                                        aria-hidden="true">inventory_2</i>
                                 </div>
                                 <div>
                                     <h6 class="mb-0 fw-bold text-dark">Line items</h6>
-                                    <span class="small text-body-secondary d-block fw-medium">Add items to create purchase order lines.</span>
+                                    <span class="small text-body-secondary d-block fw-medium">Add items to create
+                                        purchase order lines.</span>
                                 </div>
                             </div>
-                            <button type="button" class="btn btn-sm btn-warning rounded-1 d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold" id="addEditPoItemRow" style="transition: all 0.3s ease;"><i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i> Add line</button>
+                            <button type="button"
+                                class="btn btn-sm btn-warning rounded-1 d-inline-flex align-items-center gap-2 px-3 shadow-sm fw-semibold"
+                                id="addEditPoItemRow" style="transition: all 0.3s ease;"><i
+                                    class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">add</i>
+                                Add line</button>
                         </div>
                         <div class="card-body p-0 bg-white">
                             <div class="po-item-details-table-wrap">
-                            <div class="table-responsive">
-                                <table class="table table-sm table-hover text-nowrap mb-0 align-middle">
-                                    <thead class="table-light">
-                                        <tr>
-                                            <th scope="col" style="width:180px;" class="fw-bold text-dark py-3 ps-3">Item <span class="text-danger">*</span></th>
-                                            <th scope="col" class="fw-bold text-dark py-3">Unit</th>
-                                            <th scope="col" class="fw-bold text-dark py-3">Code</th>
-                                            <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Qty <span class="text-danger">*</span></th>
-                                            <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Rate <span class="text-danger">*</span></th>
-                                            <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Tax %</th>
-                                            <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Line total</th>
-                                            <th scope="col" class="fw-bold text-dark py-3 pe-3 text-center" style="width:3rem;"> </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="editPoItemsBody"></tbody>
-                                </table>
-                            </div>
+                                <div class="table-responsive">
+                                    <table class="table table-sm table-hover text-nowrap mb-0 align-middle">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th scope="col" style="width:180px;"
+                                                    class="fw-bold text-dark py-3 ps-3">Item <span
+                                                        class="text-danger">*</span></th>
+                                                <th scope="col" class="fw-bold text-dark py-3">Unit</th>
+                                                <th scope="col" class="fw-bold text-dark py-3">Code</th>
+                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Qty
+                                                    <span class="text-danger">*</span></th>
+                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Rate
+                                                    <span class="text-danger">*</span></th>
+                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Tax
+                                                    %</th>
+                                                <th scope="col" style="width:120px;" class="fw-bold text-dark py-3">Line
+                                                    total</th>
+                                                <th scope="col" class="fw-bold text-dark py-3 pe-3 text-center"
+                                                    style="width:3rem;"> </th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="editPoItemsBody"></tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
-                        <div class="card-footer bg-gradient border-0 d-flex justify-content-end align-items-center py-3 px-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                        <div class="card-footer bg-gradient border-0 d-flex justify-content-end align-items-center py-3 px-4"
+                            style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
                             <div class="d-flex align-items-baseline gap-3 flex-wrap justify-content-end">
-                                <span class="fw-bold text-dark small text-uppercase" style="letter-spacing: 0.05em;">Grand total</span>
-                                <span class="fs-4 text-warning fw-bold" id="editPoGrandTotal" style="font-family: 'Segoe UI', system-ui, sans-serif;">₹0.00</span>
+                                <span class="fw-bold text-dark small text-uppercase"
+                                    style="letter-spacing: 0.05em;">Grand total</span>
+                                <span class="fs-4 text-warning fw-bold" id="editPoGrandTotal"
+                                    style="font-family: 'Segoe UI', system-ui, sans-serif;">₹0.00</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 border-top py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                    <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
-                    <button type="submit" class="btn btn-warning rounded-1 px-5 shadow-sm fw-semibold" style="transition: all 0.3s ease;">Update purchase order</button>
+                <div class="modal-footer border-0 border-top py-3 px-4 bg-gradient"
+                    style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                    <button type="button" class="btn btn-outline-secondary rounded-1 px-4 fw-semibold"
+                        data-bs-dismiss="modal" style="transition: all 0.3s ease;">Cancel</button>
+                    <button type="submit" class="btn btn-warning rounded-1 px-5 shadow-sm fw-semibold"
+                        style="transition: all 0.3s ease;">Update purchase order</button>
                 </div>
             </form>
         </div>
@@ -1003,88 +1475,118 @@
 </div>
 
 {{-- View Purchase Order Modal (read-only) --}}
-<div class="modal fade" id="viewPurchaseOrderModal" tabindex="-1" aria-labelledby="viewPurchaseOrderModalLabel" aria-hidden="true">
+<div class="modal fade" id="viewPurchaseOrderModal" tabindex="-1" aria-labelledby="viewPurchaseOrderModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-fullscreen-lg-down modal-xl modal-dialog-scrollable">
         <div class="modal-content border-0 shadow-lg rounded-4">
-            <div class="modal-header border-0 py-3 px-4 bg-gradient" style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
+            <div class="modal-header border-0 py-3 px-4 bg-gradient"
+                style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
                 <h5 class="modal-title fw-bold text-dark" id="viewPurchaseOrderModalLabel">Purchase Order Details</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body p-3 p-lg-4" style="background: linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%);">
                 <div class="card border-0 shadow-lg mb-4 overflow-hidden rounded-4">
-                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;">receipt_long</i>
+                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2"
+                        style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
+                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                            style="width: 2.5rem; height: 2.5rem;">
+                            <i class="material-icons material-symbol-rounded"
+                                style="font-size: 1.25rem;">receipt_long</i>
                         </div>
                         <h6 class="mb-0 fw-bold text-dark">Order Details</h6>
                     </div>
                     <div class="card-body p-3 p-lg-4">
                         <div class="row g-3">
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Order Number</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Order Number</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewPoNumber">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Order Date</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Order Date</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewPoDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Store Name</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Store Name</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewStoreName">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Vendor Name</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Vendor Name</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewVendorName">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Payment Mode</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Payment Mode</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewPaymentCode">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Bill No./Invoice No</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Bill No./Invoice No</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewBillNo">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Bill Date</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Bill Date</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewBillDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Challan No./Reference</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Challan No./Reference</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewChallanNo">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Challan Date</label>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Challan Date</label>
                                     <p class="mb-0 fw-bold text-dark fs-6" id="viewChallanDate">&mdash;</p>
                                 </div>
                             </div>
                             <div class="col-12 col-md-6 col-xl-4">
-                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Status</label>
-                                    <p class="mb-0"><span class="badge fs-6 px-3 py-2" id="viewStatus">&mdash;</span></p>
+                                <div class="border-0 rounded-4 p-3 h-100 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Status</label>
+                                    <p class="mb-0"><span class="badge fs-6 px-3 py-2" id="viewStatus">&mdash;</span>
+                                    </p>
                                 </div>
                             </div>
                             <div class="col-12">
-                                <div class="border-0 rounded-4 p-4 shadow-sm" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase" style="letter-spacing: 0.05em;">Bill</label>
+                                <div class="border-0 rounded-4 p-4 shadow-sm"
+                                    style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
+                                    <label class="form-label text-primary small mb-2 fw-bold text-uppercase"
+                                        style="letter-spacing: 0.05em;">Bill</label>
                                     <p class="mb-0" id="viewBillWrap">
-                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener" class="btn btn-info rounded-1 px-4 py-2 shadow-sm fw-semibold" style="display: none; transition: all 0.3s ease;">View / Download Bill</a>
+                                        <a href="#" id="viewBillLink" target="_blank" rel="noopener"
+                                            class="btn btn-info rounded-1 px-4 py-2 shadow-sm fw-semibold"
+                                            style="display: none; transition: all 0.3s ease;">View / Download Bill</a>
                                         <span id="viewBillNone" class="text-muted fst-italic">No bill uploaded</span>
                                     </p>
                                 </div>
@@ -1094,9 +1596,12 @@
                 </div>
 
                 <div class="card border-0 shadow-lg mb-0 overflow-hidden rounded-4">
-                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2" style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
-                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm" style="width: 2.5rem; height: 2.5rem;">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.25rem;">inventory_2</i>
+                    <div class="card-header bg-gradient border-0 py-3 px-4 d-flex align-items-center gap-2"
+                        style="background: linear-gradient(135deg, #ffffff 0%, #e7f3ff 100%);">
+                        <div class="rounded-3 bg-info bg-gradient text-white d-flex align-items-center justify-content-center flex-shrink-0 shadow-sm"
+                            style="width: 2.5rem; height: 2.5rem;">
+                            <i class="material-icons material-symbol-rounded"
+                                style="font-size: 1.25rem;">inventory_2</i>
                         </div>
                         <h6 class="mb-0 fw-bold text-dark">Item Details</h6>
                     </div>
@@ -1118,17 +1623,23 @@
                             </table>
                         </div>
                     </div>
-                    <div class="card-footer bg-gradient d-flex justify-content-end align-items-center py-3 px-4" style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
+                    <div class="card-footer bg-gradient d-flex justify-content-end align-items-center py-3 px-4"
+                        style="background: linear-gradient(135deg, #e7f3ff 0%, #cfe2ff 100%);">
                         <span class="fw-bold text-dark" style="letter-spacing: 0.05em;">Grand Total:</span>
-                        <span class="fs-4 text-info fw-bold ms-3" id="viewPoGrandTotal" style="font-family: 'Segoe UI', system-ui, sans-serif;">&#8377;0.00</span>
+                        <span class="fs-4 text-info fw-bold ms-3" id="viewPoGrandTotal"
+                            style="font-family: 'Segoe UI', system-ui, sans-serif;">&#8377;0.00</span>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-0 border-top py-3 px-4 d-flex flex-wrap gap-2 justify-content-end bg-gradient" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
-                <button type="button" class="btn btn-info rounded-1 d-inline-flex align-items-center gap-2 px-4 shadow-sm fw-semibold btn-print-view-modal" data-print-target="#viewPurchaseOrderModal" title="Print" style="transition: all 0.3s ease;">
+            <div class="modal-footer border-0 border-top py-3 px-4 d-flex flex-wrap gap-2 justify-content-end bg-gradient"
+                style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <button type="button"
+                    class="btn btn-info rounded-1 d-inline-flex align-items-center gap-2 px-4 shadow-sm fw-semibold btn-print-view-modal"
+                    data-print-target="#viewPurchaseOrderModal" title="Print" style="transition: all 0.3s ease;">
                     <i class="material-icons material-symbol-rounded" style="font-size: 1.125rem;">print</i> Print
                 </button>
-                <button type="button" class="btn btn-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal" style="transition: all 0.3s ease;">Close</button>
+                <button type="button" class="btn btn-secondary rounded-1 px-4 fw-semibold" data-bs-dismiss="modal"
+                    style="transition: all 0.3s ease;">Close</button>
             </div>
         </div>
     </div>
@@ -1144,7 +1655,11 @@
     let editItemRowIndex = 0;
     let currentVendorId = null;
     let editCurrentVendorId = null;
-    let hasInitialCreateErrors = {{ $errors->any() ? 'true' : 'false' }};
+    let hasInitialCreateErrors = {
+        {
+            $errors - > any() ? 'true' : 'false'
+        }
+    };
 
     let choicesInstances = {
         filter: {},
@@ -1156,9 +1671,13 @@
     function safeFocus(el) {
         if (!el || typeof el.focus !== 'function') return;
         try {
-            el.focus({ preventScroll: true });
+            el.focus({
+                preventScroll: true
+            });
         } catch (e) {
-            try { el.focus(); } catch (e2) {}
+            try {
+                el.focus();
+            } catch (e2) {}
         }
     }
 
@@ -1166,9 +1685,11 @@
     function bindPoItemChoicesFixedDropdown(selectEl, choices, api) {
         var modalBody = null;
         var placeScheduled = false;
+
         function getDropdownEl() {
             return choices.dropdown && choices.dropdown.element;
         }
+
         function place() {
             var dd = getDropdownEl();
             var wrap = api.wrapper;
@@ -1182,9 +1703,11 @@
             var spaceAbove = r.top - margin * 2;
             dd.classList.add('po-item-choices-dropdown-fixed');
             dd.style.setProperty('position', 'fixed', 'important');
-            dd.style.setProperty('left', Math.max(margin, Math.min(r.left, window.innerWidth - Math.max(r.width, 200) - margin)) + 'px', 'important');
+            dd.style.setProperty('left', Math.max(margin, Math.min(r.left, window.innerWidth - Math.max(r.width,
+                200) - margin)) + 'px', 'important');
             dd.style.setProperty('width', Math.max(r.width, 220) + 'px', 'important');
-            dd.style.setProperty('max-height', Math.max(120, flipped ? spaceAbove : spaceBelow) + 'px', 'important');
+            dd.style.setProperty('max-height', Math.max(120, flipped ? spaceAbove : spaceBelow) + 'px',
+            'important');
             dd.style.setProperty('z-index', '200000', 'important');
             if (flipped) {
                 dd.style.setProperty('top', 'auto', 'important');
@@ -1194,6 +1717,7 @@
                 dd.style.setProperty('bottom', 'auto', 'important');
             }
         }
+
         function onScrollOrResize() {
             if (placeScheduled) return;
             placeScheduled = true;
@@ -1202,6 +1726,7 @@
                 place();
             });
         }
+
         function onShow() {
             modalBody = selectEl.closest('.modal-body');
             requestAnimationFrame(function() {
@@ -1210,15 +1735,21 @@
             });
             setTimeout(place, 0);
             setTimeout(place, 80);
-            window.addEventListener('resize', onScrollOrResize, { passive: true });
+            window.addEventListener('resize', onScrollOrResize, {
+                passive: true
+            });
             document.addEventListener('scroll', onScrollOrResize, true);
-            if (modalBody) modalBody.addEventListener('scroll', onScrollOrResize, { passive: true });
+            if (modalBody) modalBody.addEventListener('scroll', onScrollOrResize, {
+                passive: true
+            });
         }
+
         function onHide() {
             var dd = getDropdownEl();
             if (dd) {
                 dd.classList.remove('po-item-choices-dropdown-fixed');
-                ['position', 'left', 'top', 'right', 'bottom', 'width', 'max-height', 'z-index'].forEach(function(p) {
+                ['position', 'left', 'top', 'right', 'bottom', 'width', 'max-height', 'z-index'].forEach(function(
+                p) {
                     dd.style.removeProperty(p);
                 });
             }
@@ -1246,7 +1777,8 @@
             searchFloor: typeof settings.searchFloor === 'number' ? settings.searchFloor : 0,
             searchResultLimit: typeof settings.maxOptions === 'number' ? settings.maxOptions : -1,
             placeholder: true,
-            placeholderValue: settings.placeholder || (selectEl.getAttribute('data-placeholder') || selectEl.getAttribute('placeholder') || ''),
+            placeholderValue: settings.placeholder || (selectEl.getAttribute('data-placeholder') || selectEl
+                .getAttribute('placeholder') || ''),
             searchPlaceholderValue: '',
             removeItemButton: isMulti
         };
@@ -1269,7 +1801,9 @@
                         if (Array.isArray(v)) return v.map(String).filter(Boolean);
                         return v ? [String(v)] : [];
                     } catch (e) {
-                        return Array.from(this.selectEl.selectedOptions).map(function(o) { return o.value; }).filter(Boolean);
+                        return Array.from(this.selectEl.selectedOptions).map(function(o) {
+                            return o.value;
+                        }).filter(Boolean);
                     }
                 }
                 return this.selectEl.value || '';
@@ -1277,10 +1811,14 @@
             setValue: function(v) {
                 this._choices.removeActiveItems();
                 if (isMulti) {
-                    var arr = Array.isArray(v) ? v : (v !== '' && v !== null && typeof v !== 'undefined' ? [v] : []);
+                    var arr = Array.isArray(v) ? v : (v !== '' && v !== null && typeof v !== 'undefined' ? [
+                        v
+                    ] : []);
                     arr.forEach(function(x) {
                         if (x === '' || x === null || typeof x === 'undefined') return;
-                        try { this._choices.setChoiceByValue(String(x)); } catch (e) {}
+                        try {
+                            this._choices.setChoiceByValue(String(x));
+                        } catch (e) {}
                     }, this);
                 } else {
                     var value = (v === null || typeof v === 'undefined') ? '' : String(v);
@@ -1295,7 +1833,12 @@
             addOption: function(opt) {
                 if (!opt) return;
                 var val = (opt.value === null || typeof opt.value === 'undefined') ? '' : String(opt.value);
-                this._choices.setChoices([{ value: val, label: opt.text || val, selected: false, disabled: false }], 'value', 'label', false);
+                this._choices.setChoices([{
+                    value: val,
+                    label: opt.text || val,
+                    selected: false,
+                    disabled: false
+                }], 'value', 'label', false);
             },
             destroy: function() {
                 if (this._choices) this._choices.destroy();
@@ -1325,7 +1868,9 @@
         }
         api.syncItems();
 
-        selectEl.addEventListener('change', function() { api.syncItems(); });
+        selectEl.addEventListener('change', function() {
+            api.syncItems();
+        });
         selectEl.addEventListener('showDropdown', function() {
             if (typeof settings.onDropdownOpen === 'function') {
                 settings.onDropdownOpen.call(api, choices.dropdown ? choices.dropdown.element : null);
@@ -1363,7 +1908,10 @@
                 var modalBody = modalEl ? modalEl.querySelector('.modal-body') : null;
                 var helper = window.MessModalDropdownStability;
                 self._modalDropdownState = helper && modalEl ? helper.onOpen(modalEl) : null;
-                if (!self._modalDropdownState && modalBody) self._modalDropdownState = { scrollTop: modalBody.scrollTop };
+                if (!self._modalDropdownState && modalBody) self._modalDropdownState = {
+                    scrollTop: modalBody.scrollTop
+                };
+
                 function clearInputAndCursor() {
                     var input = (dropdown && dropdown.querySelector('input.choices__input--cloned')) ||
                         (dropdown && dropdown.querySelector('input')) ||
@@ -1377,12 +1925,15 @@
                         input.style.opacity = '1';
                         input.value = '';
                         safeFocus(input);
-                        try { input.setSelectionRange(0, 0); } catch (e) {}
+                        try {
+                            input.setSelectionRange(0, 0);
+                        } catch (e) {}
                         input.scrollLeft = 0;
                     }
                     if (helper && modalEl) {
                         helper.keepScroll(modalEl, self._modalDropdownState);
-                    } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                    } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState
+                        .scrollTop === 'number') {
                         modalBody.scrollTop = self._modalDropdownState.scrollTop;
                     }
                 }
@@ -1395,7 +1946,9 @@
                 setTimeout(clearInputAndCursor, 100);
                 if (dropdown) {
                     setTimeout(function() {
-                        var opts = dropdown.querySelectorAll('.option.active, .option.selected, .option[aria-selected="true"], .choices__item--selectable[aria-selected="true"]');
+                        var opts = dropdown.querySelectorAll(
+                            '.option.active, .option.selected, .option[aria-selected="true"], .choices__item--selectable[aria-selected="true"]'
+                            );
                         opts.forEach(function(opt) {
                             opt.classList.remove('active');
                             opt.classList.remove('selected');
@@ -1411,7 +1964,8 @@
                 var helper = window.MessModalDropdownStability;
                 if (helper && modalEl) {
                     helper.onClose(modalEl, self._modalDropdownState);
-                } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState.scrollTop === 'number') {
+                } else if (modalBody && self._modalDropdownState && typeof self._modalDropdownState
+                    .scrollTop === 'number') {
                     modalBody.scrollTop = self._modalDropdownState.scrollTop;
                 }
                 self._modalDropdownState = null;
@@ -1423,7 +1977,9 @@
         opts = opts || {};
         if (!selectEl || typeof window.Choices === 'undefined') return null;
         if (selectEl.tomselect) {
-            try { selectEl.tomselect.destroy(); } catch (e) {}
+            try {
+                selectEl.tomselect.destroy();
+            } catch (e) {}
         }
         var base = createBlankSearchConfig({
             placeholder: opts.placeholder || 'Select',
@@ -1443,16 +1999,23 @@
             maxItems: null,
             maxOptions: 500,
             plugins: ['remove_button', 'dropdown_input'],
-            sortField: { field: 'text', direction: 'asc' },
+            sortField: {
+                field: 'text',
+                direction: 'asc'
+            },
             closeAfterSelect: false
         };
         if (filterVendor && !filterVendor.tomselect) {
             var phV = filterVendor.getAttribute('data-placeholder') || 'All vendors';
-            choicesInstances.filter.vendor = new TomSelect(filterVendor, Object.assign({}, tsOpts, { placeholder: phV }));
+            choicesInstances.filter.vendor = new TomSelect(filterVendor, Object.assign({}, tsOpts, {
+                placeholder: phV
+            }));
         }
         if (filterStore && !filterStore.tomselect) {
             var phS = filterStore.getAttribute('data-placeholder') || 'All stores';
-            choicesInstances.filter.store = new TomSelect(filterStore, Object.assign({}, tsOpts, { placeholder: phS }));
+            choicesInstances.filter.store = new TomSelect(filterStore, Object.assign({}, tsOpts, {
+                placeholder: phS
+            }));
         }
     }
 
@@ -1461,13 +2024,19 @@
         var createVendor = document.querySelector('#createPurchaseOrderModal select[name="vendor_id"]');
         var createPayment = document.querySelector('#createPurchaseOrderModal select[name="payment_code"]');
         if (createStore) {
-            choicesInstances.create.store = initChoicesSingle(createStore, { placeholder: 'Select Store' });
+            choicesInstances.create.store = initChoicesSingle(createStore, {
+                placeholder: 'Select Store'
+            });
         }
         if (createVendor) {
-            choicesInstances.create.vendor = initChoicesSingle(createVendor, { placeholder: 'Select Vendor' });
+            choicesInstances.create.vendor = initChoicesSingle(createVendor, {
+                placeholder: 'Select Vendor'
+            });
         }
         if (createPayment) {
-            choicesInstances.create.payment = initChoicesSingle(createPayment, { placeholder: 'Select Payment Mode' });
+            choicesInstances.create.payment = initChoicesSingle(createPayment, {
+                placeholder: 'Select Payment Mode'
+            });
         }
     }
 
@@ -1476,25 +2045,36 @@
         var editVendor = document.getElementById('editVendorId');
         var editPayment = document.getElementById('editPaymentCode');
         if (editStore) {
-            choicesInstances.edit.store = initChoicesSingle(editStore, { placeholder: 'Select Store' });
+            choicesInstances.edit.store = initChoicesSingle(editStore, {
+                placeholder: 'Select Store'
+            });
         }
         if (editVendor) {
-            choicesInstances.edit.vendor = initChoicesSingle(editVendor, { placeholder: 'Select Vendor' });
+            choicesInstances.edit.vendor = initChoicesSingle(editVendor, {
+                placeholder: 'Select Vendor'
+            });
         }
         if (editPayment) {
-            choicesInstances.edit.payment = initChoicesSingle(editPayment, { placeholder: 'Select Payment Mode' });
+            choicesInstances.edit.payment = initChoicesSingle(editPayment, {
+                placeholder: 'Select Payment Mode'
+            });
         }
     }
 
     function refreshRowItemChoices(select, itemsToUse, currentValue) {
         var api = select.tomselect;
         var multi = !!select.multiple;
-        var selectedIds = multi
-            ? (Array.isArray(currentValue) ? currentValue.map(String) : [])
-            : (currentValue ? [String(currentValue)] : []);
+        var selectedIds = multi ?
+            (Array.isArray(currentValue) ? currentValue.map(String) : []) :
+            (currentValue ? [String(currentValue)] : []);
         var selSet = new Set(selectedIds);
-        var list = [{ value: '', label: 'Select Item', disabled: true, selected: false }];
-        itemsToUse.forEach(function (item) {
+        var list = [{
+            value: '',
+            label: 'Select Item',
+            disabled: true,
+            selected: false
+        }];
+        itemsToUse.forEach(function(item) {
             var sid = String(item.id);
             list.push({
                 value: sid,
@@ -1504,7 +2084,7 @@
         });
         api._choices.clearChoices();
         api._choices.setChoices(list, 'value', 'label', true);
-        itemsToUse.forEach(function (item) {
+        itemsToUse.forEach(function(item) {
             var opt = select.querySelector('option[value="' + String(item.id).replace(/"/g, '\\"') + '"]');
             if (opt) {
                 opt.setAttribute('data-unit', item.unit_measurement || '');
@@ -1512,11 +2092,15 @@
             }
         });
         if (multi) {
-            selectedIds.forEach(function (id) {
-                try { api._choices.setChoiceByValue(String(id)); } catch (e) {}
+            selectedIds.forEach(function(id) {
+                try {
+                    api._choices.setChoiceByValue(String(id));
+                } catch (e) {}
             });
         } else if (currentValue) {
-            try { api._choices.setChoiceByValue(String(currentValue)); } catch (e) {}
+            try {
+                api._choices.setChoiceByValue(String(currentValue));
+            } catch (e) {}
         }
         api.syncItems();
     }
@@ -1524,10 +2108,10 @@
     function initItemDropdownInRow(row) {
         var select = row.querySelector('.po-item-select');
         if (select && !select.tomselect) {
-            var hadValueBefore = select.multiple
-                ? (select.selectedOptions && select.selectedOptions.length > 0)
-                : !!select.value;
-            
+            var hadValueBefore = select.multiple ?
+                (select.selectedOptions && select.selectedOptions.length > 0) :
+                !!select.value;
+
             // Proper Choices.js config for multi-select
             var instance = createChoicesInstance(select, {
                 placeholder: 'Select Item',
@@ -1540,48 +2124,50 @@
                 itemSelectText: '',
                 allowHTML: false
             });
-            
+
             if (instance) {
                 choicesInstances.items.push(instance);
                 if (!hadValueBefore) {
                     instance.clear();
                 }
-                
+
                 // Note: Change event is already handled by delegated listener on tbody
             }
         }
     }
 
     function initAllItemDropdowns(tbody) {
-        tbody.querySelectorAll('.po-item-row').forEach(function (row) {
+        tbody.querySelectorAll('.po-item-row').forEach(function(row) {
             initItemDropdownInRow(row);
         });
     }
 
     function destroyAllItemDropdowns() {
-        choicesInstances.items.forEach(function (instance) {
+        choicesInstances.items.forEach(function(instance) {
             if (instance) instance.destroy();
         });
         choicesInstances.items = [];
     }
 
     function findItemMeta(id, isEditModal) {
-        var list = isEditModal
-            ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories)
-            : filteredItems;
-        return (list || []).find(function (s) { return String(s.id) === String(id); });
+        var list = isEditModal ?
+            (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) :
+            filteredItems;
+        return (list || []).find(function(s) {
+            return String(s.id) === String(id);
+        });
     }
 
     function reindexPoItemRows(tbody, isEdit) {
-        tbody.querySelectorAll('.po-item-select').forEach(function (sel) {
+        tbody.querySelectorAll('.po-item-select').forEach(function(sel) {
             if (sel.tomselect) sel.tomselect.destroy();
         });
-        choicesInstances.items = choicesInstances.items.filter(function (inst) {
+        choicesInstances.items = choicesInstances.items.filter(function(inst) {
             return !(inst.selectEl && tbody.contains(inst.selectEl));
         });
         var rows = tbody.querySelectorAll('.po-item-row');
-        rows.forEach(function (row, i) {
-            row.querySelectorAll('[name^="items["]').forEach(function (el) {
+        rows.forEach(function(row, i) {
+            row.querySelectorAll('[name^="items["]').forEach(function(el) {
                 el.name = el.name.replace(/items\[\d+\]/, 'items[' + i + ']');
             });
             initItemDropdownInRow(row);
@@ -1602,7 +2188,9 @@
     function maybeSplitMultiItemRow(row) {
         var select = row.querySelector('.po-item-select');
         if (!select || !select.multiple) return false;
-        var vals = Array.from(select.selectedOptions).map(function (o) { return o.value; }).filter(Boolean);
+        var vals = Array.from(select.selectedOptions).map(function(o) {
+            return o.value;
+        }).filter(Boolean);
         if (vals.length <= 1) return false;
         var tbody = row.closest('tbody');
         if (!tbody) return false;
@@ -1611,13 +2199,13 @@
         var price = (row.querySelector('.po-unit-price') || {}).value || '';
         var tax = (row.querySelector('.po-tax') || {}).value || '0';
         if (select.tomselect) select.tomselect.destroy();
-        choicesInstances.items = choicesInstances.items.filter(function (inst) {
+        choicesInstances.items = choicesInstances.items.filter(function(inst) {
             return inst.selectEl !== select;
         });
         var rowsSnap = Array.prototype.slice.call(tbody.querySelectorAll('.po-item-row'));
         var rowIndex = rowsSnap.indexOf(row);
         row.remove();
-        vals.forEach(function (id, j) {
+        vals.forEach(function(id, j) {
             var meta = findItemMeta(id, isEdit);
             var editItem = {
                 item_subcategory_id: id,
@@ -1640,7 +2228,8 @@
 
     function getItemRowHtml(index, editItem, isEditModal) {
         const selected = editItem && editItem.item_subcategory_id ? editItem.item_subcategory_id : '';
-        const itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) : filteredItems;
+        const itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems :
+            itemSubcategories) : filteredItems;
         const options = itemsToUse.map(s =>
             `<option value="${s.id}" data-unit="${(s.unit_measurement || '').replace(/"/g, '&quot;')}" data-code="${(s.item_code || '').replace(/"/g, '&quot;')}" ${s.id == selected ? 'selected' : ''}>${(s.item_name || '—').replace(/</g, '&lt;')}</option>`
         ).join('');
@@ -1674,31 +2263,37 @@
             if (callback) callback();
             return;
         }
-        
+
         fetch(`{{ url('admin/mess/purchaseorders/vendor') }}/${vendorId}/items`, {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-        })
-        .then(r => r.json())
-        .then(data => {
-            filteredItems = data;
-            if (callback) callback();
-        })
-        .catch(err => {
-            console.error(err);
-            filteredItems = itemSubcategories || [];
-            if (callback) callback();
-        });
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                filteredItems = data;
+                if (callback) callback();
+            })
+            .catch(err => {
+                console.error(err);
+                filteredItems = itemSubcategories || [];
+                if (callback) callback();
+            });
     }
 
     function updateItemDropdowns(tbody, isEditModal) {
         var rows = tbody.querySelectorAll('.po-item-row');
-        var itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems : itemSubcategories) : filteredItems;
-        rows.forEach(function (row) {
+        var itemsToUse = isEditModal ? (editModalItems && editModalItems.length ? editModalItems :
+            itemSubcategories) : filteredItems;
+        rows.forEach(function(row) {
             var select = row.querySelector('.po-item-select');
             if (!select) return;
             var currentValue;
             if (select.multiple) {
-                currentValue = Array.from(select.selectedOptions).map(function (o) { return o.value; }).filter(Boolean);
+                currentValue = Array.from(select.selectedOptions).map(function(o) {
+                    return o.value;
+                }).filter(Boolean);
             } else {
                 currentValue = select.tomselect ? select.tomselect.getValue() : select.value;
             }
@@ -1706,14 +2301,16 @@
                 refreshRowItemChoices(select, itemsToUse, currentValue);
             } else {
                 select.innerHTML = '<option value="">Select Item</option>';
-                itemsToUse.forEach(function (item) {
+                itemsToUse.forEach(function(item) {
                     var option = document.createElement('option');
                     option.value = item.id;
                     option.textContent = item.item_name || '—';
                     option.setAttribute('data-unit', item.unit_measurement || '');
                     option.setAttribute('data-code', item.item_code || '');
                     if (select.multiple) {
-                        if (Array.isArray(currentValue) && currentValue.some(function (v) { return String(v) === String(item.id); })) {
+                        if (Array.isArray(currentValue) && currentValue.some(function(v) {
+                                return String(v) === String(item.id);
+                            })) {
                             option.selected = true;
                         }
                     } else if (String(item.id) === String(currentValue)) {
@@ -1721,7 +2318,7 @@
                     }
                     select.appendChild(option);
                 });
-                
+
                 // Properly initialize Choices with correct config
                 var instance = createChoicesInstance(select, {
                     placeholder: 'Select Item',
@@ -1734,7 +2331,7 @@
                     itemSelectText: '',
                     allowHTML: false
                 });
-                
+
                 if (instance) {
                     choicesInstances.items.push(instance);
                 }
@@ -1748,7 +2345,9 @@
         if (!select) return;
         var ids;
         if (select.multiple) {
-            ids = Array.from(select.selectedOptions).map(function (o) { return o.value; }).filter(Boolean);
+            ids = Array.from(select.selectedOptions).map(function(o) {
+                return o.value;
+            }).filter(Boolean);
         } else {
             var sv = select.tomselect ? select.tomselect.getValue() : select.value;
             ids = sv ? [String(sv)] : [];
@@ -1760,7 +2359,8 @@
             if (codeInput) codeInput.value = '';
             return;
         }
-        var opt = select.querySelector('option[value="' + String(ids[0]).replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"]');
+        var opt = select.querySelector('option[value="' + String(ids[0]).replace(/\\/g, '\\\\').replace(/"/g,
+            '\\"') + '"]');
         if (unitInput) unitInput.value = opt && opt.dataset.unit ? opt.dataset.unit : '';
         if (codeInput) codeInput.value = opt && opt.dataset.code ? opt.dataset.code : '';
     }
@@ -1794,19 +2394,20 @@
 
     // Vendor selection change in CREATE modal
     document.addEventListener('DOMContentLoaded', function() {
-        const createVendorSelect = document.querySelector('#createPurchaseOrderModal select[name="vendor_id"]');
+        const createVendorSelect = document.querySelector(
+            '#createPurchaseOrderModal select[name="vendor_id"]');
         if (createVendorSelect) {
             createVendorSelect.addEventListener('change', function() {
                 const vendorId = this.value;
                 currentVendorId = vendorId;
-                
+
                 if (!vendorId) {
                     filteredItems = itemSubcategories;
                     const tbody = document.getElementById('poItemsBody');
                     updateItemDropdowns(tbody, false);
                     return;
                 }
-                
+
                 fetchVendorItems(vendorId, function() {
                     const tbody = document.getElementById('poItemsBody');
                     updateItemDropdowns(tbody, false);
@@ -1844,9 +2445,13 @@
     });
 
     document.getElementById('poItemsBody').addEventListener('input', function(e) {
-        if (e.target.classList.contains('po-qty') || e.target.classList.contains('po-unit-price') || e.target.classList.contains('po-tax')) {
+        if (e.target.classList.contains('po-qty') || e.target.classList.contains('po-unit-price') || e
+            .target.classList.contains('po-tax')) {
             const row = e.target.closest('.po-item-row');
-            if (row) { calcLineTotal(row); updateGrandTotal(); }
+            if (row) {
+                calcLineTotal(row);
+                updateGrandTotal();
+            }
         }
     });
 
@@ -1871,6 +2476,7 @@
         const el = document.getElementById('editPoGrandTotal');
         if (el) el.textContent = '₹' + sum.toFixed(2);
     }
+
     function updateEditRemoveButtons() {
         const rows = document.querySelectorAll('#editPoItemsBody .po-item-row');
         rows.forEach(row => {
@@ -1886,40 +2492,50 @@
         e.preventDefault();
         e.stopPropagation();
         const poId = btn.getAttribute('data-po-id');
-            fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => r.json())
-                .then(data => {
-                    const po = data.po;
-                    const items = data.items || [];
-                    document.getElementById('viewPoNumber').textContent = po.po_number || '—';
-                    document.getElementById('viewPoDate').textContent = po.po_date ? new Date(po.po_date).toLocaleDateString('en-IN') : '—';
-                    document.getElementById('viewStoreName').textContent = po.store_name || '—';
-                    document.getElementById('viewVendorName').textContent = po.vendor_name || '—';
-                    document.getElementById('viewPaymentCode').textContent = po.payment_code || '—';
-                    document.getElementById('viewBillNo').textContent = po.bill_no || '—';
-                    document.getElementById('viewBillDate').textContent = po.bill_date ? new Date(po.bill_date).toLocaleDateString('en-IN') : '—';
-                    document.getElementById('viewChallanNo').textContent = po.challan_no || '—';
-                    document.getElementById('viewChallanDate').textContent = po.challan_date ? new Date(po.challan_date).toLocaleDateString('en-IN') : '—';
-                    const billLink = document.getElementById('viewBillLink');
-                    const billNone = document.getElementById('viewBillNone');
-                    if (po.bill_url) {
-                        billLink.href = po.bill_url;
-                        billLink.style.display = '';
-                        if (billNone) billNone.style.display = 'none';
-                    } else {
-                        billLink.href = '#';
-                        billLink.style.display = 'none';
-                        if (billNone) billNone.style.display = '';
-                    }
-                    const statusEl = document.getElementById('viewStatus');
-                    statusEl.textContent = (po.status || '—').charAt(0).toUpperCase() + (po.status || '').slice(1);
-                    statusEl.className = 'badge bg-' + (po.status === 'approved' ? 'success' : po.status === 'rejected' ? 'danger' : po.status === 'completed' ? 'primary' : 'warning');
-                    const tbody = document.getElementById('viewPoItemsBody');
-                    tbody.innerHTML = '';
-                    let grandTotal = 0;
-                    items.forEach(item => {
-                        grandTotal += parseFloat(item.total_price) || 0;
-                        tbody.insertAdjacentHTML('beforeend', `
+        fetch(editPoBaseUrl + '/' + poId + '/edit', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                const po = data.po;
+                const items = data.items || [];
+                document.getElementById('viewPoNumber').textContent = po.po_number || '—';
+                document.getElementById('viewPoDate').textContent = po.po_date ? new Date(po.po_date)
+                    .toLocaleDateString('en-IN') : '—';
+                document.getElementById('viewStoreName').textContent = po.store_name || '—';
+                document.getElementById('viewVendorName').textContent = po.vendor_name || '—';
+                document.getElementById('viewPaymentCode').textContent = po.payment_code || '—';
+                document.getElementById('viewBillNo').textContent = po.bill_no || '—';
+                document.getElementById('viewBillDate').textContent = po.bill_date ? new Date(po
+                    .bill_date).toLocaleDateString('en-IN') : '—';
+                document.getElementById('viewChallanNo').textContent = po.challan_no || '—';
+                document.getElementById('viewChallanDate').textContent = po.challan_date ? new Date(po
+                    .challan_date).toLocaleDateString('en-IN') : '—';
+                const billLink = document.getElementById('viewBillLink');
+                const billNone = document.getElementById('viewBillNone');
+                if (po.bill_url) {
+                    billLink.href = po.bill_url;
+                    billLink.style.display = '';
+                    if (billNone) billNone.style.display = 'none';
+                } else {
+                    billLink.href = '#';
+                    billLink.style.display = 'none';
+                    if (billNone) billNone.style.display = '';
+                }
+                const statusEl = document.getElementById('viewStatus');
+                statusEl.textContent = (po.status || '—').charAt(0).toUpperCase() + (po.status || '')
+                    .slice(1);
+                statusEl.className = 'badge bg-' + (po.status === 'approved' ? 'success' : po.status ===
+                    'rejected' ? 'danger' : po.status === 'completed' ? 'primary' : 'warning');
+                const tbody = document.getElementById('viewPoItemsBody');
+                tbody.innerHTML = '';
+                let grandTotal = 0;
+                items.forEach(item => {
+                    grandTotal += parseFloat(item.total_price) || 0;
+                    tbody.insertAdjacentHTML('beforeend', `
                             <tr>
                                 <td>${escapeHtml(item.item_name || '—')}</td>
                                 <td>${escapeHtml(item.unit || '—')}</td>
@@ -1929,11 +2545,14 @@
                                 <td>${(parseFloat(item.tax_percent) || 0).toFixed(2)}%</td>
                                 <td>₹${(parseFloat(item.total_price) || 0).toFixed(2)}</td>
                             </tr>`);
-                    });
-                    document.getElementById('viewPoGrandTotal').textContent = '₹' + grandTotal.toFixed(2);
-                    new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
-                })
-                .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
+                });
+                document.getElementById('viewPoGrandTotal').textContent = '₹' + grandTotal.toFixed(2);
+                new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Failed to load purchase order.');
+            });
     }, true);
 
     function escapeHtml(text) {
@@ -1961,9 +2580,12 @@
                     const currentIds = [];
                     tbody.querySelectorAll('.po-item-select').forEach(sel => {
                         if (sel.multiple) {
-                            Array.from(sel.selectedOptions).forEach(o => { if (o.value) currentIds.push(o.value); });
+                            Array.from(sel.selectedOptions).forEach(o => {
+                                if (o.value) currentIds.push(o.value);
+                            });
                         } else {
-                            const v = sel.tomselect ? sel.tomselect.getValue() : sel.value;
+                            const v = sel.tomselect ? sel.tomselect.getValue() : sel
+                                .value;
                             if (v) currentIds.push(v);
                         }
                     });
@@ -1988,102 +2610,117 @@
         e.preventDefault();
         e.stopPropagation();
         const poId = btn.getAttribute('data-po-id');
-            fetch(editPoBaseUrl + '/' + poId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
-                .then(r => r.json())
-                .then(data => {
-                    const po = data.po;
-                    const items = data.items || [];
-                    document.getElementById('editPOForm').action = editPoBaseUrl + '/' + poId;
-                    document.getElementById('editPoNumber').value = po.po_number || '';
-                    document.getElementById('editPoDate').value = po.po_date || '';
-                    var storeVal = (po.store_id != null && po.store_id !== '') ? String(po.store_id) : '';
-                    var vendorVal = (po.vendor_id != null && po.vendor_id !== '') ? String(po.vendor_id) : '';
-                    var paymentVal = (po.payment_code != null && po.payment_code !== '') ? String(po.payment_code) : '';
-                    if (choicesInstances.edit.store) {
-                        choicesInstances.edit.store.setValue(storeVal);
+        fetch(editPoBaseUrl + '/' + poId + '/edit', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(r => r.json())
+            .then(data => {
+                const po = data.po;
+                const items = data.items || [];
+                document.getElementById('editPOForm').action = editPoBaseUrl + '/' + poId;
+                document.getElementById('editPoNumber').value = po.po_number || '';
+                document.getElementById('editPoDate').value = po.po_date || '';
+                var storeVal = (po.store_id != null && po.store_id !== '') ? String(po.store_id) : '';
+                var vendorVal = (po.vendor_id != null && po.vendor_id !== '') ? String(po.vendor_id) :
+                    '';
+                var paymentVal = (po.payment_code != null && po.payment_code !== '') ? String(po
+                    .payment_code) : '';
+                if (choicesInstances.edit.store) {
+                    choicesInstances.edit.store.setValue(storeVal);
+                } else {
+                    document.getElementById('editStoreId').value = storeVal;
+                }
+                if (choicesInstances.edit.vendor) {
+                    choicesInstances.edit.vendor.setValue(vendorVal);
+                } else {
+                    document.getElementById('editVendorId').value = vendorVal;
+                }
+                if (choicesInstances.edit.payment) {
+                    choicesInstances.edit.payment.setValue(paymentVal);
+                } else {
+                    document.getElementById('editPaymentCode').value = paymentVal;
+                }
+                document.getElementById('editBillNo').value = po.bill_no || '';
+                const editBillDateEl = document.getElementById('editBillDate');
+                if (editBillDateEl) editBillDateEl.value = po.bill_date || '';
+                document.getElementById('editChallanNo').value = po.challan_no || '';
+                const editChallanDateEl = document.getElementById('editChallanDate');
+                if (editChallanDateEl) editChallanDateEl.value = po.challan_date || '';
+                var editBillPathEl = document.getElementById('editCurrentBillPath');
+                if (editBillPathEl) {
+                    editBillPathEl.textContent = po.bill_path ? (po.bill_path.split('/').pop() || po
+                        .bill_path) : 'No file chosen';
+                }
+                var editBillFileInput = document.getElementById('editBillFileInput');
+                if (editBillFileInput) {
+                    editBillFileInput.value = '';
+                }
+                var editBillLinkEl = document.getElementById('editCurrentBillLink');
+                if (editBillLinkEl) {
+                    if (po.bill_url) {
+                        editBillLinkEl.innerHTML = 'Current bill: <a href="' + escapeHtml(po.bill_url) +
+                            '" target="_blank" rel="noopener" class="text-primary">View Bill</a>';
                     } else {
-                        document.getElementById('editStoreId').value = storeVal;
+                        editBillLinkEl.innerHTML = '';
                     }
-                    if (choicesInstances.edit.vendor) {
-                        choicesInstances.edit.vendor.setValue(vendorVal);
-                    } else {
-                        document.getElementById('editVendorId').value = vendorVal;
-                    }
-                    if (choicesInstances.edit.payment) {
-                        choicesInstances.edit.payment.setValue(paymentVal);
-                    } else {
-                        document.getElementById('editPaymentCode').value = paymentVal;
-                    }
-                    document.getElementById('editBillNo').value = po.bill_no || '';
-                    const editBillDateEl = document.getElementById('editBillDate');
-                    if (editBillDateEl) editBillDateEl.value = po.bill_date || '';
-                    document.getElementById('editChallanNo').value = po.challan_no || '';
-                    const editChallanDateEl = document.getElementById('editChallanDate');
-                    if (editChallanDateEl) editChallanDateEl.value = po.challan_date || '';
-                    var editBillPathEl = document.getElementById('editCurrentBillPath');
-                    if (editBillPathEl) {
-                        editBillPathEl.textContent = po.bill_path ? (po.bill_path.split('/').pop() || po.bill_path) : 'No file chosen';
-                    }
-                    var editBillFileInput = document.getElementById('editBillFileInput');
-                    if (editBillFileInput) {
-                        editBillFileInput.value = '';
-                    }
-                    var editBillLinkEl = document.getElementById('editCurrentBillLink');
-                    if (editBillLinkEl) {
-                        if (po.bill_url) {
-                            editBillLinkEl.innerHTML = 'Current bill: <a href="' + escapeHtml(po.bill_url) + '" target="_blank" rel="noopener" class="text-primary">View Bill</a>';
-                        } else {
-                            editBillLinkEl.innerHTML = '';
+                }
+                editCurrentVendorId = po.vendor_id;
+
+                function buildEditRows(vendorItemList) {
+                    const merged = (vendorItemList || []).slice();
+                    items.forEach(poItem => {
+                        const id = poItem.item_subcategory_id;
+                        if (id && !merged.some(m => m.id == id)) {
+                            const fromAll = itemSubcategories.find(s => s.id == id);
+                            if (fromAll) merged.push(fromAll);
                         }
-                    }
-                    editCurrentVendorId = po.vendor_id;
+                    });
+                    editModalItems = merged.length ? merged : itemSubcategories;
 
-                    function buildEditRows(vendorItemList) {
-                        const merged = (vendorItemList || []).slice();
-                        items.forEach(poItem => {
-                            const id = poItem.item_subcategory_id;
-                            if (id && !merged.some(m => m.id == id)) {
-                                const fromAll = itemSubcategories.find(s => s.id == id);
-                                if (fromAll) merged.push(fromAll);
-                            }
+                    // Destroy existing item dropdowns
+                    destroyAllItemDropdowns();
+
+                    const tbody = document.getElementById('editPoItemsBody');
+                    tbody.innerHTML = '';
+                    if (items.length === 0) {
+                        tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, true));
+                        editItemRowIndex = 1;
+                    } else {
+                        items.forEach((item, i) => {
+                            tbody.insertAdjacentHTML('beforeend', getItemRowHtml(i, item,
+                            true));
                         });
-                        editModalItems = merged.length ? merged : itemSubcategories;
+                        editItemRowIndex = items.length;
+                    }
 
-                        // Destroy existing item dropdowns
-                        destroyAllItemDropdowns();
+                    // Initialize Choices for all item dropdowns
+                    initAllItemDropdowns(tbody);
+                    updateEditGrandTotal();
+                    updateEditRemoveButtons();
+                    new bootstrap.Modal(document.getElementById('editPurchaseOrderModal')).show();
+                }
 
+                // Show modal immediately with all items; vendor-specific list loads in background
+                buildEditRows(itemSubcategories);
+                if (po.vendor_id) {
+                    fetchVendorItems(po.vendor_id, function() {
                         const tbody = document.getElementById('editPoItemsBody');
-                        tbody.innerHTML = '';
-                        if (items.length === 0) {
-                            tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, true));
-                            editItemRowIndex = 1;
-                        } else {
-                            items.forEach((item, i) => {
-                                tbody.insertAdjacentHTML('beforeend', getItemRowHtml(i, item, true));
-                            });
-                            editItemRowIndex = items.length;
+                        if (tbody && document.getElementById('editPurchaseOrderModal').classList
+                            .contains('show')) {
+                            editModalItems = (filteredItems && filteredItems.length) ?
+                                filteredItems : itemSubcategories;
+                            updateItemDropdowns(tbody, true);
                         }
-                        
-                        // Initialize Choices for all item dropdowns
-                        initAllItemDropdowns(tbody);
-                        updateEditGrandTotal();
-                        updateEditRemoveButtons();
-                        new bootstrap.Modal(document.getElementById('editPurchaseOrderModal')).show();
-                    }
-
-                    // Show modal immediately with all items; vendor-specific list loads in background
-                    buildEditRows(itemSubcategories);
-                    if (po.vendor_id) {
-                        fetchVendorItems(po.vendor_id, function() {
-                            const tbody = document.getElementById('editPoItemsBody');
-                            if (tbody && document.getElementById('editPurchaseOrderModal').classList.contains('show')) {
-                                editModalItems = (filteredItems && filteredItems.length) ? filteredItems : itemSubcategories;
-                                updateItemDropdowns(tbody, true);
-                            }
-                        });
-                    }
-                })
-                .catch(err => { console.error(err); alert('Failed to load purchase order.'); });
+                    });
+                }
+            })
+            .catch(err => {
+                console.error(err);
+                alert('Failed to load purchase order.');
+            });
     }, true);
 
     document.getElementById('addEditPoItemRow').addEventListener('click', function() {
@@ -2098,7 +2735,7 @@
     var createBillFileInputEl = document.getElementById('createBillFileInput');
     var createBillClearBtnEl = document.getElementById('createBillClearBtn');
     if (createBillClearBtnEl && createBillFileInputEl) {
-        createBillClearBtnEl.addEventListener('click', function () {
+        createBillClearBtnEl.addEventListener('click', function() {
             createBillFileInputEl.value = '';
         });
     }
@@ -2134,7 +2771,7 @@
     }
 
     if (createBillFileInputEl) {
-        createBillFileInputEl.addEventListener('change', function () {
+        createBillFileInputEl.addEventListener('change', function() {
             // For create modal we don't show a file-name label; just validate
             validateBillFileInput(createBillFileInputEl, null);
         });
@@ -2150,7 +2787,7 @@
 
     var editBillClearBtnEl = document.getElementById('editBillClearBtn');
     if (editBillClearBtnEl && editBillFileInputEl) {
-        editBillClearBtnEl.addEventListener('click', function () {
+        editBillClearBtnEl.addEventListener('click', function() {
             editBillFileInputEl.value = '';
             var pathEl = document.getElementById('editCurrentBillPath');
             if (pathEl) pathEl.textContent = 'No file chosen';
@@ -2159,7 +2796,7 @@
 
     var editBillClearBtnEl = document.getElementById('editBillClearBtn');
     if (editBillClearBtnEl && editBillFileInputEl) {
-        editBillClearBtnEl.addEventListener('click', function () {
+        editBillClearBtnEl.addEventListener('click', function() {
             editBillFileInputEl.value = '';
             var pathEl = document.getElementById('editCurrentBillPath');
             if (pathEl) pathEl.textContent = 'No file chosen';
@@ -2184,9 +2821,13 @@
         }
     });
     document.getElementById('editPoItemsBody').addEventListener('input', function(e) {
-        if (e.target.classList.contains('po-qty') || e.target.classList.contains('po-unit-price') || e.target.classList.contains('po-tax')) {
+        if (e.target.classList.contains('po-qty') || e.target.classList.contains('po-unit-price') || e
+            .target.classList.contains('po-tax')) {
             const row = e.target.closest('.po-item-row');
-            if (row) { calcLineTotal(row); updateEditGrandTotal(); }
+            if (row) {
+                calcLineTotal(row);
+                updateEditGrandTotal();
+            }
         }
     });
     document.getElementById('editPoItemsBody').addEventListener('click', function(e) {
@@ -2221,13 +2862,15 @@
 
             e.preventDefault();
 
-            if (poItemsTable && poItemsTable.contains(activeEl) && activeEl.classList.contains('po-unit-price')) {
+            if (poItemsTable && poItemsTable.contains(activeEl) && activeEl.classList.contains(
+                    'po-unit-price')) {
                 const addBtn = document.getElementById('addPoItemRow');
                 if (addBtn) {
                     addBtn.click();
                     const tbody = document.getElementById('poItemsBody');
                     const newRow = tbody ? tbody.lastElementChild : null;
-                    const firstInput = newRow ? newRow.querySelector('.po-item-select, .po-qty, .po-unit-price, input, select') : null;
+                    const firstInput = newRow ? newRow.querySelector(
+                        '.po-item-select, .po-qty, .po-unit-price, input, select') : null;
                     if (firstInput) firstInput.focus();
                 }
                 return;
@@ -2269,13 +2912,15 @@
 
             e.preventDefault();
 
-            if (editPoItemsTable && editPoItemsTable.contains(activeEl) && activeEl.classList.contains('po-unit-price')) {
+            if (editPoItemsTable && editPoItemsTable.contains(activeEl) && activeEl.classList.contains(
+                    'po-unit-price')) {
                 const addBtn = document.getElementById('addEditPoItemRow');
                 if (addBtn) {
                     addBtn.click();
                     const tbody = document.getElementById('editPoItemsBody');
                     const newRow = tbody ? tbody.lastElementChild : null;
-                    const firstInput = newRow ? newRow.querySelector('.po-item-select, .po-qty, .po-unit-price, input, select') : null;
+                    const firstInput = newRow ? newRow.querySelector(
+                        '.po-item-select, .po-qty, .po-unit-price, input, select') : null;
                     if (firstInput) firstInput.focus();
                 }
                 return;
@@ -2301,7 +2946,8 @@
         if (!inputEl) return;
         inputEl.addEventListener('keydown', function(e) {
             const key = e.key;
-            if (key === 'Backspace' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight' || key === 'Delete') return;
+            if (key === 'Backspace' || key === 'Tab' || key === 'ArrowLeft' || key === 'ArrowRight' ||
+                key === 'Delete') return;
             if (key.length === 1 && !/^[0-9]$/.test(key)) {
                 e.preventDefault();
             }
@@ -2318,7 +2964,8 @@
             e.preventDefault();
             const text = (e.clipboardData || window.clipboardData).getData('text');
             const digits = text.replace(/[^0-9]/g, '').slice(0, 10);
-            const start = this.selectionStart, end = this.selectionEnd;
+            const start = this.selectionStart,
+                end = this.selectionEnd;
             this.value = this.value.slice(0, start) + digits + this.value.slice(end);
             this.setSelectionRange(start + digits.length, start + digits.length);
         });
@@ -2326,7 +2973,9 @@
     initContactNumberValidation(document.getElementById('createContactNumber'));
     document.getElementById('editPurchaseOrderModal').addEventListener('shown.bs.modal', function() {
         initContactNumberValidation(document.getElementById('editContactNumber'));
-    }, { once: false });
+    }, {
+        once: false
+    });
 
     // Validate contact number before form submit (optional field: if provided, must be exactly 10 digits)
     function validateContactNumber(val) {
@@ -2338,7 +2987,8 @@
         if (input && !validateContactNumber(input.value)) {
             e.preventDefault();
             input.classList.add('is-invalid');
-            const msg = input.parentNode.querySelector('.invalid-feedback.d-block') || document.createElement('div');
+            const msg = input.parentNode.querySelector('.invalid-feedback.d-block') || document
+                .createElement('div');
             if (!msg.classList || !msg.classList.contains('invalid-feedback')) {
                 const m = document.createElement('div');
                 m.className = 'invalid-feedback d-block';
@@ -2420,19 +3070,27 @@
             var csrf = form.querySelector('input[name="_token"]');
 
             fetch(action, {
-                method: method,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'X-CSRF-TOKEN': csrf ? csrf.value : '',
-                    'Accept': 'application/json'
-                },
-                body: formData
-            })
+                    method: method,
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-CSRF-TOKEN': csrf ? csrf.value : '',
+                        'Accept': 'application/json'
+                    },
+                    body: formData
+                })
                 .then(function(response) {
                     return response.json().then(function(payload) {
-                        return { ok: response.ok, status: response.status, payload: payload };
+                        return {
+                            ok: response.ok,
+                            status: response.status,
+                            payload: payload
+                        };
                     }).catch(function() {
-                        return { ok: response.ok, status: response.status, payload: null };
+                        return {
+                            ok: response.ok,
+                            status: response.status,
+                            payload: null
+                        };
                     });
                 })
                 .then(function(res) {
@@ -2445,7 +3103,8 @@
                             alert(data.message);
                         }
                     } else {
-                        var msg = (data && data.message) ? data.message : 'Failed to create purchase order. Please try again.';
+                        var msg = (data && data.message) ? data.message :
+                            'Failed to create purchase order. Please try again.';
                         if (res.status === 422 && data && data.errors) {
                             try {
                                 var firstKey = Object.keys(data.errors)[0];
@@ -2486,10 +3145,11 @@
     });
 
     // Auto-open create modal when validation errors exist (e.g. after failed submit)
-    @if($errors->any() || session('open_create_po_modal'))
+    @if($errors - > any() || session('open_create_po_modal'))
     document.addEventListener('DOMContentLoaded', function() {
         const createModal = document.getElementById('createPurchaseOrderModal');
-        if (createModal && (document.getElementById('createPOForm') || document.querySelector('[name="po_number"]'))) {
+        if (createModal && (document.getElementById('createPOForm') || document.querySelector(
+                '[name="po_number"]'))) {
             new bootstrap.Modal(createModal).show();
         }
     });
@@ -2512,7 +3172,7 @@
             const form = document.getElementById('createPOForm');
             if (form) {
                 form.reset();
-                
+
                 // Reset Choices dropdowns
                 if (choicesInstances.create.vendor) {
                     choicesInstances.create.vendor.clear();
@@ -2537,7 +3197,7 @@
                 tbody.innerHTML = '';
                 tbody.insertAdjacentHTML('beforeend', getItemRowHtml(0, null, false));
                 itemRowIndex = 1;
-                
+
                 // Note: Initialize dropdowns in 'shown.bs.modal' event instead (when modal is visible)
                 updateGrandTotal();
                 updateRemoveButtons();
@@ -2553,22 +3213,37 @@
         if (!sel) return;
         var modal = document.querySelector(sel);
         if (!modal) return;
-        var content = modal.querySelector('.modal-content');
-        if (!content) return;
+        var bodyEl = modal.querySelector('.modal-body');
+        if (!bodyEl) return;
         var win = window.open('', '_blank', 'width=900,height=700');
-        if (!win) { alert('Please allow popups to print.'); return; }
+        if (!win) {
+            alert('Please allow popups to print.');
+            return;
+        }
         var title = (modal.querySelector('.modal-title') || {}).textContent || 'Purchase Order Details';
         var printedOn = new Date();
-        var dateStr = printedOn.getDate().toString().padStart(2,'0') + '/' + (printedOn.getMonth()+1).toString().padStart(2,'0') + '/' + printedOn.getFullYear() + ', ' + printedOn.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
-        var bodyContent = content.innerHTML;
-        bodyContent = bodyContent.replace(/<button[^>]*btn-close[^>]*>[\s\S]*?<\/button>/gi, '');
-        bodyContent = bodyContent.replace(/<div class="modal-footer[^"]*"[^>]*>[\s\S]*?<\/div>\s*$/i, '');
-        var printHeader = '<div class="print-doc-header" style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
-            '<div style="margin-bottom:10px;"><img src="{{ asset('images/lbsnaa_logo.jpg') }}" alt="LBSNAA Logo" style="height:60px;width:auto;"></div>' +
+        var dateStr = printedOn.getDate().toString().padStart(2, '0') + '/' + (printedOn.getMonth() + 1)
+            .toString().padStart(2, '0') + '/' + printedOn.getFullYear() + ', ' + printedOn
+            .toLocaleTimeString('en-IN', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        var bodyWrap = document.createElement('div');
+        bodyWrap.innerHTML = bodyEl.innerHTML;
+        var bodyContent = typeof window.poSanitizePrintDom === 'function'
+            ? window.poSanitizePrintDom(bodyWrap)
+            : bodyWrap.innerHTML;
+        var poPrintLogoUrl = @json(asset('images/lbsnaa_logo.jpg'));
+        var printHeader =
+            '<div class="print-doc-header" style="text-align:center;margin-bottom:20px;padding-bottom:12px;border-bottom:2px solid #2c3e50;">' +
+            '<div style="margin-bottom:10px;"><img src="' + poPrintLogoUrl + '" alt="LBSNAA Logo" style="height:60px;width:auto;"></div>' +
             '<div style="font-size:18px;font-weight:700;color:#1a1a1a;margin-bottom:6px;">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
             '<div style="background:#004a93;color:#fff;padding:8px 16px;font-size:14px;display:inline-block;margin:4px 0;border-radius:4px;-webkit-print-color-adjust:exact;print-color-adjust:exact;">Purchase Order Details</div>' +
-            '<div style="font-size:11px;color:#6c757d;margin-top:8px;">Printed on ' + dateStr + '</div></div>';
-        var printCss = '<style>' +
+            '<div style="font-size:11px;color:#6c757d;margin-top:8px;">Printed on ' + dateStr +
+            '</div></div>';
+        var iconCss = window.PO_PRINT_SUPPRESS_ICON_CSS || '';
+        var printCss = '<style>' + iconCss +
             '@page { size: A4; margin: 14mm; }' +
             'body { font-family: Arial, sans-serif; font-size: 12px; color: #212529; padding: 0 12px; margin: 0; background: #fff; }' +
             '.print-doc-header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
@@ -2601,23 +3276,28 @@
             '.fs-5 { font-size: 16px !important; }' +
             '@media print { body { padding: 0; } .print-doc-header { margin-bottom: 16px; } }' +
             '</style>';
-        win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title.replace(/</g, '&lt;') + '</title>' + printCss + '</head><body>' + printHeader + '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>');
+        win.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + title.replace(/</g,
+                '&lt;') + '</title>' + printCss + '</head><body>' + printHeader +
+            '<div class="modal-content-wrap">' + bodyContent + '</div></body></html>');
         win.document.close();
         win.focus();
-        setTimeout(function() { win.print(); win.close(); }, 350);
+        setTimeout(function() {
+            win.print();
+            win.close();
+        }, 350);
     });
 
     // Initialize Choices on page load
     document.addEventListener('DOMContentLoaded', function() {
         // Initialize filter dropdowns only (always visible)
         initFilterDropdowns();
-        
+
         // Initialize create modal dropdowns immediately
         initCreateModalDropdowns();
-        
+
         // Initialize edit modal dropdowns immediately  
         initEditModalDropdowns();
-        
+
         // Setup modal event listeners
         const createPOModal = document.getElementById('createPurchaseOrderModal');
         if (createPOModal) {
@@ -2627,7 +3307,7 @@
                     initCreateModalDropdowns();
                 }
             });
-            
+
             // Initialize item dropdowns when modal is SHOWN (not hidden)
             createPOModal.addEventListener('shown.bs.modal', function() {
                 const createTbody = document.getElementById('poItemsBody');
@@ -2635,7 +3315,9 @@
                     // Destroy any existing instances first
                     createTbody.querySelectorAll('.po-item-select').forEach(function(sel) {
                         if (sel.tomselect) {
-                            try { sel.tomselect.destroy(); } catch(e) {}
+                            try {
+                                sel.tomselect.destroy();
+                            } catch (e) {}
                         }
                     });
                     // Re-initialize all item dropdowns
