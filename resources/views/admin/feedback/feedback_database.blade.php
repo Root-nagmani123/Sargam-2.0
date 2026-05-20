@@ -1,3 +1,6 @@
+@php
+    $fr = $fr ?? $feedbackReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::forRequest();
+@endphp
 @extends('admin.layouts.master')
 
 @section('title', 'Feedback Database - Sargam | Lal Bahadur')
@@ -410,11 +413,11 @@
 @section('scripts')
     <script>
         const FEEDBACK_DB_EXPORT_ROUTES = {
-            print: @json(route('admin.feedback.database.print')),
-            pdf: @json(route('admin.feedback.database.export.pdf')),
-            excel: @json(route('admin.feedback.database.export.excel')),
+            print: @json($fr['database_print']),
+            pdf: @json($fr['database_export_pdf']),
+            excel: @json($fr['database_export_excel']),
         };
-        const FEEDBACK_DB_COURSES_URL = @json(route('admin.feedback.database.courses'));
+        const FEEDBACK_DB_COURSES_URL = @json($fr['database_courses']);
 
         $(document).ready(function() {
             // Prevent duplicate execution
@@ -785,7 +788,7 @@
                     per_page: perPage
                 });
 
-                const apiUrl = `/faculty/database/data?${params.toString()}`;
+                const apiUrl = `{{ $fr['database_data'] }}?${params.toString()}`;
 
                 fetch(apiUrl)
                     .then(response => response.json())

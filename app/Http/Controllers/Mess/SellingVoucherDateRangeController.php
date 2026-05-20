@@ -31,6 +31,18 @@ use Illuminate\Support\MessageBag;
  */
 class SellingVoucherDateRangeController extends Controller
 {
+    /**
+     * Historical mess_client_types.id values still stored on sv_date_range_reports rows
+     * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
+     *
+     * @var array<string, list<int>>
+     */
+    private const LEGACY_EMPLOYEE_CLIENT_TYPE_PK = [
+        'academy staff' => [2, 12],
+        'faculty' => [1],
+        'mess staff' => [],
+    ];
+
     public function index(Request $request)
     {
         // Get active stores and sub-stores
@@ -1171,11 +1183,17 @@ class SellingVoucherDateRangeController extends Controller
             $q->where('sv.client_type_slug', $clientTypeSlug);
         }
         if ($request->filled('client_type_pk')) {
-            $q->where('sv.client_type_pk', (int) $request->input('client_type_pk'));
+            $clientTypePk = (int) $request->input('client_type_pk');
+            if ($clientTypeSlug === ClientType::TYPE_EMPLOYEE) {
+                $pkValues = $this->employeeClientTypePkFilterValues($clientTypePk);
+                if ($pkValues !== []) {
+                    $q->whereIn('sv.client_type_pk', $pkValues);
+                }
+            } else {
+                $q->where('sv.client_type_pk', $clientTypePk);
+            }
         }
-        if ($request->filled('buyer_name')) {
-            $q->where('sv.client_name', trim((string) $request->input('buyer_name')));
-        }
+        $this->applySellingVoucherDateRangeBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $q->whereBetween('sv.date_from', [$request->start_date, $request->end_date]);
@@ -1195,6 +1213,47 @@ class SellingVoucherDateRangeController extends Controller
         }
 
         return $q;
+    }
+
+    /**
+     * Employee category filter must match current mess_client_types.id and legacy ids on old vouchers.
+     *
+     * @return list<int>
+     */
+    private function employeeClientTypePkFilterValues(int $selectedPk): array
+    {
+        if ($selectedPk <= 0) {
+            return [];
+        }
+
+        $pks = [$selectedPk];
+        $category = ClientType::query()
+            ->where('id', $selectedPk)
+            ->where('client_type', ClientType::TYPE_EMPLOYEE)
+            ->value('client_name');
+
+        if ($category !== null) {
+            $legacy = self::LEGACY_EMPLOYEE_CLIENT_TYPE_PK[strtolower(trim((string) $category))] ?? [];
+            $pks = array_merge($pks, $legacy);
+        }
+
+        return array_values(array_unique(array_map('intval', $pks)));
+    }
+
+    /**
+     * Match buyer names saved with optional department suffix, e.g. "Name (Dept)".
+     */
+    private function applySellingVoucherDateRangeBuyerNameFilter(Builder $q, string $buyerName): void
+    {
+        $buyerName = trim($buyerName);
+        if ($buyerName === '') {
+            return;
+        }
+
+        $q->where(function ($bq) use ($buyerName) {
+            $bq->where('sv.client_name', $buyerName)
+                ->orWhere('sv.client_name', 'LIKE', $buyerName.' (%');
+        });
     }
 
     private function applySellingVoucherDateRangeItemSearch(Builder $q, string $search): void
@@ -1223,6 +1282,20 @@ class SellingVoucherDateRangeController extends Controller
                             END) LIKE ?',
                             ['ot', 'course', 'course', '', $term]
                         );
+        $q->where(function ($w) use ($term, $needle, $search) {
+            $w->where('sri.item_name', 'like', $term)
+                ->orWhere('sv.client_name', 'like', $term)
+                ->orWhere('mct.client_name', 'like', $term)
+                ->orWhere('cm.course_name', 'like', $term)
+                ->orWhere('ms.store_name', 'like', $term)
+                ->orWhere('mss.sub_store_name', 'like', $term)
+                ->orWhereRaw(
+                    "(CAST((CASE
+                        WHEN sv.client_type_slug IN (?, ?) THEN ?
+                        ELSE COALESCE(mct.client_type, sv.client_type_slug, '')
+                    END) AS CHAR CHARACTER SET utf8mb4) COLLATE utf8mb4_unicode_ci) LIKE ?",
+                    ['ot', 'course', 'course', $term]
+                );
 
                     if (is_numeric($token)) {
                         $w->orWhere('sri.quantity', 'like', $term)->orWhere('sri.return_quantity', 'like', $term);

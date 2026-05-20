@@ -214,7 +214,12 @@
  <li class="sidebar-item"><a class="sidebar-link" href="{{route('feedback.get.feedbackList')}}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">My Feedback</span>
                                 </a></li>
-                               
+                                @if (is_faculty_portal_user())
+                                    @include('components.menu.partials.faculty_session_feedback_report_menu', [
+                                        'reportCollapseId' => 'facultySessionFeedbackReportAcademics',
+                                    ])
+                                @endif
+
                             <!-- faculty menu end -->
 
                             <!-- OTs menu start -->

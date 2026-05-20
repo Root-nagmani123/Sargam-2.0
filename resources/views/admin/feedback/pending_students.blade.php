@@ -1,10 +1,14 @@
+@php
+    $pr = $pendingReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::pendingForRequest();
+    $pageTitle = $pendingPageTitle ?? 'Pending Feedback – Students';
+@endphp
 @extends('admin.layouts.master')
 
-@section('title', 'Pending Feedback - Students')
+@section('title', $pageTitle . ' - Sargam | Lal Bahadur')
 
 @section('setup_content')
     <div class="container-fluid px-2 px-sm-3 px-md-4 pb-4 pb-lg-5 pending-feedback-page">
-        <x-breadcrum title="Pending Feedback – Students"></x-breadcrum>
+        <x-breadcrum :title="$pageTitle"></x-breadcrum>
 
         <x-session_message />
 
@@ -601,7 +605,7 @@
                 );
 
                 $.ajax({
-                    url: "{{ route('admin.feedback.pending.grouped') }}",
+                    url: "{{ $pr['grouped'] }}",
                     type: "GET",
                     data: params,
                     dataType: 'json',
@@ -901,7 +905,7 @@
                 $sessionSelect.val('').trigger('change');
 
                 $.ajax({
-                    url: "{{ route('admin.get.sessions.by.course') }}",
+                    url: "{{ $pr['sessions_by_course'] }}",
                     type: "GET",
                     data: { course_pk: courseId },
                     dataType: 'json',
@@ -986,17 +990,17 @@
 
             $('#exportPDF').on('click', function(e) {
                 e.preventDefault();
-                submitExportForm("{{ route('admin.feedback.export.pdf') }}");
+                submitExportForm("{{ $pr['export_pdf'] }}");
             });
 
             $('#exportExcelSummary').on('click', function(e) {
                 e.preventDefault();
-                submitExportForm("{{ route('admin.feedback.export.excel') }}");
+                submitExportForm("{{ $pr['export_excel'] }}");
             });
 
             $('#exportExcelDetailed').on('click', function(e) {
                 e.preventDefault();
-                submitExportForm("{{ route('admin.feedback.export.excel.detailed') }}");
+                submitExportForm("{{ $pr['export_excel_detailed'] }}");
             });
 
             // Print — opens the same template in a new window
@@ -1010,7 +1014,7 @@
                     course_type: currentTab,
                     filter_feedback_state: $('#filter_feedback_state').val()
                 });
-                window.open("{{ route('admin.feedback.print') }}?" + params, '_blank');
+                window.open("{{ $pr['print'] }}?" + params, '_blank');
             });
 
             // ── Initial Load ──

@@ -37,7 +37,7 @@ class FacultyRequest extends FormRequest
             'email' => 'nullable|email:rfc,dns',
             'alternativeEmail' => 'nullable|email:rfc,dns',
             'mobile' => ['nullable', 'digits:10'],
-            // ...existing code...
+            'photo' => 'nullable|image|mimes:jpeg,jpg,png|max:2048',
         ];
     }
 
@@ -71,6 +71,9 @@ class FacultyRequest extends FormRequest
             'alternativeEmail.email' => 'Please enter a valid alternate email address (e.g. name@example.com)',
             // 'alternativeEmail.required' => 'Alternative email is required',
             'mobile.digits' => 'Mobile number must be exactly 10 digits',
+            'photo.image' => 'The photo must be an image file.',
+            'photo.mimes' => 'Only JPG and PNG formats are allowed for the photo.',
+            'photo.max' => 'The photo must not exceed 2 MB.',
             // 'photo.required' => 'Photo is required',
             // 'document.required' => 'Document is required',
             // 'residence_address.required' => 'Residence address is required',

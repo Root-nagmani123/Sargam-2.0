@@ -1,3 +1,6 @@
+@php
+    $fr = $fr ?? $feedbackReportRoutes ?? \App\Support\FeedbackReportRouteRegistry::forRequest();
+@endphp
 @extends('admin.layouts.master')
 
 @section('title', 'Faculty Feedback with Comments All Details - Sargam | Lal Bahadur')
@@ -272,10 +275,12 @@
                         <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
                         <span>Reset filters</span>
                     </button>
+                    @if (empty($hidePendingFeedbackAdminLink))
                     <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-warning btn-sm text-dark rounded-2 d-inline-flex align-items-center gap-1 px-3">
                         <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">pending_actions</span>
                         <span>Pending feedback (students)</span>
                     </a>
+                    @endif
                 </div>
             </div>
         </div>
@@ -508,7 +513,7 @@
                     console.log('Loading data with params:', params.toString()); // Debug log
 
                     // Make AJAX request - GET with query parameters
-                    fetch('{{ route('admin.feedback.feedback_details') }}?' + params.toString(), {
+                    fetch('{{ $fr['details'] }}?' + params.toString(), {
                             method: 'GET',
                             headers: {
                                 'X-Requested-With': 'XMLHttpRequest',
@@ -768,7 +773,7 @@
                         selectedTypes.forEach(type => params.append('faculty_type[]', type));
                         if (searchTerm) params.append('faculty_name', searchTerm);
 
-                        fetch('{{ route('feedback.faculty_suggestions') }}?' + params.toString())
+                        fetch('{{ $fr['comments_suggestions'] }}?' + params.toString())
                             .then(response => response.json())
                             .then(data => {
                                 if (data.success && data.faculties.length > 0) {
@@ -1034,7 +1039,7 @@
                 // Submit form
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '{{ route('admin.feedback.feedback_details.export') }}';
+                form.action = '{{ $fr['details_export'] }}';
                 form.style.display = 'none';
 
                 // Add all parameters as hidden inputs
@@ -1086,7 +1091,7 @@
                 // Submit form
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '{{ route('admin.feedback.feedback_details.export') }}';
+                form.action = '{{ $fr['details_export'] }}';
                 form.style.display = 'none';
 
                 // Add all parameters as hidden inputs
