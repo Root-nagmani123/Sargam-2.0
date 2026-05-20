@@ -1136,6 +1136,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $orderBy = collect($orderBys)->filter()->unique()->implode(', ');
             $remarks = collect($remarksList)->filter()->unique()->implode(' | ');
             $dueAmount = $financials['due'];
+            $totalDueAmount = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'];
             $paymentStatusLabel = $this->isBillFullyPaid($paidAmount, $totalAmount) ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid');
             $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
             $clientNameCourse = $courseName ? trim($buyerName . ' – ' . $courseName) : $buyerName;
@@ -1161,6 +1162,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'bill' => $bill,
                 'paidAmount' => $paidAmount,
                 'dueAmount' => $dueAmount,
+                'totalDueAmount' => $totalDueAmount,
                 'paymentStatusLabel' => $paymentStatusLabel,
                 'invoiceNo' => $invoiceNo,
                 'receiptNo' => $invoiceNo,
@@ -1213,7 +1215,28 @@ class ProcessMessBillsEmployeeController extends Controller
             : 'SV-' . str_pad($bill->pk ?? $bill->id, 6, '0', STR_PAD_LEFT);
         $receiptNo = $invoiceNo;
 
-        return view('admin.mess.process-mess-bills-employee.print-receipt', compact('bill', 'paidAmount', 'dueAmount', 'paymentStatusLabel', 'invoiceNo', 'receiptNo'));
+        $singleBuyerName = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
+        $singleClientTypeSlug = $isDateRange
+            ? (string) ($bill->client_type_slug ?? 'employee')
+            : $this->getBillClientTypeSlug($bill);
+        $singleDateToYmd = $request->filled('date_to')
+            ? $this->parseDate($request->date_to)
+            : ($bill->issue_date
+                ? ($bill->issue_date instanceof Carbon ? $bill->issue_date->format('Y-m-d') : Carbon::parse($bill->issue_date)->format('Y-m-d'))
+                : now()->format('Y-m-d'));
+        $totalDueAmount = $singleBuyerName !== ''
+            ? $this->computeCombinedBillFinancials($singleBuyerName, $singleClientTypeSlug, null, $singleDateToYmd)['due']
+            : $dueAmount;
+
+        return view('admin.mess.process-mess-bills-employee.print-receipt', compact(
+            'bill',
+            'paidAmount',
+            'dueAmount',
+            'totalDueAmount',
+            'paymentStatusLabel',
+            'invoiceNo',
+            'receiptNo'
+        ));
     }
 
     /**
@@ -1325,6 +1348,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 }
             }
             $dueAmount = $financials['due'];
+            $totalDueAmount = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $filterDateToYmd)['due'];
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
 
             // Collect header-level meta fields
@@ -1371,6 +1395,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 'paid_amount' => number_format($paidAmount, 1),
                 'due_amount' => number_format($dueAmount, 1),
                 'due_amount_raw' => $dueAmount,
+                'total_due_amount' => number_format($totalDueAmount, 1),
+                'total_due_amount_raw' => $totalDueAmount,
                 'first_receipt_id' => $firstReceiptId,
                 'reference_number' => $referenceNumber ?: null,
                 'order_by' => $orderBy ?: null,
@@ -1439,6 +1465,19 @@ class ProcessMessBillsEmployeeController extends Controller
             : 'SV-' . str_pad($bill->pk ?? $bill->id, 6, '0', STR_PAD_LEFT);
         $receiptNo = $invoiceNo;
 
+        $singleBuyerName = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
+        $singleClientTypeSlug = $isDateRange
+            ? (string) ($bill->client_type_slug ?? 'employee')
+            : $this->getBillClientTypeSlug($bill);
+        $singleDateToYmd = $request->filled('date_to')
+            ? $this->parseDate($request->date_to)
+            : ($bill->issue_date
+                ? ($bill->issue_date instanceof Carbon ? $bill->issue_date->format('Y-m-d') : Carbon::parse($bill->issue_date)->format('Y-m-d'))
+                : now()->format('Y-m-d'));
+        $totalDueAmount = $singleBuyerName !== ''
+            ? $this->computeCombinedBillFinancials($singleBuyerName, $singleClientTypeSlug, null, $singleDateToYmd)['due']
+            : $dueAmount;
+
         return response()->json([
             'bill_id' => $isDateRange ? 'dr-' . $bill->id : 'ki-' . $bill->pk,
             'receipt_no' => $receiptNo,
@@ -1454,6 +1493,8 @@ class ProcessMessBillsEmployeeController extends Controller
             'paid_amount' => number_format($paidAmount, 1),
             'due_amount' => number_format($dueAmount, 1),
             'due_amount_raw' => $dueAmount,
+            'total_due_amount' => number_format($totalDueAmount, 1),
+            'total_due_amount_raw' => $totalDueAmount,
             'reference_number' => $bill->reference_number ?? null,
             'order_by' => $bill->order_by ?? null,
             'remarks' => $bill->remarks ?? null,

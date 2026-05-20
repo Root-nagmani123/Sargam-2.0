@@ -2413,6 +2413,7 @@ document.addEventListener('DOMContentLoaded', function() {
             '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + (data.paid_amount || '0.0') + '</span></div>' +
             '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + (data.total_amount || '0.0') + '</span></div>' +
             '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + (data.due_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Total Due Amount</span><span class="summary-value">' + (data.total_due_amount || data.due_amount || '0.0') + '</span></div>' +
             '</div>' +
             '</div>';
         return html;

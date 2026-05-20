@@ -14,6 +14,7 @@
         $totalAmount = (float) $bill->net_total;
         $paidAmount = (float) ($paidAmount ?? 0);
         $dueAmount = (float) ($dueAmount ?? max(0, $totalAmount - $paidAmount));
+        $totalDueAmount = (float) ($totalDueAmount ?? $dueAmount);
         $paymentStatusLabel = $paymentStatusLabel ?? ($paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid'));
 
         $rawClientName = $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—');
@@ -207,6 +208,11 @@
             min-width: 3rem;
             text-align: right;
         }
+        .payment-summary .summary-row-total-due .summary-label,
+        .payment-summary .summary-row-total-due .summary-value {
+            font-weight: 700;
+            color: #0a3d6b;
+        }
         .action-bar {
             margin-top: 1.25rem;
             padding-top: 0.75rem;
@@ -357,6 +363,7 @@
             <div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">{{ number_format($paidAmount, 2) }}</span></div>
             <div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">{{ number_format($totalAmount, 2) }}</span></div>
             <div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">{{ number_format($dueAmount, 2) }}</span></div>
+            <div class="summary-row summary-row-total-due"><span class="summary-label">Total Due Amount</span><span class="summary-value">{{ number_format($totalDueAmount, 2) }}</span></div>
             <div class="summary-row"><span class="summary-label">Payment Status</span><span class="summary-value">{{ $paymentStatusLabel }}</span></div>
         </div>
     </div>
