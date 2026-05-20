@@ -1467,7 +1467,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
     // Server-computed active tab (from PHP) - used for route-based tab highlighting
     window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
-    window.SARGAM_DASHBOARD_URL = @json(route('admin.dashboard'));
+    window.SARGAM_DASHBOARD_URL = "{{ route('admin.dashboard') }}";
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
