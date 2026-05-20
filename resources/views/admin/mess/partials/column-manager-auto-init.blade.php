@@ -49,6 +49,11 @@ document.addEventListener('DOMContentLoaded', function () {
             return;
         }
 
+        /* Modals with custom search/pagination (e.g. Generate Invoice) use MessColumnManager in DOM mode only. */
+        if ($(this).closest('#addProcessMessBillsModal').length) {
+            return;
+        }
+
         var $table = $('#' + tableId);
         var skip = parseIndexList($table.data('mess-column-skip'));
         var locked = parseIndexList($table.data('mess-column-locked'));

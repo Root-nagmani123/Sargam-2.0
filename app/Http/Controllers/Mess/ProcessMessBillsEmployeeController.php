@@ -311,10 +311,9 @@ class ProcessMessBillsEmployeeController extends Controller
             $length = 10;
         }
 
-        $orderColumn = (int) $request->input('order.0.column', 0);
+        $orderColumn = (int) $request->input('order.0.column', 1);
         $orderDir = strtolower((string) $request->input('order.0.dir', 'asc')) === 'desc' ? 'desc' : 'asc';
         $sortMap = [
-            0 => 'buyer_name',
             1 => 'buyer_name',
             2 => 'combined_invoice_no',
             3 => 'invoice_date_range',
@@ -323,13 +322,18 @@ class ProcessMessBillsEmployeeController extends Controller
             6 => 'payment_type',
             7 => 'status',
         ];
-        if (isset($sortMap[$orderColumn])) {
+        if ($orderColumn === 0) {
+            $filteredBills = $orderDir === 'desc'
+                ? $filteredBills->reverse()->values()
+                : $filteredBills->values();
+        } elseif (isset($sortMap[$orderColumn])) {
             $field = $sortMap[$orderColumn];
             $filteredBills = $filteredBills->sortBy(function ($cb) use ($field) {
                 $value = $cb->{$field} ?? '';
                 if ($field === 'total' || $field === 'status') {
                     return (float) $value;
                 }
+
                 return mb_strtolower((string) $value);
             }, SORT_REGULAR, $orderDir === 'desc')->values();
         }
@@ -1500,6 +1504,48 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Sort modal bill groups (buyer + client type) before pagination.
+     *
+     * @param  \Illuminate\Support\Collection<int, \Illuminate\Support\Collection>  $groupedRows
+     */
+    private function sortModalBillGroupedRows(Collection $groupedRows, string $sortColumn, string $sortDir, array $paymentTypeMap): Collection
+    {
+        $allowed = ['sno', 'buyer_name', 'invoice_no', 'payment_type', 'total', 'status'];
+        if (! in_array($sortColumn, $allowed, true)) {
+            $sortColumn = 'buyer_name';
+        }
+        $desc = strtolower($sortDir) === 'desc';
+
+        if ($sortColumn === 'sno') {
+            return $desc ? $groupedRows->reverse()->values() : $groupedRows->values();
+        }
+
+        return $groupedRows->sortBy(function ($group) use ($sortColumn, $paymentTypeMap) {
+            $first = $group->first();
+            $buyerName = trim((string) ($first->client_name ?? ''));
+            $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
+            $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
+
+            if ($sortColumn === 'buyer_name') {
+                return mb_strtolower($buyerName);
+            }
+            if ($sortColumn === 'invoice_no') {
+                return mb_strtolower($invoiceNo);
+            }
+            if ($sortColumn === 'payment_type') {
+                return mb_strtolower((string) ($paymentTypeMap[$first->payment_type ?? 1] ?? ''));
+            }
+            if ($sortColumn === 'total') {
+                return (float) $group->sum(function ($bill) {
+                    return (float) ($bill->total_amount ?? 0);
+                });
+            }
+
+            return mb_strtolower($invoiceNo);
+        }, SORT_REGULAR, $desc)->values();
+    }
+
+    /**
      * Return JSON data for the ADD modal table (employee bills for date range).
      * Only shows unpaid bills (status != 2).
      */
@@ -1514,12 +1560,18 @@ class ProcessMessBillsEmployeeController extends Controller
         $clientTypes = $this->normalizeFilterArrayValues($request->input('client_type'));
         $clientTypePks = $this->normalizeFilterArrayValues($request->input('client_type_pk'));
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
+        $forPrint = $request->boolean('for_print') || $request->input('for_print') === '1';
         $page = max(1, (int) $request->input('page', 1));
         $perPage = (int) $request->input('per_page', 10);
-        if ($perPage < 1 || $perPage > 100) {
+        if ($forPrint) {
+            $page = 1;
+            $perPage = min(max(1, $perPage), 10000);
+        } elseif ($perPage < 1 || $perPage > 100) {
             $perPage = 10;
         }
         $search = trim((string) $request->input('search', ''));
+        $sortColumn = (string) $request->input('sort_column', 'buyer_name');
+        $sortDir = strtolower((string) $request->input('sort_dir', 'asc'));
         $unionCollation = 'utf8mb4_unicode_ci';
 
         // Query 1: Selling Voucher with Date Range
@@ -1602,6 +1654,8 @@ class ProcessMessBillsEmployeeController extends Controller
                 return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
             })->values();
         }
+
+        $groupedRows = $this->sortModalBillGroupedRows($groupedRows, $sortColumn, $sortDir, $paymentTypeMap);
 
         $total = $groupedRows->count();
         if ($total > 0 && (($page - 1) * $perPage) >= $total) {

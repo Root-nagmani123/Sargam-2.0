@@ -35,6 +35,10 @@
             return ($(this.dt.column(index).header()).text() || '').trim();
         }
         var $th = this.$table.find('thead tr').first().children('th,td').eq(index);
+        var original = $th.attr('data-mess-col-original');
+        if (original) {
+            return String(original).trim();
+        }
         return ($th.text() || '').trim();
     };
 
@@ -303,6 +307,13 @@
             }
         }
 
+        var mountEl = document.getElementById('messColManagerMount-' + this.tableId);
+        if (mountEl) {
+            mountEl.innerHTML = '';
+            mountEl.appendChild($dropdown[0]);
+            return;
+        }
+
         var toolbarId = 'messColManagerToolbar-' + this.tableId;
         var $host = this.$table.closest('.table-responsive');
         if (!$host.length) $host = this.$table.parent();
@@ -347,6 +358,31 @@
         get: function (tableId) {
             return this.instances[tableId] || null;
         },
+
+        /** Normalize a DataTables row (array or numeric-key object) to a cell array. */
+        dataTableRowToCells: function (row) {
+            if (row == null) {
+                return [];
+            }
+            if (Array.isArray(row)) {
+                return row;
+            }
+            if (typeof row === 'object') {
+                if (typeof row.length === 'number' && row.length > 0) {
+                    try {
+                        return Array.from(row);
+                    } catch (e) {}
+                }
+                var keys = Object.keys(row)
+                    .filter(function (k) { return /^\d+$/.test(String(k)); })
+                    .sort(function (a, b) { return Number(a) - Number(b); });
+                if (keys.length) {
+                    return keys.map(function (k) { return row[k]; });
+                }
+            }
+            return [];
+        },
+
         getVisibleIndexes: function (tableId) {
             var mgr = this.get(tableId);
             if (!mgr) return null;
@@ -507,18 +543,21 @@
         _buildPrintAjaxParams: function (dt) {
             var info = dt.page.info();
             var params = {};
+            var settings = dt.settings()[0];
             try {
                 if (dt.ajax && typeof dt.ajax.params === 'function') {
                     params = $.extend(true, {}, dt.ajax.params());
                 }
             } catch (e) {}
+            if ((!params || !Object.keys(params).length) && settings && settings.oAjaxData) {
+                params = $.extend(true, {}, settings.oAjaxData);
+            }
             if (!params || typeof params !== 'object') {
                 params = {};
             }
-            var settings = dt.settings()[0];
             params.draw = params.draw || ((settings && settings.iDraw) ? settings.iDraw + 1 : 1);
             params.start = 0;
-            params.length = Math.max(info.recordsDisplay || 0, 1);
+            params.length = Math.max(info.recordsFiltered || info.recordsDisplay || 0, 1);
             params.for_print = 1;
             if (!params.search) {
                 params.search = { value: dt.search(), regex: false };
@@ -617,8 +656,9 @@
                 return '<th>' + (th ? th.innerHTML : '') + '</th>';
             }).join('') + '</tr>';
 
+            var self = this;
             var bodyRowsHtml = (rowsData || []).map(function (row) {
-                var cells = Array.isArray(row) ? row : Array.from(row);
+                var cells = self.dataTableRowToCells(row);
                 return '<tr>' + printColIndexes.map(function (idx) {
                     return '<td>' + (cells[idx] != null ? cells[idx] : '') + '</td>';
                 }).join('') + '</tr>';
