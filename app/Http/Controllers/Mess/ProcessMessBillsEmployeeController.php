@@ -436,7 +436,7 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function combinedBillsCacheKey(string $dateFrom, string $dateTo, array $filters): string
     {
-        return 'process_mess_bills_combined_v2:'
+        return 'process_mess_bills_combined_v3:'
             . $this->processMessBillsCombinedCacheVersion()
             . ':'
             . md5(json_encode([
@@ -467,7 +467,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $cacheKey,
             self::COMBINED_BILLS_CACHE_TTL_SECONDS,
             function () use ($dateFrom, $dateTo, $dateRangeQuery, $kitchenIssueQuery) {
-                return $this->queryAndGroupBillsForProcessIndex(
+                return $this->queryAndGroupBillsForProcessIndexLight(
                     $dateFrom,
                     $dateTo,
                     $dateRangeQuery,
@@ -709,6 +709,407 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Same filters as queryAndGroupBillsForProcessIndex, but aggregates net/paid totals in SQL
+     * and skips loading line items — used for index DataTables cache and export.
+     *
+     * @return array{0: \Illuminate\Support\Collection, 1: \Illuminate\Support\Collection}
+     */
+    private function queryAndGroupBillsForProcessIndexLight(
+        string $dateFrom,
+        string $dateTo,
+        $dateRangeQuery,
+        $kitchenIssueQuery
+    ): array {
+        $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
+        $rows = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
+            ->mergeBindings($unionQuery->getQuery())
+            ->orderBy('issue_date', 'desc')
+            ->orderBy('id', 'desc')
+            ->limit(5000)
+            ->get();
+
+        $drIds = [];
+        $kiIds = [];
+        foreach ($rows as $bill) {
+            if (($bill->source_type ?? '') === 'date_range') {
+                $drIds[] = (int) $bill->id;
+            } else {
+                $kiIds[] = (int) $bill->id;
+            }
+        }
+        $drIds = array_values(array_unique(array_filter($drIds)));
+        $kiIds = array_values(array_unique(array_filter($kiIds)));
+
+        $svNetTotals = $this->fetchProcessIndexSvNetTotalsByReportIds($drIds, $dateFrom, $dateTo);
+        $svItemDateExtents = $this->fetchProcessIndexSvItemDateExtentsByReportIds($drIds, $dateFrom, $dateTo);
+        $svHeaders = $drIds !== []
+            ? SellingVoucherDateRangeReport::query()
+                ->whereIn('id', $drIds)
+                ->get(['id', 'client_name', 'client_type_slug', 'client_type_pk', 'payment_type', 'paid_amount', 'issue_date'])
+                ->keyBy('id')
+            : collect();
+
+        $kiNetTotals = $this->fetchProcessIndexKitchenNetTotalsByPk($kiIds);
+        $kiPaidTotals = $this->fetchProcessIndexKitchenPaidTotalsByPk($kiIds);
+        $kiHeaders = $kiIds !== []
+            ? KitchenIssueMaster::query()
+                ->whereIn('pk', $kiIds)
+                ->get(['pk', 'client_name', 'client_type', 'client_type_pk', 'client_id', 'payment_type', 'issue_date'])
+                ->keyBy('pk')
+            : collect();
+
+        $clientTypePks = $svHeaders->pluck('client_type_pk')
+            ->merge($kiHeaders->pluck('client_type_pk'))
+            ->map(fn ($pk) => (int) $pk)
+            ->filter(fn ($pk) => $pk > 0)
+            ->unique()
+            ->values()
+            ->all();
+        $clientTypeCategories = $clientTypePks !== []
+            ? ClientType::query()->whereIn('id', $clientTypePks)->get(['id', 'client_type', 'client_name'])->keyBy('id')
+            : collect();
+
+        $voucherStubs = $rows->map(function ($row) use (
+            $svHeaders,
+            $svNetTotals,
+            $svItemDateExtents,
+            $kiHeaders,
+            $kiNetTotals,
+            $kiPaidTotals,
+            $clientTypeCategories
+        ) {
+            if (($row->source_type ?? '') === 'date_range') {
+                $header = $svHeaders->get((int) $row->id);
+                if (! $header) {
+                    return null;
+                }
+                $reportId = (int) $header->id;
+                $slug = (string) ($header->client_type_slug ?? 'employee');
+                $category = $clientTypeCategories->get((int) ($header->client_type_pk ?? 0));
+
+                return (object) [
+                    'source_type' => 'date_range',
+                    'id' => $reportId,
+                    'pk' => null,
+                    'client_name' => trim((string) ($header->client_name ?? '')),
+                    'client_type_slug' => $slug,
+                    'client_type' => null,
+                    'client_type_pk' => (int) ($header->client_type_pk ?? 0),
+                    'client_id' => null,
+                    'payment_type' => $header->payment_type,
+                    'issue_date' => $header->issue_date,
+                    'net_total' => (float) ($svNetTotals[$reportId] ?? 0),
+                    'paid_amount' => (float) ($header->paid_amount ?? 0),
+                    'kitchen_paid_total' => 0.0,
+                    'item_date_min' => $svItemDateExtents[$reportId]['min'] ?? null,
+                    'item_date_max' => $svItemDateExtents[$reportId]['max'] ?? null,
+                    'client_type_category' => $category,
+                ];
+            }
+
+            $header = $kiHeaders->get((int) $row->id);
+            if (! $header) {
+                return null;
+            }
+            $pk = (int) $header->pk;
+            $clientType = (int) ($header->client_type ?? 0);
+            $category = $clientTypeCategories->get((int) ($header->client_type_pk ?? 0));
+
+            return (object) [
+                'source_type' => 'kitchen_issue',
+                'id' => $pk,
+                'pk' => $pk,
+                'client_name' => trim((string) ($header->client_name ?? '')),
+                'client_type_slug' => $this->kitchenClientTypeIdToSlug($clientType),
+                'client_type' => $clientType,
+                'client_type_pk' => (int) ($header->client_type_pk ?? 0),
+                'client_id' => isset($header->client_id) ? (int) $header->client_id : null,
+                'payment_type' => $header->payment_type,
+                'issue_date' => $header->issue_date,
+                'net_total' => (float) ($kiNetTotals[$pk] ?? 0),
+                'paid_amount' => 0.0,
+                'kitchen_paid_total' => (float) ($kiPaidTotals[$pk] ?? 0),
+                'item_date_min' => null,
+                'item_date_max' => null,
+                'client_type_category' => $category,
+            ];
+        })->filter()->values();
+
+        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs), $voucherStubs];
+    }
+
+    /**
+     * @param  array<int, int>  $reportIds
+     * @return array<int, float>
+     */
+    private function fetchProcessIndexSvNetTotalsByReportIds(array $reportIds, ?string $dateFromYmd, ?string $dateToYmd): array
+    {
+        if ($reportIds === []) {
+            return [];
+        }
+
+        $netExpr = 'SUM(GREATEST(0, COALESCE(quantity, 0) - COALESCE(return_quantity, 0)) * COALESCE(rate, 0))';
+        $totals = [];
+
+        foreach (array_chunk($reportIds, 500) as $chunk) {
+            $query = DB::table('sv_date_range_report_items')
+                ->select('sv_date_range_report_id', DB::raw("{$netExpr} as net_total"))
+                ->whereIn('sv_date_range_report_id', $chunk)
+                ->groupBy('sv_date_range_report_id');
+            $this->applySvDateRangeReportItemsIssueDateConstraint($query, $dateFromYmd, $dateToYmd);
+
+            foreach ($query->get() as $row) {
+                $totals[(int) $row->sv_date_range_report_id] = (float) $row->net_total;
+            }
+        }
+
+        return $totals;
+    }
+
+    /**
+     * @param  array<int, int>  $reportIds
+     * @return array<int, array{min: ?string, max: ?string}>
+     */
+    private function fetchProcessIndexSvItemDateExtentsByReportIds(array $reportIds, ?string $dateFromYmd, ?string $dateToYmd): array
+    {
+        if ($reportIds === []) {
+            return [];
+        }
+
+        $extents = [];
+
+        foreach (array_chunk($reportIds, 500) as $chunk) {
+            $query = DB::table('sv_date_range_report_items')
+                ->select(
+                    'sv_date_range_report_id',
+                    DB::raw('MIN(issue_date) as date_min'),
+                    DB::raw('MAX(issue_date) as date_max')
+                )
+                ->whereIn('sv_date_range_report_id', $chunk)
+                ->groupBy('sv_date_range_report_id');
+            $this->applySvDateRangeReportItemsIssueDateConstraint($query, $dateFromYmd, $dateToYmd);
+
+            foreach ($query->get() as $row) {
+                $id = (int) $row->sv_date_range_report_id;
+                $extents[$id] = [
+                    'min' => $row->date_min ? (string) $row->date_min : null,
+                    'max' => $row->date_max ? (string) $row->date_max : null,
+                ];
+            }
+        }
+
+        return $extents;
+    }
+
+    /**
+     * @param  array<int, int>  $kitchenPks
+     * @return array<int, float>
+     */
+    private function fetchProcessIndexKitchenNetTotalsByPk(array $kitchenPks): array
+    {
+        if ($kitchenPks === []) {
+            return [];
+        }
+
+        $netExpr = 'SUM(GREATEST(0, COALESCE(quantity, 0) - COALESCE(return_quantity, 0)) * COALESCE(rate, 0))';
+        $totals = [];
+
+        foreach (array_chunk($kitchenPks, 500) as $chunk) {
+            foreach (DB::table('kitchen_issue_items')
+                ->select('kitchen_issue_master_pk', DB::raw("{$netExpr} as net_total"))
+                ->whereIn('kitchen_issue_master_pk', $chunk)
+                ->groupBy('kitchen_issue_master_pk')
+                ->get() as $row) {
+                $totals[(int) $row->kitchen_issue_master_pk] = (float) $row->net_total;
+            }
+        }
+
+        return $totals;
+    }
+
+    /**
+     * @param  array<int, int>  $kitchenPks
+     * @return array<int, float>
+     */
+    private function fetchProcessIndexKitchenPaidTotalsByPk(array $kitchenPks): array
+    {
+        if ($kitchenPks === []) {
+            return [];
+        }
+
+        $totals = [];
+
+        foreach (array_chunk($kitchenPks, 500) as $chunk) {
+            foreach (DB::table('kitchen_issue_payment_details')
+                ->select('kitchen_issue_master_pk', DB::raw('SUM(COALESCE(paid_amount, 0)) as paid_total'))
+                ->whereIn('kitchen_issue_master_pk', $chunk)
+                ->groupBy('kitchen_issue_master_pk')
+                ->get() as $row) {
+                $totals[(int) $row->kitchen_issue_master_pk] = (float) $row->paid_total;
+            }
+        }
+
+        return $totals;
+    }
+
+    /**
+     * Group lightweight voucher stubs (no Eloquent line items) into combined bill rows for the grid.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $vouchers
+     */
+    private function groupProcessIndexVouchersByBuyer(Collection $vouchers): Collection
+    {
+        $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
+
+        return $vouchers->groupBy(function ($bill) {
+            $name = trim((string) ($bill->client_name ?? ''));
+            $slug = (string) ($bill->client_type_slug ?? 'employee');
+
+            return $name . '|' . $slug;
+        })->map(function ($group) use ($paymentTypeMap) {
+            $first = $group->first();
+            $buyerName = trim((string) ($first->client_name ?? '—'));
+            $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
+            $combinedId = 'combined-' . rawurlencode($buyerName) . '-' . $clientTypeSlug;
+            $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
+
+            $total = $this->roundMoney((float) $group->sum(fn ($b) => (float) ($b->net_total ?? 0)));
+            $paid = 0.0;
+            foreach ($group as $b) {
+                $paid += $this->getBillPaidAmount($b, ($b->source_type ?? '') === 'date_range');
+            }
+            $paid = $this->roundMoney($paid);
+            $due = $this->billDueAmount($total, $paid);
+
+            $dateStrings = collect();
+            foreach ($group as $b) {
+                if (($b->source_type ?? '') === 'date_range') {
+                    if (! empty($b->item_date_min)) {
+                        $dateStrings->push((string) $b->item_date_min);
+                    }
+                    if (! empty($b->item_date_max) && $b->item_date_max !== $b->item_date_min) {
+                        $dateStrings->push((string) $b->item_date_max);
+                    }
+                } elseif (! empty($b->issue_date)) {
+                    $dateStrings->push($b->issue_date instanceof Carbon
+                        ? $b->issue_date->format('Y-m-d')
+                        : Carbon::parse($b->issue_date)->format('Y-m-d'));
+                }
+            }
+            $dateStrings = $dateStrings->filter()->unique()->sort()->values();
+            $dateMin = $dateStrings->first();
+            $dateMax = $dateStrings->last();
+            $invoiceDateRange = $dateMin && $dateMax
+                ? (Carbon::parse($dateMin)->format('d-m-Y') . ($dateMin !== $dateMax ? ' to ' . Carbon::parse($dateMax)->format('d-m-Y') : ''))
+                : '—';
+
+            $allPaid = $group->every(function ($b) {
+                $isDr = ($b->source_type ?? '') === 'date_range';
+
+                return $this->isBillFullyPaid(
+                    $this->getBillPaidAmount($b, $isDr),
+                    (float) ($b->net_total ?? 0)
+                );
+            });
+            $anyPaid = $group->contains(function ($b) {
+                $isDr = ($b->source_type ?? '') === 'date_range';
+
+                return $this->getBillPaidAmount($b, $isDr) > 0;
+            });
+            $status = $allPaid ? 2 : ($anyPaid ? 1 : 0);
+
+            $firstReceipt = $group->first();
+            $firstReceiptId = ($firstReceipt->source_type ?? '') === 'date_range'
+                ? 'dr-' . ($firstReceipt->id ?? 0)
+                : 'ki-' . ($firstReceipt->pk ?? $firstReceipt->id ?? 0);
+
+            $category = $first->client_type_category ?? null;
+            $typeLabel = $category
+                ? ucfirst((string) ($category->client_type ?? ''))
+                : ucfirst($clientTypeSlug);
+            $categoryName = $category->client_name ?? null;
+            $clientTypeDisplay = ($categoryName !== null && $categoryName !== '')
+                ? $typeLabel . '(' . strtoupper((string) $categoryName) . ')'
+                : ($typeLabel ?: '—');
+
+            $receiverUserId = $this->resolveReceiverUserIdFromAnyBill($group->all());
+
+            return (object) [
+                'combined_id' => $combinedId,
+                'combined_invoice_no' => $combinedInvoiceNo,
+                'buyer_name' => $buyerName,
+                'client_type_display' => $clientTypeDisplay,
+                'invoice_date_range' => $invoiceDateRange,
+                'total' => $total,
+                'paid' => $paid,
+                'due' => $due,
+                'status' => $status,
+                'payment_type' => $paymentTypeMap[$first->payment_type ?? 1] ?? '—',
+                'first_receipt_id' => $firstReceiptId,
+                'receiver_user_id' => $receiverUserId,
+                'bills' => collect(),
+            ];
+        })->values();
+    }
+
+    private function kitchenClientTypeIdToSlug(int $clientType): string
+    {
+        $map = [
+            KitchenIssueMaster::CLIENT_EMPLOYEE => 'employee',
+            KitchenIssueMaster::CLIENT_OT => 'ot',
+            KitchenIssueMaster::CLIENT_COURSE => 'course',
+            KitchenIssueMaster::CLIENT_OTHER => 'other',
+            KitchenIssueMaster::CLIENT_SECTION => 'section',
+        ];
+
+        return $map[$clientType] ?? 'employee';
+    }
+
+    /**
+     * Export/search box: match buyer, slip no, status label, amounts (same haystack as DataTables).
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
+     */
+    private function filterCombinedBillsForProcessIndexSearch(Collection $combinedBills, string $searchRaw): Collection
+    {
+        $searchTokens = DataTableSearchHelper::tokens($searchRaw);
+        if ($searchTokens === []) {
+            return $combinedBills;
+        }
+
+        return $combinedBills->filter(function ($cb) use ($searchTokens, $searchRaw) {
+            $statusLabel = ((int) ($cb->status ?? 0)) === 2
+                ? 'paid'
+                : (((int) ($cb->status ?? 0)) === 1 ? 'partial' : 'unpaid');
+
+            $haystack = implode(' ', [
+                (string) ($cb->buyer_name ?? ''),
+                (string) ($cb->combined_invoice_no ?? ''),
+                (string) ($cb->invoice_date_range ?? ''),
+                (string) ($cb->client_type_display ?? ''),
+                (string) ($cb->payment_type ?? ''),
+                (string) number_format((float) ($cb->total ?? 0), 2, '.', ''),
+                $statusLabel,
+            ]);
+
+            if (DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens)) {
+                return true;
+            }
+
+            if (is_numeric($searchRaw) && str_contains((string) ($cb->first_receipt_id ?? ''), (string) (int) $searchRaw)) {
+                return true;
+            }
+
+            if (preg_match('/^(?:SV|DR)-(\d+)$/i', $searchRaw, $m)
+                && str_contains((string) ($cb->first_receipt_id ?? ''), $m[1])) {
+                return true;
+            }
+
+            return false;
+        });
+    }
+
+    /**
      * Map client type slug to KitchenIssueMaster client_type constant.
      */
     private function clientTypeSlugToKitchenId(string $slug): int
@@ -853,7 +1254,9 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $receiverIds = [];
         foreach ($combinedBills as $cb) {
-            $rid = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+            $rid = isset($cb->receiver_user_id) && (int) $cb->receiver_user_id > 0
+                ? (int) $cb->receiver_user_id
+                : $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
             if ($rid !== null && $rid > 0) {
                 $receiverIds[] = $rid;
             }
@@ -916,7 +1319,9 @@ class ProcessMessBillsEmployeeController extends Controller
         $invoiceSentKeys = $this->messCombinedInvoiceNotificationSentKeys($combinedBills);
 
         return $combinedBills->filter(function ($cb) use ($invoiceSentKeys) {
-            $receiverId = $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
+            $receiverId = isset($cb->receiver_user_id) && (int) $cb->receiver_user_id > 0
+                ? (int) $cb->receiver_user_id
+                : $this->resolveReceiverUserIdFromAnyBill($cb->bills->all());
             if ($receiverId === null || $receiverId <= 0) {
                 return false;
             }
@@ -1082,42 +1487,16 @@ class ProcessMessBillsEmployeeController extends Controller
             $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
         }
 
-        $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
-        $rowsRaw = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
-            ->mergeBindings($unionQuery->getQuery())
-            ->when($search, function ($q) use ($search) {
-                $q->where(function ($query) use ($search) {
-                    $query->where('client_name', 'like', '%' . $search . '%');
-                    if (is_numeric($search)) {
-                        $query->orWhere('id', '=', (int) $search);
-                    }
-                    if (preg_match('/^(?:SV|DR)-(\d+)$/i', $search, $m)) {
-                        $query->orWhere('id', '=', (int) $m[1]);
-                    }
-                });
-            })
-            ->orderBy('issue_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->get();
+        [$combinedBills] = $this->queryAndGroupBillsForProcessIndexLight(
+            $dateFrom,
+            $dateTo,
+            $dateRangeQuery,
+            $kitchenIssueQuery
+        );
 
-        $bills = $rowsRaw->map(function ($bill) use ($dateFrom, $dateTo) {
-            if ($bill->source_type === 'date_range') {
-                $model = SellingVoucherDateRangeReport::with([
-                    'clientTypeCategory',
-                    'items' => function ($itemQ) use ($dateFrom, $dateTo) {
-                        $this->applySvDateRangeReportItemsIssueDateConstraint($itemQ, $dateFrom, $dateTo);
-                    },
-                    'items.itemSubcategory',
-                ])->find($bill->id);
-                if ($model) $model->setAttribute('source_type', 'date_range');
-                return $model;
-            }
-            $model = KitchenIssueMaster::with(['clientTypeCategory', 'items'])->where('pk', $bill->id)->first();
-            if ($model) $model->setAttribute('source_type', 'kitchen_issue');
-            return $model;
-        })->filter()->values();
-
-        $combinedBills = $this->groupBillsByBuyer($bills);
+        if ($search) {
+            $combinedBills = $this->filterCombinedBillsForProcessIndexSearch($combinedBills, $search)->values();
+        }
 
         // Optional status filter on combined bills for export as well
         if ($statusFilter !== null && $statusFilter !== '') {
@@ -2025,6 +2404,13 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function getReceiverUserIdForBill($bill, bool $isKitchenIssue): ?int
     {
+        $categoryName = null;
+        if ($bill instanceof KitchenIssueMaster || $bill instanceof SellingVoucherDateRangeReport) {
+            $categoryName = $bill->clientTypeCategory->client_name ?? null;
+        } elseif (isset($bill->client_type_category)) {
+            $categoryName = $bill->client_type_category->client_name ?? null;
+        }
+
         if ($isKitchenIssue) {
             $clientType = (int) ($bill->client_type ?? 0);
             $clientId = isset($bill->client_id) ? (int) $bill->client_id : null;
@@ -2034,7 +2420,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 if ($clientId > 0) {
                     return $clientId;
                 }
-                $clientName = trim($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? ''));
+                $clientName = trim($bill->client_name ?? ($categoryName ?? ''));
                 return $clientName !== '' ? $this->resolveReceiverUserIdByClientName($clientName) : null;
             }
 
@@ -2045,7 +2431,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
             // Other: often a named buyer without student/employee pk — try employee directory by name
             if ($clientType === KitchenIssueMaster::CLIENT_OTHER) {
-                $clientName = trim($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? ''));
+                $clientName = trim($bill->client_name ?? ($categoryName ?? ''));
                 return $clientName !== '' ? $this->resolveReceiverUserIdByClientName($clientName) : null;
             }
 
@@ -2054,7 +2440,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         // Selling Voucher Date Range: map buyer name to app user (employee or student by type)
         $slug = (string) ($bill->client_type_slug ?? '');
-        $clientName = trim($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? ''));
+        $clientName = trim($bill->client_name ?? ($categoryName ?? ''));
         if ($clientName === '') {
             return null;
         }
@@ -2079,7 +2465,8 @@ class ProcessMessBillsEmployeeController extends Controller
     {
         $list = is_array($bills) ? $bills : $bills->all();
         foreach ($list as $bill) {
-            $isKitchen = !($bill instanceof SellingVoucherDateRangeReport);
+            $isKitchen = $bill instanceof KitchenIssueMaster
+                || (($bill->source_type ?? '') === 'kitchen_issue');
             $uid = $this->getReceiverUserIdForBill($bill, $isKitchen);
             if ($uid !== null && $uid > 0) {
                 return $uid;
@@ -2272,9 +2659,13 @@ class ProcessMessBillsEmployeeController extends Controller
         if ($isDateRange) {
             return $this->roundMoney((float) ($bill->paid_amount ?? 0));
         }
-        $bill->load('paymentDetails');
+        if ($bill instanceof KitchenIssueMaster) {
+            $bill->load('paymentDetails');
 
-        return $this->roundMoney((float) $bill->paymentDetails->sum('paid_amount'));
+            return $this->roundMoney((float) $bill->paymentDetails->sum('paid_amount'));
+        }
+
+        return $this->roundMoney((float) ($bill->kitchen_paid_total ?? 0));
     }
 
     /**
