@@ -399,12 +399,15 @@ function applyMessSortHeaderIcon(th, isActive, sortDir) {
     if (!icon) return;
     th.classList.toggle('mess-th-sorted', !!isActive);
     th.classList.toggle('is-sorted', !!isActive);
+    icon.classList.add('material-symbols-rounded');
     if (isActive) {
         icon.textContent = sortDir === 'desc' ? 'arrow_downward' : 'arrow_upward';
         icon.classList.remove('mess-report-sort-icon--muted');
+        icon.setAttribute('aria-label', sortDir === 'desc' ? 'Sorted descending' : 'Sorted ascending');
     } else {
         icon.textContent = 'unfold_more';
         icon.classList.add('mess-report-sort-icon--muted');
+        icon.setAttribute('aria-label', 'Sortable');
     }
 }
 window.applyMessSortHeaderIcon = applyMessSortHeaderIcon;
@@ -658,10 +661,36 @@ document.addEventListener('DOMContentLoaded', function () {
     color: #fff !important;
     opacity: 1 !important;
 }
-#modalBillsTable .mess-sort-th.mess-th-sorted .mess-report-sort-icon,
-#modalBillsTable .mess-sort-th.is-sorted .mess-report-sort-icon {
-    color: var(--bs-primary) !important;
+#modalBillsTable thead {
+    background: #004a93;
+    color: #fff;
+}
+#modalBillsTable thead th {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+#modalBillsTable thead th.mess-sort-th:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+#modalBillsTable thead th.mess-sort-th .mess-report-sort-icon {
+    font-size: 1rem !important;
+    line-height: 1 !important;
+    flex-shrink: 0;
+    display: inline-block !important;
+    font-family: 'Material Symbols Rounded', sans-serif;
+}
+#modalBillsTable thead th.mess-sort-th .mess-report-sort-icon--muted {
+    color: rgba(255, 255, 255, 0.55) !important;
     opacity: 1 !important;
+}
+#modalBillsTable thead th.mess-sort-th.mess-th-sorted .mess-report-sort-icon,
+#modalBillsTable thead th.mess-sort-th.is-sorted .mess-report-sort-icon {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+#modalBillsTable thead th.mess-sort-th > .d-inline-flex {
+    align-items: center;
+    gap: 0.25rem;
 }
 /* Use Material icons instead of DataTables unicode arrows (often invisible on Windows) */
 #processMessBillsTable.dataTable thead > tr > th.sorting:before,
@@ -948,7 +977,7 @@ document.addEventListener('DOMContentLoaded', function () {
                             <tr>
                                 <th class="text-nowrap py-3 fw-semibold" style="width: 40px;" data-mess-col-original="Select"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
                                 <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="sno" data-mess-col-original="S.No."><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
-                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th mess-th-sorted is-sorted" data-sort="buyer_name" data-mess-col-original="Buyer Name"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th mess-th-sorted" data-sort="buyer_name" data-mess-col-original="Buyer Name"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
                                 <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="invoice_no" data-mess-col-original="Invoice No."><span class="d-inline-flex align-items-center gap-1"><span>Invoice No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                                 <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="payment_type" data-mess-col-original="Payment Type"><span class="d-inline-flex align-items-center gap-1"><span>Payment Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                                 <th class="text-nowrap py-3 fw-semibold text-end mess-sort-th mess-report-sort-th" data-sort="total" data-mess-col-original="Total"><span class="d-inline-flex align-items-center gap-1"><span>Total</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
@@ -1622,7 +1651,11 @@ document.addEventListener('DOMContentLoaded', function() {
         loadModalBills();
     }
 
-    document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });
+    document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() {
+        updateModalBillsSortHeaderIcons();
+        loadModalBills();
+    });
+    updateModalBillsSortHeaderIcons();
     var payNowModalForAddRedirect = document.getElementById('payNowModal');
     if (payNowModalForAddRedirect) {
         payNowModalForAddRedirect.addEventListener('hidden.bs.modal', function () {

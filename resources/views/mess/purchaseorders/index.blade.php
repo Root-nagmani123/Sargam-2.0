@@ -1655,11 +1655,7 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
     let editItemRowIndex = 0;
     let currentVendorId = null;
     let editCurrentVendorId = null;
-    let hasInitialCreateErrors = {
-        {
-            $errors - > any() ? 'true' : 'false'
-        }
-    };
+    let hasInitialCreateErrors = {{ $errors->any() ? 'true' : 'false' }};
 
     let choicesInstances = {
         filter: {},
@@ -3145,7 +3141,7 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
     });
 
     // Auto-open create modal when validation errors exist (e.g. after failed submit)
-    @if($errors - > any() || session('open_create_po_modal'))
+    @if($errors->any() || session('open_create_po_modal'))
     document.addEventListener('DOMContentLoaded', function() {
         const createModal = document.getElementById('createPurchaseOrderModal');
         if (createModal && (document.getElementById('createPOForm') || document.querySelector(
