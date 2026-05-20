@@ -178,6 +178,69 @@ $(document).ready(function() {
 
     // Run on page load for initial state
     toggleFacultyPaField();
+
+    // ======= PHOTO FILE SIZE VALIDATION =======
+    // Custom close button handler for photo error
+    $(document).on('click', '.photo-close-btn-basic', function() {
+        $('#photoErrorMessageBasic').addClass('d-none').removeClass('show');
+    });
+
+    $('input[name="photo"]').on('change', function () {
+        try {
+            const file = this.files[0];
+            const maxSizeInBytes = 2 * 1024 * 1024; // 2 MB
+            const allowedTypes = ['image/jpeg', 'image/jpg', 'image/png'];
+            const errorMessageDiv = $('#photoErrorMessageBasic');
+            const errorText = $('#photoErrorTextBasic');
+            const photoPreview = $('#photoPreview');
+
+            // Reset error state completely - remove all Bootstrap alert classes and add d-none
+            errorMessageDiv.removeClass('show').addClass('d-none');
+            if (errorText.length) {
+                errorText.text('');
+            }
+            photoPreview.addClass('d-none').attr('src', '#');
+
+            // If no file selected, just return
+            if (!file) {
+                return;
+            }
+
+            // Check file type
+            if (!allowedTypes.includes(file.type)) {
+                errorText.text('Unsupported format. Only JPG and PNG files are allowed.');
+                errorMessageDiv.removeClass('d-none').addClass('show');
+                this.value = '';
+                console.warn('Photo validation failed: unsupported format', file.type);
+                return;
+            }
+
+            // Check file size
+            if (file.size > maxSizeInBytes) {
+                errorText.text('File size exceeds limit. Maximum file size allowed is 2 MB.');
+                errorMessageDiv.removeClass('d-none').addClass('show');
+                this.value = '';
+                console.warn('Photo validation failed: file size exceeded', file.size);
+                return;
+            }
+
+            // Valid file — show preview
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                try {
+                    photoPreview
+                        .attr('src', event.target.result)
+                        .removeClass('d-none');
+                } catch (err) {
+                    console.warn('Photo preview error:', err);
+                }
+            };
+            reader.readAsDataURL(file);
+        } catch (err) {
+            console.error('Photo validation error:', err);
+        }
+    });
+    // ======= END PHOTO VALIDATION =======
 });
 </script>
 @endsection
