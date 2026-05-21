@@ -840,7 +840,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ];
         })->filter()->values();
 
-        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs), $voucherStubs];
+        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo), $voucherStubs];
     }
 
     /**
@@ -962,7 +962,7 @@ class ProcessMessBillsEmployeeController extends Controller
      *
      * @param  \Illuminate\Support\Collection<int, object>  $vouchers
      */
-    private function groupProcessIndexVouchersByBuyer(Collection $vouchers): Collection
+    private function groupProcessIndexVouchersByBuyer(Collection $vouchers, ?string $dateToYmd = null): Collection
     {
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
@@ -971,7 +971,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $slug = (string) ($bill->client_type_slug ?? 'employee');
 
             return $name . '|' . $slug;
-        })->map(function ($group) use ($paymentTypeMap) {
+        })->map(function ($group) use ($paymentTypeMap, $dateToYmd) {
             $first = $group->first();
             $buyerName = trim((string) ($first->client_name ?? '—'));
             $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
@@ -985,6 +985,9 @@ class ProcessMessBillsEmployeeController extends Controller
             }
             $paid = $this->roundMoney($paid);
             $due = $this->billDueAmount($total, $paid);
+            $totalDueAmount = ($buyerName !== '' && $buyerName !== '—' && $dateToYmd)
+                ? $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, null, $dateToYmd)['due']
+                : $due;
 
             $dateStrings = collect();
             foreach ($group as $b) {
@@ -1048,11 +1051,12 @@ class ProcessMessBillsEmployeeController extends Controller
                 'total' => $total,
                 'paid' => $paid,
                 'due' => $due,
+                'total_due_amount' => $totalDueAmount,
                 'status' => $status,
                 'payment_type' => $paymentTypeMap[$first->payment_type ?? 1] ?? '—',
                 'first_receipt_id' => $firstReceiptId,
                 'receiver_user_id' => $receiverUserId,
-                'bills' => collect(),
+                'bills' => $group->values(),
             ];
         })->values();
     }
@@ -1268,10 +1272,64 @@ class ProcessMessBillsEmployeeController extends Controller
                         $keys[] = 'ki-bill-' . $masterPk;
                     }
                 }
+            } elseif ($this->isProcessIndexVoucherStub($b)) {
+                foreach ($this->collectMessBillLineItemKeysFromProcessIndexStub($b) as $key) {
+                    $keys[] = $key;
+                }
             }
         }
 
         return array_values(array_unique($keys));
+    }
+
+    private function isProcessIndexVoucherStub($bill): bool
+    {
+        return is_object($bill)
+            && ! ($bill instanceof SellingVoucherDateRangeReport)
+            && ! ($bill instanceof KitchenIssueMaster)
+            && in_array((string) ($bill->source_type ?? ''), ['date_range', 'kitchen_issue'], true);
+    }
+
+    /**
+     * Line-item keys for lightweight process-index voucher rows (no Eloquent items loaded).
+     *
+     * @return array<int, string>
+     */
+    private function collectMessBillLineItemKeysFromProcessIndexStub(object $bill): array
+    {
+        $keys = [];
+        if (($bill->source_type ?? '') === 'date_range') {
+            $reportId = (int) ($bill->id ?? 0);
+            if ($reportId > 0) {
+                foreach (DB::table('sv_date_range_report_items')
+                    ->where('sv_date_range_report_id', $reportId)
+                    ->pluck('id') as $itemId) {
+                    $id = (int) $itemId;
+                    if ($id > 0) {
+                        $keys[] = 'dr-' . $id;
+                    }
+                }
+            }
+        } elseif (($bill->source_type ?? '') === 'kitchen_issue') {
+            $masterPk = (int) ($bill->pk ?? $bill->id ?? 0);
+            if ($masterPk > 0) {
+                $itemPks = DB::table('kitchen_issue_items')
+                    ->where('kitchen_issue_master_pk', $masterPk)
+                    ->pluck('pk');
+                if ($itemPks->isNotEmpty()) {
+                    foreach ($itemPks as $itemPk) {
+                        $pk = (int) $itemPk;
+                        if ($pk > 0) {
+                            $keys[] = 'ki-' . $pk;
+                        }
+                    }
+                } else {
+                    $keys[] = 'ki-bill-' . $masterPk;
+                }
+            }
+        }
+
+        return $keys;
     }
 
     /**
@@ -1329,6 +1387,38 @@ class ProcessMessBillsEmployeeController extends Controller
                     $masterPk = (int) ($b->pk ?? 0);
                     if ($masterPk > 0) {
                         $keys[] = 'ki-bill-' . $masterPk;
+                    }
+                }
+            } elseif ($this->isProcessIndexVoucherStub($b)) {
+                if (($b->source_type ?? '') === 'kitchen_issue') {
+                    $billIssueYmd = null;
+                    if (! empty($b->issue_date)) {
+                        try {
+                            $billIssueYmd = $b->issue_date instanceof Carbon
+                                ? $b->issue_date->format('Y-m-d')
+                                : Carbon::parse($b->issue_date)->format('Y-m-d');
+                        } catch (\Throwable $e) {
+                            $billIssueYmd = null;
+                        }
+                    }
+                    if ($billIssueYmd === null || $billIssueYmd > $onOrBeforeYmd) {
+                        continue;
+                    }
+                    foreach ($this->collectMessBillLineItemKeysFromProcessIndexStub($b) as $key) {
+                        $keys[] = $key;
+                    }
+                } elseif (($b->source_type ?? '') === 'date_range') {
+                    $reportId = (int) ($b->id ?? 0);
+                    if ($reportId > 0) {
+                        foreach (DB::table('sv_date_range_report_items')
+                            ->where('sv_date_range_report_id', $reportId)
+                            ->where('issue_date', '<=', $onOrBeforeYmd)
+                            ->pluck('id') as $itemId) {
+                            $id = (int) $itemId;
+                            if ($id > 0) {
+                                $keys[] = 'dr-' . $id;
+                            }
+                        }
                     }
                 }
             }
@@ -1438,6 +1528,14 @@ class ProcessMessBillsEmployeeController extends Controller
         $fullySent = $currentKeys !== [] && $pendingCount === 0;
         $partial = $sent && ! $fullySent && $pendingCount > 0;
 
+        // Legacy notifications without line-item keys (or index stubs before keys are resolved).
+        if (! $sent && $this->messCombinedHasInvoiceNotificationInDateRange($receiverUserId, $combinedId, $dateFromYmd, $dateToYmd)) {
+            $sent = true;
+            $fullySent = true;
+            $partial = false;
+            $pendingCount = 0;
+        }
+
         return [
             'sent' => $sent,
             'fully_sent' => $fullySent,
@@ -1445,6 +1543,36 @@ class ProcessMessBillsEmployeeController extends Controller
             'pending_count' => $pendingCount,
             'read' => $sent ? $this->messCombinedInvoiceLatestRead($receiverUserId, $combinedId) : false,
         ];
+    }
+
+    private function messCombinedHasInvoiceNotificationInDateRange(
+        int $receiverUserId,
+        string $combinedId,
+        string $dateFromYmd,
+        string $dateToYmd
+    ): bool {
+        if ($receiverUserId <= 0 || $combinedId === '') {
+            return false;
+        }
+
+        foreach (Notification::query()
+            ->where('type', 'mess')
+            ->where('module_name', 'MessInvoiceCombined')
+            ->where('receiver_user_id', $receiverUserId)
+            ->orderByDesc('pk')
+            ->get(['message']) as $n) {
+            $parsed = NotificationService::parseMessCombinedReceiptPayload($n->message);
+            if ($parsed === null || $parsed['i'] !== $combinedId) {
+                continue;
+            }
+            $nf = (string) ($parsed['f'] ?? '');
+            $nt = (string) ($parsed['t'] ?? '');
+            if ($this->messCombinedDateRangesOverlap($nf, $nt, $dateFromYmd, $dateToYmd)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private function messCombinedInvoiceLatestRead(int $receiverUserId, string $combinedId): bool
