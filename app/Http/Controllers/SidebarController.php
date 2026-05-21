@@ -17,7 +17,11 @@ class SidebarController extends Controller
     public function getGroups(Request $request)
     {
         $user = auth()->user();
-        $isAdmin = $user->hasRole('Admin');
+        $isAdmin = isSidebarPrivilegedUser();
+
+        if (! $isAdmin && ! userHasAssignedRoles()) {
+            return '<ul class="sidebar-groups-list"><li>No groups found.</li></ul>';
+        }
 
         $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
 
@@ -33,10 +37,10 @@ class SidebarController extends Controller
             }
 
             return $group->menus->contains(function ($menu) use ($permissions) {
-                $hasMenuPermission = !$menu->permission_name || in_array($menu->permission_name, $permissions);
+                $hasMenuPermission = $this->menuVisibleToUser($menu->permission_name, $permissions);
 
                 $hasChildPermission = $menu->children->contains(function ($child) use ($permissions) {
-                    return !$child->permission_name || in_array($child->permission_name, $permissions);
+                    return $this->menuVisibleToUser($child->permission_name, $permissions);
                 });
 
                 return $hasMenuPermission || $hasChildPermission;
@@ -68,7 +72,11 @@ class SidebarController extends Controller
     public function sidebarMenus(Request $request)
     {
         $user = auth()->user();
-        $isAdmin = $user->hasRole('Admin');
+        $isAdmin = isSidebarPrivilegedUser();
+
+        if (! $isAdmin && ! userHasAssignedRoles()) {
+            return '<li>No Data Found</li>';
+        }
 
         $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
 
@@ -100,10 +108,10 @@ class SidebarController extends Controller
                     return true;
                 }
 
-                return !$child->permission_name || in_array($child->permission_name, $permissions);
+                return $this->menuVisibleToUser($child->permission_name, $permissions);
             });
 
-            $hasMenuPermission = $isAdmin || !$menu->permission_name || in_array($menu->permission_name, $permissions);
+            $hasMenuPermission = $isAdmin || $this->menuVisibleToUser($menu->permission_name, $permissions);
 
             if (!$hasMenuPermission && $children->isEmpty()) {
                 continue;
@@ -189,19 +197,23 @@ class SidebarController extends Controller
 
     public function getGroupMenus(Request $request, $group_id)
     {
-        $menus = Menu::where('group_id', $group_id)->where('is_active', 1)->orderBy('order', 'ASC')->get();
-        if ($menus->count() > 0) {
-            return response()->json([
-                'success' => true,
-                'menus' => $menus,
-                'message' => 'Menus fetched successfully',
-            ]);
+        $query = Menu::query()
+            ->select('id', 'name')
+            ->where('group_id', $group_id)
+            ->whereNull('parent_id')
+            ->where('is_active', 1)
+            ->orderBy('order', 'ASC');
+
+        if ($request->filled('exclude_id')) {
+            $query->where('id', '!=', (int) $request->input('exclude_id'));
         }
 
+        $menus = $query->get();
+
         return response()->json([
-            'success' => false,
-            'menus' => [],
-            'message' => 'No menus found',
+            'success' => true,
+            'menus' => $menus,
+            'message' => $menus->isEmpty() ? 'No parent menus in this group' : 'Menus fetched successfully',
         ]);
     }
 
@@ -221,5 +233,17 @@ class SidebarController extends Controller
             'groups' => [],
             'message' => 'No groups found',
         ]);
+    }
+
+    /**
+     * Non-admin users must have an explicit permission; empty permission_name is not public.
+     */
+    protected function menuVisibleToUser(?string $permissionName, array $permissions): bool
+    {
+        if ($permissionName === null || $permissionName === '') {
+            return false;
+        }
+
+        return in_array($permissionName, $permissions, true);
     }
 }

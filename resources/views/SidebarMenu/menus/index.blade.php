@@ -113,15 +113,6 @@
                             <small class="text-muted fs-2">(If you select this, this menu will be a sub-menu of the selected parent menu)</small>
                             <select class="form-select sidebar-menu-select" name="parent_id" id="parent_id">
                                 <option value="">Select Parent Menu</option>
-                                @if(isset($menus) && $menus->count() > 0)
-                                    @forelse($menus as $menu)
-                                        <option value="{{$menu->id}}">{{$menu->name}}</option>
-                                    @empty
-                                        <option value="">No Menu Found</option>
-                                    @endforelse
-                                @else
-                                    <option value="">No Menu Found</option>
-                                @endif
                             </select>
                         </div>
                         <div class="col-12 form-group mb-2">
@@ -196,31 +187,124 @@
 
     $(document).on('click', '.edit-btn', function () {
         let data = $(this).data('item');
+        if (typeof data === 'string') {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                toastr.error('Could not load menu data for editing');
+                return;
+            }
+        }
         MenuGroupModal(data);
-    })
+    });
 
     function MenuGroupModal(data = null) {
+        $('input[name="_method"]').remove();
+        manualEdit = false;
+
         if (data) {
             $('#menuId').val(data.id);
-            $('#category_id').val(data.category_id);
-            $('#group_id').val(data.group_id);
-            $('#parent_id').val(data.parent_id);
             $('#name').val(data.name);
-            $('#route').val(data.route);
+            $('#route').val(data.route ?? '');
             $('#permission_name').val(data.permission_name);
-            $('#icon').val(data.icon);
-            $('#order').val(data.order);
+            manualEdit = true;
+            $('#icon').val(data.icon ?? '');
+            $('#order').val(data.order ?? '');
             $('#is_active').val(data.is_active);
-            $('#target').val(data.target);
+            $('#target').val(data.target ?? 0);
             $('#menuForm').attr('action', '/sidebar/menus/' + data.id);
             $('#menuForm').append('<input type="hidden" name="_method" value="PUT">');
-        }else{
-            $('#menuForm')[0].reset();
-            $('#menuId').val('');
-            $('#menuForm').attr('action', '/sidebar/menus');
-            $('input[name="_method"]').remove();
+            populateMenuFormDropdowns(data, function () {
+                $('#MenuGroupModal').modal('show');
+            });
+            return;
         }
+
+        $('#menuForm')[0].reset();
+        $('#menuId').val('');
+        $('#menuForm').attr('action', '/sidebar/menus');
+        resetParentMenuSelect();
         $('#MenuGroupModal').modal('show');
+    }
+
+    function resetParentMenuSelect() {
+        $('#parent_id').empty().append('<option value="">Select Parent Menu</option>');
+    }
+
+    function populateMenuFormDropdowns(data, done) {
+        const categoryId = data.category_id;
+        const groupId = data.group_id;
+        const parentId = data.parent_id ? String(data.parent_id) : '';
+
+        $('#category_id').val(categoryId || '');
+
+        if (!categoryId) {
+            $('#group_id').val(groupId || '');
+            loadParentMenus(groupId, data.id, parentId, done);
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('sidebar.getGroups', ':category_id') }}".replace(':category_id', categoryId),
+            type: 'GET',
+            data: { _token: "{{ csrf_token() }}" },
+            success: function (response) {
+                const $groupSelect = $('#group_id');
+                $groupSelect.empty().append('<option value="">Select Group</option>');
+                if (response.success) {
+                    response.groups.forEach(function (group) {
+                        $groupSelect.append('<option value="' + group.id + '">' + group.name + '</option>');
+                    });
+                }
+                $groupSelect.val(groupId || '');
+                loadParentMenus(groupId, data.id, parentId, done);
+            },
+            error: function () {
+                toastr.error('Could not load groups for this category');
+                if (typeof done === 'function') {
+                    done();
+                }
+            }
+        });
+    }
+
+    function loadParentMenus(groupId, excludeMenuId, selectedParentId, done) {
+        resetParentMenuSelect();
+
+        if (!groupId) {
+            if (typeof done === 'function') {
+                done();
+            }
+            return;
+        }
+
+        let url = "{{ route('sidebar.getMenus', ':group_id') }}".replace(':group_id', groupId);
+        if (excludeMenuId) {
+            url += '?exclude_id=' + encodeURIComponent(excludeMenuId);
+        }
+
+        $.ajax({
+            url: url,
+            type: 'GET',
+            data: { _token: "{{ csrf_token() }}" },
+            success: function (response) {
+                if (response.success && response.menus && response.menus.length > 0) {
+                    response.menus.forEach(function (menu) {
+                        $('#parent_id').append('<option value="' + menu.id + '">' + menu.name + '</option>');
+                    });
+                }
+                $('#parent_id').val(selectedParentId || '');
+                if (typeof done === 'function') {
+                    done();
+                }
+            },
+            error: function () {
+                toastr.error('Could not load parent menus');
+                if (typeof done === 'function') {
+                    done();
+                }
+            }
+        });
     }
 
     $(document).ready(function () {
@@ -380,32 +464,8 @@
 
     function getMenus(group_id)
     {
-        if(group_id == ''){
-            $('#parent_id').empty();
-            $('#parent_id').append('<option value="">Select Parent Menu</option>');
-            return;
-        }
-        $.ajax({
-            url: "{{ route('sidebar.getMenus', ':group_id') }}".replace(':group_id', group_id),
-            type: "GET",
-            data: {
-                _token: "{{ csrf_token() }}"
-            },
-            success: function (response) {
-                $('.sidebar-menu-select').empty();
-                if (response.success) {
-                    $('.sidebar-menu-select').append('<option value="">Select Menu</option>');
-                    response.menus.forEach(function (menu) {
-                        $('.sidebar-menu-select').append('<option value="' + menu.id + '">' + menu.name + '</option>');
-                    });
-                } else {
-                    $('.sidebar-menu-select').append('<option value="">No Menu Found</option>');
-                }
-            },
-            error: function (xhr) {
-                toastr.error('Something went wrong');
-            }
-        });
+        const excludeMenuId = $('#menuId').val() || null;
+        loadParentMenus(group_id, excludeMenuId, '', null);
     }
 
     $(document).on('change', '.sidebar-menu-status-toggle', function () {

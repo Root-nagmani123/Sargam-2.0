@@ -109,8 +109,9 @@ class MenuService
     {
         return [
             ['title' => 'Sr No.', 'data' => 'DT_RowIndex', 'orderable' => false, 'searchable' => false],
-            ['title' => 'Group', 'data' => 'group_id'],
-            ['title' => 'Parent Menu', 'data' => 'parent_id'],
+            ['title' => 'Category', 'data' => 'category_name'],
+            ['title' => 'Group', 'data' => 'group_name'],
+            ['title' => 'Parent Menu', 'data' => 'parent_menu'],
             ['title' => 'Name', 'data' => 'name'],
             ['title' => 'Route', 'data' => 'route'],
             ['title' => 'Permission Name', 'data' => 'permission_name'],
@@ -154,16 +155,17 @@ class MenuService
     # @ Base Query
     protected function baseQuery(Request $request)
     {
-        return Menu::query()->with('group','parent');
+        return Menu::query()->with(['category', 'group.category', 'parent']);
     }
 
     public function getDatatable(Request $request)
     {
         return DataTables::of($this->baseQuery($request))
-            ->addColumn('group_id', fn ($e) =>
+            ->addColumn('category_name', fn ($e) => $this->resolveMenuCategoryName($e))
+            ->addColumn('group_name', fn ($e) =>
                 optional($e)->group ? optional($e)->group->name : '-'
             )
-            ->addColumn('parent_id', fn ($e) =>
+            ->addColumn('parent_menu', fn ($e) =>
                 optional($e)->parent ? optional($e)->parent->name : '-'
             )
             ->addColumn('created_at', fn ($e) =>
@@ -189,6 +191,22 @@ class MenuService
             ->make(true);
     }
 
+    /**
+     * Category label for list/export (menu.category_id, else group's category).
+     */
+    protected function resolveMenuCategoryName($menu): string
+    {
+        if ($menu->category?->name) {
+            return $menu->category->name;
+        }
+
+        if ($menu->group?->category?->name) {
+            return $menu->group->category->name;
+        }
+
+        return '-';
+    }
+
     private function orderBadge($data)
     {
         return '<span class="badge bg-primary">'.$data->order.'</span>';
@@ -202,7 +220,20 @@ class MenuService
     private function actionButtons($data)
     {
         $deleteUrl = route('sidebar.menus.destroy', $data->id);
-        $jsonData = htmlspecialchars(json_encode($data), ENT_QUOTES, 'UTF-8');
+        $editPayload = [
+            'id' => $data->id,
+            'category_id' => $data->category_id,
+            'group_id' => $data->group_id,
+            'parent_id' => $data->parent_id,
+            'name' => $data->name,
+            'route' => $data->route,
+            'permission_name' => $data->permission_name,
+            'icon' => $data->icon,
+            'order' => $data->order,
+            'is_active' => $data->is_active,
+            'target' => $data->target,
+        ];
+        $jsonData = htmlspecialchars(json_encode($editPayload), ENT_QUOTES, 'UTF-8');
         $buttons = '
         <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Menu actions">
             <!-- Edit -->
@@ -249,7 +280,7 @@ class MenuService
     public function getMenus()
     {
         $user = auth()->user();
-        $isAdmin = $user->hasRole('Admin');
+        $isAdmin = isSidebarPrivilegedUser();
 
         # if Admin then load all menus else load only user permissions
         $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
@@ -272,26 +303,24 @@ class MenuService
             ->where('is_active', 1)
             ->get();
 
+        // No role assigned → only Home (no Setup / Academic / Time Table tabs).
+        if (! $isAdmin && ! userHasAssignedRoles()) {
+            return $this->mapCategoriesForNav(
+                $categories->filter(fn ($category) => $category->slug === 'home')->values()
+            );
+        }
 
         if ($isAdmin) {
-            return $categories->map(function ($category) {
-                $category->groups = $category->groups->map(function ($group) {
-                    unset($group->menus);
-                    $group->url = url($group->slug ?? '#');
-                    return $group;
-                });
-                $category->url = url($category->slug ?? '#');
-                return $category;
-            });
+            return $this->mapCategoriesForNav($categories);
         }
 
         return $categories->map(function ($category) use ($permissions) {
             $category->groups = $category->groups->map(function ($group) use ($permissions) {
                 $group->menus = $group->menus->map(function ($menu) use ($permissions) {
                     $menu->children = $menu->children->filter(function ($child) use ($permissions) {
-                        return !$child->permission_name || in_array($child->permission_name, $permissions);
+                        return $this->menuVisibleToUser($child->permission_name, $permissions);
                     })->values();
-                    $hasMenuPermission = !$menu->permission_name || in_array($menu->permission_name, $permissions);
+                    $hasMenuPermission = $this->menuVisibleToUser($menu->permission_name, $permissions);
                     if ($menu->children->count() > 0 || $hasMenuPermission) {
                         $menu->url = $menu->route ? url($menu->route) : url($menu->slug ?? '#');
                         return $menu;
@@ -306,6 +335,34 @@ class MenuService
         })->filter(function ($category) {
             return $category->groups->count() > 0;
         })->values();
+    }
+
+    /**
+     * Non-admin users must have an explicit permission; empty permission_name is not public.
+     */
+    protected function menuVisibleToUser(?string $permissionName, array $permissions): bool
+    {
+        if ($permissionName === null || $permissionName === '') {
+            return false;
+        }
+
+        return in_array($permissionName, $permissions, true);
+    }
+
+    /**
+     * Header tabs: categories with group icons (menus stripped).
+     */
+    protected function mapCategoriesForNav($categories)
+    {
+        return $categories->map(function ($category) {
+            $category->groups = $category->groups->map(function ($group) {
+                unset($group->menus);
+                $group->url = url($group->slug ?? '#');
+                return $group;
+            });
+            $category->url = url($category->slug ?? '#');
+            return $category;
+        });
     }
 
     // public function getMenus()

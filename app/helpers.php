@@ -309,6 +309,27 @@ function hasRole($role)
     // Spatie already has hasRole() method
     return $user->hasRole($role);
 }
+
+/**
+ * Whether the user has at least one Spatie role (user management → assign role).
+ */
+function userHasAssignedRoles(): bool
+{
+    $user = Auth::user();
+    if (! $user) {
+        return false;
+    }
+
+    return $user->roles()->exists();
+}
+
+/**
+ * Full sidebar / setup category access (all groups without per-menu permission checks).
+ */
+function isSidebarPrivilegedUser(): bool
+{
+    return hasRole('Admin') || hasRole('Super Admin');
+}
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
  */
