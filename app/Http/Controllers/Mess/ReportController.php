@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Http\Controllers\Mess\Concerns\SortsMessReportData;
+use App\Models\KitchenIssueMaster;
+use App\Models\Mess\MonthlyBill;
 use Illuminate\Http\Request;
 use App\Models\Mess\Inventory;
 use App\Models\Mess\Store;
@@ -15,7 +18,6 @@ use App\Models\Mess\StoreAllocation;
 use App\Models\Mess\StoreAllocationItem;
 use App\Models\Mess\Vendor;
 use App\Models\Mess\ClientType;
-use App\Models\KitchenIssueMaster;
 use App\Models\FacultyMaster;
 use App\Models\EmployeeMaster;
 use App\Models\DepartmentMaster;
@@ -37,6 +39,8 @@ use Illuminate\Support\Facades\Schema;
 
 class ReportController extends Controller
 {
+    use SortsMessReportData;
+
     /**
      * Academy Staff list for report filters.
      * Excludes Officers Mess department staff and employees that are mapped as Faculty.
@@ -180,8 +184,14 @@ class ReportController extends Controller
                     return $r['category_name'] ?? 'Uncategorized';
                 })
                 ->map(function ($rows, $catName) {
-                    return ['category_name' => $catName, 'items' => $rows->values()->all()];
+                    $items = collect($rows)->sortBy(
+                        fn ($r) => mb_strtolower((string) ($r['item_name'] ?? '')),
+                        SORT_NATURAL
+                    )->values()->all();
+
+                    return ['category_name' => $catName, 'items' => $items];
                 })
+                ->sortBy(fn ($g) => mb_strtolower((string) ($g['category_name'] ?? '')), SORT_NATURAL)
                 ->values()
                 ->all();
         }
@@ -197,11 +207,16 @@ class ReportController extends Controller
      * @param  array<int, string>  $viewTypes
      * @return array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>, groupedData: array|null}>
      */
-    private function buildPurchaseSaleQuantityViewSections(array $viewTypes, string $fromDate, string $toDate, $categoryId, array $itemIds, array $storeIds): array
+    private function buildPurchaseSaleQuantityViewSections(array $viewTypes, string $fromDate, string $toDate, $categoryId, array $itemIds, array $storeIds, Request $request): array
     {
         $sections = [];
         foreach ($viewTypes as $viewType) {
             [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
+            $reportData = $this->sortMessReportRows($reportData, $request, [
+                'item_name' => 'item_name',
+                'purchase_qty' => 'purchase_qty',
+                'sale_qty' => 'sale_qty',
+            ], 'item_name', 'asc');
             $sections[] = [
                 'viewType' => $viewType,
                 'viewLabel' => $this->purchaseSaleViewTypeLabel($viewType),
@@ -444,11 +459,11 @@ class ReportController extends Controller
         $storeIds = $this->stockSummaryStoreIdsFromRequest($request, $storeType);
         sort($storeIds);
 
-        // This report is expensive to compute; cache the computed dataset for repeated pagination
-        $cacheTtlSeconds = 600; // 10 minutes
+        // This report is expensive to compute; cache the computed dataset for repeated pagination.
+        // `refresh=1` (Apply filters) bypasses cache so long sessions still see current data.
+        $cacheTtlSeconds = 300;
         $cacheKey = 'stock-summary:v3:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
-
-        [$reportData, $selectedStoreName, $cachedTotals] = Cache::remember($cacheKey, $cacheTtlSeconds, function () use ($fromDate, $toDate, $storeIds, $storeType) {
+        $loadReport = function () use ($fromDate, $toDate, $storeIds, $storeType) {
             [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
             $totals = [
                 'opening_amount' => (float) collect($data)->sum('opening_amount'),
@@ -456,11 +471,24 @@ class ReportController extends Controller
                 'sale_amount' => (float) collect($data)->sum('sale_amount'),
                 'closing_amount' => (float) collect($data)->sum('closing_amount'),
             ];
+
             return [$data, $storeName, $totals];
-        });
+        };
+
+        if ($request->boolean('refresh')) {
+            [$reportData, $selectedStoreName, $cachedTotals] = $loadReport();
+            Cache::put($cacheKey, [$reportData, $selectedStoreName, $cachedTotals], $cacheTtlSeconds);
+        } else {
+            [$reportData, $selectedStoreName, $cachedTotals] = Cache::remember($cacheKey, $cacheTtlSeconds, $loadReport);
+        }
 
         // Convert report data to collection for convenient pagination & totals
-        $reportCollection = collect($reportData);
+        $reportCollection = collect($this->sortMessReportRows($reportData, $request, [
+            'item_name' => 'item_name',
+            'item_code' => 'item_code',
+            'closing_qty' => 'closing_qty',
+            'closing_amount' => 'closing_amount',
+        ], 'item_name', 'asc'));
 
         // Simple server-side pagination (per-page can be tuned). print_all=1 returns full table for browser print.
         $printAll = $request->boolean('print_all');
@@ -844,7 +872,7 @@ class ReportController extends Controller
         $storeIds   = $this->normalizedIdList($request, 'store_id');
 
         $viewTypes = $this->normalizedPurchaseSaleViewTypes($request);
-        $viewTypeSections = $this->buildPurchaseSaleQuantityViewSections($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds);
+        $viewTypeSections = $this->buildPurchaseSaleQuantityViewSections($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds, $request);
         $combinedViewLabel = implode(', ', array_column($viewTypeSections, 'viewLabel'));
 
         $data = [
@@ -1805,7 +1833,18 @@ class ReportController extends Controller
             : now()->format('Y-m-d');
 
         $storeIds = $this->normalizedIdList($request, 'store_id');
-        $reportData = $this->buildStockBalanceTillDateData($tillDate, $storeIds);
+        $reportData = $this->sortMessReportRows(
+            $this->buildStockBalanceTillDateData($tillDate, $storeIds),
+            $request,
+            [
+                'item_name' => 'item_name',
+                'item_code' => 'item_code',
+                'remaining_qty' => 'remaining_qty',
+                'amount' => 'amount',
+            ],
+            'item_name',
+            'asc'
+        );
         $stores = Store::where('status', 'active')->get();
         $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
 
@@ -2021,7 +2060,11 @@ class ReportController extends Controller
         $selectedStoreIds = $this->normalizedIdList($request, 'store_id');
         $storeFilter = $selectedStoreIds === [] ? null : $selectedStoreIds;
 
-        $items = self::getLowStockAlertItems($tillDate, $storeFilter);
+        $items = $this->sortMessReportRows(self::getLowStockAlertItems($tillDate, $storeFilter), $request, [
+            'item_name' => 'item_name',
+            'remaining_quantity' => 'remaining_quantity',
+            'alert_quantity' => 'alert_quantity',
+        ], 'item_name', 'asc');
         $stores = Store::where('status', 'active')->get();
 
         $selectedStoreName = $selectedStoreIds === []
@@ -2173,7 +2216,7 @@ class ReportController extends Controller
         $storeIds = $this->normalizedIdList($request, 'store_id');
 
         $viewTypes = $this->normalizedPurchaseSaleViewTypes($request);
-        $viewTypeSections = $this->buildPurchaseSaleQuantityViewSections($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds);
+        $viewTypeSections = $this->buildPurchaseSaleQuantityViewSections($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds, $request);
 
         $allowedPerPage = [10, 25, 50, 100];
         $perPage = (int) $request->input('per_page', 25);
@@ -2297,5 +2340,135 @@ class ReportController extends Controller
         }
 
         return [$items, $reportData];
+    }
+
+    public function stockIssueDetailReport(Request $request)
+    {
+        $query = KitchenIssueMaster::query()
+            ->with(['store', 'items', 'paymentDetails', 'approvals'])
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('issue_date', '>=', $request->from_date);
+        }
+        if ($request->filled('to_date')) {
+            $query->whereDate('issue_date', '<=', $request->to_date);
+        }
+
+        $this->applyMessReportQuerySort($query, $request, [
+            'issue_date' => 'issue_date',
+            'issue_number' => 'reference_number',
+            'store' => 'store_id',
+        ], 'issue_date', 'desc');
+
+        $issues = $query->paginate($this->messReportPerPage($request))->withQueryString();
+        $issues->getCollection()->transform(function (KitchenIssueMaster $issue) {
+            $issue->setAttribute('issue_number', $issue->reference_number);
+            $issue->setAttribute('total_amount', $issue->net_total);
+            $issue->setRelation('approval', $issue->approvals->sortByDesc('pk')->first());
+            $payment = $issue->paymentDetails->first();
+            if ($payment) {
+                $issue->setRelation('paymentDetails', $payment);
+            }
+
+            return $issue;
+        });
+
+        return view('admin.mess.reports.stock-issue-detail', compact('issues'));
+    }
+
+    public function itemsListReport(Request $request)
+    {
+        $nameColumn = ItemSubcategory::displayNameColumnForQuery();
+        $query = ItemSubcategory::query()
+            ->with('category')
+            ->where('status', 'active');
+
+        if ($request->filled('category_id')) {
+            $query->where('category_id', $request->category_id);
+        }
+        if ($request->filled('search')) {
+            $search = '%' . trim((string) $request->search) . '%';
+            $query->where(function ($q) use ($search, $nameColumn) {
+                $q->where($nameColumn, 'like', $search);
+                if (Schema::hasColumn('mess_item_subcategories', 'item_code')) {
+                    $q->orWhere('item_code', 'like', $search);
+                }
+            });
+        }
+
+        $sortMap = ['item_name' => $nameColumn, 'item_code' => 'item_code'];
+        if (Schema::hasColumn('mess_item_subcategories', 'standard_cost')) {
+            $sortMap['unit_price'] = 'standard_cost';
+        }
+        $this->applyMessReportQuerySort($query, $request, $sortMap, 'item_name', 'asc');
+
+        $items = $query->paginate($this->messReportPerPage($request))->withQueryString();
+        $items->getCollection()->transform(function (ItemSubcategory $item) {
+            $item->setAttribute('unit_of_measurement', $item->unit_measurement ?? 'Unit');
+            $item->setAttribute('minimum_stock', (float) ($item->alert_quantity ?? 0));
+            $item->setAttribute('unit_price', (float) ($item->standard_cost ?? 0));
+            $item->setAttribute('current_stock', 0);
+            $item->setAttribute('is_active', ($item->status ?? 'active') === ItemSubcategory::STATUS_ACTIVE);
+
+            return $item;
+        });
+        $categories = ItemCategory::active()->orderBy('category_name')->get();
+
+        return view('admin.mess.reports.items-list', compact('items', 'categories'));
+    }
+
+    public function purchaseOrdersReport(Request $request)
+    {
+        $query = PurchaseOrder::query()->with(['vendor', 'store', 'items', 'creator']);
+
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
+
+        $this->applyMessReportQuerySort($query, $request, [
+            'po_number' => 'po_number',
+            'po_date' => 'po_date',
+            'total_amount' => 'total_amount',
+            'status' => 'status',
+        ], 'po_date', 'desc');
+
+        $orders = $query->paginate($this->messReportPerPage($request))->withQueryString();
+
+        return view('admin.mess.reports.purchase-orders', compact('orders'));
+    }
+
+    public function pendingOrdersReport(Request $request)
+    {
+        $query = PurchaseOrder::query()
+            ->with(['vendor', 'store', 'items', 'creator'])
+            ->whereIn('status', ['pending', 'draft']);
+
+        $this->applyMessReportQuerySort($query, $request, [
+            'po_number' => 'po_number',
+            'po_date' => 'po_date',
+            'total_amount' => 'total_amount',
+        ], 'po_date', 'desc');
+
+        $orders = $query->paginate($this->messReportPerPage($request))->withQueryString();
+
+        return view('admin.mess.reports.pending-orders', compact('orders'));
+    }
+
+    public function messBillReport(Request $request)
+    {
+        $query = MonthlyBill::query()->with('user');
+
+        $this->applyMessReportQuerySort($query, $request, [
+            'bill_number' => 'bill_number',
+            'total_amount' => 'total_amount',
+            'balance' => 'balance',
+            'status' => 'status',
+            'period' => 'year',
+        ], 'year', 'desc');
+
+        $bills = $query->paginate($this->messReportPerPage($request))->withQueryString();
+
+        return view('admin.mess.reports.mess-bill', compact('bills'));
     }
 }

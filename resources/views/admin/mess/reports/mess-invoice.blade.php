@@ -13,6 +13,7 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
+                        <th class="text-center" style="width:4rem;">S. No.</th>
                         <th>Invoice Number</th>
                         <th>Invoice Date</th>
                         <th>Vendor</th>
@@ -25,8 +26,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($invoices as $invoice)
+                    @forelse($invoices as $index => $invoice)
                         <tr>
+                            <td class="text-center text-muted">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $invoices, 'index' => $index])</td>
                             <td>{{ $invoice->invoice_number }}</td>
                             <td>{{ $invoice->invoice_date ? date('d-M-Y', strtotime($invoice->invoice_date)) : 'N/A' }}</td>
                             <td>{{ $invoice->vendor->vendor_name ?? 'N/A' }}</td>
@@ -43,14 +45,14 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">No invoices found</td>
+                            <td colspan="10" class="text-center text-muted py-4">No invoices found</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="d-flex justify-content-center mt-3">
-            {{ $invoices->links() }}
+        <div class="mt-3">
+            {{ $invoices->links('pagination::bootstrap-5') }}
         </div>
     </div>
 </div>

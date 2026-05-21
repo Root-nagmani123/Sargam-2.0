@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Summary Report')
 @section('content')
+@include('admin.mess.reports.partials.report-styles')
 @php
     /** @var array<int> $storeIds */
     $storeIds = $storeIds ?? [];
@@ -37,7 +38,8 @@
             </div>
         </div>
         <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}">
+            <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}" id="stockSummaryFilterForm">
+                <input type="hidden" name="refresh" value="1">
                 <div class="row g-3">
                     <div class="col-12 col-sm-6 col-xl-3">
                         <label for="stock_summary_from_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
@@ -572,11 +574,12 @@ document.addEventListener('DOMContentLoaded', function () {
         max-width: 100%;
         height: auto;
         min-height: 0;
-        max-height: min(70vh, calc(100dvh - 13rem));
+        max-height: min(72vh, calc(100dvh - 12rem));
         margin: 0 0.75rem 0.75rem;
         border-radius: 0.5rem;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-x: contain;
+        overscroll-behavior-y: auto;
         border: 1px solid #e2e8f0;
         outline: none;
         scrollbar-gutter: stable;
@@ -591,15 +594,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     @media (max-width: 767.98px) {
         .stock-summary-report .ssr-table-scroller {
-            max-height: min(62vh, calc(100dvh - 17rem));
             margin-left: 0.5rem;
             margin-right: 0.5rem;
-        }
-    }
-
-    @media (min-width: 1400px) {
-        .stock-summary-report .ssr-table-scroller {
-            max-height: min(74vh, calc(100dvh - 11rem));
         }
     }
 
@@ -937,7 +933,7 @@ document.addEventListener('DOMContentLoaded', function () {
         font-size: 0.8125rem;
     }
 
-    .stock-summary-report .ssr-pagination-links .pagination {
+    .stock-summary-report .ssr-pagination-bar .pagination {
         margin-bottom: 0;
         --bs-pagination-font-size: 0.8125rem;
     }
@@ -1151,11 +1147,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* Pagination hover effects */
-    .stock-summary-report .ssr-pagination-links .page-link {
+    .stock-summary-report .ssr-pagination-bar .page-link {
         transition: all 0.15s ease;
     }
 
-    .stock-summary-report .ssr-pagination-links .page-link:hover {
+    .stock-summary-report .ssr-pagination-bar .page-link:hover {
         transform: translateY(-1px);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     }

@@ -232,9 +232,7 @@
     /* Screen: frozen header = separate head table; body scrolls in sibling pane */
     @media screen {
         .print-slip-section .cw-slip-table-split {
-            display: flex;
-            flex-direction: column;
-            max-height: min(65vh, 640px);
+            display: block;
             border: 1px solid var(--bs-border-color, #dee2e6);
             border-radius: 0.25rem;
             background: #fff;
@@ -251,9 +249,8 @@
             border-bottom-color: #8eb8d0 !important;
         }
         .print-slip-section .cw-slip-table-body-scroll {
-            flex: 1 1 auto;
-            min-height: 0;
-            overflow: auto !important;
+            overflow-x: auto;
+            overflow-y: visible;
             -webkit-overflow-scrolling: touch;
         }
         .print-slip-section .cw-slip-table-body-scroll .print-slip-table {
@@ -264,8 +261,8 @@
         }
         /* Fallback single-table mode (PDF/print routes): sticky header inside scroll box */
         .print-slip-section .cw-slip-table-scroll {
-            max-height: min(65vh, 640px);
-            overflow: auto !important;
+            overflow-x: auto !important;
+            overflow-y: visible !important;
             -webkit-overflow-scrolling: touch;
         }
         .print-slip-section .cw-slip-table-scroll .print-slip-table thead th {

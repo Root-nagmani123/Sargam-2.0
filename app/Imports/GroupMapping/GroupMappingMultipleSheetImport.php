@@ -16,8 +16,9 @@ class GroupMappingMultipleSheetImport implements WithMultipleSheets
 
     public function sheets(): array
     {
+        // First sheet only — sheet title does not matter (Worksheet, Sheet1, etc.).
         return [
-            'Sheet1' => $this->sheet1Import, // Pass the tracked instance
+            0 => $this->sheet1Import,
         ];
     }
 }

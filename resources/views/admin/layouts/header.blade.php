@@ -193,7 +193,7 @@
                 <span class="fw-semibold">Notifications</span>
                 @if($unreadCount > 0)
                     <button type="button"
-                        class="btn btn-sm btn-link text-primary p-0 text-nowrap"
+                        class="btn btn-sm btn-link text-primary p-0 text-nowrap notification-mark-all-btn"
                         onclick="markAllAsRead()">
                         Mark all as read
                     </button>
@@ -212,31 +212,7 @@
                         : collect();
                 @endphp
 
-                @if($notifications->count() > 0)
-                    @foreach($notifications as $notification)
-                        <li class="notification-list-item">
-                            <a class="notification-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
-                               href="javascript:void(0)"
-                                   data-notification-id="{{ $notification->pk }}">
-                                <div class="notification-item-body">
-                                    <div class="d-flex align-items-start justify-content-between gap-2">
-                                        <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
-                                        @if(empty($notification->is_read))
-                                        <span class="badge bg-danger notification-new-tag">New</span>
-                                        @endif
-                                    </div>
-                                    <p class="notification-item-message">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 60) }}</p>
-                                    <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
-                                </div>
-                            </a>
-                        </li>
-                    @endforeach
-                @else
-                    <li class="notification-empty-state">
-                        <i class="material-icons material-symbols-rounded">notifications_none</i>
-                        <span>No notifications</span>
-                    </li>
-                @endif
+                @include('admin.layouts.partials.notification-list-desktop', ['notifications' => $notifications])
             </div>
         </ul>
     </div>
@@ -308,7 +284,7 @@
                                 : 0;
                             @endphp
                             @if($unreadCountMobile > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 9px;">
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
                                 {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
                             </span>
                             @endif
@@ -324,7 +300,7 @@
                 <div class="offcanvas-header border-bottom py-3">
                     <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
                     @if($unreadCountMobile > 0)
-                    <button type="button" class="btn btn-sm btn-link text-primary p-0" onclick="markAllAsRead()">
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0 notification-mark-all-btn" onclick="markAllAsRead()">
                         Mark all as read
                     </button>
                     @endif
@@ -342,28 +318,7 @@
                             )
                             : collect();
                         @endphp
-                        @if($notificationsMobile->count() > 0)
-                        @foreach($notificationsMobile as $notification)
-                        <a class="notification-item notification-mobile-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
-                            href="javascript:void(0)" data-notification-id="{{ $notification->pk }}">
-                            <div class="notification-item-body">
-                                <div class="d-flex align-items-start justify-content-between gap-2">
-                                    <span class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
-                                    @if(empty($notification->is_read))
-                                    <span class="badge bg-danger notification-new-tag">New</span>
-                                    @endif
-                                </div>
-                                <p class="notification-item-message">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 80) }}</p>
-                                <span class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
-                            </div>
-                        </a>
-                        @endforeach
-                        @else
-                        <div class="notification-empty-state">
-                            <i class="material-icons material-symbols-rounded">notifications_none</i>
-                            <span>No notifications</span>
-                        </div>
-                        @endif
+                        @include('admin.layouts.partials.notification-list-mobile', ['notifications' => $notificationsMobile])
                     </div>
                 </div>
             </div>
@@ -1340,6 +1295,7 @@
             // Notification functions
             const notificationMarkReadUrlTemplate = '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
             const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
+            const notificationPanelsUrl = '{{ route("admin.notifications.panels") }}';
             function markAsRead(notificationId) {
                 console.log('[Notification][Step 1] markAsRead called', { notificationId, currentUrl: window.location.href });
                 const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
@@ -1397,25 +1353,84 @@
                 markAsRead(id);
             });
 
+            function updateNotificationBadges(unreadCount) {
+                document.querySelectorAll('.notification-badge, .notification-badge-mobile').forEach(function (el) {
+                    el.remove();
+                });
+                if (!unreadCount || unreadCount <= 0) {
+                    return;
+                }
+                var label = unreadCount > 99 ? '99+' : String(unreadCount);
+                var desktopBtn = document.getElementById('notificationDropdown');
+                if (desktopBtn) {
+                    var desktopBadge = document.createElement('span');
+                    desktopBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge';
+                    desktopBadge.textContent = label;
+                    desktopBtn.appendChild(desktopBadge);
+                }
+                var mobileBtn = document.getElementById('notificationBtnMobile');
+                if (mobileBtn) {
+                    var mobileBadge = document.createElement('span');
+                    mobileBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile';
+                    mobileBadge.style.fontSize = '9px';
+                    mobileBadge.textContent = label;
+                    mobileBtn.appendChild(mobileBadge);
+                }
+            }
+
+            function toggleMarkAllButtons(unreadCount) {
+                document.querySelectorAll('.notification-mark-all-btn').forEach(function (btn) {
+                    btn.classList.toggle('d-none', !unreadCount || unreadCount <= 0);
+                });
+            }
+
+            function refreshNotificationPanels() {
+                return fetch(notificationPanelsUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (!data || !data.success) {
+                            return;
+                        }
+                        var desktopList = document.getElementById('notificationList');
+                        var mobileList = document.getElementById('notificationListMobile');
+                        if (desktopList && data.desktop_html) {
+                            desktopList.innerHTML = data.desktop_html;
+                        }
+                        if (mobileList && data.mobile_html) {
+                            mobileList.innerHTML = data.mobile_html;
+                        }
+                        updateNotificationBadges(data.unread_count || 0);
+                        toggleMarkAllButtons(data.unread_count || 0);
+                    })
+                    .catch(function (error) {
+                        console.error('[Notification] Failed to refresh panels', error);
+                    });
+            }
+
             function markAllAsRead() {
-                const markAllEndpoint = '/admin/notifications/mark-all-read';
-                console.log('[Notification][AllRead][Step 1] markAllAsRead called', { endpoint: markAllEndpoint });
-                fetch(markAllEndpoint, {
+                fetch(notificationMarkAllReadUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('[Notification][AllRead][Step 2] Controller JSON payload', data);
-                        if (data.success) {
-                            console.log('[Notification][AllRead][Step 3] Reloading page after success');
-                            location.reload();
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (data && data.success) {
+                            refreshNotificationPanels();
                         }
                     })
-                    .catch(error => console.error('[Notification][AllRead][Step X] Exception', error));
+                    .catch(function (error) {
+                        console.error('[Notification][AllRead] Exception', error);
+                    });
             }
             </script>
         </nav>
@@ -1488,7 +1503,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
     // Server-computed active tab (from PHP) - used for route-based tab highlighting
     window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
-    window.SARGAM_DASHBOARD_URL = @json(route('admin.dashboard'));
+    window.SARGAM_DASHBOARD_URL = "{{ route('admin.dashboard') }}";
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {

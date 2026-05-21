@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
+@include('admin.mess.reports.partials.report-styles')
 <div class="card" style="border-left: 4px solid #004a93;">
     <div class="card-header">
         <h5 class="mb-0">
@@ -35,8 +36,9 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Issue Number</th>
-                        <th>Issue Date</th>
+                        @include('admin.mess.reports.partials.report-sno-th')
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'issue_number', 'label' => 'Issue Number', 'defaultDir' => 'asc'])
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'issue_date', 'label' => 'Issue Date', 'defaultDir' => 'desc', 'defaultSort' => 'issue_date'])
                         <th>Store</th>
                         <th>Issued To</th>
                         <th>Total Items</th>
@@ -47,12 +49,13 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($issues as $issue)
+                    @forelse($issues as $index => $issue)
                         <tr>
+                            <td class="text-center text-muted mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $issues, 'index' => $index])</td>
                             <td>{{ $issue->issue_number ?? 'N/A' }}</td>
                             <td>{{ $issue->issue_date ? date('d-M-Y', strtotime($issue->issue_date)) : 'N/A' }}</td>
                             <td>{{ $issue->store->store_name ?? 'N/A' }}</td>
-                            <td>{{ $issue->user->name ?? 'N/A' }}</td>
+                            <td>{{ $issue->client_name ?? $issue->order_by ?? 'N/A' }}</td>
                             <td>{{ $issue->items->count() }}</td>
                             <td>{{ number_format($issue->items->sum('quantity') ?? 0, 2) }}</td>
                             <td>₹{{ number_format($issue->total_amount ?? 0, 2) }}</td>
@@ -73,7 +76,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="text-center text-muted py-4">
+                            <td colspan="10" class="text-center text-muted py-4">
                                 <iconify-icon icon="solar:box-minimalistic-bold" style="font-size: 48px;"></iconify-icon>
                                 <p class="mt-2">No stock issues found</p>
                             </td>
@@ -83,7 +86,7 @@
                 @if($issues->count() > 0)
                     <tfoot class="table-light">
                         <tr>
-                            <th colspan="6" class="text-end">Total Amount (Page):</th>
+                            <th colspan="7" class="text-end">Total Amount (Page):</th>
                             <th colspan="3">₹{{ number_format($issues->sum('total_amount'), 2) }}</th>
                         </tr>
                     </tfoot>
@@ -128,8 +131,8 @@
         </div>
 
         <!-- Pagination -->
-        <div class="d-flex justify-content-center mt-3">
-            {{ $issues->withQueryString()->links() }}
+        <div class="mt-3">
+            {{ $issues->withQueryString()->links('pagination::bootstrap-5') }}
         </div>
 
         <!-- Export Button -->
