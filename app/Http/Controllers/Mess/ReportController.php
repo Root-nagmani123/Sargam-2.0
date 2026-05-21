@@ -1187,7 +1187,7 @@ class ReportController extends Controller
                     ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
                     ->where('svi.item_subcategory_id', $item->id)
                     ->where('svr.store_type', 'store')
-                    ->whereDate('svr.issue_date', '<=', $previousDate)
+                    ->whereDate('svi.issue_date', '<=', $previousDate)
                     ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
                     ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
                     ->value('net') ?? 0;
@@ -1212,7 +1212,7 @@ class ReportController extends Controller
                     ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
                     ->where('svi.item_subcategory_id', $item->id)
                     ->where('svr.store_type', 'sub_store')
-                    ->whereDate('svr.issue_date', '<=', $previousDate)
+                    ->whereDate('svi.issue_date', '<=', $previousDate)
                     ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
                     ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
                     ->value('net') ?? 0;
@@ -1268,7 +1268,7 @@ class ReportController extends Controller
                 ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', $kimStoreType)
-                ->whereBetween('svr.issue_date', [$fromDate, $toDate])
+                ->whereBetween('svi.issue_date', [$fromDate, $toDate])
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
                 ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty, SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis_sv.standard_cost, 0)) as total_amount')
                 ->first();
@@ -1897,7 +1897,7 @@ class ReportController extends Controller
                 ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '<=', $tillDate)
+                ->whereDate('svi.issue_date', '<=', $tillDate)
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
                 ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
                 ->value('net') ?? 0;
@@ -2025,7 +2025,7 @@ class ReportController extends Controller
                 ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '<=', $tillDate)
+                ->whereDate('svi.issue_date', '<=', $tillDate)
                 ->when($storeIds !== null, fn ($q) => $q->whereIn('svr.store_id', $storeIds))
                 ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
                 ->value('net') ?? 0;
@@ -2311,8 +2311,8 @@ class ReportController extends Controller
                 ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '>=', $fromDate)
-                ->whereDate('svr.issue_date', '<=', $toDate);
+                ->whereDate('svi.issue_date', '>=', $fromDate)
+                ->whereDate('svi.issue_date', '<=', $toDate);
             if ($storeIds !== []) {
                 $saleSvQuery->whereIn('svr.store_id', $storeIds);
             }
