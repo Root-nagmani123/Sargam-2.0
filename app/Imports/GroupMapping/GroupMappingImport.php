@@ -14,6 +14,7 @@ use App\Models\StudentCourseGroupMap;
 class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
 {
     public $failures = [];
+    public $importedCount = 0;
     public $courseMasterPk;
 
     public function __construct($courseMasterPk)
@@ -40,6 +41,7 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
 
             $rowNumber = $index + 2;
             $data = array_map('trim', $row->toArray());
+            $data = $this->normalizeRowKeys($data);
 
             /* ---------- Validation ---------- */
             $validator = Validator::make($data, [
@@ -129,7 +131,35 @@ class GroupMappingImport implements ToCollection, WithHeadingRow, WithStartRow
         /* ---------- Bulk Insert ---------- */
         if (empty($this->failures) && !empty($dataToInsert)) {
             StudentCourseGroupMap::insert($dataToInsert);
+            $this->importedCount = count($dataToInsert);
         }
+    }
+
+    /**
+     * Map export/sample heading variants to the keys expected by validation.
+     */
+    private function normalizeRowKeys(array $data): array
+    {
+        $aliases = [
+            'name'       => ['name', 'student_name', 'display_name'],
+            'otcode'     => ['otcode', 'ot_code', 'generated_ot_code', 'ot'],
+            'group_name' => ['group_name', 'group'],
+            'group_type' => ['group_type', 'type', 'type_name'],
+        ];
+
+        foreach ($aliases as $canonical => $keys) {
+            if (!empty($data[$canonical])) {
+                continue;
+            }
+            foreach ($keys as $key) {
+                if (!empty($data[$key])) {
+                    $data[$canonical] = $data[$key];
+                    break;
+                }
+            }
+        }
+
+        return $data;
     }
 
     private function addFailure($rowNumber, array $errors)
