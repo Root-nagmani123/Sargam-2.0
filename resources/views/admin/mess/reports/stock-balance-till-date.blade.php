@@ -11,6 +11,7 @@
             : 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
     }
 @endphp
+@include('admin.mess.reports.partials.report-styles')
 <div class="container-fluid stock-balance-report min-vh-100 d-flex flex-column">
     <x-breadcrum title="Stock Balance as of Till Date"></x-breadcrum>
     <!-- Header Section -->
@@ -131,9 +132,9 @@
                         </colgroup>
                         <thead>
                             <tr>
-                                <th>S. No.</th>
+                                @include('admin.mess.reports.partials.report-sno-th')
                                 <th>Item Code</th>
-                                <th>Item Name</th>
+                                @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name'])
                                 <th class="text-end">Remaining Quantity</th>
                                 <th>Unit</th>
                                 <th class="text-end">Avg rate</th>
@@ -162,7 +163,7 @@
                                     $totalAmount += $item['amount'];
                                 @endphp
                                 <tr>
-                                    <td class="text-center">{{ $index + 1 }}</td>
+                                    <td class="text-center mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['index' => $index])</td>
                                     <td>{{ $item['item_code'] ?? '—' }}</td>
                                     <td>{{ $item['item_name'] }}</td>
                                     <td class="text-end">{{ number_format($item['remaining_qty'], 2) }}</td>
@@ -204,10 +205,11 @@
     }
 
     .stock-balance-report .stock-balance-table-body-scroll {
-        min-height: 100%;
-        max-height: calc(100vh - 320px);
+        min-height: 0;
         -webkit-overflow-scrolling: touch;
-        overflow: auto;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: min(72vh, calc(100dvh - 12rem));
     }
 
     .stock-balance-report .stock-balance-table-head-wrap .stock-balance-table {

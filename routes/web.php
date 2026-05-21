@@ -1032,6 +1032,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Mark all as read
         Route::post('/mark-all-read', 'markAllAsRead')->name('mark-all-read');
+
+        // Refresh notification panels (AJAX)
+        Route::get('/panels', 'panels')->name('panels');
     });
 
     //change password work here
@@ -1348,6 +1351,7 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
     // Selling Voucher with Date Range (standalone module - design like Selling Voucher, data separate)
     Route::get('selling-voucher-date-range/students-by-course/{course_pk}', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStudentsByCourse'])->name('selling-voucher-date-range.students-by-course');
     Route::get('selling-voucher-date-range/buyer-names', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getBuyerNames'])->name('selling-voucher-date-range.buyer-names');
+    Route::get('selling-voucher-date-range/filter-buyer-names', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'filterBuyerNames'])->name('selling-voucher-date-range.filter-buyer-names');
     Route::get('selling-voucher-date-range/store/{storeIdentifier}/items', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'getStoreItems'])->name('selling-voucher-date-range.store.items');
     Route::get('selling-voucher-date-range/datatable', [\App\Http\Controllers\Mess\SellingVoucherDateRangeController::class, 'datatable'])->name('selling-voucher-date-range.datatable');
     Route::resource('selling-voucher-date-range', \App\Http\Controllers\Mess\SellingVoucherDateRangeController::class);
@@ -1407,6 +1411,11 @@ Route::prefix('admin/mess')->name('admin.mess.')->middleware(['auth'])->group(fu
         Route::get('purchase-sale-quantity/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseSaleQuantityPdf'])->name('purchase-sale-quantity.pdf');
         Route::get('low-stock', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockReport'])->name('low-stock');
         Route::get('low-stock/export-pdf', [\App\Http\Controllers\Mess\ReportController::class, 'lowStockPdf'])->name('low-stock.pdf');
+        Route::get('stock-issue-detail', [\App\Http\Controllers\Mess\ReportController::class, 'stockIssueDetailReport'])->name('stock-issue-detail');
+        Route::get('items-list', [\App\Http\Controllers\Mess\ReportController::class, 'itemsListReport'])->name('items-list');
+        Route::get('purchase-orders', [\App\Http\Controllers\Mess\ReportController::class, 'purchaseOrdersReport'])->name('purchase-orders');
+        Route::get('pending-orders', [\App\Http\Controllers\Mess\ReportController::class, 'pendingOrdersReport'])->name('pending-orders');
+        Route::get('mess-bill', [\App\Http\Controllers\Mess\ReportController::class, 'messBillReport'])->name('mess-bill');
     });
 });
 

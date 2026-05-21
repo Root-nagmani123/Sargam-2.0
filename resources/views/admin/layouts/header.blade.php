@@ -161,17 +161,17 @@
                             class="dropdown-menu dropdown-menu-end notification-dropdown rounded-4 border shadow-sm bg-white overflow-hidden p-0"
                             aria-labelledby="notificationDropdown">
 
-                            <div
-                                class="notification-dropdown-header d-flex justify-content-between align-items-center px-3 py-3 border-bottom bg-white">
-                                <span class="notification-dropdown-title fw-bold text-dark mb-0 text-body fs-6">Notifications</span>
-                                @if($unreadCount > 0)
-                                <button type="button"
-                                    class="btn btn-link btn-sm notification-mark-all-read p-0 border-0 text-nowrap shadow-none lh-sm link-primary small text-decoration-underline"
-                                    onclick="markAllAsRead()">
-                                    Mark all as read
-                                </button>
-                                @endif
-                            </div>
+            <!-- Header -->
+            <li class="notification-dropdown-header">
+                <span class="fw-semibold">Notifications</span>
+                @if($unreadCount > 0)
+                    <button type="button"
+                        class="btn btn-sm btn-link text-primary p-0 text-nowrap notification-mark-all-btn"
+                        onclick="markAllAsRead()">
+                        Mark all as read
+                    </button>
+                @endif
+            </li>
 
                             <div id="notificationList" class="notification-list notification-list-shell px-3 py-3">
                                 @php
@@ -185,44 +185,10 @@
                                 : collect();
                                 @endphp
 
-                                @if($notifications->count() > 0)
-                                @foreach($notifications as $notification)
-                                <div class="notification-list-item mb-3">
-                                    <a class="notification-item rounded-3 border border-secondary-subtle bg-white p-3 text-decoration-none text-reset d-block mb-0 {{ $notification->is_read ? '' : 'notification-item-unread is-unread' }}"
-                                        href="javascript:void(0)" data-notification-id="{{ $notification->pk }}">
-                                        <div class="notification-item-body">
-                                            <div class="d-flex align-items-start gap-2">
-                                                @if(empty($notification->is_read))
-                                                <span class="notification-unread-dot flex-shrink-0 rounded-circle bg-primary mt-1"
-                                                    style="width: 8px; height: 8px;" aria-hidden="true"></span>
-                                                @endif
-                                                <div class="flex-grow-1 min-w-0">
-                                                    <div class="notification-item-title text-body fw-semibold lh-sm">{{ $notification->title ?? 'Notification' }}</div>
-                                                    <p class="notification-item-message text-muted small mb-1 mt-2">
-                                                        {{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 140) }}
-                                                    </p>
-                                                    <span
-                                                        class="notification-item-time small text-muted">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </a>
-                                </div>
-                                @endforeach
-                                @else
-                                <div class="notification-empty-state notification-empty-state-dropdown rounded-3 border border-dashed py-5 px-3 mb-0 bg-white border-secondary-subtle">
-                                    <i class="material-icons material-symbols-rounded">notifications_none</i>
-                                    <span>No notifications</span>
-                                </div>
-                                @endif
-                            </div>
-
-                            <div class="notification-dropdown-footer text-center border-top bg-white px-3 py-3">
-                                <a href="{{ route('admin.dashboard') }}"
-                                    class="link-primary small text-decoration-underline fw-normal">Check all notifications</a>
-                            </div>
-                        </div>
-                    </div>
+                @include('admin.layouts.partials.notification-list-desktop', ['notifications' => $notifications])
+            </div>
+        </ul>
+    </div>
 
                     @php
                         $authUser = Auth::user();
@@ -363,24 +329,23 @@
 
                     <!-- Notifications (Offcanvas on mobile for reliable display) -->
                     <li class="nav-item" role="none">
-                    <button type="button" class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
-                        id="notificationBtnMobile" data-bs-toggle="offcanvas"
-                        data-bs-target="#notificationOffcanvasMobile" aria-controls="notificationOffcanvasMobile"
-                        aria-label="Notifications" title="Notifications">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
-                        @php
-                        $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
-                        ? notification()->getUnreadCount(Auth::user()->user_id)
-                        : 0;
-                        @endphp
-                        @if($unreadCountMobile > 0)
-                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
-                            style="font-size: 9px;">
-                            {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
-                        </span>
-                        @endif
-                        <span>Notifications</span>
-                    </button>
+                        <button type="button"
+                            class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
+                            id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
+                            aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
+                            @php
+                            $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
+                                ? notification()->getUnreadCount(Auth::user()->user_id)
+                                : 0;
+                            @endphp
+                            @if($unreadCountMobile > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
+                                {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
+                            </span>
+                            @endif
+                            <span>Notifications</span>
+                        </button>
                     </li>
                 </ul>
             </div>
@@ -392,7 +357,7 @@
                 <div class="offcanvas-header border-bottom py-3">
                     <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
                     @if($unreadCountMobile > 0)
-                    <button type="button" class="btn btn-sm btn-link text-primary p-0 js-notification-mark-all-read" onclick="markAllAsRead(event)">
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0 notification-mark-all-btn" onclick="markAllAsRead()">
                         Mark all as read
                     </button>
                     @endif
@@ -411,32 +376,7 @@
                         )
                         : collect();
                         @endphp
-                        @if($notificationsMobile->count() > 0)
-                        @foreach($notificationsMobile as $notification)
-                        <a class="notification-item notification-mobile-item {{ $notification->is_read ? '' : 'notification-item-unread' }}"
-                            href="javascript:void(0)" data-notification-id="{{ $notification->pk }}">
-                            <div class="notification-item-body">
-                                <div class="d-flex align-items-start justify-content-between gap-2">
-                                    <span
-                                        class="notification-item-title">{{ $notification->title ?? 'Notification' }}</span>
-                                    @if(empty($notification->is_read))
-                                    <span class="badge bg-danger notification-new-tag">New</span>
-                                    @endif
-                                </div>
-                                <p class="notification-item-message">
-                                    {{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 80) }}
-                                </p>
-                                <span
-                                    class="notification-item-time">{{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}</span>
-                            </div>
-                        </a>
-                        @endforeach
-                        @else
-                        <div class="notification-empty-state">
-                            <i class="material-icons material-symbols-rounded">notifications_none</i>
-                            <span>No notifications</span>
-                        </div>
-                        @endif
+                        @include('admin.layouts.partials.notification-list-mobile', ['notifications' => $notificationsMobile])
                     </div>
                 </div>
             </div>
@@ -1889,7 +1829,7 @@
             const notificationMarkReadUrlTemplate =
                 '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
             const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
-
+            const notificationPanelsUrl = '{{ route("admin.notifications.panels") }}';
             function markAsRead(notificationId) {
                 console.log('[Notification][Step 1] markAsRead called', {
                     notificationId,
@@ -1961,34 +1901,91 @@
                     const id = target.getAttribute('data-notification-id');
                     if (!id) return;
 
-                    console.log('[Notification][Step 0] Notification clicked', {
-                        id,
-                        elementClass: target.className
-                    });
-                    markAsRead(id);
+                console.log('[Notification][Step 0] Notification clicked', {
+                    id,
+                    elementClass: target.className
                 });
+                markAsRead(id);
+            });
+
+            function updateNotificationBadges(unreadCount) {
+                document.querySelectorAll('.notification-badge, .notification-badge-mobile').forEach(function (el) {
+                    el.remove();
+                });
+                if (!unreadCount || unreadCount <= 0) {
+                    return;
+                }
+                var label = unreadCount > 99 ? '99+' : String(unreadCount);
+                var desktopBtn = document.getElementById('notificationDropdown');
+                if (desktopBtn) {
+                    var desktopBadge = document.createElement('span');
+                    desktopBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge';
+                    desktopBadge.textContent = label;
+                    desktopBtn.appendChild(desktopBadge);
+                }
+                var mobileBtn = document.getElementById('notificationBtnMobile');
+                if (mobileBtn) {
+                    var mobileBadge = document.createElement('span');
+                    mobileBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile';
+                    mobileBadge.style.fontSize = '9px';
+                    mobileBadge.textContent = label;
+                    mobileBtn.appendChild(mobileBadge);
+                }
+            }
+
+            function toggleMarkAllButtons(unreadCount) {
+                document.querySelectorAll('.notification-mark-all-btn').forEach(function (btn) {
+                    btn.classList.toggle('d-none', !unreadCount || unreadCount <= 0);
+                });
+            }
+
+            function refreshNotificationPanels() {
+                return fetch(notificationPanelsUrl, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (!data || !data.success) {
+                            return;
+                        }
+                        var desktopList = document.getElementById('notificationList');
+                        var mobileList = document.getElementById('notificationListMobile');
+                        if (desktopList && data.desktop_html) {
+                            desktopList.innerHTML = data.desktop_html;
+                        }
+                        if (mobileList && data.mobile_html) {
+                            mobileList.innerHTML = data.mobile_html;
+                        }
+                        updateNotificationBadges(data.unread_count || 0);
+                        toggleMarkAllButtons(data.unread_count || 0);
+                    })
+                    .catch(function (error) {
+                        console.error('[Notification] Failed to refresh panels', error);
+                    });
+            }
 
             function markAllAsRead() {
-                const markAllEndpoint = '/admin/notifications/mark-all-read';
-                console.log('[Notification][AllRead][Step 1] markAllAsRead called', {
-                    endpoint: markAllEndpoint
-                });
-                fetch(markAllEndpoint, {
+                fetch(notificationMarkAllReadUrl, {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
                         }
                     })
-                    .then(response => response.json())
-                    .then(data => {
-                        console.log('[Notification][AllRead][Step 2] Controller JSON payload', data);
-                        if (data.success) {
-                            console.log('[Notification][AllRead][Step 3] Reloading page after success');
-                            location.reload();
+                    .then(function (response) { return response.json(); })
+                    .then(function (data) {
+                        if (data && data.success) {
+                            refreshNotificationPanels();
                         }
                     })
-                    .catch(error => console.error('[Notification][AllRead][Step X] Exception', error));
+                    .catch(function (error) {
+                        console.error('[Notification][AllRead] Exception', error);
+                    });
             }
             </script>
         </nav>
@@ -2110,9 +2107,9 @@
 
 <!-- Fallback Tab Switcher (if Bootstrap JS not active) -->
 <script>
-// Server-computed active tab (from PHP) - used for route-based tab highlighting
-window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
-window.SARGAM_DASHBOARD_URL = "{{ route('admin.dashboard') }}";
+    // Server-computed active tab (from PHP) - used for route-based tab highlighting
+    window.SARGAM_ACTIVE_NAV_TAB = '{{ $activeNavTab }}';
+    window.SARGAM_DASHBOARD_URL = "{{ route('admin.dashboard') }}";
 </script>
 <script>
     document.addEventListener('DOMContentLoaded', function() {

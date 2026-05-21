@@ -43,7 +43,7 @@
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&family=Noto+Sans+Devanagari:wght@400;500;600;700&family=Noto+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Noto+Sans+Devanagari:wght@400;500;600;700&display=swap" rel="stylesheet">
     
     <link href="{{asset('admin_assets/css/accesibility-style_v1.css')}}" rel="stylesheet">
 
@@ -51,37 +51,41 @@
 
     <style>
     /* ============================================
-       MODERN FULLSCREEN LOGIN WITH BACKGROUND
-       GIGW Compliant + WCAG 2.1 AAA
+       MODERN FULLSCREEN LOGIN - ENHANCED UI/UX
+       Bootstrap 5.3.6 + GIGW + WCAG 2.1 AAA
     ============================================ */
 
     :root {
-        --primary-blue: #003d7a;
-        --primary-blue-dark: #002952;
-        --primary-blue-darker: #001a3d;
-        --accent-orange: #ff6b35;
+        --primary: #0f4c81;
+        --primary-hover: #0a3a64;
+        --primary-light: #e8f4fd;
+        --primary-subtle: #f0f7ff;
         --accent-saffron: #ff9933;
         --accent-green: #138808;
-        --text-primary: #1a1a2e;
-        --text-secondary: #4a5568;
-        --text-muted: #6b7280;
-        --success-color: #059669;
-        --error-color: #dc2626;
-        --border-color: #d1d5db;
-        --border-light: #e5e7eb;
-        --bg-white: #ffffff;
-        --shadow-sm: 0 1px 3px rgba(0,0,0,0.1);
-        --shadow-lg: 0 10px 40px rgba(0,0,0,0.15);
-        --shadow-xl: 0 25px 60px rgba(0,0,0,0.2);
-        --shadow-focus: 0 0 0 3px rgba(0,61,122,0.25);
-        --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
-        --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+        --accent-orange: #ff6b35;
+        --text-heading: #0f172a;
+        --text-body: #334155;
+        --text-muted: #64748b;
+        --text-light: #94a3b8;
+        --surface: #ffffff;
+        --surface-hover: #f8fafc;
+        --border: #e2e8f0;
+        --border-focus: #0f4c81;
+        --success: #059669;
+        --error: #dc2626;
+        --shadow-card: 0 20px 60px -12px rgba(0,0,0,0.25), 0 0 0 1px rgba(255,255,255,0.1);
+        --shadow-input: 0 1px 2px rgba(0,0,0,0.05);
+        --shadow-input-focus: 0 0 0 4px rgba(15,76,129,0.12);
+        --shadow-btn: 0 4px 14px rgba(15,76,129,0.4);
+        --shadow-btn-hover: 0 8px 24px rgba(15,76,129,0.5);
+        --radius-sm: 0.375rem;
         --radius-md: 0.5rem;
         --radius-lg: 0.75rem;
         --radius-xl: 1rem;
-        --radius-2xl: 1.5rem;
-        --font-sans: 'Noto Sans', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-        --font-heading: 'Montserrat', 'Noto Sans', 'Noto Sans Devanagari', sans-serif;
+        --radius-2xl: 1.25rem;
+        --radius-3xl: 1.5rem;
+        --transition: 250ms cubic-bezier(0.4, 0, 0.2, 1);
+        --font-sans: 'Inter', 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
     }
 
     *, *::before, *::after {
@@ -99,13 +103,9 @@
         font-family: var(--font-sans);
         font-size: 1rem;
         line-height: 1.6;
-        color: var(--text-primary);
+        color: var(--text-body);
         -webkit-font-smoothing: antialiased;
-    }
-
-    h1, h2, h3, h4, h5, h6,
-    .login-brand-title, .fw-bold.display-heading {
-        font-family: var(--font-heading);
+        -moz-osx-font-smoothing: grayscale;
     }
 
     /* ===== Skip Link ===== */
@@ -113,15 +113,15 @@
         position: absolute;
         top: -100%;
         left: 1rem;
-        background: var(--text-primary);
+        background: var(--text-heading);
         color: white;
-        padding: 0.75rem 1rem;
+        padding: 0.75rem 1.25rem;
         text-decoration: none;
         border-radius: 0 0 var(--radius-md) var(--radius-md);
         z-index: 9999;
         font-weight: 600;
         font-size: 0.875rem;
-        transition: top var(--transition-base);
+        transition: top var(--transition);
     }
 
     .skip-to-content:focus {
@@ -167,15 +167,15 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        filter: brightness(0.6);
-        transition: transform 8s ease-out;
+        filter: brightness(0.55) saturate(1.1);
+        transition: transform 10s ease-out;
     }
 
     .bg-carousel-container .carousel-item.active img {
-        transform: scale(1.05);
+        transform: scale(1.08);
     }
 
-    /* Dark Gradient Overlay */
+    /* Overlay */
     .bg-overlay {
         position: absolute;
         top: 0;
@@ -183,55 +183,48 @@
         width: 100%;
         height: 100%;
         background: linear-gradient(
-            135deg,
-            rgba(0, 41, 82, 0.85) 0%,
-            rgba(0, 61, 122, 0.7) 50%,
-            rgba(0, 26, 61, 0.85) 100%
+            160deg,
+            rgba(10, 25, 47, 0.88) 0%,
+            rgba(15, 76, 129, 0.72) 40%,
+            rgba(10, 58, 100, 0.82) 100%
         );
         z-index: 1;
     }
 
-    /* Pattern Overlay */
+    /* Mesh Gradient Pattern */
     .bg-pattern {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background-image: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E");
+        background-image: 
+            radial-gradient(ellipse at 20% 50%, rgba(255,153,51,0.08) 0%, transparent 50%),
+            radial-gradient(ellipse at 80% 20%, rgba(19,136,8,0.06) 0%, transparent 50%),
+            radial-gradient(ellipse at 50% 80%, rgba(15,76,129,0.1) 0%, transparent 50%);
         z-index: 2;
         pointer-events: none;
     }
 
-    /* ===== Header - Redesigned ===== */
+    /* ===== Header ===== */
     .login-header {
         position: relative;
         z-index: 100;
     }
 
-    /* Top Bar - Tricolor */
     .header-tricolor {
         height: 4px;
         background: linear-gradient(90deg, var(--accent-saffron) 33.33%, white 33.33%, white 66.66%, var(--accent-green) 66.66%);
     }
 
-    /* Main Header Bar */
     .header-main {
-        background: rgba(255, 255, 255, 0.98);
-        backdrop-filter: blur(12px);
-        box-shadow: 0 2px 12px rgba(0,0,0,0.08);
-        padding: 0.75rem 0;
+        background: rgba(255, 255, 255, 0.97);
+        backdrop-filter: blur(16px) saturate(180%);
+        -webkit-backdrop-filter: blur(16px) saturate(180%);
+        border-bottom: 1px solid rgba(0,0,0,0.05);
+        padding: 0.625rem 0;
     }
 
-    .header-main .container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 1rem;
-    }
-
-    /* Left: GoI + LBSNAA */
     .header-left {
         display: flex;
         align-items: center;
@@ -243,84 +236,44 @@
         align-items: center;
         gap: 0.5rem;
         padding-right: 1.25rem;
-        border-right: 1px solid var(--border-light);
+        border-right: 1px solid var(--border);
     }
 
     .header-govt img {
-        height: 32px;
+        height: 28px;
         width: auto;
     }
 
     .header-govt span {
-        font-size: 0.8125rem;
+        font-size: 0.75rem;
         font-weight: 600;
-        color: var(--text-primary);
+        color: var(--text-heading);
         white-space: nowrap;
-    }
-
-    .header-lbsnaa {
-        display: flex;
-        align-items: center;
-        text-decoration: none;
+        letter-spacing: -0.01em;
     }
 
     .header-lbsnaa img {
-        height: 42px;
-        max-width: 200px;
+        height: 40px;
+        max-width: 280px;
         width: auto;
-    }
-
-    /* Right: Digital India + NeGD + Utils */
-    .header-right {
-        display: flex;
-        align-items: center;
-        gap: 1.5rem;
-    }
-
-    .header-digital-india {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.5rem 1rem;
-        background: linear-gradient(135deg, rgba(0, 61, 122, 0.06) 0%, rgba(0, 41, 82, 0.04) 100%);
-        border-radius: var(--radius-lg);
-        border: 1px solid var(--border-light);
-    }
-
-    .header-digital-india img {
-        height: 36px;
-        width: auto;
-    }
-
-    .header-digital-india .negd-badge {
-        font-size: 0.7rem;
-        color: var(--primary-blue);
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    .header-utils {
-        display: flex;
-        align-items: center;
-        gap: 0.25rem;
     }
 
     .header-utils a {
-        padding: 0.5rem 0.75rem;
+        padding: 0.4rem 0.75rem;
         font-size: 0.8125rem;
-        color: var(--text-secondary);
+        font-weight: 500;
+        color: var(--text-muted);
         text-decoration: none;
         border-radius: var(--radius-md);
-        transition: all var(--transition-base);
+        transition: all var(--transition);
         display: inline-flex;
         align-items: center;
         gap: 0.375rem;
     }
 
     .header-utils a:hover {
-        background: var(--bg-subtle);
-        color: var(--primary-blue);
+        background: var(--primary-subtle);
+        color: var(--primary);
     }
 
     /* ===== Main Content Area ===== */
@@ -334,29 +287,32 @@
         padding: 1rem;
     }
 
-    /* ===== Login Card - Glassmorphism ===== */
+    /* ===== Login Card ===== */
     .login-card {
-        background: rgba(255, 255, 255, 0.95);
-        backdrop-filter: blur(20px);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        border-radius: var(--radius-2xl);
-        box-shadow: var(--shadow-xl), 0 0 80px rgba(0,0,0,0.3);
+        background: rgba(255, 255, 255, 0.98);
+        backdrop-filter: blur(24px) saturate(200%);
+        -webkit-backdrop-filter: blur(24px) saturate(200%);
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        border-radius: var(--radius-3xl);
+        box-shadow: var(--shadow-card);
         width: 100%;
-        max-width: 440px;
-        padding: 2rem;
+        max-width: 460px;
+        padding: 2.5rem;
         position: relative;
         overflow: hidden;
-        animation: cardFloat 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+        animation: cardEntry 0.7s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    @keyframes cardFloat {
+    @keyframes cardEntry {
         from {
             opacity: 0;
-            transform: translateY(30px) scale(0.95);
+            transform: translateY(24px) scale(0.96);
+            filter: blur(4px);
         }
         to {
             opacity: 1;
             transform: translateY(0) scale(1);
+            filter: blur(0);
         }
     }
 
@@ -367,206 +323,169 @@
         top: 0;
         left: 0;
         right: 0;
-        height: 5px;
-        border-radius: var(--radius-2xl) var(--radius-2xl) 0 0;
+        height: 4px;
         background: linear-gradient(90deg, 
             var(--accent-saffron) 0%, var(--accent-saffron) 33.33%, 
-            white 33.33%, white 66.66%, 
+            #ffffff 33.33%, #ffffff 66.66%, 
             var(--accent-green) 66.66%, var(--accent-green) 100%);
     }
 
     /* Logo Section */
     .login-logo {
         text-align: center;
-        margin-bottom: 1.5rem;
+        margin-bottom: 2rem;
     }
 
     .login-logo img {
-        max-width: 200px;
+        max-width: 180px;
         height: auto;
+        margin-bottom: 0.75rem;
     }
 
     .login-logo h1 {
-        color: var(--primary-blue);
-        font-size: 1.5rem;
-        font-weight: 700;
-        margin-top: 0.75rem;
+        color: var(--text-heading);
+        font-size: 1.625rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
         margin-bottom: 0.25rem;
     }
 
-    .login-logo p {
+    .login-logo .subtitle {
         color: var(--text-muted);
-        font-size: 0.875rem;
-        margin: 0;
+        font-size: 0.9rem;
+        font-weight: 400;
     }
 
     /* ===== Form Styles ===== */
     .form-group {
-        margin-bottom: 1.25rem;
+        margin-bottom: 1.5rem;
     }
 
-    .form-label {
+    .form-label-custom {
         display: flex;
         align-items: center;
         gap: 0.5rem;
         margin-bottom: 0.5rem;
         font-weight: 600;
-        color: var(--text-primary);
+        color: var(--text-heading);
+        font-size: 0.875rem;
+        letter-spacing: -0.01em;
+    }
+
+    .form-label-custom i {
+        color: var(--primary);
         font-size: 0.9375rem;
     }
 
-    .form-label i {
-        color: var(--primary-blue);
-    }
-
-    .form-control {
+    .form-control-custom {
         width: 100%;
-        padding: 0.875rem 1rem;
-        border: 2px solid var(--border-color);
+        padding: 0.8125rem 1rem;
+        border: 1.5px solid var(--border);
         border-radius: var(--radius-lg);
-        font-size: 1rem;
-        color: var(--text-primary);
-        background: var(--bg-white);
-        transition: all var(--transition-base);
+        font-size: 0.9375rem;
+        font-weight: 400;
+        color: var(--text-heading);
+        background: var(--surface);
+        box-shadow: var(--shadow-input);
+        transition: all var(--transition);
+        letter-spacing: -0.01em;
     }
 
-    .form-control:hover:not(:focus) {
-        border-color: var(--text-muted);
+    .form-control-custom:hover:not(:focus) {
+        border-color: #cbd5e1;
+        background: var(--surface-hover);
     }
 
-    .form-control:focus {
-        border-color: var(--primary-blue);
-        box-shadow: var(--shadow-focus);
+    .form-control-custom:focus {
+        border-color: var(--border-focus);
+        box-shadow: var(--shadow-input-focus);
         outline: none;
+        background: var(--surface);
     }
 
-    .form-control::placeholder {
-        color: #9ca3af;
+    .form-control-custom::placeholder {
+        color: var(--text-light);
+        font-weight: 400;
     }
 
-    /* Input Group */
-    .input-group {
+    /* Input Group for Password */
+    .password-input-group {
+        position: relative;
         display: flex;
     }
 
-    .input-group .form-control {
-        border-right: none;
-        border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+    .password-input-group .form-control-custom {
+        padding-right: 3.25rem;
+        border-radius: var(--radius-lg);
     }
 
-    .input-group .form-control:focus + .input-addon {
-        border-color: var(--primary-blue);
-    }
-
-    .input-addon {
+    .password-toggle-btn {
+        position: absolute;
+        right: 0;
+        top: 0;
+        bottom: 0;
+        width: 3rem;
         display: flex;
         align-items: center;
         justify-content: center;
-        padding: 0 1rem;
-        background: #f8fafc;
-        border: 2px solid var(--border-color);
-        border-left: none;
+        background: transparent;
+        border: none;
+        color: var(--text-light);
+        cursor: pointer;
+        transition: color var(--transition);
         border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
-        cursor: pointer;
-        color: var(--text-muted);
-        transition: all var(--transition-base);
-        min-width: 50px;
     }
 
-    .input-addon:hover {
-        background: white;
-        color: var(--primary-blue);
+    .password-toggle-btn:hover {
+        color: var(--primary);
     }
 
-    .form-text {
-        font-size: 0.8125rem;
-        color: var(--text-muted);
+    .form-hint {
+        font-size: 0.75rem;
+        color: var(--text-light);
         margin-top: 0.375rem;
-    }
-
-    /* Checkbox */
-    .form-check {
-        display: flex;
-        align-items: center;
-        gap: 0.625rem;
-    }
-
-    .form-check-input {
-        width: 18px;
-        height: 18px;
-        border: 2px solid var(--border-color);
-        border-radius: 4px;
-        cursor: pointer;
-        appearance: none;
-        background: white;
-        transition: all var(--transition-base);
-        flex-shrink: 0;
-    }
-
-    .form-check-input:checked {
-        background: var(--primary-blue);
-        border-color: var(--primary-blue);
-        background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23fff' stroke-width='3' stroke-linecap='round' stroke-linejoin='round' d='M6 10l3 3 6-6'/%3e%3c/svg%3e");
-        background-size: 12px;
-        background-position: center;
-        background-repeat: no-repeat;
-    }
-
-    .form-check-input:focus {
-        box-shadow: var(--shadow-focus);
-    }
-
-    .form-check-label {
-        font-size: 0.9375rem;
-        color: var(--text-secondary);
-        cursor: pointer;
+        font-weight: 400;
     }
 
     /* ===== Submit Button ===== */
     .btn-login {
         width: 100%;
-        padding: 1rem;
-        background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-blue-dark) 100%);
+        padding: 0.875rem 1.5rem;
+        background: var(--primary);
         color: white;
         border: none;
         border-radius: var(--radius-lg);
-        font-size: 1rem;
+        font-size: 0.9375rem;
         font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        letter-spacing: -0.01em;
         cursor: pointer;
-        transition: all var(--transition-base);
-        box-shadow: 0 4px 15px rgba(0, 61, 122, 0.35);
-        display: flex;
+        transition: all var(--transition);
+        box-shadow: var(--shadow-btn);
+        display: inline-flex;
         align-items: center;
         justify-content: center;
-        gap: 0.5rem;
+        gap: 0.625rem;
         position: relative;
         overflow: hidden;
     }
 
-    .btn-login::before {
+    .btn-login::after {
         content: '';
         position: absolute;
-        top: 0;
-        left: -100%;
-        width: 100%;
-        height: 100%;
-        background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-        transition: left 0.5s;
+        inset: 0;
+        background: linear-gradient(180deg, rgba(255,255,255,0.1) 0%, transparent 60%);
+        pointer-events: none;
     }
 
     .btn-login:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 25px rgba(0, 61, 122, 0.4);
-    }
-
-    .btn-login:hover::before {
-        left: 100%;
+        background: var(--primary-hover);
+        box-shadow: var(--shadow-btn-hover);
+        transform: translateY(-1px);
     }
 
     .btn-login:active {
         transform: translateY(0);
+        box-shadow: var(--shadow-btn);
     }
 
     .btn-login:disabled {
@@ -580,31 +499,33 @@
         pointer-events: none;
     }
 
-    .btn-login.loading::after {
+    .btn-login.loading::before {
         content: '';
         position: absolute;
         width: 20px;
         height: 20px;
-        border: 2px solid white;
-        border-top-color: transparent;
+        border: 2.5px solid rgba(255,255,255,0.3);
+        border-top-color: white;
         border-radius: 50%;
-        animation: spin 0.6s linear infinite;
+        animation: spin 0.7s linear infinite;
+        z-index: 2;
     }
 
     @keyframes spin { to { transform: rotate(360deg); } }
 
     /* Forgot Password */
     .forgot-link {
-        color: var(--primary-blue);
+        color: var(--primary);
         text-decoration: none;
-        font-size: 0.875rem;
+        font-size: 0.8125rem;
         font-weight: 600;
-        transition: all var(--transition-base);
+        transition: all var(--transition);
     }
 
     .forgot-link:hover {
-        color: var(--primary-blue-dark);
+        color: var(--primary-hover);
         text-decoration: underline;
+        text-underline-offset: 3px;
     }
 
     /* Security Badge */
@@ -613,174 +534,404 @@
         align-items: center;
         justify-content: center;
         gap: 0.5rem;
-        margin-top: 1rem;
+        margin-top: 1.25rem;
         padding: 0.625rem 1rem;
-        background: rgba(5, 150, 105, 0.1);
+        background: linear-gradient(135deg, rgba(5,150,105,0.08) 0%, rgba(5,150,105,0.04) 100%);
+        border: 1px solid rgba(5,150,105,0.15);
         border-radius: var(--radius-lg);
-        color: var(--success-color);
+        color: var(--success);
         font-size: 0.8125rem;
         font-weight: 500;
     }
 
     .security-badge i {
-        animation: pulse 2s ease-in-out infinite;
+        animation: securePulse 2.5s ease-in-out infinite;
     }
 
-    @keyframes pulse {
-        0%, 100% { opacity: 1; }
-        50% { opacity: 0.5; }
+    @keyframes securePulse {
+        0%, 100% { opacity: 1; transform: scale(1); }
+        50% { opacity: 0.6; transform: scale(0.95); }
     }
 
     /* Alert */
     .alert-error {
-        background: rgba(220, 38, 38, 0.1);
-        border-left: 4px solid var(--error-color);
+        background: rgba(220, 38, 38, 0.06);
+        border: 1px solid rgba(220, 38, 38, 0.15);
+        border-left: 4px solid var(--error);
         border-radius: var(--radius-lg);
         padding: 0.875rem 1rem;
-        margin-bottom: 1.25rem;
-        color: var(--error-color);
+        margin-bottom: 1.5rem;
+        color: var(--error);
         display: flex;
         align-items: flex-start;
         gap: 0.625rem;
         font-size: 0.875rem;
-        animation: shake 0.4s ease-out;
+        font-weight: 500;
+        animation: alertSlide 0.4s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        25% { transform: translateX(-5px); }
-        75% { transform: translateX(5px); }
+    @keyframes alertSlide {
+        from { opacity: 0; transform: translateY(-8px); }
+        to { opacity: 1; transform: translateY(0); }
     }
 
     .alert-error i {
         font-size: 1.125rem;
         flex-shrink: 0;
+        margin-top: 1px;
     }
 
     /* Validation */
-    .form-control.is-invalid {
-        border-color: var(--error-color);
+    .form-control-custom.is-invalid {
+        border-color: var(--error);
+        box-shadow: 0 0 0 4px rgba(220,38,38,0.08);
     }
 
-    .form-control.is-valid {
-        border-color: var(--success-color);
+    .form-control-custom.is-valid {
+        border-color: var(--success);
+        box-shadow: 0 0 0 4px rgba(5,150,105,0.08);
     }
 
     /* Word of Day */
     .word-of-day {
-        margin-top: 1.5rem;
-        padding-top: 1rem;
-        border-top: 1px solid var(--border-light);
+        margin-top: 1.75rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--border);
         text-align: center;
     }
 
-    .word-of-day h6 {
-        color: var(--text-muted);
-        font-size: 0.8125rem;
-        font-weight: 500;
+    .word-of-day .wod-label {
+        color: var(--text-light);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
         margin-bottom: 0.375rem;
     }
 
-    .word-of-day p {
-        color: var(--primary-blue);
-        font-weight: 600;
+    .word-of-day .wod-text {
+        color: var(--primary);
+        font-weight: 700;
         font-size: 0.9375rem;
         margin: 0;
+        letter-spacing: -0.01em;
     }
 
-    /* ===== Footer - Redesigned ===== */
+    /* ===== Footer ===== */
     .login-footer {
         position: relative;
         z-index: 100;
     }
 
-    /* Footer Tricolor */
     .footer-tricolor {
         height: 4px;
         background: linear-gradient(90deg, var(--accent-saffron) 33.33%, white 33.33%, white 66.66%, var(--accent-green) 66.66%);
     }
 
-    /* Main Footer */
     .footer-main {
-        background: var(--primary-blue);
+        background: rgba(15, 23, 42, 0.97);
+        backdrop-filter: blur(12px);
         color: white;
-        padding: 1rem 0;
-    }
-
-    .footer-main .container {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        gap: 1rem;
+        padding: 0.875rem 0;
     }
 
     .footer-info {
         font-size: 0.8125rem;
-        color: rgba(255,255,255,0.95);
+        color: rgba(255,255,255,0.85);
+        font-weight: 400;
     }
 
     .footer-info a {
-        color: white;
+        color: rgba(255,255,255,0.95);
         text-decoration: none;
+        font-weight: 500;
     }
 
     .footer-info a:hover {
         text-decoration: underline;
+        text-underline-offset: 2px;
     }
 
     .footer-badge {
-        background: rgba(255,255,255,0.15);
+        background: rgba(255,255,255,0.1);
+        border: 1px solid rgba(255,255,255,0.15);
         padding: 0.375rem 0.875rem;
         border-radius: var(--radius-md);
         font-size: 0.8125rem;
+        font-weight: 500;
+        color: rgba(255,255,255,0.9);
     }
 
-    /* NeGD Credit Bar */
     .footer-negd {
-        background: rgba(0, 26, 61, 0.9);
-        padding: 0.625rem 0;
-    }
-
-    .footer-negd .container {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 0.75rem;
-        flex-wrap: wrap;
+        background: rgba(10, 15, 30, 0.97);
+        padding: 0.5rem 0;
     }
 
     .footer-negd a {
-        display: flex;
+        display: inline-flex;
         align-items: center;
         gap: 0.625rem;
-        color: rgba(255,255,255,0.9);
+        color: rgba(255,255,255,0.8);
         text-decoration: none;
         font-size: 0.8125rem;
-        transition: opacity var(--transition-base);
+        font-weight: 400;
+        transition: color var(--transition);
     }
 
     .footer-negd a:hover {
-        opacity: 0.9;
         color: white;
     }
 
     .footer-negd img {
-        height: 24px;
+        height: 22px;
         width: auto;
     }
 
-    /* ===== Carousel Controls (Hidden but accessible) ===== */
-    .bg-carousel-container .carousel-control-prev,
-    .bg-carousel-container .carousel-control-next {
+    /* ===== GIGW Accessibility Toolbar ===== */
+    .gigw-toolbar {
+        background: var(--primary);
+        padding: 0.375rem 0;
+        position: relative;
+        z-index: 101;
+    }
+
+    .gigw-toolbar .container {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .gigw-toolbar-left {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+
+    .gigw-toolbar-left a {
+        color: rgba(255,255,255,0.9);
+        font-size: 0.75rem;
+        text-decoration: none;
+        font-weight: 500;
+        transition: color var(--transition);
+    }
+
+    .gigw-toolbar-left a:hover,
+    .gigw-toolbar-left a:focus {
+        color: white;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .gigw-toolbar-right {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+    }
+
+    .font-size-controls {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .font-size-controls span {
+        color: rgba(255,255,255,0.8);
+        font-size: 0.6875rem;
+        font-weight: 500;
+        margin-right: 0.25rem;
+    }
+
+    .font-size-btn {
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: white;
+        width: 26px;
+        height: 26px;
+        border-radius: var(--radius-sm);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-weight: 700;
+        font-size: 0.75rem;
+        transition: all var(--transition);
+        text-decoration: none;
+    }
+
+    .font-size-btn:hover,
+    .font-size-btn:focus {
+        background: rgba(255,255,255,0.3);
+        color: white;
+    }
+
+    .font-size-btn.active {
+        background: white;
+        color: var(--primary);
+    }
+
+    .contrast-btn {
+        background: rgba(255,255,255,0.15);
+        border: 1px solid rgba(255,255,255,0.25);
+        color: white;
+        padding: 0.25rem 0.625rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all var(--transition);
+        display: inline-flex;
+        align-items: center;
+        gap: 0.375rem;
+    }
+
+    .contrast-btn:hover,
+    .contrast-btn:focus {
+        background: rgba(255,255,255,0.3);
+        color: white;
+    }
+
+    .lang-toggle {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .lang-toggle a {
+        color: rgba(255,255,255,0.8);
+        font-size: 0.6875rem;
+        font-weight: 600;
+        text-decoration: none;
+        padding: 0.2rem 0.5rem;
+        border-radius: var(--radius-sm);
+        transition: all var(--transition);
+    }
+
+    .lang-toggle a:hover,
+    .lang-toggle a:focus {
+        background: rgba(255,255,255,0.15);
+        color: white;
+    }
+
+    .lang-toggle a.active-lang {
+        background: white;
+        color: var(--primary);
+    }
+
+    .lang-toggle .separator {
+        color: rgba(255,255,255,0.4);
+        font-size: 0.6875rem;
+    }
+
+    /* National Emblem */
+    .national-emblem {
+        height: 36px;
+        width: auto;
+        margin-right: 0.5rem;
+    }
+
+    /* GIGW Footer Links */
+    .footer-links {
+        background: rgba(15, 23, 42, 0.95);
+        padding: 0.625rem 0;
+        border-top: 1px solid rgba(255,255,255,0.08);
+    }
+
+    .footer-links .container {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-wrap: wrap;
+        gap: 0.25rem 1rem;
+    }
+
+    .footer-links a {
+        color: rgba(255,255,255,0.75);
+        font-size: 0.75rem;
+        text-decoration: none;
+        font-weight: 400;
+        transition: color var(--transition);
+        padding: 0.125rem 0;
+    }
+
+    .footer-links a:hover,
+    .footer-links a:focus {
+        color: white;
+        text-decoration: underline;
+        text-underline-offset: 2px;
+    }
+
+    .footer-links .link-separator {
+        color: rgba(255,255,255,0.3);
+        font-size: 0.625rem;
+    }
+
+    .footer-last-updated {
+        font-size: 0.6875rem;
+        color: rgba(255,255,255,0.6);
+        text-align: center;
+        padding-top: 0.375rem;
+    }
+
+    /* High Contrast Mode */
+    body.high-contrast {
+        --primary: #000000;
+        --primary-hover: #1a1a1a;
+        --text-heading: #000000;
+        --text-body: #000000;
+        --text-muted: #333333;
+        --text-light: #555555;
+        --surface: #ffffff;
+        --border: #000000;
+    }
+
+    body.high-contrast .login-card {
+        background: #ffffff;
+        border: 3px solid #000000;
+        box-shadow: none;
+    }
+
+    body.high-contrast .form-control-custom {
+        border: 2px solid #000000;
+    }
+
+    body.high-contrast .btn-login {
+        background: #000000;
+        box-shadow: none;
+    }
+
+    body.high-contrast .gigw-toolbar {
+        background: #000000;
+    }
+
+    body.high-contrast .header-main {
+        background: #ffffff;
+        border-bottom: 2px solid #000;
+    }
+
+    body.high-contrast .bg-carousel-container {
         display: none;
     }
 
+    body.high-contrast .bg-overlay {
+        background: #333333;
+    }
+
+    /* Font Size Scaling */
+    html.font-size-small { font-size: 87.5%; }
+    html.font-size-normal { font-size: 100%; }
+    html.font-size-large { font-size: 112.5%; }
+    html.font-size-xlarge { font-size: 125%; }
+
+    /* ===== Carousel Controls (Hidden) ===== */
+    .bg-carousel-container .carousel-control-prev,
+    .bg-carousel-container .carousel-control-next,
     .bg-carousel-container .carousel-indicators {
         display: none;
     }
 
-    /* ===== Decorative Elements ===== */
+    /* ===== Floating Shapes ===== */
     .floating-shapes {
         position: absolute;
         top: 0;
@@ -794,94 +945,69 @@
 
     .shape {
         position: absolute;
-        background: rgba(255,255,255,0.03);
         border-radius: 50%;
-        animation: float 20s infinite ease-in-out;
+        background: radial-gradient(circle, rgba(255,255,255,0.04) 0%, transparent 70%);
+        animation: floatShape 25s infinite ease-in-out;
     }
 
-    .shape-1 { width: 400px; height: 400px; top: -100px; left: -100px; animation-delay: 0s; }
-    .shape-2 { width: 300px; height: 300px; bottom: -50px; right: -50px; animation-delay: -5s; }
-    .shape-3 { width: 200px; height: 200px; top: 50%; left: 10%; animation-delay: -10s; }
-    .shape-4 { width: 150px; height: 150px; top: 20%; right: 15%; animation-delay: -15s; }
+    .shape-1 { width: 500px; height: 500px; top: -150px; left: -150px; animation-delay: 0s; }
+    .shape-2 { width: 350px; height: 350px; bottom: -80px; right: -80px; animation-delay: -6s; }
+    .shape-3 { width: 250px; height: 250px; top: 45%; left: 8%; animation-delay: -12s; }
+    .shape-4 { width: 180px; height: 180px; top: 15%; right: 12%; animation-delay: -18s; }
 
-    @keyframes float {
-        0%, 100% { transform: translate(0, 0) rotate(0deg); }
-        25% { transform: translate(20px, -20px) rotate(5deg); }
-        50% { transform: translate(0, 20px) rotate(0deg); }
-        75% { transform: translate(-20px, -10px) rotate(-5deg); }
+    @keyframes floatShape {
+        0%, 100% { transform: translate(0, 0) scale(1); }
+        25% { transform: translate(15px, -20px) scale(1.02); }
+        50% { transform: translate(-10px, 15px) scale(0.98); }
+        75% { transform: translate(-15px, -10px) scale(1.01); }
     }
 
     /* ===== Responsive ===== */
     @media (max-width: 576px) {
-        .header-main .container {
-            flex-direction: column;
-            align-items: center;
-            text-align: center;
-        }
-        .header-left {
-            flex-direction: column;
-            border-right: none;
-        }
-        .header-govt {
-            border-right: none;
-            padding-right: 0;
-        }
-        .header-govt span { font-size: 0.75rem; }
-        .header-lbsnaa img { height: 36px; max-width: 160px; }
-        .header-right {
-            flex-direction: column;
-            width: 100%;
-        }
-        .header-digital-india { justify-content: center; }
-        .header-digital-india img { height: 30px; }
-        .header-utils { justify-content: center; }
-        .footer-main .container { flex-direction: column; text-align: center; }
-        .footer-negd .container { flex-direction: column; }
-        
         .login-card {
-            padding: 1.5rem;
+            padding: 1.75rem 1.5rem;
             margin: 0.5rem;
-            border-radius: var(--radius-xl);
+            border-radius: var(--radius-2xl);
         }
-        
-        .login-logo img { max-width: 160px; }
-        .login-logo h1 { font-size: 1.25rem; }
-        
+        .login-logo img { max-width: 150px; }
+        .login-logo h1 { font-size: 1.375rem; }
+        .header-govt span { font-size: 0.6875rem; }
+        .gigw-toolbar .container { justify-content: center; }
+        .gigw-toolbar-left { display: none; }
+        .footer-links .container { gap: 0.25rem 0.75rem; }
+        .national-emblem { height: 28px; }
     }
 
     @media (min-width: 576px) and (max-width: 768px) {
-        .header-left { gap: 1rem; }
-        .header-govt span { font-size: 0.75rem; }
-        .header-lbsnaa img { height: 38px; max-width: 180px; }
         .login-card {
-            max-width: 400px;
-            padding: 2rem;
+            max-width: 420px;
+            padding: 2.25rem;
         }
     }
 
     @media (min-width: 768px) {
         .login-card {
-            padding: 2.5rem;
+            padding: 2.75rem;
         }
-        .login-logo img { max-width: 220px; }
+        .login-logo img { max-width: 200px; }
     }
 
     @media (min-width: 992px) {
         .login-card {
-            max-width: 460px;
+            max-width: 480px;
         }
     }
 
     @media (max-height: 700px) {
         .login-card {
-            padding: 1.25rem 1.5rem;
+            padding: 1.5rem 1.75rem;
         }
-        .login-logo { margin-bottom: 1rem; }
-        .login-logo img { max-width: 150px; }
-        .login-logo h1 { font-size: 1.25rem; margin-top: 0.5rem; }
-        .form-group { margin-bottom: 0.875rem; }
-        .form-control { padding: 0.75rem; }
-        .btn-login { padding: 0.875rem; }
+        .login-logo { margin-bottom: 1.25rem; }
+        .login-logo img { max-width: 140px; }
+        .login-logo h1 { font-size: 1.25rem; }
+        .form-group { margin-bottom: 1rem; }
+        .form-control-custom { padding: 0.6875rem 0.875rem; }
+        .btn-login { padding: 0.75rem; }
         .word-of-day { margin-top: 1rem; padding-top: 0.75rem; }
     }
 
@@ -900,9 +1026,9 @@
     @media (prefers-contrast: high) {
         .login-card {
             background: white;
-            border: 3px solid var(--primary-blue);
+            border: 3px solid var(--primary);
         }
-        .form-control { border-width: 3px; }
+        .form-control-custom { border-width: 3px; }
     }
 
     @media print {
@@ -912,10 +1038,40 @@
     </style>
 </head>
 
-<body>
+<body class="bg-dark">
     <a href="#login-form" class="skip-to-content">Skip to Main Content</a>
 
-    <div class="login-wrapper d-flex flex-column min-vh-100">
+    <div class="login-wrapper">
+        <!-- GIGW: Accessibility Toolbar -->
+        <div class="gigw-toolbar" role="navigation" aria-label="Accessibility Options">
+            <div class="container">
+                <div class="gigw-toolbar-left">
+                    <a href="https://screenreaderaccess.com" target="_blank" rel="noopener noreferrer" title="Screen Reader Access Information">
+                        <i class="bi bi-ear" aria-hidden="true"></i> Screen Reader Access
+                    </a>
+                    <a href="https://www.india.gov.in" target="_blank" rel="noopener noreferrer" title="National Portal of India">
+                        <i class="bi bi-globe2" aria-hidden="true"></i> india.gov.in
+                    </a>
+                </div>
+                <div class="gigw-toolbar-right">
+                    <div class="font-size-controls" role="group" aria-label="Text Size Controls">
+                        <span>Text Size:</span>
+                        <button type="button" class="font-size-btn" data-size="small" aria-label="Decrease text size" title="Decrease Text Size">A-</button>
+                        <button type="button" class="font-size-btn active" data-size="normal" aria-label="Normal text size" title="Normal Text Size">A</button>
+                        <button type="button" class="font-size-btn" data-size="large" aria-label="Increase text size" title="Increase Text Size">A+</button>
+                    </div>
+                    <button type="button" class="contrast-btn" id="contrastToggle" aria-label="Toggle high contrast" title="High Contrast Mode">
+                        <i class="bi bi-circle-half" aria-hidden="true"></i> Contrast
+                    </button>
+                    <div class="lang-toggle" role="group" aria-label="Language Selection">
+                        <a href="#" class="active-lang" lang="en" title="English">EN</a>
+                        <span class="separator">|</span>
+                        <a href="#" lang="hi" title="हिन्दी">हिन्दी</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Background Carousel -->
         <div class="bg-carousel-container" aria-hidden="true">
             <div id="bgCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6000" data-bs-pause="false">
@@ -946,22 +1102,31 @@
             <div class="header-tricolor"></div>
             <div class="header-main">
                 <div class="container">
-                    <div class="header-left">
-                        <div class="header-govt">
-                            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png"
-                                alt="National Flag of India" loading="eager" onerror="this.style.display='none'">
-                            <span>भारत सरकार | Government of India</span>
+                    <div class="d-flex align-items-center justify-content-between w-100 flex-wrap gap-2">
+                        <div class="header-left">
+                            <!-- GIGW: National Emblem -->
+                            <img src="{{ asset('admin_assets/images/logos/emblem-dark.png') }}"
+                                alt="National Emblem of India - Satyameva Jayate"
+                                class="national-emblem"
+                                loading="eager"
+                                onerror="this.style.display='none'">
+                            <div class="header-govt">
+                                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                                    alt="National Flag of India" loading="eager" onerror="this.style.display='none'">
+                                <span lang="hi">भारत सरकार</span>
+                                <span class="d-none d-sm-inline">| Government of India</span>
+                            </div>
+                            <a href="{{ url('/') }}" class="d-none d-lg-inline-flex align-items-center text-decoration-none" aria-label="LBSNAA Home">
+                                <img src="{{ asset('admin_assets/images/logos/logo.png') }}"
+                                    alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager" onerror="this.style.display='none'" class="header-lbsnaa" style="width: 180px; height: auto;">
+                            </a>
                         </div>
-                        <a href="{{ url('/') }}" class="header-lbsnaa d-none d-lg-block" aria-label="LBSNAA Home">
-                            <img src="{{ asset('admin_assets/images/logos/logo.png') }}"
-                                alt="LBSNAA - Lal Bahadur Shastri National Academy of Administration" loading="eager" onerror="this.style.display='none'" style="min-width: 300px; height: auto;">
-                        </a>
-                    </div>
-                    <div class="header-right d-none d-lg-block">
-                        <nav class="header-utils" aria-label="Utility Navigation">
-                            <a href="#login-form"><i class="bi bi-arrow-down-circle" aria-hidden="true"></i> Skip to Content</a>
-                            <a href="#" id="accessibilityTrigger" role="button"><i class="bi bi-universal-access" aria-hidden="true"></i> Accessibility</a>
-                        </nav>
+                        <div class="d-none d-lg-flex align-items-center">
+                            <nav class="header-utils d-flex align-items-center gap-1" aria-label="Utility Navigation">
+                                <a href="#login-form"><i class="bi bi-arrow-down-circle" aria-hidden="true"></i> Skip to Content</a>
+                                <a href="#" id="accessibilityTrigger" role="button"><i class="bi bi-universal-access" aria-hidden="true"></i> Accessibility</a>
+                            </nav>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -974,9 +1139,10 @@
                 <div class="login-logo mb-4 text-center">
                     <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" 
                         alt="Sargam - LBSNAA Portal"
-                        loading="eager" class="img-fluid mb-2" style="max-width: 180px;">
-                    <h1 id="login-form" class="fw-bold fs-3 mb-1">Welcome Back</h1>
-                    <p class="text-muted mb-0">Sign in to access your LBSNAA account</p>
+                        loading="eager"
+                        class="d-block mx-auto">
+                    <h1 id="login-form">Welcome Back</h1>
+                    <p class="subtitle mb-0">Sign in to access your LBSNAA account</p>
                 </div>
 
                 <!-- Error Alert -->
@@ -1002,48 +1168,50 @@
                 <form action="{{ route('post_login') }}" method="POST" id="loginForm" novalidate class="needs-validation" autocomplete="off">
                     @csrf
                     <!-- Username -->
-                    <div class="form-group mb-3">
-                        <label for="username" class="form-label d-flex align-items-center gap-1">
+                    <div class="form-group">
+                        <label for="username" class="form-label-custom">
                             <i class="bi bi-person-fill" aria-hidden="true"></i>
                             <span>Username <span class="text-danger">*</span></span>
                         </label>
                         <input type="text" 
-                            class="form-control @error('username') is-invalid @enderror py-3" 
+                            class="form-control-custom @error('username') is-invalid @enderror" 
                             id="username"
                             name="username"
                             value="{{ old('username') }}"
-                            placeholder="Enter your username"
+                            placeholder="Enter your username or ID"
                             autocomplete="username"
                             required
                             autofocus>
-                        <div class="form-text">Your official registration number or ID</div>
+                        <div class="form-hint">Your official registration number or ID</div>
                     </div>
                     <!-- Password -->
                     <div class="form-group mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
-                            <label for="password" class="form-label mb-0 d-flex align-items-center gap-1">
+                            <label for="password" class="form-label-custom mb-0">
                                 <i class="bi bi-lock-fill" aria-hidden="true"></i>
                                 <span>Password <span class="text-danger">*</span></span>
                             </label>
                         </div>
-                        <div class="input-group flex-nowrap">
+                        <div class="password-input-group">
                             <input type="password" 
-                                class="form-control @error('password') is-invalid @enderror py-3" 
+                                class="form-control-custom @error('password') is-invalid @enderror" 
                                 id="password"
                                 name="password"
                                 placeholder="Enter your password"
                                 autocomplete="current-password"
                                 required>
-                            <button type="button" class="input-addon border-0 bg-transparent" id="togglePassword" aria-label="Show password" tabindex="0">
-                                <i class="bi bi-eye" aria-hidden="true"></i>
+                            <button type="button" class="password-toggle-btn" id="togglePassword" aria-label="Show password">
+                                <i class="bi bi-eye fs-5" aria-hidden="true"></i>
                             </button>
                         </div>
-                        <div class="text-end mt-1">
-                            <a href="{{ route('password.request') ?? '#' }}" class="forgot-link small">Forgot Password?</a>
+                        <div class="d-flex justify-content-end mt-2">
+                            <a href="{{ route('password.request') ?? '#' }}" class="forgot-link">
+                                Forgot Password?
+                            </a>
                         </div>
                     </div>
                     <!-- Submit -->
-                    <button type="submit" class="btn-login btn btn-primary btn-lg mt-2 mb-3 d-flex align-items-center justify-content-center gap-2 w-100" id="loginBtn">
+                    <button type="submit" class="btn-login mt-1" id="loginBtn">
                         <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
                         <span>Sign In</span>
                     </button>
@@ -1080,19 +1248,46 @@
             <div class="footer-tricolor"></div>
             <div class="footer-main">
                 <div class="container">
-                    <div class="footer-info">
-                        <span>&copy; {{ date('Y') }} LBSNAA Mussoorie, Government of India. All Rights Reserved</span>
-                        <span class="d-none d-md-inline mx-2">|</span>
-                        <span class="d-none d-sm-inline">Support: <a href="mailto:support.lbsnaa@nic.in">support.lbsnaa@nic.in</a></span>
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 w-100">
+                        <div class="footer-info">
+                            <span>&copy; {{ date('Y') }} LBSNAA Mussoorie, Government of India. All Rights Reserved</span>
+                            <span class="d-none d-md-inline mx-2">|</span>
+                            <span class="d-none d-sm-inline">Support: <a href="mailto:support.lbsnaa@nic.in">support[dot]lbsnaa[at]nic[dot]in</a></span>
+                        </div>
+                        <div class="footer-badge d-inline-flex align-items-center gap-1">
+                            <i class="bi bi-people-fill" aria-hidden="true"></i>
+                            Active Users: <strong id="activeCount">--</strong>
+                        </div>
                     </div>
-                    <div class="footer-badge">
-                        <i class="bi bi-people-fill me-1" aria-hidden="true"></i>
-                        Active Users: <strong id="activeCount">--</strong>
+                </div>
+            </div>
+            <!-- GIGW: Mandatory Footer Links -->
+            <div class="footer-links">
+                <div class="container">
+                    <a href="#" title="Website Policies">Web Information Manager</a>
+                    <span class="link-separator" aria-hidden="true">|</span>
+                    <a href="#" title="Privacy Policy">Privacy Policy</a>
+                    <span class="link-separator" aria-hidden="true">|</span>
+                    <a href="#" title="Terms and Conditions">Terms & Conditions</a>
+                    <span class="link-separator" aria-hidden="true">|</span>
+                    <a href="#" title="Copyright Policy">Copyright Policy</a>
+                    <span class="link-separator" aria-hidden="true">|</span>
+                    <a href="#" title="Hyperlinking Policy">Hyperlinking Policy</a>
+                    <span class="link-separator" aria-hidden="true">|</span>
+                    <a href="#" title="Accessibility Statement">Accessibility Statement</a>
+                    <span class="link-separator" aria-hidden="true">|</span>
+                    <a href="#" title="Disclaimer">Disclaimer</a>
+                    <span class="link-separator" aria-hidden="true">|</span>
+                    <a href="#" title="Help">Help</a>
+                    <span class="link-separator" aria-hidden="true">|</span>
+                    <a href="#" title="Sitemap">Sitemap</a>
+                    <div class="footer-last-updated w-100 mt-1">
+                        <span>Last Updated: {{ date('d M Y') }}</span>
                     </div>
                 </div>
             </div>
             <div class="footer-negd">
-                <div class="container">
+                <div class="container text-center">
                     <a href="https://negd.gov.in/" target="_blank" rel="noopener noreferrer" aria-label="Powered by National e-Governance Division">
                         <img src="https://cdn.digitalindiacorporation.in/wp-content/themes/di-child/assets/images/dilogonew.svg.gzip" alt="NeGD Logo" loading="lazy" onerror="this.style.display='none'">
                         <span>Powered by <strong>National e-Governance Division</strong>, MeitY</span>
@@ -1195,6 +1390,65 @@
             document.body.appendChild(sr);
             setTimeout(() => sr.remove(), 3000);
         });
+
+        // GIGW: Font Size Controls
+        const fontBtns = document.querySelectorAll('.font-size-btn');
+        fontBtns.forEach(btn => {
+            btn.addEventListener('click', function() {
+                const size = this.dataset.size;
+                const html = document.documentElement;
+                html.classList.remove('font-size-small', 'font-size-normal', 'font-size-large', 'font-size-xlarge');
+                html.classList.add('font-size-' + size);
+                fontBtns.forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+                // Store preference
+                try { localStorage.setItem('gigw-font-size', size); } catch(e) {}
+                // Announce change
+                announceChange('Text size changed to ' + size);
+            });
+        });
+
+        // Restore font size preference
+        try {
+            const savedSize = localStorage.getItem('gigw-font-size');
+            if (savedSize) {
+                document.documentElement.classList.add('font-size-' + savedSize);
+                fontBtns.forEach(b => {
+                    b.classList.toggle('active', b.dataset.size === savedSize);
+                });
+            }
+        } catch(e) {}
+
+        // GIGW: High Contrast Toggle
+        const contrastBtn = document.getElementById('contrastToggle');
+        if (contrastBtn) {
+            contrastBtn.addEventListener('click', function() {
+                document.body.classList.toggle('high-contrast');
+                const isHC = document.body.classList.contains('high-contrast');
+                this.setAttribute('aria-pressed', isHC);
+                try { localStorage.setItem('gigw-contrast', isHC ? 'high' : 'normal'); } catch(e) {}
+                announceChange(isHC ? 'High contrast mode enabled' : 'Normal contrast mode enabled');
+            });
+
+            // Restore contrast preference
+            try {
+                if (localStorage.getItem('gigw-contrast') === 'high') {
+                    document.body.classList.add('high-contrast');
+                    contrastBtn.setAttribute('aria-pressed', 'true');
+                }
+            } catch(e) {}
+        }
+
+        // Accessibility live announcement helper
+        function announceChange(message) {
+            const announcer = document.createElement('div');
+            announcer.setAttribute('role', 'status');
+            announcer.setAttribute('aria-live', 'assertive');
+            announcer.className = 'visually-hidden';
+            announcer.textContent = message;
+            document.body.appendChild(announcer);
+            setTimeout(() => announcer.remove(), 2000);
+        }
     })();
     </script>
 </body>

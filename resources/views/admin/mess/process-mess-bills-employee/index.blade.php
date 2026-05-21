@@ -28,68 +28,92 @@
     </div>
 
     {{-- Summary cards --}}
-    <div class="no-print">
-    @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0]; @endphp
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-4 g-3 mb-4 animate__animated animate__fadeIn">
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-primary" style="font-size: 2rem;">description</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</div>
+    <div class="no-print process-mess-stats-section mb-4">
+        @php
+            $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0];
+            $statsPaidPct = ($stats['total_bills'] ?? 0) > 0
+                ? (int) round((($stats['paid_count'] ?? 0) / $stats['total_bills']) * 100)
+                : 0;
+        @endphp
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+            <h2 class="h6 mb-0 text-uppercase fw-semibold text-body-secondary d-flex align-items-center gap-2">
+                <span class="material-symbols-rounded text-primary" style="font-size: 1.35rem;" aria-hidden="true">insights</span>
+                <span>Bill overview</span>
+            </h2>
+            <span class="badge text-bg-light border text-body-secondary fw-normal px-3 py-2 rounded-pill">
+                <span class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;" aria-hidden="true">date_range</span>
+                {{ $dateFromDisplay }} – {{ $dateToDisplay }}
+            </span>
+        </div>
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 g-lg-4 animate__animated animate__fadeIn" role="list" aria-label="Bill statistics">
+            <div class="col" role="listitem">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-primary bg-primary-subtle bg-opacity-25">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                        <div class="flex-shrink-0 rounded-circle bg-primary text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
+                            <span class="material-symbols-rounded">description</span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total bills</p>
+                            <p class="fs-3 fw-bold text-primary mb-1 lh-1 tabular-nums" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</p>
+                            <p class="small text-body-secondary mb-0">Combined invoices in range</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-warning bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-warning" style="font-size: 2rem;">schedule</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-success bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-success" style="font-size: 2rem;">check_circle</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</div>
+            <div class="col" role="listitem">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-warning bg-warning-subtle bg-opacity-25">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                        <div class="flex-shrink-0 rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
+                            <span class="material-symbols-rounded">pending_actions</span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Unpaid</p>
+                            <p class="fs-3 fw-bold text-warning-emphasis mb-1 lh-1 tabular-nums" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</p>
+                            <p class="small text-body-secondary mb-0">Awaiting payment</p>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-info" style="font-size: 2rem;">payments</i>
+            <div class="col" role="listitem">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-success bg-success-subtle bg-opacity-25">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                        <div class="flex-shrink-0 rounded-circle bg-success text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
+                            <span class="material-symbols-rounded">check_circle</span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                <p class="text-body-secondary small text-uppercase fw-semibold mb-0 lh-sm">Paid</p>
+                                <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle" id="process-mess-stats-paid-pct">{{ $statsPaidPct }}% cleared</span>
+                            </div>
+                            <p class="fs-3 fw-bold text-success mb-1 lh-1 tabular-nums" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</p>
+                            <p class="small text-body-secondary mb-0">Fully settled bills</p>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</div>
+                </div>
+            </div>
+            <div class="col" role="listitem">
+                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-info bg-info-subtle bg-opacity-25">
+                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                        <div class="flex-shrink-0 rounded-circle bg-info text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
+                            <span class="material-symbols-rounded">payments</span>
+                        </div>
+                        <div class="flex-grow-1 min-w-0">
+                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total amount</p>
+                            <p class="fs-3 fw-bold text-info-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</p>
+                            <p class="small text-body-secondary mb-0">Bill value for period</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    </div>
+
 
     {{-- Filters card --}}
     <div class="card border-0 shadow mb-4 no-print" style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
         <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.process-mess-bills-employee.index') }}" id="mainFilterForm">
+                <input type="hidden" name="refresh" value="1">
                 <div class="row g-3 align-items-end">
                     <div class="col-md-3">
                         <label class="form-label small fw-semibold text-dark mb-2"><i class="material-symbols-rounded align-middle me-1" style="font-size: 1.1rem;">event</i>Date From <span class="text-danger">*</span></label>
@@ -215,7 +239,10 @@
                                 ? request('invoice_sent')
                                 : ($invoiceSentFilter ?? 'sent');
                         @endphp
-                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}" class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3" title="Export to Excel">
+                        <a href="{{ route('admin.mess.process-mess-bills-employee.export') }}?{{ http_build_query($exportQuery) }}"
+                           class="btn btn-outline-success shadow-sm d-inline-flex align-items-center gap-2 px-3"
+                           title="Export to Excel"
+                           data-mess-excel-export="processMessBillsTable">
                             <i class="material-symbols-rounded" style="font-size: 1.1rem;">file_download</i>
                             <span>Export</span>
                         </a>
@@ -228,17 +255,17 @@
             </form>
 
             <div class="table-responsive">
-                <table class="table table-sm table-striped table-hover text-nowrap align-middle mb-0" id="processMessBillsTable">
+                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-nowrap py-2">S.No.</th>
-                            <th class="text-nowrap py-2">Buyer Name</th>
-                            <th class="text-nowrap py-2">Slip No.</th>
-                            <th class="text-nowrap py-2">Invoice Date</th>
-                            <th class="text-nowrap py-2">Client Type</th>
-                            <th class="text-nowrap py-2 text-end">Total</th>
-                            <th class="text-nowrap py-2">Payment Type</th>
-                            <th class="text-nowrap py-2">Status</th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="S.No."><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th mess-th-sorted" data-mess-col-original="Buyer Name"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Slip No."><span class="d-inline-flex align-items-center gap-1"><span>Slip No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Invoice Date"><span class="d-inline-flex align-items-center gap-1"><span>Invoice Date</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Client Type"><span class="d-inline-flex align-items-center gap-1"><span>Client Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 text-end mess-sort-th mess-report-sort-th" data-mess-col-original="Total"><span class="d-inline-flex align-items-center gap-1"><span>Total</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Payment Type"><span class="d-inline-flex align-items-center gap-1"><span>Payment Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Status"><span class="d-inline-flex align-items-center gap-1"><span>Status</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                             <th class="text-nowrap py-2 text-center no-print">Actions</th>
                         </tr>
                     </thead>
@@ -287,30 +314,16 @@
             </div>
         </div>
     </div>
-</div>
-
-@include('components.mess-master-datatables', [
-    'tableId' => 'processMessBillsTable',
-    'searchPlaceholder' => 'Search name or invoice no.',
-    'orderColumn' => [[0, 'asc']],
-    'actionColumnIndex' => 8,
-    'infoLabel' => 'bills',
-    'serverSide' => true,
-    'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
-])
+    </div>
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof window.jQuery === 'undefined') return;
-    var $ = window.jQuery;
-    var $table = $('#processMessBillsTable');
-    if (!$table.length) return;
-    $table.on('xhr.dt', function(e, settings, json) {
+(function () {
+    function applyProcessMessBillStats(json) {
         if (!json || !json.stats) return;
         var s = json.stats;
-        var fmtInt = function(n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
-        var fmtAmt = function(n) {
+        var fmtInt = function (n) { return String(Math.round(Number(n) || 0)).replace(/\B(?=(\d{3})+(?!\d))/g, ','); };
+        var fmtAmt = function (n) {
             var x = Number(n) || 0;
             var parts = x.toFixed(2).split('.');
             parts[0] = parts[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',');
@@ -320,11 +333,154 @@ document.addEventListener('DOMContentLoaded', function() {
         var elUnpaid = document.getElementById('process-mess-stats-unpaid');
         var elPaid = document.getElementById('process-mess-stats-paid');
         var elAmt = document.getElementById('process-mess-stats-total-amount');
+        var elPaidPct = document.getElementById('process-mess-stats-paid-pct');
         if (elTotal) elTotal.textContent = fmtInt(s.total_bills);
         if (elUnpaid) elUnpaid.textContent = fmtInt(s.unpaid_count);
         if (elPaid) elPaid.textContent = fmtInt(s.paid_count);
         if (elAmt) elAmt.textContent = '₹ ' + fmtAmt(s.total_amount);
+        if (elPaidPct) {
+            var total = Number(s.total_bills) || 0;
+            var paid = Number(s.paid_count) || 0;
+            elPaidPct.textContent = (total > 0 ? Math.round((paid / total) * 100) : 0) + '% cleared';
+        }
+    }
+
+    window.applyProcessMessBillStats = applyProcessMessBillStats;
+
+    function bindProcessMessBillStatsListener() {
+        if (typeof window.jQuery === 'undefined') return;
+        var $ = window.jQuery;
+        var $table = $('#processMessBillsTable');
+        if (!$table.length) return;
+
+        $table.off('xhr.dt.processMessStats').on('xhr.dt.processMessStats', function (e, settings, json) {
+            applyProcessMessBillStats(json);
+        });
+
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
+            applyProcessMessBillStats($table.DataTable().settings()[0].json);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', bindProcessMessBillStatsListener);
+})();
+</script>
+@endpush
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'processMessBillsTable',
+    'searchPlaceholder' => 'Search name or invoice no.',
+    'orderColumn' => [[1, 'asc']],
+    'actionColumnIndex' => 8,
+    'infoLabel' => 'bills',
+    'searchDelay' => 500,
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
+    'ajaxJsonCallback' => 'applyProcessMessBillStats',
+    'columnManager' => true,
+    'columnManagerLocked' => [0],
+    'columnManagerTitle' => 'Process Mess Bills columns',
+])
+
+@push('scripts')
+<script>
+function applyMessSortHeaderIcon(th, isActive, sortDir) {
+    if (!th) return;
+    var icon = th.querySelector('.mess-report-sort-icon');
+    if (!icon) return;
+    th.classList.toggle('mess-th-sorted', !!isActive);
+    th.classList.toggle('is-sorted', !!isActive);
+    icon.classList.add('material-symbols-rounded');
+    if (isActive) {
+        icon.textContent = sortDir === 'desc' ? 'arrow_downward' : 'arrow_upward';
+        icon.classList.remove('mess-report-sort-icon--muted');
+        icon.setAttribute('aria-label', sortDir === 'desc' ? 'Sorted descending' : 'Sorted ascending');
+    } else {
+        icon.textContent = 'unfold_more';
+        icon.classList.add('mess-report-sort-icon--muted');
+        icon.setAttribute('aria-label', 'Sortable');
+    }
+}
+window.applyMessSortHeaderIcon = applyMessSortHeaderIcon;
+
+/** Column title for print/export — never include Material icon ligature text. */
+function messPrintThLabel(th) {
+    if (!th) {
+        return '';
+    }
+    var label = (th.getAttribute('data-mess-col-original') || '').trim();
+    if (label) {
+        return label;
+    }
+    var clone = th.cloneNode(true);
+    clone.querySelectorAll(
+        '.mess-report-sort-icon, .material-symbols-rounded, .material-icons, i[class*="material"]'
+    ).forEach(function (el) {
+        el.remove();
     });
+    label = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    return label.replace(/\s+(unfold_more|arrow_upward|arrow_downward)$/i, '');
+}
+window.messPrintThLabel = messPrintThLabel;
+
+function syncProcessMessBillsTableSortIcons() {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
+        return;
+    }
+    var $ = window.jQuery;
+    var $table = $('#processMessBillsTable');
+    if (!$table.length || !$.fn.DataTable.isDataTable($table)) {
+        return;
+    }
+    var dt = $table.DataTable();
+    var order = dt.order();
+    var sortCol = order.length ? order[0][0] : -1;
+    var sortDir = order.length ? order[0][1] : 'asc';
+
+    $table.find('thead tr').first().children('th.mess-sort-th').each(function () {
+        var colIdx = dt.column(this).index();
+        if (colIdx == null || colIdx < 0) {
+            return;
+        }
+        applyMessSortHeaderIcon(this, colIdx === sortCol, sortDir);
+    });
+}
+window.syncProcessMessBillsTableSortIcons = syncProcessMessBillsTableSortIcons;
+
+function bindProcessMessBillsTableSortIcons() {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
+        return false;
+    }
+    var $table = window.jQuery('#processMessBillsTable');
+    if (!$table.length || !window.jQuery.fn.DataTable.isDataTable($table)) {
+        return false;
+    }
+    var dt = $table.DataTable();
+    dt.off('order.dt.messSort draw.dt.messSort column-reorder.dt.messSort');
+    dt.on('order.dt.messSort draw.dt.messSort column-reorder.dt.messSort', syncProcessMessBillsTableSortIcons);
+    syncProcessMessBillsTableSortIcons();
+    return true;
+}
+window.bindProcessMessBillsTableSortIcons = bindProcessMessBillsTableSortIcons;
+
+document.addEventListener('DOMContentLoaded', function () {
+    var attempts = 0;
+    var timer = setInterval(function () {
+        if (bindProcessMessBillsTableSortIcons()) {
+            clearInterval(timer);
+            return;
+        }
+        if (++attempts > 60) {
+            clearInterval(timer);
+        }
+    }, 150);
+    if (typeof window.jQuery !== 'undefined') {
+        window.jQuery(document).on('mess:columns:saved', function (e, tableId) {
+            if (tableId === 'processMessBillsTable') {
+                syncProcessMessBillsTableSortIcons();
+            }
+        });
+    }
 });
 </script>
 @endpush
@@ -411,6 +567,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 {{-- Generate Invoice & Payment Modal --}}
+@include('admin.mess.reports.partials.report-styles')
 <style>
 /* Bill Receipt (Payment Details) modal – match reference design */
 #paymentDetailsModal .modal-dialog { max-width: 720px; }
@@ -474,6 +631,68 @@ document.addEventListener('DOMContentLoaded', function() {
 #addProcessMessBillsModal .modal-header { border-radius: 0.5rem 0.5rem 0 0; }
 #addProcessMessBillsModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); }
 #addProcessMessBillsModal .modal-footer { border-top: 1px solid var(--bs-border-color); }
+
+/* Sort headers — same pattern as mess reports (report-sort-th) */
+.mess-sort-th {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.mess-sort-th:hover {
+    background: rgba(var(--bs-primary-rgb), 0.08) !important;
+}
+#processMessBillsTable thead th.mess-sort-th:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+#processMessBillsTable thead th .mess-report-sort-icon--muted {
+    color: rgba(255, 255, 255, 0.55) !important;
+    opacity: 1 !important;
+}
+#processMessBillsTable thead th.mess-th-sorted .mess-report-sort-icon {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+#modalBillsTable thead {
+    background: #004a93;
+    color: #fff;
+}
+#modalBillsTable thead th {
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.15);
+}
+#modalBillsTable thead th.mess-sort-th:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+#modalBillsTable thead th.mess-sort-th .mess-report-sort-icon {
+    font-size: 1rem !important;
+    line-height: 1 !important;
+    flex-shrink: 0;
+    display: inline-block !important;
+    font-family: 'Material Symbols Rounded', sans-serif;
+}
+#modalBillsTable thead th.mess-sort-th .mess-report-sort-icon--muted {
+    color: rgba(255, 255, 255, 0.55) !important;
+    opacity: 1 !important;
+}
+#modalBillsTable thead th.mess-sort-th.mess-th-sorted .mess-report-sort-icon,
+#modalBillsTable thead th.mess-sort-th.is-sorted .mess-report-sort-icon {
+    color: #fff !important;
+    opacity: 1 !important;
+}
+#modalBillsTable thead th.mess-sort-th > .d-inline-flex {
+    align-items: center;
+    gap: 0.25rem;
+}
+/* Use Material icons instead of DataTables unicode arrows (often invisible on Windows) */
+#processMessBillsTable.dataTable thead > tr > th.sorting:before,
+#processMessBillsTable.dataTable thead > tr > th.sorting:after,
+#processMessBillsTable.dataTable thead > tr > th.sorting_asc:before,
+#processMessBillsTable.dataTable thead > tr > th.sorting_asc:after,
+#processMessBillsTable.dataTable thead > tr > th.sorting_desc:before,
+#processMessBillsTable.dataTable thead > tr > th.sorting_desc:after {
+    display: none !important;
+    content: '' !important;
+}
 
 /* Print styles */
 @media screen {
@@ -545,6 +764,30 @@ document.addEventListener('DOMContentLoaded', function() {
     @page {
         margin: 12mm;
         size: auto;
+    }
+    .mess-report-sort-icon,
+    .process-mess-bills-employee-report .material-symbols-rounded,
+    .process-mess-bills-employee-report i[class*="material"] {
+        display: none !important;
+        font-size: 0 !important;
+        visibility: hidden !important;
+    }
+}
+
+/* Summary stat cards */
+.process-mess-stats-section .process-mess-stat-icon {
+    width: 3rem;
+    height: 3rem;
+}
+.process-mess-stats-section .process-mess-stat-icon .material-symbols-rounded {
+    font-size: 1.5rem;
+}
+.process-mess-stats-section .card {
+    --bs-card-spacer-y: 0;
+}
+@media (prefers-reduced-motion: reduce) {
+    .process-mess-stats-section .hover-lift:hover {
+        transform: none;
     }
 }
 
@@ -710,6 +953,7 @@ document.addEventListener('DOMContentLoaded', function() {
                             </span>
                             <input type="text" id="modalSearch" class="form-control border-start-0" placeholder="Search bills...">
                         </div>
+                        <span id="messColManagerMount-modalBillsTable" class="d-inline-block"></span>
                         <button type="button" class="btn btn-outline-primary shadow-sm btn-sm d-inline-flex align-items-center gap-2 px-3" onclick="printProcessMessBillsTable()" title="Print bills list">
                             <i class="material-symbols-rounded align-middle" style="font-size: 1rem;">print</i>
                             <span>Print</span>
@@ -717,19 +961,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     </div>
                 </div>
 
-                <div class="table-responsive rounded-3 border shadow-sm bg-white">
-                <table id="modalBillsTable" class="table table-sm table-hover align-middle mb-0">
-                        <thead style="background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);">
+                <div id="modalBillsTableHost" class="table-responsive">
+                <table id="modalBillsTable"
+                       class="table table-sm table-hover align-middle mb-0">
+                        <thead>
                             <tr>
-                                <th class="text-nowrap py-3 fw-semibold" style="width: 40px;"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
-                                <th class="text-nowrap py-3 fw-semibold">S.No.</th>
-                                <th class="text-nowrap py-3 fw-semibold">Buyer Name</th>
-                                <th class="text-nowrap py-3 fw-semibold">Invoice No.</th>
-                                <th class="text-nowrap py-3 fw-semibold">Payment Type</th>
-                                <th class="text-nowrap py-3 fw-semibold text-end">Total</th>
-                                <th class="text-nowrap py-3 fw-semibold text-center">Status</th>
-                                <th class="text-nowrap py-3 fw-semibold text-center">Actions</th>
-                                <th class="text-nowrap py-3 fw-semibold text-center">Receipt</th>
+                                <th class="text-nowrap py-3 fw-semibold" style="width: 40px;" data-mess-col-original="Select"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="sno" data-mess-col-original="S.No."><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th mess-th-sorted" data-sort="buyer_name" data-mess-col-original="Buyer Name"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="invoice_no" data-mess-col-original="Invoice No."><span class="d-inline-flex align-items-center gap-1"><span>Invoice No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="payment_type" data-mess-col-original="Payment Type"><span class="d-inline-flex align-items-center gap-1"><span>Payment Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold text-end mess-sort-th mess-report-sort-th" data-sort="total" data-mess-col-original="Total"><span class="d-inline-flex align-items-center gap-1"><span>Total</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold text-center mess-sort-th mess-report-sort-th" data-sort="status" data-mess-col-original="Status"><span class="d-inline-flex align-items-center gap-1"><span>Status</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold text-center" data-mess-col-original="Actions">Actions</th>
+                                <th class="text-nowrap py-3 fw-semibold text-center" data-mess-col-original="Receipt">Receipt</th>
                             </tr>
                         </thead>
                         <tbody id="modalBillsTableBody">
@@ -960,7 +1205,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 var el = document.getElementById(id);
                 initChoicesElement(el);
             });
-            
+
+            initModalBillsColumnManager();
+            updateModalBillsSortHeaderIcons();
+
             // After Choices.js initialization, populate the modal dropdowns
             setTimeout(function() {
                 if (typeof fillModalClientTypePk === 'function') {
@@ -975,6 +1223,8 @@ document.addEventListener('DOMContentLoaded', function() {
     var modalBillsTotal = 0;
     var modalBillsFrom = 0;
     var modalBillsTo = 0;
+    var modalBillsSortCol = 'buyer_name';
+    var modalBillsSortDir = 'asc';
     var modalAllBuyerNames = {!! json_encode(($allBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
     var paymentDetailsBillId = null;
     var paymentDetailsDateFrom = null;
@@ -1032,9 +1282,8 @@ document.addEventListener('DOMContentLoaded', function() {
         }).filter(Boolean);
     }
 
-    function loadModalBills(page) {
-        var requestedPage = parseInt(page, 10);
-        modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
+    function buildModalBillsDataUrl(options) {
+        options = options || {};
         var ct = document.getElementById('modal_client_type');
         var ctp = document.getElementById('modal_client_type_pk');
         var bn = document.getElementById('modal_buyer_name');
@@ -1045,9 +1294,18 @@ document.addEventListener('DOMContentLoaded', function() {
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
         var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
         var buyerNames = getChoicesMultiValues(bn);
+        var page = options.forPrint ? 1 : (options.page != null ? options.page : modalBillsCurrentPage);
+        if (options.forPrint) {
+            perPage = 10000;
+        }
         var url = '{{ route("admin.mess.process-mess-bills-employee.modal-data") }}?date_from=' + encodeURIComponent(dateFrom) + '&date_to=' + encodeURIComponent(dateTo);
-        url += '&page=' + encodeURIComponent(modalBillsCurrentPage) + '&per_page=' + encodeURIComponent(perPage);
-        if (modalSearch) url += '&search=' + encodeURIComponent(modalSearch);
+        url += '&page=' + encodeURIComponent(page) + '&per_page=' + encodeURIComponent(perPage);
+        if (options.forPrint) {
+            url += '&for_print=1';
+        }
+        if (modalSearch) {
+            url += '&search=' + encodeURIComponent(modalSearch);
+        }
         clientTypes.forEach(function (type) {
             url += '&client_type[]=' + encodeURIComponent(type);
         });
@@ -1059,6 +1317,26 @@ document.addEventListener('DOMContentLoaded', function() {
                 url += '&buyer_name[]=' + encodeURIComponent(name);
             });
         }
+        url += '&sort_column=' + encodeURIComponent(modalBillsSortCol || 'buyer_name');
+        url += '&sort_dir=' + encodeURIComponent(modalBillsSortDir || 'asc');
+        return url;
+    }
+    window.buildModalBillsDataUrl = buildModalBillsDataUrl;
+
+    function updateModalBillsSortHeaderIcons() {
+        document.querySelectorAll('#modalBillsTable .mess-sort-th[data-sort]').forEach(function (th) {
+            var col = th.getAttribute('data-sort') || '';
+            applyMessSortHeaderIcon(th, col === modalBillsSortCol, modalBillsSortDir);
+        });
+    }
+
+    function loadModalBills(page) {
+        var requestedPage = parseInt(page, 10);
+        modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
+        var ct = document.getElementById('modal_client_type');
+        var clientTypes = getChoicesMultiValues(ct);
+        var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
+        var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage });
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -1068,6 +1346,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalBillsFrom = parseInt(pagination.from || (modalBillsTotal ? 1 : 0), 10);
                 modalBillsTo = parseInt(pagination.to || modalBillsData.length || 0, 10);
                 modalBillsCurrentPage = parseInt(pagination.page || modalBillsCurrentPage || 1, 10);
+                updateModalBillsSortHeaderIcons();
                 renderModalTable();
 
                 // Also refresh Buyer Name dropdown in modal based on loaded bills.
@@ -1172,6 +1451,63 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         return 'Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread');
     }
+    window.formatInvoiceNotificationStatusText = formatInvoiceNotificationStatusText;
+
+    function destroyModalBillsDataTableIfAny() {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
+            return;
+        }
+        var $ = window.jQuery;
+        var $table = $('#modalBillsTable');
+        if (!$table.length) {
+            return;
+        }
+        if ($.fn.DataTable.isDataTable($table)) {
+            try {
+                $table.DataTable().destroy();
+            } catch (e) {}
+        }
+        var $wrapper = $table.closest('.dataTables_wrapper');
+        if ($wrapper.length) {
+            $table.detach();
+            var $host = $('#modalBillsTableHost');
+            if ($host.length) {
+                $host.empty().append($table);
+            } else {
+                $wrapper.replaceWith($table);
+            }
+        }
+    }
+
+    function initModalBillsColumnManager() {
+        if (typeof window.MessColumnManager === 'undefined' || typeof window.jQuery === 'undefined') {
+            return;
+        }
+        destroyModalBillsDataTableIfAny();
+
+        var $table = window.jQuery('#modalBillsTable');
+        if (!$table.length) return;
+
+        if (!window.MessColumnManager.get('modalBillsTable')) {
+            window.MessColumnManager.init({
+                tableId: 'modalBillsTable',
+                mode: 'dom',
+                $table: $table,
+                colReorder: false,
+                lockedColumns: [0],
+                skipColumns: [7, 8]
+            });
+        } else {
+            window.MessColumnManager.get('modalBillsTable').apply();
+        }
+    }
+
+    function applyModalBillsColumnVisibility() {
+        var mgr = window.MessColumnManager && window.MessColumnManager.get('modalBillsTable');
+        if (mgr) {
+            mgr.apply();
+        }
+    }
 
     function renderModalTable() {
         var tbody = document.getElementById('modalBillsTableBody');
@@ -1219,6 +1555,7 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('modalPaginationInfo').textContent = 'Showing ' + modalBillsFrom + ' to ' + modalBillsTo + ' of ' + modalBillsTotal + ' entries';
         updateModalPaginationNav(totalPages, modalBillsTotal);
         updateBulkActionsBar();
+        applyModalBillsColumnVisibility();
     }
 
     function updateBulkActionsBar() {
@@ -1298,10 +1635,18 @@ document.addEventListener('DOMContentLoaded', function() {
         var ms = document.getElementById('modalSearch');
         if (ms) ms.value = '';
 
+        modalBillsSortCol = 'buyer_name';
+        modalBillsSortDir = 'asc';
+        updateModalBillsSortHeaderIcons();
+
         loadModalBills();
     }
 
-    document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() { loadModalBills(); });
+    document.getElementById('addProcessMessBillsModal').addEventListener('show.bs.modal', function() {
+        updateModalBillsSortHeaderIcons();
+        loadModalBills();
+    });
+    updateModalBillsSortHeaderIcons();
     var payNowModalForAddRedirect = document.getElementById('payNowModal');
     if (payNowModalForAddRedirect) {
         payNowModalForAddRedirect.addEventListener('hidden.bs.modal', function () {
@@ -1315,6 +1660,20 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     document.getElementById('modalPerPage').addEventListener('change', function() {
         loadModalBills(1);
+    });
+    document.querySelectorAll('#modalBillsTable .mess-sort-th[data-sort]').forEach(function (th) {
+        th.addEventListener('click', function () {
+            var col = th.getAttribute('data-sort');
+            if (!col) return;
+            if (modalBillsSortCol === col) {
+                modalBillsSortDir = modalBillsSortDir === 'asc' ? 'desc' : 'asc';
+            } else {
+                modalBillsSortCol = col;
+                modalBillsSortDir = (col === 'total' || col === 'sno') ? 'desc' : 'asc';
+            }
+            updateModalBillsSortHeaderIcons();
+            loadModalBills(1);
+        });
     });
     document.getElementById('modalPaginationPrev').addEventListener('click', function() {
         if (modalBillsCurrentPage > 1) {
@@ -2608,137 +2967,17 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 function printProcessMessBillsMainTable() {
-    var table = document.getElementById('processMessBillsTable');
-    if (!table) { window.print(); return; }
-
-    // Use DataTables API so print includes ALL filtered rows, not just current page
-    var dt = null;
-    try {
-        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#processMessBillsTable')) {
-            dt = window.jQuery('#processMessBillsTable').DataTable();
-        }
-    } catch (e) {}
-
-    var rowsData = [];
-    if (dt) {
-        rowsData = dt.rows({ search: 'applied' }).data().toArray();
-    } else {
-        rowsData = Array.from(table.querySelectorAll('tbody tr')).map(function (tr) {
-            return Array.from(tr.children).map(function (td) { return td.innerHTML; });
+    if (window.MessColumnManager && typeof window.MessColumnManager.printDataTable === 'function') {
+        window.MessColumnManager.printDataTable('processMessBillsTable', {
+            template: 'lbsnaa',
+            title: 'Process Mess Bills - Employee',
+            periodText: 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}'
         });
+        return;
     }
-
-    // Remove action column (last column) for print
-    var actionColIdx = 8;
-
-    var originalThead = table.querySelector('thead');
-    var headerCells = originalThead ? Array.from(originalThead.querySelectorAll('tr th')) : [];
-    var printHeaderCells = headerCells.filter(function (_, idx) { return idx !== actionColIdx; });
-    var headerHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
-
-    var bodyRowsHtml = rowsData.map(function (row) {
-        var cells = Array.isArray(row) ? row : (row && row.length != null ? Array.from(row) : []);
-        var filteredCells = cells.filter(function (_, idx) { return idx !== actionColIdx; });
-        return '<tr>' + filteredCells.map(function (c) { return '<td>' + c + '</td>'; }).join('') + '</tr>';
-    }).join('');
-
-    var columnsCount = printHeaderCells.length || 8;
-    var title = 'Process Mess Bills - Employee';
-    var periodText = 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}';
-
-    var printableTable = `
-      <table class="table table-sm table-bordered align-middle mb-0">
-        <thead>
-          <tr>
-            <th colspan="${columnsCount}">
-              <div class="d-flex justify-content-between align-items-center mb-2 lbsnaa-header">
-                <div class="d-flex align-items-center gap-1">
-                  <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
-                  <div>
-                    <div class="brand-line-1">Government of India</div>
-                    <div class="brand-line-2">OFFICER'S MESS LBSNAA MUSSOORIE</div>
-                    <div class="brand-line-3">Lal Bahadur Shastri National Academy of Administration</div>
-                  </div>
-                </div>
-                <div class="d-none d-print-block">
-                  <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="40">
-                </div>
-              </div>
-              <div class="d-flex flex-wrap justify-content-between align-items-center report-meta">
-                <span><strong>${title}</strong></span>
-                <span>${periodText}</span>
-                <span><strong>Printed on:</strong> ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}</span>
-              </div>
-            </th>
-          </tr>
-          ${headerHtml}
-        </thead>
-        <tbody>
-          ${bodyRowsHtml}
-        </tbody>
-      </table>`;
-
-    var printWindow = window.open('', '_blank');
-    if (!printWindow) { window.print(); return; }
-
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${title} - OFFICER'S MESS LBSNAA MUSSOORIE</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet">
-  <style>
-    body {
-      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      font-size: 10px;
-      margin: 0;
-      padding: 0;
-      -webkit-print-color-adjust: exact;
-      print-color-adjust: exact;
+    if (window.alert) {
+        window.alert('Print is not available. Please refresh the page and try again.');
     }
-    .lbsnaa-header {
-      border-bottom: 2px solid #004a93;
-      padding-bottom: .75rem;
-      margin-bottom: 1rem;
-    }
-    .brand-line-1 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: #004a93; }
-    .brand-line-2 { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; color: #222; }
-    .brand-line-3 { font-size: .8rem; color: #555; }
-    .report-meta { font-size: .8rem; margin-bottom: .75rem; }
-    .report-meta span { display: inline-block; margin-right: 1.5rem; }
-    .container-fluid { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; }
-    th, td {
-      padding: 4px 6px;
-      border: 1px solid #dee2e6;
-      white-space: normal !important;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      vertical-align: top;
-    }
-    thead th { background: #f8f9fa; font-weight: 600; }
-    .table, .table * { white-space: normal !important; }
-    .table-responsive { overflow: visible !important; }
-    thead { display: table-header-group; }
-    @page { size: A4 landscape; margin: 8mm; }
-    @media print { body { margin: 0; } }
-  </style>
-</head>
-<body>
-  <div class="container-fluid">
-    <div class="table-responsive">
-      ${printableTable}
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener('load', function() { window.print(); });
-  <\/script>
-</body>
-</html>`);
-    printWindow.document.close();
 }
 
 function printProcessMessBillsTable() {
@@ -2748,45 +2987,76 @@ function printProcessMessBillsTable() {
         return;
     }
 
-    var dateFrom = document.getElementById('modal_date_from')?.value || '';
-    var dateTo   = document.getElementById('modal_date_to')?.value || '';
+    function openModalPrintWithBills(bills) {
+        var dateFrom = document.getElementById('modal_date_from')?.value || '';
+        var dateTo   = document.getElementById('modal_date_to')?.value || '';
 
-    var printWindow = window.open('', '_blank');
-    if (!printWindow) {
-        window.print();
-        return;
-    }
+        var title = 'Process Mess Bills - Invoice & Payment';
+        var periodText = dateFrom || dateTo
+            ? ('From ' + (dateFrom || 'Start') + ' To ' + (dateTo || 'End'))
+            : 'All Dates';
 
-    var title = 'Process Mess Bills - Invoice & Payment';
-    var periodText = dateFrom || dateTo
-        ? ('From ' + (dateFrom || 'Start') + ' To ' + (dateTo || 'End'))
-        : 'All Dates';
+        var originalThead = table.querySelector('thead');
+        var headerRow = originalThead ? originalThead.querySelector('tr') : null;
+        var headerCells = headerRow ? Array.from(headerRow.children) : [];
 
-    // Build printable table with LBSNAA header inside thead so it repeats on every page
-    // Print ALL rows from modal dataset (not only current "per page" view)
-    var originalThead = table.querySelector('thead');
-    var headerRow = originalThead ? originalThead.querySelector('tr') : null;
-    var headerCells = headerRow ? Array.from(headerRow.children) : [];
-    // Remove Checkbox (0), Actions (7) and Receipt (8) columns from print
-    var removeIdx = { 0: true, 7: true, 8: true };
-    var printHeaderCells = headerCells.filter(function (_, idx) { return !removeIdx[idx]; });
-    var columnsCount = printHeaderCells.length || 7;
-    var columnHeadHtml = '<tr>' + printHeaderCells.map(function (th) { return '<th>' + th.innerHTML + '</th>'; }).join('') + '</tr>';
+        var printColIndexes = [1, 2, 3, 4, 5, 6];
+        if (window.MessColumnManager && typeof window.MessColumnManager.resolveExportIndexes === 'function') {
+            printColIndexes = window.MessColumnManager.resolveExportIndexes('modalBillsTable').filter(function (idx) {
+                return idx !== 0;
+            });
+        }
+        if (!printColIndexes.length) {
+            printColIndexes = [1, 2, 3, 4, 5, 6];
+        }
 
-    var filtered = (typeof getFilteredModalBills === 'function') ? getFilteredModalBills() : [];
-    var bodyHtml = filtered.map(function (b, i) {
-        var sn = i + 1;
-        return '<tr>' +
-            '<td>' + sn + '</td>' +
-            '<td>' + (b.buyer_name || '—') + '</td>' +
-            '<td>' + (b.invoice_no || '—') + '</td>' +
-            '<td>' + (b.payment_type || '—') + '</td>' +
-            '<td class="text-end">' + (b.total || '0') + '</td>' +
-            '<td>' + (b && b.invoice_notification_sent ? ('Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread')) : '—') + '</td>' +
-            '</tr>';
-    }).join('');
+        var columnsCount = printColIndexes.length || 7;
+        var columnHeadHtml = '<tr>' + printColIndexes.map(function (idx) {
+            var th = headerCells[idx];
+            var label = typeof window.messPrintThLabel === 'function'
+                ? window.messPrintThLabel(th)
+                : (th ? (th.textContent || '').trim() : '');
+            return '<th>' + label.replace(/</g, '&lt;').replace(/>/g, '&gt;') + '</th>';
+        }).join('') + '</tr>';
 
-    var printableTable = `
+        function modalBillPrintCell(b, idx, sn) {
+            switch (idx) {
+                case 1: return String(sn);
+                case 2: return b.buyer_name || '—';
+                case 3: return b.invoice_no || '—';
+                case 4: return b.payment_type || '—';
+                case 5: return b.total || '0';
+                case 6:
+                    return (typeof window.formatInvoiceNotificationStatusText === 'function')
+                        ? window.formatInvoiceNotificationStatusText(b)
+                        : '—';
+                default: return '';
+            }
+        }
+
+        var filtered = bills || [];
+        var bodyHtml = filtered.map(function (b, i) {
+            var sn = b.sno || (i + 1);
+            return '<tr>' + printColIndexes.map(function (idx) {
+                var cls = idx === 5 ? ' class="text-end"' : (idx === 6 ? ' class="text-center"' : '');
+                return '<td' + cls + '>' + modalBillPrintCell(b, idx, sn) + '</td>';
+            }).join('') + '</tr>';
+        }).join('');
+
+        if (!bodyHtml) {
+            if (window.alert) {
+                window.alert('No bills to print. Load bills first or adjust your filters.');
+            }
+            return;
+        }
+
+        var printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            window.print();
+            return;
+        }
+
+        var printableTable = `
       <table class="table table-sm table-bordered align-middle mb-0">
         <thead>
           <tr>
@@ -2818,8 +3088,8 @@ function printProcessMessBillsTable() {
         </tbody>
       </table>`;
 
-    printWindow.document.open();
-    printWindow.document.write(`<!doctype html>
+        printWindow.document.open();
+        printWindow.document.write(`<!doctype html>
 <html lang="en">
 <head>
   <meta charset="utf-8">
@@ -2861,6 +3131,7 @@ function printProcessMessBillsTable() {
     thead { display: table-header-group; }
     @page { size: A4 landscape; margin: 8mm; }
     @media print { body { margin: 0; } }
+    ${(window.MessColumnManager && window.MessColumnManager.MESS_PRINT_SUPPRESS_ICON_CSS) || ''}
   </style>
 </head>
 <body>
@@ -2875,7 +3146,23 @@ function printProcessMessBillsTable() {
   <\/script>
 </body>
 </html>`);
-    printWindow.document.close();
+        printWindow.document.close();
+    }
+
+    if (typeof window.buildModalBillsDataUrl === 'function') {
+        fetch(window.buildModalBillsDataUrl({ forPrint: true }))
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                openModalPrintWithBills(data.bills || []);
+            })
+            .catch(function () {
+                var fallback = (typeof getFilteredModalBills === 'function') ? getFilteredModalBills() : [];
+                openModalPrintWithBills(fallback);
+            });
+        return;
+    }
+
+    openModalPrintWithBills((typeof getFilteredModalBills === 'function') ? getFilteredModalBills() : []);
 }
 </script>
 @endpush

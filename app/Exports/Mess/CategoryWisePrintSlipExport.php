@@ -90,24 +90,18 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                     trim((string) ($first->client_name ?? ($first->clientTypeCategory?->client_name ?? ''))),
                     (string) ($first->client_type_slug ?? 'employee')
                 );
-                $combinedRemarks = $sectionVouchers
-                    ->map(fn ($v) => trim((string) ($v->remarks ?? '')))
-                    ->filter()
-                    ->unique()
-                    ->implode('; ');
-                if ($combinedRemarks === '') {
-                    $combinedRemarks = '—';
-                }
                 $firstSectionRow = true;
+                $displayRows = mess_cw_slip_section_display_rows($sectionVouchers);
+                $remarkLayout = mess_cw_slip_section_remark_layout($displayRows);
 
-                foreach (mess_cw_slip_section_display_rows($sectionVouchers) as $row) {
+                foreach ($displayRows as $loopIdx => $row) {
+                    $remarkCell = $remarkLayout[$loopIdx] ?? ['show' => true, 'rowspan' => 1, 'remark' => '—'];
+
                     if ($row->kind === 'empty') {
-                        $voucher = $row->voucher;
-                        $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
+                        $requestDate = mess_cw_slip_row_display_date($row);
                         $excelRow = ['', '', '', '', '', '', ''];
                         if ($firstSectionRow) {
                             $excelRow[0] = $combinedSlipNo;
-                            $excelRow[6] = $combinedRemarks;
                             $firstSectionRow = false;
                         }
                         $excelRow[1] = '—';
@@ -115,13 +109,15 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                         $excelRow[3] = '—';
                         $excelRow[4] = '—';
                         $excelRow[5] = '—';
+                        if ($remarkCell['show']) {
+                            $excelRow[6] = $remarkCell['remark'];
+                        }
                         $rows[] = $excelRow;
                         continue;
                     }
 
-                    $voucher = $row->voucher;
                     $item = $row->item;
-                    $requestDate = $voucher->issue_date ? $voucher->issue_date->format('d-m-Y') : 'N/A';
+                    $itemIssueDateFormatted = mess_cw_slip_row_display_date($row);
                     $issueQty = (float) ($item->quantity ?? 0);
                     $returnQty = (float) ($item->return_quantity ?? 0);
                     $netQty = max(0, $issueQty - $returnQty);
@@ -130,17 +126,10 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                     $sectionTotal += $itemAmount;
 
                     $itemName = $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? 'N/A');
-                    $itemIssueDate = $item->issue_date ?? null;
-                    $itemIssueDateFormatted = $itemIssueDate
-                        ? ($itemIssueDate instanceof \Carbon\Carbon
-                            ? $itemIssueDate->format('d-m-Y')
-                            : Carbon::parse($itemIssueDate)->format('d-m-Y'))
-                        : $requestDate;
 
                     $excelRow = ['', '', '', '', '', '', ''];
                     if ($firstSectionRow) {
                         $excelRow[0] = $combinedSlipNo;
-                        $excelRow[6] = $combinedRemarks;
                         $firstSectionRow = false;
                     }
                     $excelRow[1] = $itemName;
@@ -148,6 +137,9 @@ class CategoryWisePrintSlipExport implements FromCollection, WithStyles, WithEve
                     $excelRow[3] = number_format($netQty, 2);
                     $excelRow[4] = number_format($rate, 2);
                     $excelRow[5] = number_format($itemAmount, 2);
+                    if ($remarkCell['show']) {
+                        $excelRow[6] = $remarkCell['remark'];
+                    }
                     $rows[] = $excelRow;
                 }
 

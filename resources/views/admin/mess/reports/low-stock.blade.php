@@ -21,7 +21,8 @@
 @endphp
 @section('title', 'Low Stock Report')
 @section('content')
-<div class="container-fluid low-stock-report">
+@include('admin.mess.reports.partials.report-styles')
+<div class="container-fluid low-stock-report py-3 py-md-4">
     <x-breadcrum title="Low Stock Report"></x-breadcrum>
 
     <!-- Filters -->
@@ -133,8 +134,8 @@
                     <table class="table table-hover table-striped align-middle mb-0" id="lowStockReportTable">
                         <thead class="table-light text-nowrap">
                             <tr>
-                                <th class="text-center text-uppercase small fw-bold text-body-secondary py-3 ps-3" style="width: 70px;">Sr. No.</th>
-                                <th class="text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 220px;">Item Name</th>
+                                @include('admin.mess.reports.partials.report-sno-th')
+                                @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'class' => 'text-uppercase small fw-bold text-body-secondary py-3'])
                                 <th class="text-center text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 90px;">Unit</th>
                                 <th class="text-end text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 120px;">Available Qty</th>
                                 <th class="text-end text-uppercase small fw-bold text-body-secondary py-3" style="min-width: 120px;">Alert Qty</th>
@@ -148,7 +149,7 @@
                                     $alert = $row['alert_quantity'] ?? 0;
                                 @endphp
                                 <tr class="{{ $remaining < $alert ? 'table-danger' : '' }}">
-                                    <td class="text-center ps-3">{{ $index + 1 }}</td>
+                                    <td class="text-center ps-3 mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['index' => $index])</td>
                                     <td class="fw-semibold text-body-emphasis">{{ $row['item_name'] ?? '-' }}</td>
                                     <td class="text-center">{{ $row['unit'] ?? 'Unit' }}</td>
                                     <td class="text-end fw-medium">{{ number_format($remaining, 2) }}</td>

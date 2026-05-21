@@ -58,6 +58,11 @@ class PurchaseOrder extends Model
     {
         return $this->belongsTo(\App\Models\User::class, 'created_by');
     }
+
+    public function createdBy()
+    {
+        return $this->creator();
+    }
     
     public function approver()
     {

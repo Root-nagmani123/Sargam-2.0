@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
+@include('admin.mess.reports.partials.report-styles')
 <div class="card" style="border-left: 4px solid #004a93;">
     <div class="card-header">
         <h5 class="mb-0">
@@ -39,7 +40,8 @@
             <table class="table table-hover">
                 <thead class="table-light">
                     <tr>
-                        <th>Bill Number</th>
+                        @include('admin.mess.reports.partials.report-sno-th')
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'bill_number', 'label' => 'Bill Number', 'defaultDir' => 'asc'])
                         <th>User</th>
                         <th>Period</th>
                         <th>Total Amount</th>
@@ -49,8 +51,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($bills as $bill)
+                    @forelse($bills as $index => $bill)
                         <tr>
+                            <td class="text-center text-muted mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $bills, 'index' => $index])</td>
                             <td>{{ $bill->bill_number }}</td>
                             <td>{{ $bill->user->name ?? 'N/A' }}</td>
                             <td>{{ date('F Y', mktime(0, 0, 0, $bill->month, 1, $bill->year)) }}</td>
@@ -65,14 +68,14 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-4">No bills found</td>
+                            <td colspan="8" class="text-center text-muted py-4">No bills found</td>
                         </tr>
                     @endforelse
                 </tbody>
             </table>
         </div>
-        <div class="d-flex justify-content-center mt-3">
-            {{ $bills->withQueryString()->links() }}
+        <div class="mt-3">
+            {{ $bills->withQueryString()->links('pagination::bootstrap-5') }}
         </div>
     </div>
 </div>

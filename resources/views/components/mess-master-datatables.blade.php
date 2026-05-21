@@ -2,7 +2,11 @@
     Reusable DataTable with pagination and live auto-search for mess master modules.
     Options: tableId, searchPlaceholder, orderColumn (int|array), orderDir, actionColumnIndex (int|array),
     infoLabel, searchDelay, ordering, pageLength, lengthMenu, responsive (bool), scrollX (bool),
-    searchHighlight (bool), searchHighlightExcludeColumns (int[] — extra columns to skip, merged with action columns).
+    searchHighlight (bool), searchHighlightExcludeColumns (int[] — extra columns to skip, merged with action columns),
+    dom (string|null) — custom DataTables dom layout.
+    columnManager (bool) — enable Columns show/hide dropdown (default true).
+    columnManagerTitle (string|null) — unused; kept for compatibility.
+    columnManagerLocked (int[]) — column indexes that stay visible.
 --}}
 @php
     $tableId = $tableId ?? 'masterTable';
@@ -19,6 +23,8 @@
     $responsive = isset($responsive) ? (bool) $responsive : false;
     $scrollX = isset($scrollX) ? (bool) $scrollX : false;
     $searchSmart = isset($searchSmart) ? (bool) $searchSmart : true;
+    // Client-side tables always use smart search (multi-word AND across row text).
+    $searchSmartClient = true;
     $searchHighlight = isset($searchHighlight) ? (bool) $searchHighlight : true;
     $searchHighlightExcludeColumnsMerged = array_values(array_unique(array_merge(
         $actionColumnIndices,
@@ -30,12 +36,15 @@
     $serverSide = isset($serverSide) ? (bool) $serverSide : false;
     $ajaxUrlBase = isset($ajaxUrlBase) ? (string) $ajaxUrlBase : '';
     $serverSideColumnDefs = isset($serverSideColumnDefs) && is_array($serverSideColumnDefs) ? $serverSideColumnDefs : [];
-    $dtWrapperClass = isset($dtWrapperClass) ? trim((string) $dtWrapperClass) : '';
     $dom = $dom ?? '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>';
-    $lengthMenuLabel = $lengthMenuLabel ?? 'Show _MENU_ entries';
-    $infoPattern = $infoPattern ?? ('Showing _START_ to _END_ of _TOTAL_ ' . $infoLabel);
-    $infoEmptyPattern = $infoEmptyPattern ?? ('No ' . $infoLabel);
+    $columnManager = isset($columnManager) ? (bool) $columnManager : true;
+    $columnManagerTitle = $columnManagerTitle ?? 'Manage Columns';
+    $columnManagerLocked = isset($columnManagerLocked) ? (array) $columnManagerLocked : [];
+    $ajaxJsonCallback = isset($ajaxJsonCallback) ? (string) $ajaxJsonCallback : '';
 @endphp
+@if($columnManager)
+    @include('components.mess-column-manager', ['tableId' => $tableId, 'title' => $columnManagerTitle])
+@endif
 @if($searchHighlight)
 @push('styles')
 <style>
@@ -50,153 +59,8 @@
 @endpush
 @endif
 @push('scripts')
+@include('components.mess-datatable-search-helpers')
 <script>
-(function() {
-    if (typeof window.messDataTableApplySearchHighlight !== 'undefined') {
-        return;
-    }
-
-    var HL_CLASS = 'dt-search-highlight';
-
-    function escapeRegExp(s) {
-        return String(s).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    }
-
-    function unwrapSearchMarks(cell) {
-        cell.querySelectorAll('mark.' + HL_CLASS).forEach(function(m) {
-            var parent = m.parentNode;
-            if (!parent) return;
-            while (m.firstChild) parent.insertBefore(m.firstChild, m);
-            parent.removeChild(m);
-        });
-        if (cell.normalize) cell.normalize();
-    }
-
-    function replaceMatchesInTextNode(textNode, regex) {
-        var text = textNode.nodeValue;
-        if (text === null || text === '') return;
-
-        var r = new RegExp(regex.source, 'gi');
-        if (!r.test(text)) return;
-        r.lastIndex = 0;
-
-        var lastIndex = 0;
-        var frag = document.createDocumentFragment();
-        var match;
-        var emptyGuard = 0;
-        while ((match = r.exec(text)) !== null) {
-            if (match.index > lastIndex) {
-                frag.appendChild(document.createTextNode(text.slice(lastIndex, match.index)));
-            }
-            var mk = document.createElement('mark');
-            mk.className = HL_CLASS;
-            mk.appendChild(document.createTextNode(match[0]));
-            frag.appendChild(mk);
-            lastIndex = match.index + match[0].length;
-            if (match[0].length === 0) {
-                r.lastIndex++;
-                if (++emptyGuard > text.length + 50) break;
-            }
-            if (r.lastIndex >= text.length) break;
-        }
-        frag.appendChild(document.createTextNode(text.slice(lastIndex)));
-        if (!frag.childNodes.length) return;
-        textNode.parentNode.replaceChild(frag, textNode);
-    }
-
-    /** Highlight inside cell while skipping existing marks so we do not double-wrap nested matches. */
-    function highlightCellPlainTextRoots(cell, regex) {
-        var nodes = [];
-        var w = document.createTreeWalker(cell, NodeFilter.SHOW_TEXT, null, false);
-        var n;
-        while ((n = w.nextNode())) {
-            var anc = n.parentElement;
-            if (!anc) continue;
-            if (anc.closest && anc.closest('mark.' + HL_CLASS)) continue;
-            var up = anc;
-            var skipAncest = false;
-            while (up) {
-                var tag = String(up.tagName || '').toUpperCase();
-                if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'NOSCRIPT') {
-                    skipAncest = true;
-                    break;
-                }
-                up = up.parentElement;
-            }
-            if (skipAncest) continue;
-            nodes.push(n);
-        }
-        nodes.forEach(function(textNode) {
-            if (!textNode.parentElement) return;
-            replaceMatchesInTextNode(textNode, regex);
-        });
-    }
-
-    /**
-     * @param {$.fn.dataTable.Api} api
-     * @param {number[]} excludedColIndices
-     */
-    window.messDataTableApplySearchHighlight = function(api, excludedColIndices) {
-        if (!api) return;
-
-        var raw = '';
-        try {
-            raw = (typeof api.search === 'function' ? api.search() : '') || '';
-        } catch (e) {
-            raw = '';
-        }
-        var search = String(raw).trim();
-
-        var tableEl = api.table().node ? api.table().node() : api.table()[0];
-        if (!tableEl) return;
-
-        Array.prototype.slice.call(tableEl.querySelectorAll('tbody td')).forEach(function(td) {
-            unwrapSearchMarks(td);
-        });
-
-        if (!search) return;
-
-        var skip = {};
-        (excludedColIndices || []).forEach(function(idx) {
-            skip[Number(idx)] = true;
-        });
-
-        var terms = search.split(/\s+/).map(function(t) { return t.trim(); }).filter(Boolean);
-        var seen = {};
-        var uniq = [];
-        terms.forEach(function(t) {
-            var k = t.toLowerCase();
-            if (!seen[k]) {
-                seen[k] = true;
-                uniq.push(t);
-            }
-        });
-        uniq.sort(function(a, b) {
-            return b.length - a.length;
-        });
-
-        var escaped = uniq.filter(function(t) {
-            return t.length > 0;
-        }).map(escapeRegExp);
-        if (!escaped.length) return;
-
-        var mergedRe = new RegExp('(?:' + escaped.join('|') + ')', 'gi');
-
-        api.rows({
-            search: 'applied'
-        }).every(function() {
-            var rowEl = this.node();
-            if (!rowEl) return;
-            if (rowEl.querySelector && rowEl.querySelector('td[colspan]')) return;
-            var cells = rowEl.cells;
-            for (var c = 0; c < cells.length; c++) {
-                if (skip[c]) continue;
-                highlightCellPlainTextRoots(cells[c], mergedRe);
-            }
-        });
-    };
-})();
-
 document.addEventListener('DOMContentLoaded', function() {
     if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) return;
     var $ = window.jQuery;
@@ -224,6 +88,19 @@ document.addEventListener('DOMContentLoaded', function() {
     var order = {!! json_encode($ordering ? (is_array($orderColumn) ? $orderColumn : [[$orderColumn, $orderDir]]) : []) !!};
     var columnDefsMerged = {!! json_encode(array_values(array_merge($columnDefs, $serverSideColumnDefs))) !!};
     var lengthMenu = {!! json_encode($lengthMenu) !!};
+    var messDtNonOrderableColumns = {!! json_encode(array_values($actionColumnIndices)) !!};
+    var messDtAjaxJsonCallbackName = {!! json_encode($ajaxJsonCallback) !!};
+
+    function messMasterInvokeAjaxJsonCallback(settings) {
+        if (!messDtAjaxJsonCallbackName) return;
+        try {
+            var json = new $.fn.dataTable.Api(settings).ajax.json();
+            var fn = window[messDtAjaxJsonCallbackName];
+            if (json && typeof fn === 'function') {
+                fn(json);
+            }
+        } catch (e) {}
+    }
 
     @if ($serverSide && $ajaxUrlBase !== '')
     var columnCount = $firstHeaderRow.children('th,td').length;
@@ -231,7 +108,7 @@ document.addEventListener('DOMContentLoaded', function() {
     for (var ci = 0; ci < columnCount; ci++) {
         ajaxColumns.push({
             data: ci,
-            orderable: false,
+            orderable: messDtNonOrderableColumns.indexOf(ci) === -1,
             searchable: false,
             render: function(data, type) {
                 if (type !== 'display' && type !== 'filter') {
@@ -247,8 +124,39 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function sellingVouchersServerDtUrl() {
-        var sep = '{{ $ajaxUrlBase }}'.indexOf('?') === -1 ? '?' : '&';
-        return '{{ $ajaxUrlBase }}' + (window.location.search ? (sep + window.location.search.substring(1)) : '');
+        var base = '{{ $ajaxUrlBase }}';
+        var qs = window.location.search ? window.location.search.substring(1) : '';
+        var sep = base.indexOf('?') === -1 ? '?' : '&';
+        return base + (qs ? (sep + qs) : '');
+    }
+
+    window.messMasterDataTableAjaxUrlByTable = window.messMasterDataTableAjaxUrlByTable || {};
+    window.messMasterDataTableAjaxUrlByTable['{{ $tableId }}'] = sellingVouchersServerDtUrl;
+
+    function messMasterDtAjax(data, callback) {
+        $.ajax({
+            url: sellingVouchersServerDtUrl(),
+            type: 'GET',
+            data: data,
+            dataType: 'json',
+            cache: false,
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        }).done(function(json) {
+            callback(json);
+        }).fail(function(xhr) {
+            if (xhr && (xhr.status === 401 || xhr.status === 419 || xhr.status === 403)) {
+                window.alert('Your session may have expired. The page will reload so you can sign in again.');
+                window.location.reload();
+                return;
+            }
+            callback({
+                draw: data.draw,
+                recordsTotal: 0,
+                recordsFiltered: 0,
+                data: [],
+                error: 'Could not load table data. Try refreshing the page.'
+            });
+        });
     }
 
     $table.DataTable({
@@ -256,10 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
         order: order,
         serverSide: true,
         processing: true,
-        ajax: {
-            url: sellingVouchersServerDtUrl(),
-            type: 'GET'
-        },
+        ajax: messMasterDtAjax,
         columns: ajaxColumns,
         pageLength: {{ $pageLength }},
         lengthMenu: lengthMenu,
@@ -267,7 +172,9 @@ document.addEventListener('DOMContentLoaded', function() {
         search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
-        pagingType: 'full_numbers',
+        @if($columnManager)
+        colReorder: { realtime: false, fixedColumnsRight: {{ count($actionColumnIndices) > 0 ? 1 : 0 }} },
+        @endif
         dom: {!! json_encode($dom) !!},
         language: {
             search: '',
@@ -281,14 +188,16 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {
-            @if($dtWrapperClass !== '')
-            $(settings.nTableWrapper).addClass({!! json_encode($dtWrapperClass) !!});
-            @endif
+            if (typeof window.messDataTableBindSearchInputTrim === 'function') {
+                try { window.messDataTableBindSearchInputTrim(new $.fn.dataTable.Api(settings)); } catch (e) {}
+            }
+            messMasterInvokeAjaxJsonCallback(settings);
         },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
             }
+            messMasterInvokeAjaxJsonCallback(settings);
             @if ($searchHighlight)
             if (typeof window.messDataTableApplySearchHighlight === 'function') {
                 try {
@@ -305,10 +214,15 @@ document.addEventListener('DOMContentLoaded', function() {
         pageLength: {{ $pageLength }},
         lengthMenu: lengthMenu,
         searchDelay: {{ $searchDelay }},
-        search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
+        search: { smart: {{ $searchSmartClient ? 'true' : 'false' }} },
+        @if(!$searchSmartClient)
+        _messCustomMultiWordSearch: true,
+        @endif
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
-        pagingType: 'full_numbers',
+        @if($columnManager)
+        colReorder: { realtime: false, fixedColumnsRight: {{ count($actionColumnIndices) > 0 ? 1 : 0 }} },
+        @endif
         dom: {!! json_encode($dom) !!},
         language: {
             search: '',
@@ -322,14 +236,16 @@ document.addEventListener('DOMContentLoaded', function() {
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {
-            @if($dtWrapperClass !== '')
-            $(settings.nTableWrapper).addClass({!! json_encode($dtWrapperClass) !!});
-            @endif
+            if (typeof window.messDataTableBindSearchInputTrim === 'function') {
+                try { window.messDataTableBindSearchInputTrim(new $.fn.dataTable.Api(settings)); } catch (e) {}
+            }
+            messMasterInvokeAjaxJsonCallback(settings);
         },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
             }
+            messMasterInvokeAjaxJsonCallback(settings);
             @if ($searchHighlight)
             if (typeof window.messDataTableApplySearchHighlight === 'function') {
                 try {
@@ -340,6 +256,31 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     @endif
+
+    window.messMasterDataTableRegistry = window.messMasterDataTableRegistry || [];
+    if ($.fn.DataTable.isDataTable($table)) {
+        var dtApi = $table.DataTable();
+        window.messMasterDataTableRegistry.push(dtApi);
+
+        @if($columnManager)
+        function initMessColumnManagerWhenReady() {
+            if (typeof window.MessColumnManager === 'undefined') {
+                setTimeout(initMessColumnManagerWhenReady, 50);
+                return;
+            }
+            window.MessColumnManager.init({
+                tableId: '{{ $tableId }}',
+                mode: 'datatable',
+                dtApi: dtApi,
+                $table: $table,
+                colReorder: true,
+                lockedColumns: {!! json_encode($columnManagerLocked) !!},
+                skipColumns: {!! json_encode($actionColumnIndices) !!}
+            });
+        }
+        initMessColumnManagerWhenReady();
+        @endif
+    }
 });
 </script>
 @endpush

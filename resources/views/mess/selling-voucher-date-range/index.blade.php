@@ -49,9 +49,9 @@ $selectedClientType = (string) request()->input('client_type', '');
                     Smart filters
                 </span>
             </div>
-        </div>
-        <div class="card-body p-3 p-lg-4 pt-3">
-            <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}" class="sv-dr-filter-form">
+            <hr class="my-4">
+            <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}" id="sellingVoucherFilterForm">
+                <input type="hidden" name="refresh" value="1">
                 <div class="sv-filter-fields-grid">
                     <div class="sv-filter-field">
                         <label class="form-label small fw-semibold text-uppercase mb-1">Status</label>
@@ -99,9 +99,9 @@ $selectedClientType = (string) request()->input('client_type', '');
                         </select>
                     </div>
                     <div class="sv-filter-field">
-                        <label class="form-label small fw-semibold text-uppercase mb-1">Buyer name</label>
+                        <label class="form-label small fw-semibold text-uppercase mb-1">Person / buyer name</label>
                         <select name="buyer_name" id="filter_buyer_name" class="form-select w-100">
-                            <option value="">All Buyers</option>
+                            <option value="">All persons</option>
                             @foreach(($filterBuyerNames ?? collect()) as $buyerName)
                             <option value="{{ $buyerName }}" {{ (string) ($selectedBuyerName ?? '') === (string) $buyerName ? 'selected' : '' }}>
                                 {{ $buyerName }}
@@ -143,17 +143,15 @@ $selectedClientType = (string) request()->input('client_type', '');
         </div>
     </div>
 
-    <div class="card border-0 shadow-sm rounded-4 selling-voucher-card sv-dr-list-card">
-        <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <div>
-                    <h5 class="mb-1 fw-semibold text-dark">Voucher listing</h5>
-                    <p class="mb-0 small text-muted">Search, browse, and manage line items for the selected filters.</p>
-                </div>
-                <div class="sv-dr-search selling-voucher-search-wrapper ms-auto">
-                    <span class="sv-dr-search-icon material-symbols-rounded" aria-hidden="true">search</span>
-                    <input type="search" id="sellingVoucherCustomSearch" class="form-control form-control-sm rounded-pill"
-                        placeholder="Search" autocomplete="off" aria-label="Search selling vouchers">
+    <div class="card border-0 shadow-sm rounded-4 selling-voucher-card">
+        <div class="card-body">
+            <div class="d-flex justify-content-end mb-2">
+                <div class="input-group input-group-sm selling-voucher-search-wrapper" style="max-width: 260px;">
+                    <span class="input-group-text">
+                        <i class="material-symbols-rounded" style="font-size: 1rem;">search</i>
+                    </span>
+                    <input type="text" id="sellingVoucherCustomSearch" class="form-control"
+                        placeholder="Search person, item, store…" autocomplete="off">
                 </div>
             </div>
         </div>
@@ -185,21 +183,14 @@ $selectedClientType = (string) request()->input('client_type', '');
 
     @include('components.mess-master-datatables', [
     'tableId' => 'sellingVoucherDateRangeTable',
-    'searchPlaceholder' => 'Search selling vouchers...',
-    'ordering' => false,
+    'searchPlaceholder' => 'Search person, item, store…',
     'actionColumnIndex' => 12,
     'infoLabel' => 'selling vouchers',
-    'searchDelay' => 0,
+    'searchDelay' => 250,
     'scrollX' => true,
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.selling-voucher-date-range.datatable'),
-    'dtWrapperClass' => 'sv-dr-dt-modern',
-    'dom' => 'rt<"row align-items-center g-3 mt-3 pt-3 border-top sv-dr-dt-footer"<"col-12 col-xl-6" p><"col-12 col-xl-6 d-flex flex-wrap justify-content-xl-end align-items-center gap-3" il>>',
-    'lengthMenuLabel' => 'Rows per page _MENU_',
-    'infoPattern' => 'Showing _START_–_END_ of _TOTAL_ items',
-    'infoEmptyPattern' => 'No items to show',
-    'pageLength' => 25,
-    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+    'dom' => '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>',
     ])
     @include('mess.partials.modal-dropdown-stability')
 
@@ -214,11 +205,25 @@ $selectedClientType = (string) request()->input('client_type', '');
         function bindSellingVoucherSearch(dtApi) {
             var $input = $('#sellingVoucherCustomSearch');
             if (!$input.length) return;
-            $input.on('keyup change', function() {
+            var searchTimer = null;
+            $input.on('keyup change', function(e) {
                 var val = this.value;
-                dtApi.search(val).draw();
+                clearTimeout(searchTimer);
+                if (e.type === 'change' || e.key === 'Enter') {
+                    dtApi.search(val).draw();
+                    return;
+                }
+                searchTimer = setTimeout(function() {
+                    dtApi.search(val).draw();
+                }, 250);
             });
         }
+
+        window.reloadSellingVoucherDateRangeTable = function() {
+            if ($.fn.DataTable.isDataTable($table)) {
+                $table.DataTable().ajax.reload(null, false);
+            }
+        };
 
         if ($.fn.DataTable.isDataTable($table)) {
             bindSellingVoucherSearch($table.DataTable());
@@ -1434,6 +1439,10 @@ $selectedClientType = (string) request()->input('client_type', '');
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
                 <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label voucher-label">Person / buyer</label>
+                        <p class="mb-0 form-control-plaintext fw-semibold" id="returnClientName">—</p>
+                    </div>
                     <div class="mb-3">
                         <label class="form-label voucher-label">Transfer From Store</label>
                         <p class="mb-0 form-control-plaintext" id="returnTransferFromStore">—</p>
@@ -4309,6 +4318,10 @@ $selectedClientType = (string) request()->input('client_type', '');
             })
             .then(r => r.json())
             .then(function(data) {
+                var clientEl = document.getElementById('returnClientName');
+                if (clientEl) {
+                    clientEl.textContent = data.client_name || '—';
+                }
                 document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                 const issueDate = data.issue_date || '';
                 const todayYmd = new Date().toISOString().slice(0, 10);
@@ -4416,13 +4429,79 @@ $selectedClientType = (string) request()->input('client_type', '');
     const returnItemForm = document.getElementById('returnItemForm');
     if (returnItemForm) {
         returnItemForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
             this.querySelectorAll('.dr-return-qty').forEach(enforceReturnQtyWithinIssued);
             this.querySelectorAll('.dr-return-date').forEach(enforceReturnDateNotBeforeIssue);
             if (!this.checkValidity()) {
-                e.preventDefault();
-                e.stopPropagation();
                 this.classList.add('was-validated');
+                return;
             }
+            var submitBtn = this.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+            }
+            var formData = new FormData(this);
+            formData.append('_method', 'PUT');
+            fetch(this.action, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                credentials: 'same-origin'
+            })
+                .then(function(r) {
+                    return r.json().then(function(payload) {
+                        return { ok: r.ok, payload: payload };
+                    });
+                })
+                .then(function(result) {
+                    if (!result.ok || !result.payload || !result.payload.success) {
+                        throw new Error((result.payload && result.payload.message) || 'Failed to update return.');
+                    }
+                    var modalEl = document.getElementById('returnItemModal');
+                    if (modalEl && typeof bootstrap !== 'undefined') {
+                        bootstrap.Modal.getInstance(modalEl)?.hide();
+                    }
+                    var clientName = result.payload.client_name || '';
+                    var filterBuyer = document.getElementById('filter_buyer_name');
+                    var filterReturn = document.querySelector('select[name="return_status"]');
+                    if (clientName && filterBuyer) {
+                        var hasOpt = Array.from(filterBuyer.options).some(function(o) {
+                            return o.value === clientName;
+                        });
+                        if (!hasOpt) {
+                            var opt = document.createElement('option');
+                            opt.value = clientName;
+                            opt.textContent = clientName;
+                            filterBuyer.appendChild(opt);
+                        }
+                        filterBuyer.value = clientName;
+                    }
+                    if (filterReturn) {
+                        filterReturn.value = 'returned';
+                    }
+                    var url = new URL(window.location.href);
+                    if (clientName) {
+                        url.searchParams.set('buyer_name', clientName);
+                    }
+                    url.searchParams.set('return_status', 'returned');
+                    window.history.replaceState({}, '', url.toString());
+                    if (typeof window.reloadSellingVoucherDateRangeTable === 'function') {
+                        window.reloadSellingVoucherDateRangeTable();
+                    }
+                    alert(result.payload.message || 'Return updated successfully.');
+                })
+                .catch(function(err) {
+                    alert(err.message || 'Failed to update return.');
+                })
+                .finally(function() {
+                    if (submitBtn) {
+                        submitBtn.disabled = false;
+                    }
+                });
         }, true);
     }
 
@@ -5161,19 +5240,52 @@ $selectedClientType = (string) request()->input('client_type', '');
         function setBuyerOptions(options, preserveSelection) {
             fillSelect(filterBuyer, (options || []).map(function(name) {
                 return { value: name, text: name };
-            }), 'All Buyers', preserveSelection ? selectedBuyer : '');
+            }), 'All persons', preserveSelection ? selectedBuyer : '');
+        }
+
+        function getFilterParamsForBuyerList() {
+            var form = document.getElementById('sellingVoucherFilterForm');
+            var params = new URLSearchParams();
+            if (!form) {
+                return params;
+            }
+            Array.from(form.elements).forEach(function(el) {
+                if (!el.name || el === filterBuyer) {
+                    return;
+                }
+                if (el.disabled) {
+                    return;
+                }
+                if (el.type === 'checkbox' || el.type === 'radio') {
+                    if (!el.checked) {
+                        return;
+                    }
+                    params.append(el.name, el.value);
+                    return;
+                }
+                if (el.tagName === 'SELECT' && el.multiple) {
+                    Array.from(el.selectedOptions).forEach(function(opt) {
+                        if (opt.value !== '') {
+                            params.append(el.name, opt.value);
+                        }
+                    });
+                    return;
+                }
+                if (el.value !== '') {
+                    params.append(el.name, el.value);
+                }
+            });
+            return params;
         }
 
         function loadBuyerOptions(preserveSelection) {
-            if (!filterType || !filterTypePk || !filterBuyer) return;
-            var slug = String(filterType.value || '');
-            var pk = String(filterTypePk.value || '');
-            if (!slug || !pk) {
-                setBuyerOptions([], preserveSelection);
+            if (!filterBuyer) {
                 return;
             }
+            var slug = filterType ? String(filterType.value || '') : '';
+            var pk = filterTypePk ? String(filterTypePk.value || '') : '';
 
-            if (slug === 'employee') {
+            if (slug === 'employee' && pk) {
                 var selectedLabel = ((filterTypePk.options[filterTypePk.selectedIndex] || {}).text || '').toLowerCase().trim();
                 if (selectedLabel === 'academy staff') {
                     setBuyerOptions(employees, preserveSelection);
@@ -5187,30 +5299,31 @@ $selectedClientType = (string) request()->input('client_type', '');
                 return;
             }
 
-            var url = '';
-            if (slug === 'ot') {
-                url = '{{ route('admin.mess.selling-voucher-date-range.students-by-course', ['course_pk' => '__COURSE__']) }}'.replace('__COURSE__', encodeURIComponent(pk));
-            } else if (slug === 'course' || slug === 'section' || slug === 'other') {
-                var params = new URLSearchParams({
-                    client_type_slug: slug,
-                    client_type_pk: pk
-                });
-                url = '{{ route('admin.mess.selling-voucher-date-range.buyer-names') }}' + '?' + params.toString();
-            }
-
-            if (!url) {
-                setBuyerOptions([], preserveSelection);
+            if (slug === 'ot' && pk) {
+                var otUrl = '{{ route('admin.mess.selling-voucher-date-range.students-by-course', ['course_pk' => '__COURSE__']) }}'.replace('__COURSE__', encodeURIComponent(pk));
+                fetch(otUrl, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(response) { return response.ok ? response.json() : { students: [] }; })
+                    .then(function(payload) {
+                        var buyers = (payload.students || []).map(function(student) {
+                            return student.display_name || '';
+                        }).filter(Boolean);
+                        setBuyerOptions(buyers, preserveSelection);
+                    })
+                    .catch(function() {
+                        setBuyerOptions([], preserveSelection);
+                    });
                 return;
             }
-            fetch(url, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
+
+            var params = getFilterParamsForBuyerList();
+            fetch('{{ route('admin.mess.selling-voucher-date-range.filter-buyer-names') }}?' + params.toString(), {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            })
                 .then(function(response) { return response.ok ? response.json() : { buyers: [] }; })
                 .then(function(payload) {
-                    var buyers = [];
-                    if (slug === 'ot') {
-                        buyers = (payload.students || []).map(function(student) { return student.display_name || ''; }).filter(Boolean);
-                    } else {
-                        buyers = (payload.buyers || []).map(function(name) { return String(name || '').trim(); }).filter(Boolean);
-                    }
+                    var buyers = (payload.buyers || []).map(function(name) {
+                        return String(name || '').trim();
+                    }).filter(Boolean);
                     setBuyerOptions(buyers, preserveSelection);
                 })
                 .catch(function() {
@@ -5250,6 +5363,17 @@ $selectedClientType = (string) request()->input('client_type', '');
                 loadBuyerOptions(false);
             });
             loadTypePkOptions(true);
+        } else if (filterBuyer) {
+            loadBuyerOptions(true);
+        }
+
+        var filterForm = document.getElementById('sellingVoucherFilterForm');
+        if (filterForm) {
+            filterForm.addEventListener('submit', function() {
+                if (typeof window.reloadSellingVoucherDateRangeTable === 'function') {
+                    setTimeout(window.reloadSellingVoucherDateRangeTable, 0);
+                }
+            });
         }
     });
 

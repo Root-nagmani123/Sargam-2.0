@@ -135,14 +135,134 @@ function mess_cw_slip_section_display_rows(\Illuminate\Support\Collection $secti
     }
 
     return $rows->sort(function ($a, $b) {
-        $tsA = $a->sortDate ? \Carbon\Carbon::parse($a->sortDate)->startOfDay()->timestamp : 0;
-        $tsB = $b->sortDate ? \Carbon\Carbon::parse($b->sortDate)->startOfDay()->timestamp : 0;
+        $dateA = mess_cw_slip_row_display_date($a);
+        $dateB = mess_cw_slip_row_display_date($b);
+        $tsA = mess_cw_slip_display_date_timestamp($dateA);
+        $tsB = mess_cw_slip_display_date_timestamp($dateB);
         if ($tsA !== $tsB) {
             return $tsB <=> $tsA;
         }
 
         return $b->sortId <=> $a->sortId;
     })->values();
+}
+
+/**
+ * Request-date label shown in the Sale Voucher Report table for one display row.
+ */
+function mess_cw_slip_row_display_date(object $row): string
+{
+    $voucher = $row->voucher;
+    if ($row->kind === 'empty') {
+        return $voucher->issue_date
+            ? ($voucher->issue_date instanceof \Carbon\Carbon
+                ? $voucher->issue_date->format('d-m-Y')
+                : \Carbon\Carbon::parse($voucher->issue_date)->format('d-m-Y'))
+            : 'N/A';
+    }
+
+    $item = $row->item;
+    $requestDate = $voucher->issue_date
+        ? ($voucher->issue_date instanceof \Carbon\Carbon
+            ? $voucher->issue_date->format('d-m-Y')
+            : \Carbon\Carbon::parse($voucher->issue_date)->format('d-m-Y'))
+        : 'N/A';
+    $itemIssueDate = $item->issue_date ?? null;
+    if ($itemIssueDate) {
+        return $itemIssueDate instanceof \Carbon\Carbon
+            ? $itemIssueDate->format('d-m-Y')
+            : \Carbon\Carbon::parse($itemIssueDate)->format('d-m-Y');
+    }
+
+    return $requestDate;
+}
+
+function mess_cw_slip_display_date_timestamp(string $displayDate): int
+{
+    if ($displayDate === '' || $displayDate === 'N/A') {
+        return 0;
+    }
+
+    try {
+        return \Carbon\Carbon::createFromFormat('d-m-Y', $displayDate)->startOfDay()->timestamp;
+    } catch (\Throwable $e) {
+        return 0;
+    }
+}
+
+/**
+ * Remark label for a date group (unique voucher remarks merged when same date).
+ *
+ * @param  string[]  $remarks
+ */
+function mess_cw_slip_remark_for_date_group(string $displayDate, array $remarks): string
+{
+    $unique = array_values(array_unique(array_filter(array_map(
+        static fn ($r) => trim((string) $r),
+        $remarks
+    ))));
+
+    if ($unique === []) {
+        return '—';
+    }
+
+    $text = count($unique) === 1 ? $unique[0] : implode('; ', $unique);
+
+    if ($displayDate !== '' && $displayDate !== 'N/A') {
+        return $displayDate . ' → ' . $text;
+    }
+
+    return $text;
+}
+
+/**
+ * Per-row remark layout: rowspan when consecutive rows share the same display date.
+ *
+ * @param  \Illuminate\Support\Collection<int, object>  $displayRows
+ * @return array<int, array{show: bool, rowspan: int, remark: string}>
+ */
+function mess_cw_slip_section_remark_layout(\Illuminate\Support\Collection $displayRows): array
+{
+    $layout = [];
+    $count = $displayRows->count();
+    $i = 0;
+
+    while ($i < $count) {
+        $displayDate = mess_cw_slip_row_display_date($displayRows[$i]);
+        $remarks = [];
+        $j = $i;
+
+        while ($j < $count && mess_cw_slip_row_display_date($displayRows[$j]) === $displayDate) {
+            $remarks[] = (string) ($displayRows[$j]->voucher->remarks ?? '');
+            $j++;
+        }
+
+        $span = $j - $i;
+        $label = mess_cw_slip_remark_for_date_group($displayDate, $remarks);
+
+        for ($k = $i; $k < $j; $k++) {
+            $layout[$k] = [
+                'show' => $k === $i,
+                'rowspan' => $span,
+                'remark' => $label,
+            ];
+        }
+
+        $i = $j;
+    }
+
+    return $layout;
+}
+
+/**
+ * @deprecated Use mess_cw_slip_remark_for_date_group() via mess_cw_slip_section_remark_layout().
+ */
+function mess_cw_slip_voucher_remark_display($voucher, ?string $rowDateFormatted = null): string
+{
+    return mess_cw_slip_remark_for_date_group(
+        $rowDateFormatted ?? 'N/A',
+        [(string) ($voucher->remarks ?? '')]
+    );
 }
 
 function createDirectory($path)
