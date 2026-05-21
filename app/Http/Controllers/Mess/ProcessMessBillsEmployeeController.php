@@ -919,14 +919,16 @@ class ProcessMessBillsEmployeeController extends Controller
         );
 
         $notifiedSet = array_fill_keys($notifiedKeys, true);
-        $pendingCount = 0;
+        $notifiedAmongCurrent = 0;
         foreach ($currentKeys as $key) {
-            if (! isset($notifiedSet[$key])) {
-                $pendingCount++;
+            if (isset($notifiedSet[$key])) {
+                $notifiedAmongCurrent++;
             }
         }
+        $pendingCount = count($currentKeys) - $notifiedAmongCurrent;
 
-        $sent = count($notifiedKeys) > 0;
+        // Only items still on this bill count — stale keys from old notifications must not show "partial".
+        $sent = $notifiedAmongCurrent > 0;
         $fullySent = $currentKeys !== [] && $pendingCount === 0;
         $partial = $sent && ! $fullySent && $pendingCount > 0;
 
@@ -2061,14 +2063,23 @@ class ProcessMessBillsEmployeeController extends Controller
                 $dateToYmd,
                 $bills
             );
-            $pendingLineKeys = array_values(array_diff($allLineKeys, $notifiedLineKeys));
+            $notifiedSet = array_fill_keys($notifiedLineKeys, true);
+            $pendingLineKeys = [];
+            $notifiedAmongCurrent = 0;
+            foreach ($allLineKeys as $key) {
+                if (isset($notifiedSet[$key])) {
+                    $notifiedAmongCurrent++;
+                } else {
+                    $pendingLineKeys[] = $key;
+                }
+            }
             if ($pendingLineKeys === []) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Already sent invoice for all items in this date range.',
                 ], 422);
             }
-            $isFollowUp = count($notifiedLineKeys) > 0;
+            $isFollowUp = $notifiedAmongCurrent > 0;
             $visibleMessage = $isFollowUp
                 ? 'New mess charges have been added to your bill. Please review and pay.'
                 : 'Your combined mess bill is pending. Please review and pay via Process Mess Bills.';
