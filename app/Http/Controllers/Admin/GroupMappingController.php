@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Imports\GroupMapping\GroupMappingMultipleSheetImport;
+use App\Imports\GroupMapping\GroupMappingImport;
 use Maatwebsite\Excel\Facades\Excel;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use App\Models\{CourseMaster, CourseGroupTypeMaster, GroupTypeMasterCourseMasterMap, StudentCourseGroupMap, StudentMasterCourseMap, VenueMaster,FacultyMaster, StudentMaster};
@@ -296,18 +296,18 @@ class GroupMappingController extends Controller
      */
     function importGroupMapping(Request $request)
     {
-        // print_r($request->all());die;
         try {
             $request->validate([
                 'file' => 'required|mimes:xlsx,xls,csv|max:10248',
+                'course_master_pk' => 'required|integer',
             ]);
 
-           $import = new GroupMappingMultipleSheetImport(
-                $request->course_master_pk
-            );
+            // Imports the first worksheet only (any sheet name: Worksheet, Sheet1, etc.).
+            $import = new GroupMappingImport($request->course_master_pk);
 
             Excel::import($import, $request->file('file'));
-            $failures = $import->sheet1Import->failures;
+            $failures = $import->failures;
+            $importedCount = $import->importedCount;
 
             if (count($failures) > 0) {
                 return response()->json([
@@ -317,14 +317,25 @@ class GroupMappingController extends Controller
                 ], 422);
             }
 
+            if ($importedCount === 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'No rows were imported. Ensure the Excel file has data rows and matches the sample format (name, otcode, group_name, group_type).',
+                ], 422);
+            }
+
             GroupMappingDataTable::bumpListingCacheEpoch();
 
             return response()->json([
                 'status' => 'success',
-                'message' => 'Group Mapping imported successfully.',
+                'message' => "Group Mapping imported successfully. {$importedCount} record(s) added.",
+                'imported_count' => $importedCount,
             ], 200);
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage())->withInput();
+            return response()->json([
+                'status' => 'error',
+                'message' => $e->getMessage(),
+            ], 500);
         }
     }
 
