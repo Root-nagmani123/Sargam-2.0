@@ -29,13 +29,18 @@
                                         <div class="simplebar-content p-0" id="sidebar-groups"> 
                                             <ul class="sidebar-groups-list"> 
                                                 @foreach ($groups as $group)
+                                                    @php
+                                                        $groupSelected = ($activeGroupId ?? null) == $group->id;
+                                                    @endphp
                                                     <li class="sidebar-group-item py-2" id="{{ $group->id }}">
                                                         <a href="javascript:void(0)" 
-                                                            class="d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link" data-id="{{ $group->id }}" data-name="{{ $group->name }}">
-                                                            <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                            class="d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link {{ $groupSelected ? 'selected mx-2 py-1 bg-primary' : '' }}"
+                                                            data-id="{{ $group->id }}" data-name="{{ $group->name }}"
+                                                            aria-selected="{{ $groupSelected ? 'true' : 'false' }}">
+                                                            <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center {{ $groupSelected ? 'text-light' : '' }}">
                                                                 <i class="material-icons menu-icon material-symbols-rounded">{{ $group->icon }}</i>
                                                             </span>
-                                                            <span class="sidebar-google-label">{{ $group->name }}</span>
+                                                            <span class="sidebar-google-label {{ $groupSelected ? 'text-light' : '' }}">{{ $group->name }}</span>
                                                         </a>
                                                     </li>
                                                 @endforeach
@@ -490,70 +495,7 @@ document.addEventListener('DOMContentLoaded', function() {
         sidebar.scrollTop = parseInt(scrollPos, 10);
     }
     
-    // Sync sidebar tabs with main content tabs
-    syncSidebarWithMainTabs();
 });
-
-// Function to sync sidebar tabs with main content tabs
-function syncSidebarWithMainTabs() {
-    const mainTabLinks = document.querySelectorAll('#mainNavbar .nav-link[data-bs-toggle="tab"]');
-    const sidebarTabPanes = document.querySelectorAll('#sidebarTabContent .tab-pane');
-    
-    // Map main tab IDs to sidebar tab IDs
-    const tabMapping = {
-        '#home': '#sidebar-home',
-        '#tab-setup': '#sidebar-setup',
-        '#tab-communications': '#sidebar-communications',
-        '#tab-academics': '#sidebar-academics',
-        '#tab-purchase-order': '#sidebar-purchase-order'
-    };
-    
-    // Function to activate sidebar tab based on main tab
-    function activateSidebarTab(mainTabId) {
-        const sidebarTabId = tabMapping[mainTabId];
-        if (!sidebarTabId) return;
-        
-        // Deactivate all sidebar tabs
-        sidebarTabPanes.forEach(pane => {
-            pane.classList.remove('show', 'active');
-        });
-        
-        // Activate corresponding sidebar tab
-        const sidebarTab = document.querySelector(sidebarTabId);
-        if (sidebarTab) {
-            sidebarTab.classList.add('show', 'active');
-        }
-    }
-    
-    // Listen for main tab clicks
-    mainTabLinks.forEach(link => {
-        link.addEventListener('click', function() {
-            const targetTab = this.getAttribute('href');
-            activateSidebarTab(targetTab);
-        });
-        
-        // Also listen for Bootstrap tab events
-        link.addEventListener('shown.bs.tab', function() {
-            const targetTab = this.getAttribute('href');
-            activateSidebarTab(targetTab);
-        });
-    });
-    
-    // Activate sidebar tab based on initial active main tab
-    const activeMainTab = document.querySelector('#mainNavbar .nav-link[data-bs-toggle="tab"].active');
-    if (activeMainTab) {
-        const targetTab = activeMainTab.getAttribute('href');
-        activateSidebarTab(targetTab);
-    }
-    
-    // Prefer server-resolved tab (menu placement) over last clicked tab
-    const routeTab = window.SARGAM_ACTIVE_NAV_TAB;
-    const savedTab = localStorage.getItem('activeMainTab');
-    const initialSidebarTab = routeTab || savedTab;
-    if (initialSidebarTab) {
-        activateSidebarTab(initialSidebarTab);
-    }
-}
 
 // Save scroll position before unload
 window.addEventListener('beforeunload', function() {

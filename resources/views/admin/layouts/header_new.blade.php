@@ -46,7 +46,7 @@
         </div>
     </div>
 
-    <div class="header-bottom-bar with-vertical px-1" style="border-bottom: 1px solid;">
+    <div class="header-bottom-bar with-vertical px-1">
         <nav class="navbar navbar-expand-lg p-0">
             <ul class="navbar-nav">
                 <li class="nav-item d-flex d-xl-none">
@@ -86,9 +86,10 @@
                                     <a href="{{ $categoryTabHash }}"
                                         class="nav-link header-nav-link px-3 py-2 sidebar-category-link {{ $isActive ? 'active' : '' }}"
                                         role="tab"
-                                        data-bs-toggle="tab"
+                                        data-sargam-category-tab="1"
                                         id="{{ $tabId }}"
                                         data-id="{{ $category->id }}"
+                                        data-slug="{{ $category->slug }}"
                                         data-tab="{{ $categoryTabHash }}"
                                         aria-selected="{{ $isActive ? 'true' : 'false' }}">
                                         @if(!empty($category->icon))
@@ -202,8 +203,8 @@
                 <ul class="navbar-nav mobile-tabbar" role="menubar" aria-label="Main navigation mobile">
                     <!-- Home -->
                     <li class="nav-item" role="none">
-                        <a href="#home" class="nav-link mobile-tab-link {{ $activeNavTab === '#home' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
+                        <a href="#home" class="nav-link mobile-tab-link sidebar-category-link {{ $activeNavTab === '#home' ? 'active' : '' }}"
+                            data-sargam-category-tab="1" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
                             id="home-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">home</i>
                             <span>Home</span>
@@ -212,8 +213,8 @@
 
                     <!-- Setup -->
                     <li class="nav-item" role="none">
-                        <a href="#tab-setup" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
+                        <a href="#tab-setup" class="nav-link mobile-tab-link sidebar-category-link {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
+                            data-sargam-category-tab="1" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                             id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
                             @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
@@ -227,8 +228,8 @@
 
                     <!-- Communications -->
                     <li class="nav-item" role="none">
-                        <a href="#tab-communications" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
+                        <a href="#tab-communications" class="nav-link mobile-tab-link sidebar-category-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                            data-sargam-category-tab="1" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
                             aria-controls="communications-panel" id="communications-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
                             <span>Comms</span>
@@ -237,8 +238,8 @@
 
                     <!-- Material Management -->
                     <li class="nav-item" role="none">
-                        <a href="#tab-material-management" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
+                        <a href="#tab-material-management" class="nav-link mobile-tab-link sidebar-category-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
+                            data-sargam-category-tab="1" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
                             aria-controls="material-management-panel" id="material-management-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
                             <span>Material</span>
@@ -1188,35 +1189,7 @@
                     });
                 });
 
-                // Mobile tab handling - ensure Bootstrap tabs work
-                const mobileTabs = document.querySelectorAll('.mobile-tab-link[data-bs-toggle="tab"]');
-                mobileTabs.forEach(tab => {
-                    tab.addEventListener('click', function(e) {
-                        const href = this.getAttribute('href');
-                        if (!href || href === '#') {
-                            e.preventDefault();
-                            return;
-                        }
-
-                        // Find corresponding desktop tab and trigger it
-                        const desktopTab = document.querySelector(
-                            `#mainNavbar .nav-link[href="${href}"]`);
-                        if (desktopTab) {
-                            e.preventDefault();
-                            desktopTab.click();
-                        } else {
-                            // If no desktop tab found, try Bootstrap tab directly
-                            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-                                try {
-                                    const tabElement = new bootstrap.Tab(this);
-                                    tabElement.show();
-                                } catch (err) {
-                                    console.log('Bootstrap tab error:', err);
-                                }
-                            }
-                        }
-                    });
-                });
+                // Mobile category tabs use the same handler as desktop (no Bootstrap tab toggle)
             });
 
             // Notification functions
@@ -1337,26 +1310,80 @@ document.addEventListener('DOMContentLoaded', function() {
     window.SARGAM_ACTIVE_NAV_TAB = @json($activeNavTab ?? '#home');
     window.SARGAM_ACTIVE_CATEGORY_ID = @json($activeCategoryId ?? null);
     window.SARGAM_ACTIVE_GROUP_ID = @json($activeGroupId ?? null);
+    window.SARGAM_ACTIVE_MENU_ID = @json($activeNavMeta['menu_id'] ?? null);
+    window.SARGAM_CURRENT_ROUTE_NAME = @json(request()->route()?->getName());
+    window.SARGAM_IS_DASHBOARD = @json($isDashboardPage ?? false);
+    window.SARGAM_DASHBOARD_URL = @json(route('admin.dashboard'));
+    window.SARGAM_CATEGORY_LANDING_URLS = @json($categoryLandingUrls ?? ['#home' => route('admin.dashboard')]);
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Include both desktop and mobile tabs
-    const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
     const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
 
-    function showPane(targetId) {
-        if (!targetId || targetId === '#') return; // Skip empty hrefs
+    function getMainContentPaneId(targetId) {
+        const map = {
+            '#home': 'home',
+            '#tab-setup': 'tab-setup',
+            '#tab-communications': 'tab-communications',
+            '#tab-academics': 'tab-academics',
+            '#tab-material-management': 'tab-material-management'
+        };
+        return map[targetId] || null;
+    }
 
-        panes.forEach(p => {
-            if ('#' + p.id === targetId) {
-                p.classList.add('show', 'active');
-            } else {
-                p.classList.remove('show', 'active');
+    function paneHasContent(pane) {
+        if (!pane) return false;
+        return pane.children.length > 0 && pane.textContent.trim().length > 0;
+    }
+
+    function getPaneWithContent() {
+        for (let i = 0; i < panes.length; i++) {
+            if (paneHasContent(panes[i])) {
+                return panes[i];
             }
-        });
+        }
+        return null;
+    }
 
-        // Update all tabs (desktop and mobile)
-        tabLinks.forEach(l => {
+    function isMainContentPaneEmpty(targetId) {
+        const pid = getMainContentPaneId(targetId);
+        if (!pid) return true;
+        return !paneHasContent(document.getElementById(pid));
+    }
+
+    function showPane(targetId, options) {
+        options = options || {};
+        if (!targetId || targetId === '#') return;
+
+        const targetPaneId = getMainContentPaneId(targetId);
+        const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
+        const canSwitchBodyPane = paneHasContent(targetPane);
+        const keepPageContent = options.keepPageContent === true;
+
+        if (canSwitchBodyPane && !keepPageContent) {
+            panes.forEach(function (p) {
+                if ('#' + p.id === targetId) {
+                    p.classList.add('show', 'active');
+                } else {
+                    p.classList.remove('show', 'active');
+                }
+            });
+        } else if (!options.skipBodyKeep) {
+            var contentPane = getPaneWithContent();
+            if (contentPane) {
+                panes.forEach(function (p) {
+                    if (p === contentPane) {
+                        p.classList.add('show', 'active');
+                    } else {
+                        p.classList.remove('show', 'active');
+                    }
+                });
+            } else if (window.SargamNavState && window.SargamNavState.ensureVisibleContentPane) {
+                window.SargamNavState.ensureVisibleContentPane();
+            }
+        }
+
+        document.querySelectorAll('.sidebar-category-link').forEach(function (l) {
             const href = l.getAttribute('href');
             if (href === targetId) {
                 l.classList.add('active');
@@ -1367,31 +1394,19 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
 
-        // Save the active tab to localStorage
-        localStorage.setItem('activeMainTab', targetId);
+        try {
+            localStorage.setItem('activeMainTab', targetId);
+        } catch (e) { /* ignore */ }
+
+        if (window.SargamNavState && window.SargamNavState.persistTabState) {
+            var catLink = document.querySelector('.sidebar-category-link[href="' + targetId + '"]');
+            var categoryId = catLink ? catLink.getAttribute('data-id') : null;
+            window.SargamNavState.persistTabState(targetId, categoryId, null);
+        }
     }
 
     window.showMainNavPane = showPane;
-
-    // Handle clicks on all tabs (desktop and mobile)
-    tabLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            const target = this.getAttribute('href');
-            if (!target || target === '#') {
-                e.preventDefault();
-                return; // Skip tabs without proper href
-            }
-
-            e.preventDefault();
-            showPane(target);
-            history.replaceState(null, '', target);
-
-            // Ensure default content within the activated tab
-            if (typeof activateDefaultSubmenuForPane === 'function') {
-                activateDefaultSubmenuForPane(target);
-            }
-        });
-    });
+    window.isMainContentPaneEmpty = isMainContentPaneEmpty;
 
     // Helper function to get cookie value
     function getCookie(name) {
@@ -1428,29 +1443,12 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Initial tab:', initial, '(route:', routeTab, ')');
     }
 
-    showPane(initial);
+    showPane(initial, { skipBodyKeep: false });
 
-    // Keep localStorage aligned with server-resolved menu placement (category/tab in DB)
     if (window.SARGAM_ACTIVE_NAV_TAB) {
-        localStorage.setItem('activeMainTab', window.SARGAM_ACTIVE_NAV_TAB);
-    }
-
-    // Sync mobile tabs with initial state
-    const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
-    allTabs.forEach(tab => {
-        const href = tab.getAttribute('href');
-        if (href === initial) {
-            tab.classList.add('active');
-            tab.setAttribute('aria-selected', 'true');
-        } else {
-            tab.classList.remove('active');
-            tab.setAttribute('aria-selected', 'false');
-        }
-    });
-
-    // Apply default submenu/content for initial tab
-    if (typeof activateDefaultSubmenuForPane === 'function') {
-        activateDefaultSubmenuForPane(initial);
+        try {
+            localStorage.setItem('activeMainTab', window.SARGAM_ACTIVE_NAV_TAB);
+        } catch (e) { /* ignore */ }
     }
 });
 </script>

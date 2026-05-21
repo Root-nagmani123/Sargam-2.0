@@ -133,6 +133,8 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/admin/navigation-error', [\App\Http\Controllers\Admin\NavigationErrorController::class, 'show'])
+        ->name('admin.navigation.error');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
@@ -1639,7 +1641,7 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 });
 Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);
 
-Route::prefix('sidebar')->name('sidebar.')->group(function () {
+Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function () {
     Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
     Route::resource('categories', SidebarCategoryController::class);
     Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');

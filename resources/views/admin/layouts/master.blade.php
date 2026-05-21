@@ -2,24 +2,61 @@
 <html lang="en" data-bs-theme="light">
 @php
     $sidebarMenus = $sidebarMenus ?? collect();
+    $activeNavMeta = $activeNavMeta ?? null;
     if (! isset($activeNavTab)) {
         $nav = app(\App\Services\SidebarMenu\SidebarNavResolver::class)->resolve();
         $activeNavTab = $nav['nav_tab'];
         $activeCategoryId = $activeCategoryId ?? $nav['category_id'];
         $activeGroupId = $activeGroupId ?? $nav['group_id'];
+        $activeNavMeta = $nav;
     } else {
         $activeNavTab = $activeNavTab ?? \App\Services\SidebarMenu\SidebarNavResolver::HOME_TAB;
+        $activeNavMeta = $activeNavMeta ?? [
+            'nav_tab' => $activeNavTab,
+            'category_id' => $activeCategoryId ?? null,
+            'category_slug' => null,
+            'group_id' => $activeGroupId ?? null,
+            'menu_id' => null,
+        ];
     }
     $activeCategoryId = $activeCategoryId
         ?? request()->get('category')
+        ?? ($activeNavMeta['category_id'] ?? null)
         ?? ($sidebarMenus->first()?->id);
-    $activeGroupId = $activeGroupId ?? null;
+    $activeGroupId = $activeGroupId ?? ($activeNavMeta['group_id'] ?? null);
+    $isDashboardPage = request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') || request()->is('dashboard');
     $activeCategory = $sidebarMenus->firstWhere('id', $activeCategoryId)
         ?? $sidebarMenus->first();
     if ($activeCategory) {
         $activeCategoryId = $activeCategory->id;
     }
     $groups = $activeCategory ? $activeCategory->groups : collect([]);
+
+    $routeMatcher = app(\App\Services\SidebarMenu\MenuRouteMatcher::class);
+    $categoryLandingUrls = ['#home' => route('admin.dashboard')];
+    foreach ($sidebarMenus as $cat) {
+        $tabHash = $cat->slug === 'home' ? '#home' : '#tab-' . $cat->slug;
+        if ($tabHash === '#home') {
+            continue;
+        }
+        $firstMenu = \App\Models\SidebarMenu\Menu::query()
+            ->where('is_active', 1)
+            ->where(function ($q) use ($cat) {
+                $q->where('category_id', $cat->id)
+                    ->orWhereIn('group_id', $cat->groups->pluck('id'));
+            })
+            ->whereNotNull('route')
+            ->where('route', '!=', '')
+            ->where('route', '!=', '#')
+            ->orderBy('order')
+            ->first(['id', 'route']);
+        if ($firstMenu) {
+            $href = $routeMatcher->resolveHref($firstMenu->route, $firstMenu->id);
+            if ($href && !str_contains($href, 'navigation-error')) {
+                $categoryLandingUrls[$tabHash] = $href;
+            }
+        }
+    }
 @endphp
 
 
@@ -726,6 +763,7 @@
     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
+    <script src="{{ asset('admin_assets/js/nav-state.js') }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @stack('scripts')
@@ -807,53 +845,59 @@
                 }
             }
 
-            // Apply saved sidebar type preference; default to collapsed on first login
+            // One-time migration: reset all users to expanded sidebar
             try {
-                const savedType = localStorage.getItem('SidebarType');
-                if (savedType) {
-                    body.setAttribute('data-sidebartype', savedType);
-                } else {
-                    // Default to collapsed (mini-sidebar) for new users
-                    body.setAttribute('data-sidebartype', 'mini-sidebar');
-                    localStorage.setItem('SidebarType', 'mini-sidebar');
+                if (!localStorage.getItem('SidebarType_migrated_v2')) {
+                    localStorage.setItem('SidebarType', 'full');
+                    localStorage.setItem('SidebarType_migrated_v2', '1');
                 }
             } catch (e) { }
 
-            // Initialize collapsed state on page load
-            const sidebarType = body.getAttribute("data-sidebartype");
+            function applySidebarVisualState(type) {
+                if (type === 'mini-sidebar') {
+                    sidebar.classList.remove('show-sidebar');
+                    sidebarmenus.forEach(function (el) { el.classList.add('close'); });
+                    icons.forEach(function (icon) {
+                        icon.textContent = 'keyboard_double_arrow_right';
+                        icon.classList.remove('rotated');
+                    });
+                } else {
+                    sidebar.classList.add('show-sidebar');
+                    sidebarmenus.forEach(function (el) { el.classList.remove('close'); });
+                    icons.forEach(function (icon) {
+                        icon.textContent = 'keyboard_double_arrow_right';
+                        icon.classList.add('rotated');
+                    });
+                }
+            }
+
+            // Apply saved sidebar type; default expanded
+            let sidebarType = 'full';
+            try {
+                const savedType = localStorage.getItem('SidebarType');
+                sidebarType = savedType || 'full';
+                if (!savedType) {
+                    localStorage.setItem('SidebarType', 'full');
+                }
+            } catch (e) { }
+
+            // Dashboard/Home always shows expanded sidebar
+            const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+            if (isDashboard || routeTab === '#home') {
+                sidebarType = 'full';
+                body.setAttribute('data-sidebartype', 'full');
+                try { localStorage.setItem('SidebarType', 'full'); } catch (e) { }
+            } else {
+                body.setAttribute('data-sidebartype', sidebarType);
+            }
+
+            // Initialize sidebar state on page load
+            sidebarType = body.getAttribute('data-sidebartype');
             console.log('Initial sidebar type:', sidebarType);
             console.log('Icon elements found:', icons.length);
 
-            if (sidebarType === "mini-sidebar") {
-                // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
-                sidebar.classList.remove("show-sidebar");
-                // Add close class to sidebarmenu elements
-                sidebarmenus.forEach(function (el) {
-                    el.classList.add("close");
-                });
-                // Set all icon instances to expand (collapsed state)
-                icons.forEach(function (icon) {
-                    icon.textContent = "keyboard_double_arrow_right";
-                    icon.classList.remove("rotated");
-                });
-                console.log('Set all icons to non-rotated (collapsed state)');
-                // After initial collapse state, adjust DataTables to new layout
-                setTimeout(adjustAllDataTables, 300);
-            } else {
-                // Sidebar should be expanded
-                sidebar.classList.add("show-sidebar");
-                sidebarmenus.forEach(function (el) {
-                    el.classList.remove("close");
-                });
-                // Set all icon instances to rotated (expanded state)
-                icons.forEach(function (icon) {
-                    icon.textContent = "keyboard_double_arrow_right";
-                    icon.classList.add("rotated");
-                });
-                console.log('Set all icons to rotated (expanded state)');
-                // After initial expanded state, adjust DataTables to new layout
-                setTimeout(adjustAllDataTables, 300);
-            }
+            applySidebarVisualState(sidebarType);
+            setTimeout(adjustAllDataTables, 300);
 
             // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
             function syncIconWithSidebar(type) {
@@ -874,6 +918,8 @@
                     if (m.attributeName === 'data-sidebartype') {
                         const t = body.getAttribute('data-sidebartype');
                         syncIconWithSidebar(t);
+                        try { localStorage.setItem('SidebarType', t); } catch (e) { }
+                        applySidebarVisualState(t);
                         setTimeout(adjustAllDataTables, 300);
                     }
                 }
@@ -905,14 +951,30 @@
     
     <!-- @sidebar  scripts -->
     <script>
+        function navAjaxContext() {
+            return {
+                current_path: window.location.pathname.replace(/^\//, ''),
+                current_route: window.SARGAM_CURRENT_ROUTE_NAME || ''
+            };
+        }
 
-        // @getSidebarGroups()
         function markActiveSidebarMenuLink() {
-            var current = window.location.href.split('#')[0].split('?')[0];
-            $('#sidebarnav .sidebar-link[href]').each(function () {
-                var href = this.href ? this.href.split('#')[0].split('?')[0] : '';
-                $(this).toggleClass('active', href !== '' && href === current);
-            });
+            if (window.SargamNavState && window.SargamNavState.markActiveSidebarLinks) {
+                window.SargamNavState.markActiveSidebarLinks();
+            }
+        }
+        window.markActiveSidebarMenuLink = markActiveSidebarMenuLink;
+
+        function selectSidebarGroupVisual(groupId) {
+            $('.sidebar-group-link').removeClass('selected mx-2 py-1 bg-primary').attr('aria-selected', 'false');
+            $('.sidebar-google-icon-wrap').removeClass('text-light');
+            $('.sidebar-google-label').removeClass('text-light');
+            var $link = $('.sidebar-group-link[data-id="' + groupId + '"]');
+            if (!$link.length) return;
+            $link.addClass('selected').attr('aria-selected', 'true');
+            $link.addClass('mx-2 py-1 bg-primary');
+            $link.find('.sidebar-google-icon-wrap').addClass('text-light');
+            $link.find('.sidebar-google-label').addClass('text-light');
         }
 
         function loadSidebarMenusForGroup(groupId, groupName) {
@@ -920,10 +982,20 @@
             if (groupName) {
                 $('#sidebar-title').text(groupName).addClass('border-bottom');
             }
+            if (window.SargamNavState) {
+                var tabHash = window.SargamNavState.getActiveTabHash
+                    ? window.SargamNavState.getActiveTabHash()
+                    : (window.SARGAM_ACTIVE_NAV_TAB || '#home');
+                window.SargamNavState.persistTabState(
+                    tabHash,
+                    window.SARGAM_ACTIVE_CATEGORY_ID,
+                    groupId
+                );
+            }
             $.ajax({
                 url: '{{ route("sidebar.menu") }}',
                 type: 'GET',
-                data: { group_id: groupId },
+                data: $.extend({ group_id: groupId }, navAjaxContext()),
                 success: function (response) {
                     $('#sidebarnav').html(response);
                     markActiveSidebarMenuLink();
@@ -933,6 +1005,7 @@
                 }
             });
         }
+        window.loadSidebarMenusForGroup = loadSidebarMenusForGroup;
 
         function loadSidebarGroupsForCategory(categoryId, done) {
             if (!categoryId) {
@@ -953,42 +1026,25 @@
                 }
             });
         }
+        window.loadSidebarGroupsForCategory = loadSidebarGroupsForCategory;
 
-        $(document).on('click', '.sidebar-category-link', function(e){
-            e.preventDefault();
-            var categoryId = $(this).data('id');
-            var tabHash = $(this).data('tab') || $(this).attr('href');
-            if (tabHash && typeof window.showMainNavPane === 'function') {
-                window.showMainNavPane(tabHash);
-            }
-            $('.sidebar-category-link').removeClass('active').attr('aria-selected','false');
-            $(this).addClass('active').attr('aria-selected','true');
-            $('#sidebarnav').empty();
-            $('#sidebar-title').text('').removeClass('border-bottom');
-            loadSidebarGroupsForCategory(categoryId);
-        });
+        // Header category tabs: nav-state.js (capture handler, no Bootstrap tab toggle)
 
-        // @getSidebarMenu()
         $(document).on('click', '.sidebar-group-link', function(e){
             e.preventDefault();
             var groupId = $(this).data('id');
             var groupName = $(this).data('name');
-            $('.sidebar-group-link').removeClass('selected').attr('aria-selected','false');
-            $('.sidebar-group-link').removeClass('mx-2 py-1 bg-primary');
-            $('.sidebar-google-icon-wrap').removeClass('text-light');
-            $('.sidebar-google-label').removeClass('text-light');
-            $(this).addClass('selected').attr('aria-selected','true');
-            $(this).addClass('mx-2 py-1 bg-primary');
-            $(this).find('.sidebar-google-icon-wrap').addClass('text-light');
-            $(this).find('.sidebar-google-label').addClass('text-light');
+            selectSidebarGroupVisual(groupId);
             loadSidebarMenusForGroup(groupId, groupName);
         });
 
-        // On full page load: open tab + sidebar for menu placement (category/group from server)
         $(function () {
             var categoryId = window.SARGAM_ACTIVE_CATEGORY_ID;
             var groupId = window.SARGAM_ACTIVE_GROUP_ID;
             var routeTab = window.SARGAM_ACTIVE_NAV_TAB;
+            if (!groupId && window.SargamNavState && window.SargamNavState.getLastVisitedGroupId && routeTab) {
+                groupId = window.SargamNavState.getLastVisitedGroupId(routeTab);
+            }
 
             if (routeTab && typeof window.showMainNavPane === 'function') {
                 window.showMainNavPane(routeTab);
@@ -1002,17 +1058,19 @@
                 .attr('aria-selected', 'true');
 
             loadSidebarGroupsForCategory(categoryId, function () {
-                if (!groupId) return;
-                var $groupLink = $('.sidebar-group-link[data-id="' + groupId + '"]');
-                if ($groupLink.length) {
-                    $groupLink.trigger('click');
-                } else {
+                if (groupId) {
+                    selectSidebarGroupVisual(groupId);
                     loadSidebarMenusForGroup(groupId);
+                    return;
+                }
+                if (window.SARGAM_IS_DASHBOARD) {
+                    var $first = $('.sidebar-group-link').first();
+                    if ($first.length) {
+                        $first.trigger('click');
+                    }
                 }
             });
         });
-
-
     </script>
 
   @yield('script')

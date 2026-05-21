@@ -2,294 +2,224 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;        
-use App\Models\SidebarMenu\{SidebarCategory,MenuGroup,Menu};
+use App\Models\SidebarMenu\Menu;
+use App\Models\SidebarMenu\MenuGroup;
+use App\Models\SidebarMenu\SidebarCategory;
+use App\Services\SidebarMenu\MenuRouteMatcher;
+use Illuminate\Http\Request;
+
 class SidebarController extends Controller
 {
-    //  
-    // public function getGroups(Request $request)
-    // {
-        
-    //     $category = SidebarCategory::with('groups')->find($request->category_id);
-       
-    //     if(!$category) {
-    //         return '<ul class="sidebar-groups-list"><li>No groups found.</li></ul>';
-    //     }
-
-    //     $html = '<ul class="sidebar-groups-list">';
-    //     foreach($category->groups as $group){
-    //             $html .= '<li class="sidebar-group-item py-2" data-id="'.$group->id.'">';
-    //             $html .= '<a href="javascript:void(0)" class="sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-1 sidebar-group-link" data-id="'.$group->id.'" data-name="'.$group->name.'">';
-    //             $html .= '<span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">';
-    //             $html .= '<i class="material-icons menu-icon material-symbols-rounded">'.$group->icon.'</i>';
-    //             $html .= '</span>';
-    //             $html .= '<span class="sidebar-google-label">'.$group->name.'</span>';
-    //             $html .= '</a>';
-    //             $html .= '</li>';
-    //         }
-    //     $html .= '</ul>';
-    //     return $html;
-    // }
-
+    public function __construct(
+        protected MenuRouteMatcher $routeMatcher
+    ) {}
 
     public function getGroups(Request $request)
-{
-    $user = auth()->user();
-    $isAdmin = $user->hasRole('Admin');
+    {
+        $user = auth()->user();
+        $isAdmin = $user->hasRole('Admin');
 
-    $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
+        $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
 
-    $category = SidebarCategory::with(['groups.menus.children'])->find($request->category_id);
+        $category = SidebarCategory::with(['groups.menus.children'])->find($request->category_id);
 
-    if (!$category) {
-        return '<ul class="sidebar-groups-list"><li>No groups found.</li></ul>';
-    }
-
-    $groups = $category->groups->filter(function ($group) use ($permissions, $isAdmin) {
-
-        // Admin → show all
-        if ($isAdmin) {
-            return true;
+        if (!$category) {
+            return '<ul class="sidebar-groups-list"><li>No groups found.</li></ul>';
         }
 
-        return $group->menus->contains(function ($menu) use ($permissions) {
+        $groups = $category->groups->filter(function ($group) use ($permissions, $isAdmin) {
+            if ($isAdmin) {
+                return true;
+            }
 
-            $hasMenuPermission = !$menu->permission_name || in_array($menu->permission_name, $permissions);
+            return $group->menus->contains(function ($menu) use ($permissions) {
+                $hasMenuPermission = !$menu->permission_name || in_array($menu->permission_name, $permissions);
 
-            $hasChildPermission = $menu->children->contains(function ($child) use ($permissions) {
+                $hasChildPermission = $menu->children->contains(function ($child) use ($permissions) {
+                    return !$child->permission_name || in_array($child->permission_name, $permissions);
+                });
+
+                return $hasMenuPermission || $hasChildPermission;
+            });
+        });
+
+        if ($groups->isEmpty()) {
+            return '<ul class="sidebar-groups-list"><li>No groups found.</li></ul>';
+        }
+
+        $html = '<ul class="sidebar-groups-list">';
+
+        foreach ($groups as $group) {
+            $html .= '<li class="sidebar-group-item py-2" data-id="'.$group->id.'">';
+            $html .= '<a href="javascript:void(0)" class="sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-1 sidebar-group-link" data-id="'.$group->id.'" data-name="'.e($group->name).'">';
+            $html .= '<span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">';
+            $html .= '<i class="material-icons menu-icon material-symbols-rounded">'.e($group->icon).'</i>';
+            $html .= '</span>';
+            $html .= '<span class="sidebar-google-label">'.e($group->name).'</span>';
+            $html .= '</a>';
+            $html .= '</li>';
+        }
+
+        $html .= '</ul>';
+
+        return $html;
+    }
+
+    public function sidebarMenus(Request $request)
+    {
+        $user = auth()->user();
+        $isAdmin = $user->hasRole('Admin');
+
+        $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
+
+        $groupId = $request->group_id;
+        $currentPath = $this->resolveCurrentPath($request);
+        $currentRouteName = $request->input('current_route', request()->route()?->getName() ?? '');
+
+        $group = MenuGroup::with([
+            'menus' => function ($q) {
+                $q->whereNull('parent_id')
+                    ->where('is_active', 1)
+                    ->orderBy('order', 'ASC');
+            },
+            'menus.children' => function ($q) {
+                $q->where('is_active', 1)
+                    ->orderBy('order', 'ASC');
+            },
+        ])->find($groupId);
+
+        if (!$group) {
+            return '<li>No Data Found</li>';
+        }
+
+        $html = '';
+
+        foreach ($group->menus as $menu) {
+            $children = $menu->children->filter(function ($child) use ($permissions, $isAdmin) {
+                if ($isAdmin) {
+                    return true;
+                }
+
                 return !$child->permission_name || in_array($child->permission_name, $permissions);
             });
 
-            return $hasMenuPermission || $hasChildPermission;
-        });
-    });
+            $hasMenuPermission = $isAdmin || !$menu->permission_name || in_array($menu->permission_name, $permissions);
 
-   
-    // If no groups after filtering
-    if ($groups->isEmpty()) {
-        return '<ul class="sidebar-groups-list"><li>No groups found.</li></ul>';
-    }
+            if (!$hasMenuPermission && $children->isEmpty()) {
+                continue;
+            }
 
-    // Build HTML
-    $html = '<ul class="sidebar-groups-list">';
+            $hasChild = $children->count() > 0;
+            $collapseId = 'menu_' . $menu->id;
+            $childActive = false;
 
-    foreach ($groups as $group) {
-        $html .= '<li class="sidebar-group-item py-2" data-id="'.$group->id.'">';
-        $html .= '<a href="javascript:void(0)" class="sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-1 sidebar-group-link" data-id="'.$group->id.'" data-name="'.$group->name.'">';
-        $html .= '<span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">';
-        $html .= '<i class="material-icons menu-icon material-symbols-rounded">'.$group->icon.'</i>';
-        $html .= '</span>';
-        $html .= '<span class="sidebar-google-label">'.$group->name.'</span>';
-        $html .= '</a>';
-        $html .= '</li>';
-    }
+            if ($hasChild) {
+                foreach ($children as $submenu) {
+                    if ($this->routeMatcher->isActive($submenu->route, $currentPath, $currentRouteName)) {
+                        $childActive = true;
+                        break;
+                    }
+                }
 
-    $html .= '</ul>';
+                $collapseClass = $childActive ? 'collapse show' : 'collapse';
+                $parentLinkClass = $childActive ? 'sidebar-link active' : 'sidebar-link';
+                $ariaExpanded = $childActive ? 'true' : 'false';
 
-    return $html;
-}
-
-    public function getMenu(Request $request)
-{
-    $user = auth()->user();
-    $isAdmin = $user->hasRole('Admin');
-
-    $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
-
-    $group = MenuGroup::with(['menus.children'])->find($request->group_id);
-
-    if (!$group) {
-        return '<ul class="sidebar-menu-list"><li>No menus found.</li></ul>';
-    }
-
-    $menus = $group->menus->filter(function ($menu) use ($permissions, $isAdmin) {
-
-        // Admin → show all
-        if ($isAdmin) {
-            return true;
-        }
-
-        $hasMenuPermission = !$menu->permission_name || in_array($menu->permission_name, $permissions);
-
-        $hasChildPermission = $menu->children->contains(function ($child) use ($permissions) {
-            return !$child->permission_name || in_array($child->permission_name, $permissions);
-        });
-
-        return $hasMenuPermission || $hasChildPermission;
-    });
-
-    if ($menus->isEmpty()) {
-        return '<ul class="sidebar-menu-list"><li>No menus found.</li></ul>';
-    }
-
-    // Build HTML
-    $html = '<ul class="sidebar-menu-list">';
-
-    foreach ($menus as $menu) {
-        $html .= '<li class="sidebar-menu-item" data-id="'.$menu->id.'">';
-        $html .= '<a href="javascript:void(0)" class="sidebar-menu-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">';
-        $html .= '<span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">';
-        $html .= '<i class="material-icons menu-icon material-symbols-rounded">'.$menu->icon.'</i>';
-        $html .= '</span>';
-        $html .= '<span class="sidebar-google-label">'.$menu->name.'</span>';
-        $html .= '</a>';
-        $html .= '</li>';
-    }
-
-    $html .= '</ul>';
-
-    return $html;
-}
-
- public function sidebarMenus(Request $request)
-{
-    $user = auth()->user();
-    $isAdmin = $user->hasRole('Admin');
-
-    $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
-
-    $groupId = $request->group_id;
-    $currentPath = trim(strtolower(request()->path()), '/');
-
-    $group = MenuGroup::with([
-        'menus' => function ($q) {
-            $q->whereNull('parent_id')
-              ->where('is_active', 1)
-              ->orderBy('order', 'ASC');
-        },
-        'menus.children' => function ($q) {
-            $q->where('is_active', 1)
-              ->orderBy('order', 'ASC');
-        }
-    ])->find($groupId);
-
-    if (!$group) {
-        return '<li>No Data Found</li>';
-    }
-
-    $html = '';
-
-    foreach ($group->menus as $menu) {
-
-        // ✅ Filter children based on permission
-        $children = $menu->children->filter(function ($child) use ($permissions, $isAdmin) {
-            if ($isAdmin) return true;
-
-            return !$child->permission_name || in_array($child->permission_name, $permissions);
-        });
-
-        // ✅ Check menu permission
-        $hasMenuPermission = $isAdmin || !$menu->permission_name || in_array($menu->permission_name, $permissions);
-
-        // ❌ Skip menu if no permission & no allowed children
-        if (!$hasMenuPermission && $children->isEmpty()) {
-            continue;
-        }
-
-        $hasChild = $children->count() > 0;
-        $collapseId = 'menu_' . $menu->id;
-
-        if ($hasChild) {
-            $html .= '
+                $html .= '
                 <li class="sidebar-item" style="background:#4077ad;
                     border-radius:30px 0 0 30px;
                     width:100%;
                     box-shadow:-2px 3px rgba(251,248,248,0.1);
                     min-width:250px;">
 
-                    <a class="sidebar-link d-flex justify-content-between align-items-center"
+                    <a class="'.$parentLinkClass.' d-flex justify-content-between align-items-center"
                         data-bs-toggle="collapse"
-                        href="#' . $collapseId . '">
-                        <span class="hide-menu fw-bold">' . $menu->name . '</span>
+                        href="#'.$collapseId.'"
+                        aria-expanded="'.$ariaExpanded.'">
+                        <span class="hide-menu fw-bold">'.e($menu->name).'</span>
                         <i class="material-icons">keyboard_arrow_down</i>
                     </a>
                 </li>
-                <ul class="collapse list-unstyled ps-3" id="' . $collapseId . '">';
+                <ul class="'.$collapseClass.' list-unstyled ps-3" id="'.$collapseId.'">';
 
-            foreach ($children as $submenu) {
-                $activeClass = $this->menuRouteIsActive($submenu->route, $currentPath) ? ' active' : '';
-                $html .= '
+                foreach ($children as $submenu) {
+                    $activeClass = $this->routeMatcher->isActive($submenu->route, $currentPath, $currentRouteName) ? ' active' : '';
+                    $href = $this->routeMatcher->resolveHref($submenu->route, $submenu->id);
+                    $html .= '
                 <li class="sidebar-item">
-                    <a class="sidebar-link' . $activeClass . '" href="' . ($submenu->route ? url($submenu->route) : 'javascript:void(0)') . '" target="' . ($submenu->target == 1 ? '_blank' : '_self') . '">
-                        <span class="hide-menu">' . e($submenu->name) . '</span>
+                    <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.($submenu->target == 1 ? '_blank' : '_self').'">
+                        <span class="hide-menu">'.e($submenu->name).'</span>
                     </a>
                 </li>';
-            }
+                }
 
-            $html .= '</ul>';
-
-        } else {
-
-            // Only show if menu itself is allowed
-            if ($hasMenuPermission) {
-                $activeClass = $this->menuRouteIsActive($menu->route, $currentPath) ? ' active' : '';
-                $html .= '
+                $html .= '</ul>';
+            } else {
+                if ($hasMenuPermission) {
+                    $activeClass = $this->routeMatcher->isActive($menu->route, $currentPath, $currentRouteName) ? ' active' : '';
+                    $href = $this->routeMatcher->resolveHref($menu->route, $menu->id);
+                    $html .= '
                 <li class="sidebar-item">
-                    <a class="sidebar-link' . $activeClass . '" href="' . ($menu->route ? url($menu->route) : 'javascript:void(0)') . '" target="' . ($menu->target == 1 ? '_blank' : '_self') . '">
-                        <span class="hide-menu">' . e($menu->name) . '</span>
+                    <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.($menu->target == 1 ? '_blank' : '_self').'">
+                        <span class="hide-menu">'.e($menu->name).'</span>
                     </a>
                 </li>';
+                }
             }
         }
+
+        return $html ?: '<li>No Data Found</li>';
     }
 
-    return $html ?: '<li>No Data Found</li>';
-}
+    protected function resolveCurrentPath(Request $request): string
+    {
+        if ($request->filled('current_path')) {
+            return $this->routeMatcher->normalizePath($request->input('current_path'));
+        }
+
+        $referer = $request->headers->get('Referer');
+        if ($referer) {
+            $path = parse_url($referer, PHP_URL_PATH);
+
+            return $this->routeMatcher->normalizePath($path ?? '');
+        }
+
+        return $this->routeMatcher->normalizePath($request->path());
+    }
 
     public function getGroupMenus(Request $request, $group_id)
     {
         $menus = Menu::where('group_id', $group_id)->where('is_active', 1)->orderBy('order', 'ASC')->get();
-        if($menus->count() > 0){
+        if ($menus->count() > 0) {
             return response()->json([
                 'success' => true,
                 'menus' => $menus,
-                'message' => 'Menus fetched successfully'
+                'message' => 'Menus fetched successfully',
             ]);
         }
+
         return response()->json([
             'success' => false,
             'menus' => [],
-            'message' => 'No menus found'
+            'message' => 'No menus found',
         ]);
-    }
-
-    protected function menuRouteIsActive(?string $menuRoute, string $currentPath): bool
-    {
-        if (!$menuRoute || $menuRoute === '#' || trim($menuRoute) === '') {
-            return false;
-        }
-
-        $menuPath = trim(strtolower(parse_url($menuRoute, PHP_URL_PATH) ?? $menuRoute), '/');
-        if ($menuPath === '' || preg_match('#^https?://#i', $menuRoute)) {
-            $menuPath = trim(strtolower($menuRoute), '/');
-        }
-
-        if ($menuPath === $currentPath) {
-            return true;
-        }
-
-        return str_ends_with($currentPath, $menuPath)
-            || str_starts_with($currentPath, $menuPath . '/')
-            || str_contains($currentPath, '/' . $menuPath . '/');
     }
 
     public function getCategoryGroups(Request $request, $category_id)
     {
         $groups = MenuGroup::where('category_id', $category_id)->where('is_active', 1)->orderBy('order', 'ASC')->get();
-        if($groups->count() > 0){
+        if ($groups->count() > 0) {
             return response()->json([
                 'success' => true,
                 'groups' => $groups,
-                'message' => 'Groups fetched successfully'
+                'message' => 'Groups fetched successfully',
             ]);
         }
+
         return response()->json([
             'success' => false,
             'groups' => [],
-            'message' => 'No groups found'
+            'message' => 'No groups found',
         ]);
     }
-             
 }
-    
-
