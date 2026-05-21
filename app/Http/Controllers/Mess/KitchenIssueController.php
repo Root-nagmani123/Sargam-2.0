@@ -1526,6 +1526,7 @@ class KitchenIssueController extends Controller
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
         try {
+            $kitchenIssue->items()->delete();
             $kitchenIssue->delete();
 
             return redirect()->route('admin.mess.material-management.index')
