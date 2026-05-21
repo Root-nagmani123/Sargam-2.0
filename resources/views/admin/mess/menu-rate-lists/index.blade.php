@@ -20,7 +20,8 @@
                     </div>
                 </div>
                 <hr>
-                <table class="table w-100 text-nowrap">
+                <div class="table-responsive">
+                <table id="menuRateListsTable" class="table w-100 text-nowrap" data-mess-column-manager data-mess-column-skip="6">
                     <thead>
                         <tr>
                             <th>S.No.</th>
@@ -50,6 +51,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
                 <div class="d-flex justify-content-center mt-3">{{ $menus->links() }}</div>
             </div>
         </div>
