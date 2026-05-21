@@ -70,6 +70,15 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Word of the Day</span>
                                     </a>
                                 </li>
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link {{ request()->routeIs('admin.login-carousel-images.*') ? 'active' : '' }}"
+                                    href="{{ route('admin.login-carousel-images.index') }}">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">wallpaper</i>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Login Carousel</span>
+                                </a>
+                            </li>
+                            @endif
 
                             @if(hasRole('Doctor'))
                             {{-- Student Medical Exemption --}}
