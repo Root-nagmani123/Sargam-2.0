@@ -322,9 +322,7 @@
     <div class="receipt-center">
         <div class="receipt-title">Mess Bill Receipt</div>
         <div class="receipt-subtitle">{{ $paymentOnly ? 'Payment Receipt' : 'Client Bill Statement' }}</div>
-        @if(!$paymentOnly)
-            <div class="receipt-period">From {{ $dateFrom }} To {{ $dateTo }}</div>
-        @endif
+        <div class="receipt-period">From {{ $dateFrom }} To {{ $dateTo }}</div>
     </div>
 
     <hr>
