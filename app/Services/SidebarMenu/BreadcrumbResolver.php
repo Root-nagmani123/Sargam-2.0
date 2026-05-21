@@ -20,15 +20,6 @@ class BreadcrumbResolver
         $nav = $this->navResolver->resolve($path, $routeName);
         $items = [];
 
-        try {
-            $items[] = [
-                'label' => 'Dashboard',
-                'url' => route('admin.dashboard'),
-            ];
-        } catch (\Throwable) {
-            $items[] = ['label' => 'Dashboard', 'url' => url('/dashboard')];
-        }
-
         if (!empty($nav['category_id'])) {
             $category = SidebarCategory::find($nav['category_id']);
             if ($category) {

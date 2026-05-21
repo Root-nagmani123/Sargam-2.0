@@ -24,6 +24,7 @@
         ?? ($activeNavMeta['category_id'] ?? null)
         ?? ($sidebarMenus->first()?->id);
     $activeGroupId = $activeGroupId ?? ($activeNavMeta['group_id'] ?? null);
+    $activeMenuId = $activeNavMeta['menu_id'] ?? null;
     $isDashboardPage = request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') || request()->is('dashboard');
     $activeCategory = $sidebarMenus->firstWhere('id', $activeCategoryId)
         ?? $sidebarMenus->first();
@@ -987,6 +988,27 @@
             $link.find('.sidebar-google-icon-wrap').addClass('text-light');
             $link.find('.sidebar-google-label').addClass('text-light');
         }
+        window.selectSidebarGroupVisual = selectSidebarGroupVisual;
+
+        function clearSidebarGroupSelectedVisual() {
+            $('.sidebar-group-link').removeClass('selected mx-2 py-1 bg-primary').attr('aria-selected', 'false');
+            $('.sidebar-google-icon-wrap').removeClass('text-light');
+            $('.sidebar-google-label').removeClass('text-light');
+        }
+        window.clearSidebarGroupSelectedVisual = clearSidebarGroupSelectedVisual;
+
+        function clearSidebarGroupSelection() {
+            clearSidebarGroupSelectedVisual();
+            $('#sidebar-title').text('').removeClass('border-bottom');
+            $('#sidebarnav').html(
+                '<li class="sidebar-item sidebar-empty-state list-unstyled">'
+                + '<div class="px-3 py-4 text-center">'
+                + '<i class="material-icons material-symbols-rounded sidebar-empty-icon mb-2" aria-hidden="true">info</i>'
+                + '<span class="sidebar-empty-message small fw-medium d-block">No active menu</span>'
+                + '</div></li>'
+            );
+        }
+        window.clearSidebarGroupSelection = clearSidebarGroupSelection;
 
         function loadSidebarMenusForGroup(groupId, groupName) {
             if (!groupId) return;
@@ -1053,9 +1075,6 @@
             var categoryId = window.SARGAM_ACTIVE_CATEGORY_ID;
             var groupId = window.SARGAM_ACTIVE_GROUP_ID;
             var routeTab = window.SARGAM_ACTIVE_NAV_TAB;
-            if (!groupId && window.SargamNavState && window.SargamNavState.getLastVisitedGroupId && routeTab) {
-                groupId = window.SargamNavState.getLastVisitedGroupId(routeTab);
-            }
 
             if (routeTab && typeof window.showMainNavPane === 'function') {
                 window.showMainNavPane(routeTab);
@@ -1074,12 +1093,7 @@
                     loadSidebarMenusForGroup(groupId);
                     return;
                 }
-                if (window.SARGAM_IS_DASHBOARD) {
-                    var $first = $('.sidebar-group-link').first();
-                    if ($first.length) {
-                        $first.trigger('click');
-                    }
-                }
+                clearSidebarGroupSelection();
             });
         });
     </script>

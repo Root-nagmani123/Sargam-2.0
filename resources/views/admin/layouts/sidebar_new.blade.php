@@ -289,21 +289,10 @@
     console.log('Found mini-nav items in setup tab:', miniNavItems.length);
     console.log('Found sidebar menus in setup tab:', sidebarMenus.length);
 
-    // Function to manually find and mark active links based on current URL
     function markActiveLinks() {
-        const currentUrl = window.location.href;
-        console.log('Current URL:', currentUrl);
-
-        sidebarMenus.forEach(function(nav) {
-            const links = nav.querySelectorAll('.sidebar-link[href]');
-            links.forEach(function(link) {
-                if (link.href === currentUrl) {
-                    console.log('Found matching link:', link.href, 'in nav:', nav
-                        .id);
-                    link.classList.add('active');
-                }
-            });
-        });
+        if (window.SargamNavState && window.SargamNavState.markActiveSidebarLinks) {
+            window.SargamNavState.markActiveSidebarLinks();
+        }
     }
 
     // Function to keep sidebar menu visible for a few seconds

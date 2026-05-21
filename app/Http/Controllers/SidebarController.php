@@ -75,7 +75,7 @@ class SidebarController extends Controller
         $isAdmin = isSidebarPrivilegedUser();
 
         if (! $isAdmin && ! userHasAssignedRoles()) {
-            return '<li>No Data Found</li>';
+            return $this->renderNoActiveMenuMessage();
         }
 
         $permissions = $isAdmin ? [] : $user->getAllPermissions()->pluck('name')->toArray();
@@ -97,7 +97,7 @@ class SidebarController extends Controller
         ])->find($groupId);
 
         if (!$group) {
-            return '<li>No Data Found</li>';
+            return $this->renderNoActiveMenuMessage();
         }
 
         $html = '';
@@ -130,7 +130,7 @@ class SidebarController extends Controller
                 }
 
                 $collapseClass = $childActive ? 'collapse show' : 'collapse';
-                $parentLinkClass = $childActive ? 'sidebar-link active' : 'sidebar-link';
+                $parentLinkClass = 'sidebar-link';
                 $ariaExpanded = $childActive ? 'true' : 'false';
 
                 $html .= '
@@ -176,7 +176,16 @@ class SidebarController extends Controller
             }
         }
 
-        return $html ?: '<li>No Data Found</li>';
+        return $html ?: $this->renderNoActiveMenuMessage();
+    }
+
+    protected function renderNoActiveMenuMessage(): string
+    {
+        return '<li class="sidebar-item sidebar-empty-state list-unstyled">'
+            . '<div class="px-3 py-4 text-center">'
+            . '<i class="material-icons material-symbols-rounded sidebar-empty-icon mb-2" aria-hidden="true">info</i>'
+            . '<span class="sidebar-empty-message small fw-medium d-block">No active menu</span>'
+            . '</div></li>';
     }
 
     protected function resolveCurrentPath(Request $request): string

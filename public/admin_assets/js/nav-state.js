@@ -146,7 +146,11 @@
         persistTabState(target, categoryId, null);
 
         if (categoryId && typeof global.loadSidebarGroupsForCategory === 'function') {
-            global.loadSidebarGroupsForCategory(categoryId, loadLastVisitedGroupForTab.bind(null, target));
+            global.loadSidebarGroupsForCategory(categoryId, function () {
+                if (typeof global.clearSidebarGroupSelection === 'function') {
+                    global.clearSidebarGroupSelection();
+                }
+            });
         }
     }
 
@@ -187,6 +191,12 @@
             var href = a.getAttribute('href') || '';
             if (!href || href.indexOf('javascript') === 0) {
                 return;
+            }
+            if (a.getAttribute('data-bs-toggle') !== 'collapse') {
+                document.querySelectorAll('#sidebarnav .sidebar-link.active').forEach(function (link) {
+                    link.classList.remove('active');
+                });
+                a.classList.add('active');
             }
             recordLastVisitedForTab(getActiveTabHash(), global.location.href);
         }, true);
@@ -309,58 +319,66 @@
 
     function pathMatchesLink(menuPath, current) {
         if (!menuPath || !current) return false;
-        menuPath = normalizePath(menuPath);
-        current = normalizePath(current);
-        if (menuPath === current) return true;
-        if (current.indexOf(menuPath + '/') === 0) return true;
-        if (current.slice(-menuPath.length) === menuPath &&
-            (current.length === menuPath.length || current.charAt(current.length - menuPath.length - 1) === '/')) {
-            return true;
-        }
-        return current.indexOf('/' + menuPath + '/') !== -1;
+        return normalizePath(menuPath) === normalizePath(current);
     }
 
     function markActiveSidebarLinks() {
         if (typeof global.jQuery === 'undefined') return;
         var $ = global.jQuery;
-        var currentFull = window.location.href.split('#')[0].split('?')[0];
+        var currentFull = normalizeUrlForCompare(window.location.href);
         var currentPath = currentPagePath();
 
+        $('#sidebarnav .sidebar-link').removeClass('active');
+
+        var $best = null;
+        var bestPathLen = -1;
+
         $('#sidebarnav .sidebar-link[href]').each(function () {
-            var href = this.href ? this.href.split('#')[0].split('?')[0] : '';
+            if (this.getAttribute('data-bs-toggle') === 'collapse') {
+                return;
+            }
+            var rawHref = (this.getAttribute('href') || '').trim();
+            if (!rawHref || rawHref === '#' || rawHref.indexOf('javascript') === 0) {
+                return;
+            }
+
+            var linkFull = '';
             var linkPath = '';
             try {
-                linkPath = normalizePath(new URL(href).pathname);
+                var parsed = new URL(rawHref, global.location.origin);
+                linkFull = normalizeUrlForCompare(parsed.href);
+                linkPath = normalizePath(parsed.pathname);
             } catch (e) {
-                linkPath = normalizePath(href);
+                linkFull = normalizeUrlForCompare(rawHref);
+                linkPath = normalizePath(rawHref);
             }
-            var active = href !== '' && (href === currentFull || pathMatchesLink(linkPath, currentPath));
-            $(this).toggleClass('active', active);
-            if (active) {
-                var $collapse = $(this).closest('.collapse');
-                if ($collapse.length) {
-                    $collapse.addClass('show');
-                    var toggle = document.querySelector('[href="#' + $collapse.attr('id') + '"]');
-                    if (toggle) {
-                        toggle.classList.add('active');
-                        toggle.setAttribute('aria-expanded', 'true');
-                    }
-                }
+
+            if (linkFull !== currentFull && !pathMatchesLink(linkPath, currentPath)) {
+                return;
+            }
+
+            if (linkPath.length > bestPathLen) {
+                bestPathLen = linkPath.length;
+                $best = $(this);
             }
         });
 
-        var groupId = global.SARGAM_ACTIVE_GROUP_ID;
-        if (groupId) {
-            $('.sidebar-group-link').removeClass('selected mx-2 py-1 bg-primary').attr('aria-selected', 'false');
-            $('.sidebar-google-icon-wrap').removeClass('text-light');
-            $('.sidebar-google-label').removeClass('text-light');
-            var $g = $('.sidebar-group-link[data-id="' + groupId + '"]');
-            if ($g.length) {
-                $g.addClass('selected').attr('aria-selected', 'true');
-                $g.addClass('mx-2 py-1 bg-primary');
-                $g.find('.sidebar-google-icon-wrap').addClass('text-light');
-                $g.find('.sidebar-google-label').addClass('text-light');
+        if ($best && $best.length) {
+            $best.addClass('active');
+            var $collapse = $best.closest('.collapse');
+            if ($collapse.length) {
+                $collapse.addClass('show');
+                var toggle = document.querySelector('[href="#' + $collapse.attr('id') + '"]');
+                if (toggle) {
+                    toggle.setAttribute('aria-expanded', 'true');
+                    toggle.classList.remove('collapsed');
+                }
             }
+        }
+
+        var groupId = global.SARGAM_ACTIVE_GROUP_ID;
+        if (groupId && typeof global.selectSidebarGroupVisual === 'function') {
+            global.selectSidebarGroupVisual(groupId);
         }
     }
 

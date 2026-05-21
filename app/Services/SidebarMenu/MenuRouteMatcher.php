@@ -39,20 +39,7 @@ class MenuRouteMatcher
             return false;
         }
 
-        if ($menuPath === $currentPath) {
-            return true;
-        }
-
-        if (str_ends_with($currentPath, '/' . $menuPath) || str_ends_with($currentPath, $menuPath)) {
-            return true;
-        }
-
-        if (str_starts_with($currentPath, $menuPath . '/')) {
-            return true;
-        }
-
-        return str_contains($currentPath, '/' . $menuPath . '/')
-            || str_contains($currentPath, '/' . $menuPath);
+        return $menuPath === $currentPath;
     }
 
     public function routeNamesMatch(string $currentRoute, string $menuRoute): bool
