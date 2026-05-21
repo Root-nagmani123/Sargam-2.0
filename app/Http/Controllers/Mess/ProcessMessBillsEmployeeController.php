@@ -1038,6 +1038,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'combined_id' => $combinedId,
                 'combined_invoice_no' => $combinedInvoiceNo,
                 'buyer_name' => $buyerName,
+                'client_type_slug' => $clientTypeSlug,
                 'client_type_display' => $clientTypeDisplay,
                 'invoice_date_range' => $invoiceDateRange,
                 'total' => $total,
@@ -2052,6 +2053,41 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
+     * Sort lightweight modal combined rows before loading full line-item models for the requested page.
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $combinedRows
+     */
+    private function sortModalCombinedRows(Collection $combinedRows, string $sortColumn, string $sortDir): Collection
+    {
+        $allowed = ['sno', 'buyer_name', 'invoice_no', 'payment_type', 'total', 'status'];
+        if (! in_array($sortColumn, $allowed, true)) {
+            $sortColumn = 'buyer_name';
+        }
+        $desc = strtolower($sortDir) === 'desc';
+
+        if ($sortColumn === 'sno') {
+            return $desc ? $combinedRows->reverse()->values() : $combinedRows->values();
+        }
+
+        return $combinedRows->sortBy(function ($row) use ($sortColumn) {
+            if ($sortColumn === 'buyer_name') {
+                return mb_strtolower((string) ($row->buyer_name ?? ''));
+            }
+            if ($sortColumn === 'invoice_no' || $sortColumn === 'status') {
+                return mb_strtolower((string) ($row->combined_invoice_no ?? ''));
+            }
+            if ($sortColumn === 'payment_type') {
+                return mb_strtolower((string) ($row->payment_type ?? ''));
+            }
+            if ($sortColumn === 'total') {
+                return (float) ($row->total ?? 0);
+            }
+
+            return mb_strtolower((string) ($row->buyer_name ?? ''));
+        }, SORT_REGULAR, $desc)->values();
+    }
+
+    /**
      * Return JSON data for the ADD modal table (employee bills for date range).
      * Includes approved SV/kitchen vouchers (same as main index); keeps buyers with period due > 0.
      */
@@ -2132,48 +2168,34 @@ class ProcessMessBillsEmployeeController extends Controller
             $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
         }
 
-        $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
-        $rows = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
-            ->mergeBindings($unionQuery->getQuery())
-            ->orderBy('issue_date', 'desc')
-            ->orderBy('id', 'desc')
-            ->limit(5000)
-            ->get();
+        // Decide the modal page with the lightweight SQL aggregate path first.
+        // Full FIFO/line-item financials are still computed below for only visible page rows.
+        [$groupedRows, $voucherStubs] = $this->queryAndGroupBillsForProcessIndexLight(
+            $dateFrom,
+            $dateTo,
+            $dateRangeQuery,
+            $kitchenIssueQuery
+        );
 
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
-        $groupedRows = $rows->groupBy(function ($bill) {
-            $name = trim((string) ($bill->client_name ?? ''));
-            $slug = (string) ($bill->client_type_slug ?? 'employee');
-            return $name . '|' . $slug;
-        })->values();
-
-        $groupedRows = $groupedRows->filter(function ($group) use ($dateFrom, $dateTo) {
-            $first = $group->first();
-            $buyerName = trim((string) ($first->client_name ?? ''));
-            if ($buyerName === '') {
-                return false;
-            }
-            $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
-            $financials = $this->computeCombinedBillFinancials($buyerName, $clientTypeSlug, $dateFrom, $dateTo);
-
-            return $financials['due'] > 0;
+        $groupedRows = $groupedRows->filter(function ($row) {
+            return trim((string) ($row->buyer_name ?? '')) !== ''
+                && (float) ($row->due ?? 0) > 0;
         })->values();
 
         $searchTokens = DataTableSearchHelper::tokens($search);
         if ($searchTokens !== []) {
-            $groupedRows = $groupedRows->filter(function ($group) use ($searchTokens, $paymentTypeMap) {
-                $first = $group->first();
-                $buyerName = trim((string) ($first->client_name ?? ''));
-                $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
-                $invoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
-                $paymentType = $paymentTypeMap[$first->payment_type ?? 1] ?? '—';
+            $groupedRows = $groupedRows->filter(function ($row) use ($searchTokens) {
+                $buyerName = trim((string) ($row->buyer_name ?? ''));
+                $invoiceNo = (string) ($row->combined_invoice_no ?? '');
+                $paymentType = (string) ($row->payment_type ?? '');
                 $haystack = $buyerName . ' ' . $invoiceNo . ' ' . $paymentType;
 
                 return DataTableSearchHelper::haystackMatchesAllTokens($haystack, $searchTokens);
             })->values();
         }
 
-        $groupedRows = $this->sortModalBillGroupedRows($groupedRows, $sortColumn, $sortDir, $paymentTypeMap);
+        $groupedRows = $this->sortModalCombinedRows($groupedRows, $sortColumn, $sortDir);
 
         $total = $groupedRows->count();
         if ($total > 0 && (($page - 1) * $perPage) >= $total) {
@@ -2184,12 +2206,17 @@ class ProcessMessBillsEmployeeController extends Controller
         $pageGroupOrder = [];
         $drIds = [];
         $kiIds = [];
+        $voucherStubsByBuyer = $voucherStubs->groupBy(function ($bill) {
+            $buyerName = trim((string) ($bill->client_name ?? ''));
+            $clientTypeSlug = (string) ($bill->client_type_slug ?? 'employee');
+
+            return $buyerName . '|' . $clientTypeSlug;
+        });
         foreach ($pageGroups as $groupIndex => $group) {
-            $first = $group->first();
-            $buyerName = trim((string) ($first->client_name ?? ''));
-            $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
+            $buyerName = trim((string) ($group->buyer_name ?? ''));
+            $clientTypeSlug = (string) ($group->client_type_slug ?? 'employee');
             $pageGroupOrder[$buyerName . '|' . $clientTypeSlug] = $groupIndex;
-            foreach ($group as $bill) {
+            foreach ($voucherStubsByBuyer->get($buyerName . '|' . $clientTypeSlug, collect()) as $bill) {
                 if (($bill->source_type ?? '') === 'date_range') {
                     $drIds[] = (int) $bill->id;
                 } else {
@@ -2220,8 +2247,12 @@ class ProcessMessBillsEmployeeController extends Controller
                 ->keyBy('pk');
         }
 
-        $pageBills = $pageGroups->flatMap(function ($group) use ($drModels, $kiModels) {
-            return $group->map(function ($bill) use ($drModels, $kiModels) {
+        $pageBills = $pageGroups->flatMap(function ($group) use ($drModels, $kiModels, $voucherStubsByBuyer) {
+            $buyerName = trim((string) ($group->buyer_name ?? ''));
+            $clientTypeSlug = (string) ($group->client_type_slug ?? 'employee');
+            $groupStubs = $voucherStubsByBuyer->get($buyerName . '|' . $clientTypeSlug, collect());
+
+            return $groupStubs->map(function ($bill) use ($drModels, $kiModels) {
                 if (($bill->source_type ?? '') === 'date_range') {
                     $model = $drModels->get((int) $bill->id);
                     if ($model) {
