@@ -724,6 +724,66 @@ document.addEventListener('DOMContentLoaded', function () {
     align-items: center;
     gap: 0.25rem;
 }
+#addProcessMessBillsModal #modalBillsTableBody .modal-bills-skeleton-row {
+    pointer-events: none;
+}
+#addProcessMessBillsModal #modalBillsTableBody .modal-bills-skeleton-row td {
+    height: 3.25rem;
+    vertical-align: middle;
+}
+#addProcessMessBillsModal .modal-bills-skeleton {
+    display: block;
+    width: 100%;
+    height: 0.875rem;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 45%, #e2e8f0 65%);
+    background-size: 220% 100%;
+    animation: modal-bills-skeleton-shimmer 1.25s ease-in-out infinite;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--check {
+    width: 1rem;
+    height: 1rem;
+    margin: 0 auto;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--sn {
+    width: 2rem;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--buyer {
+    width: min(11rem, 100%);
+}
+#addProcessMessBillsModal .modal-bills-skeleton--invoice {
+    width: min(7rem, 100%);
+}
+#addProcessMessBillsModal .modal-bills-skeleton--payment {
+    width: min(8rem, 100%);
+}
+#addProcessMessBillsModal .modal-bills-skeleton--total {
+    width: min(5rem, 100%);
+    margin-left: auto;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--status {
+    width: min(5.5rem, 100%);
+    margin: 0 auto;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--action {
+    width: min(7.5rem, 100%);
+    height: 1.5rem;
+    margin: 0 auto;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--receipt {
+    width: 2rem;
+    height: 1.5rem;
+    margin: 0 auto;
+}
+@keyframes modal-bills-skeleton-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #addProcessMessBillsModal .modal-bills-skeleton {
+        animation: none;
+    }
+}
 /* Use Material icons instead of DataTables unicode arrows (often invisible on Windows) */
 #processMessBillsTable.dataTable thead > tr > th.sorting:before,
 #processMessBillsTable.dataTable thead > tr > th.sorting:after,
@@ -1372,6 +1432,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function setModalBillsLoading(isLoading) {
+        var table = document.getElementById('modalBillsTable');
+        var host = document.getElementById('modalBillsTableHost');
+        if (table) {
+            table.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        }
+        if (host) {
+            host.classList.toggle('is-loading', !!isLoading);
+        }
+    }
+
+    function renderModalBillsSkeleton() {
+        var tbody = document.getElementById('modalBillsTableBody');
+        var modalSelectAllEl = document.getElementById('modalSelectAll');
+        var bulkActionsBar = document.getElementById('modalBulkActionsBar');
+        var paginationInfo = document.getElementById('modalPaginationInfo');
+        var paginationNav = document.getElementById('modalPaginationNav');
+        if (!tbody) return;
+
+        var skeletonRow = function (rowIndex) {
+            var srText = rowIndex === 0
+                ? '<span class="visually-hidden" role="status">Loading bills</span>'
+                : '';
+            return '<tr class="modal-bills-skeleton-row" aria-hidden="' + (rowIndex === 0 ? 'false' : 'true') + '">' +
+                '<td>' + srText + '<span class="modal-bills-skeleton modal-bills-skeleton--check"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--sn"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--buyer"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--invoice"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--payment"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--total"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--status"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--action"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--receipt"></span></td>' +
+                '</tr>';
+        };
+
+        tbody.innerHTML = [0, 1, 2, 3, 4].map(skeletonRow).join('');
+        if (modalSelectAllEl) modalSelectAllEl.checked = false;
+        if (bulkActionsBar) bulkActionsBar.classList.add('d-none');
+        if (paginationInfo) paginationInfo.textContent = 'Loading bills...';
+        if (paginationNav) paginationNav.classList.add('d-none');
+        setModalBillsLoading(true);
+        applyModalBillsColumnVisibility();
+    }
+
     function loadModalBills(page) {
         var requestedPage = parseInt(page, 10);
         modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
@@ -1379,6 +1484,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var clientTypes = getChoicesMultiValues(ct);
         var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
         var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage });
+        renderModalBillsSkeleton();
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -1567,6 +1673,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function renderModalTable() {
         var tbody = document.getElementById('modalBillsTableBody');
         var modalSelectAllEl = document.getElementById('modalSelectAll');
+        setModalBillsLoading(false);
         if (modalSelectAllEl) modalSelectAllEl.checked = false;
         var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
