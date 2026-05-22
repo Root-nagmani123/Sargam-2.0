@@ -486,11 +486,13 @@
         50% { transform: scale(1.2); background: #0d6efd; }
     }
 
-    /* Sidebar toggle icon rotation */
+    /* Sidebar toggle icon (+ 17px per layout spec) */
+    .sidebarToggleIcon,
     #sidebarToggleIcon {
         transition: transform 0.3s ease-in-out;
         display: inline-block;
     }
+    .sidebarToggleIcon.rotated,
     #sidebarToggleIcon.rotated {
         transform: rotate(180deg);
     }
@@ -500,7 +502,7 @@
     @stack('styles')
 </head>
 
-<body data-sidebartype="full" @class(['admin-mess-module' => request()->routeIs('admin.mess.*')])>
+<body data-sidebartype="full">
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
     <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status" aria-live="polite" aria-label="Loading Sargam 2.0">
         <div class="sargam-loader-particles">
@@ -697,7 +699,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const toggleBtn = document.getElementById("headerCollapse");
     if (!sidebar || !toggleBtn) return;
     // Query all icons across all tabs (multiple instances due to tab structure)
-    const icons = document.querySelectorAll("#sidebarToggleIcon");
+    const icons = document.querySelectorAll(".sidebarToggleIcon, #sidebarToggleIcon");
     const body = document.body;
     const sidebarmenus = document.querySelectorAll(".sidebarmenu");
     const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
@@ -733,66 +735,17 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Apply saved sidebar type preference; default to collapsed on first login
-    try {
-        const savedType = localStorage.getItem('SidebarType');
-        if (savedType) {
-            body.setAttribute('data-sidebartype', savedType);
-        } else {
-            // Default to collapsed (mini-sidebar) for new users
-            body.setAttribute('data-sidebartype', 'mini-sidebar');
-            localStorage.setItem('SidebarType', 'mini-sidebar');
-        }
-    } catch (e) {}
-
-    // Initialize collapsed state on page load
-    const sidebarType = body.getAttribute("data-sidebartype");
-    console.log('Initial sidebar type:', sidebarType);
-    console.log('Icon elements found:', icons.length);
-
-    if (sidebarType === "mini-sidebar") {
-        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
-        sidebar.classList.remove("show-sidebar");
-        // Add close class to sidebarmenu elements
-        sidebarmenus.forEach(function(el) {
-            el.classList.add("close");
-        });
-        // Set all icon instances to expand (collapsed state)
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.remove("rotated");
-        });
-        console.log('Set all icons to non-rotated (collapsed state)');
-        // After initial collapse state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
-    } else {
-        // Sidebar should be expanded
-        sidebar.classList.add("show-sidebar");
-        sidebarmenus.forEach(function(el) {
-            el.classList.remove("close");
-        });
-        // Set all icon instances to rotated (expanded state)
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.add("rotated");
-        });
-        console.log('Set all icons to rotated (expanded state)');
-        // After initial expanded state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
+    // Sidebar expand/collapse is handled by sidebar-navigation-fixed.js (click toggle only).
+    if (typeof window.sargamSyncSidebarToggleIcons === 'function') {
+        window.sargamSyncSidebarToggleIcons(body.getAttribute('data-sidebartype') || 'full');
     }
 
     // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
     function syncIconWithSidebar(type) {
-        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
-        allIcons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            if (type === "full") {
-                icon.classList.add("rotated");
-            } else {
-                icon.classList.remove("rotated");
-            }
-        });
-        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
+        if (typeof window.sargamSyncSidebarToggleIcons === 'function') {
+            window.sargamSyncSidebarToggleIcons(type);
+            return;
+        }
     }
 
     const observer = new MutationObserver(function(mutations) {

@@ -428,6 +428,57 @@ $(document).ready(function() {
             console.log('Course ID:', courseId); // Debug log
             loadCourseDetails(courseId);
         });
+
+        // ── Custom SweetAlert: Delete Course ──
+        $(document).on('click', '.programme-delete-btn', function(e) {
+            e.preventDefault();
+            var $btn = $(this);
+            var deleteUrl = $btn.data('delete-url');
+            var csrfToken = $btn.data('csrf');
+
+            Swal.fire({
+                html: '<div style="text-align:center;">' +
+                    '<div style="margin:0 auto 16px;width:72px;height:72px;border-radius:50%;border:4px solid #dc3545;display:flex;align-items:center;justify-content:center;">' +
+                    '<span class="material-icons material-symbols-rounded" style="font-size:36px;color:#dc3545;">priority_high</span></div>' +
+                    '<h4 style="font-weight:700;margin-bottom:4px;">Delete Course?</h4>' +
+                    '<p style="color:#6c757d;margin:0;">Are you sure you want to delete this course?</p></div>',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Delete',
+                cancelButtonText: 'Cancel, Keep it',
+                confirmButtonColor: '#dc3545',
+                cancelButtonColor: '#fff',
+                customClass: {
+                    cancelButton: 'btn btn-outline-dark border-2 fw-semibold px-4',
+                    confirmButton: 'btn btn-danger fw-semibold px-4',
+                    actions: 'gap-3 mt-2'
+                },
+                buttonsStyling: false,
+                reverseButtons: true,
+                showCloseButton: false,
+                focusCancel: true
+            }).then(function(result) {
+                if (result.isConfirmed) {
+                    var $form = $('<form>', {
+                        action: deleteUrl,
+                        method: 'POST'
+                    });
+                    $form.append($('<input>', {
+                        type: 'hidden',
+                        name: '_token',
+                        value: csrfToken
+                    }));
+                    $form.append($('<input>', {
+                        type: 'hidden',
+                        name: '_method',
+                        value: 'DELETE'
+                    }));
+                    $('body').append($form);
+                    $form.submit();
+                }
+            });
+        });
+
+        // Status toggle uses global .status-toggle handler in custom.js (form-switch)
     }, 100);
 
     // Function to load course details

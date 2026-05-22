@@ -80,11 +80,12 @@ class CourseMasterDataTable extends DataTable
                 $csrf = csrf_token();
                 $btnId = 'dropdown-btn-' . $row->pk;
 
-                $html = <<<HTML
-<td class="text-center">
-    <div class="d-inline-flex align-items-center gap-2"
-         role="group"
-         aria-label="Row actions">
+                $checked = $isActive ? 'checked' : '';
+                $statusToggle = '<div class="form-check form-switch mb-0">'
+                    .'<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    .' data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'"'
+                    .' aria-label="'.($isActive ? 'Deactivate' : 'Activate').' course" '.$checked.'>'
+                    .'</div>';
 
         <!-- View -->
         <a

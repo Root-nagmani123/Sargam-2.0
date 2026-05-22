@@ -18,8 +18,41 @@
     transition: background 0.2s ease;
 }
 
-.dropdown-item:hover {
-    background-color: #f5f6f8;
+/* ── Action icon buttons ── */
+.cgt-action-btn {
+    width: 32px; height: 32px; display: inline-flex; align-items: center;
+    justify-content: center; border-radius: .5rem; text-decoration: none;
+    cursor: pointer; transition: all .2s ease; border: none;
+}
+.cgt-action-btn:hover { transform: translateY(-1px); box-shadow: 0 2px 4px rgba(0,0,0,.1); }
+.cgt-action-btn .material-icons,
+.cgt-action-btn .material-symbols-rounded { font-size: 18px; line-height: 1; }
+.cgt-action-edit { background: #e8f0fe; }
+.cgt-action-edit:hover { background: #d3e3fd; }
+.cgt-action-edit .material-icons,
+.cgt-action-edit .material-symbols-rounded { color: #1a73e8; }
+.cgt-action-delete { background: #fce8e6; }
+.cgt-action-delete:hover { background: #f8c9c5; }
+.cgt-action-delete .material-icons,
+.cgt-action-delete .material-symbols-rounded { color: #dc3545; }
+
+/* ── DataTables overrides ── */
+.cgt-page #coursegrouptype_wrapper .cgt-dt-meta .dataTables_length,
+.cgt-page #coursegrouptype_wrapper .cgt-dt-meta .dataTables_info,
+.cgt-page #coursegrouptype_wrapper .cgt-dt-paginate-wrap .dataTables_paginate {
+    display: block !important; visibility: visible !important;
+}
+.cgt-page #coursegrouptype_wrapper .cgt-dt-meta .dataTables_length label,
+.cgt-page #coursegrouptype_wrapper .cgt-dt-meta .dataTables_info {
+    margin-bottom: 0; font-size: .8125rem; color: #6c757d; font-weight: 500;
+}
+.cgt-page #coursegrouptype_wrapper .cgt-dt-meta .dataTables_length select {
+    border-radius: .375rem; border: 1px solid #dee2e6; padding: .3rem .5rem;
+    font-size: .8125rem; color: #495057; background-color: #fff;
+    cursor: pointer; transition: border-color .2s;
+}
+.cgt-page #coursegrouptype_wrapper .cgt-dt-meta .dataTables_length select:focus {
+    border-color: #86b7fe; outline: none; box-shadow: 0 0 0 .15rem rgba(13,110,253,.15);
 }
 
 .dropdown-item i {
@@ -125,49 +158,61 @@ $(function() {
 
     $(document).on('change', '.plain-status-toggle', function() {
         var checkbox = $(this);
-        var previousState = !checkbox.is(':checked'); // save previous state
+        var previousState = !checkbox.is(':checked');
         var pk = checkbox.data('id');
         var active_inactive = checkbox.is(':checked') ? 1 : 0;
 
-        var actionText = active_inactive ? 'activate' : 'deactivate';
-        var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
-        var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
-
-        Swal.fire({
-            title: 'Are you sure?',
-            text: `Are you sure you want to ${actionText} this item?`,
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: confirmBtnColor,
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: confirmBtnText,
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                $('#pk').val(pk);
-                $('#active_inactive').val(active_inactive);
-                table.ajax.reload(null, false);
-
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Updated!',
-                    text: 'Status has been updated successfully.',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } else {
-                // revert checkbox to previous state
-                checkbox.prop('checked', previousState);
-
-                Swal.fire({
-                    icon: 'info',
-                    title: 'Cancelled',
-                    text: 'Status change has been cancelled.',
-                    timer: 1200,
-                    showConfirmButton: false
-                });
-            }
-        });
+        if (active_inactive == 1) {
+            // ACTIVATE
+            Swal.fire({
+                icon: 'info',
+                iconColor: '#198754',
+                title: 'Activate Course Group?',
+                text: 'Are you sure you want to activate this course group',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Activate',
+                cancelButtonText: 'Cancel, Keep it deactive',
+                buttonsStyling: false,
+                customClass: {
+                    confirmButton: 'btn btn-success me-2',
+                    cancelButton: 'btn btn-outline-secondary'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#pk').val(pk);
+                    $('#active_inactive').val(1);
+                    table.ajax.reload(null, false);
+                    Swal.fire({ icon: 'success', title: 'Activated!', text: 'Course group has been activated.', timer: 1500, showConfirmButton: false });
+                } else {
+                    checkbox.prop('checked', previousState);
+                }
+            });
+        } else {
+            // DEACTIVATE
+            Swal.fire({
+                icon: 'warning',
+                title: 'Deactivate Course Group?',
+                text: 'Are you sure you want to deactivate this course group?',
+                showCancelButton: true,
+                confirmButtonText: 'Yes, Deactivate',
+                cancelButtonText: 'Cancel, Keep it active',
+                buttonsStyling: false,
+                customClass: {
+                    popup: 'cgt-swal-deactivate',
+                    confirmButton: 'btn btn-primary me-2',
+                    cancelButton: 'btn btn-outline-secondary'
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $('#pk').val(pk);
+                    $('#active_inactive').val(0);
+                    table.ajax.reload(null, false);
+                    Swal.fire({ icon: 'success', title: 'Deactivated!', text: 'Course group has been deactivated.', timer: 1500, showConfirmButton: false });
+                } else {
+                    checkbox.prop('checked', previousState);
+                }
+            });
+        }
     });
 
 

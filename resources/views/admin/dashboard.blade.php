@@ -92,10 +92,71 @@
     padding-bottom: 0.9rem !important;
 }
 
-.dashboard-birthday-item {
-    border: 1px solid #b7cdf9;
-    background: #f7f9ff;
-    border-radius: 0.5rem;
+/* ── Today's Birthday panel (overrides .dashboard-panel chrome for comp match) ── */
+.card.dashboard-panel.dashboard-birthday-panel {
+    border: 1px solid #e5e9ef !important;
+    border-radius: 0.75rem !important;
+    box-shadow: none !important;
+    background: #fff !important;
+    overflow: hidden;
+}
+
+.card.dashboard-panel.dashboard-birthday-panel>.card-header {
+    background: #fff !important;
+    border-bottom: 1px solid #eef1f6 !important;
+    padding-top: 1rem !important;
+    padding-bottom: 1rem !important;
+}
+
+.card.dashboard-panel.dashboard-birthday-panel>.card-body {
+    background: #fff;
+}
+
+.dashboard-birthday-panel-title-main {
+    font-size: 1.0625rem;
+    line-height: 1.35;
+    letter-spacing: -0.02em;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+}
+
+.dashboard-birthday-count-badge {
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0 0.45rem;
+    border-radius: 10px !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.8125rem;
+    background-color: #003a75 !important;
+    color: #fff !important;
+}
+
+.dashboard-birthday-header-actions .btn-icon-bday {
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.dashboard-birthday-item.card {
+    border: 1px solid #e8ecf2 !important;
+    border-radius: 0.65rem !important;
+    background: #fff !important;
+    box-shadow: none !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.dashboard-birthday-item.card:hover {
+    border-color: #c5d4f0 !important;
+    box-shadow: 0 2px 10px rgba(13, 110, 253, 0.08);
 }
 
 .dashboard-birthday-item .card-body {

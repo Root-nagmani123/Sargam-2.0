@@ -41,6 +41,7 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
+                                            @include('admin.layouts.sidebar.partials.mini-sidebar-toggle')
                                             <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                 id="mini-1">
                                                 <a href="javascript:void(0)"
@@ -131,104 +132,119 @@
 </aside>
 
 <style>
-/* Google-style sidebar - home (matches setup) */
-#sidebar-home .sidebar-google-style.side-mini-panel {
-    width: 90px;
-}
-#sidebar-home .sidebar-google-style .mini-nav {
-    background: #f0f0f0 !important;
-    border: 1px solid var(--bs-border-color-translucent);
-    padding: 12px 0;
-    border-radius: 10px;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-hamburger {
-    padding: 16px 0;
-    margin: 0;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
-    color: var(--bs-secondary-color) !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item {
-    list-style: none;
-    display: flex !important;
-    justify-content: center !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav ul.mini-nav-ul {
-    padding-inline-start: 0 !important;
-    list-style: none !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 12px 8px !important;
-    padding-left: 8px !important;
-    margin: 4px 8px !important;
-    background: transparent !important;
-    height: auto !important;
-    min-height: 56px;
-    width: 100%;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 4px;
-    text-align: center !important;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 48px;
-    height: 32px;
-    margin-inline: auto;
-    border-radius: 24px;
-    transition: background 0.2s;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
-    line-height: 1 !important;
-    vertical-align: middle !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
-    font-size: 24px !important;
-    color: var(--bs-secondary-color) !important;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-label {
-    font-size: 11px;
-    color: var(--bs-secondary-color) !important;
-    font-weight: 400;
-    text-align: center;
-    line-height: 1.2;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .material-icons,
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .sidebar-google-label {
-    color: var(--bs-emphasis-color) !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:focus-visible {
-    outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
-    outline-offset: 2px;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
-    background: var(--bs-primary-bg-subtle) !important;
-    border-radius: 10px;
-    padding: 10px;
-    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
-    transition: all 0.2s ease;
-    transform: scale(1.05);
-    margin: 4px 8px;
-    width: 100%;
-    height: 100%;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
-    color: var(--bs-primary-text-emphasis) !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a:before {
-    display: none !important;
-}
+    /* Google-style sidebar - home (matches setup) */
+    body[data-sidebartype="mini-sidebar"] #sidebar-home .sidebar-google-style.side-mini-panel {
+        width: 90px;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav {
+        border: 1px solid var(--bs-border-color-translucent);
+        padding: 12px 0;
+        border-radius: 10px;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-hamburger {
+        padding: 16px 0;
+        margin: 0;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
+        color: var(--bs-secondary-color) !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item {
+        list-style: none;
+        display: flex !important;
+        justify-content: center !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav ul.mini-nav-ul {
+        padding-inline-start: 0 !important;
+        list-style: none !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 12px 8px !important;
+        padding-left: 8px !important;
+        margin: 4px 8px !important;
+        background: transparent !important;
+        height: auto !important;
+        min-height: 56px;
+        width: 100%;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px;
+        text-align: center !important;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 48px;
+        height: 32px;
+        margin-inline: auto;
+        border-radius: 24px;
+        transition: background 0.2s;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
+        line-height: 1 !important;
+        vertical-align: middle !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a .material-icons {
+        font-size: 24px !important;
+        color: var(--bs-secondary-color) !important;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-label {
+        font-size: 11px;
+        color: var(--bs-secondary-color) !important;
+        font-weight: 400;
+        text-align: center;
+        line-height: 1.2;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a:hover .material-icons,
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a:hover .sidebar-google-label {
+        color: var(--bs-emphasis-color) !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a:focus-visible {
+        outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
+        outline-offset: 2px;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-icon-wrap {
+        background: var(--bs-primary-bg-subtle) !important;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
+        transition: all 0.2s ease;
+        transform: scale(1.05);
+        margin: 4px 8px;
+        width: 100%;
+        height: 100%;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected>a .material-icons,
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-label {
+        color: var(--bs-primary-text-emphasis) !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected>a:before {
+        display: none !important;
+    }
 </style>
 
 <script>
