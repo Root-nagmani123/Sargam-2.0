@@ -18,6 +18,9 @@ use Illuminate\Validation\Rule;
 
 class DynamicFormService
 {
+    /** @var array<string, string|null> */
+    protected static array $columnTypeCache = [];
+
     /**
      * Get a form by slug.
      */
@@ -308,9 +311,99 @@ class DynamicFormService
      * Route validated data to correct target tables and save.
      * Handles file uploads as well.
      */
-    public function saveStepData(string $stepSlug, string $username, array $validatedData, $request = null): void
+    public function saveStepData(string $stepSlug, string $username, array $validatedData, $request = null, bool $markStepComplete = true): void
     {
         $step   = $this->getStep($stepSlug);
+        if (! $step) {
+            return;
+        }
+
+        $this->saveStepDataForStep($step, $username, $validatedData, $request, $markStepComplete);
+    }
+
+    /**
+     * Upload one document field (per-row Upload button) without marking the step complete.
+     */
+    public function saveSingleFileField(FcFormStep $step, FcFormField $field, string $username, $request): void
+    {
+        if ($field->field_type !== 'file' || ! $request || ! $request->hasFile($field->field_name)) {
+            throw \Illuminate\Validation\ValidationException::withMessages([
+                $field->field_name => ['Please choose a file to upload.'],
+            ]);
+        }
+
+        $targetTable = $field->target_table ?: $step->target_table;
+        $path = $this->storeUploadedFieldFile($step, $field, $username, $request->file($field->field_name));
+
+        DB::table($targetTable)->updateOrInsert(
+            ['username' => $username],
+            [
+                $field->target_column => $path,
+                'updated_at' => now(),
+            ]
+        );
+
+        $existing = DB::table($targetTable)->where('username', $username)->first();
+        if ($existing && empty($existing->created_at)) {
+            DB::table($targetTable)->where('username', $username)->update(['created_at' => now()]);
+        }
+    }
+
+    public function documentStepRequiredFilesSatisfied(FcFormStep $step, string $username): bool
+    {
+        $fileFields = $step->activeFields->filter(fn ($f) => $f->field_type === 'file' && $f->is_required);
+        if ($fileFields->isEmpty()) {
+            return true;
+        }
+
+        $row = DB::table($step->target_table)->where('username', $username)->first();
+        foreach ($fileFields as $field) {
+            $col = $field->target_column ?: $field->field_name;
+            if (! $row || blank($row->{$col} ?? null)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Mark document step complete when every required file field has a stored path.
+     */
+    public function syncDocumentStepCompletion(FcFormStep $step, string $username): void
+    {
+        if (! $this->documentStepRequiredFilesSatisfied($step, $username)) {
+            return;
+        }
+
+        $fileFields = $step->activeFields->filter(fn ($f) => $f->field_type === 'file');
+        if ($fileFields->isEmpty()) {
+            return;
+        }
+
+        $form = $step->form;
+        $data = ['updated_at' => now()];
+        if ($step->completion_column) {
+            $data[$step->completion_column] = 1;
+        }
+
+        DB::table($step->target_table)->updateOrInsert(['username' => $username], $data);
+
+        if ($step->tracker_column && $form) {
+            $trackerTable = $form->trackerStorageTable();
+            $userKey = $form->user_identifier ?: 'username';
+            $trackerKey = [$userKey => $username];
+            $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
+            if (Schema::hasColumn($trackerTable, 'form_id')) {
+                $trackerKey['form_id'] = $form->id;
+                $trackerData['form_id'] = $form->id;
+            }
+            DB::table($trackerTable)->updateOrInsert($trackerKey, $trackerData);
+        }
+    }
+
+    public function saveStepDataForStep(FcFormStep $step, string $username, array $validatedData, $request = null, bool $markStepComplete = true): void
+    {
         $fields = $step->activeFields;
 
         foreach ($fields as $field) {
@@ -330,17 +423,13 @@ class DynamicFormService
             $targetTable = $field->target_table ?: $step->target_table;
 
             if ($field->field_type === 'file') {
-                // Handle file upload
                 if ($request && $request->hasFile($field->field_name)) {
-                    $file = $request->file($field->field_name);
-                    $subfolder = $stepSlug === 'bank' ? 'bank' : '';
-                    $dir  = "uploads/{$username}" . ($subfolder ? "/{$subfolder}" : '');
-                    $path = $file->storeAs(
-                        $dir,
-                        $field->field_name . '_' . time() . '.' . $file->extension(),
-                        'public'
+                    $tableData[$targetTable][$field->target_column] = $this->storeUploadedFieldFile(
+                        $step,
+                        $field,
+                        $username,
+                        $request->file($field->field_name)
                     );
-                    $tableData[$targetTable][$field->target_column] = $path;
                 }
             } elseif ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
                 $arr = $validatedData[$field->field_name] ?? [];
@@ -354,20 +443,35 @@ class DynamicFormService
                     } elseif ($field->field_type === 'number' && $value !== null && $value !== '') {
                         $value = fc_numeric_display_value($value);
                     }
+
+                    $value = $this->normalizeValueForColumn(
+                        $targetTable,
+                        $field->target_column,
+                        $value,
+                        $field
+                    );
+
+                    if ($field->target_column === 'adjustment_required'
+                        && ! in_array($field->field_type, ['radio', 'select', 'checkbox'], true)
+                        && is_string($validatedData[$field->field_name] ?? null)
+                        && strlen(trim((string) $validatedData[$field->field_name])) > 10
+                        && empty($tableData[$targetTable]['adjustment_type'] ?? null)) {
+                        $tableData[$targetTable]['adjustment_type'] = trim((string) $validatedData[$field->field_name]);
+                    }
+
                     $tableData[$targetTable][$field->target_column] = $value;
                 }
             }
         }
 
         // Save to each target table
-        DB::transaction(function () use ($tableData, $username, $step) {
+        DB::transaction(function () use ($tableData, $username, $step, $markStepComplete) {
             $form = $step->form;
 
             foreach ($tableData as $table => $data) {
                 $data['username'] = $username;
 
-                // Set completion column if this is the primary target table
-                if ($table === $step->target_table && $step->completion_column) {
+                if ($markStepComplete && $table === $step->target_table && $step->completion_column) {
                     $data[$step->completion_column] = 1;
                 }
 
@@ -376,20 +480,16 @@ class DynamicFormService
                     array_merge($data, ['updated_at' => now()])
                 );
 
-                // Ensure the row actually exists (for new users the updateOrInsert above handles it,
-                // but we need to set created_at for new rows)
                 $existing = DB::table($table)->where('username', $username)->first();
-                if ($existing && ! $existing->created_at) {
+                if ($existing && empty($existing->created_at)) {
                     DB::table($table)->where('username', $username)->update(['created_at' => now()]);
                 }
             }
 
-            // Update the consolidated tracker
-            if ($step->tracker_column) {
+            if ($markStepComplete && $step->tracker_column) {
                 $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
 
-                // For step1, also sync summary fields to student_masters
-                if ($step->step_slug === 'step1') {
+                if ($step->step_slug === 'step1' || str_contains((string) $step->step_slug, 'step1')) {
                     $step1Data = DB::table('student_master_firsts')->where('username', $username)->first();
                     if ($step1Data) {
                         $trackerData['full_name']    = $step1Data->full_name ?? null;
@@ -402,12 +502,41 @@ class DynamicFormService
 
                 $trackerTable = $form->trackerStorageTable();
                 $userKey = $form->user_identifier ?: 'username';
+                $trackerKey = [$userKey => $username];
+                if (Schema::hasColumn($trackerTable, 'form_id')) {
+                    $trackerKey['form_id'] = $form->id;
+                    $trackerData['form_id'] = $form->id;
+                }
                 DB::table($trackerTable)->updateOrInsert(
-                    [$userKey => $username],
+                    $trackerKey,
                     $trackerData
                 );
             }
         });
+
+        if ($markStepComplete) {
+            $fileFields = $fields->filter(fn ($f) => $f->field_type === 'file');
+            if ($fileFields->count() === $fields->count() && $fileFields->isNotEmpty()) {
+                $this->syncDocumentStepCompletion($step, $username);
+            }
+        }
+    }
+
+    private function storeUploadedFieldFile(FcFormStep $step, FcFormField $field, string $username, $file): string
+    {
+        $slug = (string) $step->step_slug;
+        $subfolder = match (true) {
+            str_contains($slug, 'document') => 'documents',
+            $slug === 'bank' || str_contains($slug, 'bank') => 'bank',
+            default => '',
+        };
+        $dir = 'uploads/'.$username.($subfolder !== '' ? '/'.$subfolder : '');
+
+        return $file->storeAs(
+            $dir,
+            $field->field_name.'_'.time().'.'.$file->extension(),
+            'public'
+        );
     }
 
     /**
@@ -560,5 +689,99 @@ class DynamicFormService
             ['userid' => $username, 'course' => $course],
             $payload
         );
+    }
+
+    /**
+     * Coerce submitted values to match DB column types (e.g. tinyint yes/no flags).
+     */
+    protected function normalizeValueForColumn(
+        string $table,
+        string $column,
+        mixed $value,
+        FcFormField $field
+    ): mixed {
+        if ($value === null || $value === '') {
+            return $value;
+        }
+
+        $type = $this->getColumnType($table, $column);
+        if ($type === null) {
+            return $value;
+        }
+
+        if (in_array($type, ['tinyint', 'boolean', 'bool', 'smallint', 'integer', 'int', 'bigint'], true)) {
+            return $this->coerceToBoolInt($value) ? 1 : 0;
+        }
+
+        return $value;
+    }
+
+    protected function getColumnType(string $table, string $column): ?string
+    {
+        $key = $table.'.'.$column;
+        if (! array_key_exists($key, self::$columnTypeCache)) {
+            if (! Schema::hasTable($table) || ! Schema::hasColumn($table, $column)) {
+                self::$columnTypeCache[$key] = null;
+            } else {
+                self::$columnTypeCache[$key] = $this->fetchMysqlColumnType($table, $column);
+            }
+        }
+
+        return self::$columnTypeCache[$key];
+    }
+
+    /**
+     * Read column data type without Doctrine DBAL (Schema::getColumnType requires it).
+     */
+    protected function fetchMysqlColumnType(string $table, string $column): ?string
+    {
+        if (! preg_match('/^[a-zA-Z0-9_]+$/', $table) || ! preg_match('/^[a-zA-Z0-9_]+$/', $column)) {
+            return null;
+        }
+
+        $row = DB::selectOne(
+            'SELECT DATA_TYPE AS data_type
+             FROM information_schema.COLUMNS
+             WHERE TABLE_SCHEMA = DATABASE()
+               AND TABLE_NAME = ?
+               AND COLUMN_NAME = ?
+             LIMIT 1',
+            [$table, $column]
+        );
+
+        if (! $row || empty($row->data_type)) {
+            return null;
+        }
+
+        return strtolower((string) $row->data_type);
+    }
+
+    protected function coerceToBoolInt(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+        if (is_numeric($value)) {
+            return (int) $value !== 0;
+        }
+
+        $s = strtolower(trim((string) $value));
+
+        if (in_array($s, ['1', 'yes', 'y', 'true', 'on'], true)) {
+            return true;
+        }
+        if (in_array($s, ['0', 'no', 'n', 'false', 'off', 'none', 'na', 'n/a'], true)) {
+            return false;
+        }
+        if (str_starts_with($s, 'no')) {
+            return false;
+        }
+        if (str_starts_with($s, 'yes')) {
+            return true;
+        }
+
+        $filtered = filter_var($value, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+
+        return $filtered ?? false;
     }
 }

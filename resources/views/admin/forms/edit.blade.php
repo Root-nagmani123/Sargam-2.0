@@ -63,6 +63,23 @@
                         <small class="text-muted d-block mt-2 pt-2 border-top border-light-subtle">User ID Column: <code class="user-select-all">{{ $form->user_identifier }}</code></small>
                     </div>
                     <div class="col-xl-3 col-lg-6">
+                        <label class="form-label small fw-semibold mb-1" for="fcEditCourseMasterPk">Linked Programme (Course Master)</label>
+                        <select name="course_master_pk" id="fcEditCourseMasterPk" class="form-select fc-form-settings__field rounded-2 @error('course_master_pk') is-invalid @enderror">
+                            <option value="">-- Not linked --</option>
+                            @foreach($courses ?? [] as $pk => $name)
+                                <option value="{{ $pk }}" {{ (int) old('course_master_pk', $form->course_master_pk) === (int) $pk ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                        @error('course_master_pk') <div class="invalid-feedback d-block">{{ $message }}</div> @enderror
+                        <small class="text-muted d-block mt-2 pt-2 border-top border-light-subtle">
+                            @if($form->courseMaster)
+                                Programme: <strong>{{ $form->courseMaster->course_name }}</strong>
+                            @else
+                                <span class="text-warning">Required before activating this form.</span>
+                            @endif
+                        </small>
+                    </div>
+                    <div class="col-xl-3 col-lg-6">
                         <label class="form-label small fw-semibold mb-1" for="fcEditConsolidationTable">Consolidation / Tracking Table</label>
                         <select name="consolidation_table" id="fcEditConsolidationTable" class="form-select fc-form-settings__field rounded-2">
                             <option value="">-- None (no step tracking) --</option>

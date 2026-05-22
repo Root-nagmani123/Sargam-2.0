@@ -2,20 +2,28 @@
 
 namespace App\Models\FC;
 
+use App\Models\CourseMaster;
 use App\Support\FcEncryptedFormId;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\Schema;
 
 class FcForm extends Model
 {
     protected $fillable = [
         'form_name', 'form_slug', 'description', 'icon',
-        'consolidation_table', 'user_identifier', 'is_active',
+        'consolidation_table', 'user_identifier', 'is_active', 'course_master_pk',
     ];
 
     protected $casts = [
         'is_active' => 'boolean',
     ];
+
+    public function courseMaster(): BelongsTo
+    {
+        return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
+    }
 
     public function steps(): HasMany
     {
@@ -77,6 +85,32 @@ class FcForm extends Model
             ->where('form_slug', 'fc-registration')
             ->where('is_active', true)
             ->first();
+    }
+
+    /**
+     * FC form used for reports/PDF for a trainee (99th batch, legacy, etc.).
+     */
+    public static function resolveForUsername(string $username): ?self
+    {
+        if ($username !== '' && Schema::hasTable('student_masters') && Schema::hasColumn('student_masters', 'form_id')) {
+            $formId = (int) (StudentMaster::where('username', $username)->value('form_id') ?? 0);
+            if ($formId > 0) {
+                $form = static::query()->whereKey($formId)->where('is_active', true)->first();
+                if ($form) {
+                    return $form;
+                }
+            }
+        }
+
+        $ninetyNinth = static::query()
+            ->where('form_slug', 'fc-registration-99th')
+            ->where('is_active', true)
+            ->first();
+        if ($ninetyNinth) {
+            return $ninetyNinth;
+        }
+
+        return static::activeRegistrationDynamicForm();
     }
 }
 

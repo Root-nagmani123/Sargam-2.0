@@ -20,24 +20,36 @@
         </div>
         <div class="card-body">
             {{-- Flat fields (Step 1, 2, Bank) --}}
+            {{-- When ALL flat fields are file uploads, render using the same checklist layout as the Documents step --}}
             @if($fields->isNotEmpty())
-                @php $lastSection = null; @endphp
-                <div class="row g-3">
-                    @foreach($fields as $field)
-                        @if($field->section_heading && $field->section_heading !== $lastSection)
-                            @if($lastSection !== null)
-                                </div><div class="row g-3 mt-2">
+                @php $allFileFields = $fields->every(fn($f) => $f->field_type === 'file'); @endphp
+
+                @if($allFileFields)
+                    @include('fc.registration.partials.document-checklist', [
+                        'fields' => $fields,
+                        'existingData' => null,
+                        'readonly' => true,
+                    ])
+                @else
+                    {{-- Regular step: render individual form fields --}}
+                    @php $lastSection = null; @endphp
+                    <div class="row g-3">
+                        @foreach($fields as $field)
+                            @if($field->section_heading && $field->section_heading !== $lastSection)
+                                @if($lastSection !== null)
+                                    </div><div class="row g-3 mt-2">
+                                @endif
+                                @php $lastSection = $field->section_heading; @endphp
+                                <div class="col-12">
+                                    <h6 class="text-uppercase small fw-bold text-muted border-bottom pb-2 mb-0 mt-2" style="letter-spacing:0.5px;">{{ $field->section_heading }}</h6>
+                                </div>
                             @endif
-                            @php $lastSection = $field->section_heading; @endphp
-                            <div class="col-12">
-                                <h6 class="text-uppercase small fw-bold text-muted border-bottom pb-2 mb-0 mt-2" style="letter-spacing:0.5px;">{{ $field->section_heading }}</h6>
+                            <div class="{{ $field->css_class }}">
+                                @include('fc.registration.partials.dynamic-field', ['field' => $field, 'existingData' => null, 'lookups' => $lookups, 'readonly' => true])
                             </div>
-                        @endif
-                        <div class="{{ $field->css_class }}">
-                            @include('fc.registration.partials.dynamic-field', ['field' => $field, 'existingData' => null, 'lookups' => $lookups, 'readonly' => true])
-                        </div>
-                    @endforeach
-                </div>
+                        @endforeach
+                    </div>
+                @endif
             @endif
 
             {{-- Groups (Step 3) --}}

@@ -16,13 +16,67 @@
     </div>
 
     <div class="card border-0 shadow-sm" style="border-radius:10px;">
-        <div class="card-header bg-white py-3">
-            <h5 class="mb-1"><i class="bi {{ $step->icon ?? 'bi-file-text' }} me-2"></i>{{ $step->step_name }}</h5>
-            @if($step->description)
-                <p class="text-muted small mb-0">{{ $step->description }}</p>
+        <div class="card-header bg-white py-3 d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+                <h5 class="mb-1"><i class="bi {{ $step->icon ?? 'bi-file-text' }} me-2"></i>{{ $step->step_name }}</h5>
+                @if($step->description)
+                    <p class="text-muted small mb-0">{{ $step->description }}</p>
+                @endif
+            </div>
+            @php
+                $fileFieldCount = $fields->where('field_type', 'file')->count();
+                $uploadedDocCount = 0;
+                if ($fileFieldCount > 0 && $existingData) {
+                    foreach ($fields as $f) {
+                        if ($f->field_type !== 'file') {
+                            continue;
+                        }
+                        $c = $f->target_column ?: $f->field_name;
+                        if (filled($existingData->{$c} ?? null)) {
+                            $uploadedDocCount++;
+                        }
+                    }
+                }
+            @endphp
+            @if($fileFieldCount > 0)
+                <span class="badge bg-primary rounded-pill">{{ $uploadedDocCount }} / {{ $fileFieldCount }} Uploaded</span>
             @endif
         </div>
         <div class="card-body">
+            @if(session('success'))
+                <div class="alert alert-success small py-2">{{ session('success') }}</div>
+            @endif
+            @if(session('error'))
+                <div class="alert alert-danger small py-2">{{ session('error') }}</div>
+            @endif
+            @php $allFileFields = $fields->isNotEmpty() && $fields->every(fn ($f) => $f->field_type === 'file'); @endphp
+
+            @if($allFileFields)
+                @include('fc.registration.partials.document-checklist', [
+                    'fields' => $fields,
+                    'existingData' => $existingData,
+                    'readonly' => false,
+                    'form' => $form,
+                    'step' => $step,
+                ])
+                <form method="POST" action="{{ route('fc-reg.forms.step.save', [$form, $step]) }}" class="mt-4 pt-3 border-top">
+                    @csrf
+                    <div class="d-flex justify-content-between flex-wrap gap-2">
+                        @if($prevStep)
+                            <a href="{{ route('fc-reg.forms.step', [$form, $prevStep]) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Previous
+                            </a>
+                        @else
+                            <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-outline-secondary">
+                                <i class="bi bi-arrow-left me-1"></i>Dashboard
+                            </a>
+                        @endif
+                        <button type="submit" class="btn btn-primary px-4">
+                            Save & Continue <i class="bi bi-arrow-right ms-1"></i>
+                        </button>
+                    </div>
+                </form>
+            @else
             <form method="POST" action="{{ route('fc-reg.forms.step.save', [$form, $step]) }}" enctype="multipart/form-data">
                 @csrf
 
@@ -76,59 +130,17 @@
                     </button>
                 </div>
             </form>
+            @endif
         </div>
     </div>
 </div>
 @endsection
 
-@if(($step->step_slug ?? '') === 'step2')
+@php
+    $hasSameAsPermanent = $fields->contains(fn ($f) => $f->field_name === 'same_as_permanent');
+@endphp
+@if($hasSameAsPermanent)
 @push('scripts')
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const cb = document.getElementById('same_as_permanent');
-    if (!cb) return;
-    const form = cb.closest('form');
-    if (!form) return;
-
-    const presFields = ['pres_address_line1', 'pres_address_line2', 'pres_city', 'pres_state_id', 'pres_pincode', 'pres_country_id'];
-    const permFields = ['perm_address_line1', 'perm_address_line2', 'perm_city', 'perm_state_id', 'perm_pincode', 'perm_country_id'];
-
-    function field(name) {
-        return form.querySelector('[name="' + name + '"]');
-    }
-
-    function syncPresentFromPermanent() {
-        if (cb.checked) {
-            permFields.forEach(function (perm, i) {
-                const src = field(perm);
-                const dst = field(presFields[i]);
-                if (src && dst) {
-                    dst.value = src.value;
-                    dst.dispatchEvent(new Event('change', { bubbles: true }));
-                }
-            });
-        }
-        presFields.forEach(function (name) {
-            const el = field(name);
-            if (!el) return;
-            el.disabled = cb.checked;
-            const wrap = el.closest('[class*="col-md"]');
-            if (wrap) wrap.style.opacity = cb.checked ? '0.65' : '1';
-        });
-    }
-
-    cb.addEventListener('change', syncPresentFromPermanent);
-    permFields.forEach(function (name) {
-        const el = field(name);
-        if (!el) return;
-        ['change', 'input'].forEach(function (ev) {
-            el.addEventListener(ev, function () {
-                if (cb.checked) syncPresentFromPermanent();
-            });
-        });
-    });
-    syncPresentFromPermanent();
-});
-</script>
+@include('fc.registration.partials.same-as-permanent-script')
 @endpush
 @endif

@@ -9,7 +9,9 @@
         <div>
             <nav aria-label="breadcrumb">
                 <ol class="breadcrumb mb-0 small">
-                    <li class="breadcrumb-item"><a href="{{ route('admin.reports.overview') }}">Reports</a></li>
+                    <li class="breadcrumb-item">
+                        <a href="{{ request('ref') ? request('ref') : route('admin.reports.overview') }}">Reports</a>
+                    </li>
                     <li class="breadcrumb-item active">{{ $step1->full_name ?? $username }}</li>
                 </ol>
             </nav>

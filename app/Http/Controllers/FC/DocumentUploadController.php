@@ -3,6 +3,8 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
+use App\Services\FC\FcCourseEnrollmentService;
+use App\Services\FC\FcRegistrationFlowService;
 use App\Models\FC\{
     FcJoiningRelatedDocumentsMaster,
     FcJoiningRelatedDocumentsDetailsMaster,
@@ -17,9 +19,23 @@ use Illuminate\Support\Facades\Auth;
  */
 class DocumentUploadController extends Controller
 {
-    public function show()
+    public function show(FcRegistrationFlowService $registrationFlow)
     {
         $username = Auth::user()->username;
+
+        $form = $registrationFlow->activeFormFromSession();
+        if ($form && ! $registrationFlow->usesLegacyDocumentChecklist($form)) {
+            if ($registrationFlow->isDynamicDocumentsComplete($form, $username)) {
+                return redirect()->route('fc-reg.forms.dashboard', $form)
+                    ->with('info', 'Joining documents are already completed on your registration form.');
+            }
+
+            $docsStep = $registrationFlow->documentsStep($form);
+            if ($docsStep) {
+                return redirect()->route('fc-reg.forms.step', [$form, $docsStep])
+                    ->with('info', 'Upload joining documents using your registration form (not the legacy checklist).');
+            }
+        }
 
         $bankDone = StudentMaster::where('username', $username)->value('bank_done');
         if (! $bankDone) {
@@ -108,7 +124,7 @@ class DocumentUploadController extends Controller
         return back()->with('success', 'Document removed.');
     }
 
-    public function finalSubmit(Request $request)
+    public function finalSubmit(Request $request, FcCourseEnrollmentService $enrollment)
     {
         $username = Auth::user()->username;
 
@@ -135,8 +151,14 @@ class DocumentUploadController extends Controller
             'status'    => 'SUBMITTED',
         ]);
 
+        $enrollResult = $enrollment->enrollTrainee($username);
+        $flash = 'Registration submitted successfully! Please note your roll number.';
+        if ($enrollResult['enrolled']) {
+            $flash .= ' You are enrolled in the linked programme.';
+        }
+
         return redirect()->route('fc-reg.registration.status')
-            ->with('success', 'Registration submitted successfully! Please note your roll number.');
+            ->with('success', $flash);
     }
 
     private function checkAndMarkDocsDone(string $username): void

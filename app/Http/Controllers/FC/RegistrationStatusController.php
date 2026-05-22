@@ -8,6 +8,7 @@ use App\Models\FC\{
     NewRegistrationBankDetailsMaster, FcJoiningRelatedDocumentsDetailsMaster,
     StudentConfirmMaster, StudentMasterIncompletMaster
 };
+use App\Services\FC\FcCourseEnrollmentService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -55,7 +56,7 @@ class RegistrationStatusController extends Controller
         ));
     }
 
-    public function confirm(Request $request)
+    public function confirm(Request $request, FcCourseEnrollmentService $enrollment)
     {
         $username = Auth::user()->username;
         $master   = StudentMaster::where('username', $username)->first();
@@ -74,7 +75,15 @@ class RegistrationStatusController extends Controller
             'ip_address'           => $request->ip(),
         ]);
 
+        $enrollResult = $enrollment->enrollTrainee($username);
+        $flash = 'Declaration accepted. Your registration is now confirmed.';
+        if ($enrollResult['enrolled']) {
+            $flash .= ' You are enrolled in the linked programme.';
+        } elseif ($enrollResult['message']) {
+            $flash .= ' Note: '.$enrollResult['message'];
+        }
+
         return redirect()->route('fc-reg.registration.status')
-            ->with('success', 'Declaration accepted. Your registration is now confirmed.');
+            ->with('success', $flash);
     }
 }
