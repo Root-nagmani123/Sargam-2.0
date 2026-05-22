@@ -724,7 +724,7 @@
             <div class="body-wrapper">
                 <main id="main-content" tabindex="-1" role="main">
                 @if(request()->routeIs('admin.mess.*'))
-                    <div class="container-fluid px-3 px-lg-4 pt-0">
+                    <div class="container-fluid pt-0">
                         <div class="mess-dt-stale-hint alert alert-warning border-0 shadow-sm rounded-3 mb-3 align-items-center justify-content-between flex-wrap gap-2 no-print" role="status">
                             <span class="small mb-0">Table data may be outdated after a long idle period. Click refresh or apply filters again.</span>
                             <button type="button" class="btn btn-sm btn-warning" id="messDtStaleRefreshBtn">Refresh data</button>
