@@ -188,47 +188,22 @@
     </div>
 </div>
 
-<div class="modal fade my-bill-details-modal" id="myBillDetailsModal" tabindex="-1" aria-labelledby="myBillDetailsModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-        <div class="modal-content bill-receipt-modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <div class="modal-header border-0 my-bill-modal-header text-white py-3 px-3 px-md-4 align-items-center">
-                <div class="d-flex align-items-center gap-3 min-w-0 me-2">
-                    <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-white bg-opacity-25 flex-shrink-0 my-bill-modal-header-icon" aria-hidden="true">
-                        <span class="material-symbols-rounded text-white">receipt_long</span>
-                    </span>
-                    <div class="min-w-0">
-                        <h5 class="modal-title fw-semibold mb-0 lh-sm" id="myBillDetailsModalLabel">Bill details</h5>
-                        <p class="small mb-0 opacity-75 text-truncate" id="myBillDetailsModalSubtitle">Line items and payment summary</p>
-                    </div>
-                </div>
-                <button type="button" class="btn-close btn-close-white flex-shrink-0" data-bs-dismiss="modal" aria-label="Close"></button>
+<div class="modal fade" id="myBillDetailsModal" tabindex="-1" aria-labelledby="myBillDetailsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+        <div class="modal-content bill-receipt-modal-content">
+            <div class="modal-header border-0 py-2 align-items-start">
+                <h5 class="modal-title fw-bold" id="myBillDetailsModalLabel">Bill details</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
-            <div class="modal-body bill-receipt-modal-body p-0">
-                <div class="my-bill-modal-body-inner p-3 p-md-4">
-                    <div id="myBillDetailsContent" class="bill-receipt-content bg-body rounded-4 border border-light-subtle shadow-sm p-3 p-md-4 my-bill-receipt-panel" aria-live="polite">
-                        <div class="d-flex flex-column align-items-center justify-content-center py-5 text-body-secondary my-bill-receipt-loading" role="status">
-                            <div class="spinner-border text-primary mb-3" style="width: 2.5rem; height: 2.5rem;" aria-hidden="true"></div>
-                            <span class="fw-medium">Loading bill details…</span>
-                            <span class="small text-body-secondary mt-1">Fetching line items and totals</span>
-                        </div>
-                    </div>
+            <div class="modal-body bill-receipt-modal-body">
+                <div id="myBillDetailsContent" class="bill-receipt-content">
+                    <div class="text-center py-4 text-muted">Loading…</div>
                 </div>
-            </div>
-            <div class="modal-footer bill-receipt-actions border-top border-light-subtle bg-body-tertiary flex-wrap justify-content-between align-items-center gap-3 py-3 px-3 px-md-4">
-                <div class="d-flex align-items-start gap-2 small text-body-secondary mb-0 flex-grow-1 min-w-0">
-                    <span class="material-symbols-rounded flex-shrink-0 text-primary" style="font-size: 1.15rem;" aria-hidden="true">info</span>
-                    <span class="d-none d-md-inline">Print opens the official mess receipt in a new tab for your records.</span>
-                    <span class="d-inline d-md-none">Tap Print for the official receipt.</span>
-                </div>
-                <div class="btn-toolbar gap-2 flex-shrink-0" role="toolbar" aria-label="Bill actions">
-                    <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 btn-receipt-print" id="myBillDetailsPrintBtn">
-                        <span class="material-symbols-rounded" style="font-size: 1.15rem;" aria-hidden="true">print</span>
-                        <span>Print receipt</span>
+                <div class="bill-receipt-actions">
+                    <button type="button" class="btn btn-receipt-print" id="myBillDetailsPrintBtn">
+                        <i class="material-symbols-rounded align-middle" style="font-size: 1.1rem;">print</i> Print
                     </button>
-                    <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-4 btn-receipt-cancel" data-bs-dismiss="modal">
-                        <span class="material-symbols-rounded" style="font-size: 1.15rem;" aria-hidden="true">close</span>
-                        <span>Close</span>
-                    </button>
+                    <button type="button" class="btn btn-receipt-cancel" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -251,69 +226,28 @@
 @media print {
     .mess-my-bills-page .no-print { display: none !important; }
 }
-/* My Bills – bill details modal */
-.my-bill-details-modal .modal-dialog { max-width: 760px; }
-.my-bill-details-modal .my-bill-modal-header {
-    background: linear-gradient(135deg, #004a93 0%, #0a3d6b 100%);
+.bill-receipt-content .receipt-top { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.5rem; }
+.bill-receipt-content .receipt-logo { display: flex; align-items: center; gap: 0.5rem; font-weight: 700; color: #0a3d6b; }
+.bill-receipt-content .receipt-center { text-align: center; margin: 0.75rem 0; }
+.bill-receipt-content .receipt-title { font-weight: 700; font-size: 1rem; color: #0a3d6b; }
+.bill-receipt-content .receipt-subtitle { font-size: 0.9rem; color: #333; }
+.bill-receipt-content .receipt-period { font-size: 0.85rem; color: #555; margin-top: 0.25rem; }
+.bill-receipt-content .receipt-client-info {
+    font-size: 0.9rem;
+    color: #212529;
 }
-.my-bill-details-modal .my-bill-modal-header-icon { width: 2.75rem; height: 2.75rem; }
-.my-bill-details-modal .my-bill-modal-header-icon .material-symbols-rounded { font-size: 1.5rem; }
-.my-bill-details-modal .bill-receipt-modal-body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: linear-gradient(180deg, var(--bs-tertiary-bg) 0%, var(--bs-body-bg) 100%);
+.bill-receipt-content .receipt-client-info .receipt-info-line {
+    word-break: break-word;
 }
-.my-bill-details-modal .my-bill-receipt-panel { min-height: 12rem; }
-.my-bill-details-modal .bill-receipt-actions { margin-top: 0; }
-#myBillDetailsModal .bill-receipt-content { color: var(--bs-body-color); }
-#myBillDetailsModal .bill-receipt-content .receipt-top {
-    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; margin-bottom: 0.75rem;
-}
-#myBillDetailsModal .bill-receipt-content .receipt-logo { display: inline-flex; align-items: center; gap: 0.4rem; }
-#myBillDetailsModal .bill-receipt-content .receipt-logo-icon {
-    width: 1.25rem; height: 1.25rem; flex-shrink: 0;
-    background: linear-gradient(135deg, #c00 0%, #a00 50%, #800 100%);
-    clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%);
-}
-#myBillDetailsModal .bill-receipt-content .receipt-logo-text {
-    font-size: 1.1rem; font-weight: 700; color: #0a3d6b; letter-spacing: 0.02em;
-}
-#myBillDetailsModal .bill-receipt-content .receipt-date { font-size: 0.875rem; color: var(--bs-secondary-color); white-space: nowrap; }
-#myBillDetailsModal .bill-receipt-content .receipt-center { text-align: center; margin: 1rem 0; padding: 0 0.5rem; }
-#myBillDetailsModal .bill-receipt-content .receipt-title {
-    font-size: 1.2rem; font-weight: 700; color: #0a3d6b; text-transform: uppercase; letter-spacing: 0.03em; margin-bottom: 0.25rem;
-}
-#myBillDetailsModal .bill-receipt-content .receipt-subtitle {
-    font-size: 0.95rem; font-weight: 700; color: #c00; text-transform: uppercase; letter-spacing: 0.02em; margin-bottom: 0.35rem;
-}
-#myBillDetailsModal .bill-receipt-content .receipt-period { font-size: 0.9rem; font-weight: 600; color: #004a93; }
-#myBillDetailsModal .bill-receipt-content .receipt-divider {
-    border: 0; border-top: 1px solid var(--bs-border-color); margin: 0.75rem 0; opacity: 0.65;
-}
-#myBillDetailsModal .bill-receipt-content .receipt-meta-grid { --bs-gutter-y: 0.5rem; }
-#myBillDetailsModal .bill-receipt-content .receipt-meta-item {
-    font-size: 0.875rem; padding: 0.35rem 0;
-}
-#myBillDetailsModal .bill-receipt-content .client-label { font-weight: 600; color: var(--bs-secondary-color); }
-#myBillDetailsModal .bill-receipt-content .client-value { font-weight: 500; color: var(--bs-body-color); }
-#myBillDetailsModal .bill-receipt-content .bill-table-wrap { margin: 0.75rem 0; }
-#myBillDetailsModal .bill-receipt-content .bill-table { font-size: 0.875rem; margin-bottom: 0; }
-#myBillDetailsModal .bill-receipt-content .bill-table thead th {
-    font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.02em;
-    background: var(--bs-tertiary-bg); color: var(--bs-emphasis-color);
-}
-#myBillDetailsModal .bill-receipt-content .receipt-bottom { margin-top: 1rem; }
-#myBillDetailsModal .bill-receipt-content .payment-summary-card { max-width: 280px; margin-left: auto; }
-#myBillDetailsModal .bill-receipt-content .payment-summary-card .list-group-item {
-    display: flex; justify-content: space-between; align-items: baseline; gap: 0.75rem; padding: 0.5rem 0.85rem;
-}
-#myBillDetailsModal .bill-receipt-content .payment-summary-card .summary-label { font-weight: 600; color: var(--bs-secondary-color); }
-#myBillDetailsModal .bill-receipt-content .payment-summary-card .summary-value { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
-#myBillDetailsModal .bill-receipt-content .payment-summary-card .summary-row-due .summary-value { color: var(--bs-danger); font-weight: 700; }
-@media (max-width: 575.98px) {
-    .my-bill-details-modal .modal-footer .btn-toolbar { width: 100%; }
-    .my-bill-details-modal .modal-footer .btn-toolbar .btn { flex: 1 1 auto; justify-content: center; }
-    #myBillDetailsModal .bill-receipt-content .payment-summary-card { max-width: 100%; margin-left: 0; }
-}
+.bill-receipt-content .bill-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.85rem; }
+.bill-receipt-content .bill-table th, .bill-receipt-content .bill-table td { border: 1px solid #dee2e6; padding: 0.35rem 0.5rem; }
+.bill-receipt-content .bill-table th { background: #f8f9fa; }
+.bill-receipt-content .receipt-bottom { display: flex; justify-content: flex-end; margin-top: 1rem; }
+.bill-receipt-content .payment-summary { text-align: right; min-width: 200px; }
+.bill-receipt-content .payment-summary .summary-row { display: flex; justify-content: flex-end; gap: 0.5rem; margin-bottom: 0.2rem; }
+.bill-receipt-actions { margin-top: 1.5rem; padding-top: 1rem; border-top: 1px solid #dee2e6; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+.bill-receipt-actions .btn-receipt-print { background: linear-gradient(180deg, #0a6bb5 0%, #0a3d6b 100%); color: #fff; border: none; padding: 0.5rem 1.25rem; font-weight: 600; border-radius: 6px; }
+.bill-receipt-actions .btn-receipt-cancel { background: #c00; color: #fff; border: none; padding: 0.5rem 1.25rem; border-radius: 6px; font-weight: 600; }
 </style>
 @endpush
 
@@ -327,39 +261,28 @@
     var myBillDetailsDateFrom = null;
     var myBillDetailsDateTo = null;
 
-    function setMyBillModalSubtitle(data) {
-        var sub = document.getElementById('myBillDetailsModalSubtitle');
-        if (!sub) return;
-        if (!data || data.error) {
-            sub.textContent = 'Line items and payment summary';
-            return;
-        }
-        var parts = [];
-        if (data.invoice_no) parts.push('Invoice ' + data.invoice_no);
-        if (data.date_from && data.date_to) parts.push(data.date_from + ' – ' + data.date_to);
-        sub.textContent = parts.length ? parts.join(' · ') : 'Line items and payment summary';
+    function escapeReceiptHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
     }
 
-    function myBillLoadingHtml() {
-        return '<div class="d-flex flex-column align-items-center justify-content-center py-5 text-body-secondary my-bill-receipt-loading" role="status">' +
-            '<div class="spinner-border text-primary mb-3" style="width: 2.5rem; height: 2.5rem;" aria-hidden="true"></div>' +
-            '<span class="fw-medium">Loading bill details…</span>' +
-            '<span class="small text-body-secondary mt-1">Fetching line items and totals</span></div>';
+    function receiptInfoCol(label, value, alignEnd) {
+        var alignClass = alignEnd ? ' text-md-end' : ' text-md-start';
+        return '<div class="col-12 col-md-6' + alignClass + ' receipt-info-line">' +
+            '<span class="fw-bold">' + escapeReceiptHtml(label) + ':</span> ' +
+            '<span>' + escapeReceiptHtml(value) + '</span></div>';
     }
 
     function renderPaymentDetailsContent(data) {
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
         var timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
-        var items = data.items || [];
-        var rows = items.map(function (item) {
+        var rows = (data.items || []).map(function (item) {
             var issue = item.issue_date || item.purchase_date || '—';
-            return '<tr><td>' + (item.store_name || '—') + '</td><td>' + (item.item_name || '—') + '</td><td class="text-nowrap">' + issue + '</td>' +
-                '<td class="text-end tabular-nums">' + (item.price || '0') + '</td><td class="text-end tabular-nums">' + (item.quantity || '0') + '</td>' +
-                '<td class="text-end tabular-nums fw-medium">' + (item.amount || '0') + '</td></tr>';
+            return '<tr><td>' + escapeReceiptHtml(item.store_name || '—') + '</td><td>' + escapeReceiptHtml(item.item_name || '—') + '</td><td>' + escapeReceiptHtml(issue) + '</td><td class="text-end">' + escapeReceiptHtml(item.price || '0') + '</td><td class="text-end">' + escapeReceiptHtml(item.quantity || '0') + '</td><td class="text-end">' + escapeReceiptHtml(item.amount || '0') + '</td></tr>';
         }).join('');
-        if (!rows) {
-            rows = '<tr><td colspan="6" class="text-center text-body-secondary py-4">No line items for this bill.</td></tr>';
-        }
         var clientNameCourse = data.client_name_course || (function () {
             if (data.course_name) {
                 return (data.client_name || '—') + ' – ' + data.course_name;
@@ -367,40 +290,41 @@
             return data.client_name || '—';
         })();
         var hasRefOrOrder = !!(data.reference_number || data.order_by);
-        function metaCol(label, value) {
-            return '<div class="col-sm-6 receipt-meta-item"><span class="client-label d-block small text-uppercase">' + label + '</span>' +
-                '<span class="client-value">' + (value || '—') + '</span></div>';
-        }
         return '<div class="receipt-top">' +
-            '<div class="receipt-logo"><span class="receipt-logo-icon" aria-hidden="true"></span><span class="receipt-logo-text">Sargam</span></div>' +
-            '<span class="receipt-date badge text-bg-light border border-light-subtle fw-normal">Date ' + dateStr + ' ' + timeStr + '</span></div>' +
+            '<div class="receipt-logo"><span class="receipt-logo-text">Sargam</span></div>' +
+            '<span class="receipt-date">Date ' + escapeReceiptHtml(dateStr + ' ' + timeStr) + '</span>' +
+            '</div>' +
             '<div class="receipt-center">' +
             '<div class="receipt-title">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
             '<div class="receipt-subtitle">MESS BILLS</div>' +
-            '<div class="receipt-period">Client Bill From Period ' + (data.date_from || '') + ' To ' + (data.date_to || '') + '</div></div>' +
-            '<hr class="receipt-divider"/>' +
-            '<div class="row receipt-meta-grid g-2">' +
-            metaCol('Receipt No', data.receipt_no) + metaCol('Invoice No', data.invoice_no) +
-            metaCol('Client Name', clientNameCourse) + metaCol('Client Type', data.client_type) +
-            (hasRefOrOrder ? (
-                (data.reference_number ? metaCol('Reference Number', data.reference_number) : '') +
-                (data.order_by ? metaCol('Order By', data.order_by) : '')
-            ) : '') +
-            (data.remarks ? metaCol('Remarks', data.remarks) : '') +
+            '<div class="receipt-period">Client Bill From Period ' + escapeReceiptHtml(data.date_from || '') + ' To ' + escapeReceiptHtml(data.date_to || '') + '</div>' +
             '</div>' +
-            '<hr class="receipt-divider"/>' +
-            '<div class="table-responsive bill-table-wrap rounded-3 border border-light-subtle">' +
-            '<table class="table table-sm table-hover table-bordered align-middle bill-table mb-0">' +
-            '<thead class="table-light"><tr><th scope="col">Store</th><th scope="col">Item</th><th scope="col">Issue Date</th>' +
-            '<th scope="col" class="text-end">Price</th><th scope="col" class="text-end">Qty</th><th scope="col" class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table></div>' +
-            '<div class="receipt-bottom d-flex justify-content-end">' +
-            '<div class="card payment-summary-card border shadow-sm">' +
-            '<div class="card-header py-2 px-3 bg-primary-subtle border-0"><span class="small fw-semibold text-primary-emphasis text-uppercase">Payment summary</span></div>' +
-            '<ul class="list-group list-group-flush">' +
-            '<li class="list-group-item"><span class="summary-label">Paid Amount</span><span class="summary-value">' + (data.paid_amount || '0.0') + '</span></li>' +
-            '<li class="list-group-item"><span class="summary-label">Total Amount</span><span class="summary-value">' + (data.total_amount || '0.0') + '</span></li>' +
-            '<li class="list-group-item summary-row-due"><span class="summary-label">Due Amount</span><span class="summary-value">' + (data.due_amount || '0.0') + '</span></li>' +
-            '</ul></div></div>';
+            '<hr class="border-secondary-subtle opacity-50 my-2" />' +
+            '<div class="receipt-client-info border-top border-bottom border-secondary-subtle py-2 my-2">' +
+            '<div class="row g-2 py-1 align-items-start">' +
+            receiptInfoCol('Receipt No', data.receipt_no || '—', false) +
+            receiptInfoCol('Invoice No', data.invoice_no || '—', true) +
+            '</div>' +
+            '<div class="row g-2 py-1 align-items-start">' +
+            receiptInfoCol('Client Name', clientNameCourse, false) +
+            receiptInfoCol('Client Type', data.client_type || '—', true) +
+            '</div>' +
+            '</div>' +
+            (hasRefOrOrder ? ('<div class="receipt-client-info border-bottom border-secondary-subtle pb-2 mb-2">' +
+                '<div class="row g-2 py-1 align-items-start">' +
+                (data.reference_number ? receiptInfoCol('Reference Number', data.reference_number, false) : '') +
+                (data.order_by ? receiptInfoCol('Order By', data.order_by, true) : '') +
+                '</div></div>') : '') +
+            (data.remarks ? ('<div class="receipt-client-info border-bottom border-secondary-subtle pb-2 mb-2">' +
+                '<div class="row g-2 py-1"><div class="col-12 text-start receipt-info-line">' +
+                '<span>Remarks:</span> <span>' + escapeReceiptHtml(data.remarks) + '</span></div></div></div>') : '') +
+            '<hr class="border-secondary-subtle opacity-50 my-2" />' +
+            '<table class="bill-table"><thead><tr><th>Store Name</th><th>Item Name</th><th>Issue Date</th><th class="text-end">Price</th><th class="text-end">Quantity</th><th class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<div class="receipt-bottom"><div class="payment-summary">' +
+            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + escapeReceiptHtml(data.paid_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + escapeReceiptHtml(data.total_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + escapeReceiptHtml(data.due_amount || '0.0') + '</span></div>' +
+            '</div></div>';
     }
 
     function openMyBillDetails(billId, dateFromYmd, dateToYmd) {
@@ -408,12 +332,7 @@
         myBillDetailsDateFrom = dateFromYmd || null;
         myBillDetailsDateTo = dateToYmd || null;
         var content = document.getElementById('myBillDetailsContent');
-        var modalEl = document.getElementById('myBillDetailsModal');
-        setMyBillModalSubtitle(null);
-        if (content) content.innerHTML = myBillLoadingHtml();
-        if (modalEl && typeof bootstrap !== 'undefined') {
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        }
+        if (content) content.innerHTML = '<div class="text-center py-4 text-muted">Loading…</div>';
         var url = paymentDetailsUrl.replace('__ID__', encodeURIComponent(billId));
         if (String(billId).indexOf('combined-') === 0 && (myBillDetailsDateFrom || myBillDetailsDateTo)) {
             var params = [];
@@ -424,20 +343,17 @@
         fetch(url, { headers: { 'Accept': 'application/json' } }).then(function (r) { return r.json(); })
             .then(function (data) {
                 if (data.error) {
-                    setMyBillModalSubtitle(null);
-                    if (content) content.innerHTML = '<div class="alert alert-danger d-flex align-items-center gap-2 mb-0 shadow-sm" role="alert">' +
-                        '<span class="material-symbols-rounded flex-shrink-0" aria-hidden="true">error</span>' +
-                        '<span>' + (data.error || 'Failed to load.') + '</span></div>';
+                    if (content) content.innerHTML = '<div class="text-danger py-4 text-center">' + (data.error || 'Failed to load.') + '</div>';
                     return;
                 }
-                setMyBillModalSubtitle(data);
                 if (content) content.innerHTML = renderPaymentDetailsContent(data);
+                var modalEl = document.getElementById('myBillDetailsModal');
+                if (modalEl && typeof bootstrap !== 'undefined') {
+                    bootstrap.Modal.getOrCreateInstance(modalEl).show();
+                }
             })
             .catch(function () {
-                setMyBillModalSubtitle(null);
-                if (content) content.innerHTML = '<div class="alert alert-danger d-flex align-items-center gap-2 mb-0 shadow-sm" role="alert">' +
-                    '<span class="material-symbols-rounded flex-shrink-0" aria-hidden="true">error</span>' +
-                    '<span>Failed to load bill details.</span></div>';
+                if (content) content.innerHTML = '<div class="text-danger py-4 text-center">Failed to load bill details.</div>';
             });
     }
 
