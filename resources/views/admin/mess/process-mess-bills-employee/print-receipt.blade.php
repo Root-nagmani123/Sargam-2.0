@@ -16,6 +16,8 @@
         $dueAmount = (float) ($dueAmount ?? max(0, $totalAmount - $paidAmount));
         $totalDueAmount = (float) ($totalDueAmount ?? $dueAmount);
         $paymentStatusLabel = $paymentStatusLabel ?? ($paidAmount >= $totalAmount ? 'Paid' : ($paidAmount > 0 ? 'Partial' : 'Unpaid'));
+        $paymentOnly = !empty($paymentOnly);
+        $receiptPaymentAmount = isset($receiptPaymentAmount) ? (float) $receiptPaymentAmount : (float) $paidAmount;
 
         $rawClientName = $bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—');
         $courseName = $bill->course_name ?? optional($bill->course ?? null)->course_name;
@@ -215,6 +217,27 @@
             font-weight: 700;
             color: #0a3d6b;
         }
+        .payment-only-amount {
+            text-align: center;
+            margin: 1.25rem 0 0.5rem;
+            padding: 1rem 1.25rem;
+            border: 1px solid #dee2e6;
+            border-radius: .5rem;
+            background: #f8fafc;
+        }
+        .payment-only-amount .amount-label {
+            font-size: .85rem;
+            font-weight: 600;
+            color: #495057;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            margin-bottom: .35rem;
+        }
+        .payment-only-amount .amount-value {
+            font-size: 1.75rem;
+            font-weight: 700;
+            color: #0a3d6b;
+        }
         .action-bar {
             margin-top: 1.25rem;
             padding-top: 0.75rem;
@@ -298,7 +321,7 @@
 
     <div class="receipt-center">
         <div class="receipt-title">Mess Bill Receipt</div>
-        <div class="receipt-subtitle">Client Bill Statement</div>
+        <div class="receipt-subtitle">{{ $paymentOnly ? 'Payment Receipt' : 'Client Bill Statement' }}</div>
         <div class="receipt-period">From {{ $dateFrom }} To {{ $dateTo }}</div>
     </div>
 
@@ -330,57 +353,62 @@
 
     <hr>
 
-    <div class="bill-table-wrapper">
-        <table class="bill-table">
-            <thead>
-                <tr>
-                    <th>Store Name</th>
-                    <th>Item Name</th>
-                    <th>Issue Date</th>
-                    <th class="text-end">Rate</th>
-                    <th class="text-end">Issue Qty</th>
-                    <th class="text-end">Return Qty</th>
-                    <th class="text-end">Net Qty</th>
-                    <th class="text-end">Amount</th>
-                </tr>
-            </thead>
-            <tbody>
-                @foreach($bill->items as $item)
-                @php
-                    $issueQty = (float) ($item->quantity ?? 0);
-                    $returnQty = (float) ($item->return_quantity ?? 0);
-                    $netQty = max(0, $issueQty - $returnQty);
-                    $rate = (float) ($item->rate ?? 0);
-                    $itemAmount = $netQty * $rate;
-                    // Prefer per-item issue_date (for Selling Voucher Date Range items),
-                    // fall back to bill-level issue date range when not available.
-                    $itemIssueDate = $item->issue_date ?? $fallbackIssueDate;
-                @endphp
-                <tr>
-                    <td>{{ $item->store_name ?? $storeName }}</td>
-                    <td>{{ $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}</td>
-                    <td>{{ $itemIssueDate }}</td>
-                    <td class="text-end">{{ number_format($rate, 2) }}</td>
-                    <td class="text-end">{{ number_format($issueQty, 2) }}</td>
-                    <td class="text-end">{{ number_format($returnQty, 2) }}</td>
-                    <td class="text-end">{{ number_format($netQty, 2) }}</td>
-                    <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
-                </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
-
-    <div class="receipt-bottom">
-        <div></div>
-        <div class="payment-summary">
-            <div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">{{ number_format($paidAmount, 2) }}</span></div>
-            <div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">{{ number_format($totalAmount, 2) }}</span></div>
-            <div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">{{ number_format($dueAmount, 2) }}</span></div>
-            <div class="summary-row summary-row-total-due"><span class="summary-label">Total Due Amount</span><span class="summary-value">{{ number_format($totalDueAmount, 2) }}</span></div>
-            <div class="summary-row"><span class="summary-label">Payment Status</span><span class="summary-value">{{ $paymentStatusLabel }}</span></div>
+    @if($paymentOnly)
+        <div class="payment-only-amount">
+            <div class="amount-label">Payment Amount</div>
+            <div class="amount-value">₹ {{ number_format($receiptPaymentAmount, 2) }}</div>
         </div>
-    </div>
+    @else
+        <div class="bill-table-wrapper">
+            <table class="bill-table">
+                <thead>
+                    <tr>
+                        <th>Store Name</th>
+                        <th>Item Name</th>
+                        <th>Issue Date</th>
+                        <th class="text-end">Rate</th>
+                        <th class="text-end">Issue Qty</th>
+                        <th class="text-end">Return Qty</th>
+                        <th class="text-end">Net Qty</th>
+                        <th class="text-end">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($bill->items as $item)
+                    @php
+                        $issueQty = (float) ($item->quantity ?? 0);
+                        $returnQty = (float) ($item->return_quantity ?? 0);
+                        $netQty = max(0, $issueQty - $returnQty);
+                        $rate = (float) ($item->rate ?? 0);
+                        $itemAmount = $netQty * $rate;
+                        $itemIssueDate = $item->issue_date ?? $fallbackIssueDate;
+                    @endphp
+                    <tr>
+                        <td>{{ $item->store_name ?? $storeName }}</td>
+                        <td>{{ $item->item_name ?? ($item->itemSubcategory->item_name ?? $item->itemSubcategory->name ?? '—') }}</td>
+                        <td>{{ $itemIssueDate }}</td>
+                        <td class="text-end">{{ number_format($rate, 2) }}</td>
+                        <td class="text-end">{{ number_format($issueQty, 2) }}</td>
+                        <td class="text-end">{{ number_format($returnQty, 2) }}</td>
+                        <td class="text-end">{{ number_format($netQty, 2) }}</td>
+                        <td class="text-end">{{ number_format($itemAmount, 2) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        <div class="receipt-bottom">
+            <div></div>
+            <div class="payment-summary">
+                <div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">{{ number_format($paidAmount, 2) }}</span></div>
+                <div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">{{ number_format($totalAmount, 2) }}</span></div>
+                <div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">{{ number_format($dueAmount, 2) }}</span></div>
+                <div class="summary-row summary-row-total-due"><span class="summary-label">Total Due Amount</span><span class="summary-value">{{ number_format($totalDueAmount, 2) }}</span></div>
+                <div class="summary-row"><span class="summary-label">Payment Status</span><span class="summary-value">{{ $paymentStatusLabel }}</span></div>
+            </div>
+        </div>
+    @endif
 
     <div class="action-bar no-print">
         <button type="button" class="btn-print" onclick="window.print()">Print</button>
