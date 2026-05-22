@@ -1293,10 +1293,59 @@ class ReportController extends Controller
                 'closing_amount' => 0,
             ];
 
-            $previousIncoming = (float) ($openingIncoming->get($item->id)->total_qty ?? 0);
-            $previousSale = (float) ($openingKitchenIssueSales->get($item->id)->total_qty ?? 0);
-            $previousSaleSv = (float) ($openingDateRangeSales->get($item->id)->total_qty ?? 0);
-            $itemData['opening_qty'] = $previousIncoming - $previousSale - $previousSaleSv;
+            if ($storeType == 'main') {
+                $previousPurchase = PurchaseOrderItem::where('item_subcategory_id', $item->id)
+                    ->whereHas('purchaseOrder', function ($q) use ($previousDate, $storeIds) {
+                        $q->where('status', 'approved')->whereDate('po_date', '<=', $previousDate);
+                        if ($storeIds !== []) {
+                            $q->whereIn('store_id', $storeIds);
+                        }
+                    })
+                    ->sum('quantity');
+                $previousSale = \DB::table('kitchen_issue_items as kii')
+                    ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+                    ->where('kii.item_subcategory_id', $item->id)
+                    ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                    ->where('kim.store_type', 'store')
+                    ->whereDate('kim.issue_date', '<=', $previousDate)
+                    ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
+                    ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
+                    ->value('net') ?? 0;
+                $previousSaleSv = \DB::table('sv_date_range_report_items as svi')
+                    ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                    ->where('svi.item_subcategory_id', $item->id)
+                    ->where('svr.store_type', 'store')
+                    ->whereDate('svi.issue_date', '<=', $previousDate)
+                    ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
+                    ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
+                    ->value('net') ?? 0;
+                $itemData['opening_qty'] = $previousPurchase - $previousSale - $previousSaleSv;
+            } else {
+                $previousAllocation = \DB::table('mess_store_allocation_items as sai')
+                    ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
+                    ->where('sai.item_subcategory_id', $item->id)
+                    ->whereDate('sa.allocation_date', '<=', $previousDate)
+                    ->when($storeIds !== [], fn ($q) => $q->whereIn('sa.sub_store_id', $storeIds))
+                    ->sum('sai.quantity');
+                $previousSale = \DB::table('kitchen_issue_items as kii')
+                    ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+                    ->where('kii.item_subcategory_id', $item->id)
+                    ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+                    ->where('kim.store_type', 'sub_store')
+                    ->whereDate('kim.issue_date', '<=', $previousDate)
+                    ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
+                    ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
+                    ->value('net') ?? 0;
+                $previousSaleSv = \DB::table('sv_date_range_report_items as svi')
+                    ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                    ->where('svi.item_subcategory_id', $item->id)
+                    ->where('svr.store_type', 'sub_store')
+                    ->whereDate('svi.issue_date', '<=', $previousDate)
+                    ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
+                    ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
+                    ->value('net') ?? 0;
+                $itemData['opening_qty'] = $previousAllocation - $previousSale - $previousSaleSv;
+            }
 
             $itemData['opening_amount'] = $itemData['opening_qty'] * $itemData['opening_rate'];
 
@@ -1310,7 +1359,16 @@ class ReportController extends Controller
             $saleQtyKi = (float) ($salesKi->total_qty ?? 0);
             $saleAmountKi = (float) ($salesKi->total_amount ?? 0);
 
-            $salesSv = $periodDateRangeSales->get($item->id);
+            // Sales from Selling Voucher with Date Range
+            $salesSv = \DB::table('sv_date_range_report_items as svi')
+                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+                ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
+                ->where('svi.item_subcategory_id', $item->id)
+                ->where('svr.store_type', $kimStoreType)
+                ->whereBetween('svi.issue_date', [$fromDate, $toDate])
+                ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
+                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty, SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis_sv.standard_cost, 0)) as total_amount')
+                ->first();
             $saleQtySv = (float) ($salesSv->total_qty ?? 0);
             $saleAmountSv = (float) ($salesSv->total_amount ?? 0);
 
@@ -1937,7 +1995,7 @@ class ReportController extends Controller
                 ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '<=', $tillDate)
+                ->whereDate('svi.issue_date', '<=', $tillDate)
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
                 ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
                 ->value('net') ?? 0;
@@ -2065,7 +2123,7 @@ class ReportController extends Controller
                 ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '<=', $tillDate)
+                ->whereDate('svi.issue_date', '<=', $tillDate)
                 ->when($storeIds !== null, fn ($q) => $q->whereIn('svr.store_id', $storeIds))
                 ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
                 ->value('net') ?? 0;
@@ -2351,8 +2409,8 @@ class ReportController extends Controller
                 ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
                 ->where('svi.item_subcategory_id', $item->id)
                 ->where('svr.store_type', 'store')
-                ->whereDate('svr.issue_date', '>=', $fromDate)
-                ->whereDate('svr.issue_date', '<=', $toDate);
+                ->whereDate('svi.issue_date', '>=', $fromDate)
+                ->whereDate('svi.issue_date', '<=', $toDate);
             if ($storeIds !== []) {
                 $saleSvQuery->whereIn('svr.store_id', $storeIds);
             }

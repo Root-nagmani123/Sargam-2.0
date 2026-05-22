@@ -135,8 +135,7 @@
                             </thead>
                             <tbody>
                                 @foreach ($documents as $index => $doc)
-                                <tr class="{{ $loop->odd ? 'table-light' : '' }}" style="cursor: pointer;"
-                                    onclick="window.location='{{ route('admin.course-repository.user.document-details', $doc->pk) }}'">
+                              <tr class="{{ $loop->odd ? 'table-light' : '' }}">
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>
                                         <span
