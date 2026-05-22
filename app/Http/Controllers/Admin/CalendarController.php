@@ -273,7 +273,7 @@ class CalendarController extends Controller
     protected function collectCalendarEventsForRange(Request $request, string $rangeStart, string $rangeEnd, ?int $courseMasterPk): Collection
     {
         $events = DB::table('timetable')
-            ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
+            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
         if (hasRole('Student-OT')) {
             $student_pk = auth()->user()->user_id;
@@ -289,8 +289,9 @@ class CalendarController extends Controller
         }
 
         $events = $events
-            ->whereDate('START_DATE', '>=', $rangeStart)
-            ->whereDate('END_DATE', '<=', $rangeEnd)
+            ->where('timetable.active_inactive', 1)
+            ->whereDate('timetable.START_DATE', '<=', $rangeEnd)
+            ->whereDate('timetable.END_DATE', '>=', $rangeStart)
             ->select(
                 'timetable.*',
                 'venue_master.venue_name as venue_name'

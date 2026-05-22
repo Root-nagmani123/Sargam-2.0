@@ -204,7 +204,6 @@
   <script src="{{asset('admin_assets/js/datatable/datatable-basic.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/repeater-init.js')}}"></script>
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
-  <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="{{asset('admin_assets/js/plugins/toastr-init.js')}}"></script>
   <script src="{{asset('admin_assets/js/routes.js')}}"></script>
   <!-- SweetAlert2 must be loaded before custom.js (status-toggle confirmation uses Swal.fire) -->

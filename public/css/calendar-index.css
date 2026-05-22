@@ -1,4 +1,4 @@
-﻿/* Academic calendar — FullCalendar & module UI (page-scoped; does not override admin master :root) */
+/* Academic calendar — FullCalendar & module UI (page-scoped; does not override admin master :root) */
 
 .calendar-admin-page,
 #eventModal,
@@ -66,6 +66,8 @@
     color: #212529;
     white-space: nowrap;
     user-select: none;
+    min-width: 10rem;
+    max-width: 14rem;
 }
 
 /* ---- View toggle icon buttons ---- */
@@ -146,6 +148,226 @@
 /* Calendar styling */
 .fc {
     font-size: 0.95rem;
+}
+
+/* -------------------------------------------------------------------------
+   Week / day time-grid — Bootstrap-aligned schedule UI
+   ------------------------------------------------------------------------- */
+.calendar-schedule-shell {
+    border-color: var(--bs-border-color) !important;
+    transition: box-shadow 0.2s ease;
+}
+
+.calendar-schedule-shell--active {
+    border-color: rgba(var(--bs-primary-rgb), 0.35) !important;
+    box-shadow: 0 0.25rem 1rem rgba(var(--bs-primary-rgb), 0.08) !important;
+}
+
+#calendarScheduleContext .badge.text-bg-primary {
+    letter-spacing: 0.02em;
+}
+
+#calendar.calendar-view-week .fc-view-harness,
+#calendar.calendar-view-day .fc-view-harness {
+    min-height: 34rem;
+    max-height: min(72vh, 42rem);
+}
+
+#calendar.calendar-view-week .fc-scroller,
+#calendar.calendar-view-day .fc-scroller {
+    overflow: auto !important;
+}
+
+#calendar.calendar-view-week .fc-scrollgrid,
+#calendar.calendar-view-day .fc-scrollgrid {
+    border: 0 !important;
+    border-radius: 0 !important;
+}
+
+/* Column headers */
+#calendar.calendar-view-week .fc-col-header-cell,
+#calendar.calendar-view-day .fc-col-header-cell {
+    background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-dark) 100%) !important;
+    border-color: rgba(255, 255, 255, 0.12) !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.75rem 0.5rem !important;
+    vertical-align: middle;
+}
+
+#calendar.calendar-view-week .fc-col-header-cell-cushion,
+#calendar.calendar-view-day .fc-col-header-cell-cushion {
+    color: #fff !important;
+    text-decoration: none !important;
+    padding: 0.25rem 0.5rem;
+}
+
+#calendar.calendar-view-day .fc-col-header-cell {
+    font-size: 0.9375rem;
+}
+
+/* Today column */
+#calendar.calendar-view-week .fc-day-today,
+#calendar.calendar-view-day .fc-day-today {
+    background-color: rgba(var(--bs-primary-rgb), 0.06) !important;
+}
+
+#calendar.calendar-view-week .fc-day-today .fc-col-header-cell,
+#calendar.calendar-view-day .fc-day-today .fc-col-header-cell {
+    box-shadow: inset 0 -3px 0 #fff;
+}
+
+/* Time axis */
+#calendar.calendar-view-week .fc-timegrid-axis,
+#calendar.calendar-view-day .fc-timegrid-axis {
+    background: var(--bs-tertiary-bg) !important;
+    border-color: var(--bs-border-color) !important;
+}
+
+#calendar.calendar-view-week .fc-timegrid-slot-label,
+#calendar.calendar-view-day .fc-timegrid-slot-label {
+    background: var(--bs-tertiary-bg);
+    border-color: var(--bs-border-color-translucent) !important;
+    color: var(--bs-secondary-color);
+    font-size: 0.75rem;
+    font-weight: 600;
+    vertical-align: top;
+    padding: 0.35rem 0.5rem !important;
+}
+
+#calendar.calendar-view-week .fc-timegrid-slot-label-cushion,
+#calendar.calendar-view-day .fc-timegrid-slot-label-cushion {
+    padding: 0 0.25rem;
+}
+
+/* Grid lines — subtle zebra for readability */
+#calendar.calendar-view-week .fc-timegrid-slot,
+#calendar.calendar-view-day .fc-timegrid-slot {
+    border-color: var(--bs-border-color-translucent) !important;
+    height: 2.25rem;
+}
+
+#calendar.calendar-view-week .fc-timegrid-slot.fc-timegrid-slot-minor,
+#calendar.calendar-view-day .fc-timegrid-slot.fc-timegrid-slot-minor {
+    border-top-style: dotted !important;
+}
+
+#calendar.calendar-view-week .fc-timegrid-col,
+#calendar.calendar-view-day .fc-timegrid-col {
+    border-color: var(--bs-border-color-translucent) !important;
+}
+
+#calendar.calendar-view-week .fc-timegrid-col.fc-day-today,
+#calendar.calendar-view-day .fc-timegrid-col.fc-day-today {
+    background-color: rgba(var(--bs-primary-rgb), 0.04);
+}
+
+/* Now indicator */
+#calendar.calendar-view-week .fc-timegrid-now-indicator-line,
+#calendar.calendar-view-day .fc-timegrid-now-indicator-line {
+    border-color: var(--bs-danger) !important;
+    border-width: 2px !important;
+}
+
+#calendar.calendar-view-week .fc-timegrid-now-indicator-arrow,
+#calendar.calendar-view-day .fc-timegrid-now-indicator-arrow {
+    border-color: var(--bs-danger) !important;
+}
+
+/* Time-grid event slots — reference week/day card (pale fill + thick left accent) */
+#calendar.calendar-view-week .fc-timegrid-event-harness,
+#calendar.calendar-view-day .fc-timegrid-event-harness {
+    margin-right: 0.35rem !important;
+}
+
+#calendar.calendar-view-week .fc-timegrid-event,
+#calendar.calendar-view-day .fc-timegrid-event {
+    border: 0 !important;
+    border-radius: 0.375rem !important;
+    box-shadow: none !important;
+}
+
+#calendar.calendar-view-week .fc-timegrid-event .fc-event-main,
+#calendar.calendar-view-day .fc-timegrid-event .fc-event-main {
+    background: transparent !important;
+    border: 0 !important;
+    border-radius: 0.375rem !important;
+    box-shadow: none !important;
+    height: 100%;
+    overflow: hidden;
+    padding: 0 !important;
+}
+
+#calendar.calendar-view-week .calendar-timegrid-slot-card,
+#calendar.calendar-view-day .calendar-timegrid-slot-card {
+    --tt-slot-accent: #004085;
+    --tt-slot-fill: #f0f4f8;
+    background-color: var(--tt-slot-fill) !important;
+    border: 0 !important;
+    border-left: 5px solid var(--tt-slot-accent) !important;
+    border-radius: 0.375rem !important;
+    box-shadow: none !important;
+    min-height: 100%;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#calendar.calendar-view-week .calendar-timegrid-slot-card.border-start,
+#calendar.calendar-view-day .calendar-timegrid-slot-card.border-start {
+    border-left-width: 5px !important;
+}
+
+#calendar.calendar-view-week .fc-timegrid-event:hover .calendar-timegrid-slot-card,
+#calendar.calendar-view-day .fc-timegrid-event:hover .calendar-timegrid-slot-card {
+    background-color: #e8f0f8 !important;
+    box-shadow: 0 1px 4px rgba(0, 64, 133, 0.12) !important;
+}
+
+#calendar.calendar-view-week .calendar-timegrid-slot-card .event-card-title,
+#calendar.calendar-view-day .calendar-timegrid-slot-card .event-card-title {
+    color: #1a3a5c !important;
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    line-height: 1.2 !important;
+}
+
+#calendar.calendar-view-week .calendar-timegrid-slot-card .event-card-time,
+#calendar.calendar-view-day .calendar-timegrid-slot-card .event-card-time {
+    color: #6b7c93 !important;
+    font-size: 0.6875rem !important;
+    font-weight: 400 !important;
+    line-height: 1.2 !important;
+}
+
+/* Day view — slightly larger type in wider column */
+#calendar.calendar-view-day .fc-timegrid-col {
+    min-width: 0;
+}
+
+#calendar.calendar-view-day .calendar-timegrid-slot-card .event-card-title {
+    font-size: 0.875rem !important;
+}
+
+#calendar.calendar-view-day .calendar-timegrid-slot-card .event-card-time {
+    font-size: 0.75rem !important;
+}
+
+@media (max-width: 767.98px) {
+    #calendar.calendar-view-week .fc-view-harness,
+    #calendar.calendar-view-day .fc-view-harness {
+        min-height: 28rem;
+        max-height: 65vh;
+    }
+
+    #calendar.calendar-view-week .fc-col-header-cell,
+    #calendar.calendar-view-day .fc-col-header-cell {
+        font-size: 0.6875rem;
+        padding: 0.5rem 0.25rem !important;
+    }
+
+    #calendarScheduleContext {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
 }
 
 .fc-daygrid-day {
@@ -673,8 +895,8 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     display: none;
 }
 
-/* TimeGrid overlapping events */
-.fc-timegrid-event .fc-event-main {
+/* TimeGrid overlapping events (month view unaffected; week/day use .calendar-timegrid-slot-card) */
+#calendar:not(.calendar-view-week):not(.calendar-view-day) .fc-timegrid-event .fc-event-main {
     border-left: 3px solid var(--primary-color);
     border-radius: 8px;
     background: #fff !important;
@@ -682,7 +904,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     overflow: hidden;
 }
 
-.fc-timegrid-event:hover .fc-event-main {
+#calendar:not(.calendar-view-week):not(.calendar-view-day) .fc-timegrid-event:hover .fc-event-main {
     box-shadow: var(--shadow);
 }
 
@@ -2552,6 +2774,17 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     padding-bottom: 0 !important;
 }
 
+#calendarSheetToolbar .calendar-toolbar-controls {
+    margin-left: auto;
+}
+
+@media (max-width: 767.98px) {
+    #calendarSheetToolbar .calendar-toolbar-controls {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
 #calendarSheetToolbar .text-muted {
     color: #8b8b8b !important;
     font-size: 0.75rem !important;
@@ -2936,4 +3169,150 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     padding: 0.4rem 0.55rem !important;
     visibility: visible !important;
     width: 100% !important;
+}
+
+/* Event details hover popover — same card as reference design */
+#eventDetailsHoverPopover.event-details-hover-popover {
+    display: none;
+    max-width: 22rem;
+    pointer-events: auto;
+    position: fixed;
+    z-index: 1080;
+}
+
+#eventDetailsHoverPopover.event-details-hover-popover.is-visible {
+    display: block;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card,
+#eventDetails .calendar-event-details-card {
+    border-radius: 0.75rem !important;
+    box-shadow: 0 0.35rem 1.15rem rgba(15, 23, 42, 0.12) !important;
+    padding: 1rem 1.05rem !important;
+    position: relative;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card::after,
+#eventDetails .calendar-event-details-card::after {
+    background: #ffffff;
+    border-right: 1px solid rgba(15, 23, 42, 0.06);
+    border-top: 1px solid rgba(15, 23, 42, 0.06);
+    content: "";
+    height: 0.85rem;
+    position: absolute;
+    right: -0.42rem;
+    top: 50%;
+    transform: translateY(-50%) rotate(45deg);
+    width: 0.85rem;
+    z-index: 1;
+}
+
+#eventDetailsHoverPopover.popover-arrow-left .calendar-event-details-card::after,
+#eventDetails.popover-arrow-left .calendar-event-details-card::after {
+    left: -0.42rem;
+    right: auto;
+    transform: translateY(-50%) rotate(-135deg);
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card .event-card-title,
+#eventDetails .calendar-event-details-card .event-card-title {
+    font-size: 0.9375rem !important;
+    font-weight: 700 !important;
+    line-height: 1.25 !important;
+    white-space: normal !important;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card .event-card-time,
+#eventDetails .calendar-event-details-card .event-card-time {
+    font-size: 0.75rem !important;
+    line-height: 1.35 !important;
+    margin-top: 0.15rem;
+    white-space: normal !important;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card .event-card-topic,
+#eventDetails .calendar-event-details-card .event-card-topic {
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    line-height: 1.35 !important;
+    white-space: normal !important;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card .event-card-topic:empty,
+#eventDetails .calendar-event-details-card .event-card-topic:empty {
+    display: none;
+    margin: 0 !important;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card:has(.event-card-topic:empty) .event-details-divider,
+#eventDetails .calendar-event-details-card:has(.event-card-topic:empty) .event-details-divider {
+    display: none;
+}
+
+#eventDetailsHoverPopover .event-details-divider,
+#eventDetails .event-details-divider {
+    border: 0;
+    border-top: 1px solid #e5e7eb;
+    opacity: 1;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card .event-card-action,
+#eventDetails .calendar-event-details-card .event-card-action {
+    border-radius: 50% !important;
+    height: 1.75rem !important;
+    width: 1.75rem !important;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card .event-card-action i,
+#eventDetails .calendar-event-details-card .event-card-action i {
+    font-size: 0.8rem !important;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card .event-card-info,
+#eventDetailsHoverPopover .calendar-event-details-card .event-card-venue,
+#eventDetails .calendar-event-details-card .event-card-info,
+#eventDetails .calendar-event-details-card .event-card-venue {
+    font-size: 0.75rem !important;
+    padding: 0.65rem 0.75rem !important;
+}
+
+#eventDetailsHoverPopover .calendar-event-details-card .event-details-internal-row:has([data-detail="internal-faculty"]:empty),
+#eventDetails .calendar-event-details-card .event-details-internal-row:has(#internal_faculty_name_show:empty) {
+    display: none;
+}
+
+@media (max-width: 575.98px) {
+    #eventDetailsHoverPopover .calendar-event-details-card::after {
+        display: none;
+    }
+}
+
+/* Event details modal — same card as calendar reference design (popover scale) */
+#eventDetails .event-details-dialog {
+    max-width: 22rem;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+#eventDetails .event-details-modal-content {
+    overflow: visible;
+    position: relative;
+}
+
+#eventDetails .modal-backdrop.show {
+    opacity: 0.25;
+}
+
+@media (max-width: 575.98px) {
+    #eventDetails .event-details-dialog {
+        max-width: calc(100% - 1.5rem);
+    }
+
+    #eventDetails .calendar-event-details-card::after {
+        display: none;
+    }
+
+    #eventDetailsHoverPopover {
+        max-width: calc(100vw - 1.5rem);
+    }
 }

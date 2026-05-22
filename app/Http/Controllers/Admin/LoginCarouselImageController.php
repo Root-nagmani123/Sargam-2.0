@@ -15,6 +15,7 @@ class LoginCarouselImageController extends Controller
         $this->authorizeManager();
 
         $images = LoginCarouselImage::query()
+            ->select(['id', 'image_path', 'sort_order', 'active_inactive'])
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get();
@@ -25,6 +26,7 @@ class LoginCarouselImageController extends Controller
     public function store(Request $request)
     {
         $this->authorizeManager();
+        $this->ensureTableExists();
 
         $validated = $request->validate([
             'images' => ['required', 'array', 'min:1', 'max:10'],
@@ -36,9 +38,11 @@ class LoginCarouselImageController extends Controller
 
         foreach ($validated['images'] as $image) {
             $nextOrder++;
+            $path = $image->store('login-carousel-images', 'public');
+            LoginCarouselImage::generateThumbnail($path);
 
             LoginCarouselImage::create([
-                'image_path' => $image->store('login-carousel-images', 'public'),
+                'image_path' => $path,
                 'sort_order' => $nextOrder,
                 'active_inactive' => true,
                 'created_by_pk' => $pk,
@@ -53,6 +57,7 @@ class LoginCarouselImageController extends Controller
     public function update(Request $request, LoginCarouselImage $loginCarouselImage)
     {
         $this->authorizeManager();
+        $this->ensureTableExists();
 
         $validated = $request->validate([
             'sort_order' => ['required', 'integer', 'min:0', 'max:65535'],
@@ -61,12 +66,9 @@ class LoginCarouselImageController extends Controller
         ]);
 
         if ($request->hasFile('image')) {
-            $oldPath = $loginCarouselImage->image_path;
+            $loginCarouselImage->deleteStoredFiles();
             $validated['image_path'] = $request->file('image')->store('login-carousel-images', 'public');
-
-            if ($oldPath) {
-                Storage::disk('public')->delete($oldPath);
-            }
+            LoginCarouselImage::generateThumbnail($validated['image_path']);
         }
 
         unset($validated['image']);
@@ -82,11 +84,9 @@ class LoginCarouselImageController extends Controller
     public function destroy(LoginCarouselImage $loginCarouselImage)
     {
         $this->authorizeManager();
+        $this->ensureTableExists();
 
-        if ($loginCarouselImage->image_path) {
-            Storage::disk('public')->delete($loginCarouselImage->image_path);
-        }
-
+        $loginCarouselImage->deleteStoredFiles();
         $loginCarouselImage->delete();
 
         return redirect()->route('admin.login-carousel-images.index')
@@ -96,5 +96,14 @@ class LoginCarouselImageController extends Controller
     protected function authorizeManager(): void
     {
         abort_unless(hasRole('Admin') || hasRole('Super Admin'), 403);
+    }
+
+    protected function ensureTableExists(): void
+    {
+        if (LoginCarouselImage::tableExists()) {
+            return;
+        }
+
+        abort(503, 'Login carousel is not set up yet. Run: php artisan migrate --path=database/migrations/2026_05_21_000001_create_login_carousel_images_table.php');
     }
 }
