@@ -2,7 +2,7 @@
 <!-- //admin tabs -->
     <div class="tab-content" id="sidebarTabContent">
         <div class="" id="sidebar-setup" role="tabpanel" aria-labelledby="setup-tab">
-          <aside class="side-mini-panel with-vertical sidebar-google-style">
+          <aside class="side-mini-panel with-vertical sidebar-google-style sidebar-hover-flyout">
     <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
@@ -10,14 +10,6 @@
         <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
             <div class="flex-fill d-flex flex-column" style="min-height: 0;">
                 <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
-                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
-                        <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
-                            data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
-                            <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
-                                menu
-                            </i>
-                        </a>
-                    </div>
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
@@ -32,7 +24,7 @@
                                                     @php
                                                         $groupSelected = ($activeGroupId ?? null) == $group->id;
                                                     @endphp
-                                                    <li class="sidebar-group-item py-2" id="{{ $group->id }}">
+                                                    <li class="sidebar-group-item mini-nav-item py-2" id="{{ $group->id }}" data-id="{{ $group->id }}">
                                                         <a href="javascript:void(0)" 
                                                             class="d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link {{ $groupSelected ? 'selected mx-2 py-1 bg-primary' : '' }}"
                                                             data-id="{{ $group->id }}" data-name="{{ $group->name }}"
@@ -62,7 +54,7 @@
                     </ul>
                 </div>
                 <div class="sidebarmenu">
-                    <nav class="sidebar-nav d-block simplebar-scrollable-y" data-simplebar="init" style="display: block !important;">
+                    <nav class="sidebar-nav simplebar-scrollable-y" data-simplebar="init">
                         <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer">

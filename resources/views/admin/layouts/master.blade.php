@@ -1097,6 +1097,7 @@
             });
         });
     </script>
+    <script src="{{ asset('admin_assets/js/sidebar-flyout-hover.js') }}"></script>
 
   @yield('script')
 </body>
