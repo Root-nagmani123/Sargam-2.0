@@ -37,76 +37,113 @@
     </div>
 
     {{-- Summary cards --}}
-    <div class="no-print">
-    @php $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0, 'total_due_amount' => 0]; @endphp
-    <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-5 g-3 mb-4 animate__animated animate__fadeIn">
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-primary bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-primary" style="font-size: 2rem;">description</i>
+    <section class="no-print process-mess-stats-section mb-4" aria-labelledby="process-mess-stats-heading">
+        @php
+            $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0, 'total_due_amount' => 0];
+            $statsPaidPct = ($stats['total_bills'] ?? 0) > 0
+                ? (int) round((($stats['paid_count'] ?? 0) / $stats['total_bills']) * 100)
+                : 0;
+        @endphp
+        <div class="card border border-light-subtle shadow-sm rounded-4 overflow-hidden bg-body-tertiary bg-opacity-50">
+            <div class="card-body p-3 p-lg-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-light-subtle">
+                    <div class="d-flex align-items-center gap-3 min-w-0">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary process-mess-stat-icon flex-shrink-0" aria-hidden="true">
+                            <span class="material-symbols-rounded">insights</span>
+                        </span>
+                        <div class="min-w-0">
+                            <h2 id="process-mess-stats-heading" class="h6 mb-0 fw-semibold text-body-emphasis">Bill overview</h2>
+                            <p class="small text-body-secondary mb-0 text-truncate">Key metrics for the selected period</p>
+                        </div>
                     </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Bills</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</div>
+                    <span class="badge text-bg-light border border-light-subtle text-body-secondary fw-normal px-3 py-2 rounded-pill d-inline-flex align-items-center gap-1 flex-shrink-0">
+                        <span class="material-symbols-rounded" style="font-size: 1rem;" aria-hidden="true">date_range</span>
+                        <span class="text-truncate">{{ $dateFromDisplay }} – {{ $dateToDisplay }}</span>
+                    </span>
+                </div>
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-5 g-3 g-lg-4 animate__animated animate__fadeIn" role="list" aria-label="Bill statistics">
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-primary bg-primary-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                                <span class="flex-shrink-0 rounded-3 bg-primary text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                    <span class="material-symbols-rounded">description</span>
+                                </span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total bills</p>
+                                    <p class="fs-3 fw-bold text-primary mb-1 lh-1 tabular-nums" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</p>
+                                    <p class="small text-body-secondary mb-0 opacity-75">Combined invoices in range</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-warning bg-warning-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                                <span class="flex-shrink-0 rounded-3 bg-warning text-dark d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                    <span class="material-symbols-rounded">pending_actions</span>
+                                </span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Unpaid</p>
+                                    <p class="fs-3 fw-bold text-warning-emphasis mb-1 lh-1 tabular-nums" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</p>
+                                    <p class="small text-body-secondary mb-0 opacity-75">Awaiting payment</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-success bg-success-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex flex-column gap-2">
+                                <div class="d-flex align-items-start gap-3">
+                                    <span class="flex-shrink-0 rounded-3 bg-success text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                        <span class="material-symbols-rounded">check_circle</span>
+                                    </span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <p class="text-body-secondary small text-uppercase fw-semibold mb-0 lh-sm">Paid</p>
+                                            <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle" id="process-mess-stats-paid-pct">{{ $statsPaidPct }}% cleared</span>
+                                        </div>
+                                        <p class="fs-3 fw-bold text-success mb-0 lh-1 tabular-nums" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</p>
+                                    </div>
+                                </div>
+                                <div class="progress rounded-pill process-mess-stats-progress" id="process-mess-stats-paid-progress" role="progressbar" aria-label="Paid bills percentage" aria-valuenow="{{ $statsPaidPct }}" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar bg-success" id="process-mess-stats-paid-progress-bar" style="width: {{ $statsPaidPct }}%"></div>
+                                </div>
+                                <p class="small text-body-secondary mb-0 opacity-75">Fully settled bills</p>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-info bg-info-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                                <span class="flex-shrink-0 rounded-3 bg-info text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                    <span class="material-symbols-rounded">payments</span>
+                                </span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total amount</p>
+                                    <p class="fs-3 fw-bold text-info-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</p>
+                                    <p class="small text-body-secondary mb-0 opacity-75">Bill value for period</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-danger bg-danger-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                                <span class="flex-shrink-0 rounded-3 bg-danger text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                    <span class="material-symbols-rounded">account_balance_wallet</span>
+                                </span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total due amount</p>
+                                    <p class="fs-3 fw-bold text-danger-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-due-amount">₹ {{ number_format($stats['total_due_amount'] ?? 0, 2) }}</p>
+                                    <p class="small text-body-secondary mb-0 opacity-75">Outstanding balance for period</p>
+                                </div>
+                            </div>
+                        </article>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-warning bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-warning" style="font-size: 2rem;">schedule</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Unpaid</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-success bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-success" style="font-size: 2rem;">check_circle</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Paid</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-info bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-info" style="font-size: 2rem;">payments</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Amount</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-danger bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-danger" style="font-size: 2rem;">account_balance_wallet</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Due Amount</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-due-amount">₹ {{ number_format($stats['total_due_amount'] ?? 0, 2) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    </div>
+    </section>
 
 
     {{-- Filters card --}}
@@ -258,15 +295,15 @@
                 <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
                     <thead class="table-light">
                         <tr>
-                            <th class="text-nowrap py-2">S.No.</th>
-                            <th class="text-nowrap py-2">Buyer Name</th>
-                            <th class="text-nowrap py-2">Slip No.</th>
-                            <th class="text-nowrap py-2">Invoice Date</th>
-                            <th class="text-nowrap py-2">Client Type</th>
-                            <th class="text-nowrap py-2 text-end">Total</th>
-                            <th class="text-nowrap py-2 text-end">Total Due Amount</th>
-                            <th class="text-nowrap py-2">Payment Type</th>
-                            <th class="text-nowrap py-2">Status</th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="S.No."><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th mess-th-sorted" data-mess-col-original="Buyer Name"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Slip No."><span class="d-inline-flex align-items-center gap-1"><span>Slip No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Invoice Date"><span class="d-inline-flex align-items-center gap-1"><span>Invoice Date</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Client Type"><span class="d-inline-flex align-items-center gap-1"><span>Client Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 text-end mess-sort-th mess-report-sort-th" data-mess-col-original="Total"><span class="d-inline-flex align-items-center gap-1"><span>Total</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 text-end mess-sort-th mess-report-sort-th" data-mess-col-original="Total Due Amount"><span class="d-inline-flex align-items-center gap-1"><span>Total Due Amount</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Payment Type"><span class="d-inline-flex align-items-center gap-1"><span>Payment Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                            <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="Status"><span class="d-inline-flex align-items-center gap-1"><span>Status</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
                             <th class="text-nowrap py-2 text-center no-print">Actions</th>
                         </tr>
                     </thead>
@@ -316,7 +353,7 @@
             </div>
         </div>
     </div>
-    </div>
+</div>
 
 @include('components.mess-master-datatables', [
     'tableId' => 'processMessBillsTable',
@@ -345,13 +382,161 @@
         var elUnpaid = document.getElementById('process-mess-stats-unpaid');
         var elPaid = document.getElementById('process-mess-stats-paid');
         var elAmt = document.getElementById('process-mess-stats-total-amount');
+        var elPaidPct = document.getElementById('process-mess-stats-paid-pct');
         var elDueAmt = document.getElementById('process-mess-stats-total-due-amount');
         if (elTotal) elTotal.textContent = fmtInt(s.total_bills);
         if (elUnpaid) elUnpaid.textContent = fmtInt(s.unpaid_count);
         if (elPaid) elPaid.textContent = fmtInt(s.paid_count);
         if (elAmt) elAmt.textContent = '₹ ' + fmtAmt(s.total_amount);
+        if (elPaidPct) {
+            var total = Number(s.total_bills) || 0;
+            var paid = Number(s.paid_count) || 0;
+            var pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+            elPaidPct.textContent = pct + '% cleared';
+            var elProgress = document.getElementById('process-mess-stats-paid-progress');
+            var elProgressBar = document.getElementById('process-mess-stats-paid-progress-bar');
+            if (elProgress) elProgress.setAttribute('aria-valuenow', String(pct));
+            if (elProgressBar) elProgressBar.style.width = pct + '%';
+        }
         if (elDueAmt) elDueAmt.textContent = '₹ ' + fmtAmt(s.total_due_amount);
+    }
+
+    window.applyProcessMessBillStats = applyProcessMessBillStats;
+
+    function bindProcessMessBillStatsListener() {
+        if (typeof window.jQuery === 'undefined') return;
+        var $ = window.jQuery;
+        var $table = $('#processMessBillsTable');
+        if (!$table.length) return;
+
+        $table.off('xhr.dt.processMessStats').on('xhr.dt.processMessStats', function (e, settings, json) {
+            applyProcessMessBillStats(json);
+        });
+
+        if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
+            applyProcessMessBillStats($table.DataTable().settings()[0].json);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', bindProcessMessBillStatsListener);
+})();
+</script>
+@endpush
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'processMessBillsTable',
+    'searchPlaceholder' => 'Search name or invoice no.',
+    'orderColumn' => [[1, 'asc']],
+    'actionColumnIndex' => 8,
+    'infoLabel' => 'bills',
+    'searchDelay' => 500,
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
+    'ajaxJsonCallback' => 'applyProcessMessBillStats',
+    'columnManager' => true,
+    'columnManagerLocked' => [0],
+    'columnManagerTitle' => 'Process Mess Bills columns',
+])
+
+@push('scripts')
+<script>
+function applyMessSortHeaderIcon(th, isActive, sortDir) {
+    if (!th) return;
+    var icon = th.querySelector('.mess-report-sort-icon');
+    if (!icon) return;
+    th.classList.toggle('mess-th-sorted', !!isActive);
+    th.classList.toggle('is-sorted', !!isActive);
+    icon.classList.add('material-symbols-rounded');
+    if (isActive) {
+        icon.textContent = sortDir === 'desc' ? 'arrow_downward' : 'arrow_upward';
+        icon.classList.remove('mess-report-sort-icon--muted');
+        icon.setAttribute('aria-label', sortDir === 'desc' ? 'Sorted descending' : 'Sorted ascending');
+    } else {
+        icon.textContent = 'unfold_more';
+        icon.classList.add('mess-report-sort-icon--muted');
+        icon.setAttribute('aria-label', 'Sortable');
+    }
+}
+window.applyMessSortHeaderIcon = applyMessSortHeaderIcon;
+
+/** Column title for print/export — never include Material icon ligature text. */
+function messPrintThLabel(th) {
+    if (!th) {
+        return '';
+    }
+    var label = (th.getAttribute('data-mess-col-original') || '').trim();
+    if (label) {
+        return label;
+    }
+    var clone = th.cloneNode(true);
+    clone.querySelectorAll(
+        '.mess-report-sort-icon, .material-symbols-rounded, .material-icons, i[class*="material"]'
+    ).forEach(function (el) {
+        el.remove();
     });
+    label = (clone.textContent || '').replace(/\s+/g, ' ').trim();
+    return label.replace(/\s+(unfold_more|arrow_upward|arrow_downward)$/i, '');
+}
+window.messPrintThLabel = messPrintThLabel;
+
+function syncProcessMessBillsTableSortIcons() {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
+        return;
+    }
+    var $ = window.jQuery;
+    var $table = $('#processMessBillsTable');
+    if (!$table.length || !$.fn.DataTable.isDataTable($table)) {
+        return;
+    }
+    var dt = $table.DataTable();
+    var order = dt.order();
+    var sortCol = order.length ? order[0][0] : -1;
+    var sortDir = order.length ? order[0][1] : 'asc';
+
+    $table.find('thead tr').first().children('th.mess-sort-th').each(function () {
+        var colIdx = dt.column(this).index();
+        if (colIdx == null || colIdx < 0) {
+            return;
+        }
+        applyMessSortHeaderIcon(this, colIdx === sortCol, sortDir);
+    });
+}
+window.syncProcessMessBillsTableSortIcons = syncProcessMessBillsTableSortIcons;
+
+function bindProcessMessBillsTableSortIcons() {
+    if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
+        return false;
+    }
+    var $table = window.jQuery('#processMessBillsTable');
+    if (!$table.length || !window.jQuery.fn.DataTable.isDataTable($table)) {
+        return false;
+    }
+    var dt = $table.DataTable();
+    dt.off('order.dt.messSort draw.dt.messSort column-reorder.dt.messSort');
+    dt.on('order.dt.messSort draw.dt.messSort column-reorder.dt.messSort', syncProcessMessBillsTableSortIcons);
+    syncProcessMessBillsTableSortIcons();
+    return true;
+}
+window.bindProcessMessBillsTableSortIcons = bindProcessMessBillsTableSortIcons;
+
+document.addEventListener('DOMContentLoaded', function () {
+    var attempts = 0;
+    var timer = setInterval(function () {
+        if (bindProcessMessBillsTableSortIcons()) {
+            clearInterval(timer);
+            return;
+        }
+        if (++attempts > 60) {
+            clearInterval(timer);
+        }
+    }, 150);
+    if (typeof window.jQuery !== 'undefined') {
+        window.jQuery(document).on('mess:columns:saved', function (e, tableId) {
+            if (tableId === 'processMessBillsTable') {
+                syncProcessMessBillsTableSortIcons();
+            }
+        });
+    }
 });
 </script>
 @endpush
@@ -559,6 +744,66 @@
     align-items: center;
     gap: 0.25rem;
 }
+#addProcessMessBillsModal #modalBillsTableBody .modal-bills-skeleton-row {
+    pointer-events: none;
+}
+#addProcessMessBillsModal #modalBillsTableBody .modal-bills-skeleton-row td {
+    height: 3.25rem;
+    vertical-align: middle;
+}
+#addProcessMessBillsModal .modal-bills-skeleton {
+    display: block;
+    width: 100%;
+    height: 0.875rem;
+    border-radius: 4px;
+    background: linear-gradient(90deg, #e2e8f0 25%, #f8fafc 45%, #e2e8f0 65%);
+    background-size: 220% 100%;
+    animation: modal-bills-skeleton-shimmer 1.25s ease-in-out infinite;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--check {
+    width: 1rem;
+    height: 1rem;
+    margin: 0 auto;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--sn {
+    width: 2rem;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--buyer {
+    width: min(11rem, 100%);
+}
+#addProcessMessBillsModal .modal-bills-skeleton--invoice {
+    width: min(7rem, 100%);
+}
+#addProcessMessBillsModal .modal-bills-skeleton--payment {
+    width: min(8rem, 100%);
+}
+#addProcessMessBillsModal .modal-bills-skeleton--total {
+    width: min(5rem, 100%);
+    margin-left: auto;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--status {
+    width: min(5.5rem, 100%);
+    margin: 0 auto;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--action {
+    width: min(7.5rem, 100%);
+    height: 1.5rem;
+    margin: 0 auto;
+}
+#addProcessMessBillsModal .modal-bills-skeleton--receipt {
+    width: 2rem;
+    height: 1.5rem;
+    margin: 0 auto;
+}
+@keyframes modal-bills-skeleton-shimmer {
+    0% { background-position: 100% 0; }
+    100% { background-position: -120% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #addProcessMessBillsModal .modal-bills-skeleton {
+        animation: none;
+    }
+}
 /* Use Material icons instead of DataTables unicode arrows (often invisible on Windows) */
 #processMessBillsTable.dataTable thead > tr > th.sorting:before,
 #processMessBillsTable.dataTable thead > tr > th.sorting:after,
@@ -658,7 +903,10 @@
 .process-mess-stats-section .process-mess-stat-icon .material-symbols-rounded {
     font-size: 1.5rem;
 }
-.process-mess-stats-section .card {
+.process-mess-stats-section .process-mess-stats-progress {
+    height: 0.35rem;
+}
+.process-mess-stats-section > .card > .card-body > .row .card .card-body {
     --bs-card-spacer-y: 0;
 }
 @media (prefers-reduced-motion: reduce) {
@@ -842,16 +1090,16 @@
                        class="table table-sm table-hover align-middle mb-0">
                         <thead>
                             <tr>
-                                <th class="text-nowrap py-3 fw-semibold" style="width: 40px;"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
-                                <th class="text-nowrap py-3 fw-semibold">S.No.</th>
-                                <th class="text-nowrap py-3 fw-semibold">Buyer Name</th>
-                                <th class="text-nowrap py-3 fw-semibold">Invoice No.</th>
-                                <th class="text-nowrap py-3 fw-semibold">Payment Type</th>
-                                <th class="text-nowrap py-3 fw-semibold text-end">Total</th>
-                                <th class="text-nowrap py-3 fw-semibold text-end">Total Due Amount</th>
-                                <th class="text-nowrap py-3 fw-semibold text-center">Status</th>
-                                <th class="text-nowrap py-3 fw-semibold text-center">Actions</th>
-                                <th class="text-nowrap py-3 fw-semibold text-center">Receipt</th>
+                                <th class="text-nowrap py-3 fw-semibold" style="width: 40px;" data-mess-col-original="Select"><input type="checkbox" id="modalSelectAll" class="form-check-input" title="Select all"></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="sno" data-mess-col-original="S.No."><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th mess-th-sorted" data-sort="buyer_name" data-mess-col-original="Buyer Name"><span class="d-inline-flex align-items-center gap-1"><span>Buyer Name</span><span class="mess-report-sort-icon material-symbols-rounded" aria-hidden="true">arrow_upward</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="invoice_no" data-mess-col-original="Invoice No."><span class="d-inline-flex align-items-center gap-1"><span>Invoice No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold mess-sort-th mess-report-sort-th" data-sort="payment_type" data-mess-col-original="Payment Type"><span class="d-inline-flex align-items-center gap-1"><span>Payment Type</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold text-end mess-sort-th mess-report-sort-th" data-sort="total" data-mess-col-original="Total"><span class="d-inline-flex align-items-center gap-1"><span>Total</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold text-end mess-sort-th mess-report-sort-th" data-sort="total_due_amount" data-mess-col-original="Total Due Amount"><span class="d-inline-flex align-items-center gap-1"><span>Total Due Amount</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold text-center mess-sort-th mess-report-sort-th" data-sort="status" data-mess-col-original="Status"><span class="d-inline-flex align-items-center gap-1"><span>Status</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
+                                <th class="text-nowrap py-3 fw-semibold text-center" data-mess-col-original="Actions">Actions</th>
+                                <th class="text-nowrap py-3 fw-semibold text-center" data-mess-col-original="Receipt">Receipt</th>
                             </tr>
                         </thead>
                         <tbody id="modalBillsTableBody">
@@ -1207,6 +1455,51 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    function setModalBillsLoading(isLoading) {
+        var table = document.getElementById('modalBillsTable');
+        var host = document.getElementById('modalBillsTableHost');
+        if (table) {
+            table.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+        }
+        if (host) {
+            host.classList.toggle('is-loading', !!isLoading);
+        }
+    }
+
+    function renderModalBillsSkeleton() {
+        var tbody = document.getElementById('modalBillsTableBody');
+        var modalSelectAllEl = document.getElementById('modalSelectAll');
+        var bulkActionsBar = document.getElementById('modalBulkActionsBar');
+        var paginationInfo = document.getElementById('modalPaginationInfo');
+        var paginationNav = document.getElementById('modalPaginationNav');
+        if (!tbody) return;
+
+        var skeletonRow = function (rowIndex) {
+            var srText = rowIndex === 0
+                ? '<span class="visually-hidden" role="status">Loading bills</span>'
+                : '';
+            return '<tr class="modal-bills-skeleton-row" aria-hidden="' + (rowIndex === 0 ? 'false' : 'true') + '">' +
+                '<td>' + srText + '<span class="modal-bills-skeleton modal-bills-skeleton--check"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--sn"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--buyer"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--invoice"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--payment"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--total"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--status"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--action"></span></td>' +
+                '<td><span class="modal-bills-skeleton modal-bills-skeleton--receipt"></span></td>' +
+                '</tr>';
+        };
+
+        tbody.innerHTML = [0, 1, 2, 3, 4].map(skeletonRow).join('');
+        if (modalSelectAllEl) modalSelectAllEl.checked = false;
+        if (bulkActionsBar) bulkActionsBar.classList.add('d-none');
+        if (paginationInfo) paginationInfo.textContent = 'Loading bills...';
+        if (paginationNav) paginationNav.classList.add('d-none');
+        setModalBillsLoading(true);
+        applyModalBillsColumnVisibility();
+    }
+
     function loadModalBills(page) {
         var requestedPage = parseInt(page, 10);
         modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
@@ -1214,6 +1507,7 @@ document.addEventListener('DOMContentLoaded', function() {
         var clientTypes = getChoicesMultiValues(ct);
         var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
         var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage });
+        renderModalBillsSkeleton();
         fetch(url)
             .then(function(r) { return r.json(); })
             .then(function(data) {
@@ -1341,10 +1635,68 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!b) return true;
         return !b.invoice_notification_fully_sent;
     }
+    window.formatInvoiceNotificationStatusText = formatInvoiceNotificationStatusText;
+
+    function destroyModalBillsDataTableIfAny() {
+        if (typeof window.jQuery === 'undefined' || !window.jQuery.fn.DataTable) {
+            return;
+        }
+        var $ = window.jQuery;
+        var $table = $('#modalBillsTable');
+        if (!$table.length) {
+            return;
+        }
+        if ($.fn.DataTable.isDataTable($table)) {
+            try {
+                $table.DataTable().destroy();
+            } catch (e) {}
+        }
+        var $wrapper = $table.closest('.dataTables_wrapper');
+        if ($wrapper.length) {
+            $table.detach();
+            var $host = $('#modalBillsTableHost');
+            if ($host.length) {
+                $host.empty().append($table);
+            } else {
+                $wrapper.replaceWith($table);
+            }
+        }
+    }
+
+    function initModalBillsColumnManager() {
+        if (typeof window.MessColumnManager === 'undefined' || typeof window.jQuery === 'undefined') {
+            return;
+        }
+        destroyModalBillsDataTableIfAny();
+
+        var $table = window.jQuery('#modalBillsTable');
+        if (!$table.length) return;
+
+        if (!window.MessColumnManager.get('modalBillsTable')) {
+            window.MessColumnManager.init({
+                tableId: 'modalBillsTable',
+                mode: 'dom',
+                $table: $table,
+                colReorder: false,
+                lockedColumns: [0],
+                skipColumns: [7, 8]
+            });
+        } else {
+            window.MessColumnManager.get('modalBillsTable').apply();
+        }
+    }
+
+    function applyModalBillsColumnVisibility() {
+        var mgr = window.MessColumnManager && window.MessColumnManager.get('modalBillsTable');
+        if (mgr) {
+            mgr.apply();
+        }
+    }
 
     function renderModalTable() {
         var tbody = document.getElementById('modalBillsTableBody');
         var modalSelectAllEl = document.getElementById('modalSelectAll');
+        setModalBillsLoading(false);
         if (modalSelectAllEl) modalSelectAllEl.checked = false;
         var filtered = getFilteredModalBills();
         var perPage = parseInt((document.getElementById('modalPerPage') || {}).value || 10, 10);
@@ -2835,25 +3187,16 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 function printProcessMessBillsMainTable() {
-    var table = document.getElementById('processMessBillsTable');
-    if (!table) { window.print(); return; }
-
-    // Use DataTables API so print includes ALL filtered rows, not just current page
-    var dt = null;
-    try {
-        if (window.jQuery && window.jQuery.fn && window.jQuery.fn.DataTable && window.jQuery.fn.DataTable.isDataTable('#processMessBillsTable')) {
-            dt = window.jQuery('#processMessBillsTable').DataTable();
-        }
-    } catch (e) {}
-
-    var rowsData = [];
-    if (dt) {
-        rowsData = dt.rows({ search: 'applied' }).data().toArray();
-    } else {
-        rowsData = Array.from(table.querySelectorAll('tbody tr')).map(function (tr) {
-            return Array.from(tr.children).map(function (td) { return td.innerHTML; });
+    if (window.MessColumnManager && typeof window.MessColumnManager.printDataTable === 'function') {
+        window.MessColumnManager.printDataTable('processMessBillsTable', {
+            template: 'lbsnaa',
+            title: 'Process Mess Bills - Employee',
+            periodText: 'Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}'
         });
+        return;
     }
+    if (window.alert) {
+        window.alert('Print is not available. Please refresh the page and try again.');
 
     // Remove action column (last column) for print
     var actionColIdx = 9;
@@ -2925,47 +3268,6 @@ function printProcessMessBillsMainTable() {
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
     }
-    .lbsnaa-header {
-      border-bottom: 2px solid #004a93;
-      padding-bottom: .75rem;
-      margin-bottom: 1rem;
-    }
-    .brand-line-1 { font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; color: #004a93; }
-    .brand-line-2 { font-size: 1.1rem; font-weight: 700; text-transform: uppercase; color: #222; }
-    .brand-line-3 { font-size: .8rem; color: #555; }
-    .report-meta { font-size: .8rem; margin-bottom: .75rem; }
-    .report-meta span { display: inline-block; margin-right: 1.5rem; }
-    .container-fluid { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
-    table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 9px; }
-    th, td {
-      padding: 4px 6px;
-      border: 1px solid #dee2e6;
-      white-space: normal !important;
-      word-break: break-word;
-      overflow-wrap: anywhere;
-      vertical-align: top;
-    }
-    thead th { background: #f8f9fa; font-weight: 600; }
-    .table, .table * { white-space: normal !important; }
-    .table-responsive { overflow: visible !important; }
-    thead { display: table-header-group; }
-    @page { size: A4 landscape; margin: 8mm; }
-    @media print { body { margin: 0; } }
-  </style>
-</head>
-<body>
-  <div class="container-fluid">
-    <div class="table-responsive">
-      ${printableTable}
-    </div>
-  </div>
-
-  <script>
-    window.addEventListener('load', function() { window.print(); });
-  <\/script>
-</body>
-</html>`);
-    printWindow.document.close();
 }
 
 function printProcessMessBillsTable() {
@@ -2983,6 +3285,10 @@ function printProcessMessBillsTable() {
         var periodText = dateFrom || dateTo
             ? ('From ' + (dateFrom || 'Start') + ' To ' + (dateTo || 'End'))
             : 'All Dates';
+
+        var originalThead = table.querySelector('thead');
+        var headerRow = originalThead ? originalThead.querySelector('tr') : null;
+        var headerCells = headerRow ? Array.from(headerRow.children) : [];
 
     // Build printable table with LBSNAA header inside thead so it repeats on every page
     // Print ALL rows from modal dataset (not only current "per page" view)
@@ -3008,6 +3314,43 @@ function printProcessMessBillsTable() {
             '<td>' + (b && b.invoice_notification_sent ? ('Invoice Sent · ' + (b.invoice_notification_read ? 'Read' : 'Unread')) : '—') + '</td>' +
             '</tr>';
     }).join('');
+
+        function modalBillPrintCell(b, idx, sn) {
+            switch (idx) {
+                case 1: return String(sn);
+                case 2: return b.buyer_name || '—';
+                case 3: return b.invoice_no || '—';
+                case 4: return b.payment_type || '—';
+                case 5: return b.total || '0';
+                case 6:
+                    return (typeof window.formatInvoiceNotificationStatusText === 'function')
+                        ? window.formatInvoiceNotificationStatusText(b)
+                        : '—';
+                default: return '';
+            }
+        }
+
+        var filtered = bills || [];
+        var bodyHtml = filtered.map(function (b, i) {
+            var sn = b.sno || (i + 1);
+            return '<tr>' + printColIndexes.map(function (idx) {
+                var cls = idx === 5 ? ' class="text-end"' : (idx === 6 ? ' class="text-center"' : '');
+                return '<td' + cls + '>' + modalBillPrintCell(b, idx, sn) + '</td>';
+            }).join('') + '</tr>';
+        }).join('');
+
+        if (!bodyHtml) {
+            if (window.alert) {
+                window.alert('No bills to print. Load bills first or adjust your filters.');
+            }
+            return;
+        }
+
+        var printWindow = window.open('', '_blank');
+        if (!printWindow) {
+            window.print();
+            return;
+        }
 
         var printableTable = `
       <table class="table table-sm table-bordered align-middle mb-0">
