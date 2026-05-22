@@ -137,6 +137,31 @@
     color: var(--sidebar-icon) !important;
 }
 
+/* Expand/collapse control on mini-sidebar rail (desktop, icon only) */
+@media (min-width: 992px) {
+    .sargam-mini-sidebar-toggle-item {
+        position: sticky;
+        top: 0;
+        z-index: 1062;
+        background: var(--sidebar-bg) !important;
+        margin-bottom: 4px !important;
+    }
+
+    .sargam-mini-sidebar-toggle-item .sidebartoggler {
+        cursor: pointer;
+        color: var(--sidebar-icon) !important;
+        min-height: 48px;
+    }
+
+    .sargam-mini-sidebar-toggle-item .sidebartoggler:hover .material-icons {
+        color: var(--sidebar-primary) !important;
+    }
+
+    .sargam-mini-sidebar-toggle-item .sidebar-google-icon-wrap {
+        min-height: 40px;
+    }
+}
+
 /* ════════════════════════════════════════════
    2. SIDEBAR MENU PANEL (Right expanded area)
    ════════════════════════════════════════════ */
@@ -612,13 +637,10 @@
 }
 
 /* ════════════════════════════════════════════
-   9. FLOATING HOVER FLYOUT (desktop overlay)
+   9. CLICK-TOGGLE SIDEBAR (desktop — no hover expand)
    ════════════════════════════════════════════ */
 @media (min-width: 992px) {
-    /* Allow flyout to extend outside mini rail (all sidebar layout variants in this project). */
     .side-mini-panel,
-    .side-mini-panel > .vh-100.overflow-hidden,
-    .side-mini-panel > div:not(.sidebarmenu),
     .side-mini-panel .iconbar,
     .side-mini-panel .iconbar > div {
         overflow: visible !important;
@@ -630,154 +652,109 @@
         overflow: hidden;
     }
 
-    /* Keep flyout on-screen; theme hides it at left:-240px in mini-sidebar mode */
-    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav,
-    html[data-layout="vertical"] body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav,
+    /* Collapsed: icon rail only (toggle button) */
+    body[data-sidebartype="mini-sidebar"] .side-mini-panel {
+        width: 90px !important;
+    }
+
+    body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu,
     body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav,
-    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav,
-    .side-mini-panel .sidebarmenu .sidebar-nav {
-        left: 90px !important;
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav {
+        display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        left: -240px !important;
     }
 
-    .side-mini-panel {
-        width: 90px;
-        overflow: visible;
+    /* Expanded: mini-nav + active submenu (toggle button) */
+    body[data-sidebartype="full"] .side-mini-panel,
+    body[data-sidebartype="full"] #sidebar-home .sidebar-google-style.side-mini-panel,
+    body[data-sidebartype="full"] #sidebar-setup .sidebar-google-style.side-mini-panel,
+    body[data-sidebartype="full"] #sidebar-communications .sidebar-google-style.side-mini-panel {
+        width: auto !important;
+        min-width: 365px !important;
+        overflow: visible !important;
     }
 
-    .side-mini-panel .iconbar {
+    body[data-sidebartype="full"] .side-mini-panel .iconbar,
+    body[data-sidebartype="full"] .side-mini-panel .iconbar > div {
         position: relative;
-        overflow: visible;
+        overflow: visible !important;
+        flex-direction: row !important;
+        align-items: stretch !important;
     }
 
-    /* Invisible hover bridge: mini strip → flyout (prevents flicker) */
-    .side-mini-panel .sidebarmenu {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: calc(90px + 290px);
-        height: 100%;
-        min-height: 100vh;
-        pointer-events: none;
-        z-index: 1040;
+    body[data-sidebartype="full"] .side-mini-panel .mini-nav {
+        flex: 0 0 90px !important;
+        width: 90px !important;
+        max-width: 90px;
     }
 
-    .side-mini-panel .mini-nav {
-        position: relative;
-        z-index: 1051;
-        pointer-events: auto;
-    }
-
-    .side-mini-panel .sidebarmenu .sidebar-nav {
-        position: absolute !important;
-        top: 128px;
-        left: 90px !important;
-        width: 275px;
-        max-width: min(275px, calc(100vw - 110px));
+    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu {
+        position: relative !important;
+        flex: 1 1 275px !important;
+        width: 275px !important;
+        min-width: 275px;
+        height: auto;
+        min-height: calc(100vh - 120px);
+        pointer-events: auto !important;
         display: block !important;
+        overflow: visible !important;
+        margin-top: 125px !important;
+    }
+
+    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav,
+    html[data-layout="vertical"] body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav {
+        position: relative !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100% !important;
+        max-width: 100%;
+        height: calc(100vh - 130px);
+        margin-top: 0 !important;
+        display: none !important;
         opacity: 0;
         visibility: hidden;
-        transform: translateX(-10px);
+        transform: none;
         pointer-events: none;
         transition:
             opacity 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-            transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
             visibility 0.28s cubic-bezier(0.4, 0, 0.2, 1);
         z-index: 1050;
-        box-shadow: 0 10px 40px rgba(60, 64, 67, 0.18);
-        border: 1px solid var(--sidebar-border);
-        border-radius: 0 12px 12px 0 !important;
+        box-shadow: none;
+        border: none;
+        border-left: 1px solid var(--sidebar-border) !important;
+        border-radius: 0 !important;
         overflow: hidden;
+        background: var(--sidebar-bg) !important;
     }
 
-    .side-mini-panel .sidebarmenu nav.sidebar-nav:not(.d-block):not(.is-active):not(.sargam-menu-visible) {
-        display: none !important;
-    }
-
-    /* Flyout panels: hidden until JS marks the active menu */
-    .side-mini-panel .sidebarmenu .sargam-menu-flyout:not(.is-active):not(.d-block):not(.sargam-menu-visible) {
-        display: none !important;
-    }
-
-    /* Keep the active module menu visible after click / page load (not only while hovering) */
-    .side-mini-panel .sidebarmenu .sidebar-nav.is-active.sargam-menu-visible,
-    .side-mini-panel .sidebarmenu nav.sidebar-nav.d-block.is-active,
-    .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active,
-    .side-mini-panel[data-flyout-open="true"] .sidebarmenu .sidebar-nav.is-active {
+    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav.is-active,
+    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu nav.sidebar-nav.d-block.is-active,
+    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav.is-active.sargam-menu-visible,
+    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu nav.sidebar-nav.is-active.sargam-menu-visible {
         display: block !important;
-        left: 90px !important;
+        left: 0 !important;
         opacity: 1 !important;
         visibility: visible !important;
-        transform: translateX(0) !important;
+        transform: none !important;
         pointer-events: auto !important;
     }
 
-    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav.is-active.left-none,
-    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active.left-none {
-        left: 90px !important;
-    }
-
-  .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu,
-  .side-mini-panel:has(.sidebarmenu:hover) .sidebarmenu,
-  .side-mini-panel:focus-within .sidebarmenu,
-  .side-mini-panel.expanded .sidebarmenu,
-  .side-mini-panel.sidebar-flyout-open .sidebarmenu,
-  .side-mini-panel[data-flyout-open="true"] .sidebarmenu {
-        pointer-events: auto;
-    }
-
-  .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu .sidebar-nav.d-block,
-  .side-mini-panel:has(.sidebarmenu:hover) .sidebarmenu .sidebar-nav.d-block,
-  .side-mini-panel:focus-within .sidebarmenu .sidebar-nav.d-block,
-  .side-mini-panel.expanded .sidebarmenu .sidebar-nav.d-block,
-  .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.d-block,
-  .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu .sidebar-nav.is-active,
-  .side-mini-panel:has(.sidebarmenu:hover) .sidebarmenu .sidebar-nav.is-active,
-  .side-mini-panel:focus-within .sidebarmenu .sidebar-nav.is-active,
-  .side-mini-panel.expanded .sidebarmenu .sidebar-nav.is-active,
-  .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active,
-  .side-mini-panel.expanded .sidebarmenu nav.sidebar-nav.is-active,
-  .side-mini-panel.sidebar-flyout-open .sidebarmenu nav.sidebar-nav.is-active,
-  .side-mini-panel[data-flyout-open="true"] .sidebarmenu nav.sidebar-nav.is-active,
-  .side-mini-panel.expanded .sidebarmenu nav.sidebar-nav,
-  .side-mini-panel.sidebar-flyout-open .sidebarmenu nav.sidebar-nav,
-  .side-mini-panel[data-flyout-open="true"] .sidebarmenu nav.sidebar-nav {
-        opacity: 1;
-        visibility: visible;
-        transform: translateX(0);
-        pointer-events: auto;
-    }
-
-    /* Active flyout panel — beats theme display:none and left:-240px */
-    .side-mini-panel.expanded .sidebarmenu .sidebar-nav.is-active,
-    .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active,
-    .side-mini-panel[data-flyout-open="true"] .sidebarmenu .sidebar-nav.is-active,
-    .side-mini-panel:has(.mini-nav .mini-nav-item:hover) .sidebarmenu .sidebar-nav.is-active {
-        display: block !important;
-        left: 90px !important;
-        opacity: 1 !important;
-        visibility: visible !important;
-        transform: translateX(0) !important;
-        pointer-events: auto !important;
-    }
-
-    /* Single-menu sidebars (e.g. academics): hide inactive panels only */
-    .side-mini-panel.expanded .sidebarmenu nav.sidebar-nav:not(.d-block):not(.is-active),
-    .side-mini-panel.sidebar-flyout-open .sidebarmenu nav.sidebar-nav:not(.d-block):not(.is-active) {
+    body[data-sidebartype="full"] .side-mini-panel .sidebarmenu nav.sidebar-nav:not(.is-active):not(.sargam-menu-visible) {
         display: none !important;
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
     }
 
-    html[dir="rtl"][data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav {
+    html[dir="rtl"][data-layout="vertical"] body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav {
         left: auto !important;
         right: 90px !important;
         border-radius: 12px 0 0 12px;
     }
 
-    html[dir="rtl"] .side-mini-panel .sidebarmenu {
-        left: auto;
-        right: 0;
+    html[dir="rtl"][data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav {
+        left: auto !important;
+        right: -240px !important;
     }
 }
 
@@ -840,50 +817,22 @@
     }
 }
 
-/* Final override: theme hides flyouts at left:-240px / display:none (styles.css) */
+/* Final override: expanded sidebar only when data-sidebartype=full (no hover flyout) */
 @media (min-width: 992px) {
-    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel[data-flyout-open="true"] .sidebarmenu .sidebar-nav.is-active,
-    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel.expanded .sidebarmenu .sidebar-nav.is-active,
-    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel.sidebar-flyout-open .sidebarmenu .sidebar-nav.is-active,
-    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu.hovermenus .sidebar-nav.is-active.left-none {
+    html[data-layout="vertical"] body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav.is-active.left-none,
+    html[data-layout="vertical"] body[data-sidebartype="full"] .side-mini-panel .sidebarmenu .sidebar-nav.is-active,
+    html[data-layout="vertical"] body[data-sidebartype="full"] .side-mini-panel .sidebarmenu nav.sidebar-nav.sargam-menu-visible {
         display: block !important;
-        left: 90px !important;
+        left: 0 !important;
         opacity: 1 !important;
         visibility: visible !important;
-        transform: translateX(0) !important;
+        transform: none !important;
         pointer-events: auto !important;
         z-index: 1060 !important;
     }
-}
 
-/* ════════════════════════════════════════════
-   12. PERMANENT MINI RAIL + HOVER-ONLY FLYOUT
-   (body.sargam-sidebar-mini-only)
-   ════════════════════════════════════════════ */
-@media (min-width: 992px) {
-    html[data-layout="vertical"] body.sargam-sidebar-mini-only[data-sidebartype="mini-sidebar"] .page-wrapper,
-    html[data-layout="vertical"] body.sargam-sidebar-mini-only .page-wrapper {
-        margin-left: 60px !important;
-    }
-
-    @media (min-width: 1300px) {
-        html[data-layout="vertical"] body.sargam-sidebar-mini-only .page-wrapper {
-            margin-left: 60px !important;
-        }
-    }
-
-    /* Flyout hidden until hover / focus — not pinned open after route restore */
-    body.sargam-sidebar-mini-only .side-mini-panel .sidebarmenu .sidebar-nav.is-active.sargam-menu-visible,
-    body.sargam-sidebar-mini-only .side-mini-panel .sidebarmenu nav.sidebar-nav.d-block.is-active,
-    body.sargam-sidebar-mini-only .side-mini-panel .sidebarmenu .sidebar-nav.is-active {
-        opacity: 0 !important;
-        visibility: hidden !important;
-        transform: translateX(-10px) !important;
-        pointer-events: none !important;
-    }
-
-    body.sargam-sidebar-mini-only .side-mini-panel:not(:hover):not(:focus-within):not(.sidebar-flyout-open):not(.expanded):not([data-flyout-open="true"]) .sidebarmenu .sidebar-nav.is-active.sargam-menu-visible,
-    body.sargam-sidebar-mini-only .side-mini-panel:not(:hover):not(:focus-within):not(.sidebar-flyout-open):not(.expanded):not([data-flyout-open="true"]) .sidebarmenu nav.sidebar-nav.d-block.is-active {
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav.is-active,
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .side-mini-panel .sidebarmenu .sidebar-nav.sargam-menu-visible {
         display: none !important;
     }
 }

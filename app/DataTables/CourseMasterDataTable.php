@@ -80,8 +80,12 @@ class CourseMasterDataTable extends DataTable
                 $isActive = $row->active_inactive == 1;
                 $csrf = csrf_token();
 
-                $statusToggle = '<a href="javascript:void(0)" class="programme-status-toggle-btn" data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" data-status="'.($isActive ? '1' : '0').'" aria-label="'.($isActive ? 'Deactivate' : 'Activate').' course">'
-                    .'<span class="material-icons material-symbols-rounded" style="font-size:18px; color:'.($isActive ? '#198754' : '#6c757d').';">'.($isActive ? 'toggle_on' : 'toggle_off').'</span></a>';
+                $checked = $isActive ? 'checked' : '';
+                $statusToggle = '<div class="form-check form-switch mb-0">'
+                    .'<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    .' data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'"'
+                    .' aria-label="'.($isActive ? 'Deactivate' : 'Activate').' course" '.$checked.'>'
+                    .'</div>';
 
                 $deleteBtn = '<a href="javascript:void(0)" class="programme-delete-btn" data-delete-url="'.$deleteUrl.'" data-csrf="'.$csrf.'" aria-label="Delete course">'
                     .'<span class="material-icons material-symbols-rounded" style="font-size:20px; color:#dc3545;">delete</span></a>';

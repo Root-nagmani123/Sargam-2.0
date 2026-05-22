@@ -292,10 +292,12 @@
 }
 
 /* Sidebar toggle icon rotation */
+.sidebarToggleIcon,
 #sidebarToggleIcon {
     transition: transform 0.3s ease-in-out;
     display: inline-block;
 }
+.sidebarToggleIcon.rotated,
 #sidebarToggleIcon.rotated {
     transform: rotate(180deg);
 }
@@ -387,7 +389,7 @@
 
 </head>
 
-<body data-sidebartype="mini-sidebar" class="sargam-sidebar-mini-only">
+<body data-sidebartype="full">
     <!-- Preloader -->
     <div class="alphabet-loader" id="alphabetLoader">
         <div class="letters">
@@ -470,7 +472,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const sidebar = document.getElementById("main-wrapper");
     const toggleBtn = document.getElementById("headerCollapse");
     // Query all icons across all tabs (multiple instances due to tab structure)
-    const icons = document.querySelectorAll("#sidebarToggleIcon");
+    const icons = document.querySelectorAll(".sidebarToggleIcon, #sidebarToggleIcon");
     const body = document.body;
     const sidebarmenus = document.querySelectorAll(".sidebarmenu");
 
@@ -502,35 +504,17 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    body.classList.add('sargam-sidebar-mini-only');
-    try {
-        localStorage.setItem('SidebarType', 'mini-sidebar');
-    } catch (e) {}
-    body.setAttribute('data-sidebartype', 'mini-sidebar');
-    sidebar.classList.remove('show-sidebar');
-    sidebarmenus.forEach(function(el) {
-        el.classList.add('close');
-    });
-    icons.forEach(function(icon) {
-        icon.textContent = 'keyboard_double_arrow_right';
-        icon.classList.remove('rotated');
-    });
-    if (typeof window.sargamEnforcePermanentMiniSidebar === 'function') {
-        window.sargamEnforcePermanentMiniSidebar();
+    if (typeof window.sargamSyncSidebarToggleIcons === 'function') {
+        window.sargamSyncSidebarToggleIcons(body.getAttribute('data-sidebartype') || 'full');
     }
     setTimeout(adjustAllDataTables, 300);
 
     // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
     function syncIconWithSidebar(type) {
-        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
-        allIcons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            if (type === "full") {
-                icon.classList.add("rotated");
-            } else {
-                icon.classList.remove("rotated");
-            }
-        });
+        if (typeof window.sargamSyncSidebarToggleIcons === 'function') {
+            window.sargamSyncSidebarToggleIcons(type);
+            return;
+        }
     }
 
     const observer = new MutationObserver(function(mutations) {

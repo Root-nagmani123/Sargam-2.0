@@ -81,14 +81,6 @@
 .cgt-action-edit:hover { background: #d3e3fd; }
 .cgt-action-edit .material-icons,
 .cgt-action-edit .material-symbols-rounded { color: #1a73e8; }
-.cgt-action-toggle { background: #e6f4ea; }
-.cgt-action-toggle:hover { background: #c8e6c9; }
-.cgt-action-toggle .material-icons,
-.cgt-action-toggle .material-symbols-rounded { color: #198754; }
-.cgt-action-toggle-off { background: #f0f0f0; }
-.cgt-action-toggle-off:hover { background: #e0e0e0; }
-.cgt-action-toggle-off .material-icons,
-.cgt-action-toggle-off .material-symbols-rounded { color: #6c757d; }
 .cgt-action-delete { background: #fce8e6; }
 .cgt-action-delete:hover { background: #f8c9c5; }
 .cgt-action-delete .material-icons,
@@ -276,15 +268,11 @@ $(function() {
 
     $(document).on('change', '.plain-status-toggle', function() {
         var checkbox = $(this);
-        var previousState = !checkbox.is(':checked'); // save previous state
+        var previousState = !checkbox.is(':checked');
         var pk = checkbox.data('id');
         var active_inactive = checkbox.is(':checked') ? 1 : 0;
 
-        var actionText = active_inactive ? 'activate' : 'deactivate';
-        var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
-        var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
-
-        if (newStatus == 1) {
+        if (active_inactive == 1) {
             // ACTIVATE
             Swal.fire({
                 icon: 'info',
@@ -305,6 +293,8 @@ $(function() {
                     $('#active_inactive').val(1);
                     table.ajax.reload(null, false);
                     Swal.fire({ icon: 'success', title: 'Activated!', text: 'Course group has been activated.', timer: 1500, showConfirmButton: false });
+                } else {
+                    checkbox.prop('checked', previousState);
                 }
             });
         } else {
@@ -328,6 +318,8 @@ $(function() {
                     $('#active_inactive').val(0);
                     table.ajax.reload(null, false);
                     Swal.fire({ icon: 'success', title: 'Deactivated!', text: 'Course group has been deactivated.', timer: 1500, showConfirmButton: false });
+                } else {
+                    checkbox.prop('checked', previousState);
                 }
             });
         }

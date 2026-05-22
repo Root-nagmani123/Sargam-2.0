@@ -32,6 +32,7 @@ $isContractualEmployee = $emp && (int) ($emp->payroll ?? 0) !== 0;
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
+                                            @include('admin.layouts.sidebar.partials.mini-sidebar-toggle')
                                             <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                 id="mini-1">
                                                 <a href="javascript:void(0)"
@@ -123,7 +124,7 @@ $isContractualEmployee = $emp && (int) ($emp->payroll ?? 0) !== 0;
 
 <style>
     /* Google-style sidebar - home (matches setup) */
-    #sidebar-home .sidebar-google-style.side-mini-panel {
+    body[data-sidebartype="mini-sidebar"] #sidebar-home .sidebar-google-style.side-mini-panel {
         width: 90px;
     }
 

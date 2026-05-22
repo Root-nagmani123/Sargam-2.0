@@ -151,7 +151,7 @@
     min-width: 2.25rem;
     height: 2.25rem;
     padding: 0 0.45rem;
-    border-radius: 999px !important;
+    border-radius: 10px !important;
     display: inline-flex;
     align-items: center;
     justify-content: center;

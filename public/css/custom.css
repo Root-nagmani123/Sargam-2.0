@@ -81,3 +81,70 @@ body.custom-loaded {
 }
 
 /* DataTables search / pagination / footer — see public/css/datatables-enhanced.css */
+
+/* ════════════════════════════════════════════
+   Global status toggle (form-switch)
+   Outline pill: amber = inactive, green = active
+   Applies to .status-toggle, .plain-status-toggle, and all table switches
+   ════════════════════════════════════════════ */
+:root {
+    --sargam-switch-off: #e6a817;
+    --sargam-switch-on: #198754;
+    --sargam-switch-knob-off: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23e6a817'/%3e%3c/svg%3e");
+    --sargam-switch-knob-on: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23198754'/%3e%3c/svg%3e");
+}
+
+.form-switch {
+    min-height: auto;
+}
+
+.form-switch .form-check-input,
+.form-switch .form-check-input.status-toggle,
+.form-switch .form-check-input.plain-status-toggle {
+    width: 2.2em;
+    height: 1.15em;
+    margin-top: 0;
+    cursor: pointer;
+    border: 2px solid var(--sargam-switch-off);
+    background-color: #fff;
+    background-image: var(--sargam-switch-knob-off);
+    background-position: left center;
+    background-size: contain;
+    transition: background-position 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-switch .form-check-input:focus {
+    border-color: var(--sargam-switch-off);
+    background-image: var(--sargam-switch-knob-off);
+    box-shadow: 0 0 0 0.2rem rgba(230, 168, 23, 0.25);
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #fff;
+    border-color: var(--sargam-switch-on);
+    background-image: var(--sargam-switch-knob-on);
+    background-position: right center;
+}
+
+.form-switch .form-check-input:checked:focus {
+    border-color: var(--sargam-switch-on);
+    background-image: var(--sargam-switch-knob-on);
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* Compact switches in DataTable / action columns */
+.form-check.form-switch.mb-0,
+.form-check.form-switch.d-inline-block {
+    padding-left: 2.5em;
+    line-height: 1;
+}
+
+.form-check.form-switch.mb-0 .form-check-input,
+.form-check.form-switch.d-inline-block .form-check-input {
+    margin-left: -2.5em;
+}
+
+.form-switch .form-check-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}

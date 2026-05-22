@@ -71,9 +71,7 @@ class CourseGroupTypeController extends Controller
 
             // Action Icons
             ->addColumn('action', function ($row) {
-                $toggleIcon = $row->active_inactive == 1 ? 'toggle_on' : 'toggle_off';
-                $toggleClass = $row->active_inactive == 1 ? 'cgt-action-toggle' : 'cgt-action-toggle-off';
-                $toggleStatus = $row->active_inactive == 1 ? '1' : '0';
+                $checked = $row->active_inactive == 1 ? 'checked' : '';
 
                 return '
     <div class="d-flex align-items-center justify-content-center gap-2" role="group" aria-label="Row actions">
@@ -81,11 +79,10 @@ class CourseGroupTypeController extends Controller
            class="edit-btn cgt-action-btn cgt-action-edit border-0 p-0 bg-transparent" title="Edit" aria-label="Edit">
             <i class="material-icons material-symbols-rounded">edit</i>
         </a>
-        <a href="javascript:void(0)" class="cgt-status-toggle-btn cgt-action-btn border-0 p-0 bg-transparent ' . $toggleClass . '"
-           data-id="' . $row->pk . '" data-status="' . $toggleStatus . '"
-           title="Toggle status" aria-label="Toggle status">
-            <i class="material-icons material-symbols-rounded">' . $toggleIcon . '</i>
-        </a>
+        <div class="form-check form-switch mb-0">
+            <input class="form-check-input plain-status-toggle" type="checkbox" role="switch"
+                   data-id="' . $row->pk . '" title="Toggle status" aria-label="Toggle status" ' . $checked . '>
+        </div>
         <a href="javascript:void(0)" data-id="' . $row->pk . '"
            class="delete-btn cgt-action-btn cgt-action-delete border-0 p-0 bg-transparent" title="Delete" aria-label="Delete">
             <i class="material-icons material-symbols-rounded">delete</i>

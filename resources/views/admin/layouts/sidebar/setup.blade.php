@@ -32,6 +32,7 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
+                                            @include('admin.layouts.sidebar.partials.mini-sidebar-toggle')
                                             <li class="mini-nav-item {{ request()->is('academic*') ? 'selected' : '' }}" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -149,7 +150,7 @@
 
 <style>
     /* Google-style sidebar - light gray, icon above text, oval selected state */
-    #sidebar-setup .sidebar-google-style.side-mini-panel {
+    body[data-sidebartype="mini-sidebar"] #sidebar-setup .sidebar-google-style.side-mini-panel {
         width: 90px;
     }
 

@@ -80,69 +80,38 @@ function sargamIsDesktopFlyoutMode() {
     return !!(window.matchMedia && window.matchMedia('(min-width: 992px)').matches);
 }
 
-function sargamEnforcePermanentMiniSidebar() {
-    var body = document.body;
-    if (!body) {
-        return;
-    }
-    body.classList.add('sargam-sidebar-mini-only');
-    if (!sargamIsDesktopFlyoutMode()) {
-        return;
-    }
-    body.setAttribute('data-sidebartype', 'mini-sidebar');
-    try {
-        localStorage.setItem('SidebarType', 'mini-sidebar');
-    } catch (e) {}
-    var mainWrapper = document.getElementById('main-wrapper');
-    if (mainWrapper) {
-        mainWrapper.classList.remove('show-sidebar');
-    }
-    document.querySelectorAll('.sidebarmenu').forEach(function (el) {
-        el.classList.add('close');
-    });
+function sargamIsSidebarExpanded() {
+    return (
+        document.body &&
+        document.body.getAttribute('data-sidebartype') === 'full'
+    );
 }
 
-window.sargamEnforcePermanentMiniSidebar = sargamEnforcePermanentMiniSidebar;
-
-document.addEventListener(
-    'click',
-    function (e) {
-        if (!sargamIsDesktopFlyoutMode()) {
-            return;
-        }
-        if (!e.target.closest('.sidebartoggler, #headerCollapse')) {
-            return;
-        }
-        e.preventDefault();
-        e.stopImmediatePropagation();
-        sargamEnforcePermanentMiniSidebar();
-    },
-    true
-);
-
-(function bootPermanentMiniSidebar() {
-    function run() {
-        sargamEnforcePermanentMiniSidebar();
-        if (window.MutationObserver && document.body) {
-            new MutationObserver(function () {
-                if (
-                    sargamIsDesktopFlyoutMode() &&
-                    document.body.getAttribute('data-sidebartype') !== 'mini-sidebar'
-                ) {
-                    sargamEnforcePermanentMiniSidebar();
-                }
-            }).observe(document.body, {
-                attributes: true,
-                attributeFilter: ['data-sidebartype'],
-            });
-        }
+function sargamGetPreferredSidebarType() {
+    var type = 'full';
+    try {
+        type = localStorage.getItem('SidebarType') || 'full';
+    } catch (e) {}
+    if (!sargamIsDesktopFlyoutMode()) {
+        return 'mini-sidebar';
     }
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', run);
-    } else {
-        run();
-    }
-})();
+    return type === 'mini-sidebar' ? 'mini-sidebar' : 'full';
+}
+
+function sargamSyncSidebarToggleIcons(type) {
+    var expanded = type === 'full';
+    document.querySelectorAll('.sidebarToggleIcon, #sidebarToggleIcon').forEach(function (icon) {
+        icon.textContent = expanded ? 'left_panel_close' : 'left_panel_open';
+        icon.classList.remove('rotated');
+    });
+    document.querySelectorAll('[data-sargam-sidebar-expand-toggle]').forEach(function (btn) {
+        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+        btn.setAttribute(
+            'aria-label',
+            expanded ? 'Collapse sidebar' : 'Expand sidebar'
+        );
+    });
+}
 
 function sargamRunSidebarNavigationInit() {
     'use strict';
@@ -159,7 +128,110 @@ function sargamRunSidebarNavigationInit() {
         return sargamIsDesktopFlyoutMode();
     }
 
+    function isSidebarExpanded() {
+        return sargamIsSidebarExpanded();
+    }
+
+    function refreshVisiblePaneMiniNav() {
+        var activePane = document.querySelector(
+            '#sidebarTabContent .tab-pane.show.active'
+        );
+        var miniNav =
+            (activePane && activePane.querySelector('.mini-nav')) ||
+            document.querySelector('.side-mini-panel:not([style*="display: none"]) .mini-nav') ||
+            document.querySelector('.side-mini-panel .mini-nav');
+        if (miniNav) {
+            restoreOrActivatePaneMiniNav(miniNav);
+        }
+    }
+
+    function applySidebarMenusForType(type) {
+        document.querySelectorAll('.sidebarmenu').forEach(function (el) {
+            if (type === 'full') {
+                el.classList.remove('close');
+            } else {
+                el.classList.add('close');
+            }
+        });
+        document.querySelectorAll('.side-mini-panel').forEach(function (panel) {
+            if (type === 'mini-sidebar') {
+                hidePaneFlyoutMenus(panel);
+                setPanelFlyoutOpen(panel, false);
+            }
+        });
+        if (type === 'full') {
+            global.requestAnimationFrame(function () {
+                refreshVisiblePaneMiniNav();
+            });
+        }
+    }
+
+    global.sargamSetSidebarType = function (type, persist) {
+        var body = document.body;
+        if (!body) {
+            return;
+        }
+        body.classList.remove('sargam-sidebar-mini-only');
+        body.setAttribute('data-sidebartype', type);
+        if (persist) {
+            try {
+                localStorage.setItem('SidebarType', type);
+            } catch (e) {}
+        }
+        applySidebarMenusForType(type);
+        sargamSyncSidebarToggleIcons(type);
+        var mainWrapper = document.getElementById('main-wrapper');
+        if (mainWrapper && isDesktopFlyoutMode() && type === 'full') {
+            mainWrapper.classList.remove('show-sidebar');
+        }
+        setTimeout(adjustAllDataTables, 200);
+    };
+
+    global.sargamToggleSidebarType = function () {
+        var current = document.body.getAttribute('data-sidebartype') || 'full';
+        var next = current === 'full' ? 'mini-sidebar' : 'full';
+        global.sargamSetSidebarType(next, true);
+    };
+
+    global.sargamSyncSidebarToggleIcons = sargamSyncSidebarToggleIcons;
+
+    function bindSidebarToggleClick() {
+        if (document.documentElement.getAttribute('data-sargam-toggle-bound') === '1') {
+            return;
+        }
+        document.documentElement.setAttribute('data-sargam-toggle-bound', '1');
+        document.addEventListener(
+            'click',
+            function (e) {
+                if (
+                    !e.target.closest(
+                        '.sidebartoggler, #headerCollapse, [data-sargam-sidebar-expand-toggle]'
+                    )
+                ) {
+                    return;
+                }
+                e.preventDefault();
+                e.stopImmediatePropagation();
+
+                if (!isDesktopFlyoutMode()) {
+                    var mainWrapper = document.getElementById('main-wrapper');
+                    if (mainWrapper) {
+                        mainWrapper.classList.toggle('show-sidebar');
+                    }
+                    document.querySelectorAll('.sidebarmenu').forEach(function (el) {
+                        el.classList.toggle('close');
+                    });
+                    return;
+                }
+
+                global.sargamToggleSidebarType();
+            },
+            true
+        );
+    }
+
     if (document.documentElement.getAttribute('data-sargam-sidebar-nav-init') === '1') {
+        bindSidebarToggleClick();
         return;
     }
 
@@ -256,6 +328,8 @@ function sargamRunSidebarNavigationInit() {
         getPaneFlyoutMenus(paneRoot).forEach(function (nav) {
             nav.classList.remove('d-block', 'is-active', 'sargam-menu-visible', 'left-none');
             nav.style.removeProperty('display');
+            nav.style.removeProperty('visibility');
+            nav.style.removeProperty('opacity');
         });
     }
 
@@ -265,6 +339,16 @@ function sargamRunSidebarNavigationInit() {
         }
         nav.classList.add('d-block', 'is-active', 'sargam-menu-visible', 'left-none');
         nav.style.removeProperty('display');
+        if (isSidebarExpanded()) {
+            nav.style.setProperty('display', 'block', 'important');
+            nav.style.setProperty('visibility', 'visible', 'important');
+            nav.style.setProperty('opacity', '1', 'important');
+        }
+        var paneRoot = nav.closest('.side-mini-panel');
+        var miniNav = paneRoot && paneRoot.querySelector('.mini-nav');
+        if (miniNav) {
+            syncMiniNavSelectedFromActiveMenu(miniNav);
+        }
     }
 
     /** Remember active module menu without showing the flyout (desktop hover-only mode). */
@@ -317,6 +401,91 @@ function sargamRunSidebarNavigationInit() {
     global.sargamShowPaneFlyoutMenu = showPaneFlyoutMenu;
     global.sargamHidePaneFlyoutMenus = hidePaneFlyoutMenus;
 
+    function getMiniIdFromMenuNav(nav) {
+        if (!nav) {
+            return '';
+        }
+        var fromData = nav.getAttribute('data-mini-nav-target');
+        if (fromData) {
+            return fromData;
+        }
+        if (nav.id && nav.id.indexOf('menu-right-') === 0) {
+            return nav.id.replace(/^menu-right-/, '');
+        }
+        return '';
+    }
+
+    /**
+     * Active sidebarmenu panel: has .is-active on <nav> and/or .sidebar-link.active inside.
+     */
+    function findActiveMenuNav(paneRoot) {
+        var menus = getPaneFlyoutMenus(paneRoot);
+        var withActiveLink = null;
+        var withNavActive = null;
+
+        menus.forEach(function (nav) {
+            if (nav.querySelector('.sidebar-link.active')) {
+                withActiveLink = nav;
+            }
+            if (
+                nav.classList.contains('is-active') ||
+                nav.classList.contains('sargam-menu-visible')
+            ) {
+                withNavActive = nav;
+            }
+        });
+
+        return withActiveLink || withNavActive || null;
+    }
+
+    /**
+     * Match mini-nav .selected to the active sidebarmenu module.
+     * @returns {{ miniItem: Element, activeNav: Element }|null}
+     */
+    function syncMiniNavSelectedFromActiveMenu(container) {
+        if (!container) {
+            return null;
+        }
+        var paneRoot = getFlyoutPanelRoot(container);
+        var activeNav = findActiveMenuNav(paneRoot);
+        if (!activeNav) {
+            return null;
+        }
+
+        var miniId = getMiniIdFromMenuNav(activeNav);
+        if (!miniId) {
+            return null;
+        }
+
+        var miniItem = paneRoot.querySelector('#' + escapeMenuId(miniId));
+        if (!miniItem || miniItem.classList.contains('sargam-mini-sidebar-toggle-item')) {
+            return null;
+        }
+
+        paneRoot.querySelectorAll('.mini-nav-item').forEach(function (item) {
+            item.classList.remove('selected');
+        });
+        miniItem.classList.add('selected');
+
+        return { miniItem: miniItem, activeNav: activeNav };
+    }
+
+    global.sargamSyncMiniNavFromActiveMenu = syncMiniNavSelectedFromActiveMenu;
+
+    function activateMiniFromActiveMenu(container, persistSelection) {
+        var synced = syncMiniNavSelectedFromActiveMenu(container);
+        if (synced && synced.miniItem) {
+            global.sargamActivateMiniNavItem(
+                container,
+                synced.miniItem,
+                persistSelection,
+                false
+            );
+            return true;
+        }
+        return false;
+    }
+
     /**
      * Restore saved mini-nav, match active route, or open first item / sole menu for a pane.
      */
@@ -329,72 +498,48 @@ function sargamRunSidebarNavigationInit() {
         const storageKey = getMiniNavStorageKey(
             container.closest('.tab-pane') || paneRoot
         );
-        let activeId = null;
+        const menus = getPaneFlyoutMenus(paneRoot);
 
+        if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
+            global.sargamMarkSidebarActiveLinks(menus);
+        }
+
+        if (activateMiniFromActiveMenu(container, false)) {
+            return;
+        }
+
+        let activeId = null;
         try {
             activeId = localStorage.getItem(storageKey);
         } catch (e) {}
 
         if (activeId) {
             const storedItem = paneRoot.querySelector('#' + escapeMenuId(activeId));
-            if (storedItem) {
+            if (storedItem && !storedItem.classList.contains('sargam-mini-sidebar-toggle-item')) {
                 global.sargamActivateMiniNavItem(container, storedItem, false);
                 return;
             }
         }
 
-        const menus = getPaneFlyoutMenus(paneRoot);
-        if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
-            global.sargamMarkSidebarActiveLinks(menus);
-        }
-
-        let menuFromRoute = null;
-        menus.forEach(function (nav) {
-            if (!menuFromRoute && nav.querySelector('.sidebar-link.active')) {
-                menuFromRoute = nav;
-            }
-        });
-
-        if (menuFromRoute) {
-            var miniIdFromMenu =
-                menuFromRoute.getAttribute('data-mini-nav-target') ||
-                (menuFromRoute.id ? menuFromRoute.id.replace(/^menu-right-/, '') : '');
-            const miniItem = miniIdFromMenu
-                ? paneRoot.querySelector('#' + escapeMenuId(miniIdFromMenu))
-                : null;
-            if (miniItem) {
-                global.sargamActivateMiniNavItem(container, miniItem, false);
-                return;
-            }
-            hidePaneFlyoutMenus(paneRoot);
-            showPaneFlyoutMenu(menuFromRoute);
-            setPanelFlyoutOpen(paneRoot, true);
-            return;
-        }
-
-        const firstMini = container.querySelector('.mini-nav-item[id]');
+        const firstMini = container.querySelector(
+            '.mini-nav-item[id]:not(.sargam-mini-sidebar-toggle-item)'
+        );
         if (firstMini) {
             global.sargamActivateMiniNavItem(container, firstMini, false);
             return;
         }
 
         hidePaneFlyoutMenus(paneRoot);
-        if (menus.length === 1) {
-            if (isDesktopFlyoutMode()) {
-                markPaneFlyoutMenu(menus[0]);
-                setPanelFlyoutOpen(paneRoot, false);
-            } else {
-                showPaneFlyoutMenu(menus[0]);
+        if (menus.length > 0) {
+            var defaultMenu = menus[0];
+            if (isSidebarExpanded()) {
+                showPaneFlyoutMenu(defaultMenu);
                 setPanelFlyoutOpen(paneRoot, true);
-            }
-        } else if (menus.length > 0) {
-            if (isDesktopFlyoutMode()) {
-                markPaneFlyoutMenu(menus[0]);
-                setPanelFlyoutOpen(paneRoot, false);
             } else {
-                showPaneFlyoutMenu(menus[0]);
-                setPanelFlyoutOpen(paneRoot, true);
+                markPaneFlyoutMenu(defaultMenu);
+                setPanelFlyoutOpen(paneRoot, false);
             }
+            syncMiniNavSelectedFromActiveMenu(container);
         }
     }
 
@@ -406,12 +551,25 @@ function sargamRunSidebarNavigationInit() {
      * @param {Element} miniNavItem - li.mini-nav-item
      * @param {boolean} persist - write selection to localStorage
      */
-    global.sargamActivateMiniNavItem = function (container, miniNavItem, persist) {
+    /**
+     * @param {boolean} persist - save mini-nav selection to localStorage
+     * @param {boolean} expandSidebar - user clicked a module: expand rail and show sidebarmenu
+     */
+    global.sargamActivateMiniNavItem = function (
+        container,
+        miniNavItem,
+        persist,
+        expandSidebar
+    ) {
         if (!container || !miniNavItem || !miniNavItem.id) {
+            return;
+        }
+        if (miniNavItem.classList.contains('sargam-mini-sidebar-toggle-item')) {
             return;
         }
         const paneRoot = getFlyoutPanelRoot(container);
         const itemId = miniNavItem.id;
+        const shouldExpand = expandSidebar === true;
 
         paneRoot.querySelectorAll('.mini-nav-item').forEach(function (navItem) {
             navItem.classList.remove('selected');
@@ -420,13 +578,26 @@ function sargamRunSidebarNavigationInit() {
 
         hidePaneFlyoutMenus(paneRoot);
 
+        if (shouldExpand && isDesktopFlyoutMode() && !isSidebarExpanded()) {
+            global.sargamSetSidebarType('full', true);
+        }
+        if (shouldExpand && !isDesktopFlyoutMode()) {
+            var mainWrapper = document.getElementById('main-wrapper');
+            if (mainWrapper) {
+                mainWrapper.classList.add('show-sidebar');
+            }
+            document.querySelectorAll('.sidebarmenu').forEach(function (el) {
+                el.classList.remove('close');
+            });
+        }
+
         const targetMenu = resolveMenuForMiniItem(paneRoot, itemId);
-        if (isDesktopFlyoutMode()) {
-            markPaneFlyoutMenu(targetMenu);
-            setPanelFlyoutOpen(paneRoot, false);
-        } else {
+        if (shouldExpand || isSidebarExpanded()) {
             showPaneFlyoutMenu(targetMenu);
             setPanelFlyoutOpen(paneRoot, !!targetMenu);
+        } else {
+            markPaneFlyoutMenu(targetMenu);
+            setPanelFlyoutOpen(paneRoot, false);
         }
 
         if (persist && itemId) {
@@ -447,103 +618,25 @@ function sargamRunSidebarNavigationInit() {
 
         console.log('Found', miniNavContainers.length, 'mini-nav containers');
 
-        function isDesktopFlyout() {
-            return global.matchMedia && global.matchMedia('(min-width: 992px)').matches;
-        }
-
-        function panelHasFlyoutHover(panel) {
-            if (!panel) {
-                return false;
-            }
-            return !!(
-                panel.querySelector('.mini-nav .mini-nav-item:hover') ||
-                panel.querySelector('.sidebarmenu:hover') ||
-                panel.matches(':hover')
-            );
-        }
-
-        document.querySelectorAll('.side-mini-panel').forEach(function (panel) {
-            hidePaneFlyoutMenus(panel);
-            setPanelFlyoutOpen(panel, false);
-
-            if (panel.getAttribute('data-sargam-flyout-bound') === '1') {
-                return;
-            }
-            panel.setAttribute('data-sargam-flyout-bound', '1');
-
-            panel.addEventListener('mouseover', function (e) {
-                if (!isDesktopFlyout()) {
-                    return;
-                }
-                var miniNavItem = e.target.closest('.mini-nav-item');
-                if (!miniNavItem || !panel.contains(miniNavItem)) {
-                    return;
-                }
-                var miniNav = panel.querySelector('.mini-nav');
-                if (!miniNav || !miniNavItem.id) {
-                    return;
-                }
-                global.sargamActivateMiniNavItem(miniNav, miniNavItem, false);
-                var menu = resolveMenuForMiniItem(panel, miniNavItem.id);
-                showPaneFlyoutMenu(menu);
-                setPanelFlyoutOpen(panel, true);
-            });
-
-            panel.addEventListener('mouseout', function (e) {
-                if (!isDesktopFlyout()) {
-                    return;
-                }
-                var to = e.relatedTarget;
-                if (to && panel.contains(to)) {
-                    return;
-                }
-                global.requestAnimationFrame(function () {
-                    if (!panelHasFlyoutHover(panel)) {
-                        hidePaneFlyoutMenus(panel);
-                        setPanelFlyoutOpen(panel, false);
-                    }
-                });
-            });
-
-            panel.addEventListener('focusin', function () {
-                if (isDesktopFlyout()) {
-                    setPanelFlyoutOpen(panel, true);
-                }
-            });
-
-            panel.addEventListener('focusout', function (e) {
-                if (!isDesktopFlyout()) {
-                    return;
-                }
-                if (e.relatedTarget && panel.contains(e.relatedTarget)) {
-                    return;
-                }
-                global.requestAnimationFrame(function () {
-                    if (!panelHasFlyoutHover(panel)) {
-                        hidePaneFlyoutMenus(panel);
-                        setPanelFlyoutOpen(panel, false);
-                    }
-                });
-            });
-        });
-
         miniNavContainers.forEach(function (container) {
             const aside = container.closest('.side-mini-panel');
 
             container.addEventListener('click', function (e) {
                 const miniNavItem = e.target.closest('.mini-nav-item');
-                if (!miniNavItem || !container.contains(miniNavItem)) return;
+                if (!miniNavItem || !container.contains(miniNavItem)) {
+                    return;
+                }
+                if (
+                    miniNavItem.classList.contains('sargam-mini-sidebar-toggle-item') ||
+                    !miniNavItem.id
+                ) {
+                    return;
+                }
 
                 e.preventDefault();
                 e.stopPropagation();
 
-                global.sargamActivateMiniNavItem(container, miniNavItem, true);
-                const asideEl = miniNavItem.closest('.side-mini-panel') || aside;
-                if (!isDesktopFlyout()) {
-                    const menu = resolveMenuForMiniItem(asideEl, miniNavItem.id);
-                    showPaneFlyoutMenu(menu);
-                    setPanelFlyoutOpen(asideEl, true);
-                }
+                global.sargamActivateMiniNavItem(container, miniNavItem, true, true);
             });
         });
         
@@ -560,7 +653,6 @@ function sargamRunSidebarNavigationInit() {
         });
 
         document.querySelectorAll('.side-mini-panel').forEach(function (panel) {
-            panel.classList.add('sargam-hover-sidebar');
             const miniNav = panel.querySelector('.mini-nav');
             if (miniNav) {
                 restoreOrActivatePaneMiniNav(miniNav);
@@ -706,6 +798,9 @@ function sargamRunSidebarNavigationInit() {
             if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
                 global.sargamMarkSidebarActiveLinks(paneMenus);
             }
+            if (miniNav && typeof global.sargamSyncMiniNavFromActiveMenu === 'function') {
+                global.sargamSyncMiniNavFromActiveMenu(miniNav);
+            }
             setTimeout(function () {
                 if (typeof global.sargamInitAllSidebarPanels === 'function') {
                     global.sargamInitAllSidebarPanels();
@@ -792,6 +887,22 @@ function sargamRunSidebarNavigationInit() {
         }
     }
     
+    // After route-based .sidebar-link.active is set, sync mini-nav .selected
+    if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
+        var _sargamMarkSidebarActiveLinks = global.sargamMarkSidebarActiveLinks;
+        global.sargamMarkSidebarActiveLinks = function (sidebarMenus) {
+            _sargamMarkSidebarActiveLinks(sidebarMenus);
+            if (!sidebarMenus || !sidebarMenus.length) {
+                return;
+            }
+            var pane = sidebarMenus[0].closest('.tab-pane');
+            var miniNav = pane && pane.querySelector('.mini-nav');
+            if (miniNav) {
+                syncMiniNavSelectedFromActiveMenu(miniNav);
+            }
+        };
+    }
+
     // ==========================================
     // INITIALIZE ALL FUNCTIONALITY
     // ==========================================
@@ -802,6 +913,14 @@ function sargamRunSidebarNavigationInit() {
         initializeSidebarCollapse();
         initializeHeaderTabs();
         initializeScrollPersistence();
+        bindSidebarToggleClick();
+        global.sargamSetSidebarType(sargamGetPreferredSidebarType(), false);
+        global.setTimeout(function () {
+            var synced = document.body.getAttribute('data-sidebartype');
+            if (synced === 'full' || synced === 'mini-sidebar') {
+                global.sargamSetSidebarType(synced, false);
+            }
+        }, 50);
         
         // Observe layout width changes and adjust DataTables accordingly
         const mainWrapper = document.getElementById('main-wrapper');
@@ -848,7 +967,6 @@ function sargamRunSidebarNavigationInit() {
             detectAndActivateCurrentTab();
         }, 150);
         
-        sargamEnforcePermanentMiniSidebar();
         console.log('Sidebar navigation system initialized successfully');
         document.documentElement.setAttribute('data-sargam-sidebar-nav-init', '1');
     } catch (initErr) {

@@ -116,12 +116,7 @@
             <div class="card-body p-4">
 
                 {{-- Custom Search --}}
-                <div class="d-flex justify-content-end mb-3">
-                    <div class="ems-search-wrap">
-                        <i class="material-icons material-symbols-rounded ems-search-icon">search</i>
-                        <input type="text" id="emsSearch" class="form-control" placeholder="Search">
-                    </div>
-                    <hr>
+                <div class="mb-3">
                     <div class="table-responsive">
                         <table class="table" id="exemptionMedicalSpecialityTable">
                             <thead>
