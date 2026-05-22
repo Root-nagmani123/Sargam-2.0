@@ -23,6 +23,18 @@
                 </div>
 
                 <div class="mb-3">
+                    <label class="form-label fw-semibold">Linked Programme (Course Master) <span class="text-danger">*</span></label>
+                    <select name="course_master_pk" class="form-select @error('course_master_pk') is-invalid @enderror" required>
+                        <option value="">-- Select course / programme --</option>
+                        @foreach($courses ?? [] as $pk => $name)
+                            <option value="{{ $pk }}" {{ (int) old('course_master_pk') === (int) $pk ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">This form is the registration shell for that programme. Rest of Sargam uses Course Master.</small>
+                    @error('course_master_pk') <div class="invalid-feedback">{{ $message }}</div> @enderror
+                </div>
+
+                <div class="mb-3">
                     <label class="form-label fw-semibold">Form Slug <span class="text-danger">*</span></label>
                     <input type="text" name="form_slug" class="form-control @error('form_slug') is-invalid @enderror"
                            value="{{ old('form_slug') }}" required placeholder="e.g. phase2-training-feedback">
