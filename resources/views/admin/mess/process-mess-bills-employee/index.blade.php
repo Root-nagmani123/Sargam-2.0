@@ -37,98 +37,113 @@
     </div>
 
     {{-- Summary cards --}}
-    <div class="no-print process-mess-stats-section mb-4">
+    <section class="no-print process-mess-stats-section mb-4" aria-labelledby="process-mess-stats-heading">
         @php
             $stats = $stats ?? ['total_bills' => 0, 'paid_count' => 0, 'unpaid_count' => 0, 'total_amount' => 0, 'total_due_amount' => 0];
             $statsPaidPct = ($stats['total_bills'] ?? 0) > 0
                 ? (int) round((($stats['paid_count'] ?? 0) / $stats['total_bills']) * 100)
                 : 0;
         @endphp
-        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
-            <h2 class="h6 mb-0 text-uppercase fw-semibold text-body-secondary d-flex align-items-center gap-2">
-                <span class="material-symbols-rounded text-primary" style="font-size: 1.35rem;" aria-hidden="true">insights</span>
-                <span>Bill overview</span>
-            </h2>
-            <span class="badge text-bg-light border text-body-secondary fw-normal px-3 py-2 rounded-pill">
-                <span class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;" aria-hidden="true">date_range</span>
-                {{ $dateFromDisplay }} – {{ $dateToDisplay }}
-            </span>
-        </div>
-        <div class="row row-cols-1 row-cols-sm-2 row-cols-xl-4 g-3 g-lg-4 animate__animated animate__fadeIn" role="list" aria-label="Bill statistics">
-            <div class="col" role="listitem">
-                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-primary bg-primary-subtle bg-opacity-25">
-                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
-                        <div class="flex-shrink-0 rounded-circle bg-primary text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
-                            <span class="material-symbols-rounded">description</span>
-                        </div>
-                        <div class="flex-grow-1 min-w-0">
-                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total bills</p>
-                            <p class="fs-3 fw-bold text-primary mb-1 lh-1 tabular-nums" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</p>
-                            <p class="small text-body-secondary mb-0">Combined invoices in range</p>
+        <div class="card border border-light-subtle shadow-sm rounded-4 overflow-hidden bg-body-tertiary bg-opacity-50">
+            <div class="card-body p-3 p-lg-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom border-light-subtle">
+                    <div class="d-flex align-items-center gap-3 min-w-0">
+                        <span class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary process-mess-stat-icon flex-shrink-0" aria-hidden="true">
+                            <span class="material-symbols-rounded">insights</span>
+                        </span>
+                        <div class="min-w-0">
+                            <h2 id="process-mess-stats-heading" class="h6 mb-0 fw-semibold text-body-emphasis">Bill overview</h2>
+                            <p class="small text-body-secondary mb-0 text-truncate">Key metrics for the selected period</p>
                         </div>
                     </div>
+                    <span class="badge text-bg-light border border-light-subtle text-body-secondary fw-normal px-3 py-2 rounded-pill d-inline-flex align-items-center gap-1 flex-shrink-0">
+                        <span class="material-symbols-rounded" style="font-size: 1rem;" aria-hidden="true">date_range</span>
+                        <span class="text-truncate">{{ $dateFromDisplay }} – {{ $dateToDisplay }}</span>
+                    </span>
                 </div>
-            </div>
-            <div class="col" role="listitem">
-                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-warning bg-warning-subtle bg-opacity-25">
-                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
-                        <div class="flex-shrink-0 rounded-circle bg-warning text-dark d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
-                            <span class="material-symbols-rounded">pending_actions</span>
-                        </div>
-                        <div class="flex-grow-1 min-w-0">
-                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Unpaid</p>
-                            <p class="fs-3 fw-bold text-warning-emphasis mb-1 lh-1 tabular-nums" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</p>
-                            <p class="small text-body-secondary mb-0">Awaiting payment</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col" role="listitem">
-                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-success bg-success-subtle bg-opacity-25">
-                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
-                        <div class="flex-shrink-0 rounded-circle bg-success text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
-                            <span class="material-symbols-rounded">check_circle</span>
-                        </div>
-                        <div class="flex-grow-1 min-w-0">
-                            <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
-                                <p class="text-body-secondary small text-uppercase fw-semibold mb-0 lh-sm">Paid</p>
-                                <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle" id="process-mess-stats-paid-pct">{{ $statsPaidPct }}% cleared</span>
+                <div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-5 g-3 g-lg-4 animate__animated animate__fadeIn" role="list" aria-label="Bill statistics">
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-primary bg-primary-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                                <span class="flex-shrink-0 rounded-3 bg-primary text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                    <span class="material-symbols-rounded">description</span>
+                                </span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total bills</p>
+                                    <p class="fs-3 fw-bold text-primary mb-1 lh-1 tabular-nums" id="process-mess-stats-total-bills">{{ number_format($stats['total_bills']) }}</p>
+                                    <p class="small text-body-secondary mb-0 opacity-75">Combined invoices in range</p>
+                                </div>
                             </div>
-                            <p class="fs-3 fw-bold text-success mb-1 lh-1 tabular-nums" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</p>
-                            <p class="small text-body-secondary mb-0">Fully settled bills</p>
-                        </div>
+                        </article>
                     </div>
-                </div>
-            </div>
-            <div class="col" role="listitem">
-                <div class="card border-0 shadow-sm rounded-4 h-100 overflow-hidden hover-lift transition-all border-start border-4 border-info bg-info-subtle bg-opacity-25">
-                    <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
-                        <div class="flex-shrink-0 rounded-circle bg-info text-white d-flex align-items-center justify-content-center process-mess-stat-icon" aria-hidden="true">
-                            <span class="material-symbols-rounded">payments</span>
-                        </div>
-                        <div class="flex-grow-1 min-w-0">
-                            <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total amount</p>
-                            <p class="fs-3 fw-bold text-info-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</p>
-                            <p class="small text-body-secondary mb-0">Bill value for period</p>
-                        </div>
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-warning bg-warning-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                                <span class="flex-shrink-0 rounded-3 bg-warning text-dark d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                    <span class="material-symbols-rounded">pending_actions</span>
+                                </span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Unpaid</p>
+                                    <p class="fs-3 fw-bold text-warning-emphasis mb-1 lh-1 tabular-nums" id="process-mess-stats-unpaid">{{ number_format($stats['unpaid_count']) }}</p>
+                                    <p class="small text-body-secondary mb-0 opacity-75">Awaiting payment</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-success bg-success-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex flex-column gap-2">
+                                <div class="d-flex align-items-start gap-3">
+                                    <span class="flex-shrink-0 rounded-3 bg-success text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                        <span class="material-symbols-rounded">check_circle</span>
+                                    </span>
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="d-flex flex-wrap align-items-center gap-2 mb-1">
+                                            <p class="text-body-secondary small text-uppercase fw-semibold mb-0 lh-sm">Paid</p>
+                                            <span class="badge rounded-pill bg-success-subtle text-success-emphasis border border-success-subtle" id="process-mess-stats-paid-pct">{{ $statsPaidPct }}% cleared</span>
+                                        </div>
+                                        <p class="fs-3 fw-bold text-success mb-0 lh-1 tabular-nums" id="process-mess-stats-paid">{{ number_format($stats['paid_count']) }}</p>
+                                    </div>
+                                </div>
+                                <div class="progress rounded-pill process-mess-stats-progress" id="process-mess-stats-paid-progress" role="progressbar" aria-label="Paid bills percentage" aria-valuenow="{{ $statsPaidPct }}" aria-valuemin="0" aria-valuemax="100">
+                                    <div class="progress-bar bg-success" id="process-mess-stats-paid-progress-bar" style="width: {{ $statsPaidPct }}%"></div>
+                                </div>
+                                <p class="small text-body-secondary mb-0 opacity-75">Fully settled bills</p>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-info bg-info-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                                <span class="flex-shrink-0 rounded-3 bg-info text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                    <span class="material-symbols-rounded">payments</span>
+                                </span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total amount</p>
+                                    <p class="fs-3 fw-bold text-info-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-amount">₹ {{ number_format($stats['total_amount'], 2) }}</p>
+                                    <p class="small text-body-secondary mb-0 opacity-75">Bill value for period</p>
+                                </div>
+                            </div>
+                        </article>
+                    </div>
+                    <div class="col" role="listitem">
+                        <article class="card h-100 border-0 shadow-sm rounded-4 overflow-hidden hover-lift transition-all border-start border-4 border-danger bg-danger-subtle bg-opacity-50">
+                            <div class="card-body p-3 p-md-4 d-flex align-items-start gap-3">
+                                <span class="flex-shrink-0 rounded-3 bg-danger text-white d-inline-flex align-items-center justify-content-center process-mess-stat-icon shadow-sm" aria-hidden="true">
+                                    <span class="material-symbols-rounded">account_balance_wallet</span>
+                                </span>
+                                <div class="flex-grow-1 min-w-0">
+                                    <p class="text-body-secondary small text-uppercase fw-semibold mb-1 lh-sm">Total due amount</p>
+                                    <p class="fs-3 fw-bold text-danger-emphasis mb-1 lh-1 tabular-nums text-truncate" id="process-mess-stats-total-due-amount">₹ {{ number_format($stats['total_due_amount'] ?? 0, 2) }}</p>
+                                    <p class="small text-body-secondary mb-0 opacity-75">Outstanding balance for period</p>
+                                </div>
+                            </div>
+                        </article>
                     </div>
                 </div>
             </div>
         </div>
-        <div class="col">
-            <div class="card border-0 shadow h-100 hover-lift transition-all">
-                <div class="card-body d-flex align-items-center gap-3">
-                    <div class="rounded-3 bg-danger bg-opacity-10 p-3 d-flex align-items-center justify-content-center" style="width: 56px; height: 56px;">
-                        <i class="material-symbols-rounded text-danger" style="font-size: 2rem;">account_balance_wallet</i>
-                    </div>
-                    <div>
-                        <div class="text-muted small text-uppercase fw-semibold mb-1">Total Due Amount</div>
-                        <div class="fs-3 fw-bold text-dark" id="process-mess-stats-total-due-amount">₹ {{ number_format($stats['total_due_amount'] ?? 0, 2) }}</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+    </section>
 
 
     {{-- Filters card --}}
@@ -376,8 +391,14 @@
         if (elPaidPct) {
             var total = Number(s.total_bills) || 0;
             var paid = Number(s.paid_count) || 0;
-            elPaidPct.textContent = (total > 0 ? Math.round((paid / total) * 100) : 0) + '% cleared';
+            var pct = total > 0 ? Math.round((paid / total) * 100) : 0;
+            elPaidPct.textContent = pct + '% cleared';
+            var elProgress = document.getElementById('process-mess-stats-paid-progress');
+            var elProgressBar = document.getElementById('process-mess-stats-paid-progress-bar');
+            if (elProgress) elProgress.setAttribute('aria-valuenow', String(pct));
+            if (elProgressBar) elProgressBar.style.width = pct + '%';
         }
+        if (elDueAmt) elDueAmt.textContent = '₹ ' + fmtAmt(s.total_due_amount);
     }
 
     window.applyProcessMessBillStats = applyProcessMessBillStats;
@@ -452,7 +473,6 @@ function messPrintThLabel(th) {
         '.mess-report-sort-icon, .material-symbols-rounded, .material-icons, i[class*="material"]'
     ).forEach(function (el) {
         el.remove();
-        if (elDueAmt) elDueAmt.textContent = '₹ ' + fmtAmt(s.total_due_amount);
     });
     label = (clone.textContent || '').replace(/\s+/g, ' ').trim();
     return label.replace(/\s+(unfold_more|arrow_upward|arrow_downward)$/i, '');
@@ -883,7 +903,10 @@ document.addEventListener('DOMContentLoaded', function () {
 .process-mess-stats-section .process-mess-stat-icon .material-symbols-rounded {
     font-size: 1.5rem;
 }
-.process-mess-stats-section .card {
+.process-mess-stats-section .process-mess-stats-progress {
+    height: 0.35rem;
+}
+.process-mess-stats-section > .card > .card-body > .row .card .card-body {
     --bs-card-spacer-y: 0;
 }
 @media (prefers-reduced-motion: reduce) {
