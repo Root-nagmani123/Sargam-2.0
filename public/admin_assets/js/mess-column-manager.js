@@ -185,11 +185,39 @@
         } catch (e) {}
     };
 
-    MessColumnManager.prototype.apply = function () {
+    MessColumnManager.prototype._isServerSideDataTable = function () {
+        if (this.$table && this.$table.data('mess-datatable-server-side')) {
+            return true;
+        }
+        if (!this.dt) return false;
+        try {
+            var settings = this.dt.settings()[0];
+            if (settings && settings.oInit && settings.oInit.serverSide) {
+                return true;
+            }
+            if (settings && settings.oFeatures && settings.oFeatures.bServerSide) {
+                return true;
+            }
+            if (settings && settings.sAjaxSource) {
+                return true;
+            }
+        } catch (e) {
+            return false;
+        }
+        return false;
+    };
+
+    MessColumnManager.prototype.apply = function (options) {
+        options = options || {};
         if (this.mode === 'datatable' && this.dt) {
             this._applyOrderDataTable();
             this._applyVisibilityDataTable();
-            this.dt.draw(false);
+            // Server-side tables already fetched data on init; draw(false) triggers a duplicate AJAX.
+            if (!options.skipDraw) {
+                this.dt.draw(false);
+            } else {
+                this.dt.columns.adjust();
+            }
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
             }
@@ -330,7 +358,7 @@
     MessColumnManager.prototype.init = function () {
         this.loadState();
         this.injectColumnsDropdown();
-        this.apply();
+        this.apply({ skipDraw: this._isServerSideDataTable() });
         this.renderDropdownMenu();
 
         var self = this;
