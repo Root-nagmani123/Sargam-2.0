@@ -106,10 +106,10 @@
             <div class="form-check mt-1">
                 <input class="form-check-input @error($fieldName) is-invalid @enderror" type="checkbox"
                        name="{{ $fieldName }}" value="1"
-                       id="fc_cb_single_{{ $field->id }}"
+                       id="{{ $fieldName === 'same_as_permanent' ? 'same_as_permanent' : 'fc_cb_single_'.$field->id }}"
                        {{ fc_checkbox_single_checked($value) ? 'checked' : '' }}
                        {{ $isReadonly ? 'disabled' : '' }}>
-                <label class="form-check-label small" for="fc_cb_single_{{ $field->id }}">{{ $field->label }}</label>
+                <label class="form-check-label small" for="{{ $fieldName === 'same_as_permanent' ? 'same_as_permanent' : 'fc_cb_single_'.$field->id }}">{{ $field->label }}</label>
             </div>
         @endif
         @break

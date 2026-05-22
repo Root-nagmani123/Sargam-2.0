@@ -18,6 +18,10 @@ class FcRegistrationIntentService
 
     public const SESSION_FORM_SET_AT = 'fc_reg_intended_form_set_at';
 
+    public function __construct(
+        protected FcProgrammeContextService $programmeContext
+    ) {}
+
     /** Max age of intent in seconds (from first capture) before login ignores it. */
     public const TTL_SECONDS = 604800;
 
@@ -102,6 +106,8 @@ class FcRegistrationIntentService
             return $this->redirectTraineeHome()
                 ->with('warning', 'The selected programme is no longer available. You can continue from your dashboard.');
         }
+
+        $this->programmeContext->rememberCourseForForm($form);
 
         return redirect()->route('fc-reg.forms.dashboard', $form)
             ->with('success', 'Login successful!');

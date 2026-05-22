@@ -10,7 +10,7 @@ use App\Models\FC\{
     StudentMaster, StudentMasterFirst, StudentMasterSecond,
     StudentMasterQualificationDetails, NewRegistrationBankDetailsMaster,
     FcJoiningRelatedDocumentsDetailsMaster, FcJoiningRelatedDocumentsMaster,
-    StudentConfirmMaster, JbpUser
+    StudentConfirmMaster, StudentTravelPlanMaster, JbpUser
 };
 use Illuminate\Support\Collection;
 use Illuminate\Database\QueryException;
@@ -139,7 +139,7 @@ class RegistrationService
      */
     public function additionalDynamicFlatFieldsForDisplay(string $username): Collection
     {
-        $form = FcForm::activeRegistrationDynamicForm();
+        $form = FcForm::resolveForUsername($username);
         if (! $form) {
             return collect();
         }
@@ -248,18 +248,22 @@ class RegistrationService
      *
      * @return list<array{key:string,title_en:string,title_hi:string,type:string,rows?:list<array{en:string,hi:string,value:mixed}>,columns?:list<string>,head_hi?:list<string>,body?:list<list<string>>}>
      */
-    public function buildPdfSectionsFromFormDefinition(string $username): array
+    public function buildPdfSectionsFromFormDefinition(string $username, ?FcForm $form = null): array
     {
-        $form = FcForm::activeRegistrationDynamicForm();
+        $form = $form ?? FcForm::resolveForUsername($username);
         if (! $form) {
             return [];
         }
 
-        $steps = $form->activeSteps()
-            ->whereNotIn('step_slug', ['bank', 'documents'])
+        $stepsQuery = $form->activeSteps()
             ->with(['activeFields', 'activeFieldGroups.activeGroupFields'])
-            ->orderBy('step_number')
-            ->get();
+            ->orderBy('step_number');
+
+        if (($form->form_slug ?? '') === 'fc-registration') {
+            $stepsQuery->whereNotIn('step_slug', ['bank', 'documents']);
+        }
+
+        $steps = $stepsQuery->get();
 
         $sections = [];
         $tableRows = [];
@@ -294,14 +298,21 @@ class RegistrationService
                     ];
                 }
 
-                $sections[] = [
-                    'key' => strtolower((string) $step->step_slug).'_flat',
-                    'title_en' => (string) $step->step_name,
-                    'title_hi' => $this->hindiSectionTitle((string) $step->step_slug, (string) $step->step_name),
-                    'type' => 'fields',
-                    'rows' => $stepRows,
-                    'sort_order' => ((int) $step->step_number * 1000) + 10,
-                ];
+                $stepRows = array_values(array_filter(
+                    $stepRows,
+                    fn (array $r) => ($r['value'] ?? '-') !== '-'
+                ));
+
+                if ($stepRows !== []) {
+                    $sections[] = [
+                        'key' => strtolower((string) $step->step_slug).'_flat',
+                        'title_en' => (string) $step->step_name,
+                        'title_hi' => $this->hindiSectionTitle((string) $step->step_slug, (string) $step->step_name),
+                        'type' => 'fields',
+                        'rows' => $stepRows,
+                        'sort_order' => ((int) $step->step_number * 1000) + 10,
+                    ];
+                }
             }
 
             foreach ($step->activeFieldGroups as $group) {
@@ -320,8 +331,8 @@ class RegistrationService
                     }
                     $body[] = $line;
                 }
-                if (empty($body)) {
-                    $body[] = array_fill(0, $groupFields->count(), '-');
+                if ($body === []) {
+                    continue;
                 }
 
                 $sections[] = [
@@ -337,6 +348,11 @@ class RegistrationService
             }
         }
 
+        $travelSection = $this->buildTravelPlanPdfSection($username);
+        if ($travelSection !== null) {
+            $sections[] = $travelSection;
+        }
+
         usort($sections, fn (array $a, array $b) => ((int) ($a['sort_order'] ?? 0)) <=> ((int) ($b['sort_order'] ?? 0)));
         foreach ($sections as &$sec) {
             unset($sec['sort_order']);
@@ -344,6 +360,72 @@ class RegistrationService
         unset($sec);
 
         return $sections;
+    }
+
+    /**
+     * Display name for PDF header / reports (supports split name fields).
+     */
+    public function resolveStudentDisplayName(?StudentMasterFirst $step1): string
+    {
+        if (! $step1) {
+            return '';
+        }
+
+        $full = trim((string) ($step1->full_name ?? ''));
+        if ($full !== '') {
+            return $full;
+        }
+
+        return trim(implode(' ', array_filter([
+            $step1->first_name ?? null,
+            $step1->middle_name ?? null,
+            $step1->last_name ?? null,
+        ])));
+    }
+
+    /**
+     * @return array{key:string,title_en:string,title_hi:string,type:string,rows:list<array{group?:string,en:string,hi:string,value:string}>,sort_order:int}|null
+     */
+    public function buildTravelPlanPdfSection(string $username): ?array
+    {
+        $plan = StudentTravelPlanMaster::query()
+            ->where('username', $username)
+            ->with('fcArrivalSlot')
+            ->first();
+
+        if (! $plan) {
+            return null;
+        }
+
+        $slot = $plan->fcArrivalSlot;
+        $slotLabel = $slot?->slot_label ?? '-';
+        if ($slot?->time_start && $slot?->time_end) {
+            $slotLabel .= ' ('.substr((string) $slot->time_start, 0, 5).'–'.substr((string) $slot->time_end, 0, 5).')';
+        }
+
+        $rows = array_values(array_filter([
+            ['group' => 'Travel Plan', 'en' => 'Arrival date', 'hi' => 'आगमन तिथि', 'value' => $plan->joining_date?->format('d/m/Y') ?? '-'],
+            ['group' => 'Travel Plan', 'en' => 'Activity slot', 'hi' => 'गतिविधि स्लॉट', 'value' => $slotLabel],
+            ['group' => 'Travel Plan', 'en' => 'Mode of journey', 'hi' => 'यात्रा का माध्यम', 'value' => (string) ($plan->mode_of_journey ?? '-')],
+            ['group' => 'Travel Plan', 'en' => 'Flight / Train / Vehicle no.', 'hi' => 'फ्लाइट / ट्रेन / वाहन संख्या', 'value' => (string) ($plan->journey_vehicle_no ?? '-')],
+            ['group' => 'Travel Plan', 'en' => 'Arrival time at Dehradun', 'hi' => 'देहरादून आगमन समय', 'value' => (string) ($plan->arrival_time_dehradun ?? '-')],
+            ['group' => 'Travel Plan', 'en' => 'Require academy vehicle', 'hi' => 'अकादमी वाहन आवश्यक', 'value' => $plan->requiresAcademyVehicleYes() ? 'Yes / हाँ' : 'No / नहीं'],
+            ['group' => 'Travel Plan', 'en' => 'Remarks', 'hi' => 'टिप्पणी', 'value' => (string) ($plan->special_requirements ?? '-')],
+            ['group' => 'Travel Plan', 'en' => 'Submitted', 'hi' => 'जमा स्थिति', 'value' => $plan->is_submitted ? 'Yes / हाँ' : 'Draft / प्रारूप'],
+        ], fn (array $r) => ($r['value'] ?? '-') !== '-'));
+
+        if ($rows === []) {
+            return null;
+        }
+
+        return [
+            'key' => 'travel_plan',
+            'title_en' => 'Travel Plan — Joining',
+            'title_hi' => 'यात्रा योजना — प्रवेश',
+            'type' => 'fields',
+            'rows' => $rows,
+            'sort_order' => 90000,
+        ];
     }
 
     /**
@@ -399,9 +481,14 @@ class RegistrationService
     private function hindiSectionTitle(string $stepSlug, string $fallback): string
     {
         return match ($stepSlug) {
-            'step1' => 'मूल जानकारी',
-            'step2' => 'व्यक्तिगत विवरण',
-            'step3' => 'अन्य विवरण',
+            'step1', '99th-step1' => 'मूल जानकारी',
+            'step2', '99th-step2' => 'व्यक्तिगत विवरण',
+            'step3', '99th-step3' => 'अन्य विवरण',
+            '99th-bank' => 'बैंक विवरण',
+            '99th-documents' => 'प्रवेश दस्तावेज़',
+            '99th-health' => 'स्वास्थ्य जोखिम',
+            '99th-special' => 'विशेष सहायता',
+            '99th-vision' => 'दृष्टि कथन',
             default => $fallback,
         };
     }
