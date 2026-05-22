@@ -8,6 +8,9 @@ use App\Models\FC\FcFormStep;
 use App\Models\FC\FcFormFieldGroup;
 use App\Models\FC\StudentMaster;
 use App\Services\FC\DynamicFormService;
+use App\Services\FC\FcProgrammeContextService;
+use App\Services\FC\FcRegistrationFlowService;
+use App\Services\FC\FcRegistrationIntentService;
 use App\Services\FC\RegistrationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,14 +24,19 @@ class GenericFormController extends Controller
     public function __construct(
         private DynamicFormService $formService,
         private RegistrationService $registrationService,
+        private FcProgrammeContextService $programmeContext,
+        private FcRegistrationFlowService $registrationFlow,
     ) {}
 
     // ── Form Dashboard — list steps for a form ───────────────────────
     public function formDashboard(FcForm $form): View
     {
         $username = Auth::user()->username;
+        $this->programmeContext->rememberCourseForForm($form);
+        session([FcRegistrationIntentService::SESSION_FORM_ID => (int) $form->id]);
+
         $steps    = $form->activeSteps()->withCount(['fields', 'fieldGroups'])->get();
-        $stepStatus = $this->buildStepCompletionByStepId($form, $steps, $username);
+        $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $username);
 
         $registrationProgress = null;
         $fcRegistrationMeta = null;
@@ -41,12 +49,24 @@ class GenericFormController extends Controller
             ];
         }
 
+        // Travel Plan: read travel_done from the tracker table for this form + user
+        $travelDone = false;
+        $trackerTable = $form->trackerStorageTable();
+        if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'travel_done')) {
+            $tq = DB::table($trackerTable)->where($form->user_identifier ?: 'username', $username);
+            if (Schema::hasColumn($trackerTable, 'form_id')) {
+                $tq->where('form_id', $form->id);
+            }
+            $travelDone = (bool) ($tq->value('travel_done') ?? false);
+        }
+
         return view('forms.dashboard', compact(
             'form',
             'steps',
             'stepStatus',
             'registrationProgress',
-            'fcRegistrationMeta'
+            'fcRegistrationMeta',
+            'travelDone'
         ));
     }
 
@@ -63,8 +83,9 @@ class GenericFormController extends Controller
             return $guard;
         }
 
-        // Document uploads use the dedicated checklist flow (masters + files), not dynamic flat fields.
-        if (($form->form_slug ?? '') === 'fc-registration' && $step->step_slug === 'documents') {
+        // Legacy FC registration only: separate 14-document checklist. Other forms use dynamic file fields on the step.
+        if ($this->registrationFlow->usesLegacyDocumentChecklist($form)
+            && ($step->step_slug ?? '') === 'documents') {
             return redirect()->route('fc-reg.registration.documents');
         }
 
@@ -147,26 +168,63 @@ class GenericFormController extends Controller
             return $guard;
         }
 
-        if (($form->form_slug ?? '') === 'fc-registration' && $step->step_slug === 'documents') {
+        if ($this->registrationFlow->usesLegacyDocumentChecklist($form)
+            && ($step->step_slug ?? '') === 'documents') {
             return redirect()->route('fc-reg.registration.documents');
         }
 
-        $fields   = $step->activeFields;
+        $fields = $step->activeFields;
+
+        if ($request->filled('upload_single')) {
+            $fieldName = (string) $request->input('upload_single');
+            $field = $fields->firstWhere('field_name', $fieldName);
+            if (! $field || $field->field_type !== 'file') {
+                return back()->with('error', 'Invalid document field.');
+            }
+
+            $rules = $this->formService->buildValidationRules(collect([$field]));
+            $request->validate($rules);
+            $this->formService->saveSingleFileField($step, $field, $username, $request);
+
+            return redirect()->route('fc-reg.forms.step', [$form, $step])
+                ->with('success', $field->label.' uploaded successfully.');
+        }
+
+        $allFileFields = $fields->isNotEmpty() && $fields->every(fn ($f) => $f->field_type === 'file');
+
+        if ($allFileFields) {
+            if (! $this->formService->documentStepRequiredFilesSatisfied($step, $username)) {
+                return back()->with('error', 'Please upload all mandatory documents before continuing.');
+            }
+            $this->formService->syncDocumentStepCompletion($step, $username);
+
+            $allSteps  = $form->activeSteps;
+            $stepIndex = $allSteps->search(fn ($s) => $s->id === $step->id);
+            $nextStep  = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
+
+            if ($nextStep) {
+                return redirect()->route('fc-reg.forms.step', [$form, $nextStep])
+                    ->with('success', "{$step->step_name} completed.");
+            }
+
+            return redirect()->route('fc-reg.forms.dashboard', $form)
+                ->with('success', "{$step->step_name} saved. All steps completed!");
+        }
 
         $rules     = $this->formService->buildValidationRules($fields);
         $validated = $request->validate($rules);
 
-        if ($step->step_slug === 'step2' && $request->boolean('same_as_permanent')) {
+        if ($request->boolean('same_as_permanent')) {
             $validated['pres_address_line1'] = $validated['perm_address_line1'] ?? null;
             $validated['pres_address_line2'] = $validated['perm_address_line2'] ?? null;
-            $validated['pres_city'] = $validated['perm_city'] ?? null;
-            $validated['pres_state_id'] = $validated['perm_state_id'] ?? null;
-            $validated['pres_pincode'] = $validated['perm_pincode'] ?? null;
-            $validated['pres_country_id'] = $validated['perm_country_id'] ?? null;
-            $validated['same_as_permanent'] = 1;
+            $validated['pres_city']          = $validated['perm_city'] ?? null;
+            $validated['pres_state_id']      = $validated['perm_state_id'] ?? null;
+            $validated['pres_pincode']       = $validated['perm_pincode'] ?? null;
+            $validated['pres_country_id']    = $validated['perm_country_id'] ?? null;
+            $validated['same_as_permanent']  = 1;
         }
 
-        $this->formService->saveStepData($step->step_slug, $username, $validated, $request);
+        $this->formService->saveStepDataForStep($step, $username, $validated, $request);
 
         // Navigate to next step or back to dashboard
         $allSteps  = $form->activeSteps;
@@ -216,10 +274,13 @@ class GenericFormController extends Controller
             if ($step->tracker_column) {
                 $trackerTable = $form->trackerStorageTable();
                 if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, $form->user_identifier)) {
-                    DB::table($trackerTable)->updateOrInsert(
-                        [$form->user_identifier => $username],
-                        [$step->tracker_column => 1, 'updated_at' => now()]
-                    );
+                    $trackerKey  = [$form->user_identifier => $username];
+                    $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
+                    if (Schema::hasColumn($trackerTable, 'form_id')) {
+                        $trackerKey['form_id']  = $form->id;
+                        $trackerData['form_id'] = $form->id;
+                    }
+                    DB::table($trackerTable)->updateOrInsert($trackerKey, $trackerData);
                 }
             }
 
@@ -239,42 +300,10 @@ class GenericFormController extends Controller
         return back()->with('success', "{$group->group_label} saved.");
     }
 
-    /**
-     * @param  \Illuminate\Support\Collection<int, FcFormStep>  $steps
-     * @return array<int, bool>  keyed by fc_form_steps.id
-     */
-    private function buildStepCompletionByStepId(FcForm $form, $steps, string $username): array
-    {
-        $trackerTable = $form->trackerStorageTable();
-        $masterRow = null;
-        if ($steps->contains(fn ($s) => filled($s->tracker_column))
-            && Schema::hasTable($trackerTable)
-            && Schema::hasColumn($trackerTable, $form->user_identifier)) {
-            $masterRow = DB::table($trackerTable)->where($form->user_identifier, $username)->first();
-        }
-
-        $stepStatus = [];
-        foreach ($steps as $step) {
-            $stepStatus[$step->id] = false;
-            if ($step->target_table) {
-                $row = DB::table($step->target_table)->where($form->user_identifier, $username)->first();
-                if ($row && $step->completion_column && isset($row->{$step->completion_column})) {
-                    $stepStatus[$step->id] = (bool) $row->{$step->completion_column};
-                }
-            }
-            if (! $stepStatus[$step->id] && $step->tracker_column && $masterRow !== null
-                && property_exists($masterRow, $step->tracker_column)) {
-                $stepStatus[$step->id] = (bool) $masterRow->{$step->tracker_column};
-            }
-        }
-
-        return $stepStatus;
-    }
-
     private function guardSequentialFormAccess(FcForm $form, FcFormStep $step, string $username): ?RedirectResponse
     {
         $steps = $form->activeSteps;
-        $stepStatus = $this->buildStepCompletionByStepId($form, $steps, $username);
+        $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $username);
         $isDone = $stepStatus[$step->id] ?? false;
 
         if ($form->form_slug === 'fc-registration') {

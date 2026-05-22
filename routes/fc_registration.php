@@ -122,6 +122,8 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
 
     Route::prefix('forms')->name('forms.')->group(function () {
         Route::get('/',                        [FormManagementController::class, 'index'])->name('index');
+        Route::get('/list',                    [FormManagementController::class, 'ajaxList'])->name('list');
+        Route::get('/filter-courses',          [FormManagementController::class, 'filterCourses'])->name('filter.courses');
         Route::get('/create',                  [FormManagementController::class, 'create'])->name('create');
         Route::post('/',                       [FormManagementController::class, 'store'])->name('store');
         Route::get('/{form}/edit',             [FormManagementController::class, 'edit'])->name('edit');
@@ -222,6 +224,10 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/student/{username}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
     Route::post('/student/{username}/documents/{documentMasterId}/verify', [ReportController::class, 'updateStudentDocumentVerification'])
         ->name('student.documents.verify');
+
+    // Form-specific dynamic report (works for any form, any number of steps)
+    Route::get('/form/{form}',        [ReportController::class, 'formOverview'])->name('form');
+    Route::get('/form/{form}/export', [ReportController::class, 'formExportCsv'])->name('form.export');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');

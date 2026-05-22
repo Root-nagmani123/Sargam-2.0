@@ -7,16 +7,27 @@ use App\Models\FC\FcTravelArrivalSlot;
 use App\Models\FC\StudentMaster;
 use App\Models\FC\StudentMasterFirst;
 use App\Models\FC\StudentTravelPlanMaster;
+use App\Services\FC\FcRegistrationFlowService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
 class TravelPlanController extends Controller
 {
+    public function __construct(
+        private FcRegistrationFlowService $registrationFlow
+    ) {}
+
     public function show()
     {
         $username = Auth::user()->username;
 
-        if (! StudentMaster::where('username', $username)->value('bank_done')) {
+        if (! $this->registrationFlow->isBankCompleteForTravel($username)) {
+            $form = $this->registrationFlow->activeFormFromSession();
+            if ($form) {
+                return redirect()->route('fc-reg.forms.dashboard', $form)
+                    ->with('error', 'Please complete bank details before the travel plan.');
+            }
+
             return redirect()->route('fc-reg.registration.bank')
                 ->with('error', 'Please complete bank details before the travel plan.');
         }
@@ -45,13 +56,24 @@ class TravelPlanController extends Controller
         $rollSm = trim((string) ($master?->roll_no ?? ''));
         $displayCode = $rollS1 !== '' ? $step1?->roll_no : ($rollSm !== '' ? $master?->roll_no : null);
 
+        $travelNav = $this->registrationFlow->travelViewContext($username);
+
+        $formStepNav = null;
+        $form = $this->registrationFlow->activeFormFromSession();
+        if ($form) {
+            $this->registrationFlow->rememberActiveFormInSession($form);
+            $formStepNav = $this->registrationFlow->buildTravelStepNav($form, $username);
+        }
+
         return view('fc.registration.travel', [
-            'plan'         => $plan,
-            'slots'        => $slots,
+            'plan'           => $plan,
+            'slots'          => $slots,
             'availableDates' => $availableDates,
-            'step1'        => $step1,
-            'master'       => $master,
-            'displayCode'  => $displayCode,
+            'step1'          => $step1,
+            'master'         => $master,
+            'displayCode'    => $displayCode,
+            'travelNav'      => $travelNav,
+            'formStepNav'    => $formStepNav,
         ]);
     }
 
@@ -59,15 +81,23 @@ class TravelPlanController extends Controller
     {
         $username = Auth::user()->username;
 
-        if (! StudentMaster::where('username', $username)->value('bank_done')) {
+        if (! $this->registrationFlow->isBankCompleteForTravel($username)) {
+            $form = $this->registrationFlow->activeFormFromSession();
+            if ($form) {
+                return redirect()->route('fc-reg.forms.dashboard', $form)
+                    ->with('error', 'Please complete bank details first.');
+            }
+
             return redirect()->route('fc-reg.registration.bank')
                 ->with('error', 'Please complete bank details first.');
         }
 
         $existing = StudentTravelPlanMaster::where('username', $username)->first();
         if ($existing?->is_submitted) {
-            return redirect()->route('fc-reg.registration.documents')
-                ->with('error', 'Your travel plan is already submitted and cannot be changed.');
+            return $this->registrationFlow->redirectAfterTravelSubmit(
+                $username,
+                'Your travel plan is already submitted.'
+            )->with('error', 'Your travel plan is already submitted and cannot be changed.');
         }
 
         $request->validate([
@@ -123,7 +153,13 @@ class TravelPlanController extends Controller
     {
         $username = Auth::user()->username;
 
-        if (! StudentMaster::where('username', $username)->value('bank_done')) {
+        if (! $this->registrationFlow->isBankCompleteForTravel($username)) {
+            $form = $this->registrationFlow->activeFormFromSession();
+            if ($form) {
+                return redirect()->route('fc-reg.forms.dashboard', $form)
+                    ->with('error', 'Please complete bank details first.');
+            }
+
             return redirect()->route('fc-reg.registration.bank')
                 ->with('error', 'Please complete bank details first.');
         }
@@ -142,7 +178,7 @@ class TravelPlanController extends Controller
 
         $existing = StudentTravelPlanMaster::where('username', $username)->first();
         if ($existing?->is_submitted) {
-            return redirect()->route('fc-reg.registration.documents');
+            return $this->registrationFlow->redirectAfterTravelSubmit($username);
         }
 
         $slot = FcTravelArrivalSlot::where('id', $request->fc_travel_arrival_slot_id)
@@ -176,7 +212,9 @@ class TravelPlanController extends Controller
 
         StudentMaster::where('username', $username)->update(['travel_done' => 1]);
 
-        return redirect()->route('fc-reg.registration.documents')
-            ->with('success', 'Travel plan submitted. You may now upload documents.');
+        return $this->registrationFlow->redirectAfterTravelSubmit(
+            $username,
+            'Travel plan submitted.'
+        );
     }
 }

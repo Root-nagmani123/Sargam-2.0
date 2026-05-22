@@ -102,7 +102,11 @@
 <div class="row justify-content-center">
 <div class="col-12 col-xl-10">
 
-    @include('partials.step-indicator', ['current' => 5])
+    @if(!empty($formStepNav))
+        @include('fc.registration.partials.form-step-nav', ['formStepNav' => $formStepNav])
+    @else
+        @include('partials.step-indicator', ['current' => 5])
+    @endif
 
     <div class="card border-0 shadow-sm" style="border-radius:10px;">
         <div class="card-header bg-white border-bottom py-3 px-4">
@@ -159,9 +163,15 @@
             @if($plan->special_requirements)
                 <p class="small mt-2"><span class="text-muted">Remarks:</span> {{ $plan->special_requirements }}</p>
             @endif
-            <div class="mt-4 d-flex gap-2">
-                <a href="{{ route('fc-reg.registration.documents') }}" class="btn btn-primary"><i class="bi bi-file-earmark-arrow-up me-1"></i>Continue to Documents</a>
-                <a href="{{ route('fc-reg.dashboard') }}" class="btn btn-outline-secondary">Dashboard</a>
+            <div class="mt-4 d-flex gap-2 flex-wrap">
+                @if(!empty($travelNav['continueUrl']))
+                    <a href="{{ $travelNav['continueUrl'] }}" class="btn btn-primary">
+                        <i class="bi bi-file-earmark-arrow-up me-1"></i>{{ $travelNav['continueLabel'] ?? 'Continue' }}
+                    </a>
+                @endif
+                <a href="{{ $travelNav['backUrl'] ?? route('fc-reg.registration.bank') }}" class="btn btn-outline-secondary">
+                    {{ $travelNav['backLabel'] ?? 'Back' }}
+                </a>
             </div>
         @else
         <p class="text-muted small">Fields follow the <strong>Joining Date</strong> report format. Arrival date and slot are managed by the academy. Submit to confirm your travel plan.</p>
@@ -276,8 +286,8 @@
             </div>
 
             <div class="d-flex justify-content-between flex-wrap gap-2 border-top pt-3">
-                <a href="{{ route('fc-reg.registration.bank') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="bi bi-arrow-left me-1"></i>Back to Bank
+                <a href="{{ $travelNav['backUrl'] ?? route('fc-reg.registration.bank') }}" class="btn btn-outline-secondary btn-sm">
+                    <i class="bi bi-arrow-left me-1"></i>{{ $travelNav['backLabel'] ?? 'Back to Bank' }}
                 </a>
                 <button type="button" class="btn btn-success px-4" id="previewTravelPlanBtn">
                     <i class="bi bi-send-check me-1"></i>Submit Travel Plan

@@ -89,10 +89,15 @@
                         </div>
                     </div>
                 </div>
-                @if(($form->form_slug ?? '') === 'fc-registration' && isset($registrationProgress) && $step->step_slug === 'bank')
+                @if(($step->tracker_column ?? '') === 'bank_done')
                     @php
-                        $travelDone = $registrationProgress['steps']['travel'] ?? false;
-                        $bankDoneReg = $registrationProgress['steps']['bank'] ?? false;
+                        // For fc-registration use registrationProgress; for all others use the $travelDone passed from controller
+                        if (($form->form_slug ?? '') === 'fc-registration' && isset($registrationProgress)) {
+                            $travelDone = $registrationProgress['steps']['travel'] ?? false;
+                            $bankDoneReg = $registrationProgress['steps']['bank'] ?? false;
+                        } else {
+                            $bankDoneReg = $stepStatus[$step->id] ?? false;
+                        }
                         $travelAccessible = $travelDone || $bankDoneReg;
                     @endphp
                     <div class="col-md-6 col-lg-4">

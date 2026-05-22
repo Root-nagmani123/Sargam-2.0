@@ -4,6 +4,8 @@ namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
 use App\Services\FC\RegistrationService;
+use App\DataTables\FC\FcFormOverviewDataTable;
+use App\Models\FC\FcForm;
 use App\Models\FC\{
     StudentMasterFirst, StudentMasterSecond, StudentMaster,
     SessionMaster, ServiceMaster, StateMaster, CategoryMaster,
@@ -17,6 +19,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Str;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Symfony\Component\Process\Process;
 
@@ -113,6 +116,189 @@ class ReportController extends Controller
         return view('fc.report.overview', compact(
             'students','summary','sessions','services','states'
         ));
+    }
+
+    // ── 1b. Form-specific dynamic overview (any form, any step count) ──
+    public function formOverview(Request $request, FcForm $form)
+    {
+        $dataTable    = new FcFormOverviewDataTable($form);
+        $steps        = $dataTable->steps;
+        $totalSteps   = $dataTable->totalSteps;
+        $trackerTable = $form->trackerStorageTable();
+        $userKey      = $form->user_identifier ?: 'username';
+
+        // Summary counts — always computed from DB (not paginated)
+        $trackerBase = fn () => DB::table($trackerTable)
+            ->when(Schema::hasColumn($trackerTable, 'form_id'), fn ($q) => $q->where('form_id', $form->id));
+
+        $summary = [
+            'total'      => $trackerBase()->count(),
+            'submitted'  => $trackerBase()->where('status', 'SUBMITTED')->count(),
+            'incomplete' => $trackerBase()->where('status', 'INCOMPLETE')->count(),
+        ];
+        foreach ($steps as $step) {
+            $summary[$step->tracker_column] = $trackerBase()
+                ->where($step->tracker_column, 1)->count();
+        }
+
+        $services = DB::table('service_master')
+            ->orderBy('service_name')
+            ->select('pk', 'service_name', 'service_short_name')
+            ->get();
+
+        // Build paginated student query with filters
+        $t = $trackerTable;
+        $u = $userKey;
+
+        $stepsDoneExpr = $totalSteps > 0
+            ? $steps->map(fn ($s) => "CASE WHEN `{$t}`.`{$s->tracker_column}`=1 THEN 1 ELSE 0 END")
+                    ->implode(' + ')
+            : '0';
+
+        $query = DB::table($t)
+            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', 's1.username')
+            ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
+            ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id')
+            ->select([
+                "{$t}.{$u}",
+                "{$t}.status",
+                's1.full_name',
+                's1.mobile_no',
+                DB::raw('COALESCE(svc.service_short_name, svc.service_name) as service_code'),
+                's1.cadre',
+                'st.state_name as allotted_state',
+                DB::raw("({$stepsDoneExpr}) as steps_done"),
+            ]);
+
+        foreach ($steps as $step) {
+            $query->addSelect("{$t}.{$step->tracker_column}");
+        }
+
+        // Scope to this form when the tracker table is shared
+        if (Schema::hasColumn($t, 'form_id')) {
+            $query->where("{$t}.form_id", $form->id);
+        }
+
+        // Apply filters
+        if ($request->filled('status')) {
+            $query->where("{$t}.status", $request->input('status'));
+        }
+        if ($request->filled('service_id')) {
+            $query->where('s1.service_id', $request->input('service_id'));
+        }
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($t, $u, $search) {
+                $q->where("{$t}.{$u}", 'like', "%{$search}%")
+                  ->orWhere('s1.full_name', 'like', "%{$search}%")
+                  ->orWhere('s1.mobile_no', 'like', "%{$search}%");
+            });
+        }
+
+        $students = $query->orderBy("{$t}.{$u}")->paginate(50)->withQueryString();
+
+        return view(
+            'fc.report.form-overview',
+            compact('form', 'steps', 'totalSteps', 'summary', 'services', 'students', 'userKey')
+        );
+    }
+
+    // ── 1c. Form-specific CSV export ──────────────────────────────────
+    public function formExportCsv(Request $request, FcForm $form)
+    {
+        $dataTable    = new FcFormOverviewDataTable($form);
+        $steps        = $dataTable->steps;
+        $totalSteps   = $dataTable->totalSteps;
+        $trackerTable = $form->trackerStorageTable();
+        $userKey      = $form->user_identifier ?: 'username';
+        $t            = $trackerTable;
+        $u            = $userKey;
+
+        $stepsDoneExpr = $totalSteps > 0
+            ? $steps->map(fn ($s) => "CASE WHEN `{$t}`.`{$s->tracker_column}`=1 THEN 1 ELSE 0 END")
+                    ->implode(' + ')
+            : '0';
+
+        $query = DB::table($t)
+            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', 's1.username')
+            ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
+            ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id')
+            ->select([
+                "{$t}.{$u} as username",
+                "{$t}.status",
+                's1.full_name',
+                's1.mobile_no',
+                DB::raw('COALESCE(svc.service_short_name, svc.service_name) as service_code'),
+                's1.cadre',
+                'st.state_name as allotted_state',
+                DB::raw("({$stepsDoneExpr}) as steps_done"),
+            ]);
+
+        foreach ($steps as $step) {
+            $query->addSelect("{$t}.{$step->tracker_column}");
+        }
+
+        if (Schema::hasColumn($t, 'form_id')) {
+            $query->where("{$t}.form_id", $form->id);
+        }
+
+        if ($request->filled('status')) {
+            $query->where("{$t}.status", $request->input('status'));
+        }
+        if ($request->filled('service_id')) {
+            $query->where('s1.service_id', $request->input('service_id'));
+        }
+        if ($request->filled('search')) {
+            $search = $request->input('search');
+            $query->where(function ($q) use ($t, $u, $search) {
+                $q->where("{$t}.{$u}", 'like', "%{$search}%")
+                  ->orWhere('s1.full_name', 'like', "%{$search}%")
+                  ->orWhere('s1.mobile_no', 'like', "%{$search}%");
+            });
+        }
+
+        $rows = $query->orderBy("{$t}.{$u}")->get();
+
+        $filename = Str::slug($form->form_name) . '-' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type'        => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ];
+
+        $callback = function () use ($rows, $steps, $userKey, $totalSteps) {
+            $handle = fopen('php://output', 'w');
+
+            // Header row
+            $cols = [strtoupper($userKey), 'Full Name', 'Mobile', 'Service', 'Cadre', 'State'];
+            foreach ($steps as $step) {
+                $cols[] = $step->step_name;
+            }
+            $cols[] = 'Steps Done';
+            $cols[] = 'Status';
+            fputcsv($handle, $cols);
+
+            foreach ($rows as $row) {
+                $line = [
+                    $row->{$userKey} ?? $row->username,
+                    $row->full_name ?? '',
+                    $row->mobile_no ?? '',
+                    $row->service_code ?? '',
+                    $row->cadre ?? '',
+                    $row->allotted_state ?? '',
+                ];
+                foreach ($steps as $step) {
+                    $line[] = ($row->{$step->tracker_column} ?? 0) ? 'Yes' : 'No';
+                }
+                $line[] = ($row->steps_done ?? 0) . '/' . $totalSteps;
+                $line[] = $row->status ?? '';
+                fputcsv($handle, $line);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
     }
 
     // ── 2. Student Detail View ────────────────────────────────────────
@@ -250,8 +436,10 @@ class ReportController extends Controller
                 );
                 return $row;
             });
+        $registrationService = app(RegistrationService::class);
+        $pdfForm = FcForm::resolveForUsername($username);
         $sections = $this->fcStudentPdfSanitizeSections(
-            app(RegistrationService::class)->buildPdfSectionsFromFormDefinition($username)
+            $registrationService->buildPdfSectionsFromFormDefinition($username, $pdfForm)
         );
         $printedAt = $this->fcPdfSanitizeText(now()->format('d/m/Y H:i'));
         $photoDataUri = $this->fcRegistrationPhotoDataUri($step1->photo_path);
@@ -265,7 +453,8 @@ class ReportController extends Controller
             'sections' => $sections,
             'username' => $this->fcPdfSanitizeText($username),
             'step1' => $step1,
-            'pdfFullName' => $this->fcPdfSanitizeText((string) ($step1->full_name ?? '')),
+            'pdfFullName' => $this->fcPdfSanitizeText($registrationService->resolveStudentDisplayName($step1)),
+            'pdfFormName' => $this->fcPdfSanitizeText((string) ($pdfForm?->form_name ?? '')),
             'printedAt' => $printedAt,
             'photoDataUri' => $photoDataUri,
             'pdfFontFaceCss' => $pdfFontFaceCss,

@@ -221,6 +221,12 @@
         <td class="label">Generated / जारी दिनांक</td>
         <td>{{ $printedAt }}</td>
     </tr>
+    @if(!empty($pdfFormName))
+    <tr>
+        <td class="label">Form / प्रपत्र</td>
+        <td>{{ $pdfFormName }}</td>
+    </tr>
+    @endif
 </table>
 
 @foreach($sections as $sec)
