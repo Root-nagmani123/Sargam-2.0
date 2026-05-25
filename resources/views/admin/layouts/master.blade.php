@@ -560,6 +560,9 @@
                 str_starts_with($path, 'security/')
             ) {
                 $activeNavTab = '#home';
+            } elseif (request()->routeIs('member.profile.edit')) {
+                // Edit Profile lives in Home sidebar and @section('content'), not Setup.
+                $activeNavTab = '#home';
             } elseif (
                 request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
                 request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
