@@ -1,165 +1,13 @@
 @extends('admin.layouts.master')
 
 @push('styles')
-<style>
-/* Fallback styles for missing CSS files */
-.fallback-styles {
-    /* This ensures basic styling even if external CSS fails to load */
-}
-
-/* Modal Scrolling Enhancement */
-#uploadModal .modal-dialog-scrollable .modal-body {
-    max-height: calc(100vh - 250px) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important; 
-    padding: 1.5rem;
-}
-
-#uploadModal .modal-dialog-scrollable .modal-header {
-    position: sticky;
-    top: 0;
-    z-index: 1020;
-    background-color: white;
-    flex-shrink: 0;
-}
-
-#uploadModal .modal-dialog-scrollable .modal-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 1020;
-    background-color: white;
-    flex-shrink: 0;
-}
-
-#uploadModal .modal-dialog-scrollable {
-    max-height: calc(100vh - 1rem);
-}
-
-#uploadModal .modal-content {
-    max-height: calc(100vh - 1rem);
-    display: flex;
-    flex-direction: column;
-}
-
-/* Custom scrollbar styling */
-#uploadModal .modal-body::-webkit-scrollbar {
-    width: 10px;
-}
-
-#uploadModal .modal-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-#uploadModal .modal-body::-webkit-scrollbar-thumb {
-    background: #0d6efd;
-    border-radius: 10px;
-}
-
-#uploadModal .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #0b5ed7;
-}
-
-/* Attachments table container scrolling */
-#uploadModal #course_attachments_container,
-#uploadModal #other_attachments_container {
-    max-height: 300px !important;
-    overflow-y: auto !important;
-    overflow-x: auto !important;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    position: relative;
-}
-
-#uploadModal #course_attachments_container table,
-#uploadModal #other_attachments_container table {
-    margin-bottom: 0;
-}
-
-#uploadModal #course_attachments_container::-webkit-scrollbar,
-#uploadModal #other_attachments_container::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-#uploadModal #course_attachments_container::-webkit-scrollbar-track,
-#uploadModal #other_attachments_container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-#uploadModal #course_attachments_container::-webkit-scrollbar-thumb,
-#uploadModal #other_attachments_container::-webkit-scrollbar-thumb {
-    background: #6c757d;
-    border-radius: 10px;
-}
-
-#uploadModal #course_attachments_container::-webkit-scrollbar-thumb:hover,
-#uploadModal #other_attachments_container::-webkit-scrollbar-thumb:hover {
-    background: #5a6268;
-}
-</style>
-
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{{ asset('css/course-repository-admin.css') }}">
 @endpush
 
 @section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Lal Bahadur')
 
 @section('setup_content')
-<style>
-.upload-zone {
-    display: block;
-    border: 2px dashed #cfe2ff;
-    border-radius: 12px;
-    padding: 2rem;
-    background-color: #f8fbff;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-.upload-zone:hover,
-.upload-zone:focus-within {
-    border-color: #0d6efd;
-    background-color: #eef5ff;
-}
-
-.upload-icon {
-    font-size: 42px;
-    color: #0d6efd;
-    margin-bottom: 0.5rem;
-}
-
-/* Category / sub-category / documents links */
-a.cr-link-category {
-    color: #004a93 !important;
-    text-decoration: none;
-    font-weight: 600;
-}
-a.cr-link-category:hover,
-a.cr-link-category:focus {
-    color: #003366 !important;
-    text-decoration: underline;
-}
-a.cr-link-subcategory {
-    color: #087990 !important;
-    text-decoration: none;
-    font-weight: 600;
-}
-a.cr-link-subcategory:hover,
-a.cr-link-subcategory:focus {
-    color: #055160 !important;
-    text-decoration: underline;
-}
-a.cr-link-documents {
-    color: #146c43 !important;
-    text-decoration: none;
-    font-weight: 600;
-}
-a.cr-link-documents:hover,
-a.cr-link-documents:focus {
-    color: #0d5132 !important;
-    text-decoration: underline;
-}
-</style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var el = document.getElementById('category_image_create');
@@ -179,97 +27,70 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <nav aria-label="breadcrumb" class="flex-grow-1">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}"
-                            class="text-decoration-none text-muted d-flex align-items-center">
-                            <span class="material-icons material-symbols-rounded me-1"
-                                style="font-size: 18px;">home</span> Academics
-                        </a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}"
-                            class="text-decoration-none text-muted">MCTP</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Course
-                            Repository Admin</a>
-                    </li>
-                    @if (!empty($ancestors))
-                    @foreach ($ancestors as $ancestor)
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.show', $ancestor->pk) }}"
-                            class="cr-link-category">{{ $ancestor->course_repository_name }}</a>
-                    </li>
-                    @endforeach
-                    @endif
-                    <li class="breadcrumb-item active" aria-current="page">
-                        <span class="fw-semibold text-primary">{{ $repository->course_repository_name }}</span>
-                    </li>
-                </ol>
-            </nav>
+<div class="container-fluid cr-admin pb-3">
+    @php
+        $crumbItems = [
+            ['label' => 'Home', 'url' => route('admin.dashboard')],
+            ['label' => 'Course Repository', 'url' => route('course-repository.index')],
+        ];
+        if (!empty($ancestors)) {
+            foreach ($ancestors as $ancestor) {
+                $crumbItems[] = [
+                    'label' => $ancestor->course_repository_name,
+                    'url' => route('course-repository.show', $ancestor->pk),
+                ];
+            }
+        }
+        $crumbItems[] = ['label' => $repository->course_repository_name, 'url' => null];
+    @endphp
+
+    <x-breadcrum
+        :title="$repository->course_repository_name"
+        :items="$crumbItems"
+    >
+        <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 cr-repo-breadcrumb-toolbar"
+             role="toolbar"
+             aria-label="Repository actions">
+            <a href="javascript:void(0)"
+               data-bs-toggle="modal"
+               data-bs-target="#uploadModal"
+               aria-label="Upload documents"
+               class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold text-nowrap shadow-sm">
+                <span class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">upload_file</span>
+                <span class="d-none d-sm-inline">Upload Documents</span>
+                <span class="d-inline d-sm-none">Upload</span>
+            </a>
+            <a href="javascript:void(0)"
+               data-bs-toggle="modal"
+               data-bs-target="#createModal"
+               aria-label="Add new sub category"
+               class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-3 fw-semibold text-nowrap shadow-sm">
+                <span class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">create_new_folder</span>
+                <span class="d-none d-sm-inline">Add Sub Category</span>
+                <span class="d-inline d-sm-none">Add</span>
+            </a>
         </div>
-    </div>
+    </x-breadcrum>
 
     <div class="datatables">
-        <div class="card border-0 shadow-lg modern-card">
-            <div class="card-body p-4">
-                <!-- Page Title and Actions -->
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
-                    <div class="d-flex align-items-center gap-3">
-                        <a href="javascript:void(0)" type="button" onclick="window.history.back()"
-                            class="text-primary p-2 back-btn">
-                            <span class="material-icons material-symbols-rounded">arrow_back_ios</span>
-                        </a>
-                        <div>
-                            <h3 class="mb-0 fw-bold text-primary">{{ $repository->course_repository_name }}</h3>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-
-                        <!-- Upload Documents (Secondary Action) -->
-                        <button type="button"
-                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-4 py-2 rounded-pill fw-medium shadow-sm btn-hover-lift"
-                            data-bs-toggle="modal" data-bs-target="#uploadModal">
-                            <span class="material-icons material-symbols-rounded fs-6">
-                                upload
-                            </span>
-                            <span>Upload Documents</span>
-                        </button>
-
-                        <!-- Add Category (Primary Action) -->
-                        <button type="button"
-                            class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift" data-bs-toggle="modal" data-bs-target="#createModal">
-                            <span class="material-icons material-symbols-rounded fs-6">
-                                add
-                            </span>
-                            <span>Add Category</span>
-                        </button>
-
-                    </div>
-
-                </div>
+        <div class="card border-0 shadow-sm cr-admin-card">
+            <div class="card-body p-3 p-md-4">
 
                 @if($repository->children->count() == 0 && $documents->count() == 0)
-                <!-- Empty State -->
-                <div class="text-center py-5 my-5">
-                    <div class="empty-state-icon mb-3">
-                        <span class="material-icons material-symbols-rounded"
-                            style="font-size: 64px; color: #dee2e6;">folder_off</span>
+                <div class="text-center py-5 px-3 cr-admin-empty">
+                    <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
+                        <i class="bi bi-folder-x display-6 text-secondary" aria-hidden="true"></i>
                     </div>
-                    <h5 class="text-muted mb-2">No Content Found</h5>
-                    <p class="text-muted mb-4">Start by adding a category or uploading a document to get started.</p>
-                    <div class="d-flex gap-2 justify-content-center">
-                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded" data-bs-toggle="modal"
+                    <h5 class="text-secondary mb-2 fw-semibold">No Content Found</h5>
+                    <p class="text-muted mb-4 small">Start by adding a sub-category or uploading a document.</p>
+                    <div class="d-flex flex-wrap gap-2 justify-content-center">
+                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded-3 px-3" data-bs-toggle="modal"
                             data-bs-target="#createModal">
-                            Add Category
+                            <i class="bi bi-folder-plus me-1" aria-hidden="true"></i>Add Sub Category
                         </a>
-                        <a href="" class="btn btn-outline-primary btn-sm rounded">Upload Document
+                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm rounded-3 px-3"
+                           data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <i class="bi bi-upload me-1" aria-hidden="true"></i>Upload Document
                         </a>
                     </div>
                 </div>
@@ -277,36 +98,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Child Repositories Section -->
                 @if($repository->children->count() > 0)
                 <div class="mb-4">
+                    <h6 class="cr-admin-section-title d-flex align-items-center gap-2">
+                        <i class="bi bi-diagram-3 text-primary" aria-hidden="true"></i>Sub-Categories
+                    </h6>
                     <div class="table-responsive">
-                        <table class="table" id="child_repositories">
-                            <thead>
+                        <table class="table table-hover align-middle mb-0 cr-admin-table" id="child_repositories">
+                            <thead class="table-light">
                                 <tr>
-                                    <th class="col">#</th>
-                                    <th class="col">Image</th>
-                                    <th class="col">Sub Category Name</th>
-                                    <th class="col">Details</th>
-                                    <th class="col">Sub-Categories</th>
-                                    <th class="col">Documents</th>
-                                    <th class="col">Actions</th>
+                                    <th class="text-center" scope="col">#</th>
+                                    <th scope="col">Image</th>
+                                    <th scope="col">Sub Category Name</th>
+                                    <th scope="col">Details</th>
+                                    <th scope="col">Sub-Categories</th>
+                                    <th scope="col">Documents</th>
+                                    <th class="text-center" scope="col">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($repository->children as $index => $child)
                                 <tr>
-                                    <td>
-                                        {{ $loop->iteration }}
-                                    </td>
+                                    <td class="text-center text-muted">{{ $loop->iteration }}</td>
                                     <td>
                                         @if(filled($child->category_image) &&
                                         \Storage::disk('public')->exists($child->category_image))
-                                        <img src="{{ asset('storage/' . $child->category_image) }}" alt="Category Image"
-                                            class="rounded-2 shadow-sm"
-                                            style="width: 60px; height: 60px; object-fit: cover;">
+                                        <img src="{{ asset('storage/' . $child->category_image) }}" alt=""
+                                            class="rounded-3 shadow-sm cr-thumb">
                                         @else
-                                        <div class="bg-light rounded-2 d-flex align-items-center justify-content-center"
-                                            style="width: 60px; height: 60px;">
-                                            <i class="material-icons material-symbols-rounded text-muted"
-                                                style="font-size: 24px;">image</i>
+                                        <div class="bg-light rounded-3 d-flex align-items-center justify-content-center cr-thumb-placeholder">
+                                            <i class="bi bi-image text-muted" aria-hidden="true"></i>
                                         </div>
                                         @endif
                                     </td>
@@ -332,24 +151,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                             {{ $child->getDocumentCount() }} - documents
                                         </a>
                                     </td>
-                                    <td>
-                                        <div class="btn-group d-flex gap-2 text-primary" role="group">
-                                            <!-- <a href="{{ route('course-repository.show', $child->pk) }}"
-                                                class="text-primary"
-                                                data-bs-toggle="tooltip" title="View">
-                                                <span class="material-icons material-symbols-rounded">visibility</span>
-                                            </a> -->
-                                            <a href="javascript:void(0)" class="text-primary edit-repo"
+                                    <td class="text-center">
+                                        <div class="d-inline-flex gap-1" role="group" aria-label="Row actions">
+                                            <a href="javascript:void(0)" class="cr-admin-icon-btn edit-repo"
                                                 data-pk="{{ $child->pk }}"
                                                 data-name="{{ $child->course_repository_name }}"
                                                 data-details="{{ $child->course_repository_details }}"
                                                 data-image="{{ $child->category_image }}" data-bs-toggle="tooltip"
-                                                title="Edit" aria-label="Edit" aria-haspopup="true" aria-expanded="false" data-bs-target="#editModal">
-                                                <span class=" material-icons material-symbols-rounded">edit</span>
+                                                title="Edit" aria-label="Edit" data-bs-target="#editModal">
+                                                <i class="bi bi-pencil-square" aria-hidden="true"></i>
                                             </a>
-                                            <a href="javascript:void(0)" class="text-primary delete-repo"
-                                                data-pk="{{ $child->pk }}" data-bs-toggle="tooltip" title="Delete">
-                                                <span class="material-icons material-symbols-rounded">delete</span>
+                                            <a href="javascript:void(0)" class="cr-admin-icon-btn text-danger delete-repo"
+                                                data-pk="{{ $child->pk }}" data-bs-toggle="tooltip" title="Delete"
+                                                aria-label="Delete">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
                                             </a>
                                         </div>
                                     </td>
@@ -363,21 +178,24 @@ document.addEventListener('DOMContentLoaded', function() {
 
                 <!-- Documents Section -->
                 @if($documents->count() > 0)
-                <div class="table-responsive">
-                    <table class="table" id="documents">
-                        <thead>
+                <h6 class="cr-admin-section-title d-flex align-items-center gap-2 mb-3">
+                    <i class="bi bi-file-earmark-text text-primary" aria-hidden="true"></i>Documents
+                </h6>
+                <div class="table-responsive rounded-3 border">
+                    <table class="table table-hover align-middle mb-0 cr-admin-table" id="documents">
+                        <thead class="table-light">
                             <tr>
-                                <th class="col text-center">S.No.</th>
-                                <th class="col text-center">Document Name</th>
-                                <th class="col text-center">File Title</th>
-                                <th class="col text-center">Course Name</th>
-                                <th class="col text-center">Subject</th>
-                                <th class="col text-center">Topic</th>
-                                <th class="col text-center">Session Date</th>
-                                <th class="col text-center">Sector</th>
-                                <th class="col text-center">Ministry</th>
-                                <th class="col text-center">Author</th>
-                                <th class="col text-center">Action</th>
+                                <th class="text-center" scope="col">S.No.</th>
+                                <th scope="col">Document Name</th>
+                                <th scope="col">File Title</th>
+                                <th scope="col">Course Name</th>
+                                <th scope="col">Subject</th>
+                                <th scope="col">Topic</th>
+                                <th scope="col">Session Date</th>
+                                <th scope="col">Sector</th>
+                                <th scope="col">Ministry</th>
+                                <th scope="col">Author</th>
+                                <th class="text-center" scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -385,8 +203,8 @@ document.addEventListener('DOMContentLoaded', function() {
                             <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
                                 <td>{{ $loop->iteration }}</td>
                                 <td>
-                                    <i class="fas fa-file-alt text-primary me-2"></i>
-                                    <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                    <i class="bi bi-file-earmark-pdf text-danger me-1" aria-hidden="true"></i>
+                                    <span class="fw-semibold">{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</span>
                                 </td>
                                 <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
                                 <td>
@@ -485,14 +303,16 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </small>
                                 </td>
                                 <td class="text-center">
-                                    <div class="btn-group" role="group">
+                                    <div class="d-inline-flex gap-1" role="group" aria-label="Document actions">
                                         <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
-                                            class="text-primary" data-bs-toggle="tooltip" title="Download">
-                                            <span class="material-icons material-symbols-rounded">download</span>
+                                            class="cr-admin-icon-btn" data-bs-toggle="tooltip" title="Download"
+                                            aria-label="Download">
+                                            <i class="bi bi-download" aria-hidden="true"></i>
                                         </a>
-                                        <a class="text-primary delete-doc" data-pk="{{ $doc->pk }}"
-                                            data-bs-toggle="tooltip" title="Delete">
-                                            <span class="material-icons material-symbols-rounded">delete</span>
+                                        <a href="javascript:void(0)" class="cr-admin-icon-btn text-danger delete-doc"
+                                            data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Delete"
+                                            aria-label="Delete">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
                                         </a>
                                     </div>
                                 </td>
@@ -510,100 +330,57 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <!-- Create Category Modal -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+<div class="modal fade cr-design-modal" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
+        <div class="modal-content">
 
-            <!-- Header -->
-            <div class="modal-header bg-primary bg-gradient text-white border-0 rounded-top-4">
-                <h5 class="modal-title fw-semibold d-flex align-items-center" id="createModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2 fs-5">
-                        add_circle
-                    </span>
-                    Create New Category
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModalLabel">Add Sub Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <!-- Form -->
             <form id="createForm" method="POST" action="{{ route('course-repository.store') }}"
                 enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="parent_type" value="{{ $repository->pk }}">
 
-                <div class="modal-body p-4">
+                <div class="modal-body">
 
-                    <!-- Category Name -->
-                    <div class="mb-4">
-                        <div class="form-floating">
-                            <input type="text" class="form-control form-control-lg" id="course_repository_name"
-                                name="course_repository_name" placeholder="Category Name" required>
-                            <label for="course_repository_name">
-                                <span class="material-icons material-symbols-rounded me-1 fs-6">
-                                    folder
-                                </span>
-                                Category Name <span class="text-danger">*</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Details -->
-                    <div class="mb-4">
-                        <div class="form-floating">
-                            <textarea class="form-control" id="course_repository_details"
-                                name="course_repository_details" placeholder="Details" style="height: 110px"></textarea>
-                            <label for="course_repository_details">
-                                <span class="material-icons material-symbols-rounded me-1 fs-6">
-                                    subject
-                                </span>
-                                Details (Optional)
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Upload Section -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            Category Image
+                        <label for="course_repository_name" class="form-label">
+                            Sub-Category Name <span class="text-danger">*</span>
                         </label>
+                        <input type="text" class="form-control" id="course_repository_name"
+                            name="course_repository_name" placeholder="eg. E-Office" required>
+                    </div>
 
-                        <label for="category_image_create" class="upload-zone">
+                    <div class="mb-3">
+                        <label for="course_repository_details" class="form-label">Description</label>
+                        <textarea class="form-control" id="course_repository_details"
+                            name="course_repository_details" rows="3"
+                            placeholder="eg. Lorem ipsum dolor sit amet"></textarea>
+                    </div>
 
-                            <div class="text-center">
-                                <span class="material-icons material-symbols-rounded upload-icon">
-                                    cloud_upload
-                                </span>
-                                <p class="mb-1 fw-medium">
-                                    <span class="text-primary">Click to upload</span>
-                                    or drag and drop
-                                </p>
-                                <small class="text-muted">
-                                    JPEG, PNG, JPG, GIF (Max 2MB)
-                                </small>
-                            </div>
-
-                            <input type="file" id="category_image_create" name="category_image"
-                                accept="image/jpeg,image/png,image/jpg,image/gif" hidden>
-                        </label>
-
-                        <!-- Preview -->
-                        <div class="mt-3">
-                            <img id="preview_create_show" class="img-thumbnail shadow-sm d-none"
-                                alt="Category image preview" style="max-width: 150px;">
+                    <div class="mb-0">
+                        <label class="form-label d-block">Attachment</label>
+                        @include('admin.course-repository.partials.cr-design-file', [
+                            'inputId' => 'category_image_create',
+                            'inputName' => 'category_image',
+                            'required' => true,
+                            'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
+                        ])
+                        <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
+                        <div class="mt-2">
+                            <img id="preview_create_show" class="img-thumbnail rounded-3 shadow-sm d-none"
+                                alt="Category image preview" style="max-width: 120px;">
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Footer -->
-                <div class="modal-footer bg-light border-0 px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                        Save Category
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Sub-Category</button>
                 </div>
             </form>
 
@@ -613,62 +390,52 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 <!-- Edit Category Modal -->
-<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white border-0">
-                <h5 class="modal-title fw-semibold" id="editModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2" style="font-size: 20px;">edit</span>Edit
-                    Category
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+<div class="modal fade cr-design-modal" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Edit Sub Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editForm" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-body p-4">
+                <div class="modal-body">
                     <div class="mb-3">
-                        <label for="edit_course_repository_name" class="form-label fw-semibold">
-                            Category Name <span class="text-danger">*</span>
+                        <label for="edit_course_repository_name" class="form-label">
+                            Sub-Category Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control form-control-lg" id="edit_course_repository_name"
-                            name="course_repository_name" required>
+                        <input type="text" class="form-control" id="edit_course_repository_name"
+                            name="course_repository_name" placeholder="eg. E-Office" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_course_repository_details" class="form-label fw-semibold">Details</label>
+                        <label for="edit_course_repository_details" class="form-label">Description</label>
                         <textarea class="form-control" id="edit_course_repository_details"
-                            name="course_repository_details" rows="3"></textarea>
+                            name="course_repository_details" rows="3"
+                            placeholder="eg. Lorem ipsum dolor sit amet"></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label for="category_image_edit" class="form-label fw-semibold">Category Image</label>
-                        <div id="current_image_container_show" class="mb-3" style="display: none;">
-                            <p class="text-muted mb-2 small"><strong>Current Image:</strong></p>
+                    <div class="mb-0">
+                        <label class="form-label d-block">Attachment</label>
+                        <div id="current_image_container_show" class="mb-2" style="display: none;">
+                            <p class="text-muted mb-1 small">Current image</p>
                             <img id="current_image_show" src="" alt="Current"
-                                style="max-width: 150px; border-radius: 8px;" class="img-thumbnail shadow-sm">
+                                class="img-thumbnail rounded-3 shadow-sm" style="max-width: 120px;">
                         </div>
-                        <input type="file" class="form-control" id="category_image_edit" name="category_image"
-                            accept="image/jpeg,image/png,image/jpg,image/gif">
-                        <small class="text-muted d-block mt-2">
-                            <span class="material-icons material-symbols-rounded me-1"
-                                style="font-size: 14px;">info</span>Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)
-                        </small>
-                        <div class="mt-3">
+                        @include('admin.course-repository.partials.cr-design-file', [
+                            'inputId' => 'category_image_edit',
+                            'inputName' => 'category_image',
+                            'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
+                        ])
+                        <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
+                        <div class="mt-2">
                             <img id="preview_edit_show" src="" alt="Preview"
-                                style="max-width: 150px; display: none; border-radius: 8px;"
-                                class="img-thumbnail shadow-sm">
+                                class="img-thumbnail rounded-3 shadow-sm" style="max-width: 120px; display: none;">
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-light px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                        <span class="material-icons material-symbols-rounded me-1"
-                            style="font-size: 16px;">cancel</span>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                        <span class="material-icons material-symbols-rounded me-1"
-                            style="font-size: 16px;">check_circle</span>Update Category
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Sub-Category</button>
                 </div>
             </form>
         </div>
@@ -676,81 +443,68 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <!-- Upload Modal -->
-<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-3">
-            <div class="modal-header bg-white border-bottom px-4 py-3">
-                <h5 class="modal-title fw-semibold text-dark" id="uploadModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2 text-primary"
-                        style="font-size: 22px;">cloud_upload</span>Upload Document
-                </h5>
+<div class="modal fade cr-design-modal" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered cr-design-modal-upload">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">Upload Document</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="uploadForm" method="POST" action="javascript:void(0);" enctype="multipart/form-data" novalidate>
                 @csrf
-                <div id="uploadFormErrors" class="alert alert-danger d-none mx-4 mt-3 mb-0" role="alert"></div>
-                <div class="modal-body p-4 bg-light"
-                    style="max-height: calc(100vh - 250px); overflow-y: auto; overflow-x: hidden;">
-                    <!-- Category Type Selection - Radio Buttons -->
+                <div id="uploadFormErrors" class="alert alert-danger d-none mx-3 mt-3 mb-0" role="alert"></div>
+                <div class="modal-body">
                     <div class="mb-3">
-                        <div class="d-flex gap-4 align-items-center">
+                        <label class="form-label d-block">Document Type <span class="text-danger">*</span></label>
+                        <div class="d-flex flex-wrap gap-3">
                             <div class="form-check">
                                 <input class="form-check-input category-radio" type="radio" name="category"
                                     id="category_course" value="Course" checked>
-                                <label class="form-check-label fw-medium" for="category_course">
-                                    Course
-                                </label>
+                                <label class="form-check-label" for="category_course">Course</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input category-radio" type="radio" name="category"
                                     id="category_other" value="Other">
-                                <label class="form-check-label fw-medium" for="category_other">
-                                    Other
-                                </label>
+                                <label class="form-check-label" for="category_other">Other</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input category-radio" type="radio" name="category"
                                     id="category_institutional" value="Institutional">
-                                <label class="form-check-label fw-medium" for="category_institutional">
-                                    Institutional
-                                </label>
+                                <label class="form-check-label" for="category_institutional">Institutional</label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Course Repository Form Card -->
-                    <div class="card border-0 shadow-sm rounded-3 mb-3">
+                    <p class="cr-design-overview-title">Overview</p>
+                    <hr class="cr-design-divider">
+
+                    <div class="card cr-upload-form-panel mb-0">
                         <div class="card-header bg-white border-0 py-3">
                             <h6 class="mb-0 fw-semibold text-dark">Course Repository of LBSNAA</h6>
                         </div>
-                        <div class="card-body p-4 bg-white">
+                        <div class="card-body p-0 bg-white">
 
                             <!-- Course Category Fields -->
                             <div id="courseFields" class="category-fields">
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Document Location <span class="text-danger">*</span></label>
+                                    <div class="btn-group cr-course-status-group" role="group"
+                                        aria-label="Course Status Filter">
+                                        <input type="radio" class="btn-check" name="course_status"
+                                            id="btnActiveCourses" value="active" checked>
+                                        <label class="btn btn-outline-success btn-sm" for="btnActiveCourses">Active</label>
+                                        <input type="radio" class="btn-check" name="course_status"
+                                            id="btnArchivedCourses" value="archived">
+                                        <label class="btn btn-outline-secondary btn-sm" for="btnArchivedCourses">Archived</label>
+                                    </div>
+                                </div>
+
                                 <!-- Row 1: Course Name & Major Subject Name -->
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="course_name" class="form-label">
                                             Course Name <span class="text-danger">*</span>
                                         </label>
-                                        <!-- Active/Archive Toggle -->
-                                        <!-- Active/Archive Toggle -->
-                                        <div class="btn-group w-100 mb-3" role="group"
-                                            aria-label="Course Status Filter">
-                                            <input type="radio" class="btn-check" name="course_status"
-                                                id="btnActiveCourses" value="active" checked>
-                                            <label class="btn btn-outline-success" for="btnActiveCourses">
-                                                <span class="material-icons material-symbols-rounded me-1"
-                                                    style="font-size: 16px;">check_circle</span>Active Courses
-                                            </label>
-
-                                            <input type="radio" class="btn-check" name="course_status"
-                                                id="btnArchivedCourses" value="archived">
-                                            <label class="btn btn-outline-secondary" for="btnArchivedCourses">
-                                                <span class="material-icons material-symbols-rounded me-1"
-                                                    style="font-size: 16px;">archive</span>Archived Courses
-                                            </label>
-                                        </div>
                                         <select class="form-select" id="course_name" name="course_name" required>
                                             <option value="" selected>Select</option>
                                             @foreach(($activeCourses ?? []) as $course)
@@ -825,7 +579,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Keywords <span class="text-danger">*</span>
                                         </label>
                                         <input type="text" class="form-control" id="keywords_course"
-                                            name="keywords_course" placeholder="ABCD12345" required>
+                                            name="keywords_course" placeholder="eg. Lorem ipsum dolor sit amet" required>
                                         <small class="text-muted d-flex align-items-center mt-1">
                                             <i class="bi bi-info-circle me-1"></i> Enter Keyword
                                         </small>
@@ -863,11 +617,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                 <!-- Video Link -->
                                 <div class="mb-4">
-                                    <label for="video_link_course" class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2"
-                                            style="font-size: 18px; vertical-align: middle;">video_library</span>
-                                        Video Link
-                                    </label>
+                                    <label for="video_link_course" class="form-label">Video Link</label>
                                     <input type="url" class="form-control" id="video_link_course"
                                         name="video_link_course" placeholder="https://www.youtube.com/watch?v=...">
                                     <small class="text-muted d-block mt-1">
@@ -875,43 +625,39 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </small>
                                 </div>
 
-                                <!-- Attachments with Titles -->
+                                <!-- Document Upload -->
                                 <div class="mb-4">
                                     <label class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2"
-                                            style="font-size: 18px; vertical-align: middle;">attach_file</span>
-                                        Attachments <span class="text-danger">*</span>
+                                        Document Upload <span class="text-danger">*</span>
+                                        <i class="bi bi-info-circle text-muted ms-1" title="Max 10MB. jpg, jpeg, png, pdf, doc, docx" aria-hidden="true"></i>
                                     </label>
 
-                                    <!-- Attachments Table -->
-                                    <div class="table-responsive" id="course_attachments_container"
-                                        style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
-                                        <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg">
+                                    <div class="table-responsive" id="course_attachments_container">
+                                        <table class="table table-sm mb-0 align-middle">
+                                            <thead>
                                                 <tr>
-                                                    <th style="width: 5%;">S.No.</th>
-                                                    <th>Attachment Title</th>
-                                                    <th>Upload File <span>max size: 10MB , allowed types: jpg, jpeg, png, pdf, doc, docx</span></th>
-                                                    <th style="width: 8%;">Action</th>
+                                                    <th style="width: 4%;">#</th>
+                                                    <th>Title</th>
+                                                    <th>File</th>
+                                                    <th style="width: 6%;"></th>
                                                 </tr>
                                             </thead>
                                             <tbody id="course_attachments_tbody">
-                                                <tr class="attachment-row">
+                                                <tr class="attachment-row cr-upload-attach-row">
                                                     <td class="row-number">1</td>
                                                     <td>
-                                                        <input type="text" class="form-control "
-                                                            name="attachment_titles[]" placeholder="e.g., Week-01">
+                                                        <input type="text" class="form-control"
+                                                            name="attachment_titles[]" placeholder="eg. Week-01">
                                                     </td>
                                                     <td>
-                                                        <input type="file" class="form-control "
+                                                        <input type="file" class="form-control"
                                                             name="attachments[]" accept="*/*">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
-                                                            class="btn btn-sm btn-danger delete-attachment"
-                                                            style="display: none;">
-                                                            <span class="material-icons material-symbols-rounded"
-                                                                style="font-size: 16px;">delete</span>
+                                                            class="btn cr-btn-remove-row delete-attachment"
+                                                            style="display: none;" aria-label="Remove row">
+                                                            <i class="bi bi-dash-lg" aria-hidden="true"></i>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -919,14 +665,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </table>
                                     </div>
 
-                                    <!-- Add More Button -->
-                                    <div class="mt-3">
+                                    <div class="mt-2">
                                         <button type="button"
-                                            class="btn btn-outline-primary btn-sm add-attachment-course"
-                                            data-category="course">
-                                            <span class="material-icons material-symbols-rounded me-1"
-                                                style="font-size: 16px;">add_circle</span>
-                                            Add More Attachment
+                                            class="btn cr-btn-add-row add-attachment-course"
+                                            data-category="course" aria-label="Add attachment row">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -934,28 +677,25 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <!-- Other Category Fields -->
                             <div id="otherFields" class="category-fields" style="display: none;">
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Document Location <span class="text-danger">*</span></label>
+                                    <div class="btn-group cr-course-status-group" role="group"
+                                        aria-label="Other Course Status Filter">
+                                        <input type="radio" class="btn-check" name="course_status_other"
+                                            id="btnActiveCoursesOther" value="active" checked>
+                                        <label class="btn btn-outline-success btn-sm" for="btnActiveCoursesOther">Active</label>
+                                        <input type="radio" class="btn-check" name="course_status_other"
+                                            id="btnArchivedCoursesOther" value="archived">
+                                        <label class="btn btn-outline-secondary btn-sm" for="btnArchivedCoursesOther">Archived</label>
+                                    </div>
+                                </div>
+
                                 <!-- Row 1: Course Name & Major Subject Name -->
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="course_name_other" class="form-label">
                                             Course Name <span class="text-danger">*</span>
                                         </label>
-                                        <!-- Active/Archive Toggle for Other Category -->
-                                        <div class="btn-group w-100 mb-2" role="group"
-                                            aria-label="Other Course Status Filter">
-                                            <input type="radio" class="btn-check" name="course_status_other"
-                                                id="btnActiveCoursesOther" value="active" checked>
-                                            <label class="btn btn-outline-success btn-sm" for="btnActiveCoursesOther">
-                                                <i class="bi bi-check-circle me-1"></i>Active Courses
-                                            </label>
-
-                                            <input type="radio" class="btn-check" name="course_status_other"
-                                                id="btnArchivedCoursesOther" value="archived">
-                                            <label class="btn btn-outline-secondary btn-sm"
-                                                for="btnArchivedCoursesOther">
-                                                <i class="bi bi-archive me-1"></i>Archived Courses
-                                            </label>
-                                        </div>
                                         <select class="form-select" id="course_name_other" name="course_name_other">
                                             <option value="" selected>Select</option>
                                             @foreach(($activeCourses ?? []) as $course)
@@ -1024,7 +764,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Keywords <span class="text-danger">*</span>
                                         </label>
                                         <input type="text" class="form-control" id="keywords_other"
-                                            name="keywords_other" placeholder="ABCD12345">
+                                            name="keywords_other" placeholder="eg. Lorem ipsum dolor sit amet">
                                         <small class="text-muted d-flex align-items-center mt-1">
                                             <i class="bi bi-info-circle me-1"></i> Enter Keyword
                                         </small>
@@ -1062,56 +802,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                 <!-- Video Link -->
                                 <div class="mb-4">
-                                    <label for="video_link_other" class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2"
-                                            style="font-size: 18px; vertical-align: middle;">video_library</span>
-                                        Video Link
-                                    </label>
+                                    <label for="video_link_other" class="form-label">Video Link</label>
                                     <input type="url" class="form-control" id="video_link_other" name="video_link_other"
                                         placeholder="https://www.youtube.com/watch?v=...">
-                                    <small class="text-muted d-block mt-1">
-                                        <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
-                                    </small>
                                 </div>
 
-                                <!-- Attachments with Titles -->
                                 <div class="mb-4">
                                     <label class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2"
-                                            style="font-size: 18px; vertical-align: middle;">attach_file</span>
-                                        Attachments <span class="text-danger">*</span>
+                                        Document Upload <span class="text-danger">*</span>
+                                        <i class="bi bi-info-circle text-muted ms-1" aria-hidden="true"></i>
                                     </label>
 
-                                    <!-- Attachments Table -->
-                                    <div class="table-responsive" id="other_attachments_container"
-                                        style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
-                                        <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg-light">
+                                    <div class="table-responsive" id="other_attachments_container">
+                                        <table class="table table-sm mb-0 align-middle">
+                                            <thead>
                                                 <tr>
-                                                    <th style="width: 5%;">S.No.</th>
-                                                    <th>Attachment Title</th>
-                                                    <th>Upload File</th>
-                                                    <th style="width: 8%;">Action</th>
+                                                    <th style="width: 4%;">#</th>
+                                                    <th>Title</th>
+                                                    <th>File</th>
+                                                    <th style="width: 6%;"></th>
                                                 </tr>
                                             </thead>
                                             <tbody id="other_attachments_tbody">
-                                                <tr class="attachment-row">
+                                                <tr class="attachment-row cr-upload-attach-row">
                                                     <td class="row-number">1</td>
                                                     <td>
-                                                        <input type="text" class="form-control "
+                                                        <input type="text" class="form-control"
                                                             name="attachment_titles_other[]"
-                                                            placeholder="e.g., Document-01">
+                                                            placeholder="eg. Document-01">
                                                     </td>
                                                     <td>
-                                                        <input type="file" class="form-control "
+                                                        <input type="file" class="form-control"
                                                             name="attachments_other[]" accept="*/*">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
-                                                            class="btn btn-sm btn-danger delete-attachment"
-                                                            style="display: none;">
-                                                            <span class="material-icons material-symbols-rounded"
-                                                                style="font-size: 16px;">delete</span>
+                                                            class="btn cr-btn-remove-row delete-attachment"
+                                                            style="display: none;" aria-label="Remove row">
+                                                            <i class="bi bi-dash-lg" aria-hidden="true"></i>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -1119,14 +847,11 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </table>
                                     </div>
 
-                                    <!-- Add More Button -->
-                                    <div class="mt-3">
+                                    <div class="mt-2">
                                         <button type="button"
-                                            class="btn btn-outline-primary btn-sm add-attachment-other"
-                                            data-category="other">
-                                            <span class="material-icons material-symbols-rounded me-1"
-                                                style="font-size: 16px;">add_circle</span>
-                                            Add More Attachment
+                                            class="btn cr-btn-add-row add-attachment-other"
+                                            data-category="other" aria-label="Add attachment row">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -1135,97 +860,55 @@ document.addEventListener('DOMContentLoaded', function() {
                             <!-- Institutional Category Fields -->
                             <div id="institutionalFields" class="category-fields" style="display: none;">
 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <!-- Keywords -->
-                                        <div class="mb-3">
-                                            <label for="Key_words_institutional" class="form-label">
-                                                Add Key words <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="text" class="form-control" id="Key_words_institutional"
-                                                name="Key_words_institutional" placeholder="Enter Keywords">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <!-- Keywords -->
-                                        <div class="mb-3">
-                                            <label for="Key_words_institutional" class="form-label">
-                                                Keywords <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="text" class="form-control" id="Key_words_institutional"
-                                                name="Key_words_institutional" placeholder="Enter Keywords">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <!-- sector -->
+                                <div class="mb-3">
+                                    <label for="Key_words_institutional" class="form-label">
+                                        Keywords <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="Key_words_institutional"
+                                        name="Key_words_institutional" placeholder="eg. Lorem ipsum dolor sit amet">
+                                </div>
 
-                                        <div class="mb-3">
-                                            <label for="sector_master_institutional" class="form-label">
-                                                Sector <span class="text-danger">*</span>
-                                            </label>
-                                            <select class="form-select" id="sector_master_institutional"
-                                                name="sector_master_institutional">
-                                                <option value="" selected>Select</option>
-                                                @foreach(($sectors ?? []) as $sector)
-                                                <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="sector_master_institutional" class="form-label">
+                                            Sector <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="sector_master_institutional"
+                                            name="sector_master_institutional">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($sectors ?? []) as $sector)
+                                            <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <!-- ministries -->
-
-                                        <div class="mb-3">
-                                            <label for="ministry_master_institutional" class="form-label">Ministry <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select" id="ministry_master_institutional"
-                                                name="ministry_master_institutional">
-                                                <option value="" selected>Select</option>
-                                                @foreach(($ministries ?? []) as $ministry)
-                                                <option value="{{ $ministry->pk }}"
-                                                    data-sector="{{ $ministry->sector_master_pk }}"
-                                                    style="display:none;">{{ $ministry->ministry_name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                        <label for="ministry_master_institutional" class="form-label">Ministry <span
+                                                class="text-danger">*</span></label>
+                                        <select class="form-select" id="ministry_master_institutional"
+                                            name="ministry_master_institutional">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($ministries ?? []) as $ministry)
+                                            <option value="{{ $ministry->pk }}"
+                                                data-sector="{{ $ministry->sector_master_pk }}"
+                                                style="display:none;">{{ $ministry->ministry_name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                 </div>
 
-
-                                <!-- Video Link -->
-                                <!-- <div class="mb-3">
-                                    <label for="keyword_institutional" class="form-label">Video Link</label>
-                                    <input type="text" class="form-control" id="keyword_institutional"
-                                        name="keyword_institutional" placeholder="Enter Video Link">
-                                </div> -->
-
-                                <!-- Upload Attachment -->
                                 <div class="mb-3">
-                                    <label class="form-label">
-                                        Upload Attachment <span class="text-danger">*</span>
+                                    <label class="form-label d-block">
+                                        Document Upload <span class="text-danger">*</span>
+                                        <i class="bi bi-info-circle text-muted ms-1" aria-hidden="true"></i>
                                     </label>
-                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
-                                        style="border-style: dashed !important; cursor: pointer;">
-                                        <input type="file"
-                                            class="file-input-institutional position-absolute w-100 h-100 opacity-0"
-                                            name="attachments_institutional[]" accept="*/*" multiple
-                                            style="top: 0; left: 0; cursor: pointer;">
-                                        <div class="upload-icon mb-2">
-                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M12 15V3M12 3L8 7M12 3L16 7" stroke="#0d6efd" stroke-width="2"
-                                                    stroke-linecap="round" stroke-linejoin="round" />
-                                                <path
-                                                    d="M2 17L2.62 19.86C2.71 20.37 3.14 20.75 3.66 20.75H20.34C20.86 20.75 21.29 20.37 21.38 19.86L22 17"
-                                                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round"
-                                                    stroke-linejoin="round" />
-                                            </svg>
-                                        </div>
-                                        <p class="mb-1 text-primary fw-medium">Click to upload <span
-                                                class="text-muted">or drag and drop</span></p>
-                                        <div class="selected-files-institutional mt-2 text-start" style="display:none;">
-                                        </div>
-                                    </div>
+                                    @include('admin.course-repository.partials.cr-design-file', [
+                                        'inputId' => 'attachments_institutional',
+                                        'inputName' => 'attachments_institutional[]',
+                                        'inputClass' => 'file-input-institutional',
+                                        'accept' => '*/*',
+                                        'multiple' => true,
+                                    ])
+                                    <div class="selected-files-institutional mt-2 text-start small text-muted" style="display:none;"></div>
                                 </div>
                             </div>
 
@@ -1239,13 +922,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     </p>
                 </div>
 
-                <div class="modal-footer border-0 bg-white px-4 py-3">
-                    <button type="submit" class="btn btn-primary px-5 rounded-pill" id="uploadBtn">
-                        Save
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary px-5 rounded-pill" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="uploadBtn">Add Document</button>
                 </div>
             </form>
         </div>
@@ -3482,20 +3161,20 @@ document.addEventListener('click', function(e) {
         const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
 
         const newRow = document.createElement('tr');
-        newRow.className = 'attachment-row';
+        newRow.className = 'attachment-row cr-upload-attach-row';
         newRow.innerHTML = `
             <td class="row-number">${rowCount}</td>
             <td>
-                <input type="text" class="form-control " 
-                    name="attachment_titles[]" placeholder="e.g., Week-${rowCount}">
+                <input type="text" class="form-control"
+                    name="attachment_titles[]" placeholder="eg. Week-${rowCount}">
             </td>
             <td>
-                <input type="file" class="form-control " 
+                <input type="file" class="form-control"
                     name="attachments[]" accept="*/*">
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger delete-attachment">
-                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                <button type="button" class="btn cr-btn-remove-row delete-attachment" aria-label="Remove row">
+                    <i class="bi bi-dash-lg" aria-hidden="true"></i>
                 </button>
             </td>
         `;
@@ -3522,20 +3201,20 @@ document.addEventListener('click', function(e) {
         const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
 
         const newRow = document.createElement('tr');
-        newRow.className = 'attachment-row';
+        newRow.className = 'attachment-row cr-upload-attach-row';
         newRow.innerHTML = `
             <td class="row-number">${rowCount}</td>
             <td>
-                <input type="text" class="form-control " 
-                    name="attachment_titles_other[]" placeholder="e.g., Document-${rowCount}">
+                <input type="text" class="form-control"
+                    name="attachment_titles_other[]" placeholder="eg. Document-${rowCount}">
             </td>
             <td>
-                <input type="file" class="form-control " 
+                <input type="file" class="form-control"
                     name="attachments_other[]" accept="*/*">
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger delete-attachment">
-                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                <button type="button" class="btn cr-btn-remove-row delete-attachment" aria-label="Remove row">
+                    <i class="bi bi-dash-lg" aria-hidden="true"></i>
                 </button>
             </td>
         `;
@@ -3583,3 +3262,4 @@ document.addEventListener('click', function(e) {
     }
 });
 </script>
+@include('admin.course-repository.partials.cr-design-scripts')
