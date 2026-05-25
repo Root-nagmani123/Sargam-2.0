@@ -557,6 +557,7 @@
                 str_starts_with($path, 'admin/employee-idcard') ||
                 str_starts_with($path, 'admin/duplicate-idcard') ||
                 str_starts_with($path, 'admin/family-idcard') ||
+                str_starts_with($path, 'admin/notice') ||
                 str_starts_with($path, 'security/')
             ) {
                 $activeNavTab = '#home';
