@@ -7,27 +7,28 @@
 @include('admin.NoticeNotification.partials.module-styles')
 @endpush
 
-@section('content')
-<div class="container-fluid notice-module-page">
+@section('setup_content')
+<div class="container-fluid">
     <x-breadcrum title="Notice notification List"></x-breadcrum>
 
-    <div class="card notice-card border-0 shadow-sm overflow-hidden">
-        <div class="card-header bg-white border-bottom py-3 px-4">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <div class="d-flex align-items-center gap-2 min-w-0">
-                    <span class="d-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary flex-shrink-0"
-                        style="width: 2.5rem; height: 2.5rem;">
-                        <i class="bi bi-megaphone-fill" aria-hidden="true"></i>
-                    </span>
-                    <div class="min-w-0">
-                        <span class="badge bg-primary-subtle text-primary fw-semibold text-uppercase mb-1">Notices</span>
-                        <h4 class="card-title mb-0 text-truncate">Notice notification List</h4>
-                        <p class="text-muted small mb-0 d-none d-md-block">Manage notices, display dates, and audience targeting</p>
-                    </div>
-                </div>
-                <a href="{{ route('admin.notice.create') }}" class="btn btn-notice-save text-white rounded-3 px-3 flex-shrink-0">
-                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>
-                    <span>Add Notice Notification</span>
+    <div class="card">
+        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="d-flex align-items-center gap-2">
+                <span class="badge bg-primary-subtle text-primary fw-semibold text-uppercase">Notices</span>
+                <h4 class="card-title mb-0">Notice notification List</h4>
+            </div>
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <a href="{{ route('admin.notice.category-master.index') }}" class="btn btn-outline-primary btn-sm">
+                    <span class="material-symbols-rounded align-middle me-1" style="font-size:18px;">category</span>
+                    Category master
+                </a>
+                <a href="{{ route('admin.notice.subcategory-master.index') }}" class="btn btn-outline-primary btn-sm">
+                    <span class="material-symbols-rounded align-middle me-1" style="font-size:18px;">topic</span>
+                    Subcategory master
+                </a>
+                <a href="{{ route('admin.notice.create') }}" class="btn btn-primary">
+                    <span class="material-symbols-rounded align-middle me-1">add</span>
+                    <span class="align-middle">Add Notice Notification</span>
                 </a>
             </div>
         </div>
@@ -66,15 +67,13 @@
                 </div>
                 <form method="GET" action="{{ route('admin.notice.index') }}">
                     <div class="row g-3 align-items-end">
-                        <div class="col-sm-6 col-lg-3">
-                            <label class="form-label notice-form-label mb-1">
-                                <i class="bi bi-tag me-1 text-primary" aria-hidden="true"></i>Notice Type
-                            </label>
-                            <select name="notice_category_master_pk" class="form-select js-choice" onchange="this.form.submit()">
+                        <div class="col-md-3">
+                            <label class="form-label fw-semibold">Category</label>
+                            <select name="notice_category_master_pk" class="form-select form-select-sm js-choice" onchange="this.form.submit()">
                                 <option value="">All</option>
-                                @foreach($categories as $category)
-                                <option value="{{ $category->pk }}" {{ request('notice_category_master_pk') == $category->pk ? 'selected' : '' }}>
-                                    {{ $category->name }}
+                                @foreach($categories as $cat)
+                                <option value="{{ $cat->pk }}" {{ request('notice_category_master_pk') == $cat->pk ? 'selected' : '' }}>
+                                    {{ $cat->name }}
                                 </option>
                                 @endforeach
                             </select>
@@ -87,7 +86,7 @@
                             <select name="course_id" class="form-select js-choice" onchange="this.form.submit()">
                                 <option value="">All</option>
                                 @foreach($courses as $c)
-                                <option value="{{ $c->id }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
+                                <option value="{{ $c->pk }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
                                     {{ $c->course_name }}
                                 </option>
                                 @endforeach
@@ -127,11 +126,11 @@
                         <tr>
                             <th scope="col" class="ps-3" style="width: 60px;">S.N.</th>
                             <th scope="col">Notice Title</th>
-                            <th scope="col">Notice Type</th>
-                            <th scope="col" class="d-none d-lg-table-cell">Notice Sub Type</th>
-                            <th scope="col" class="d-none d-xl-table-cell">Course Name</th>
-                            <th scope="col" class="d-none d-xl-table-cell">Created By</th>
-                            <th scope="col" class="d-none d-md-table-cell">Created Date</th>
+                            <th scope="col">Category</th>
+                            <th scope="col">Subcategory</th>
+                            <th scope="col">Course Name</th>
+                            <th scope="col">Created By</th>
+                            <th scope="col">Created Date</th>
                             <th scope="col">Display Date</th>
                             <th scope="col" class="d-none d-md-table-cell">Expiry Date</th>
                             <th scope="col" class="text-center">Status</th>
@@ -151,24 +150,16 @@
                                 </span>
                             </td>
                             <td>
-                                <span class="badge rounded-pill bg-info-subtle text-info text-capitalize">
-                                    {{ $n->category->name ?? $n->notice_type }}
+                                <span class="badge rounded-pill bg-info-subtle text-info">
+                                    {{ $n->noticeCategory->name ?? $n->notice_type ?? '—' }}
                                 </span>
                             </td>
-                            <td class="d-none d-lg-table-cell text-muted small">
-                                {{ $n->subcategory->name ?? '—' }}
-                            </td>
-                            <td class="d-none d-xl-table-cell">{{ $n->course->course_name ?? 'N/A' }}</td>
-                            <td class="d-none d-xl-table-cell text-muted small">
-                                {{ $n->user->first_name }} {{ $n->user->last_name }}
-                            </td>
-                            <td class="d-none d-md-table-cell text-muted small">
-                                {{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}
-                            </td>
-                            <td class="small">{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}</td>
-                            <td class="d-none d-md-table-cell text-muted small">
-                                {{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}
-                            </td>
+                            <td>{{ $n->noticeSubcategory->name ?? '—' }}</td>
+                            <td>{{ $n->course->course_name ?? 'N/A' }}</td>
+                            <td>{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
+                            <td>{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}</td>
+                            <td>{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}</td>
+                            <td>{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}</td>
 
                             <td class="text-center">
                                 <div class="form-check form-switch d-inline-flex align-items-center justify-content-center mb-0">

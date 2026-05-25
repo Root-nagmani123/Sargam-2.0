@@ -15,13 +15,15 @@ class NoticeNotification extends Model
         'notice_title',
         'description',
         'notice_type',
+        'notice_category_master_pk',
+        'notice_subcategory_master_pk',
         'display_date',
         'expiry_date',
         'document',
         'target_audience',
         'created_by',
         'active_inactive',
-        'course_master_pk'
+        'course_master_pk',
     ];
     protected $primaryKey = 'pk';
 
@@ -33,5 +35,15 @@ class NoticeNotification extends Model
     public function course()
     {
         return $this->belongsTo(\App\Models\CourseMaster::class, 'course_master_pk', 'pk');
+    }
+
+    public function noticeCategory()
+    {
+        return $this->belongsTo(NoticeCategoryMaster::class, 'notice_category_master_pk', 'pk');
+    }
+
+    public function noticeSubcategory()
+    {
+        return $this->belongsTo(NoticeSubcategoryMaster::class, 'notice_subcategory_master_pk', 'pk');
     }
 }

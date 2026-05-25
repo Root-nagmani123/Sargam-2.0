@@ -6,8 +6,13 @@
 @include('admin.NoticeNotification.partials.module-styles')
 @endpush
 
-@section('content')
-<div class="container-fluid notice-module-page">
+@section('setup_content')
+
+@php
+    $todayMin = now()->format('Y-m-d');
+@endphp
+
+<div class="container-fluid">
     <x-breadcrum title="Notice List" />
     <x-session_message />
 
@@ -43,20 +48,54 @@
                         <label class="form-label notice-form-label">Description <span class="text-danger">*</span></label>
                         <textarea id="editor" name="description" class="form-control" placeholder="Write here...">{{ old('description') }}</textarea>
                     </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label notice-form-label">Display Date <span class="text-danger">*</span></label>
-                        <input type="date" name="display_date" class="form-control" value="{{ old('display_date') }}">
+                    <div class="col-12">
+                        <div class="mb-3">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea id="editor" name="description" class="form-control">{{ old('description') }}</textarea>
+                        </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label notice-form-label">Expiry Date <span class="text-danger">*</span></label>
-                        <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Notice Type (Category) <span class="text-danger">*</span></label>
+                            <select name="notice_category_master_pk" id="noticeCategory" class="form-control" required>
+                                <option value="">Select category</option>
+                                @foreach($categories as $cat)
+                                <option value="{{ $cat->pk }}" {{ (string) old('notice_category_master_pk') === (string) $cat->pk ? 'selected' : '' }}>{{ $cat->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
                     </div>
-
-                    <div class="col-md-6">
-                        <label class="form-label notice-form-label">Document</label>
-                        <input type="file" name="document" class="form-control">
-                        <div class="form-text">JPG, PNG, or PDF (max 2 MB)</div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Notice Sub Type (Subcategory)</label>
+                            <select name="notice_subcategory_master_pk" id="noticeSubcategory" class="form-control">
+                                <option value="">Select sub type</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Display Date <span class="text-danger">*</span></label>
+                            <input type="date" name="display_date" id="noticeDisplayDate" class="form-control"
+                                value="{{ old('display_date') }}" min="{{ $todayMin }}" required>
+                            <div class="form-text">Must be today or a future date.</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
+                            <input type="date" name="expiry_date" id="noticeExpiryDate" class="form-control"
+                                value="{{ old('expiry_date') }}" min="{{ $todayMin }}" required>
+                            <div class="form-text">Must be on or after the display date.</div>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Upload document <span class="text-muted fw-normal">(optional)</span></label>
+                            <input type="file" name="document" class="form-control" id="noticeDocument"
+                                accept=".pdf,.png,.jpg,.jpeg,image/jpeg,image/png,application/pdf">
+                            <div class="form-text">Types: <strong>PDF, JPG, PNG</strong>. Max <strong>5&nbsp;MB</strong> per file.</div>
+                        </div>
                     </div>
                     <div class="col-md-6">
                         <label class="form-label notice-form-label">Target Audience <span class="text-danger">*</span></label>
@@ -159,6 +198,33 @@
             }
         });
 
+        function loadNoticeSubcategories(categoryId, selectedId) {
+            const $sub = $('#noticeSubcategory');
+            $sub.empty().append('<option value="">Select sub type</option>');
+            if (!categoryId) {
+                return;
+            }
+            $.get(`{{ url('admin/notice/subcategories') }}/${encodeURIComponent(categoryId)}`, function(res) {
+                if (!res.status || !res.data) {
+                    return;
+                }
+                $.each(res.data, function(_, item) {
+                    const sel = selectedId && String(selectedId) === String(item.pk) ? 'selected' : '';
+                    $sub.append('<option value="' + item.pk + '" ' + sel + '>' + item.name + '</option>');
+                });
+            });
+        }
+
+        const oldCat = @json(old('notice_category_master_pk'));
+        const oldSub = @json(old('notice_subcategory_master_pk'));
+        if (oldCat) {
+            loadNoticeSubcategories(oldCat, oldSub);
+        }
+
+        $('#noticeCategory').on('change', function() {
+            loadNoticeSubcategories($(this).val(), null);
+        });
+
         $('#targetAudience').on('change', function() {
             let val = $(this).val();
 
@@ -186,7 +252,19 @@
             }
         });
 
-        @include('admin.NoticeNotification.partials.notice-type-scripts', ['selectedSubcategoryPk' => old('notice_subcategory_master_pk')])
+        var todayMin = @json($todayMin);
+        function syncNoticeExpiryMin() {
+            var disp = $('input[name="display_date"]').val();
+            var $exp = $('input[name="expiry_date"]');
+            var floor = disp && disp >= todayMin ? disp : todayMin;
+            $exp.attr('min', floor);
+            if ($exp.val() && $exp.val() < floor) {
+                $exp.val(floor);
+            }
+        }
+        $('input[name="display_date"]').on('change', syncNoticeExpiryMin);
+        syncNoticeExpiryMin();
+
     });
 </script>
 @endsection
