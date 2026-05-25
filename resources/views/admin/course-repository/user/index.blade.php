@@ -5,7 +5,7 @@
 @section('content')
 
 <!-- Main Content -->
-<div class="container-fluid px-4 py-4" id="main-content">
+<div class="container-fluid" id="main-content">
 
     <!-- Filter Card -->
     <div class="card filter-card shadow-sm mb-4">

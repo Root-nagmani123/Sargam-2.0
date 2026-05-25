@@ -3,7 +3,7 @@
 @section('title', 'Estate Approval Setting - Sargam')
 
 @section('content')
-<div class="container-fluid px-2 px-sm-3 px-md-4 py-2">
+<div class="container-fluid">
     <x-breadcrum title="Estate Approval Setting" />
 
     <x-session_message />

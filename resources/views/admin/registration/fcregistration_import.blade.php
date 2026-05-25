@@ -3,7 +3,7 @@
 @section('title', 'Bulk Upload Registration - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
-    <div class="container-fluid py-5">
+    <div class="container-fluid">
          <x-breadcrum title="Bulk Upload Registration" />
     <x-session_message />
        <div class="card" style="border-left: 5px solid #004a93;">

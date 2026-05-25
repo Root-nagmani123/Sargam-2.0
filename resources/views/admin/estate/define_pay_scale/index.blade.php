@@ -3,7 +3,7 @@
 @section('title', 'Define Pay Scale - Sargam')
 
 @section('content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
+<div class="container-fluid">
 <x-breadcrum title="Define Pay Scale" />
 
     <x-session_message />

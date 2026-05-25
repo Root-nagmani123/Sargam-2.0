@@ -38,11 +38,11 @@
                                         Friday
                                         Amazon deals: cheap TVs, headphones, laptops</a>
                                     <div class="d-flex align-items-center gap-4">
-                                        <div class="d-flex align-items-center gap-2 text-white fs-3 fw-normal">
+                                        <div class="d-flex align-items-center gap-1 text-white fs-3 fw-normal">
                                             <i class="material-icons fs-5">person</i>
                                             6006
                                         </div>
-                                        <div class="d-flex align-items-center gap-2 text-white fs-3 fw-normal">
+                                        <div class="d-flex align-items-center gap-1 text-white fs-3 fw-normal">
                                             <i class="material-icons fs-5">message</i>
                                             3
                                         </div>

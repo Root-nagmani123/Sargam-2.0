@@ -298,7 +298,8 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
                     }
 
                     $isMarked = (bool) ($markedCache[$cacheKey] ?? false);
-                    $markBtnClass = $isMarked ? 'btn btn-success btn-sm' : 'btn btn-primary btn-sm';
+                    $iconColor = $isMarked ? '#198754' : '#1b3a5c';
+                    $iconBtn = '<span class="material-symbols-rounded" style="font-size:22px;color:' . $iconColor . ';">fingerprint</span>';
 
         // if ($currentPath === 'user_attendance') {
              if (hasRole('Student-OT')) {
@@ -309,33 +310,33 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
                 'course_pk' => $row->Programme_pk,
                 'timetable_pk' => $row->timetable_pk,
                 'student_pk' => $studentPk
-            ]) . '" class="btn btn-primary btn-sm 1">Show My Attendance</a>';
+            ]) . '" class="att-icon-btn" title="Show My Attendance">' . $iconBtn . '</a>';
         } elseif (hasRole('Guest Faculty') || hasRole('Internal Faculty')) {
             // Faculty User Page
             return '<a href="' . route('attendance.student_mark', [
                 'group_pk' => $row->group_pk,
                 'course_pk' => $row->Programme_pk,
                 'timetable_pk' => $row->timetable_pk
-            ]) . '" class="' . $markBtnClass . '">Show Attendance</a>';
+            ]) . '" class="att-icon-btn" title="Show Attendance">' . $iconBtn . '</a>';
         }else if($currentPath === 'send_notice'){
             return '<a href="' . route('attendance.send_notice', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="btn btn-primary btn-sm">Send Notice</a>';
+        ]) . '" class="att-icon-btn" title="Send Notice">' . $iconBtn . '</a>';
         }else if(hasRole('Training-Induction') || hasRole('Staff') || hasRole('Admin')){
              return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
+        ]) . '" class="att-icon-btn" title="Mark Attendance">' . $iconBtn . '</a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
+        ]) . '" class="att-icon-btn" title="Mark Attendance">' . $iconBtn . '</a>';
         }
 
         // Admin Page

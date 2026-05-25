@@ -40,7 +40,7 @@
 @endpush
 
 @section('setup_content')
-    <div class="container-fluid mt-5">
+    <div class="container-fluid">
         <x-breadcrum title="Import Students"></x-breadcrum>
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">

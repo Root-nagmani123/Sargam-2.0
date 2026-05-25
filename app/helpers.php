@@ -651,6 +651,84 @@ function get_profile_pic()
         return $profile_pic;
     }
 }
+
+/**
+ * Resolved display name for the header / UI: user_credentials.name, then student/employee master, then email.
+ */
+if (!function_exists('get_auth_display_name')) {
+    function get_auth_display_name($user = null): string
+    {
+        $user = $user ?? Auth::user();
+        if (!$user) {
+            return 'User';
+        }
+
+        $trim = static function ($s): string {
+            return trim((string) ($s ?? ''));
+        };
+
+        $fromName = $trim($user->name ?? '');
+        if ($fromName !== '') {
+            return $fromName;
+        }
+
+        $uid = $user->user_id ?? null;
+        if ($uid !== null && $uid !== '' && Schema::hasTable('user_credentials')) {
+            try {
+                $cat = $user->user_category ?? null;
+
+                if ($cat === 'S' && Schema::hasTable('student_master')) {
+                    $row = DB::table('student_master')->where('pk', $uid)->first([
+                        'display_name', 'first_name', 'middle_name', 'last_name',
+                    ]);
+                    if ($row) {
+                        $dn = $trim($row->display_name ?? '');
+                        if ($dn !== '') {
+                            return $dn;
+                        }
+                        $full = $trim(implode(' ', array_filter([
+                            $trim($row->first_name ?? ''),
+                            $trim($row->middle_name ?? ''),
+                            $trim($row->last_name ?? ''),
+                        ], static fn ($p) => $p !== '')));
+                        if ($full !== '') {
+                            return $full;
+                        }
+                    }
+                } elseif (Schema::hasTable('employee_master')) {
+                    $cols = ['first_name', 'middle_name', 'last_name'];
+                    $row = DB::table('employee_master')->where('pk', $uid)->first($cols);
+                    if (!$row && Schema::hasColumn('employee_master', 'pk_old')) {
+                        $row = DB::table('employee_master')->where('pk_old', $uid)->first($cols);
+                    }
+                    if ($row) {
+                        $full = $trim(implode(' ', array_filter([
+                            $trim($row->first_name ?? ''),
+                            $trim($row->middle_name ?? ''),
+                            $trim($row->last_name ?? ''),
+                        ], static fn ($p) => $p !== '')));
+                        if ($full !== '') {
+                            return $full;
+                        }
+                    }
+                }
+            } catch (\Throwable $e) {
+                // Fall through to email / generic label
+            }
+        }
+
+        $em = $trim($user->email ?? '');
+        if ($em !== '' && str_contains($em, '@')) {
+            return $trim(explode('@', $em, 2)[0]);
+        }
+        if ($em !== '') {
+            return $em;
+        }
+
+        return 'User';
+    }
+}
+
 if (!function_exists('get_notice_notification_by_role')) {
     function get_notice_notification_by_role()
     {

@@ -457,11 +457,11 @@
     }
 </style>
 
-<div class="container-fluid px-2 px-md-3">
+<div class="container-fluid">
     <x-breadcrum title="Inhouse Faculty"></x-breadcrum>
     <div class="card inhouse-faculty-card border-0 shadow-sm rounded-4">
         <div class="card-header">
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
                 <span class="material-symbols-rounded card-header-icon">badge</span>
                 <span>Inhouse Faculty</span>
             </div>

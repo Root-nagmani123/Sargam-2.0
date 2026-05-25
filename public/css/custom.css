@@ -25,3 +25,126 @@ body.custom-loaded {
 .error-fix {
     display: none;
 }
+
+/* ════════════════════════════════════════════
+   Sidebar White Theme — Base Overrides
+   Overrides styles.css dark-blue sidebar panel
+   ════════════════════════════════════════════ */
+
+/* Main sidebar panel — white bg instead of #004384 */
+.side-mini-panel .sidebarmenu .sidebar-nav {
+    background: #ffffff !important;
+    border-radius: 0 !important;
+}
+
+/* Simplebar content inside sidebar — remove dark padding bg */
+.side-mini-panel .sidebarmenu .sidebar-nav .simplebar-content {
+    padding-left: 16px !important;
+    padding-right: 8px !important;
+}
+
+/* Mini-nav base override — white bg */
+.side-mini-panel .mini-nav {
+    background: #ffffff !important;
+    border-radius: 0 !important;
+}
+
+/* Override sidebar-nav link white color from styles.css */
+.sidebar-nav ul .sidebar-item .sidebar-link,
+.sidebar-nav ul .sidebar-item .sidebar-link .hide-menu,
+.sidebar-nav ul .sidebar-item .sidebar-link span {
+    color: #3c4043 !important;
+}
+
+/* Override sidebar-nav link hover from styles.css */
+.sidebar-nav ul .sidebar-item .sidebar-link:hover {
+    background-color: #f1f3f4 !important;
+    color: #1a73e8 !important;
+    border-radius: 0.5rem !important;
+    width: auto !important;
+}
+
+/* Override sidebar-nav active link from styles.css */
+.sidebar-nav ul .sidebar-item > .sidebar-link.active,
+.sidebar-nav ul .sidebar-item.selected > .sidebar-link,
+.sidebar-nav ul .sidebar-item.selected > .sidebar-link.active,
+.sidebar-nav ul .sidebar-item > .sidebar-link.active {
+    background-color: #e8f0fe !important;
+    color: #1a73e8 !important;
+    box-shadow: none !important;
+    max-width: none !important;
+}
+
+/* Override the nav-small-cap white color */
+.nav-small-cap {
+    color: #9aa0a6 !important;
+}
+
+/* DataTables search / pagination / footer — see public/css/datatables-enhanced.css */
+
+/* ════════════════════════════════════════════
+   Global status toggle (form-switch)
+   Outline pill: amber = inactive, green = active
+   Applies to .status-toggle, .plain-status-toggle, and all table switches
+   ════════════════════════════════════════════ */
+:root {
+    --sargam-switch-off: #e6a817;
+    --sargam-switch-on: #198754;
+    --sargam-switch-knob-off: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23e6a817'/%3e%3c/svg%3e");
+    --sargam-switch-knob-on: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23198754'/%3e%3c/svg%3e");
+}
+
+.form-switch {
+    min-height: auto;
+}
+
+.form-switch .form-check-input,
+.form-switch .form-check-input.status-toggle,
+.form-switch .form-check-input.plain-status-toggle {
+    width: 2.2em;
+    height: 1.15em;
+    margin-top: 0;
+    cursor: pointer;
+    border: 2px solid var(--sargam-switch-off);
+    background-color: #fff;
+    background-image: var(--sargam-switch-knob-off);
+    background-position: left center;
+    background-size: contain;
+    transition: background-position 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.form-switch .form-check-input:focus {
+    border-color: var(--sargam-switch-off);
+    background-image: var(--sargam-switch-knob-off);
+    box-shadow: 0 0 0 0.2rem rgba(230, 168, 23, 0.25);
+}
+
+.form-switch .form-check-input:checked {
+    background-color: #fff;
+    border-color: var(--sargam-switch-on);
+    background-image: var(--sargam-switch-knob-on);
+    background-position: right center;
+}
+
+.form-switch .form-check-input:checked:focus {
+    border-color: var(--sargam-switch-on);
+    background-image: var(--sargam-switch-knob-on);
+    box-shadow: 0 0 0 0.2rem rgba(25, 135, 84, 0.25);
+}
+
+/* Compact switches in DataTable / action columns */
+.form-check.form-switch.mb-0,
+.form-check.form-switch.d-inline-block {
+    padding-left: 2.5em;
+    line-height: 1;
+}
+
+.form-check.form-switch.mb-0 .form-check-input,
+.form-check.form-switch.d-inline-block .form-check-input {
+    margin-left: -2.5em;
+}
+
+.form-switch .form-check-input:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}

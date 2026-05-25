@@ -12,597 +12,292 @@
 
         <x-session_message />
 
-        <!-- Filters -->
-        <div class="card border-0 shadow-sm rounded-4 mb-4">
-            <div class="card-header bg-white border-bottom py-3 px-4 d-flex flex-wrap align-items-center gap-3">
-                <div class="d-flex align-items-center gap-3 min-w-0">
-                    <div class="flex-shrink-0 rounded-3 bg-primary bg-opacity-10 text-primary d-flex align-items-center justify-content-center pending-fb-filter-icon" aria-hidden="true">
-                        <i class="material-symbols-rounded">tune</i>
-                    </div>
-                    <div class="min-w-0">
-                        <h2 class="h6 fw-semibold text-body mb-0">Filters</h2>
-                        <p class="small text-body-secondary mb-0 text-truncate">Choose program scope, then refine by course, session, dates, and feedback status</p>
-                    </div>
-                </div>
-            </div>
-            <div class="card-body p-4">
-                <div class="row g-3 g-lg-4 align-items-end">
-                    <!-- Active / Archive: before Course -->
-                    <div class="col-12 col-lg-6 col-xl-5 col-xxl-4">
-                        <fieldset class="border-0 m-0 p-0 course-scope-in-filters h-100" id="courseScopeFieldset">
-                            <legend class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2 float-none w-100">Program scope</legend>
-                            <div class="d-flex flex-row flex-nowrap gap-2 align-items-stretch" id="courseTypeTabs" role="radiogroup" aria-label="Program scope">
-                                <div class="course-scope-option flex-fill rounded-3 border bg-body shadow-sm min-w-0">
-                                    <div class="form-check m-0 p-2 ps-2 d-flex align-items-center gap-1 h-100">
-                                        <input class="form-check-input flex-shrink-0 ms-1 mt-0" type="radio" name="course_type_scope" id="course_scope_active" value="active" checked>
-                                        <label class="form-check-label flex-grow-1 cursor-pointer mb-0 small text-truncate" for="course_scope_active">
-                                            <span class="d-flex align-items-center justify-content-between gap-1 min-w-0">
-                                                <span class="d-inline-flex align-items-center gap-1 fw-semibold text-body text-truncate">
-                                                    <i class="material-symbols-rounded fs-6 text-primary flex-shrink-0" aria-hidden="true">school</i>
-                                                    <span class="text-truncate">Active</span>
-                                                </span>
-                                                <span class="badge rounded-pill bg-primary-subtle text-primary border border-primary border-opacity-25 flex-shrink-0" id="activeCourseBadge">{{ count($activeCourses ?? []) }}</span>
-                                            </span>
-                                        </label>
-                                    </div>
-                                </div>
-                                <div class="course-scope-option flex-fill rounded-3 border bg-body shadow-sm min-w-0">
-                                    <div class="form-check m-0 p-2 ps-2 d-flex align-items-center gap-1 h-100">
-                                        <input class="form-check-input flex-shrink-0 ms-1 mt-0" type="radio" name="course_type_scope" id="course_scope_archive" value="archive">
-                                        <label class="form-check-label flex-grow-1 cursor-pointer mb-0 small text-truncate" for="course_scope_archive">
-                                            <span class="d-flex align-items-center justify-content-between gap-1 min-w-0">
-                                                <span class="d-inline-flex align-items-center gap-1 fw-semibold text-body text-truncate">
-                                                    <i class="material-symbols-rounded fs-6 text-body-secondary flex-shrink-0" aria-hidden="true">inventory_2</i>
-                                                    <span class="text-truncate">Archive</span>
-                                                </span>
-                                                <span class="badge rounded-pill bg-body-secondary text-body border flex-shrink-0" id="archiveCourseBadge">{{ count($archiveCourses ?? []) }}</span>
-                                            </span>
-                                        </label>
-                                    </div>
-                                </div>
-                            </div>
-                        </fieldset>
-                    </div>
-
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label for="filter_course_pk" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">Course</label>
-                        <select class="form-select select2-course shadow-sm" id="filter_course_pk" aria-describedby="hint-filter-course">
-                            <option value="">— All Courses —</option>
-                            @foreach ($courses ?? [] as $id => $name)
-                                <option value="{{ $id }}" {{ isset($activeCourse) && $activeCourse == $id ? 'selected' : '' }}>{{ $name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-sm-6 col-xl-3">
-                        <label for="filter_session_id" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">Session</label>
-                        <select class="form-select select2-session shadow-sm" id="filter_session_id">
-                            <option value="">— All Sessions —</option>
-                            @foreach ($sessions ?? [] as $id => $name)
-                                <option value="{{ $id }}">{{ $name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                        <label for="filter_from_date" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">From date</label>
-                        <input type="date" class="form-control shadow-sm" id="filter_from_date" autocomplete="off">
-                    </div>
-
-                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                        <label for="filter_to_date" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">To date</label>
-                        <input type="date" class="form-control shadow-sm" id="filter_to_date" autocomplete="off">
-                    </div>
-
-                    <div class="col-12 col-sm-6 col-md-4 col-xl-2">
-                        <label for="filter_feedback_state" class="form-label small fw-semibold text-body-secondary text-uppercase letter-spacing-tight mb-2">Feedback</label>
-                        <select class="form-select shadow-sm" id="filter_feedback_state">
-                            <option value="not_given" selected>Not given</option>
-                            <option value="given">Given</option>
-                        </select>
-                    </div>
-
-                    <div class="col-12 col-xl-12 col-xxl-auto d-flex flex-wrap gap-2 align-items-end pt-xl-2 pt-xxl-0">
-                        <button type="button" id="btnApplyFilters"
-                            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-3 shadow-sm">
-                            <i class="material-symbols-rounded fs-6" aria-hidden="true">search</i>
-                            <span>Apply filters</span>
-                        </button>
-                        <button type="button" id="btnResetFilters"
-                            class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-4 rounded-3">
-                            <i class="material-symbols-rounded fs-6" aria-hidden="true">refresh</i>
-                            <span>Reset</span>
-                        </button>
-                    </div>
-                </div>
-
-                <hr class="border-secondary border-opacity-25 my-4">
-
-                <!-- Summary + exports -->
-                <div class="row g-3 align-items-stretch align-items-lg-center">
-                    <div class="col-12 col-lg-5 col-xl-4">
-                        <div class="d-flex align-items-center gap-3 p-3 rounded-4 bg-primary bg-opacity-10 border border-primary border-opacity-25 h-100">
-                            <div class="rounded-circle bg-primary text-white d-flex align-items-center justify-content-center flex-shrink-0 pending-fb-stat-dot" aria-hidden="true">
-                                <i class="material-symbols-rounded fs-5">groups</i>
-                            </div>
-                            <div>
-                                <p class="small text-body-secondary text-uppercase fw-semibold mb-1 letter-spacing-tight">Total students</p>
-                                <p class="mb-0 d-flex align-items-baseline gap-2 flex-wrap">
-                                    <span id="totalRecordsCount" class="badge bg-primary fs-5 px-3 py-2 rounded-pill">0</span>
-                                    <span class="small text-body-secondary">in current view</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-12 col-lg-7 col-xl-8">
-                        <p class="small text-body-secondary fw-semibold text-uppercase letter-spacing-tight mb-2">Export</p>
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="button" id="exportPDF" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3 shadow-sm">
-                                <i class="material-symbols-rounded fs-6" aria-hidden="true">picture_as_pdf</i>
-                                PDF
-                            </button>
-                            <button type="button" id="exportExcelSummary"
-                                class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3 shadow-sm">
-                                <i class="material-symbols-rounded fs-6" aria-hidden="true">table_view</i>
-                                Not given feedback count
-                            </button>
-                            <button type="button" id="exportExcelDetailed"
-                                class="btn btn-outline-success btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3">
-                                <i class="material-symbols-rounded fs-6" aria-hidden="true">view_list</i>
-                               Not givern Feedback details
-                            </button>
-                            <button type="button" id="btnPrint"
-                                class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-2 rounded-3 px-3">
-                                <i class="material-symbols-rounded fs-6" aria-hidden="true">print</i>
-                                Print
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
+    <div id="psLoadingSpinner">
+        <div style="background:#fff;padding:1.5rem 2rem;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,.12);text-align:center;">
+            <div class="spinner-border text-primary mb-3" role="status" style="width:2.5rem;height:2.5rem;"><span class="visually-hidden">Loading...</span></div>
+            <p class="mb-0 fw-medium text-secondary small">Loading student data...</p>
         </div>
+    </div>
 
-        <!-- Results -->
-        <div class="card border-0 shadow-sm rounded-4 overflow-hidden mb-2">
-            <div class="card-header bg-white border-bottom py-3 px-4">
-                <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3">
-                    <div class="d-flex align-items-start gap-3 min-w-0">
-                        <div class="flex-shrink-0 rounded-3 bg-warning bg-opacity-15 text-warning d-flex align-items-center justify-content-center pending-fb-results-icon text-white" aria-hidden="true">
-                            <i class="material-symbols-rounded">assignment_late</i>
+    {{-- Top toolbar --}}
+    <div id="psTopToolbar" class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3 no-print">
+        <div class="d-flex align-items-center" role="group" aria-label="Course scope">
+            <input class="btn-check ps-course-radio" type="radio" name="course_type_scope" value="active"
+                id="psScopeActive" autocomplete="off" checked>
+            <label for="psScopeActive">
+                Active
+                <span class="badge rounded-pill ms-1" style="background:#1b3a5c;font-size:.7rem;" id="activeBadge">{{ count($activeCourses ?? []) }}</span>
+            </label>
+            <input class="btn-check ps-course-radio" type="radio" name="course_type_scope" value="archive"
+                id="psScopeArchive" autocomplete="off">
+            <label for="psScopeArchive">
+                Archived
+                <span class="badge rounded-pill ms-1 bg-secondary" style="font-size:.7rem;" id="archiveBadge">{{ count($archiveCourses ?? []) }}</span>
+            </label>
+        </div>
+        <div class="d-flex align-items-center gap-3">
+            <button type="button" id="btnPrint"
+                class="btn btn-link text-decoration-none text-body d-inline-flex align-items-center gap-1 px-0">
+                <span class="material-symbols-rounded" style="font-size:18px;">print</span>
+                <span class="fw-semibold">Print</span>
+            </button>
+            <button type="button" id="exportExcelSummary"
+                class="btn btn-link text-decoration-none text-body d-inline-flex align-items-center gap-1 px-0">
+                <span class="material-symbols-rounded" style="font-size:18px;">download</span>
+                <span class="fw-semibold">Download</span>
+            </button>
+        </div>
+    </div>
+
+    <div class="card shadow-sm border-0 rounded-3">
+        <div class="card-body p-3 p-lg-4">
+
+            {{-- Filter bar --}}
+            <div class="ps-filter-row mb-3 no-print">
+                <span class="text-muted fw-semibold small">Filters</span>
+
+                {{-- Course --}}
+                <div style="width:185px;flex-shrink:0;">
+                    <select class="form-select form-select-sm select2-course" id="filter_course_pk">
+                        <option value="">Courses</option>
+                        @foreach ($courses ?? [] as $id => $name)
+                            <option value="{{ $id }}" {{ isset($activeCourse) && $activeCourse == $id ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Session --}}
+                <div style="width:165px;flex-shrink:0;">
+                    <select class="form-select form-select-sm select2-session" id="filter_session_id">
+                        <option value="">Session</option>
+                        @foreach ($sessions ?? [] as $id => $name)
+                            <option value="{{ $id }}">{{ $name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                {{-- Time Period --}}
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Time Period</button>
+                    <div class="dropdown-menu p-3" style="min-width:300px;">
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">From</label>
+                            <input type="date" id="filter_from_date" class="form-control form-control-sm" autocomplete="off">
                         </div>
-                        <div class="min-w-0">
-                            <h2 class="h5 fw-bold text-body mb-1">Pending feedback</h2>
-                            <p class="text-body-secondary small mb-0">Expand a row for session-level detail, or use Expand all for this page. Column headers sort the list.</p>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-column flex-sm-row align-items-stretch align-items-sm-center gap-2 w-100 flex-lg-grow-0" style="max-width: 36rem;">
-                        <div class="btn-group shadow-sm rounded-3 overflow-hidden border flex-shrink-0" role="group" aria-label="Expand or collapse all student rows">
-                            <button type="button" class="btn btn-sm btn-light px-3 d-inline-flex align-items-center gap-1" id="btnExpandAllStudents" title="Open every row on this page">
-                                <i class="material-symbols-rounded fs-6" aria-hidden="true">unfold_more</i>
-                                <span>Expand all</span>
-                            </button>
-                            <button type="button" class="btn btn-sm btn-light px-3 border-start d-inline-flex align-items-center gap-1" id="btnCollapseAllStudents" title="Close every row on this page">
-                                <i class="material-symbols-rounded fs-6" aria-hidden="true">unfold_less</i>
-                                <span>Collapse all</span>
-                            </button>
-                        </div>
-                        <div class="flex-grow-1" style="min-width: 12rem;">
-                            <label for="studentSearch" class="visually-hidden">Search students</label>
-                            <div class="input-group shadow-sm rounded-3 overflow-hidden border">
-                                <span class="input-group-text bg-body-secondary bg-opacity-25 border-0 text-body-secondary">
-                                    <i class="material-symbols-rounded" aria-hidden="true">search</i>
-                                </span>
-                                <input type="search" class="form-control border-0 shadow-none" id="studentSearch"
-                                    placeholder="Name, email, or OT code…" autocomplete="off" enterkeyhint="search">
-                                <button class="btn btn-light border-0 border-start px-3" type="button" id="clearSearch"
-                                    title="Clear search" aria-label="Clear search" style="display:none">
-                                    <i class="material-symbols-rounded fs-6" aria-hidden="true">close</i>
-                                </button>
-                            </div>
+                        <div>
+                            <label class="form-label small fw-semibold mb-1">To</label>
+                            <input type="date" id="filter_to_date" class="form-control form-control-sm" autocomplete="off">
                         </div>
                     </div>
                 </div>
+
+                {{-- Feedback status --}}
+                <select class="form-select form-select-sm" id="filter_feedback_state" style="max-width:145px;">
+                    <option value="not_given" selected>Feedback</option>
+                    <option value="not_given">Not given</option>
+                    <option value="given">Given</option>
+                </select>
+
+                <button type="button" class="ps-reset-btn" id="btnResetFilters">Reset Filters</button>
+                <button type="button" class="ps-search-btn ms-auto" id="btnApplyFilters" title="Apply filters">
+                    <span class="material-symbols-rounded" style="font-size:18px;color:#6c757d;">search</span>
+                </button>
             </div>
-            <div class="card-body p-0 bg-body-tertiary bg-opacity-25">
-                <div id="studentAccordionContainer" class="px-2 px-sm-3 px-lg-4 py-3 py-lg-4">
-                    <div class="text-center py-5 px-3 rounded-4 bg-body-secondary bg-opacity-25 border border-secondary border-opacity-10">
-                        <div class="spinner-border text-primary" role="status" aria-label="Loading">
-                            <span class="visually-hidden">Loading...</span>
+
+            {{-- Student list view --}}
+            <div id="studentListView">
+                <div id="studentAccordionContainer">
+                    <div class="text-center py-5 text-muted">
+                        <div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div>
+                        <p class="mt-3 mb-0 small fw-medium">Loading student data...</p>
+                    </div>
+                </div>
+                <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 no-print" id="paginationSection" style="display:none !important;">
+                    <div id="psPaginationCell"></div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-muted small">Showing</span>
+                        <select id="perPageSelect" class="form-select form-select-sm" style="width:78px;">
+                            <option value="10">10</option>
+                            <option value="20" selected>20</option>
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="200">200</option>
+                        </select>
+                        <span id="psTotalInfo" class="text-muted small">of 0 items</span>
+                    </div>
+                </div>
+            </div>
+
+            {{-- Student detail view (shown on name click) --}}
+            <div id="studentDetailView">
+                {{-- Detail top bar --}}
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+                    <div class="d-flex align-items-center gap-1">
+                        <button class="ps-back-btn" id="detailBackBtn" title="Back to student list">
+                            <span class="material-symbols-rounded" style="font-size:1.5rem;">arrow_back</span>
+                        </button>
+                        <div>
+                            <div class="text-muted small" style="font-size:.75rem;">Home / Academic / Session Feedback Report / <span class="text-body fw-medium">Faculty Feedback Database</span></div>
+                            <h5 class="fw-bold mb-0 mt-1" id="detailStudentTitle" style="color:#212529;"></h5>
                         </div>
-                        <p class="mt-3 mb-0 text-body-secondary small fw-medium">Loading student data…</p>
+                    </div>
+                    <div class="d-flex align-items-center gap-3">
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="detailPrintBtn">
+                            <span class="material-symbols-rounded" style="font-size:16px;">print</span> Print
+                        </button>
+                        <button type="button" class="btn btn-outline-secondary btn-sm d-inline-flex align-items-center gap-1" id="detailDownloadBtn">
+                            <span class="material-symbols-rounded" style="font-size:16px;">download</span> Download
+                        </button>
+                    </div>
+                </div>
+                {{-- Session table --}}
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0" id="detailTable">
+                        <thead>
+                            <tr>
+                                <th style="width:55px;">S. No.</th>
+                                <th>Session Name</th>
+                                <th>Date</th>
+                                <th>Time</th>
+                                <th style="width:160px;">Feedback Status</th>
+                            </tr>
+                        </thead>
+                        <tbody id="detailTableBody"></tbody>
+                    </table>
+                </div>
+                {{-- Detail bottom row --}}
+                <div class="d-flex justify-content-between align-items-center mt-4 flex-wrap gap-2 no-print">
+                    <div id="detailPaginationCell"></div>
+                    <div class="d-flex align-items-center gap-1">
+                        <span class="text-muted small">Showing</span>
+                        <select id="detailPerPage" class="form-select form-select-sm" style="width:78px;">
+                            <option value="50">50</option>
+                            <option value="100">100</option>
+                            <option value="200" selected>200</option>
+                        </select>
+                        <span id="detailTotalInfo" class="text-muted small">of 0 items</span>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+</div>
 @endsection
 
 @push('styles')
     <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css"
-        rel="stylesheet" />
-
-    <style>
-        /* ── Page utilities ── */
-        .pending-feedback-page .letter-spacing-tight { letter-spacing: 0.04em; }
-        .pending-fb-filter-icon,
-        .pending-fb-results-icon {
-            width: 2.75rem;
-            height: 2.75rem;
-            font-size: 1.35rem;
-        }
-        .pending-fb-stat-dot { width: 3rem; height: 3rem; }
-
-        #studentSearch:focus {
-            box-shadow: none;
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-            .accordion-toggle,
-            .accordion-toggle .accordion-icon,
-            .sortable-header,
-            .sortable-header .sort-icon {
-                transition: none !important;
-            }
-        }
-
-        /* ── Select2 ── */
-        .select2-container { width: 100% !important; display: block !important; }
-        .select2-container--open { z-index: 9999 !important; }
-        .select2-dropdown { z-index: 9999 !important; max-height: 300px; overflow-y: auto; }
-
-        .select2-container--default .select2-selection--single {
-            height: 38px;
-            padding: 0.375rem 0.75rem;
-            border: 1px solid var(--bs-border-color);
-            border-radius: var(--bs-border-radius);
-            background-color: var(--bs-body-bg);
-            font-size: 0.875rem;
-            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
-        }
-
-        .select2-container--default .select2-selection--single:hover {
-            border-color: var(--bs-primary);
-        }
-
-        .select2-container--default .select2-selection--single .select2-selection__rendered {
-            line-height: 1.5; color: var(--bs-body-color); padding-left: 0;
-        }
-
-        .select2-container--default .select2-selection--single .select2-selection__arrow {
-            height: 36px; right: 8px;
-        }
-
-        /* ── Layout ── */
-        .card, .card-body, .card-header { overflow: visible !important; }
-
-        .table-responsive {
-            overflow-x: auto !important;
-            overflow-y: visible !important;
-        }
-
-        @media (max-width: 768px) {
-            .table-responsive { -webkit-overflow-scrolling: touch; }
-        }
-
-        /* ── Forms ── */
-        .form-label { font-size: 0.8rem; font-weight: 500; margin-bottom: 0.3rem; color: var(--bs-secondary-color); text-transform: uppercase; letter-spacing: 0.03em; }
-        .form-select, .form-control { font-size: 0.875rem; height: 38px; }
-
-        /* ── Student Table ── */
-        .student-table { font-size: 0.875rem; margin-bottom: 0; }
-
-        .student-table thead th {
-            font-weight: 600;
-            border-bottom: 1px solid var(--bs-border-color);
-            white-space: nowrap;
-            padding: 0.75rem 0.85rem;
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--bs-secondary-color);
-        }
-
-        .student-table tbody td {
-            vertical-align: middle;
-            padding: 0.7rem 0.75rem;
-            font-size: 0.875rem;
-            border-color: var(--bs-border-color-translucent);
-        }
-
-        /* ── Accordion Rows ── */
-        .accordion-toggle {
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-
-        .accordion-toggle:hover {
-            background-color: rgba(var(--bs-primary-rgb), 0.04) !important;
-        }
-
-        .accordion-toggle .accordion-icon {
-            transition: transform 0.3s cubic-bezier(.4,0,.2,1);
-            font-size: 1.3rem;
-            color: var(--bs-secondary-color);
-        }
-
-        .accordion-toggle.expanded {
-            background-color: rgba(var(--bs-primary-rgb), 0.06) !important;
-        }
-
-        .accordion-toggle.expanded .accordion-icon {
-            transform: rotate(180deg);
-            color: var(--bs-primary);
-        }
-
-        /* ── Session Detail (Collapsed Panel) ── */
-        .session-detail-table { font-size: 0.8125rem; }
-
-        .session-detail-table thead th {
-            background-color: var(--bs-tertiary-bg);
-            font-weight: 600;
-            padding: 0.5rem 0.75rem;
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: var(--bs-secondary-color);
-        }
-
-        .session-detail-table tbody td { padding: 0.5rem 0.75rem; }
-
-        .collapse-cell { padding: 0 !important; border-top: 0 !important; }
-
-        .collapse-inner {
-            padding: 1rem 1.25rem;
-            background: linear-gradient(180deg, var(--bs-tertiary-bg) 0%, var(--bs-body-bg) 100%);
-            border-top: 1px dashed var(--bs-border-color);
-            border-left: 3px solid var(--bs-primary);
-            margin-left: 0.75rem;
-            border-radius: 0 0 var(--bs-border-radius-lg) 0;
-        }
-
-        /* ── Badges (feedback counts) ── */
-        .badge-count {
-            min-width: 2rem;
-            font-weight: 600;
-            font-size: 0.78rem;
-            padding: 0.3em 0.6em;
-        }
-
-        .badge-status {
-            font-size: 0.72rem;
-            padding: 0.35em 0.8em;
-            font-weight: 600;
-            letter-spacing: 0.02em;
-        }
-
-        /* ── Pagination ── */
-        .pagination-wrap { padding: 0.75rem 0 0.25rem; }
-        .pagination-info { font-size: 0.8rem; color: var(--bs-secondary-color); }
-
-        .pagination .page-link {
-            font-size: 0.8rem;
-            padding: 0.3rem 0.65rem;
-            border-radius: var(--bs-border-radius) !important;
-            margin: 0 1px;
-            color: var(--bs-body-color);
-            border-color: transparent;
-        }
-
-        .pagination .page-link:hover { background-color: var(--bs-tertiary-bg); }
-
-        .pagination .page-item.active .page-link {
-            background-color: var(--bs-primary);
-            border-color: var(--bs-primary);
-            color: #fff;
-            box-shadow: 0 2px 6px rgba(var(--bs-primary-rgb), 0.3);
-        }
-
-        .pagination .page-item.disabled .page-link { color: var(--bs-tertiary-color); }
-
-        /* ── Sortable Headers ── */
-        .sortable-header {
-            cursor: pointer;
-            user-select: none;
-            white-space: nowrap;
-            transition: all 0.15s ease;
-            position: relative;
-        }
-
-        .sortable-header:hover { background: rgba(var(--bs-primary-rgb), 0.08) !important; }
-
-        .sortable-header .sort-icon {
-            font-size: 0.85rem;
-            vertical-align: middle;
-            opacity: 0.25;
-            margin-left: 3px;
-            transition: all 0.2s ease;
-        }
-
-        .sortable-header:hover .sort-icon { opacity: 0.6; }
-
-        .sortable-header.sort-active .sort-icon {
-            opacity: 1;
-            color: var(--bs-primary);
-        }
-
-        /* ── Search ── */
-        #studentSearch { font-size: 0.875rem; }
-        #studentSearch:focus { box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.12); border-color: var(--bs-primary); }
-        #studentSearch::placeholder { color: var(--bs-tertiary-color); }
-
-        /* ── Program scope (radio cards) ── */
-        .pending-feedback-page #courseTypeTabs .course-scope-option {
-            transition: border-color 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
-            border-color: var(--bs-border-color) !important;
-        }
-
-        .pending-feedback-page #courseTypeTabs .course-scope-option:has(.form-check-input:checked) {
-            border-color: var(--bs-primary) !important;
-            box-shadow: 0 0.25rem 0.75rem rgba(var(--bs-primary-rgb), 0.2);
-            background-color: rgba(var(--bs-primary-rgb), 0.06);
-        }
-
-        .pending-feedback-page #courseTypeTabs .course-scope-option .form-check-input:focus {
-            box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
-        }
-
-        .pending-feedback-page #courseTypeTabs label.cursor-pointer {
-            cursor: pointer;
-        }
-
-        /* ── Empty / loading (dynamic) ── */
-        .state-empty { text-align: center; max-width: 28rem; margin-inline: auto; }
-        .state-empty .material-symbols-rounded { font-size: 2.75rem; color: var(--bs-secondary-color); opacity: 0.55; }
-
-        /* ── Misc ── */
-        .per-page-ctrl { max-width: 72px; }
-    </style>
+    <link href="https://cdn.jsdelivr.net/npm/select2-bootstrap-5-theme@1.3.0/dist/select2-bootstrap-5-theme.min.css" rel="stylesheet" />
 @endpush
 
 @push('scripts')
-    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script>
+$(document).ready(function() {
+    $.ajaxSetup({
+        headers: {
+            'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    });
 
-    <script>
-        $(document).ready(function() {
-            // CSRF Setup
-            $.ajaxSetup({
-                headers: {
-                    'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
-                    'X-Requested-With': 'XMLHttpRequest'
-                }
-            });
+    function escapeHtml(text) {
+        if (!text) return '—';
+        var div = document.createElement('div');
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
+    }
 
-            // Utility: escape HTML to prevent XSS
-            function escapeHtml(text) {
-                if (!text) return '—';
-                var div = document.createElement('div');
-                div.appendChild(document.createTextNode(text));
-                return div.innerHTML;
-            }
+    function destroySelect2IfAny($el) {
+        if ($el && $el.length && $el.data('select2')) $el.select2('destroy');
+    }
 
-            function destroySelect2IfAny($el) {
-                if ($el && $el.length && $el.data('select2')) {
-                    $el.select2('destroy');
-                }
-            }
+    function initCourseSelect2() {
+        var $el = $('#filter_course_pk');
+        destroySelect2IfAny($el);
+        $el.select2({ placeholder:"Courses", allowClear:true, width:'100%', dropdownParent:$('body'), language:{noResults:function(){return "No courses found";}} });
+    }
 
-            // Initialize Select2 for Course filter (safe if already initialized)
-            function initCourseSelect2() {
-                var $el = $('#filter_course_pk');
-                destroySelect2IfAny($el);
-                $el.select2({
-                    placeholder: "— All Courses —",
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('body'),
-                    dropdownAutoWidth: false,
-                    language: {
-                        noResults: function() {
-                            return "No courses found";
-                        }
-                    }
-                });
-            }
+    function initSessionSelect2() {
+        var $el = $('#filter_session_id');
+        destroySelect2IfAny($el);
+        $el.select2({ placeholder:"Session", allowClear:true, width:'100%', dropdownParent:$('body'), language:{noResults:function(){return "No sessions found";}} });
+    }
 
-            // Initialize Select2 for Session filter
-            function initSessionSelect2() {
-                var $el = $('#filter_session_id');
-                destroySelect2IfAny($el);
-                $el.select2({
-                    placeholder: "— All Sessions —",
-                    allowClear: true,
-                    width: '100%',
-                    dropdownParent: $('body'),
-                    dropdownAutoWidth: false,
-                    language: {
-                        noResults: function() {
-                            return "No sessions found";
-                        }
-                    }
-                });
-            }
+    var originalSessions = $('#filter_session_id').html();
+    var originalCourses  = $('#filter_course_pk').html();
 
-            // Snapshot server-rendered options before Select2 wraps the selects
-            var originalSessions = $('#filter_session_id').html();
-            var originalCourses = $('#filter_course_pk').html();
+    initCourseSelect2();
+    initSessionSelect2();
 
-            initCourseSelect2();
-            initSessionSelect2();
+    var activeCoursesData  = @json($activeCourses ?? []);
+    var archiveCoursesData = @json($archiveCourses ?? []);
+    var currentTab = 'active';
 
-            // ── Course lists by tab ──
-            var activeCoursesData = @json($activeCourses ?? []);
-            var archiveCoursesData = @json($archiveCourses ?? []);
-            var currentTab = 'active';
+    function buildCourseOptions(courseMap, preselectPk) {
+        var html = '<option value="">Courses</option>';
+        $.each(courseMap, function(pk, name) {
+            var sel = (preselectPk && String(pk) === String(preselectPk)) ? ' selected' : '';
+            html += '<option value="'+pk+'"'+sel+'>'+$('<span>').text(name).html()+'</option>';
+        });
+        return html;
+    }
 
-            function buildCourseOptions(courseMap, preselectPk) {
-                var html = '<option value="">— All Courses —</option>';
-                $.each(courseMap, function(pk, name) {
-                    var sel = (preselectPk && String(pk) === String(preselectPk)) ? ' selected' : '';
-                    html += '<option value="' + pk + '"' + sel + '>' + $('<span>').text(name).html() + '</option>';
-                });
-                return html;
-            }
+    function switchCourseList(tab, preselectPk) {
+        currentTab = tab;
+        var courseMap = (tab === 'active') ? activeCoursesData : archiveCoursesData;
+        var opts = buildCourseOptions(courseMap, preselectPk || null);
+        var $course = $('#filter_course_pk');
+        destroySelect2IfAny($course);
+        $course.html(opts);
+        initCourseSelect2();
+        var pk = preselectPk != null && preselectPk !== '' ? String(preselectPk) : '';
+        var toSelect = (pk && courseMap[pk] !== undefined) ? pk : '';
+        $course.val(toSelect).trigger('change');
+        originalCourses = $course.html();
+    }
 
-            function switchCourseList(tab, preselectPk) {
-                currentTab = tab;
-                var courseMap = (tab === 'active') ? activeCoursesData : archiveCoursesData;
-                var opts = buildCourseOptions(courseMap, preselectPk || null);
-                var $course = $('#filter_course_pk');
-                destroySelect2IfAny($course);
-                $course.html(opts);
-                initCourseSelect2();
-                var pk = preselectPk != null && preselectPk !== '' ? String(preselectPk) : '';
-                var toSelect = (pk && courseMap[pk] !== undefined) ? pk : '';
-                $course.val(toSelect).trigger('change');
-                originalCourses = $course.html();
-            }
+    $('input[name="course_type_scope"]').on('change', function() {
+        var tab = $(this).val() === 'archive' ? 'archive' : 'active';
+        switchCourseList(tab);
+        var $sess = $('#filter_session_id');
+        destroySelect2IfAny($sess);
+        $sess.html('<option value="">Session</option>');
+        initSessionSelect2();
+        $sess.val('').trigger('change');
+        originalSessions = $sess.html();
+        $('#filter_from_date, #filter_to_date').val('');
+        $('#filter_feedback_state').val('not_given');
+        loadGroupedData();
+    });
 
-            // Active / archive radio (same behavior as former tabs)
-            $('input[name="course_type_scope"]').on('change', function() {
-                var tab = $(this).val() === 'archive' ? 'archive' : 'active';
-                switchCourseList(tab);
-                var $sess = $('#filter_session_id');
-                destroySelect2IfAny($sess);
-                $sess.html('<option value="">— All Sessions —</option>');
-                initSessionSelect2();
-                $sess.val('').trigger('change');
-                originalSessions = $sess.html();
-                $('#filter_from_date, #filter_to_date').val('');
-                $('#filter_feedback_state').val('not_given');
-                loadGroupedData();
-            });
+    // ── State ──
+    var currentPage = 1;
+    var perPage = 20;
+    var sortBy = 'student_name';
+    var sortDir = 'asc';
+    var searchTerm = '';
 
-            // ── Accordion Data Loading ──
-            var currentPage = 1;
-            var perPage = 20;
-            var sortBy = 'student_name';
-            var sortDir = 'asc';
-            var searchTerm = '';
+    function loadGroupedData(page) {
+        page = page || 1;
+        currentPage = page;
 
-            function loadGroupedData(page) {
-                page = page || 1;
-                currentPage = page;
+        var params = {
+            course_pk: $('#filter_course_pk').val(),
+            session_id: $('#filter_session_id').val(),
+            from_date: $('#filter_from_date').val(),
+            to_date: $('#filter_to_date').val(),
+            course_type: currentTab,
+            filter_feedback_state: $('#filter_feedback_state').val(),
+            page: page,
+            per_page: perPage,
+            sort_by: sortBy,
+            sort_dir: sortDir,
+            search: searchTerm
+        };
 
-                var params = {
-                    course_pk: $('#filter_course_pk').val(),
-                    session_id: $('#filter_session_id').val(),
-                    from_date: $('#filter_from_date').val(),
-                    to_date: $('#filter_to_date').val(),
-                    course_type: currentTab,
-                    filter_feedback_state: $('#filter_feedback_state').val(),
-                    page: page,
-                    per_page: perPage,
-                    sort_by: sortBy,
-                    sort_dir: sortDir,
-                    search: searchTerm
-                };
-
-                $('#studentAccordionContainer').html(
-                    '<div class="text-center py-5 px-3 rounded-4 bg-body-secondary bg-opacity-25 border border-secondary border-opacity-10">' +
-                    '<div class="spinner-border text-primary" role="status" aria-label="Loading"><span class="visually-hidden">Loading...</span></div>' +
-                    '<p class="mt-3 mb-0 text-body-secondary small fw-medium">Loading student data…</p></div>'
-                );
+        $('#studentAccordionContainer').html(
+            '<div class="text-center py-5 text-muted"><div class="spinner-border text-primary" role="status"><span class="visually-hidden">Loading...</span></div><p class="mt-3 mb-0 small fw-medium">Loading student data...</p></div>'
+        );
 
                 $.ajax({
                     url: "{{ $pr['grouped'] }}",
@@ -627,263 +322,152 @@
                 });
             }
 
-            function renderAccordion(data) {
-                if (!data.students || data.students.length === 0) {
-                    $('#studentAccordionContainer').html(
-                        '<div class="state-empty rounded-4 border border-secondary border-opacity-25 bg-body-secondary bg-opacity-25 p-4 p-md-5">' +
-                        '<i class="material-symbols-rounded d-block mb-3 text-body-secondary">search_off</i>' +
-                        '<p class="fw-semibold text-body mb-1">No records found</p>' +
-                        '<p class="text-body-secondary small mb-0">Try adjusting your filters or search.</p></div>'
-                    );
-                    return;
-                }
+    function renderAccordion(data) {
+        if (!data.students || data.students.length === 0) {
+            $('#studentAccordionContainer').html(
+                '<div class="text-center py-5 text-muted"><span class="material-symbols-rounded d-block mb-2" style="font-size:2.5rem;opacity:.35;">search_off</span><p class="fw-semibold mb-1">No records found</p><p class="small">Try adjusting your filters.</p></div>'
+            );
+            $('#paginationSection').hide();
+            return;
+        }
 
-                var html = '<div class="table-responsive rounded-3 border shadow-sm bg-body"><table class="table table-hover student-table align-middle mb-0">';
-                html += '<thead class="table-light"><tr>';
-                html += '<th class="text-center" style="width:50px">#</th>';
-                html += buildSortHeader('Student Name', 'student_name');
-                html += buildSortHeader('Course', 'course_summary');
-                html += buildSortHeader('Feedback Given', 'feedback_given', true);
-                html += buildSortHeader('Feedback Not Given', 'feedback_not_given', true);
-                html += '<th class="text-center" style="width:60px">Details</th>';
-                html += '</tr></thead><tbody>';
+        allStudentsData = data.students;
 
-                var startIndex = ((data.page || 1) - 1) * (data.per_page || 20);
+        var html = '<div class="table-responsive"><table class="table table-hover align-middle mb-0" id="psTable"><thead><tr>';
+        html += '<th style="width:55px">S. No.</th>';
+        html += buildSortHeader('Student Name', 'student_name');
+        html += buildSortHeader('Course', 'course_summary');
+        html += buildSortHeader('Feedback Given', 'feedback_given', true);
+        html += buildSortHeader('Feedback Not Given', 'feedback_not_given', true);
+        html += '</tr></thead><tbody>';
 
-                $.each(data.students, function(index, student) {
-                    var globalIndex = startIndex + index;
-                    var collapseId = 'studentCollapse_' + globalIndex;
+        var startIndex = ((data.page || 1) - 1) * (data.per_page || 20);
 
-                    // Main student row
-                    html += '<tr class="accordion-toggle" data-bs-toggle="collapse" data-bs-target="#' + collapseId + '" aria-expanded="false" aria-controls="' + collapseId + '">';
-                    html += '<td class="text-center">' + (globalIndex + 1) + '</td>';
-                    html += '<td class="fw-medium">' + escapeHtml(student.student_name);
-                    if (student.email) {
-                        html += '<br><small class="text-body-secondary">' + escapeHtml(student.email) + '</small>';
-                    }
-                    html += '</td>';
-                    html += '<td><small class="text-body">' + escapeHtml(student.course_summary || '—') + '</small></td>';
-                    html += '<td class="text-center"><span class="badge rounded-pill bg-success-subtle text-success badge-count">' + student.feedback_given + '</span></td>';
-                    html += '<td class="text-center"><span class="badge rounded-pill bg-danger-subtle text-danger badge-count">' + student.feedback_not_given + '</span></td>';
-                    html += '<td class="text-center"><i class="material-symbols-rounded accordion-icon" aria-hidden="true">expand_more</i></td>';
-                    html += '</tr>';
+        $.each(data.students, function(index, student) {
+            var globalIndex = startIndex + index;
+            html += '<tr>';
+            html += '<td>'+(globalIndex+1)+'</td>';
+            html += '<td><a href="javascript:void(0)" class="ps-name-link" data-index="'+index+'">'+escapeHtml(student.student_name)+'</a>';
+            if (student.email) html += '<br><small class="text-body-secondary">'+escapeHtml(student.email)+'</small>';
+            html += '</td>';
+            html += '<td><small>'+escapeHtml(student.course_summary||'—')+'</small></td>';
+            html += '<td class="text-center"><span class="badge rounded-pill bg-success-subtle text-success fw-semibold px-3">'+student.feedback_given+'</span></td>';
+            html += '<td class="text-center"><span class="badge rounded-pill bg-danger-subtle text-danger fw-semibold px-3">'+student.feedback_not_given+'</span></td>';
+            html += '</tr>';
+        });
 
-                    // Collapsible session details row
-                    html += '<tr><td colspan="6" class="collapse-cell"><div class="collapse" id="' + collapseId + '">';
-                    html += '<div class="collapse-inner">';
-                    html += '<table class="table table-sm table-bordered table-striped session-detail-table mb-0">';
-                    html += '<thead><tr>';
-                    html += '<th>Course</th>';
-                    html += '<th>Session Name</th>';
-                    html += '<th>Date</th>';
-                    html += '<th>Time</th>';
-                    html += '<th class="text-center">Feedback Status</th>';
-                    html += '</tr></thead><tbody>';
+        html += '</tbody></table></div>';
+        $('#studentAccordionContainer').html(html);
 
-                    $.each(student.sessions, function(si, session) {
-                        html += '<tr>';
-                        html += '<td>' + escapeHtml(session.course_name || '—') + '</td>';
-                        html += '<td>' + escapeHtml(session.session_name) + '</td>';
-                        html += '<td>' + escapeHtml(session.date) + '</td>';
-                        html += '<td>' + escapeHtml(session.time) + '</td>';
-                        if (session.feedback_status === 'given') {
-                            html += '<td class="text-center"><span class="badge rounded-pill bg-success-subtle text-success badge-status">Given</span></td>';
-                        } else {
-                            html += '<td class="text-center"><span class="badge rounded-pill bg-danger-subtle text-danger badge-status">Not Given</span></td>';
-                        }
-                        html += '</tr>';
-                    });
+        // Student name click → show detail view
+        $('#studentAccordionContainer').off('click', '.ps-name-link').on('click', '.ps-name-link', function(e) {
+            e.preventDefault();
+            var idx = parseInt($(this).data('index'));
+            var student = allStudentsData[idx];
+            if (student) showStudentDetail(student);
+        });
+    }
 
-                    html += '</tbody></table></div></div></td></tr>';
-                });
+    function showStudentDetail(student) {
+        $('#detailStudentTitle').text(student.student_name + '\'s Feedback Database');
 
-                html += '</tbody></table></div>';
-                html += '<div id="paginationContainer"></div>';
-                $('#studentAccordionContainer').html(html);
-
-                // Toggle icon rotation on expand/collapse
-                $('#studentAccordionContainer').off('show.bs.collapse hide.bs.collapse');
-                $('#studentAccordionContainer').on('show.bs.collapse', '.collapse', function() {
-                    $(this).closest('tr').prev('.accordion-toggle').addClass('expanded');
-                });
-                $('#studentAccordionContainer').on('hide.bs.collapse', '.collapse', function() {
-                    $(this).closest('tr').prev('.accordion-toggle').removeClass('expanded');
-                });
-            }
-
-            function updateTotalCount(total) {
-                $('#totalRecordsCount').text(total.toLocaleString());
-                var $badge = $('#totalRecordsCount');
-                $badge.removeClass('bg-primary bg-warning bg-danger');
-                if (total > 10000) {
-                    $badge.addClass('bg-danger');
-                } else if (total > 5000) {
-                    $badge.addClass('bg-warning');
-                } else {
-                    $badge.addClass('bg-primary');
-                }
-            }
-
-            // ── Sort helpers ──
-            function buildSortHeader(label, field, center) {
-                var cls = center ? 'text-center' : '';
-                var icon = 'swap_vert';
-                var activeClass = '';
-                if (sortBy === field) {
-                    icon = sortDir === 'asc' ? 'arrow_upward' : 'arrow_downward';
-                    activeClass = ' sort-active';
-                }
-                return '<th class="sortable-header ' + cls + activeClass + '" data-sort="' + field + '">' +
-                    label + ' <i class="material-symbols-rounded sort-icon">' + icon + '</i></th>';
-            }
-
-            // Click handler for sortable headers (delegated)
-            $(document).on('click', '.sortable-header', function() {
-                var field = $(this).data('sort');
-                if (sortBy === field) {
-                    sortDir = sortDir === 'asc' ? 'desc' : 'asc';
-                } else {
-                    sortBy = field;
-                    sortDir = 'asc';
-                }
-                loadGroupedData(1);
+        var sessions = student.sessions || [];
+        var tbody = '';
+        if (sessions.length === 0) {
+            tbody = '<tr><td colspan="5" class="text-center text-muted py-4">No sessions found.</td></tr>';
+        } else {
+            $.each(sessions, function(i, session) {
+                var statusBadge = session.feedback_status === 'given'
+                    ? '<span class="badge rounded-pill bg-success-subtle text-success fw-semibold px-3">Given</span>'
+                    : '<span class="badge rounded-pill bg-danger-subtle text-danger fw-semibold px-3">Not Given</span>';
+                tbody += '<tr>';
+                tbody += '<td>'+(i+1)+'</td>';
+                tbody += '<td>'+escapeHtml(session.session_name)+'</td>';
+                tbody += '<td>'+escapeHtml(session.date)+'</td>';
+                tbody += '<td>'+escapeHtml(session.time)+'</td>';
+                tbody += '<td>'+statusBadge+'</td>';
+                tbody += '</tr>';
             });
+        }
+        $('#detailTableBody').html(tbody);
+        $('#detailTotalInfo').text('of '+sessions.length+' items');
 
-            // ── Search ──
-            var searchTimeout;
-            $('#studentSearch').on('input', function() {
-                var val = $(this).val().trim();
-                $('#clearSearch').toggle(val.length > 0);
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function() {
-                    searchTerm = val;
-                    loadGroupedData(1);
-                }, 400);
-            });
+        // Hide list, show detail
+        $('#psTopToolbar').hide();
+        $('.ps-filter-row').hide();
+        $('#studentListView').hide();
+        $('#studentDetailView').show();
+    }
 
-            $('#clearSearch').on('click', function() {
-                $('#studentSearch').val('').trigger('input');
-            });
+    function hideStudentDetail() {
+        $('#studentDetailView').hide();
+        $('#studentListView').show();
+        $('.ps-filter-row').show();
+        $('#psTopToolbar').show();
+    }
 
-            // Expand / collapse all rows on the current page (data already loaded; no extra requests)
-            function forEachStudentCollapse(fn) {
-                document.querySelectorAll('#studentAccordionContainer .collapse').forEach(function(el) {
-                    if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-                        fn(bootstrap.Collapse.getOrCreateInstance(el, { toggle: false }));
-                    }
-                });
-            }
-            $('#btnExpandAllStudents').on('click', function() {
-                forEachStudentCollapse(function(c) { c.show(); });
-            });
-            $('#btnCollapseAllStudents').on('click', function() {
-                forEachStudentCollapse(function(c) { c.hide(); });
-            });
+    function updateTotalCount(total) {
+        var info = document.getElementById('psTotalInfo');
+        if (info) info.textContent = 'of '+total.toLocaleString()+' items';
+    }
 
-            function renderPagination(data) {
-                var totalPages = data.total_pages || 1;
-                var page = data.page || 1;
-                var total = data.total || 0;
-                var pp = data.per_page || 20;
+    function buildSortHeader(label, field, center) {
+        var cls = center ? 'text-center' : '';
+        var icon = 'swap_vert';
+        var activeClass = '';
+        if (sortBy === field) { icon = sortDir==='asc'?'arrow_upward':'arrow_downward'; activeClass=' sort-active'; }
+        return '<th class="sortable-header '+cls+activeClass+'" data-sort="'+field+'">'+label+' <i class="material-symbols-rounded sort-icon" style="font-size:.85rem;vertical-align:middle;opacity:.25;">'+icon+'</i></th>';
+    }
 
-                if (totalPages <= 1) {
-                    $('#paginationContainer').html('');
-                    return;
-                }
+    $(document).on('click', '.sortable-header', function() {
+        var field = $(this).data('sort');
+        if (sortBy===field) sortDir=sortDir==='asc'?'desc':'asc'; else { sortBy=field; sortDir='asc'; }
+        loadGroupedData(1);
+    });
 
-                var from = ((page - 1) * pp) + 1;
-                var to = Math.min(page * pp, total);
+    function renderPagination(data) {
+        var totalPages = data.total_pages || 1;
+        var page = data.page || 1;
+        var total = data.total || 0;
+        var pp = data.per_page || 20;
+        var info = document.getElementById('psTotalInfo');
+        if (info) info.textContent = 'of '+total.toLocaleString()+' items';
 
-                var html = '<div class="pagination-wrap d-flex flex-column flex-sm-row justify-content-between align-items-center gap-3 mt-3 pt-3 px-2 border-top border-secondary border-opacity-10">';
+        var cell = document.getElementById('psPaginationCell');
+        var section = $('#paginationSection');
+        if (!cell) return;
+        if (totalPages <= 1) { section.hide(); cell.innerHTML=''; return; }
 
-                // Info text
-                html += '<div class="pagination-info">Showing <strong>' + from + '</strong> to <strong>' + to + '</strong> of <strong>' + total.toLocaleString() + '</strong> students</div>';
+        section.show().css('display','flex');
+        var items='';
+        items+='<li class="page-item'+(page<=1?' disabled':'')+'"><a class="page-link" href="#" data-page="'+(page-1)+'">&lsaquo;</a></li>';
+        var start=Math.max(1,page-2), end=Math.min(totalPages,page+2);
+        var actualStart=Math.max(1,end-4);
+        if(actualStart>1) items+='<li class="page-item disabled"><a class="page-link">&hellip;</a></li>';
+        for(var p=actualStart;p<=end;p++) items+='<li class="page-item'+(p===page?' active':'')+'"><a class="page-link" href="#" data-page="'+p+'">'+p+'</a></li>';
+        if(end<totalPages) items+='<li class="page-item disabled"><a class="page-link">&hellip;</a></li>';
+        items+='<li class="page-item'+(page>=totalPages?' disabled':'')+'"><a class="page-link" href="#" data-page="'+(page+1)+'">&rsaquo;</a></li>';
+        cell.innerHTML='<ul class="pagination ps-pagination flex-wrap gap-1 mb-0">'+items+'</ul>';
 
-                // Per-page selector + page buttons
-                html += '<div class="d-flex align-items-center gap-3">';
-                html += '<div class="d-flex align-items-center gap-1"><label class="small text-body-secondary me-1">Per page:</label>';
-                html += '<select class="form-select form-select-sm per-page-ctrl" id="perPageSelect">';
-                [10, 20, 50, 100].forEach(function(v) {
-                    html += '<option value="' + v + '"' + (v === pp ? ' selected' : '') + '>' + v + '</option>';
-                });
-                html += '</select></div>';
+        $('#psPaginationCell .page-link[data-page]').off('click').on('click', function(e) {
+            e.preventDefault();
+            var pg=parseInt($(this).data('page'));
+            if(pg&&pg>=1&&pg<=totalPages&&pg!==page) { loadGroupedData(pg); $('html,body').animate({scrollTop:$('#studentAccordionContainer').offset().top-80},200); }
+        });
+    }
 
-                html += '<nav aria-label="Pagination"><ul class="pagination pagination-sm mb-0">';
+    // ── Filter handlers ──
+    $('#btnApplyFilters').on('click', function() { loadGroupedData(); });
 
-                // Previous
-                html += '<li class="page-item' + (page <= 1 ? ' disabled' : '') + '">';
-                html += '<a class="page-link" href="#" data-page="' + (page - 1) + '" aria-label="Previous">&laquo;</a></li>';
-
-                // Page numbers with ellipsis
-                var startP = Math.max(1, page - 2);
-                var endP = Math.min(totalPages, page + 2);
-
-                if (startP > 1) {
-                    html += '<li class="page-item"><a class="page-link" href="#" data-page="1">1</a></li>';
-                    if (startP > 2) html += '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
-                }
-
-                for (var p = startP; p <= endP; p++) {
-                    html += '<li class="page-item' + (p === page ? ' active' : '') + '">';
-                    html += '<a class="page-link" href="#" data-page="' + p + '">' + p + '</a></li>';
-                }
-
-                if (endP < totalPages) {
-                    if (endP < totalPages - 1) html += '<li class="page-item disabled"><span class="page-link">&hellip;</span></li>';
-                    html += '<li class="page-item"><a class="page-link" href="#" data-page="' + totalPages + '">' + totalPages + '</a></li>';
-                }
-
-                // Next
-                html += '<li class="page-item' + (page >= totalPages ? ' disabled' : '') + '">';
-                html += '<a class="page-link" href="#" data-page="' + (page + 1) + '" aria-label="Next">&raquo;</a></li>';
-
-                html += '</ul></nav></div></div>';
-
-                $('#paginationContainer').html(html);
-
-                // Page click
-                $('#paginationContainer').off('click', '.page-link').on('click', '.page-link', function(e) {
-                    e.preventDefault();
-                    var pg = $(this).data('page');
-                    if (pg && pg >= 1 && pg <= totalPages && pg !== page) {
-                        loadGroupedData(pg);
-                        $('html, body').animate({ scrollTop: $('#studentAccordionContainer').offset().top - 80 }, 200);
-                    }
-                });
-
-                // Per-page change
-                $('#paginationContainer').off('change', '#perPageSelect').on('change', '#perPageSelect', function() {
-                    perPage = parseInt($(this).val());
-                    loadGroupedData(1);
-                });
-            }
-
-            // ── Filter Handlers ──
-
-            // Apply filters button
-            $('#btnApplyFilters').on('click', function() {
-                loadGroupedData();
-            });
-
-            // Reset filters button
-            $('#btnResetFilters').on('click', function() {
-                var $course = $('#filter_course_pk');
-                destroySelect2IfAny($course);
-                $course.html(originalCourses);
-                initCourseSelect2();
-                $course.val('').trigger('change');
-
-                var $sess = $('#filter_session_id');
-                destroySelect2IfAny($sess);
-                $sess.html(originalSessions);
-                initSessionSelect2();
-                $sess.val('').trigger('change');
-
-                $('#filter_from_date, #filter_to_date').val('');
-                $('#filter_feedback_state').val('not_given');
-
-                loadGroupedData();
-            });
+    $('#btnResetFilters').on('click', function() {
+        var $course=$('#filter_course_pk');
+        destroySelect2IfAny($course); $course.html(originalCourses); initCourseSelect2(); $course.val('').trigger('change');
+        var $sess=$('#filter_session_id');
+        destroySelect2IfAny($sess); $sess.html(originalSessions); initSessionSelect2(); $sess.val('').trigger('change');
+        $('#filter_from_date, #filter_to_date').val('');
+        $('#filter_feedback_state').val('not_given');
+        loadGroupedData();
+    });
 
             // Course change handler - Load sessions for selected course & reload data
             $('#filter_course_pk').on('change', function() {
@@ -939,54 +523,22 @@
                 });
             });
 
-            // Auto-reload on session change
-            $('#filter_session_id').on('change', function() {
-                loadGroupedData();
-            });
+    $('#filter_session_id').on('change', function() { loadGroupedData(); });
 
-            // Auto-reload on date changes (debounced)
-            var dateFilterTimeout;
-            $('#filter_from_date, #filter_to_date').on('change', function() {
-                clearTimeout(dateFilterTimeout);
-                dateFilterTimeout = setTimeout(function() {
-                    loadGroupedData();
-                }, 500);
-            });
+    var dateTimeout;
+    $('#filter_from_date, #filter_to_date').on('change', function() { clearTimeout(dateTimeout); dateTimeout=setTimeout(function(){loadGroupedData();},500); });
+    $('#filter_feedback_state').on('change', function() { loadGroupedData(1); });
 
-            $('#filter_feedback_state').on('change', function() {
-                loadGroupedData(1);
-            });
+    $('#perPageSelect').on('change', function() { perPage=parseInt($(this).val()); loadGroupedData(1); });
 
-            // ── Export Handlers ──
-
-            function submitExportForm(actionUrl) {
-                var form = $('<form>', {
-                    method: 'POST',
-                    action: actionUrl,
-                    style: 'display: none'
-                });
-
-                $('<input>').attr({ type: 'hidden', name: '_token', value: "{{ csrf_token() }}" }).appendTo(form);
-
-                var filters = {
-                    course_pk: $('#filter_course_pk').val(),
-                    session_id: $('#filter_session_id').val(),
-                    from_date: $('#filter_from_date').val(),
-                    to_date: $('#filter_to_date').val(),
-                    course_type: currentTab,
-                    filter_feedback_state: $('#filter_feedback_state').val()
-                };
-
-                $.each(filters, function(key, value) {
-                    if (value !== undefined && value !== null && value !== '') {
-                        $('<input>').attr({ type: 'hidden', name: key, value: value }).appendTo(form);
-                    }
-                });
-
-                $('body').append(form);
-                form.submit();
-                setTimeout(function() { form.remove(); }, 1000);
-            }
+    // ── Export handlers ──
+    function submitExportForm(actionUrl) {
+        var form=$('<form>',{method:'POST',action:actionUrl,style:'display:none'});
+        $('<input>').attr({type:'hidden',name:'_token',value:"{{ csrf_token() }}"}).appendTo(form);
+        var filters={course_pk:$('#filter_course_pk').val(),session_id:$('#filter_session_id').val(),from_date:$('#filter_from_date').val(),to_date:$('#filter_to_date').val(),course_type:currentTab,filter_feedback_state:$('#filter_feedback_state').val()};
+        $.each(filters,function(k,v){ if(v!==undefined&&v!==null&&v!=='') $('<input>').attr({type:'hidden',name:k,value:v}).appendTo(form); });
+        $('body').append(form); form.submit(); setTimeout(function(){form.remove();},1000);
+    }
 
             $('#exportPDF').on('click', function(e) {
                 e.preventDefault();
@@ -1017,16 +569,12 @@
                 window.open("{{ $pr['print'] }}?" + params, '_blank');
             });
 
-            // ── Initial Load ──
-            // Active tab + course list; pre-selected course triggers change → loads sessions + data
-            var activeCourseId = '{{ $activeCourse ?? '' }}';
-            switchCourseList('active', activeCourseId);
+    // ── Initial load ──
+    var activeCourseId='{{ $activeCourse ?? '' }}';
+    switchCourseList('active', activeCourseId);
+    if(!activeCourseId) loadGroupedData();
 
-            if (!activeCourseId) {
-                loadGroupedData();
-            }
-
-            console.log('Ready - Pending Feedback with Accordion View');
-        });
-    </script>
+    console.log('Ready - Pending Feedback');
+});
+</script>
 @endpush

@@ -341,7 +341,7 @@
             <div class="card-header-modern position-relative">
                 <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
                     <div>
-                        <h4 class="mb-0 fw-bold d-flex align-items-center gap-2">
+                        <h4 class="mb-0 fw-bold d-flex align-items-center gap-1">
                             <iconify-icon icon="solar:folder-bold-duotone" style="font-size: 1.5rem; color: #004a93;"></iconify-icon>
                             Complaint Category Management
                         </h4>
@@ -355,14 +355,14 @@
             </div>
             <div class="card-body p-4">
                 @if(session('success'))
-                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
+                    <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-1 shadow-sm" role="alert">
                         <iconify-icon icon="solar:check-circle-bold" style="font-size: 1.25rem;"></iconify-icon>
                         <div class="flex-grow-1">{{ session('success') }}</div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 @endif
                 @if(session('error'))
-                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 shadow-sm" role="alert">
+                    <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-1 shadow-sm" role="alert">
                         <iconify-icon icon="solar:danger-triangle-bold" style="font-size: 1.25rem;"></iconify-icon>
                         <div class="flex-grow-1">{{ session('error') }}</div>
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
@@ -527,7 +527,7 @@
                 @csrf
                 @method('PUT')
                 <div class="modal-header bg-primary text-white">
-                    <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-1">
                         <iconify-icon icon="solar:pen-bold" style="font-size: 1.5rem;"></iconify-icon>
                         <h5 class="modal-title mb-0 fw-bold" id="editCategoryModalLabel">Edit Category</h5>
                     </div>
@@ -535,7 +535,7 @@
                 </div>
                 <div class="modal-body">
                     <div class="mb-4">
-                        <label for="edit_issue_category" class="form-label d-flex align-items-center gap-2">
+                        <label for="edit_issue_category" class="form-label d-flex align-items-center gap-1">
                             <iconify-icon icon="solar:folder-bold" style="color: #004a93;"></iconify-icon>
                             Category Name <span class="text-danger">*</span>
                         </label>
@@ -547,7 +547,7 @@
                                required>
                     </div>
                     <div class="mb-4">
-                        <label for="edit_description" class="form-label d-flex align-items-center gap-2">
+                        <label for="edit_description" class="form-label d-flex align-items-center gap-1">
                             <iconify-icon icon="solar:document-text-bold" style="color: #004a93;"></iconify-icon>
                             Description
                         </label>
@@ -559,7 +559,7 @@
                         <div class="form-text">Provide a brief description to help users understand this category.</div>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_status" class="form-label d-flex align-items-center gap-2">
+                        <label for="edit_status" class="form-label d-flex align-items-center gap-1">
                             <iconify-icon icon="solar:settings-bold" style="color: #004a93;"></iconify-icon>
                             Status
                         </label>

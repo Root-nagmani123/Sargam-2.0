@@ -3,7 +3,7 @@
 @section('title', 'Define Block/Building - Sargam')
 
 @section('content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
+<div class="container-fluid">
   <x-breadcrum title="Define Block/Building" />
 
     <x-session_message />

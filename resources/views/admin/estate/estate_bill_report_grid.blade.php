@@ -3,7 +3,7 @@
 @section('title', 'Estate Bill Report - Grid View - Sargam')
 
 @section('content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
+<div class="container-fluid">
     <!-- Breadcrumb -->
     <x-breadcrum title="Estate Bill Report - Grid View"></x-breadcrum>
 

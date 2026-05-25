@@ -1,30 +1,122 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 
-@section('title', 'Exemption medical speciality')
+@section('title', 'Exemption Medical Speciality')
 
 @section('setup_content')
+<style>
+/* ─── Hide DataTable default controls ─── */
+#exemptionMedSpecTable_wrapper .dataTables_length,
+#exemptionMedSpecTable_wrapper .dataTables_filter,
+#exemptionMedSpecTable_wrapper .dataTables_info,
+#exemptionMedSpecTable_wrapper .dataTables_paginate { display: none !important; }
+
+/* ─── Custom Search ─── */
+.ems-search-wrap {
+    position: relative;
+    width: 260px;
+}
+.ems-search-wrap .form-control {
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+    padding-left: 38px;
+    font-size: 0.875rem;
+}
+.ems-search-wrap .ems-search-icon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #adb5bd;
+    font-size: 18px;
+    pointer-events: none;
+}
+
+/* ─── Status Badges ─── */
+.badge-active {
+    display: inline-block;
+    background-color: #d1fae5;
+    color: #065f46;
+    border-radius: 10px !important;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+.badge-inactive {
+    display: inline-block;
+    background-color: #fee2e2;
+    color: #991b1b;
+    border-radius: 10px !important;
+    padding: 4px 14px;
+    font-size: 0.8rem;
+    font-weight: 600;
+}
+
+/* ─── Table ─── */
+#exemptionMedSpecTable thead th {
+    background-color: #f8f9fa;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #6c757d;
+    border-bottom: 2px solid #dee2e6;
+    padding: 12px 16px;
+    white-space: nowrap;
+}
+#exemptionMedSpecTable tbody td {
+    font-size: 0.875rem;
+    padding: 12px 16px;
+    vertical-align: middle;
+    border-bottom: 1px solid #f1f3f5;
+    color: #212529;
+}
+#exemptionMedSpecTable tbody tr:hover td { background-color: #fafbfc; }
+
+/* ─── Action Buttons ─── */
+.ems-action-btn {
+    background: none;
+    border: none;
+    padding: 3px 5px;
+    cursor: pointer;
+    line-height: 1;
+    display: inline-flex;
+    align-items: center;
+}
+.ems-action-btn .material-symbols-rounded { font-size: 20px; }
+.ems-action-btn:hover { opacity: 0.7; }
+
+/* ─── Page Info ─── */
+#emsPageInfo { font-size: 0.8125rem; color: #6c757d; }
+
+/* ─── Modal ─── */
+.ems-modal .modal-content {
+    border: 1.5px dashed #6ea8fe;
+    border-radius: 12px;
+}
+.ems-modal .modal-header { border-bottom: none; padding: 20px 24px 6px; }
+.ems-modal .modal-body   { padding: 8px 24px 16px; }
+.ems-modal .modal-footer { border-top: none; padding: 0 24px 20px; }
+.ems-modal .modal-title  { font-size: 1rem; font-weight: 700; color: #1b3a5c; }
+.ems-modal .form-label   { font-size: 0.875rem; font-weight: 500; margin-bottom: 4px; color: #495057; }
+.ems-modal .form-control,
+.ems-modal .form-select  { border-radius: 6px; font-size: 0.875rem; border: 1px solid #dee2e6; padding: 8px 12px; }
+.ems-modal .form-control:focus,
+.ems-modal .form-select:focus { border-color: #6ea8fe; box-shadow: 0 0 0 3px rgba(110,168,254,0.15); }
+</style>
 
 <div class="container-fluid">
-    <x-breadcrum title="Exemption medical speciality" />
+    <x-breadcrum title="Exemption Medical Speciality" subtitle="List of exemption medical specialities">
+        <button type="button" data-bs-toggle="modal" data-bs-target="#addEmsModal"
+            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
+            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+            <span>Add Exemption Medical Speciality</span>
+        </button>
+    </x-breadcrum>
+
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Exemption medical speciality</h4>
-                        </div>
-                        <div class="col-6">
-                             <!-- <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button> -->
-                            <div class="float-end gap-2">
-                                 <button id="showAlert" class="btn btn-primary">+ Add Exemption medical speciality</button>
-                                <!-- <a href="{{route('master.exemption.category.master.create')}}" class="btn btn-primary">+
-                                    Add Exemption categories</a> -->
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-4">
+
+                {{-- Custom Search --}}
+                <div class="mb-3">
                     <div class="table-responsive">
                         <table class="table" id="exemptionMedicalSpecialityTable">
                             <thead>
@@ -41,15 +133,91 @@
                         </table>
                     </div>
                 </div>
+
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
+
 <input type="hidden" id="pk" value="">
 <input type="hidden" id="active_inactive" value="">
+
+{{-- ═══════════════════ ADD MODAL ═══════════════════ --}}
+<div class="modal fade ems-modal" id="addEmsModal" tabindex="-1"
+    aria-labelledby="addEmsModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="addEmsModalLabel">Add Exemption Medical Speciality</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="addEmsForm" novalidate>
+                    <div class="mb-3">
+                        <label for="add_speciality_name" class="form-label">Speciality Name <span class="text-danger">*</span></label>
+                        <input type="text" id="add_speciality_name" class="form-control" placeholder="eg. General Medicine">
+                        <div class="invalid-feedback">Speciality Name is required.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="add_status" class="form-label">Status <span class="text-danger">*</span></label>
+                        <select id="add_status" class="form-select">
+                            <option value="">Select Status</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        <div class="invalid-feedback">Status is required.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn fw-semibold px-4" id="addEmsSubmit"
+                    style="background:#1b3a5c;color:#fff;border-color:#1b3a5c;">Add</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{-- ═══════════════════ EDIT MODAL ═══════════════════ --}}
+<div class="modal fade ems-modal" id="editEmsModal" tabindex="-1"
+    aria-labelledby="editEmsModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered" style="max-width:420px;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editEmsModalLabel">Edit Exemption Medical Speciality</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="editEmsForm" novalidate>
+                    <input type="hidden" id="edit_ems_id">
+                    <div class="mb-3">
+                        <label for="edit_speciality_name" class="form-label">Speciality Name <span class="text-danger">*</span></label>
+                        <input type="text" id="edit_speciality_name" class="form-control" placeholder="eg. General Medicine">
+                        <div class="invalid-feedback">Speciality Name is required.</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="edit_status" class="form-label">Status <span class="text-danger">*</span></label>
+                        <select id="edit_status" class="form-select">
+                            <option value="">Select Status</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        <div class="invalid-feedback">Status is required.</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer justify-content-end gap-2">
+                <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn fw-semibold px-4" id="editEmsSubmit"
+                    style="background:#1b3a5c;color:#fff;border-color:#1b3a5c;">Update</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 @endsection
-@section('scripts')
+
+@push('scripts')
 <script>
     $(function() {
         const tableSelector = '#exemptionMedicalSpecialityTable';
@@ -143,46 +311,28 @@
             });
         });
 
-
-
-        $(document).on('click', '.delete-btn', function(e) {
-            e.preventDefault();
-            let pk = $(this).data('id');
-            Swal.fire({
-                title: 'Are you sure?',
-                text: "This record will be permanently deleted!",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#d33',
-                cancelButtonColor: '#3085d6',
-                confirmButtonText: 'Yes, delete it!',
-                cancelButtonText: 'Cancel'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    $('#pk').val(pk);
-                    $('#active_inactive').val(2);
-                    table.ajax.reload(null, false);
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Delete!',
-                        text: 'Delete has been successfully.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                } else if (result.dismiss === Swal.DismissReason.cancel) {
-                    // Revert the checkbox state
-                    checkbox.prop('checked', !active_inactive);
-                    // Show cancel message
-                    Swal.fire({
-                        icon: 'danger',
-                        title: 'Cancelled',
-                        text: 'Delete has been cancelled.',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                }
-            });
+    // ── Delete (unchanged) ──
+    $(document).on('click', '.delete-btn', function (e) {
+        e.preventDefault();
+        let pk = $(this).data('id');
+        Swal.fire({
+            title: 'Are you sure?',
+            text: "This record will be permanently deleted!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it!',
+            cancelButtonText: 'Cancel'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                $('#pk').val(pk);
+                $('#active_inactive').val(2);
+                table.ajax.reload(null, false);
+                Swal.fire({ icon: 'success', title: 'Delete!', text: 'Delete has been successfully.', timer: 1500, showConfirmButton: false });
+            }
         });
+    });
 
     }); //endclose
 </script>
@@ -427,21 +577,13 @@ $(document).on('click', '.edit-btn', function () {
 
 @if(session('success'))
 <script>
-    Swal.fire({
-        icon: 'success',
-        title: 'Success',
-        text: "{{ session('success') }}"
-    });
+    Swal.fire({ icon: 'success', title: 'Success', text: "{{ session('success') }}" });
 </script>
 @endif
 
 @if(session('error'))
 <script>
-    Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: "{{ session('error') }}"
-    });
+    Swal.fire({ icon: 'error', title: 'Error', text: "{{ session('error') }}" });
 </script>
 @endif
-@endsection
+@endpush

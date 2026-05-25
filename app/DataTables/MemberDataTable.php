@@ -55,25 +55,37 @@ class MemberDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('employee_name', 
-            function($row) {
-                return '<label class="text-dark">' . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
+            ->addColumn('employee_id', function ($row) {
+                return $row->emp_id ? e($row->emp_id) : '—';
             })
-            ->addColumn('employee_id', fn($row) => '<label class="text-dark">' . $row->emp_id . '</label>')
-            ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
-            ->addColumn('email', fn($row) => '<label class="text-dark">' . $row->email . '</label>')
-            ->addColumn('actions', function($row) {
-                $deleteUrl = route('member.destroy', encrypt($row->pk));
-                return '<div class="d-flex justify-content-center gap-2">
-                    <a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
-                    <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-success">View</a>
-                    <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this member?\')">
-                        ' . csrf_field() . '
-                        ' . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                    </form>
-                </div>';
+            ->addColumn('employee_name', function ($row) {
+                $name = trim(
+                    ($row->first_name ?? '') . ' ' . ($row->middle_name ?? '') . ' ' . ($row->last_name ?? '')
+                );
 
+                return $name !== '' ? e($name) : '—';
+            })
+            ->addColumn('mobile_no', function ($row) {
+                return $row->mobile ? e($row->mobile) : '—';
+            })
+            ->addColumn('email', function ($row) {
+                return $row->email ? e($row->email) : '—';
+            })
+            ->addColumn('actions', function ($row) {
+                $deleteUrl = route('member.destroy', encrypt($row->pk));
+                $editBtn = '<a href="' . route('member.edit', $row->pk) . '" class="mem-action-btn text-primary" title="Edit">'
+                    . '<span class="material-symbols-rounded">edit</span></a>';
+                $viewBtn = '<a href="' . route('member.show', encrypt($row->pk)) . '" class="mem-action-btn text-primary" title="View">'
+                    . '<span class="material-symbols-rounded">visibility</span></a>';
+                $deleteBtn = '<form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this member?\')">'
+                    . csrf_field()
+                    . method_field('DELETE')
+                    . '<button type="submit" class="mem-action-btn text-danger border-0 bg-transparent p-0" title="Delete">'
+                    . '<span class="material-symbols-rounded">delete</span></button></form>';
+
+                return '<div class="d-inline-flex align-items-center justify-content-center gap-2">'
+                    . $editBtn . $viewBtn . $deleteBtn
+                    . '</div>';
             })
             ->filterColumn('employee_name', function ($query, $keyword) {
                 $query->where('first_name', 'like', "%{$keyword}%")
@@ -142,12 +154,12 @@ class MemberDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('employee_name')->title('Employee Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('employee_id')->title('Employee ID')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('email')->title('Email')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('employee_id')->title('Employee ID')->orderable(false)->searchable(false),
+            Column::make('employee_name')->title('Employee Name')->orderable(false)->searchable(true),
+            Column::make('mobile_no')->title('Mobile Number')->orderable(false)->searchable(true),
+            Column::make('email')->title('Email')->orderable(false)->searchable(true),
+            Column::computed('actions')->title('Action')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
 

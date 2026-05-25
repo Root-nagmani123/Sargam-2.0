@@ -91,9 +91,9 @@
                 </button>
             </li>
         </ul>
-        <div class="d-flex align-items-center gap-2 flex-wrap">
+        <div class="d-flex align-items-center gap-1 flex-wrap">
             <div class="dropdown">
-                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-3 py-2" type="button" id="familyIdcardExportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-1 px-3 py-2" type="button" id="familyIdcardExportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">download</i>
                     Export
                 </button>
@@ -105,7 +105,7 @@
                     <li><h6 class="dropdown-header text-muted small text-uppercase">Export current view</h6></li>
                     <li>
                         <a id="familyIdcardExportExcel"
-                           class="dropdown-item d-flex align-items-center gap-2 py-2"
+                           class="dropdown-item d-flex align-items-center gap-1 py-2"
                            href="{{ $exportBase }}?tab=active&format=xlsx"
                            data-base="{{ $exportBase }}">
                             <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
@@ -114,7 +114,7 @@
                     </li>
                     <li>
                         <a id="familyIdcardExportPdf"
-                           class="dropdown-item d-flex align-items-center gap-2 py-2"
+                           class="dropdown-item d-flex align-items-center gap-1 py-2"
                            href="{{ $exportBase }}?tab=active&format=pdf"
                            data-base="{{ $exportBase }}">
                             <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i>
@@ -126,7 +126,7 @@
             <a href="{{ route('admin.family_idcard.create') }}" class="btn btn-success" title="Add">
                 New Family ID Card
             </a>
-            <button type="button" class="btn btn-primary family-idcard-print-btn d-flex align-items-center gap-2 px-3" title="Print" onclick="window.print();" aria-label="Print list">
+            <button type="button" class="btn btn-primary family-idcard-print-btn d-flex align-items-center gap-1 px-3" title="Print" onclick="window.print();" aria-label="Print list">
                 <i class="material-icons material-symbols-rounded" style="font-size:20px;">print</i>
                 <span class="d-none d-sm-inline">Print</span>
             </button>

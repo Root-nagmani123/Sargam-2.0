@@ -3,7 +3,7 @@
 @section('title', 'Log New Issue - Sargam | Lal Bahadur')
 
 @section('content')
-<div class="container-fluid py-4 issue-log-choices">
+<div class="container-fluid issue-log-choices">
     <x-breadcrum title="Log New Issue" />
    @if(session('success'))
     <div class="alert alert-success alert-dismissible fade show" role="alert">

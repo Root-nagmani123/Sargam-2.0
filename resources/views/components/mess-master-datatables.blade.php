@@ -179,12 +179,12 @@ document.addEventListener('DOMContentLoaded', function() {
         language: {
             search: '',
             searchPlaceholder: '{{ addslashes($searchPlaceholder) }}',
-            lengthMenu: 'Show _MENU_ entries',
-            info: 'Showing _START_ to _END_ of _TOTAL_ {{ $infoLabel }}',
-            infoEmpty: 'No {{ $infoLabel }}',
-            emptyTable: 'No {{ $infoLabel }}',
+            lengthMenu: {!! json_encode($lengthMenuLabel) !!},
+            info: {!! json_encode($infoPattern) !!},
+            infoEmpty: {!! json_encode($infoEmptyPattern) !!},
+            emptyTable: {!! json_encode($infoEmptyPattern) !!},
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            paginate: { first: '', last: '', next: '›', previous: '‹' }
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {
@@ -227,12 +227,12 @@ document.addEventListener('DOMContentLoaded', function() {
         language: {
             search: '',
             searchPlaceholder: '{{ addslashes($searchPlaceholder) }}',
-            lengthMenu: 'Show _MENU_ entries',
-            info: 'Showing _START_ to _END_ of _TOTAL_ {{ $infoLabel }}',
-            infoEmpty: 'No {{ $infoLabel }}',
-            emptyTable: 'No {{ $infoLabel }}',
+            lengthMenu: {!! json_encode($lengthMenuLabel) !!},
+            info: {!! json_encode($infoPattern) !!},
+            infoEmpty: {!! json_encode($infoEmptyPattern) !!},
+            emptyTable: {!! json_encode($infoEmptyPattern) !!},
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            paginate: { first: '', last: '', next: '›', previous: '‹' }
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {

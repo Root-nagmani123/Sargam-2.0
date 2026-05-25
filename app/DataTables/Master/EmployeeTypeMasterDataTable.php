@@ -52,20 +52,27 @@ class EmployeeTypeMasterDataTable extends DataTable
         return (new EloquentDataTable($query))
             ->addIndexColumn()
             ->addColumn('category_type_name', fn($row) => $row->category_type_name ?? '-')
+            ->addColumn('status', function ($row) {
+                return $row->active_inactive == 1
+                    ? '<span class="etm-badge-active">Active</span>'
+                    : '<span class="etm-badge-inactive">Inactive</span>';
+            })
             ->addColumn('action', function ($row) {
                 $editUrl = route('master.employee.type.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
-            })
-            ->addColumn('status', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="employee_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                $editBtn = '<a href="' . $editUrl . '" class="etm-action-btn text-primary" title="Edit">'
+                    . '<span class="material-symbols-rounded">edit</span></a>';
+                $toggleBtn = '<div class="form-check form-switch d-inline-block mb-0 etm-status-switch">'
+                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
+                    . ' data-table="employee_type_master" data-column="active_inactive" data-id="' . $row->pk . '" '
+                    . $checked . '></div>';
+
+                return '<div class="d-inline-flex align-items-center justify-content-center gap-2">'
+                    . $editBtn . $toggleBtn
+                    . '</div>';
             })
 
             ->setRowId('pk')
-            ->setRowClass('text-center')
             ->filterColumn('category_type_name', function ($query, $keyword) {
                 $query->where('category_type_name', 'like', "%{$keyword}%");
             })
@@ -121,10 +128,10 @@ class EmployeeTypeMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('category_type_name')->title('Category Type Name')->orderable(false)->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false),
+            Column::make('category_type_name')->title('Category Type Name')->orderable(false),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];
     }
 

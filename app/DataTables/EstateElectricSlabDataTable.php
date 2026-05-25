@@ -73,6 +73,7 @@ class EstateElectricSlabDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
+                'pagingType' => 'full_numbers',
                 'order' => [[1, 'asc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
@@ -81,12 +82,7 @@ class EstateElectricSlabDataTable extends DataTable
                     'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
                     'infoEmpty' => 'Showing 0 to 0 of 0 entries',
                     'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
+                    'paginate' => ['first' => '', 'last' => '', 'next' => '', 'previous' => ''],
                 ],
                 'dom' => '<"row align-items-center g-2"<"col-12 col-md-6"l><"col-12 col-md-6 text-md-end"f>>rt<"row align-items-center mt-2 g-2"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
             ]);

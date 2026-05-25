@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Peer Evaluation Form | Sargam Admin')
 @section('setup_content')
-    <div class="container-fluid py-4">
+    <div class="container-fluid">
         <div class="card shadow-lg border-0 rounded-4 overflow-hidden">
             {{-- Header Section --}}
             <div class="card-header bg-gradient-primary py-4 border-0">
