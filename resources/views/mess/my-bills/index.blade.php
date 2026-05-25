@@ -232,8 +232,13 @@
 .bill-receipt-content .receipt-title { font-weight: 700; font-size: 1rem; color: #0a3d6b; }
 .bill-receipt-content .receipt-subtitle { font-size: 0.9rem; color: #333; }
 .bill-receipt-content .receipt-period { font-size: 0.85rem; color: #555; margin-top: 0.25rem; }
-.bill-receipt-content .client-row { display: flex; flex-wrap: wrap; gap: 0.75rem 1.25rem; margin: 0.35rem 0; font-size: 0.9rem; }
-.bill-receipt-content .client-label { font-weight: 600; color: #333; }
+.bill-receipt-content .receipt-client-info {
+    font-size: 0.9rem;
+    color: #212529;
+}
+.bill-receipt-content .receipt-client-info .receipt-info-line {
+    word-break: break-word;
+}
 .bill-receipt-content .bill-table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; font-size: 0.85rem; }
 .bill-receipt-content .bill-table th, .bill-receipt-content .bill-table td { border: 1px solid #dee2e6; padding: 0.35rem 0.5rem; }
 .bill-receipt-content .bill-table th { background: #f8f9fa; }
@@ -256,12 +261,27 @@
     var myBillDetailsDateFrom = null;
     var myBillDetailsDateTo = null;
 
+    function escapeReceiptHtml(value) {
+        return String(value == null ? '' : value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+    }
+
+    function receiptInfoCol(label, value, alignEnd) {
+        var alignClass = alignEnd ? ' text-md-end' : ' text-md-start';
+        return '<div class="col-12 col-md-6' + alignClass + ' receipt-info-line">' +
+            '<span class="fw-bold">' + escapeReceiptHtml(label) + ':</span> ' +
+            '<span>' + escapeReceiptHtml(value) + '</span></div>';
+    }
+
     function renderPaymentDetailsContent(data) {
         var dateStr = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-');
         var timeStr = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
         var rows = (data.items || []).map(function (item) {
             var issue = item.issue_date || item.purchase_date || '—';
-            return '<tr><td>' + (item.store_name || '—') + '</td><td>' + (item.item_name || '—') + '</td><td>' + issue + '</td><td class="text-end">' + (item.price || '0') + '</td><td class="text-end">' + (item.quantity || '0') + '</td><td class="text-end">' + (item.amount || '0') + '</td></tr>';
+            return '<tr><td>' + escapeReceiptHtml(item.store_name || '—') + '</td><td>' + escapeReceiptHtml(item.item_name || '—') + '</td><td>' + escapeReceiptHtml(issue) + '</td><td class="text-end">' + escapeReceiptHtml(item.price || '0') + '</td><td class="text-end">' + escapeReceiptHtml(item.quantity || '0') + '</td><td class="text-end">' + escapeReceiptHtml(item.amount || '0') + '</td></tr>';
         }).join('');
         var clientNameCourse = data.client_name_course || (function () {
             if (data.course_name) {
@@ -272,27 +292,38 @@
         var hasRefOrOrder = !!(data.reference_number || data.order_by);
         return '<div class="receipt-top">' +
             '<div class="receipt-logo"><span class="receipt-logo-text">Sargam</span></div>' +
-            '<span class="receipt-date">Date ' + dateStr + ' ' + timeStr + '</span></div>' +
+            '<span class="receipt-date">Date ' + escapeReceiptHtml(dateStr + ' ' + timeStr) + '</span>' +
+            '</div>' +
             '<div class="receipt-center">' +
             '<div class="receipt-title">OFFICER\'S MESS LBSNAA MUSSOORIE</div>' +
             '<div class="receipt-subtitle">MESS BILLS</div>' +
-            '<div class="receipt-period">Client Bill From Period ' + (data.date_from || '') + ' To ' + (data.date_to || '') + '</div></div><hr/>' +
-            '<div class="client-row">' +
-            '<span><span class="client-label">Receipt No</span>: <span class="client-value">' + (data.receipt_no || '—') + '</span></span>' +
-            '<span><span class="client-label">Invoice No</span>: <span class="client-value">' + (data.invoice_no || '—') + '</span></span></div>' +
-            '<div class="client-row">' +
-            '<span><span class="client-label">Client Name</span>: <span class="client-value">' + clientNameCourse + '</span></span>' +
-            '<span><span class="client-label">Client Type</span>: <span class="client-value">' + (data.client_type || '—') + '</span></span></div>' +
-            (hasRefOrOrder ? ('<div class="client-row">' +
-                (data.reference_number ? '<span><span class="client-label">Reference Number</span>: <span class="client-value">' + data.reference_number + '</span></span>' : '') +
-                (data.order_by ? '<span><span class="client-label">Order By</span>: <span class="client-value">' + data.order_by + '</span></span>' : '') +
-                '</div>') : '') +
-            (data.remarks ? ('<div class="client-row"><span><span class="client-label">Remarks</span>: <span class="client-value">' + data.remarks + '</span></span></div>') : '') +
-            '<hr/><table class="bill-table"><thead><tr><th>Store Name</th><th>Item Name</th><th>Issue Date</th><th class="text-end">Price</th><th class="text-end">Quantity</th><th class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
+            '<div class="receipt-period">Client Bill From Period ' + escapeReceiptHtml(data.date_from || '') + ' To ' + escapeReceiptHtml(data.date_to || '') + '</div>' +
+            '</div>' +
+            '<hr class="border-secondary-subtle opacity-50 my-2" />' +
+            '<div class="receipt-client-info border-top border-bottom border-secondary-subtle py-2 my-2">' +
+            '<div class="row g-2 py-1 align-items-start">' +
+            receiptInfoCol('Receipt No', data.receipt_no || '—', false) +
+            receiptInfoCol('Invoice No', data.invoice_no || '—', true) +
+            '</div>' +
+            '<div class="row g-2 py-1 align-items-start">' +
+            receiptInfoCol('Client Name', clientNameCourse, false) +
+            receiptInfoCol('Client Type', data.client_type || '—', true) +
+            '</div>' +
+            '</div>' +
+            (hasRefOrOrder ? ('<div class="receipt-client-info border-bottom border-secondary-subtle pb-2 mb-2">' +
+                '<div class="row g-2 py-1 align-items-start">' +
+                (data.reference_number ? receiptInfoCol('Reference Number', data.reference_number, false) : '') +
+                (data.order_by ? receiptInfoCol('Order By', data.order_by, true) : '') +
+                '</div></div>') : '') +
+            (data.remarks ? ('<div class="receipt-client-info border-bottom border-secondary-subtle pb-2 mb-2">' +
+                '<div class="row g-2 py-1"><div class="col-12 text-start receipt-info-line">' +
+                '<span>Remarks:</span> <span>' + escapeReceiptHtml(data.remarks) + '</span></div></div></div>') : '') +
+            '<hr class="border-secondary-subtle opacity-50 my-2" />' +
+            '<table class="bill-table"><thead><tr><th>Store Name</th><th>Item Name</th><th>Issue Date</th><th class="text-end">Price</th><th class="text-end">Quantity</th><th class="text-end">Amount</th></tr></thead><tbody>' + rows + '</tbody></table>' +
             '<div class="receipt-bottom"><div class="payment-summary">' +
-            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + (data.paid_amount || '0.0') + '</span></div>' +
-            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + (data.total_amount || '0.0') + '</span></div>' +
-            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + (data.due_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Paid Amount</span><span class="summary-value">' + escapeReceiptHtml(data.paid_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Total Amount</span><span class="summary-value">' + escapeReceiptHtml(data.total_amount || '0.0') + '</span></div>' +
+            '<div class="summary-row"><span class="summary-label">Due Amount</span><span class="summary-value">' + escapeReceiptHtml(data.due_amount || '0.0') + '</span></div>' +
             '</div></div>';
     }
 
