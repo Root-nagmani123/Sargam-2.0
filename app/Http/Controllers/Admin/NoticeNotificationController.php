@@ -67,105 +67,10 @@ class NoticeNotificationController extends Controller
      */
     public function feed(Request $request)
     {
-        $notices = collect(get_notice_notification_by_role())->unique('pk');
-        $q = trim((string) $request->get('q', ''));
-
-        if ($q !== '') {
-            $needle = mb_strtolower($q);
-            $notices = $notices->filter(function ($n) use ($needle) {
-                $hay = mb_strtolower(implode(' ', array_filter([
-                    (string) ($n->notice_title ?? ''),
-                    (string) ($n->description ?? ''),
-                    (string) ($n->notice_type ?? ''),
-                    (string) ($n->category_name ?? ''),
-                    (string) ($n->subcategory_name ?? ''),
-                ])));
-
-                return str_contains($hay, $needle);
-            })->values();
-        }
-
-        $creatorNames = [];
-        $creatorPks = $notices->pluck('created_by')->filter()->unique()->values();
-        if ($creatorPks->isNotEmpty() && Schema::hasTable('user_credentials')) {
-            $select = ['pk', 'first_name', 'last_name'];
-            $hasUserName = Schema::hasColumn('user_credentials', 'user_name');
-            if ($hasUserName) {
-                $select[] = 'user_name';
-            }
-            $rows = DB::table('user_credentials')
-                ->whereIn('pk', $creatorPks)
-                ->get($select);
-            foreach ($rows as $row) {
-                $full = trim(((string) ($row->first_name ?? '')).' '.((string) ($row->last_name ?? '')));
-                if ($full !== '') {
-                    $creatorNames[$row->pk] = $full;
-                    continue;
-                }
-                $login = $hasUserName ? trim((string) ($row->user_name ?? '')) : '';
-                $creatorNames[$row->pk] = $login !== '' ? $login : '—';
-            }
-        }
-
-        foreach ($notices as $n) {
-            $pk = $n->created_by ?? null;
-            $n->creator_display = ($pk && isset($creatorNames[$pk])) ? $creatorNames[$pk] : '—';
-        }
-
-        $noticeCategoryTabs = $notices->isEmpty()
-            ? collect()
-            : $notices->groupBy(function ($n) {
-                if (!empty($n->notice_category_master_pk)) {
-                    return 'c:'.$n->notice_category_master_pk;
-                }
-
-                return 'leg:'.md5((string) ($n->notice_type ?? 'other'));
-            })->map(function ($items, $tabKey) {
-                $first = $items->first();
-                $label = $first->category_name ?? $first->notice_type ?? 'Other';
-                $sorted = $items->sortByDesc(function ($row) {
-                    return $row->display_date ?? $row->created_at ?? '';
-                })->values();
-
-                return [
-                    'key' => $tabKey,
-                    'label' => $label,
-                    'sort' => (int) ($first->category_sort_order ?? 99999),
-                    'total' => $sorted->count(),
-                    'notices' => $sorted,
-                ];
-            })->sortBy('sort')->values();
-
-        $highlightNoticePk = null;
-        if ($request->filled('notice')) {
-            $n = (int) $request->query('notice');
-            $highlightNoticePk = $n > 0 ? $n : null;
-        }
-
-        $activeTabKey = (string) $request->get('tab', '');
-        $firstTab = $noticeCategoryTabs->first();
-
-        if ($highlightNoticePk !== null && $noticeCategoryTabs->isNotEmpty()) {
-            foreach ($noticeCategoryTabs as $tab) {
-                foreach ($tab['notices'] as $row) {
-                    if ((int) ($row->pk ?? 0) === $highlightNoticePk) {
-                        $activeTabKey = (string) $tab['key'];
-                        break 2;
-                    }
-                }
-            }
-        }
-
-        if ($activeTabKey === '' || $noticeCategoryTabs->firstWhere('key', $activeTabKey) === null) {
-            $activeTabKey = $firstTab ? (string) $firstTab['key'] : '';
-        }
-
-        return view('admin.NoticeNotification.feed', [
-            'noticeCategoryTabs' => $noticeCategoryTabs,
-            'activeTabKey' => $activeTabKey,
-            'q' => $q,
-            'highlightNoticePk' => $highlightNoticePk,
-        ]);
+        return redirect()->route('admin.communications.hub', array_filter(array_merge(
+            ['section' => 'notices'],
+            $request->only(['q', 'tab', 'notice'])
+        )));
     }
 
     public function create()

@@ -2,29 +2,36 @@
 
 @section('title', 'Notice subcategory master')
 
-@section('setup_content')
-<div class="container-fluid">
+@push('styles')
+@include('admin.NoticeNotification.partials.module-styles')
+@endpush
+
+@section('content')
+<div class="container-fluid notice-module-page">
     <x-breadcrum title="Notice subcategory master" />
     <x-session_message />
 
-    <div class="card border-0 shadow-sm" style="border-left: 4px solid #004a93 !important;">
-        <div class="card-header bg-white border-bottom d-flex flex-wrap justify-content-between align-items-center gap-2 py-3">
+    <div class="card notice-card border-0 shadow-sm rounded-4 border-start border-4 border-primary overflow-hidden">
+        <div class="card-header notice-list-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2 py-3 px-4">
             <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary-subtle text-primary fw-semibold text-uppercase">Master</span>
-                <h4 class="card-title mb-0">Notice subcategory master</h4>
+                <span class="badge rounded-pill text-bg-primary-subtle text-primary fw-semibold text-uppercase px-3 py-2">Master</span>
+                <h4 class="card-title mb-0 fw-bold">Notice subcategory master</h4>
             </div>
             <div class="d-flex flex-wrap gap-2">
-                <a href="{{ route('admin.notice.category-master.index') }}" class="btn btn-outline-primary btn-sm">Category master</a>
-                <a href="{{ route('admin.notice.feed') }}" class="btn btn-outline-secondary btn-sm">All notices</a>
-                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#modalAddSubcategory">
-                    <span class="material-symbols-rounded align-middle me-1" style="font-size: 1.125rem;">add</span>
-                    Add subcategory
+                <a href="{{ route('admin.notice.category-master.index') }}" class="btn btn-outline-primary btn-sm rounded-3">
+                    <i class="bi bi-folder me-1" aria-hidden="true"></i>Category master
+                </a>
+                <a href="{{ route('admin.notice.feed') }}" class="btn btn-outline-secondary btn-sm rounded-3">
+                    <i class="bi bi-collection me-1" aria-hidden="true"></i>All notices
+                </a>
+                <button type="button" class="btn btn-notice-save text-white btn-sm rounded-3" data-bs-toggle="modal" data-bs-target="#modalAddSubcategory">
+                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add subcategory
                 </button>
             </div>
         </div>
 
         <div class="card-body p-4">
-            <div class="bg-body-tertiary rounded-3 p-3 mb-4">
+            <div class="notice-filter-panel rounded-3 p-3 mb-4">
                 <form method="GET" action="{{ route('admin.notice.subcategory-master.index') }}">
                     <div class="row g-3 align-items-end">
                         <div class="col-md-4">

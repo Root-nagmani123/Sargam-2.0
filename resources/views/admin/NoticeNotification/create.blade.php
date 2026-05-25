@@ -6,14 +6,14 @@
 @include('admin.NoticeNotification.partials.module-styles')
 @endpush
 
-@section('setup_content')
+@section('content')
 
 @php
     $todayMin = now()->format('Y-m-d');
 @endphp
 
-<div class="container-fluid">
-    <x-breadcrum title="Notice List" />
+<div class="container-fluid notice-module-page">
+    <x-breadcrum title="Create Notice notification" />
     <x-session_message />
 
     <div class="card notice-card border-0 shadow-sm overflow-hidden">
@@ -32,7 +32,7 @@
         </div>
         @endif
 
-        <div class="card-body p-4 p-lg-5">
+        <div class="card-body">
             <div class="notice-form-header mb-4">
                 <h4 class="card-title mb-0 fw-bold">
                     Create <span class="notice-title-highlight">Notice notification</span>
@@ -45,61 +45,32 @@
                     @include('admin.NoticeNotification.partials.notice-type-fields', ['notice' => null])
 
                     <div class="col-12">
-                        <label class="form-label notice-form-label">Description <span class="text-danger">*</span></label>
+                        <label class="form-label notice-form-label" for="editor">Description <span class="text-danger">*</span></label>
                         <textarea id="editor" name="description" class="form-control" placeholder="Write here...">{{ old('description') }}</textarea>
                     </div>
-                    <div class="col-12">
-                        <div class="mb-3">
-                            <label class="form-label">Description <span class="text-danger">*</span></label>
-                            <textarea id="editor" name="description" class="form-control">{{ old('description') }}</textarea>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Notice Type (Category) <span class="text-danger">*</span></label>
-                            <select name="notice_category_master_pk" id="noticeCategory" class="form-control" required>
-                                <option value="">Select category</option>
-                                @foreach($categories as $cat)
-                                <option value="{{ $cat->pk }}" {{ (string) old('notice_category_master_pk') === (string) $cat->pk ? 'selected' : '' }}>{{ $cat->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Notice Sub Type (Subcategory)</label>
-                            <select name="notice_subcategory_master_pk" id="noticeSubcategory" class="form-control">
-                                <option value="">Select sub type</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Display Date <span class="text-danger">*</span></label>
-                            <input type="date" name="display_date" id="noticeDisplayDate" class="form-control"
-                                value="{{ old('display_date') }}" min="{{ $todayMin }}" required>
-                            <div class="form-text">Must be today or a future date.</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
-                            <input type="date" name="expiry_date" id="noticeExpiryDate" class="form-control"
-                                value="{{ old('expiry_date') }}" min="{{ $todayMin }}" required>
-                            <div class="form-text">Must be on or after the display date.</div>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Upload document <span class="text-muted fw-normal">(optional)</span></label>
-                            <input type="file" name="document" class="form-control" id="noticeDocument"
-                                accept=".pdf,.png,.jpg,.jpeg,image/jpeg,image/png,application/pdf">
-                            <div class="form-text">Types: <strong>PDF, JPG, PNG</strong>. Max <strong>5&nbsp;MB</strong> per file.</div>
-                        </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label notice-form-label" for="noticeDisplayDate">Display Date <span class="text-danger">*</span></label>
+                        <input type="date" name="display_date" id="noticeDisplayDate" class="form-control"
+                            value="{{ old('display_date') }}" min="{{ $todayMin }}" required>
+                        <div class="form-text"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Must be today or a future date.</div>
                     </div>
                     <div class="col-md-6">
-                        <label class="form-label notice-form-label">Target Audience <span class="text-danger">*</span></label>
-                        <select name="target_audience" id="targetAudience" class="form-control">
+                        <label class="form-label notice-form-label" for="noticeExpiryDate">Expiry Date <span class="text-danger">*</span></label>
+                        <input type="date" name="expiry_date" id="noticeExpiryDate" class="form-control"
+                            value="{{ old('expiry_date') }}" min="{{ $todayMin }}" required>
+                        <div class="form-text"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Must be on or after the display date.</div>
+                    </div>
+
+                    <div class="col-md-6">
+                        <label class="form-label notice-form-label" for="noticeDocument">Document <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="file" name="document" class="form-control" id="noticeDocument"
+                            accept=".pdf,.png,.jpg,.jpeg,image/jpeg,image/png,application/pdf">
+                        <div class="form-text">Types: <strong>PDF, JPG, PNG</strong>. Max <strong>5&nbsp;MB</strong> per file.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label notice-form-label" for="targetAudience">Target Audience <span class="text-danger">*</span></label>
+                        <select name="target_audience" id="targetAudience" class="form-select" required>
                             <option value="">Select the target audience</option>
                             @foreach($target as $t)
                             <option value="{{ $t }}" {{ old('target_audience') == $t ? 'selected' : '' }}>{{ $t }}</option>
@@ -108,9 +79,9 @@
                     </div>
 
                     <div class="col-md-6">
-                        <div class="mb-3 d-none" id="courseBox">
-                            <label class="form-label notice-form-label">Select Course</label>
-                            <select name="course_master_pk" id="courseSelect" class="form-control">
+                        <div class="mb-0 d-none" id="courseBox">
+                            <label class="form-label notice-form-label" for="courseSelect">Select Course</label>
+                            <select name="course_master_pk" id="courseSelect" class="form-select">
                                 <option value="">Select Course</option>
                             </select>
                         </div>
@@ -118,12 +89,9 @@
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-end gap-2 mt-4 pt-4 border-top">
-                    <a href="{{ route('admin.notice.index') }}" class="btn btn-notice-cancel btn-outline-primary rounded-3 px-4">
-                        Cancel
+                    <a href="{{ route('admin.notice.index') }}" class="btn btn-notice-cancel btn-outline-primary rounded-3 px-4">Cancel
                     </a>
-                    <button type="submit" class="btn btn-notice-save text-white rounded-3 px-4">
-                        <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Save
-                    </button>
+                    <button type="submit" class="btn btn-notice-save text-white rounded-1 px-4">Save</button>
                 </div>
             </form>
         </div>
@@ -138,7 +106,7 @@
 <script>
     $(document).ready(function() {
         $('#editor').summernote({
-            height: 200,
+            height: 220,
             placeholder: 'Write here...',
             toolbar: [
                 ['style', ['style']],
@@ -198,32 +166,7 @@
             }
         });
 
-        function loadNoticeSubcategories(categoryId, selectedId) {
-            const $sub = $('#noticeSubcategory');
-            $sub.empty().append('<option value="">Select sub type</option>');
-            if (!categoryId) {
-                return;
-            }
-            $.get(`{{ url('admin/notice/subcategories') }}/${encodeURIComponent(categoryId)}`, function(res) {
-                if (!res.status || !res.data) {
-                    return;
-                }
-                $.each(res.data, function(_, item) {
-                    const sel = selectedId && String(selectedId) === String(item.pk) ? 'selected' : '';
-                    $sub.append('<option value="' + item.pk + '" ' + sel + '>' + item.name + '</option>');
-                });
-            });
-        }
-
-        const oldCat = @json(old('notice_category_master_pk'));
-        const oldSub = @json(old('notice_subcategory_master_pk'));
-        if (oldCat) {
-            loadNoticeSubcategories(oldCat, oldSub);
-        }
-
-        $('#noticeCategory').on('change', function() {
-            loadNoticeSubcategories($(this).val(), null);
-        });
+        @include('admin.NoticeNotification.partials.notice-type-scripts', ['notice' => null])
 
         $('#targetAudience').on('change', function() {
             let val = $(this).val();
@@ -265,6 +208,9 @@
         $('input[name="display_date"]').on('change', syncNoticeExpiryMin);
         syncNoticeExpiryMin();
 
+        @if(old('target_audience') === 'Office trainee')
+        $('#targetAudience').trigger('change');
+        @endif
     });
 </script>
 @endsection

@@ -1,52 +1,72 @@
-    var subcategoriesUrl = @json(route('admin.notice.getSubcategories'));
-    var preselectedSubcategory = @json($selectedSubcategoryPk ?? null);
+    var subcategoriesBaseUrl = @json(url('admin/notice/subcategories'));
+    var preselectedSubcategory = @json(old('notice_subcategory_master_pk', optional($notice ?? null)->notice_subcategory_master_pk));
 
     function resetSubTypeSelect(message) {
-        $('#noticeSubType').empty().append('<option value="">' + (message || 'Select the sub type') + '</option>');
+        $('#noticeSubcategory').empty().append('<option value="">' + (message || 'Select the sub type') + '</option>');
+    }
+
+    function setNoticeTypeRowLayout(compactThreeCol) {
+        var $title = $('#noticeTitleCol');
+        var $type = $('#noticeTypeCol');
+        var $sub = $('#noticeSubTypeBox');
+
+        if (compactThreeCol) {
+            $title.removeClass('col-6').addClass('col-4');
+            $type.removeClass('col-6').addClass('col-4');
+            $sub.removeClass('d-none col-6').addClass('col-4');
+        } else {
+            $title.removeClass('col-4').addClass('col-6');
+            $type.removeClass('col-4').addClass('col-6');
+            $sub.addClass('d-none').removeClass('col-4 col-6');
+        }
+    }
+
+    function hideNoticeSubType() {
+        setNoticeTypeRowLayout(false);
+        $('#noticeSubcategory').prop('required', false).val('');
+        resetSubTypeSelect();
+    }
+
+    function showNoticeSubType() {
+        setNoticeTypeRowLayout(true);
+        $('#noticeSubcategory').prop('required', true);
     }
 
     function loadSubcategories(categoryPk, preselect) {
         if (!categoryPk) {
-            $('#noticeSubTypeBox').addClass('d-none');
-            resetSubTypeSelect();
+            hideNoticeSubType();
             return;
         }
 
-        $.ajax({
-            url: subcategoriesUrl,
-            type: 'GET',
-            data: { notice_category_master_pk: categoryPk },
-            success: function (res) {
-                resetSubTypeSelect();
+        hideNoticeSubType();
 
-                if (!res.data || res.data.length === 0) {
-                    $('#noticeSubTypeBox').addClass('d-none');
-                    $('#noticeSubType').prop('required', false);
-                    return;
-                }
+        $.get(subcategoriesBaseUrl + '/' + encodeURIComponent(categoryPk), function (res) {
+            resetSubTypeSelect();
 
-                $('#noticeSubTypeBox').removeClass('d-none');
-                $('#noticeSubType').prop('required', true);
-
-                $.each(res.data, function (index, item) {
-                    var selected = (preselect && String(preselect) === String(item.pk)) ? 'selected' : '';
-                    $('#noticeSubType').append(
-                        '<option value="' + item.pk + '" ' + selected + '>' + item.name + '</option>'
-                    );
-                });
-            },
-            error: function () {
-                $('#noticeSubTypeBox').addClass('d-none');
-                resetSubTypeSelect('Unable to load sub types');
+            if (!res.status || !res.data || res.data.length === 0) {
+                hideNoticeSubType();
+                return;
             }
+
+            showNoticeSubType();
+
+            $.each(res.data, function (_, item) {
+                var selected = (preselect && String(preselect) === String(item.pk)) ? 'selected' : '';
+                $('#noticeSubcategory').append(
+                    '<option value="' + item.pk + '" ' + selected + '>' + item.name + '</option>'
+                );
+            });
+        }).fail(function () {
+            hideNoticeSubType();
+            resetSubTypeSelect('Unable to load sub types');
         });
     }
 
-    $('#noticeType').on('change', function () {
+    $('#noticeCategory').on('change', function () {
         loadSubcategories($(this).val(), null);
     });
 
-    var initialCategory = $('#noticeType').val();
+    var initialCategory = $('#noticeCategory').val();
     if (initialCategory) {
         loadSubcategories(initialCategory, preselectedSubcategory);
     }

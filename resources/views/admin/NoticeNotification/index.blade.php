@@ -7,31 +7,17 @@
 @include('admin.NoticeNotification.partials.module-styles')
 @endpush
 
-@section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="Notice notification List"></x-breadcrum>
+@section('content')
+<div class="container-fluid notice-module-page">
+    <x-breadcrum title="Notice notification List">
+        <a href="{{ route('admin.notice.create') }}"
+            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
+            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+            <span>Add Notice Notification</span>
+        </a>
+    </x-breadcrum>
 
     <div class="card">
-        <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <div class="d-flex align-items-center gap-2">
-                <span class="badge bg-primary-subtle text-primary fw-semibold text-uppercase">Notices</span>
-                <h4 class="card-title mb-0">Notice notification List</h4>
-            </div>
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <a href="{{ route('admin.notice.category-master.index') }}" class="btn btn-outline-primary btn-sm">
-                    <span class="material-symbols-rounded align-middle me-1" style="font-size:18px;">category</span>
-                    Category master
-                </a>
-                <a href="{{ route('admin.notice.subcategory-master.index') }}" class="btn btn-outline-primary btn-sm">
-                    <span class="material-symbols-rounded align-middle me-1" style="font-size:18px;">topic</span>
-                    Subcategory master
-                </a>
-                <a href="{{ route('admin.notice.create') }}" class="btn btn-primary">
-                    <span class="material-symbols-rounded align-middle me-1">add</span>
-                    <span class="align-middle">Add Notice Notification</span>
-                </a>
-            </div>
-        </div>
 
         <div class="card-body p-4">
             @if ($errors->any())
@@ -60,16 +46,13 @@
 
             <div id="status-msg" class="mb-3"></div>
 
-            <div class="notice-filter-panel rounded-3 p-3 p-md-4 mb-4">
-                <div class="d-flex align-items-center gap-2 mb-3">
-                    <i class="bi bi-funnel text-primary" aria-hidden="true"></i>
-                    <span class="fw-semibold text-body">Filter notices</span>
-                </div>
+            <div class="mb-3">
                 <form method="GET" action="{{ route('admin.notice.index') }}">
                     <div class="row g-3 align-items-end">
-                        <div class="col-md-3">
-                            <label class="form-label fw-semibold">Category</label>
-                            <select name="notice_category_master_pk" class="form-select form-select-sm js-choice" onchange="this.form.submit()">
+                        <div class="col-sm-6 col-lg-3">
+                            <label class="form-label mb-1">Category
+                            </label>
+                            <select name="notice_category_master_pk" class="form-select js-choice" onchange="this.form.submit()">
                                 <option value="">All</option>
                                 @foreach($categories as $cat)
                                 <option value="{{ $cat->pk }}" {{ request('notice_category_master_pk') == $cat->pk ? 'selected' : '' }}>
@@ -80,8 +63,7 @@
                         </div>
 
                         <div class="col-sm-6 col-lg-3">
-                            <label class="form-label notice-form-label mb-1">
-                                <i class="bi bi-book me-1 text-primary" aria-hidden="true"></i>Course
+                            <label class="form-label mb-1">Course
                             </label>
                             <select name="course_id" class="form-select js-choice" onchange="this.form.submit()">
                                 <option value="">All</option>
@@ -94,8 +76,7 @@
                         </div>
 
                         <div class="col-sm-6 col-lg-3">
-                            <label class="form-label notice-form-label mb-1">
-                                <i class="bi bi-toggle-on me-1 text-primary" aria-hidden="true"></i>Status
+                            <label class="form-label mb-1">Status
                             </label>
                             <select name="status" class="form-select js-choice" onchange="this.form.submit()">
                                 <option value="">All</option>
@@ -105,32 +86,24 @@
                         </div>
 
                         <div class="col-sm-6 col-lg-3">
-                            <a href="{{ route('admin.notice.index') }}" class="btn btn-outline-secondary w-100 rounded-3">
-                                <i class="bi bi-arrow-counterclockwise me-1" aria-hidden="true"></i>Reset Filters
+                            <a href="{{ route('admin.notice.index') }}" class="btn btn-outline-secondary w-100 rounded-1">Reset Filters
                             </a>
                         </div>
                     </div>
                 </form>
             </div>
 
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                <span class="text-muted small">
-                    <i class="bi bi-list-ul me-1" aria-hidden="true"></i>
-                    <strong class="text-body">{{ $notices->total() }}</strong> notice{{ $notices->total() !== 1 ? 's' : '' }} found
-                </span>
-            </div>
-
-            <div class="table-responsive rounded-3 border">
-                <table class="table table-hover align-middle mb-0 notice-table">
-                    <thead class="table-light">
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
                         <tr>
                             <th scope="col" class="ps-3" style="width: 60px;">S.N.</th>
                             <th scope="col">Notice Title</th>
                             <th scope="col">Category</th>
-                            <th scope="col">Subcategory</th>
-                            <th scope="col">Course Name</th>
-                            <th scope="col">Created By</th>
-                            <th scope="col">Created Date</th>
+                            <th scope="col" class="d-none d-lg-table-cell">Subcategory</th>
+                            <th scope="col" class="d-none d-xl-table-cell">Course Name</th>
+                            <th scope="col" class="d-none d-md-table-cell">Created By</th>
+                            <th scope="col" class="d-none d-lg-table-cell">Created Date</th>
                             <th scope="col">Display Date</th>
                             <th scope="col" class="d-none d-md-table-cell">Expiry Date</th>
                             <th scope="col" class="text-center">Status</th>
@@ -145,37 +118,39 @@
                         <tr>
                             <td class="fw-semibold ps-3 text-muted">{{ $index + $notices->firstItem() }}</td>
                             <td>
-                                <span class="fw-semibold text-body d-inline-block text-truncate" style="max-width: 220px;">
+                                <span class="fw-semibold text-body d-inline-block text-truncate" style="max-width: 220px;" title="{{ $n->notice_title }}">
                                     {{ $n->notice_title }}
                                 </span>
                             </td>
                             <td>
-                                <span class="badge rounded-pill bg-info-subtle text-info">
+                                <span class="badge rounded-pill bg-info-subtle text-info border border-info-subtle">
                                     {{ $n->noticeCategory->name ?? $n->notice_type ?? '—' }}
                                 </span>
                             </td>
-                            <td>{{ $n->noticeSubcategory->name ?? '—' }}</td>
-                            <td>{{ $n->course->course_name ?? 'N/A' }}</td>
-                            <td>{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
-                            <td>{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}</td>
-                            <td>{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}</td>
-                            <td>{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}</td>
-
+                            <td class="d-none d-lg-table-cell text-muted small">{{ $n->noticeSubcategory->name ?? '—' }}</td>
+                            <td class="d-none d-xl-table-cell small">{{ $n->course->course_name ?? 'N/A' }}</td>
+                            <td class="d-none d-md-table-cell small">{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
+                            <td class="d-none d-lg-table-cell small text-muted">{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}</td>
+                            <td class="small">{{ \Carbon\Carbon::parse($n->display_date)->format('d-m-Y') }}</td>
+                            <td class="d-none d-md-table-cell small text-muted">{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}</td>
                             <td class="text-center">
-                                <div class="form-check form-switch d-inline-flex align-items-center justify-content-center mb-0">
+                                <span class="badge rounded-1 bg-{{ $n->active_inactive == 1 ? 'success' : 'danger' }} text-white fw-semibold">
+                                    {{ $n->active_inactive == 1 ? 'Active' : 'Inactive' }}
+                                </span>
+                            </td>
+                            <td class="text-center pe-3">
+                                <div class="d-inline-flex align-items-center justify-content-center gap-1">
+                                    
+                                    <a href="{{ route('admin.notice.edit', $encId) }}"
+                                        class="btn btn-sm btn-outline-primary bg-transparent border-0 p-0" title="Edit" aria-label="Edit Notice">
+                                        <i class="material-icons material-symbols-rounded" aria-hidden="true">edit</i>
+                                    </a>
+                                    <div class="form-check form-switch d-inline-flex align-items-center justify-content-center mb-0">
                                     <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                         data-table="notices_notification" data-column="active_inactive"
                                         data-id="{{ $n->pk }}" {{ $n->active_inactive == 1 ? 'checked' : '' }}
                                         aria-label="Toggle notice status">
                                 </div>
-                            </td>
-                            <td class="text-center pe-3">
-                                <div class="d-inline-flex align-items-center justify-content-center gap-1">
-                                    <a href="{{ route('admin.notice.edit', $encId) }}"
-                                        class="btn btn-sm btn-outline-primary notice-action-btn border-0" title="Edit" aria-label="Edit Notice">
-                                        <i class="bi bi-pencil" aria-hidden="true"></i>
-                                    </a>
-
                                     @if($n->active_inactive == 0)
                                     <form id="deleteForm{{ $encId }}"
                                         action="{{ route('admin.notice.destroy', $encId) }}" method="POST"
@@ -183,15 +158,15 @@
                                         @csrf
                                         @method('DELETE')
 
-                                        <button type="button" class="btn btn-sm btn-outline-danger notice-action-btn border-0" title="Delete"
+                                        <button type="button" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0" title="Delete"
                                             aria-label="Delete Notice" onclick="deleteConfirm('{{ $encId }}')">
-                                            <i class="bi bi-trash" aria-hidden="true"></i>
+                                            <i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i>
                                         </button>
                                     </form>
                                     @else
-                                    <button class="btn btn-sm btn-outline-secondary notice-action-btn border-0" disabled title="Delete Disabled"
+                                    <button class="btn btn-sm btn-outline-secondary bg-transparent border-0 p-0" disabled title="Delete Disabled"
                                         aria-label="Delete disabled for active notice">
-                                        <i class="bi bi-slash-circle" aria-hidden="true"></i>
+                                        <i class="material-icons material-symbols-rounded" aria-hidden="true">delete</i>
                                     </button>
                                     @endif
                                 </div>
@@ -201,24 +176,16 @@
                         <tr>
                             <td colspan="11" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox display-6 d-block mb-2 opacity-50" aria-hidden="true"></i>
-                                No notices found. Try adjusting filters or add a new notice.
+                                <p class="mb-2 fw-semibold">No notices found</p>
+                                <p class="small mb-3">Try adjusting filters or add a new notice.</p>
+                                <a href="{{ route('admin.notice.create') }}" class="btn btn-notice-save text-white btn-sm rounded-3">
+                                    <i class="bi bi-plus-lg me-1" aria-hidden="true"></i>Add Notice
+                                </a>
                             </td>
                         </tr>
                         @endforelse
                     </tbody>
                 </table>
-            </div>
-
-            <div class="d-flex justify-content-between align-items-center mt-4 pt-3 border-top flex-wrap gap-2">
-                <div class="text-muted small">
-                    Showing {{ $notices->firstItem() ?? 0 }}
-                    to {{ $notices->lastItem() ?? 0 }}
-                    of {{ $notices->total() }} items
-                </div>
-
-                <div>
-                    {{ $notices->links('vendor.pagination.custom') }}
-                </div>
             </div>
         </div>
     </div>

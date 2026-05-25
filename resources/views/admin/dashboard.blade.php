@@ -1579,7 +1579,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     {{-- See all --}}
                     @if(count($notices) > 0)
                     <div class="text-end mt-3">
-                        <a href="{{ route('admin.notice.index') }}" class="dashboard-notice-see-all">See all</a>
+                        <a href="{{ route('admin.communications.hub', ['section' => 'notices']) }}" class="dashboard-notice-see-all">See all</a>
                     </div>
                     @endif
                 </div>
@@ -1622,7 +1622,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     {{-- See all --}}
                     @if($notifications->isNotEmpty())
                     <div class="text-end mt-3">
-                        <a href="#" class="dashboard-notice-see-all">See all</a>
+                        <a href="{{ route('admin.communications.hub', ['section' => 'notifications']) }}" class="dashboard-notice-see-all">See all</a>
                     </div>
                     @endif
                 </div>
@@ -1658,7 +1658,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     </div>
 
                     <div class="text-end mt-3">
-                        <a href="#" class="dashboard-notice-see-all">See all</a>
+                        <a href="{{ route('admin.communications.hub', ['section' => 'notifications']) }}" class="dashboard-notice-see-all">See all</a>
                     </div>
                 </div>
             </div>
@@ -1699,90 +1699,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 </div>
             </div>
             @endif
-
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-3">
-                <div class="card-header py-3 px-4 d-flex flex-wrap align-items-center justify-content-between gap-2 border-0 bg-transparent">
-                    <div class="d-flex align-items-center gap-2">
-                        <span class="material-icons material-symbols-rounded text-primary">push_pin</span>
-                        <h5 class="mb-0 fw-semibold">Notices</h5>
-                    </div>
-                    @if(hasRole('Admin') || hasRole('Super Admin'))
-                    <a href="{{ route('admin.notice.create') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-1 rounded-2">
-                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">note_add</span>
-                        Add New Notice
-                    </a>
-                    @endif
-                </div>
-                <div class="card-body p-3 p-md-4 pt-0 dashboard-list-scroll">
-                    @if($noticeCategoryTabs->isEmpty())
-                    <div class="dashboard-empty-state">
-                        <span class="material-icons material-symbols-rounded">description</span>
-                        <p class="mb-0 small">No notices available.</p>
-                    </div>
-                    @else
-                    <div id="dashboard-notices-root">
-                        <div class="dashboard-notice-tabs" role="tablist" aria-label="Notice categories">
-                            @foreach($noticeCategoryTabs as $idx => $tab)
-                            <button type="button" class="dashboard-notice-tab {{ $idx === 0 ? 'active' : '' }}" data-notice-tab="{{ $tab['key'] }}" role="tab" aria-selected="{{ $idx === 0 ? 'true' : 'false' }}">
-                                {{ $tab['label'] }}: {{ $tab['total'] }}
-                            </button>
-                            @endforeach
-                        </div>
-                        @foreach($noticeCategoryTabs as $idx => $tab)
-                        <div class="dashboard-notice-tab-pane {{ $idx === 0 ? '' : 'd-none' }}" data-notice-pane="{{ $tab['key'] }}" role="tabpanel">
-                            @foreach($tab['preview'] as $notice)
-                            @php
-                                $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
-                                $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
-                                $d1 = !empty($notice->display_date) ? \Carbon\Carbon::parse($notice->display_date)->format('j F, Y') : null;
-                                $d2 = !empty($notice->expiry_date) ? \Carbon\Carbon::parse($notice->expiry_date)->format('j F, Y') : null;
-                                $rangeLabel = ($d1 && $d2) ? ($d1 . ' to ' . $d2) : ($d1 ?? '—');
-                            @endphp
-                            <div class="dashboard-notice-card-lite">
-                                <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
-                                    <p class="dashboard-notice-card-title mb-0">{{ $notice->notice_title }}</p>
-                                    @if($isNewNotice)
-                                    <span class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
-                                    @endif
-                                </div>
-                                <span class="dashboard-notice-card-range">{{ $rangeLabel }}</span>
-                                @if(!empty($notice->subcategory_name))
-                                <span class="dashboard-notice-card-sub">{{ $notice->subcategory_name }}</span>
-                                @endif
-                                @if($notice->document)
-                                <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="dashboard-notice-attachment text-danger text-decoration-none mt-2">
-                                    <span class="material-icons material-symbols-rounded" style="font-size: 1rem;">attach_file</span>View attachment
-                                </a>
-                                @endif
-                            </div>
-                            @endforeach
-                        </div>
-                        @endforeach
-                        <div class="text-end mt-2">
-                            <a href="{{ route('admin.notice.feed') }}" class="small fw-semibold text-primary text-decoration-none">See all</a>
-                        </div>
-                    </div>
-                    <script>
-                    (function () {
-                        var root = document.getElementById('dashboard-notices-root');
-                        if (!root) { return; }
-                        root.querySelectorAll('[data-notice-tab]').forEach(function (btn) {
-                            btn.addEventListener('click', function () {
-                                var key = btn.getAttribute('data-notice-tab');
-                                root.querySelectorAll('[data-notice-tab]').forEach(function (b) {
-                                    b.classList.toggle('active', b === btn);
-                                    b.setAttribute('aria-selected', b === btn ? 'true' : 'false');
-                                });
-                                root.querySelectorAll('[data-notice-pane]').forEach(function (pane) {
-                                    pane.classList.toggle('d-none', pane.getAttribute('data-notice-pane') !== key);
-                                });
-                            });
-                        });
-                    })();
-                    </script>
-                    @endif
-                </div>
-            </div>
 
         </div>
 
@@ -1900,7 +1816,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         @endforeach
                     </div>
                     <div class="text-end pt-3 mt-3 border-top">
-                        <a href="{{ route('admin.birthday-wish.index') }}"
+                        <a href="{{ route('admin.communications.hub', ['section' => 'birthdays']) }}"
                             class="link-primary fw-semibold small text-decoration-none">See all</a>
                     </div>
                     @endif

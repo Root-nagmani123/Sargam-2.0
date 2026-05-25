@@ -6,7 +6,7 @@
 @include('admin.NoticeNotification.partials.module-styles')
 @endpush
 
-@section('setup_content')
+@section('content')
 
 @php
     $todayMin = now()->format('Y-m-d');
@@ -14,7 +14,7 @@
     $expiryDateVal = old('expiry_date', \Carbon\Carbon::parse($notice->expiry_date)->format('Y-m-d'));
 @endphp
 
-<div class="container-fluid">
+<div class="container-fluid notice-module-page">
     <x-breadcrum title="Notice notification List" />
     <x-session_message />
 
@@ -49,57 +49,37 @@
                     @include('admin.NoticeNotification.partials.notice-type-fields', ['notice' => $notice])
 
                     <div class="col-12">
-                        <label class="form-label notice-form-label">Description <span class="text-danger">*</span></label>
-                        <textarea id="editor" name="description" class="form-control">{!! $notice->description !!}</textarea>
+                        <label class="form-label notice-form-label" for="editor">Description <span class="text-danger">*</span></label>
+                        <textarea id="editor" name="description" class="form-control" placeholder="Write here...">{!! $notice->description !!}</textarea>
                     </div>
 
-                <div class="mb-3">
-                    <label class="form-label">Notice Type (Category) <span class="text-danger">*</span></label>
-                    <select name="notice_category_master_pk" id="noticeCategory" class="form-control" required>
-                        <option value="">Select category</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->pk }}"
-                                @selected((string) ($resolvedCategoryPk ?? $notice->notice_category_master_pk) === (string) $cat->pk)>
-                                {{ $cat->name }}
-                            </option>
-                        @endforeach
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Notice Sub Type (Subcategory)</label>
-                    <select name="notice_subcategory_master_pk" id="noticeSubcategory" class="form-control">
-                        <option value="">Select sub type</option>
-                    </select>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Display Date <span class="text-danger">*</span></label>
-                    <input type="date" name="display_date" id="noticeDisplayDate" class="form-control"
-                        value="{{ $displayDateVal }}" min="{{ $todayMin }}" required>
-                    <div class="form-text">Must be today or a future date.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
-                    <input type="date" name="expiry_date" id="noticeExpiryDate" class="form-control"
-                        value="{{ $expiryDateVal }}" min="{{ $todayMin }}" required>
-                    <div class="form-text">Must be on or after the display date.</div>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label">Upload document <span class="text-muted fw-normal">(optional)</span></label>
-                    <input type="file" name="document" class="form-control" id="noticeDocument"
-                        accept=".pdf,.png,.jpg,.jpeg,image/jpeg,image/png,application/pdf">
-                    <div class="form-text">Types: <strong>PDF, JPG, PNG</strong>. Max <strong>5&nbsp;MB</strong> per file. Leave empty to keep the current file.</div>
-                    @if($notice->document)
-                        <a href="{{ asset('storage/'.$notice->document) }}" target="_blank" rel="noopener" class="d-inline-block mt-2">View current document</a>
-                    @endif
-                </div>
+                    <div class="col-md-6">
+                        <label class="form-label notice-form-label" for="noticeDisplayDate">Display Date <span class="text-danger">*</span></label>
+                        <input type="date" name="display_date" id="noticeDisplayDate" class="form-control"
+                            value="{{ $displayDateVal }}" min="{{ $todayMin }}" required>
+                        <div class="form-text"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Must be today or a future date.</div>
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label notice-form-label" for="noticeExpiryDate">Expiry Date <span class="text-danger">*</span></label>
+                        <input type="date" name="expiry_date" id="noticeExpiryDate" class="form-control"
+                            value="{{ $expiryDateVal }}" min="{{ $todayMin }}" required>
+                        <div class="form-text"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Must be on or after the display date.</div>
+                    </div>
 
                     <div class="col-md-6">
-                        <label class="form-label notice-form-label">Target Audience <span class="text-danger">*</span></label>
-                        <select name="target_audience" id="targetAudience" class="form-control">
+                        <label class="form-label notice-form-label" for="noticeDocument">Document <span class="text-muted fw-normal">(optional)</span></label>
+                        <input type="file" name="document" class="form-control" id="noticeDocument"
+                            accept=".pdf,.png,.jpg,.jpeg,image/jpeg,image/png,application/pdf">
+                        <div class="form-text">Types: <strong>PDF, JPG, PNG</strong>. Max <strong>5&nbsp;MB</strong>. Leave empty to keep the current file.</div>
+                        @if($notice->document)
+                        <a href="{{ asset('storage/'.$notice->document) }}" target="_blank" rel="noopener" class="notice-doc-link d-inline-flex align-items-center gap-1 mt-2 text-primary">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>View current document
+                        </a>
+                        @endif
+                    </div>
+                    <div class="col-md-6">
+                        <label class="form-label notice-form-label" for="targetAudience">Target Audience <span class="text-danger">*</span></label>
+                        <select name="target_audience" id="targetAudience" class="form-select" required>
                             <option value="">Select the target audience</option>
                             @foreach($target as $t)
                             <option value="{{ $t }}" @if($notice->target_audience == $t) selected @endif>
@@ -110,9 +90,9 @@
                     </div>
 
                     <div class="col-md-6">
-                        <div class="mb-3 {{ $notice->target_audience == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
-                            <label class="form-label notice-form-label">Select Course</label>
-                            <select name="course_master_pk" id="courseSelect" class="form-control">
+                        <div class="mb-0 {{ $notice->target_audience == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
+                            <label class="form-label notice-form-label" for="courseSelect">Select Course</label>
+                            <select name="course_master_pk" id="courseSelect" class="form-select">
                                 <option value="">Select Course</option>
                             </select>
                         </div>
@@ -121,7 +101,7 @@
 
                 <div class="d-flex flex-wrap justify-content-end gap-2 mt-4 pt-4 border-top">
                     <a href="{{ route('admin.notice.index') }}" class="btn btn-notice-cancel btn-outline-primary rounded-3 px-4">
-                        Cancel
+                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel
                     </a>
                     <button type="submit" class="btn btn-notice-save text-white rounded-3 px-4">
                         <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Update
@@ -140,35 +120,8 @@
 <script>
 $(document).ready(function() {
 
-    function loadNoticeSubcategories(categoryId, selectedId) {
-        const $sub = $('#noticeSubcategory');
-        $sub.empty().append('<option value="">Select sub type</option>');
-        if (!categoryId) {
-            return;
-        }
-        $.get(`{{ url('admin/notice/subcategories') }}/${encodeURIComponent(categoryId)}`, function(res) {
-            if (!res.status || !res.data) {
-                return;
-            }
-            $.each(res.data, function(_, item) {
-                const sel = selectedId && String(selectedId) === String(item.pk) ? 'selected' : '';
-                $sub.append('<option value="' + item.pk + '" ' + sel + '>' + item.name + '</option>');
-            });
-        });
-    }
-
-    const initialCat = @json($resolvedCategoryPk ?? $notice->notice_category_master_pk);
-    const initialSub = @json($notice->notice_subcategory_master_pk);
-    if (initialCat) {
-        loadNoticeSubcategories(initialCat, initialSub);
-    }
-
-    $('#noticeCategory').on('change', function() {
-        loadNoticeSubcategories($(this).val(), null);
-    });
-
    $('#editor').summernote({
-        height: 200,
+        height: 220,
         placeholder: 'Write here...',
       toolbar: [
     ['style', ['style']],
@@ -227,6 +180,8 @@ $(document).ready(function() {
             }
         }
     });
+
+    @include('admin.NoticeNotification.partials.notice-type-scripts', ['notice' => $notice])
 
     let selectedCourse = "{{ $notice->course_master_pk }}";
 
