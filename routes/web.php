@@ -37,7 +37,6 @@ use App\Http\Controllers\Admin\{
     DashboardController,
     DirectoryController,
     CourseRepositoryController,
-    LoginCarouselImageController,
     WhosWhoController,
     EstateController,
     QuickLinkController,
@@ -139,12 +138,6 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/word-of-day/{word}/edit', [WordOfTheDayController::class, 'edit'])->name('admin.word-of-day.edit');
     Route::put('/word-of-day/{word}', [WordOfTheDayController::class, 'update'])->name('admin.word-of-day.update');
     Route::delete('/word-of-day/{word}', [WordOfTheDayController::class, 'destroy'])->name('admin.word-of-day.destroy');
-
-    // Login page background carousel images
-    Route::get('/login-carousel-images', [LoginCarouselImageController::class, 'index'])->name('admin.login-carousel-images.index');
-    Route::post('/login-carousel-images', [LoginCarouselImageController::class, 'store'])->name('admin.login-carousel-images.store');
-    Route::put('/login-carousel-images/{loginCarouselImage}', [LoginCarouselImageController::class, 'update'])->name('admin.login-carousel-images.update');
-    Route::delete('/login-carousel-images/{loginCarouselImage}', [LoginCarouselImageController::class, 'destroy'])->name('admin.login-carousel-images.destroy');
 
     // Dashboard Statistics (Batch Profile)
     // NOTE: Currently served by a Blade view; replace with controller when business logic is ready.

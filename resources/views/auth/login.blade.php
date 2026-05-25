@@ -1076,21 +1076,13 @@
         <div class="bg-carousel-container" aria-hidden="true">
             <div id="bgCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6000" data-bs-pause="false">
                 <div class="carousel-inner">
-                    @forelse($loginCarouselImages as $index => $carouselImage)
-                        <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
-                            <img src="{{ asset('storage/' . $carouselImage->image_path) }}"
-                                alt=""
-                                loading="{{ $index <= 1 ? 'eager' : 'lazy' }}">
-                        </div>
-                    @empty
-                        @for($i = 1; $i <= 10; $i++)
-                            <div class="carousel-item {{ $i === 1 ? 'active' : '' }}">
-                                <img src="{{ asset('images/carasoul/' . $i . '.webp') }}"
-                                    alt=""
-                                    loading="{{ $i <= 2 ? 'eager' : 'lazy' }}">
-                            </div>
-                        @endfor
-                    @endforelse
+                    @for($i = 1; $i <= 10; $i++)
+                    <div class="carousel-item {{ $i === 1 ? 'active' : '' }}">
+                        <img src="{{ asset('images/carasoul/' . $i . '.webp') }}"
+                            alt=""
+                            loading="{{ $i <= 2 ? 'eager' : 'lazy' }}">
+                    </div>
+                    @endfor
                 </div>
             </div>
             <div class="bg-overlay"></div>
