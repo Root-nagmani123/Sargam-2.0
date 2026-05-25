@@ -1,1028 +1,1534 @@
 {{-- $activeNavTab is set in admin.layouts.master before this include --}}
 <header class="topbar">
     <!-- Skip to Content (GIGW Mandatory) -->
-<a href="#main-content" class="visually-hidden-focusable skip-link">
-    Skip to main content
-</a>
+    <a href="#main-content" class="visually-hidden-focusable skip-link">
+        Skip to main content
+    </a>
 
     <header class="header-top-bar d-none d-lg-block">
-    <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+        <div class="container-fluid d-flex align-items-center justify-content-between flex-wrap py-1">
 
-    <!-- Left: Government Identity -->
-    <div class="d-flex align-items-center gap-2">
-        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
-            alt="Emblem of India" class="header-flag-icon">
-        <span class="fw-semibold small text-white">
-            भारत सरकार | Government of India
-        </span>
-    </div>
+            <!-- Left: Government Identity -->
+            <div class="d-flex align-items-center gap-1">
+                <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                    alt="Emblem of India" class="header-flag-icon">
+                <span class="fw-semibold small text-white">
+                    भारत सरकार | Government of India
+                </span>
+            </div>
 
-    <!-- Right: Utilities with vertical separators -->
-    <nav aria-label="Utility Navigation">
-        <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
-            <li class="list-inline-item">
-                <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
-            </li>
-            <li class="header-utility-sep" aria-hidden="true"></li>
-            <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
-                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
-                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
-                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
-            </li>
-            <li class="header-utility-sep" aria-hidden="true"></li>
-            <li class="list-inline-item">
-                <div class="header-lang-dropdown">
-                    <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
-                    <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
-                        <option selected>English</option>
-                        <option>हिन्दी</option>
-                    </select>
-                </div>
-            </li>
-        </ul>
-    </nav>
-    </div>
+            <!-- Right: Utilities with vertical separators -->
+            <nav aria-label="Utility Navigation">
+                <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
+                    <li class="list-inline-item">
+                        <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
+                    </li>
+                    <li class="header-utility-sep" aria-hidden="true"></li>
+                    <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
+                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn"
+                            aria-label="Increase font size">A+</a>
+                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn"
+                            aria-label="Normal font size">A</a>
+                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn"
+                            aria-label="Decrease font size">A-</a>
+                    </li>
+                    <li class="header-utility-sep" aria-hidden="true"></li>
+                    <li class="list-inline-item">
+                        <div class="header-lang-dropdown">
+                            <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
+                            <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
+                                <option selected>English</option>
+                            </select>
+                        </div>
+                    </li>
+                </ul>
+            </nav>
+        </div>
     </header>
 
     <div class="with-vertical">
-        <nav class="navbar navbar-expand-lg p-0">
-            <ul class="navbar-nav">
+        <nav class="navbar navbar-expand-lg align-items-center flex-wrap p-0 gap-2 gap-lg-3">
+            <ul class="navbar-nav flex-row align-items-center">
                 <li class="nav-item d-flex d-xl-none">
-                    <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
-                        href="javascript:void(0)">
-                        <i class="material-icons material-symbols-rounded fs-6">menu</i>
+                    <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler d-inline-flex align-items-center justify-content-center"
+                        id="headerCollapse" href="javascript:void(0)" aria-label="Toggle sidebar menu">
+                        <i class="material-icons material-symbols-rounded fs-5">menu</i>
                     </a>
                 </li>
             </ul>
 
-            <div class="header-brand d-flex align-items-center gap-2 py-2">
+            <div class="header-brand d-flex align-items-center gap-2 gap-lg-3 py-2 flex-shrink-0">
                 <img src="{{ asset('images/ashoka.webp') }}" alt="ashoka emblem" class="header-logo-emblem">
+                <div class="vr align-self-stretch opacity-50 d-none d-sm-flex" style="min-height: 3rem;"></div>
                 <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo" class="header-logo">
             </div>
-
-            <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
-                data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
-                aria-label="Toggle navigation">
-                <i class="material-icons material-symbols-rounded fs-6">more_vert</i>
-            </a>
 
             <div class="collapse navbar-collapse" id="navbarNav">
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container (Desktop) -->
-                    <div class="nav-container position-relative d-none d-lg-block">
-                        <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="menubar" aria-label="Main navigation">
+                    <div class="nav-container header-main-nav-scroll position-relative d-none d-lg-block rounded-1 overflow-hidden bg-body-secondary bg-opacity-25 border  shadow-sm">
+                        <div class="header-main-nav-scroll__viewport rounded-1" tabindex="0" role="region"
+                            aria-label="Main navigation tabs">
+                            <ul class="navbar-nav header-main-nav flex-nowrap px-1 py-1 gap-1 align-items-center" role="menubar"
+                                aria-label="Main navigation">
 
-                            <!-- Home -->
-                            <li class="nav-item" role="none">
-                                <a href="#home"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#home' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
-                                    id="home-tab">
-                                    <span>Home</span>
-                                </a>
-                            </li>
+                                <!-- Home -->
+                                <li class="nav-item" role="none">
+                                    <a href="#home"
+                                        class="nav-link header-nav-link px-3 py-2 rounded-1 fw-medium {{ $activeNavTab === '#home' ? 'active' : '' }}"
+                                        data-bs-toggle="tab" role="tab"
+                                        aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}"
+                                        aria-controls="home-panel" id="home-tab">
+                                        <span>Home</span>
+                                    </a>
+                                </li>
 
-                            <!-- Setup -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-setup"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
-                                    id="setup-tab">
+                                <!-- Setup -->
+                                <li class="nav-item" role="none">
+                                    <a href="#tab-setup"
+                                        class="nav-link header-nav-link px-3 py-2 rounded-1 fw-medium {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
+                                        data-bs-toggle="tab" role="tab"
+                                        aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}"
+                                        aria-controls="setup-panel" id="setup-tab">
 
-                                    @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') || hasRole('IST'))
-                                    <span>Setup</span>
-                                    @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
-                                    hasRole('Student-OT'))
-                                    <span>Academics</span>
-                                    @else
-                                    <span>Setup</span>
-                                    @endif
+                                        @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') ||
+                                        hasRole('Training-Induction') || hasRole('IST'))
+                                        <span>Setup</span>
+                                        @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
+                                        hasRole('Student-OT'))
+                                        <span>Academics</span>
+                                        @else
+                                        <span>Setup</span>
+                                        @endif
 
-                                </a>
-                            </li>
+                                    </a>
+                                </li>
 
-                            <!-- Communications -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-communications"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}" aria-controls="tab-communications"
-                                    id="communications-tab">
-                                    <span>Communication</span>
-                                </a>
-                            </li>
-
-                        </ul>
+                                <!-- Communications -->
+                                <li class="nav-item" role="none">
+                                    <a href="#tab-communications"
+                                        class="nav-link header-nav-link px-3 py-2 rounded-1 fw-medium {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                                        data-bs-toggle="tab" role="tab"
+                                        aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
+                                        aria-controls="tab-communications" id="communications-tab">
+                                        <span>Communication</span>
+                                    </a>
+                                </li>
+                            </ul>
+                        </div>
                     </div>
 
                 </div>
 
-                <!-- Right Side: Logout + Last Login -->
-                <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
+                <!-- Right side actions -->
+                <div class="d-flex align-items-center ms-auto gap-2 gap-lg-3 header-right-actions flex-shrink-0">
 
-    <!-- Notifications (visible on both desktop and mobile) -->
-    <div class="dropdown position-relative d-none d-lg-block">
-        <button type="button"
-            class="btn btn-light rounded-1 p-2 position-relative shadow-sm notification-btn "
-            id="notificationDropdown"
-            data-bs-toggle="dropdown"
-            aria-expanded="false"
-            aria-label="Notifications">
-
-            <i class="material-icons material-symbols-rounded fs-5">
-                notifications
-            </i>
-
-            @php
-                $unreadCount = (Auth::user() && Auth::user()->user_id)
-                    ? notification()->getUnreadCount(
-                        Auth::user()->user_id,
-                        hasRole('Admin') ? 10 : null
-                    )
-                    : 0;
-            @endphp
-
-            @if($unreadCount > 0)
-                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
-                    {{ $unreadCount > 99 ? '99+' : $unreadCount }}
-                </span>
-            @endif
-        </button>
-
-        <!-- Dropdown -->
-        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown"
-            aria-labelledby="notificationDropdown">
-
-            <!-- Header -->
-            <li class="notification-dropdown-header">
-                <span class="fw-semibold">Notifications</span>
-                @if($unreadCount > 0)
-                    <button type="button"
-                        class="btn btn-sm btn-link text-primary p-0 text-nowrap notification-mark-all-btn"
-                        onclick="markAllAsRead()">
-                        Mark all as read
-                    </button>
-                @endif
-            </li>
-
-            <div id="notificationList" class="notification-list">
-                @php
-                    $notifications = (Auth::user() && Auth::user()->user_id)
-                        ? notification()->getNotifications(
-                            Auth::user()->user_id,
-                            10,
-                            false,
-                            hasRole('Admin') ? 10 : null
-                        )
-                        : collect();
-                @endphp
-
-                @include('admin.layouts.partials.notification-list-desktop', ['notifications' => $notifications])
-            </div>
-        </ul>
-    </div>
-
-    <!-- Logout -->
-    <form action="{{ route('logout') }}" method="POST" class="m-0">
-        @csrf
-        <button type="submit"
-            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
-            aria-label="Sign out">
-            <i class="material-icons material-symbols-rounded fs-6">logout</i>
-            <span class="small fw-medium">Logout</span>
-        </button>
-    </form>
-</div>
-
-            </div>
-
-            <!-- Mobile Navigation Container (FB/Instagram-style) -->
-            <div class="nav-container d-lg-none">
-                <ul class="navbar-nav mobile-tabbar" role="menubar" aria-label="Main navigation mobile">
-                    <!-- Home -->
-                    <li class="nav-item" role="none">
-                        <a href="#home" class="nav-link mobile-tab-link {{ $activeNavTab === '#home' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
-                            id="home-tab-mobile">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">home</i>
-                            <span>Home</span>
-                        </a>
-                    </li>
-
-                    <!-- Setup -->
-                    <li class="nav-item" role="none">
-                        <a href="#tab-setup" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
-                            id="setup-tab-mobile">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
-                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff'))
-                            <span>Setup</span>
-                            @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
-                            hasRole('Student-OT'))
-                            <span>Academics</span>
-                            @endif
-                        </a>
-                    </li>
-
-                    <!-- Communications -->
-                    <li class="nav-item" role="none">
-                        <a href="#tab-communications" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}" aria-controls="tab-communications"
-                            id="communications-tab-mobile">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
-                            <span>Communication</span>
-                        </a>
-                    </li>
-                        </ul>
-                    </li>
-
-                    <!-- Notifications (Offcanvas on mobile for reliable display) -->
-                    <li class="nav-item" role="none">
+                    <!-- Notifications (desktop) -->
+                    <div class="dropdown position-relative d-none d-lg-block">
                         <button type="button"
-                            class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
-                            id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
-                            aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
+                            class="btn btn-light border  rounded-circle p-0 position-relative shadow-sm notification-btn d-inline-flex align-items-center justify-content-center"
+                            id="notificationDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                            aria-expanded="false" aria-label="Notifications">
+
+                            <i class="material-icons material-symbols-rounded fs-5 text-body-secondary" aria-hidden="true">
+                                notifications
+                            </i>
+
                             @php
-                            $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
-                                ? notification()->getUnreadCount(Auth::user()->user_id)
-                                : 0;
+                            $unreadCount = (Auth::user() && Auth::user()->user_id)
+                            ? notification()->getUnreadCount(
+                            Auth::user()->user_id,
+                            hasRole('Admin') ? 10 : null
+                            )
+                            : 0;
                             @endphp
-                            @if($unreadCountMobile > 0)
-                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
-                                {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
+
+                            @if($unreadCount > 0)
+                            <span
+                                class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
+                                {{ $unreadCount > 99 ? '99+' : $unreadCount }}
                             </span>
                             @endif
-                            <span>Notifications</span>
                         </button>
-                    </li>
-                </ul>
-            </div>
 
-            <!-- Mobile Notifications Offcanvas (slides up from bottom) -->
-            <div class="offcanvas offcanvas-bottom d-lg-none" tabindex="-1" id="notificationOffcanvasMobile"
-                aria-labelledby="notificationOffcanvasMobileLabel" style="max-height: 70vh; border-radius: 16px 16px 0 0;">
-                <div class="offcanvas-header border-bottom py-3">
-                    <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
-                    @if($unreadCountMobile > 0)
-                    <button type="button" class="btn btn-sm btn-link text-primary p-0 notification-mark-all-btn" onclick="markAllAsRead()">
-                        Mark all as read
-                    </button>
-                    @endif
-                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-                </div>
-                <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list" style="max-height: calc(70vh - 60px);">
-                    <div id="notificationListMobile">
-                        @php
-                        $notificationsMobile = (Auth::user() && Auth::user()->user_id)
-                            ? notification()->getNotifications(
+                        <!-- Dropdown — layout aligned to reference (white shell, gray list strip, bordered cards) -->
+                        <div
+                            class="dropdown-menu dropdown-menu-end notification-dropdown rounded-4 border  shadow-lg bg-white overflow-hidden p-0"
+                            aria-labelledby="notificationDropdown">
+
+                            <div class="notification-dropdown-header d-flex align-items-center justify-content-between gap-2 px-3 py-2 border-bottom  bg-body-secondary bg-opacity-10">
+                                <span class="fw-semibold text-body mb-0">Notifications</span>
+                                @if($unreadCount > 0)
+                                <button type="button"
+                                    class="btn btn-sm btn-link text-primary p-0 text-nowrap notification-mark-all-btn"
+                                    onclick="markAllAsRead()">
+                                    Mark all as read
+                                </button>
+                                @endif
+                            </div>
+
+                            <div id="notificationList" class="notification-list notification-list-shell px-3 py-3">
+                                @php
+                                $notifications = (Auth::user() && Auth::user()->user_id)
+                                ? notification()->getNotifications(
                                 Auth::user()->user_id,
                                 10,
                                 false,
                                 hasRole('Admin') ? 10 : null
+                                )
+                                : collect();
+                                @endphp
+
+                                @include('admin.layouts.partials.notification-list-desktop', ['notifications' => $notifications])
+                            </div>
+                        </div>
+                    </div>
+
+                        @php
+                        $authUser = Auth::user();
+                        $headerProfileDummy = asset('images/dummypic.jpeg');
+
+                        $headerUserName = function_exists('get_auth_display_name')
+                        ? get_auth_display_name($authUser)
+                        : (($authUser && trim((string) ($authUser->name ?? ''))) ? trim($authUser->name) : 'User');
+
+                        $headerUserRole = hasRole('Admin') ? 'Admin' : 'User';
+
+                        // Prefer real uploads; treat helper placeholders (e.g. stock URLs) as “no photo” → dummy image.
+                        $headerProfileImage = $headerProfileDummy;
+                        if ($authUser && function_exists('get_profile_pic')) {
+                        $pic = get_profile_pic();
+                        $picStr = is_string($pic) ? trim($pic) : '';
+                        $looksPlaceholder = $picStr === ''
+                        || str_contains($picStr, 'unsplash.com')
+                        || str_contains($picStr, 'placeholder')
+                        || str_contains($picStr, 'via.placeholder');
+                        $headerProfileImage = $looksPlaceholder ? $headerProfileDummy : $picStr;
+                        }
+                        @endphp
+                        <div class="dropdown d-none d-lg-block">
+                            <button type="button"
+                                class="btn btn-light p-1 d-flex align-items-center gap-2 header-profile-trigger bg-transparent border-0"
+                                id="headerProfileDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside"
+                                aria-expanded="false" aria-label="User menu, {{ e($headerUserName) }}">
+                                <span
+                                    class="header-profile-avatar d-inline-flex align-items-center justify-content-center rounded-circle overflow-hidden">
+                                    <img src="{{ $headerProfileImage }}" alt="{{ $headerUserName }}"
+                                        class="header-profile-img rounded-circle w-100 h-100 object-fit-cover"
+                                        data-fallback-src="{{ $headerProfileDummy }}"
+                                        onerror="var d=this.dataset.fallbackSrc;if(d)this.onerror=null;this.src=d;">
+                                </span>
+                                <span class="d-flex flex-column align-items-start lh-sm">
+                                    <span class="fw-semibold text-dark header-profile-name">{{ $headerUserName }}</span>
+                                    <span class="text-secondary header-profile-role">{{ $headerUserRole }}</span>
+                                </span>
+                                <i class="material-icons material-symbols-rounded header-profile-chevron flex-shrink-0 align-self-center"
+                                    aria-hidden="true">expand_more</i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end header-profile-dropdown-menu border  shadow-lg rounded-4 mt-2 p-2"
+                                aria-labelledby="headerProfileDropdown" style="min-width: 17.5rem;">
+                                <li class="mb-2">
+                                    <div class="rounded-3 bg-primary bg-opacity-10 border border-primary border-opacity-10 p-3">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <span
+                                                class="header-profile-dropdown-avatar d-inline-flex align-items-center justify-content-center rounded-circle flex-shrink-0 overflow-hidden border border-white shadow-sm">
+                                                <img src="{{ $headerProfileImage }}" alt="{{ $headerUserName }}"
+                                                    class="header-profile-dropdown-img rounded-circle object-fit-cover w-100 h-100"
+                                                    data-fallback-src="{{ $headerProfileDummy }}"
+                                                    onerror="var d=this.dataset.fallbackSrc;if(d)this.onerror=null;this.src=d;">
+                                            </span>
+                                            <div class="min-w-0 flex-grow-1">
+                                                <p class="mb-0 fw-bold text-dark text-truncate lh-sm">{{ $headerUserName }}</p>
+                                                <p class="mb-0 small text-secondary text-truncate">{{ $headerUserRole }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </li>
+                                @if(Auth::check() && Auth::user()->user_id)
+                                <li>
+                                    <a href="{{ route('member.profile.edit', Auth::user()->user_id) }}"
+                                        class="dropdown-item d-flex align-items-center gap-3 rounded-3 py-2 px-3">
+                                        <i class="material-icons material-symbols-rounded fs-6 text-body-secondary opacity-75"
+                                            aria-hidden="true">edit</i>
+                                        <span>Edit Profile</span>
+                                    </a>
+                                </li>
+                                @endif
+                                <li>
+                                    <a href="{{ route('admin.password.change_password') }}"
+                                        class="dropdown-item d-flex align-items-center gap-3 rounded-3 py-2 px-3">
+                                        <i class="material-icons material-symbols-rounded fs-6 text-body-secondary opacity-75"
+                                            aria-hidden="true">lock_reset</i>
+                                        <span>Change Password</span>
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider my-1"></li>
+                                <li>
+                                    <form action="{{ route('logout') }}" method="POST" class="m-0">
+                                        @csrf
+                                        <button type="submit"
+                                            class="dropdown-item header-profile-dropdown-logout d-flex align-items-center gap-3 rounded-3 py-2 px-3 w-100 border-0 bg-transparent text-start">
+                                            <i class="material-icons material-symbols-rounded header-profile-logout-icon fs-6"
+                                                aria-hidden="true">logout</i>
+                                            <span>Log out</span>
+                                        </button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </div>
+
+                </div>
+
+                <!-- Mobile Navigation Container (FB/Instagram-style) -->
+                <div class="nav-container d-lg-none">
+                    <ul class="navbar-nav mobile-tabbar" role="menubar" aria-label="Main navigation mobile">
+                        <!-- Home -->
+                        <li class="nav-item" role="none">
+                            <a href="#home" class="nav-link mobile-tab-link {{ $activeNavTab === '#home' ? 'active' : '' }}"
+                                data-bs-toggle="tab" role="tab"
+                                aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}"
+                                aria-controls="home-panel" id="home-tab-mobile">
+                                <i class="material-icons material-symbols-rounded" aria-hidden="true">home</i>
+                                <span>Home</span>
+                            </a>
+                        </li>
+
+                        <!-- Setup -->
+                        <li class="nav-item" role="none">
+                            <a href="#tab-setup"
+                                class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
+                                data-bs-toggle="tab" role="tab"
+                                aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}"
+                                aria-controls="setup-panel" id="setup-tab-mobile">
+                                <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
+                                @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Staff'))
+                                <span>Setup</span>
+                                @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
+                                hasRole('Student-OT'))
+                                <span>Academics</span>
+                                @endif
+                            </a>
+                        </li>
+
+                        <!-- Communications -->
+                        <li class="nav-item" role="none">
+                            <a href="#tab-communications"
+                                class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                                data-bs-toggle="tab" role="tab"
+                                aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
+                                aria-controls="tab-communications" id="communications-tab-mobile">
+                                <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
+                                <span>Communication</span>
+                            </a>
+                        </li>
+
+                        <!-- Notifications (Offcanvas on mobile for reliable display) -->
+                        <li class="nav-item" role="none">
+                            <button type="button"
+                                class="nav-link mobile-tab-link border-0 bg-transparent position-relative w-100"
+                                id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
+                                aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
+                                <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
+                                @php
+                                $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
+                                ? notification()->getUnreadCount(Auth::user()->user_id)
+                                : 0;
+                                @endphp
+                                @if($unreadCountMobile > 0)
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
+                                    {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
+                                </span>
+                                @endif
+                                <span>Notifications</span>
+                            </button>
+                        </li>
+                    </ul>
+                </div>
+
+                <!-- Mobile Notifications Offcanvas (slides up from bottom) -->
+                <div class="offcanvas offcanvas-bottom d-lg-none rounded-top-4 border-top  shadow-lg"
+                    tabindex="-1" id="notificationOffcanvasMobile"
+                    aria-labelledby="notificationOffcanvasMobileLabel" style="max-height: 70vh;">
+                    <div class="offcanvas-header border-bottom  bg-body-secondary bg-opacity-10 py-3 gap-2">
+                        <h5 class="offcanvas-title fw-semibold mb-0 flex-grow-1" id="notificationOffcanvasMobileLabel">Notifications</h5>
+                        @if($unreadCountMobile > 0)
+                        <button type="button" class="btn btn-sm btn-link text-primary p-0 text-nowrap notification-mark-all-btn order-2"
+                            onclick="markAllAsRead()">
+                            Mark all as read
+                        </button>
+                        @endif
+                        <button type="button" class="btn-close ms-0" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                    </div>
+                    <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list bg-body-tertiary"
+                        style="max-height: calc(70vh - 4.5rem);">
+                        <div id="notificationListMobile">
+                            @php
+                            $notificationsMobile = (Auth::user() && Auth::user()->user_id)
+                            ? notification()->getNotifications(
+                            Auth::user()->user_id,
+                            10,
+                            false,
+                            hasRole('Admin') ? 10 : null
                             )
                             : collect();
-                        @endphp
-                        @include('admin.layouts.partials.notification-list-mobile', ['notifications' => $notificationsMobile])
+                            @endphp
+                            @include('admin.layouts.partials.notification-list-mobile', ['notifications' => $notificationsMobile])
+                        </div>
                     </div>
                 </div>
-            </div>
 
-            <style>
-                .notification-btn {
-                    transition: background-color 0.2s ease, transform 0.2s ease;
-                }
-                .notification-btn:hover {
-                    background-color: var(--bs-light);
-                    transform: translateY(-1px);
-                }
-                .notification-badge {
-                    font-size: 10px;
-                    padding: 4px 6px;
-                }
-                .notification-dropdown {
-                    width: 380px;
-                    max-height: 440px;
-                    overflow: hidden;
-                    padding: 0;
-                }
-                .notification-dropdown-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 14px 18px;
-                    border-bottom: 1px solid var(--bs-border-color-translucent);
-                    background: var(--bs-body-bg);
-                    position: sticky;
-                    top: 0;
-                    z-index: 1;
-                }
-                .notification-list {
-                    max-height: 380px;
-                    overflow-y: auto;
-                    padding: 8px 0;
-                }
-                .notification-list-item {
-                    list-style: none;
-                    margin: 0;
-                }
-                .notification-item {
-                    display: block;
-                    padding: 14px 18px;
-                    margin: 4px 10px;
-                    border-radius: 10px;
-                    text-decoration: none;
-                    color: inherit;
-                    border-left: 3px solid transparent;
-                    transition: background-color 0.2s ease, border-color 0.2s ease;
-                }
-                .notification-item:hover {
-                    background-color: rgba(0, 0, 0, 0.04);
-                }
-                .notification-item-unread {
-                    background-color: rgba(var(--bs-primary-rgb), 0.06);
-                    border-left-color: var(--bs-primary);
-                }
-                .notification-item-unread:hover {
-                    background-color: rgba(var(--bs-primary-rgb), 0.1);
-                }
-                .notification-item-body {
-                    min-width: 0;
-                }
-                .notification-item-title {
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    color: var(--bs-primary);
-                    line-height: 1.3;
-                }
-                .notification-item-message {
-                    font-size: 0.8125rem;
-                    color: var(--bs-primary);
-                    margin: 6px 0 0 0;
-                    line-height: 1.4;
-                }
-                .notification-item-time {
-                    font-size: 0.6875rem;
-                    color: var(--bs-primary);
-                    margin-top: 6px;
-                    display: block;
-                }
-                /* Blinking "New" tag for unread notifications */
-                .notification-new-tag {
-                    font-size: 0.625rem;
-                    font-weight: 600;
-                    letter-spacing: 0.02em;
-                    padding: 0.2em 0.5em;
-                    flex-shrink: 0;
-                    animation: notification-blink 1.2s ease-in-out infinite;
-                }
-                @keyframes notification-blink {
-                    0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.4); }
-                    50% { opacity: 0.85; box-shadow: 0 0 0 4px rgba(var(--bs-danger-rgb), 0); }
-                }
-                .notification-empty-state {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 48px 24px;
-                    color: var(--bs-primary);
-                    list-style: none;
-                    margin: 0;
-                }
-                .notification-empty-state .material-icons {
-                    font-size: 2.5rem;
-                    opacity: 0.35;
-                    margin-bottom: 10px;
-                }
-                .notification-empty-state span {
-                    font-size: 0.875rem;
-                }
-                /* Mobile offcanvas notifications */
-                .notification-mobile-list {
-                    padding: 8px 12px 16px;
-                }
-                .notification-mobile-item {
-                    margin: 4px 0;
-                    padding: 14px 16px;
-                }
+                <style>
+                    .notification-btn {
+                        transition: background-color 0.2s ease, transform 0.2s ease;
+                    }
 
-                /* Skip link visibility */
-.skip-link {
-    position: absolute;
-    top: -40px;
-    left: 10px;
-    background: #0d6efd;
-    color: #fff;
-    padding: 6px 12px;
-    z-index: 1000;
-    border-radius: 4px;
-}
-.skip-link:focus { top: 10px; }
-:focus-visible { outline: 3px solid #ffbf47; outline-offset: 2px; }
+                    .notification-btn:hover {
+                        background-color: var(--bs-light);
+                        transform: translateY(-1px);
+                    }
 
-/* Header - Match reference design */
-.header-top-bar {
-    background: #122442;
-    height: 40px;
-    border: none;
-}
-.header-flag-icon { height: 20px; }
-.header-utility-nav .header-utility-sep {
-    width: 1px;
-    height: 16px;
-    background: rgba(255,255,255,0.5);
-    margin: 0 8px;
-    display: inline-block;
-}
-.header-font-btn { text-decoration: none !important; }
-.header-lang-dropdown {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 6px;
-    padding: 4px 10px;
-}
-.header-globe-icon { font-size: 18px !important; color: #fff !important; }
-.header-lang-select {
-    background: transparent !important;
-    border: none !important;
-    color: #fff !important;
-    font-size: 0.875rem;
-    padding: 2px 4px;
-    min-width: 80px;
-}
-.header-lang-select option { background: #122442; color: #fff; }
+                    .notification-badge {
+                        font-size: 10px;
+                        padding: 4px 6px;
+                    }
 
-/* Main nav bar - white background */
-.with-vertical .navbar { background: #fff !important }
-.header-brand { gap: 10px !important; }
-.header-logo-emblem { height: 40px; object-fit: contain; }
-.header-logo { height: 32px; object-fit: contain; }
-/* Desktop: larger, more prominent logo */
-@media (min-width: 992px) {
-    .header-brand { gap: 12px !important; }
-    .header-logo-emblem { height: 52px !important; }
-    .header-logo { height: 44px !important; }
-}
-.header-app-name {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #004a93;
-}
+                    /* Layout only when open — do not set display on .notification-dropdown alone or it overrides
+               Bootstrap's .dropdown-menu { display: none } and keeps the panel visible without a click */
+                    .notification-dropdown {
+                        width: 20rem;
+                        max-width: min(20rem, calc(100vw - 2rem));
+                        max-height: 26rem;
+                        padding: 0;
+                        --notification-navy: #2b3a5c;
+                    }
 
-/* Nav container - light grey pill */
-.header-main-nav {
-    background: #f0f0f0 !important;
-    border-radius: 12px;
-    height: 48px;
-    border: 1px solid rgba(0,0,0,0.05);
-}
-.header-nav-link {
-    color: #6c757d !important;
-    border-radius: 8px;
-    text-decoration: none !important;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-}
-.header-nav-link:hover { color: #495057 !important; }
-.header-nav-link.active {
-    color: #004a93 !important;
-    border-bottom-color: #004a93;
-    font-weight: 500;
-}
-.header-search-btn {
-    background: transparent !important;
-    border: none !important;
-    color: #6c757d !important;
-    padding: 6px 10px !important;
-    border-radius: 8px;
-}
-.header-search-btn:hover { color: #004a93 !important; }
+                    .dropdown-menu.notification-dropdown.show {
+                        display: flex !important;
+                        flex-direction: column;
+                    }
 
-/* Right side */
-.header-right-actions { margin-right: 1rem; }
-.header-icon-sm { font-size: 24px !important; }
-.header-logout-icon { font-size: 22px !important; }
-.header-last-login { font-size: 0.8125rem; }
+                    .notification-dropdown-header {
+                        flex-shrink: 0;
+                    }
 
-/* Divider before logout */
-.header-logout-divider {
-    width: 1px;
-    height: 28px;
-    background: rgba(0, 0, 0, 0.08);
-    flex-shrink: 0;
-}
+                    .header-nav-link:focus-visible,
+                    .header-profile-trigger:focus-visible,
+                    .notification-btn:focus-visible,
+                    .mobile-tab-link:focus-visible {
+                        outline: 2px solid rgba(var(--bs-primary-rgb), 0.45);
+                        outline-offset: 2px;
+                        box-shadow: none;
+                    }
 
-/* Logout button - enhanced */
-.header-logout-btn {
-    gap: 3px;
-    min-width: 52px;
-    padding: 6px 10px !important;
-    border-radius: 10px;
-    color: #6c757d !important;
-    border: 1px solid transparent;
-    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
-}
-.header-logout-btn:hover {
-    color: #004a93 !important;
-    background-color: rgba(0, 74, 147, 0.08) !important;
-    border-color: rgba(0, 74, 147, 0.12);
-}
-.header-logout-btn:active {
-    transform: scale(0.97);
-}
+                    .notification-dropdown-title {
+                        letter-spacing: -0.01em;
+                    }
 
-/* Notification dropdown: end-align on large screens, start-align on smaller for proper view */
-.dropdown-menu-end-lg[data-bs-popper] {
-    left: 0;
-    right: auto;
-}
-@media (min-width: 992px) {
-    .dropdown-menu-end-lg[data-bs-popper] {
-        left: auto;
-        right: 0;
-    }
-}
+                    .notification-list {
+                        flex: 1 1 auto;
+                        min-height: 0;
+                        max-height: 18.5rem;
+                        overflow-y: auto;
+                    }
 
-            @media (max-width: 991.98px) {
-                body {
-                    padding-bottom: 64px !important;
-                }
+                    /* Light strip behind cards (matches reference) */
+                    .notification-list-shell {
+                        background-color: #f4f6f9;
+                    }
 
-                /* Mobile: Right-align logout and header actions */
-                .header-right-actions {
-                    width: 100%;
-                    justify-content: flex-end !important;
-                    margin-left: 0 !important;
-                    margin-right: 0 !important;
-                    padding: 0.5rem 0;
-                }
+                    .notification-dropdown-footer {
+                        flex-shrink: 0;
+                    }
 
-                /* Hide sidebar by default on mobile - responsive width */
-                .left-sidebar,
-                .side-mini-panel,
-                aside.side-mini-panel,
-                aside.side-mini-panel.with-vertical {
-                    position: fixed !important;
-                    top: 0 !important;
-                    left: -100% !important;
-                    width: min(320px, 88vw) !important;
-                    max-width: 320px !important;
-                    height: 100vh !important;
-                    z-index: 1060 !important;
-                    background: transparent !important;
-                    transition: left 0.3s ease-in-out !important;
-                    display: block !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                    overflow-y: auto !important;
-                }
+                    .notification-dropdown .notification-list-item {
+                        margin: 0;
+                        list-style: none;
+                    }
 
-                /* Sidebar mini panel specific - compact when hidden */
-                .side-mini-panel {
-                    width: 64px !important;
-                    left: -64px !important;
-                }
+                    .notification-dropdown .notification-list-item:last-child {
+                        margin-bottom: 0 !important;
+                    }
 
-                /* Hide sidebar tab content by default on mobile */
-                #sidebarTabContent {
-                    display: none !important;
-                    visibility: hidden !important;
-                    opacity: 0 !important;
-                }
+                    .notification-dropdown .notification-list-item:last-child .notification-item {
+                        margin-bottom: 0;
+                    }
 
-                .sidebar-overlay {
-                    z-index: 1050 !important;
-                }
+                    .notification-dropdown .notification-item {
+                        border-color: #dee2e6 !important;
+                        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+                        transition: box-shadow 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+                    }
 
-                /* Ensure sidebar toggle button is accessible */
-                #headerCollapse {
-                    z-index: 1040 !important;
-                    position: relative !important;
-                    pointer-events: auto !important;
-                }
+                    .notification-dropdown .notification-item:hover {
+                        border-color: #ced4da !important;
+                        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.06);
+                    }
 
-                /* Show sidebar when toggled - handle all sidebar instances */
-                .left-sidebar.show-sidebar,
-                .side-mini-panel.show-sidebar,
-                aside.side-mini-panel.show-sidebar,
-                aside.side-mini-panel.with-vertical.show-sidebar,
-                #sidebarTabContent .tab-pane.show.active .side-mini-panel.show-sidebar,
-                #sidebarTabContent .tab-pane .side-mini-panel.show-sidebar {
-                    left: 0 !important;
-                    transform: translateX(0) !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                    display: block !important;
-                    background: transparent !important;
-                    pointer-events: auto !important;
-                }
+                    .notification-dropdown .notification-item:focus-visible {
+                        outline: 2px solid var(--bs-primary);
+                        outline-offset: 2px;
+                    }
 
-                /* Expand side-mini-panel to responsive width on mobile when open - so child module (sidebar-nav) is visible */
-                .side-mini-panel.show-sidebar,
-                aside.side-mini-panel.show-sidebar,
-                aside.side-mini-panel.with-vertical.show-sidebar {
-                    width: min(320px, 88vw) !important;
-                    max-width: 320px !important;
-                }
+                    /* Unread: same white card as screenshot; dot indicates state */
+                    .notification-dropdown .notification-item-unread,
+                    .notification-dropdown .notification-item-unread:hover {
+                        background-color: #fff !important;
+                        border-color: #dee2e6 !important;
+                    }
 
-                /* Show sidebar tab content when sidebar is open */
-                body.sidebar-open #sidebarTabContent {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                }
-                
-                /* Ensure active sidebar tab pane is visible */
-                body.sidebar-open #sidebarTabContent .tab-pane.show.active {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                }
+                    /* Offcanvas / legacy list rows (non-card) */
+                    .notification-mobile-item.notification-item {
+                        display: block;
+                        padding: 14px 16px;
+                        margin: 4px 0;
+                        border-radius: 10px;
+                        text-decoration: none;
+                        color: inherit;
+                        border-left: 3px solid transparent;
+                        transition: background-color 0.2s ease, border-color 0.2s ease;
+                    }
 
-                .nav-container.d-lg-none {
-                    position: fixed !important;
-                    bottom: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    width: 100% !important;
-                    z-index: 1030 !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                    pointer-events: none !important;
-                    overflow: visible !important;
-                }
+                    .notification-mobile-item.notification-item:hover {
+                        background-color: rgba(0, 0, 0, 0.04);
+                    }
 
-                .nav-container.d-lg-none .mobile-tabbar {
-                    pointer-events: auto !important;
-                }
+                    .notification-mobile-item.notification-item-unread {
+                        background-color: rgba(var(--bs-primary-rgb), 0.06);
+                        border-left-color: var(--bs-primary);
+                    }
 
-                .mobile-tabbar {
-                    position: fixed !important;
-                    bottom: 0 !important;
-                    left: 0 !important;
-                    right: 0 !important;
-                    width: 100% !important;
-                    z-index: 1030 !important;
-                    display: flex !important;
-                    flex-direction: row !important;
-                    justify-content: space-around !important;
-                    align-items: center !important;
-                    gap: 2px !important;
-                    padding: 6px 4px !important;
-                    margin: 0 !important;
-                    background: #ffffff !important;
-                    border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
-                    box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06) !important;
-                    list-style: none !important;
-                    height: 64px !important;
-                    pointer-events: auto !important;
-                    overflow: visible !important;
-                }
+                    .notification-mobile-item.notification-item-unread:hover {
+                        background-color: rgba(var(--bs-primary-rgb), 0.1);
+                    }
 
-                /* Hide mobile tab bar when sidebar is open - handled by JS */
-                body.sidebar-open .mobile-tabbar {
-                    display: none !important;
-                }
+                    .notification-item-body {
+                        min-width: 0;
+                    }
 
-                .mobile-tabbar .nav-item {
-                    flex: 1 1 0 !important;
-                    text-align: center !important;
-                    margin: 0 !important;
-                    padding: 0 !important;
-                }
+                    .notification-dropdown .notification-item-title {
+                        font-size: 0.9375rem;
+                        font-weight: 700 !important;
+                        color: var(--notification-navy) !important;
+                        line-height: 1.35;
+                    }
+
+                    .notification-dropdown .notification-item-message {
+                        line-height: 1.5;
+                        color: #64748b !important;
+                        display: -webkit-box;
+                        -webkit-line-clamp: 2;
+                        -webkit-box-orient: vertical;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        word-break: break-word;
+                    }
+
+                    .notification-dropdown .notification-item-time {
+                        display: block;
+                        margin-top: 0.35rem;
+                        color: #9ca3af !important;
+                        font-size: 0.8125rem;
+                    }
+
+                    /* Reference uses no prominent “New” chip — unread = small primary dot only */
+                    .notification-dropdown .notification-new-tag {
+                        display: none !important;
+                    }
+
+                    .notification-mobile-item .notification-item-title {
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                        color: var(--bs-primary);
+                        line-height: 1.3;
+                    }
+
+                    .notification-mobile-item .notification-item-message {
+                        font-size: 0.8125rem;
+                        color: var(--bs-primary);
+                        margin: 6px 0 0 0;
+                        line-height: 1.4;
+                    }
+
+                    .notification-mobile-item .notification-item-time {
+                        font-size: 0.6875rem;
+                        color: var(--bs-primary);
+                        margin-top: 6px;
+                        display: block;
+                    }
+
+                    /* Blinking "New" tag for unread notifications */
+                    .notification-new-tag {
+                        font-size: 0.625rem;
+                        font-weight: 600;
+                        letter-spacing: 0.02em;
+                        padding: 0.2em 0.5em;
+                        flex-shrink: 0;
+                        animation: notification-blink 1.2s ease-in-out infinite;
+                    }
+
+                    @keyframes notification-blink {
+
+                        0%,
+                        100% {
+                            opacity: 1;
+                            box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.4);
+                        }
+
+                        50% {
+                            opacity: 0.85;
+                            box-shadow: 0 0 0 4px rgba(var(--bs-danger-rgb), 0);
+                        }
+                    }
+
+                    .notification-empty-state {
+                        display: flex;
+                        flex-direction: column;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 48px 24px;
+                        color: var(--bs-primary);
+                        list-style: none;
+                        margin: 0;
+                    }
+
+                    .notification-empty-state .material-icons {
+                        font-size: 2.5rem;
+                        opacity: 0.35;
+                        margin-bottom: 10px;
+                    }
+
+                    .notification-empty-state span {
+                        font-size: 0.875rem;
+                    }
+
+                    .notification-empty-state-dropdown {
+                        padding: 1.5rem 1rem !important;
+                        color: var(--bs-secondary-color) !important;
+                        text-align: center;
+                    }
+
+                    .notification-empty-state-dropdown .material-icons {
+                        margin-bottom: 0.35rem !important;
+                    }
+
+                    /* Mobile offcanvas notifications */
+                    .notification-mobile-list {
+                        padding: 8px 12px 16px;
+                    }
+
+                    .notification-mobile-item {
+                        margin: 4px 0;
+                        padding: 14px 16px;
+                    }
+
+                    /* Skip link visibility */
+                    .skip-link {
+                        position: absolute;
+                        top: -40px;
+                        left: 10px;
+                        background: #0d6efd;
+                        color: #fff;
+                        padding: 6px 12px;
+                        z-index: 1000;
+                        border-radius: 4px;
+                    }
+
+                    .skip-link:focus {
+                        top: 10px;
+                    }
+
+                    :focus-visible {
+                        outline: 3px solid #ffbf47;
+                        outline-offset: 2px;
+                    }
+
+                    /* Header - Match reference design */
+                    .header-top-bar {
+                        background: #1a2744;
+                        min-height: 36px;
+                        border: none;
+                    }
+
+                    .header-flag-icon {
+                        height: 14px;
+                        border-radius: 2px;
+                    }
+
+                    .header-utility-nav .header-utility-sep {
+                        width: 1px;
+                        height: 14px;
+                        background: rgba(255, 255, 255, 0.35);
+                        margin: 0 10px;
+                        display: inline-block;
+                    }
+
+                    .header-font-btn {
+                        text-decoration: none !important;
+                        font-size: 0.8125rem;
+                        opacity: 0.85;
+                        transition: opacity 0.15s;
+                    }
+
+                    .header-font-btn:hover {
+                        opacity: 1;
+                    }
+
+                    .header-lang-dropdown {
+                        display: flex;
+                        align-items: center;
+                        gap: 5px;
+                        border-radius: 20px;
+                        padding: 2px 10px;
+                        transition: border-color 0.15s;
+                    }
+
+                    .header-lang-dropdown:hover {
+                        border-color: rgba(255, 255, 255, 0.4);
+                    }
+
+                    .header-globe-icon {
+                        font-size: 16px !important;
+                        color: #fff !important;
+                    }
+
+                    .header-lang-select {
+                        background: transparent !important;
+                        border: none !important;
+                        color: #fff !important;
+                        font-size: 0.8125rem;
+                        padding: 2px 4px;
+                        min-width: 72px;
+                        cursor: pointer;
+                    }
+
+                    .header-lang-select:focus {
+                        outline: none;
+                    }
+
+                    .header-lang-select option {
+                        background: #1a2744;
+                        color: #fff;
+                    }
+
+                    /* Main nav bar - white background */
+                    .with-vertical .navbar {
+                        background: #fff !important;
+                        min-height: 87px;
+                    }
+
+                    .header-brand {
+                        gap: 7px !important;
+                    }
+
+                    .header-logo-emblem {
+                        height: 61px;
+                        object-fit: contain;
+                    }
+
+                    .header-logo {
+                        height: 48px;
+                        object-fit: contain;
+                    }
+
+                    /* Desktop: larger, more prominent logo */
+                    @media (min-width: 992px) {
+                        .header-brand {
+                            gap: 7px !important;
+                        }
+
+                        .header-logo-emblem {
+                            height: 67px !important;
+                        }
+
+                        .header-logo {
+                            height: 50px !important;
+                        }
+                    }
+
+                    .header-app-name {
+                        font-size: 1.25rem;
+                        font-weight: 700;
+                        color: #004a93;
+                    }
+
+                    /* Nav container - light grey pill; scroll when wider than max width */
+                    :root {
+                        --header-main-nav-max-width: 42rem;
+                    }
+
+                    @media (min-width: 992px) {
+                        #mainNavbar {
+                            flex: 1 1 auto;
+                            min-width: 0;
+                            justify-content: center !important;
+                        }
+
+                        .header-main-nav-scroll {
+                            max-width: min(var(--header-main-nav-max-width), calc(100vw - 28rem));
+                            width: max-content;
+                            min-width: 0;
+                            flex: 0 1 auto;
+                            border-radius: var(--bs-border-radius, 0.25rem) !important;
+                            overflow: hidden;
+                        }
+
+                        .header-main-nav-scroll__viewport {
+                            display: block;
+                            overflow-x: auto;
+                            overflow-y: hidden;
+                            max-width: 100%;
+                            background: #f0f2f5 !important;
+                            border-radius: var(--bs-border-radius, 0.25rem) !important;
+                            padding: 4px !important;
+                            min-height: 44px;
+                            overscroll-behavior-x: contain;
+                            scroll-behavior: smooth;
+                            -webkit-overflow-scrolling: touch;
+                            /* Hidden by default — same look as project SimpleBar thumb on hover */
+                            scrollbar-width: none;
+                            -ms-overflow-style: none;
+                        }
+
+                        .header-main-nav-scroll__viewport::-webkit-scrollbar {
+                            height: 0;
+                        }
+
+                        .header-main-nav-scroll.is-scrollable:hover .header-main-nav-scroll__viewport,
+                        .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport:hover {
+                            scrollbar-width: thin;
+                            scrollbar-color: rgba(0, 0, 0, 0.5) transparent;
+                            padding-bottom: 6px !important;
+                        }
+
+                        .header-main-nav-scroll.is-scrollable:hover .header-main-nav-scroll__viewport::-webkit-scrollbar,
+                        .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport:hover::-webkit-scrollbar {
+                            height: 11px;
+                        }
+
+                        .header-main-nav-scroll.is-scrollable:hover .header-main-nav-scroll__viewport::-webkit-scrollbar-thumb,
+                        .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport:hover::-webkit-scrollbar-thumb {
+                            background: rgba(0, 0, 0, 0.5);
+                            border-radius: 7px;
+                        }
+
+                        .header-main-nav-scroll.is-scrollable:hover .header-main-nav-scroll__viewport::-webkit-scrollbar-track,
+                        .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport:hover::-webkit-scrollbar-track {
+                            background: transparent;
+                        }
+
+                        .header-main-nav-scroll__viewport:focus-visible {
+                            outline: 2px solid rgba(0, 74, 147, 0.35);
+                            outline-offset: 2px;
+                        }
+
+                        .header-main-nav-scroll.is-scrollable .header-main-nav-scroll__viewport {
+                            border-radius: var(--bs-border-radius, 0.25rem) !important;
+                        }
+                    }
+
+                    .header-main-nav {
+                        display: flex !important;
+                        flex-direction: row !important;
+                        background: transparent !important;
+                        border-radius: 0;
+                        min-height: 36px;
+                        border: none;
+                        padding: 0 !important;
+                        margin: 0 !important;
+                        gap: 2px !important;
+                        flex-wrap: nowrap !important;
+                        width: max-content;
+                        max-width: none;
+                    }
+
+                    .header-main-nav .nav-item {
+                        flex: 0 0 auto;
+                    }
+
+                    .header-nav-link {
+                        color: var(--bs-body-color) !important;
+                        border-radius: 50rem;
+                        text-decoration: none !important;
+                        border-bottom: none;
+                        font-size: 0.875rem;
+                        padding: 0.5rem 1.125rem !important;
+                        transition: color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+                        white-space: nowrap;
+                    }
+
+                    .header-nav-link:hover {
+                        color: var(--bs-primary) !important;
+                        background-color: rgba(var(--bs-primary-rgb), 0.08);
+                    }
+
+                    .header-nav-link.active {
+                        color: #fff !important;
+                        background-color: #004a93 !important;
+                        box-shadow: 0 2px 8px rgba(0, 74, 147, 0.28);
+                        font-weight: 600;
+                    }
+
+                    .header-search-btn {
+                        background: transparent !important;
+                        border: none !important;
+                        color: #6c757d !important;
+                        padding: 6px 10px !important;
+                        border-radius: 8px;
+                    }
+
+                    .header-search-btn:hover {
+                        color: #004a93 !important;
+                    }
+
+                    /* Right side */
+                    .header-right-actions {
+                        margin-right: 0.75rem;
+                        gap: 10px !important;
+                    }
+
+                    .notification-btn {
+                        width: 42px;
+                        height: 42px;
+                        border-radius: 10px !important;
+                        background: #fff !important;
+                        display: inline-flex;
+                        align-items: center;
+                        justify-content: center;
+                        padding: 0 !important;
+                        color: #5f6368 !important;
+                    }
+
+                    .notification-btn:hover {
+                        background: #f1f3f4 !important;
+                        border-color: #c4c7cc !important;
+                        color: #3c4043 !important;
+                    }
+
+                    .notification-btn .material-icons {
+                        font-size: 22px !important;
+                    }
+
+                    .header-icon-sm {
+                        font-size: 22px !important;
+                    }
+
+                    .header-logout-icon {
+                        font-size: 22px !important;
+                    }
+
+                    .header-last-login {
+                        font-size: 0.8125rem;
+                    }
+
+                    .header-profile-trigger {
+                        border-radius: 50rem !important;
+                        padding: 4px 12px 4px 4px !important;
+                        transition: background-color 0.15s ease;
+                    }
+
+                    .header-profile-trigger:hover {
+                        background-color: #f1f3f4 !important;
+                    }
+
+                    .header-profile-chevron {
+                        font-size: 1.25rem !important;
+                        line-height: 1;
+                        color: #5f6368 !important;
+                        opacity: 0;
+                        margin-left: 2px;
+                        transition: opacity 0.18s ease, transform 0.18s ease;
+                        pointer-events: none;
+                    }
+
+                    .header-profile-trigger:hover .header-profile-chevron,
+                    .header-profile-trigger:focus-visible .header-profile-chevron,
+                    .header-profile-trigger.show .header-profile-chevron {
+                        opacity: 1;
+                    }
+
+                    .header-profile-trigger.show .header-profile-chevron {
+                        transform: rotate(180deg);
+                    }
+
+                    .header-profile-avatar {
+                        width: 55px;
+                        height: 55px;
+                        background: linear-gradient(135deg, #e0e7f3, #c8d8f0);
+                        color: #1a73e8;
+                        overflow: hidden;
+                        flex-shrink: 0;
+                    }
+
+                    .header-profile-img {
+                        width: 100%;
+                        height: 100%;
+                        object-fit: cover;
+                        display: block;
+                    }
+
+                    .header-profile-fallback-icon {
+                        display: none;
+                    }
+
+                    .header-profile-name {
+                        max-width: 160px;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        white-space: nowrap;
+                        font-size: 0.875rem;
+                        font-weight: 600;
+                        color: #202124 !important;
+                    }
+
+                    .header-profile-role {
+                        font-size: 0.75rem;
+                        color: #5f6368 !important;
+                    }
+
+                    .header-profile-dropdown-menu .dropdown-item {
+                        font-weight: 500;
+                    }
+
+                    .header-profile-dropdown-menu .dropdown-item:hover,
+                    .header-profile-dropdown-menu .dropdown-item:focus {
+                        background-color: rgba(13, 110, 253, 0.06);
+                    }
+
+                    .header-profile-dropdown-menu .dropdown-item:active {
+                        background-color: rgba(13, 110, 253, 0.12);
+                    }
+
+                    /* Log out row — reference hover: light red wash + red label + red icon */
+                    .header-profile-dropdown-menu .header-profile-dropdown-logout {
+                        color: var(--bs-body-color);
+                    }
+
+                    .header-profile-dropdown-menu .header-profile-dropdown-logout .header-profile-logout-icon {
+                        color: var(--bs-body-color);
+                        opacity: 0.8;
+                    }
+
+                    .header-profile-dropdown-menu .header-profile-dropdown-logout:hover,
+                    .header-profile-dropdown-menu .header-profile-dropdown-logout:focus-visible {
+                        background-color: rgba(220, 53, 69, 0.12) !important;
+                        color: #c82333 !important;
+                    }
+
+                    .header-profile-dropdown-menu .header-profile-dropdown-logout:hover .header-profile-logout-icon,
+                    .header-profile-dropdown-menu .header-profile-dropdown-logout:focus-visible .header-profile-logout-icon {
+                        color: #dc3545 !important;
+                        opacity: 1 !important;
+                    }
+
+                    .header-profile-dropdown-menu .header-profile-dropdown-logout:active {
+                        background-color: rgba(220, 53, 69, 0.2) !important;
+                        color: #b02a37 !important;
+                    }
+
+                    .header-profile-dropdown-avatar {
+                        width: 3rem;
+                        height: 3rem;
+                        background: linear-gradient(135deg, #e0e7f3, #c8d8f0);
+                        color: #1a73e8;
+                    }
+
+                    .header-profile-dropdown-img {
+                        display: block;
+                    }
+
+                    .header-profile-dropdown-fallback-icon {
+                        display: none;
+                    }
+
+                    /* Divider before logout */
+                    .header-logout-divider {
+                        width: 1px;
+                        height: 28px;
+                        background: rgba(0, 0, 0, 0.08);
+                        flex-shrink: 0;
+                    }
+
+                    /* Logout button - enhanced */
+                    .header-logout-btn {
+                        gap: 3px;
+                        min-width: 52px;
+                        padding: 6px 10px !important;
+                        border-radius: 10px;
+                        color: #6c757d !important;
+                        border: 1px solid transparent;
+                        transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+                    }
+
+                    .header-logout-btn:hover {
+                        color: #004a93 !important;
+                        background-color: rgba(0, 74, 147, 0.08) !important;
+                        border-color: rgba(0, 74, 147, 0.12);
+                    }
+
+                    .header-logout-btn:active {
+                        transform: scale(0.97);
+                    }
+
+                    /* Notification dropdown: end-align on large screens, start-align on smaller for proper view */
+                    .dropdown-menu-end-lg[data-bs-popper] {
+                        left: 0;
+                        right: auto;
+                    }
+
+                    @media (min-width: 992px) {
+                        .dropdown-menu-end-lg[data-bs-popper] {
+                            left: auto;
+                            right: 0;
+                        }
+                    }
+
+                    @media (max-width: 991.98px) {
+                        body {
+                            padding-bottom: 64px !important;
+                        }
+
+                        /* Mobile: Right-align logout and header actions */
+                        .header-right-actions {
+                            width: 100%;
+                            justify-content: flex-end !important;
+                            margin-left: 0 !important;
+                            margin-right: 0 !important;
+                            padding: 0.5rem 0;
+                        }
+
+                        /* Hide sidebar by default on mobile - responsive width */
+                        .left-sidebar,
+                        .side-mini-panel,
+                        aside.side-mini-panel,
+                        aside.side-mini-panel.with-vertical {
+                            position: fixed !important;
+                            top: 0 !important;
+                            left: -100% !important;
+                            width: min(320px, 88vw) !important;
+                            max-width: 320px !important;
+                            height: 100vh !important;
+                            z-index: 1060 !important;
+                            background: transparent !important;
+                            transition: left 0.3s ease-in-out !important;
+                            display: block !important;
+                            visibility: hidden !important;
+                            opacity: 0 !important;
+                            overflow-y: auto !important;
+                        }
+
+                        /* Sidebar mini panel specific - compact when hidden */
+                        .side-mini-panel {
+                            width: 64px !important;
+                            left: -64px !important;
+                        }
+
+                        /* Hide sidebar tab content by default on mobile */
+                        #sidebarTabContent {
+                            display: none !important;
+                            visibility: hidden !important;
+                            opacity: 0 !important;
+                        }
+
+                        .sidebar-overlay {
+                            z-index: 1050 !important;
+                        }
+
+                        /* Ensure sidebar toggle button is accessible */
+                        #headerCollapse {
+                            z-index: 1040 !important;
+                            position: relative !important;
+                            pointer-events: auto !important;
+                        }
+
+                        /* Show sidebar when toggled - handle all sidebar instances */
+                        .left-sidebar.show-sidebar,
+                        .side-mini-panel.show-sidebar,
+                        aside.side-mini-panel.show-sidebar,
+                        aside.side-mini-panel.with-vertical.show-sidebar,
+                        #sidebarTabContent .tab-pane.show.active .side-mini-panel.show-sidebar,
+                        #sidebarTabContent .tab-pane .side-mini-panel.show-sidebar {
+                            left: 0 !important;
+                            transform: translateX(0) !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                            display: block !important;
+                            background: transparent !important;
+                            pointer-events: auto !important;
+                        }
+
+                        /* Expand side-mini-panel to responsive width on mobile when open - so child module (sidebar-nav) is visible */
+                        .side-mini-panel.show-sidebar,
+                        aside.side-mini-panel.show-sidebar,
+                        aside.side-mini-panel.with-vertical.show-sidebar {
+                            width: min(320px, 88vw) !important;
+                            max-width: 320px !important;
+                        }
+
+                        /* Show sidebar tab content when sidebar is open */
+                        body.sidebar-open #sidebarTabContent {
+                            display: block !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                        }
+
+                        /* Ensure active sidebar tab pane is visible */
+                        body.sidebar-open #sidebarTabContent .tab-pane.show.active {
+                            display: block !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                        }
+
+                        .nav-container.d-lg-none {
+                            position: fixed !important;
+                            bottom: 0 !important;
+                            left: 0 !important;
+                            right: 0 !important;
+                            width: 100% !important;
+                            z-index: 1030 !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                            pointer-events: none !important;
+                            overflow: visible !important;
+                        }
+
+                        .nav-container.d-lg-none .mobile-tabbar {
+                            pointer-events: auto !important;
+                        }
+
+                        .mobile-tabbar {
+                            position: fixed !important;
+                            bottom: 0 !important;
+                            left: 0 !important;
+                            right: 0 !important;
+                            width: 100% !important;
+                            z-index: 1030 !important;
+                            display: flex !important;
+                            flex-direction: row !important;
+                            justify-content: space-around !important;
+                            align-items: center !important;
+                            gap: 2px !important;
+                            padding: 6px 4px !important;
+                            margin: 0 !important;
+                            background: #ffffff !important;
+                            border-top: 1px solid rgba(0, 0, 0, 0.08) !important;
+                            box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.06) !important;
+                            list-style: none !important;
+                            height: 64px !important;
+                            pointer-events: auto !important;
+                            overflow: visible !important;
+                        }
+
+                        /* Hide mobile tab bar when sidebar is open - handled by JS */
+                        body.sidebar-open .mobile-tabbar {
+                            display: none !important;
+                        }
+
+                        .mobile-tabbar .nav-item {
+                            flex: 1 1 0 !important;
+                            text-align: center !important;
+                            margin: 0 !important;
+                            padding: 0 !important;
+                        }
 
 
-                .mobile-tab-link {
-                    display: flex !important;
-                    flex-direction: column !important;
-                    align-items: center !important;
-                    justify-content: center !important;
-                    gap: 2px !important;
-                    padding: 6px 4px !important;
-                    font-size: 11px !important;
-                    color: #475569 !important;
-                    border-radius: 10px !important;
-                    text-decoration: none !important;
-                    width: 100% !important;
-                    height: 100% !important;
-                    border: none !important;
-                    background: transparent !important;
-                    cursor: pointer !important;
-                    pointer-events: auto !important;
-                    -webkit-tap-highlight-color: rgba(29, 78, 216, 0.1) !important;
-                    touch-action: manipulation !important;
-                }
+                        .mobile-tab-link {
+                            display: flex !important;
+                            flex-direction: column !important;
+                            align-items: center !important;
+                            justify-content: center !important;
+                            gap: 2px !important;
+                            padding: 6px 4px !important;
+                            font-size: 11px !important;
+                            color: #475569 !important;
+                            border-radius: 10px !important;
+                            text-decoration: none !important;
+                            width: 100% !important;
+                            height: 100% !important;
+                            border: none !important;
+                            background: transparent !important;
+                            cursor: pointer !important;
+                            pointer-events: auto !important;
+                            -webkit-tap-highlight-color: rgba(29, 78, 216, 0.1) !important;
+                            touch-action: manipulation !important;
+                        }
 
-                .mobile-tab-link:hover,
-                .mobile-tab-link:focus {
-                    color: #1d4ed8 !important;
-                    background: rgba(29, 78, 216, 0.05) !important;
-                }
+                        .mobile-tab-link:hover,
+                        .mobile-tab-link:focus {
+                            color: #1d4ed8 !important;
+                            background: rgba(29, 78, 216, 0.05) !important;
+                        }
 
-                .mobile-tab-link i {
-                    font-size: 22px !important;
-                    line-height: 22px !important;
-                    display: block !important;
-                }
+                        .mobile-tab-link i {
+                            font-size: 22px !important;
+                            line-height: 22px !important;
+                            display: block !important;
+                        }
 
-                .mobile-tab-link span {
-                    font-size: 10px !important;
-                    line-height: 1.2 !important;
-                    white-space: nowrap !important;
-                }
+                        .mobile-tab-link span {
+                            font-size: 10px !important;
+                            line-height: 1.2 !important;
+                            white-space: nowrap !important;
+                        }
 
-                .mobile-tab-link.active {
-                    color: #1d4ed8 !important;
-                    background: rgba(29, 78, 216, 0.08) !important;
-                }
+                        .mobile-tab-link.active {
+                            color: #1d4ed8 !important;
+                            background: rgba(29, 78, 216, 0.08) !important;
+                        }
 
-                .mobile-tab-link.active i {
-                    color: #1d4ed8 !important;
-                }
-            }
+                        .mobile-tab-link.active i {
+                            color: #1d4ed8 !important;
+                        }
+                    }
 
-            /* Very small phones - narrower sidebar */
-            @media (max-width: 375px) {
-                .left-sidebar,
-                .side-mini-panel,
-                aside.side-mini-panel,
-                aside.side-mini-panel.with-vertical {
-                    width: min(280px, 92vw) !important;
-                    max-width: 280px !important;
-                }
-                .side-mini-panel.show-sidebar,
-                aside.side-mini-panel.show-sidebar,
-                aside.side-mini-panel.with-vertical.show-sidebar {
-                    width: min(280px, 92vw) !important;
-                    max-width: 280px !important;
-                }
-            }
+                    /* Very small phones - narrower sidebar */
+                    @media (max-width: 375px) {
 
-            @media (max-width: 991.98px) and (orientation: landscape) {
-                .mobile-tabbar {
-                    height: 56px !important;
-                }
+                        .left-sidebar,
+                        .side-mini-panel,
+                        aside.side-mini-panel,
+                        aside.side-mini-panel.with-vertical {
+                            width: min(280px, 92vw) !important;
+                            max-width: 280px !important;
+                        }
 
-                body {
-                    padding-bottom: 56px !important;
-                }
+                        .side-mini-panel.show-sidebar,
+                        aside.side-mini-panel.show-sidebar,
+                        aside.side-mini-panel.with-vertical.show-sidebar {
+                            width: min(280px, 92vw) !important;
+                            max-width: 280px !important;
+                        }
+                    }
 
-                .mobile-tab-link {
-                    padding: 4px 2px !important;
-                }
+                    @media (max-width: 991.98px) and (orientation: landscape) {
+                        .mobile-tabbar {
+                            height: 56px !important;
+                        }
 
-                .mobile-tab-link i {
-                    font-size: 20px !important;
-                }
+                        body {
+                            padding-bottom: 56px !important;
+                        }
 
-                .mobile-tab-link span {
-                    font-size: 9px !important;
-                }
-            }
+                        .mobile-tab-link {
+                            padding: 4px 2px !important;
+                        }
 
-            /* Mobile notifications offcanvas - ensure it appears above tabbar */
-            @media (max-width: 991.98px) {
-                #notificationOffcanvasMobile {
-                    z-index: 1100 !important;
-                }
-            }
+                        .mobile-tab-link i {
+                            font-size: 20px !important;
+                        }
 
-            /* Desktop styles - ensure sidebar is visible */
-            @media (min-width: 992px) {
-                /* Reset any mobile-specific styles on desktop */
-                .left-sidebar,
-                .side-mini-panel,
-                aside.side-mini-panel,
-                aside.side-mini-panel.with-vertical {
-                    position: fixed !important;
-                    left: 0 !important;
-                    top: 0 !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                    display: block !important;
-                }
+                        .mobile-tab-link span {
+                            font-size: 9px !important;
+                        }
+                    }
 
-                /* Ensure sidebar tab content is visible on desktop */
-                #sidebarTabContent {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                }
+                    /* Mobile notifications offcanvas - ensure it appears above tabbar */
+                    @media (max-width: 991.98px) {
+                        #notificationOffcanvasMobile {
+                            z-index: 1100 !important;
+                        }
+                    }
 
-                /* Ensure active sidebar tab pane is visible */
-                #sidebarTabContent .tab-pane.show.active {
-                    display: block !important;
-                    visibility: visible !important;
-                    opacity: 1 !important;
-                }
+                    /* Desktop styles - ensure sidebar is visible */
+                    @media (min-width: 992px) {
 
-                /* Remove overlay on desktop */
-                .sidebar-overlay {
-                    display: none !important;
-                }
+                        /* Reset any mobile-specific styles on desktop */
+                        .left-sidebar,
+                        .side-mini-panel,
+                        aside.side-mini-panel,
+                        aside.side-mini-panel.with-vertical {
+                            position: fixed !important;
+                            left: 0 !important;
+                            top: 0 !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                            display: block !important;
+                        }
 
-                /* Ensure body doesn't have mobile padding on desktop */
-                body {
-                    padding-bottom: 0 !important;
-                }
+                        /* Ensure sidebar tab content is visible on desktop */
+                        #sidebarTabContent {
+                            display: block !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                        }
 
-                /* Reset any inline styles that might hide sidebar on desktop */
-                .left-sidebar[style*="left: -"],
-                .side-mini-panel[style*="left: -"],
-                aside.side-mini-panel[style*="left: -"] {
-                    left: 0 !important;
-                }
-            }
+                        /* Ensure active sidebar tab pane is visible */
+                        #sidebarTabContent .tab-pane.show.active {
+                            display: block !important;
+                            visibility: visible !important;
+                            opacity: 1 !important;
+                        }
 
-            /* Medium desktop fallback (e.g., 1280x1024 at 100% zoom):
+                        /* Remove overlay on desktop */
+                        .sidebar-overlay {
+                            display: none !important;
+                        }
+
+                        /* Ensure body doesn't have mobile padding on desktop */
+                        body {
+                            padding-bottom: 0 !important;
+                        }
+
+                        /* Reset any inline styles that might hide sidebar on desktop */
+                        .left-sidebar[style*="left: -"],
+                        .side-mini-panel[style*="left: -"],
+                        aside.side-mini-panel[style*="left: -"] {
+                            left: 0 !important;
+                        }
+                    }
+
+                    /* Medium desktop fallback (e.g., 1280x1024 at 100% zoom):
                keep content shifted so fixed sidebar doesn't overlap mid section. */
-            @media (min-width: 992px) and (max-width: 1299.98px) {
-                html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper {
-                    margin-left: calc(80px + 240px) !important;
-                    width: calc(100% - 320px) !important;
-                }
+                    @media (min-width: 992px) and (max-width: 1299.98px) {
+                        html[data-layout="vertical"] body[data-sidebartype="full"] .page-wrapper {
+                            margin-left: calc(80px + 240px) !important;
+                            width: calc(100% - 320px) !important;
+                        }
 
-                html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
-                    margin-left: 80px !important;
-                    width: calc(100% - 80px) !important;
-                }
-            }
-            </style>
-<script>
-    const root = document.documentElement;
-    let fontSize = 100;
+                        html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .page-wrapper {
+                            margin-left: 80px !important;
+                            width: calc(100% - 80px) !important;
+                        }
+                    }
+                </style>
+                <script>
+                    const root = document.documentElement;
+                    let fontSize = 100;
 
-    document.querySelectorAll('[aria-label]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (btn.textContent === 'A+') fontSize += 10;
-            if (btn.textContent === 'A-') fontSize -= 10;
-            if (btn.textContent === 'A') fontSize = 100;
-            root.style.fontSize = fontSize + '%';
-        });
-    });
-</script>
+                    document.querySelectorAll('[aria-label]').forEach(btn => {
+                        btn.addEventListener('click', () => {
+                            if (btn.textContent === 'A+') fontSize += 10;
+                            if (btn.textContent === 'A-') fontSize -= 10;
+                            if (btn.textContent === 'A') fontSize = 100;
+                            root.style.fontSize = fontSize + '%';
+                        });
+                    });
+                </script>
 
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Sidebar toggle handler for mobile
-                const sidebarToggler = document.getElementById('headerCollapse');
-                const mobileTabbar = document.querySelector('.mobile-tabbar');
-                
-                // Function to get the currently active sidebar (from active tab)
-                function getActiveSidebar() {
-                    // First, try to find sidebar in the active sidebar tab pane
-                    const activeSidebarPane = document.querySelector('#sidebarTabContent .tab-pane.show.active');
-                    if (activeSidebarPane) {
-                        const sidebarInPane = activeSidebarPane.querySelector('.side-mini-panel');
-                        if (sidebarInPane) return sidebarInPane;
-                    }
-                    
-                    // Fallback: find any visible sidebar
-                    const visibleSidebar = document.querySelector('.side-mini-panel:not([style*="display: none"])');
-                    if (visibleSidebar) return visibleSidebar;
-                    
-                    // Last resort: find any sidebar
-                    return document.querySelector('.left-sidebar') || document.querySelector('.side-mini-panel');
-                }
-                
-                function updateSidebarState() {
-                    // Only apply mobile-specific styles on mobile
-                    if (window.innerWidth >= 992) {
-                        // On desktop, don't interfere with sidebar visibility
-                        // Let desktop CSS handle it
-                        return;
-                    }
-                    
-                    const sidebar = getActiveSidebar();
-                    if (!sidebar) return;
-                    
-                    const isOpen = sidebar.classList.contains('show-sidebar');
-                    const sidebarTabContent = document.getElementById('sidebarTabContent');
-                    
-                    if (isOpen) {
-                        document.body.classList.add('sidebar-open');
-                        
-                        // Ensure sidebar and its content are visible (mobile only)
-                        sidebar.style.left = '0';
-                        sidebar.style.visibility = 'visible';
-                        sidebar.style.opacity = '1';
-                        sidebar.style.display = 'block';
-                        
-                        // Ensure sidebar tab content is visible
-                        if (sidebarTabContent) {
-                            sidebarTabContent.style.display = 'block';
-                            sidebarTabContent.style.visibility = 'visible';
-                            sidebarTabContent.style.opacity = '1';
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        // Sidebar toggle handler for mobile
+                        const sidebarToggler = document.getElementById('headerCollapse');
+                        const mobileTabbar = document.querySelector('.mobile-tabbar');
+
+                        // Function to get the currently active sidebar (from active tab)
+                        function getActiveSidebar() {
+                            // First, try to find sidebar in the active sidebar tab pane
+                            const activeSidebarPane = document.querySelector(
+                                '#sidebarTabContent .tab-pane.show.active');
+                            if (activeSidebarPane) {
+                                const sidebarInPane = activeSidebarPane.querySelector('.side-mini-panel');
+                                if (sidebarInPane) return sidebarInPane;
+                            }
+
+                            // Fallback: find any visible sidebar
+                            const visibleSidebar = document.querySelector(
+                                '.side-mini-panel:not([style*="display: none"])');
+                            if (visibleSidebar) return visibleSidebar;
+
+                            // Last resort: find any sidebar
+                            return document.querySelector('.left-sidebar') || document.querySelector(
+                                '.side-mini-panel');
                         }
-                        
-                        // Ensure overlay is visible
-                        let overlay = document.querySelector('.sidebar-overlay');
-                        if (!overlay) {
-                            overlay = document.createElement('div');
-                            overlay.className = 'sidebar-overlay';
-                            document.body.appendChild(overlay);
-                        }
-                        overlay.classList.add('active');
-                        
-                        // Prevent body scroll when sidebar is open
-                        document.body.style.overflow = 'hidden';
-                    } else {
-                        document.body.classList.remove('sidebar-open');
-                        
-                        // Hide sidebar (mobile only)
-                        const sidebarWidth = sidebar.classList.contains('side-mini-panel') ? '-70px' : '-100%';
-                        sidebar.style.left = sidebarWidth;
-                        sidebar.style.visibility = 'hidden';
-                        sidebar.style.opacity = '0';
-                        
-                        // Hide sidebar tab content
-                        if (sidebarTabContent) {
-                            sidebarTabContent.style.display = 'none';
-                            sidebarTabContent.style.visibility = 'hidden';
-                            sidebarTabContent.style.opacity = '0';
-                        }
-                        
-                        // Hide overlay
-                        const overlay = document.querySelector('.sidebar-overlay');
-                        if (overlay) {
-                            overlay.classList.remove('active');
-                        }
-                        
-                        // Restore body scroll
-                        document.body.style.overflow = '';
-                    }
-                }
-                
-                // Initialize: Hide sidebar by default on mobile only
-                if (window.innerWidth < 992) {
-                    const sidebar = getActiveSidebar();
-                    if (sidebar) {
-                        sidebar.classList.remove('show-sidebar');
-                        const sidebarTabContent = document.getElementById('sidebarTabContent');
-                        if (sidebarTabContent) {
-                            sidebarTabContent.style.display = 'none';
-                            sidebarTabContent.style.visibility = 'hidden';
-                            sidebarTabContent.style.opacity = '0';
-                        }
-                    }
-                } else {
-                    // On desktop: ensure sidebar is visible and remove any mobile styles
-                    const sidebar = getActiveSidebar();
-                    if (sidebar) {
-                        // Remove mobile-specific inline styles
-                        sidebar.style.left = '';
-                        sidebar.style.visibility = '';
-                        sidebar.style.opacity = '';
-                        sidebar.style.display = '';
-                        
-                        // Ensure sidebar tab content is visible
-                        const sidebarTabContent = document.getElementById('sidebarTabContent');
-                        if (sidebarTabContent) {
-                            sidebarTabContent.style.display = '';
-                            sidebarTabContent.style.visibility = '';
-                            sidebarTabContent.style.opacity = '';
-                        }
-                    }
-                }
-                
-                // Observe all sidebar elements for state changes
-                function observeSidebars() {
-                    const allSidebars = document.querySelectorAll('.side-mini-panel, .left-sidebar');
-                    allSidebars.forEach(sidebar => {
-                        const observer = new MutationObserver(function(mutations) {
-                            mutations.forEach(function(mutation) {
-                                if (mutation.attributeName === 'class') {
-                                    updateSidebarState();
+
+                        function updateSidebarState() {
+                            // Only apply mobile-specific styles on mobile
+                            if (window.innerWidth >= 992) {
+                                // Clear mobile inline hides so desktop sidebar / tab panes stay visible
+                                const sidebarTabContent = document.getElementById('sidebarTabContent');
+                                if (sidebarTabContent) {
+                                    sidebarTabContent.style.display = '';
+                                    sidebarTabContent.style.visibility = '';
+                                    sidebarTabContent.style.opacity = '';
                                 }
-                            });
-                        });
-                        
-                        observer.observe(sidebar, {
-                            attributes: true,
-                            attributeFilter: ['class']
-                        });
-                    });
-                }
-                
-                observeSidebars();
-                
-                // Re-observe when tabs change (new sidebar content might be added)
-                document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-                    tab.addEventListener('shown.bs.tab', function() {
-                        setTimeout(observeSidebars, 100);
-                        updateSidebarState();
-                    });
-                });
-                
-                // Handle window resize - switch between mobile and desktop
-                let resizeTimeout;
-                window.addEventListener('resize', function() {
-                    clearTimeout(resizeTimeout);
-                    resizeTimeout = setTimeout(function() {
-                        if (window.innerWidth >= 992) {
-                            // Switched to desktop - ensure sidebar is visible
+                                document.querySelectorAll('.side-mini-panel, .left-sidebar').forEach(function(el) {
+                                    el.style.left = '';
+                                    el.style.visibility = '';
+                                    el.style.opacity = '';
+                                    el.style.display = '';
+                                });
+                                document.body.classList.remove('sidebar-open');
+                                document.body.style.overflow = '';
+                                const overlay = document.querySelector('.sidebar-overlay');
+                                if (overlay) {
+                                    overlay.classList.remove('active');
+                                }
+                                return;
+                            }
+
+                            const sidebar = getActiveSidebar();
+                            if (!sidebar) return;
+
+                            const isOpen = sidebar.classList.contains('show-sidebar');
+                            const sidebarTabContent = document.getElementById('sidebarTabContent');
+
+                            if (isOpen) {
+                                document.body.classList.add('sidebar-open');
+
+                                // Ensure sidebar and its content are visible (mobile only)
+                                sidebar.style.left = '0';
+                                sidebar.style.visibility = 'visible';
+                                sidebar.style.opacity = '1';
+                                sidebar.style.display = 'block';
+
+                                // Ensure sidebar tab content is visible
+                                if (sidebarTabContent) {
+                                    sidebarTabContent.style.display = 'block';
+                                    sidebarTabContent.style.visibility = 'visible';
+                                    sidebarTabContent.style.opacity = '1';
+                                }
+
+                                // Ensure overlay is visible
+                                let overlay = document.querySelector('.sidebar-overlay');
+                                if (!overlay) {
+                                    overlay = document.createElement('div');
+                                    overlay.className = 'sidebar-overlay';
+                                    document.body.appendChild(overlay);
+                                }
+                                overlay.classList.add('active');
+
+                                // Prevent body scroll when sidebar is open
+                                document.body.style.overflow = 'hidden';
+                            } else {
+                                document.body.classList.remove('sidebar-open');
+
+                                // Hide sidebar (mobile only)
+                                const sidebarWidth = sidebar.classList.contains('side-mini-panel') ? '-70px' : '-100%';
+                                sidebar.style.left = sidebarWidth;
+                                sidebar.style.visibility = 'hidden';
+                                sidebar.style.opacity = '0';
+
+                                // Hide sidebar tab content
+                                if (sidebarTabContent) {
+                                    sidebarTabContent.style.display = 'none';
+                                    sidebarTabContent.style.visibility = 'hidden';
+                                    sidebarTabContent.style.opacity = '0';
+                                }
+
+                                // Hide overlay
+                                const overlay = document.querySelector('.sidebar-overlay');
+                                if (overlay) {
+                                    overlay.classList.remove('active');
+                                }
+
+                                // Restore body scroll
+                                document.body.style.overflow = '';
+                            }
+                        }
+
+                        // Initialize: Hide sidebar by default on mobile only
+                        if (window.innerWidth < 992) {
+                            const sidebar = getActiveSidebar();
+                            if (sidebar) {
+                                sidebar.classList.remove('show-sidebar');
+                                const sidebarTabContent = document.getElementById('sidebarTabContent');
+                                if (sidebarTabContent) {
+                                    sidebarTabContent.style.display = 'none';
+                                    sidebarTabContent.style.visibility = 'hidden';
+                                    sidebarTabContent.style.opacity = '0';
+                                }
+                            }
+                        } else {
+                            // On desktop: ensure sidebar is visible and remove any mobile styles
                             const sidebar = getActiveSidebar();
                             if (sidebar) {
                                 // Remove mobile-specific inline styles
@@ -1030,7 +1536,7 @@
                                 sidebar.style.visibility = '';
                                 sidebar.style.opacity = '';
                                 sidebar.style.display = '';
-                                
+
                                 // Ensure sidebar tab content is visible
                                 const sidebarTabContent = document.getElementById('sidebarTabContent');
                                 if (sidebarTabContent) {
@@ -1038,429 +1544,579 @@
                                     sidebarTabContent.style.visibility = '';
                                     sidebarTabContent.style.opacity = '';
                                 }
-                                
-                                // Remove overlay
-                                const overlay = document.querySelector('.sidebar-overlay');
-                                if (overlay) {
-                                    overlay.classList.remove('active');
-                                }
-                                
-                                // Restore body scroll
-                                document.body.style.overflow = '';
-                                document.body.classList.remove('sidebar-open');
                             }
-                        } else {
-                            // Switched to mobile - apply mobile styles
-                            updateSidebarState();
                         }
-                    }, 150);
-                });
-                
-                // Check initial state
-                updateSidebarState();
-                
-                // Handle overlay clicks
-                document.addEventListener('click', function(e) {
-                    const overlay = document.querySelector('.sidebar-overlay');
-                    if (overlay && e.target === overlay && overlay.classList.contains('active')) {
-                        const sidebar = getActiveSidebar();
-                        if (sidebar) {
-                            sidebar.classList.remove('show-sidebar');
-                            updateSidebarState();
-                        }
-                    }
-                });
-                
-                // Ensure sidebar toggle button works
-                if (sidebarToggler) {
-                    sidebarToggler.addEventListener('click', function(e) {
-                        // On desktop, let the default sidebar toggle behavior work
-                        if (window.innerWidth >= 992) {
-                            // Don't prevent default on desktop - let existing sidebar toggle handle it
-                            return;
-                        }
-                        
-                        // On mobile, handle toggle
-                        e.preventDefault();
-                        e.stopPropagation();
-                        const sidebar = getActiveSidebar();
-                        if (sidebar) {
-                            sidebar.classList.toggle('show-sidebar');
-                            updateSidebarState();
-                        }
-                    });
-                }
-                
-                // Mobile collapse: document-level delegation (capture phase)
-                let collapseHandledAt = 0;
-                function handleMobileCollapse(e) {
-                    if (window.innerWidth >= 992) return;
-                    
-                    const trigger = e.target.closest('[data-bs-toggle="collapse"]');
-                    if (!trigger) return;
-                    
-                    const sidebarTabContent = document.getElementById('sidebarTabContent');
-                    if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
-                    
-                    if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
-                    
-                    // Prevent double-fire from pointerup + click on touch devices
-                    const now = Date.now();
-                    if (now - collapseHandledAt < 400) return;
-                    collapseHandledAt = now;
-                    
-                    const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') || '').replace(/^#/, '');
-                    if (!targetId) return;
-                    
-                    const targetElement = document.getElementById(targetId);
-                    if (!targetElement) return;
-                    
-                    if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
-                        let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
-                        if (!bsCollapse) {
-                            bsCollapse = new bootstrap.Collapse(targetElement, { toggle: false });
-                        }
-                        bsCollapse.toggle();
-                        // Accordion: close other collapses in same sidebar-nav
-                        const parentNav = trigger.closest('.sidebar-nav');
-                        if (parentNav) {
-                            parentNav.querySelectorAll('.collapse').forEach(c => {
-                                if (c !== targetElement && c.classList.contains('show')) {
-                                    const other = bootstrap.Collapse.getInstance(c);
-                                    if (other) other.hide();
-                                }
+
+                        // Observe all sidebar elements for state changes
+                        function observeSidebars() {
+                            const allSidebars = document.querySelectorAll('.side-mini-panel, .left-sidebar');
+                            allSidebars.forEach(sidebar => {
+                                const observer = new MutationObserver(function(mutations) {
+                                    mutations.forEach(function(mutation) {
+                                        if (mutation.attributeName === 'class') {
+                                            updateSidebarState();
+                                        }
+                                    });
+                                });
+
+                                observer.observe(sidebar, {
+                                    attributes: true,
+                                    attributeFilter: ['class']
+                                });
                             });
                         }
-                        // Rotate arrow icon
-                        const icon = trigger.querySelector('.material-icons');
-                        if (icon) {
-                            setTimeout(() => {
-                                icon.textContent = targetElement.classList.contains('show') ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
-                            }, 350);
-                        }
-                        e.preventDefault();
-                        e.stopPropagation();
-                    }
-                }
-                
-                document.addEventListener('pointerup', handleMobileCollapse, true);
-                document.addEventListener('click', handleMobileCollapse, true);
-             
 
-                // Time format is already set in PHP, no need to override
+                        observeSidebars();
 
-                // Active tab indicator animation
-                const activeTab = document.querySelector('.nav-link.active');
-                const indicator = document.querySelector('.active-tab-indicator');
+                        // Re-observe when tabs change (new sidebar content might be added)
+                        document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                            tab.addEventListener('shown.bs.tab', function() {
+                                setTimeout(observeSidebars, 100);
+                                updateSidebarState();
+                            });
+                        });
 
-                if (activeTab && indicator) {
-                    updateIndicatorPosition(activeTab);
+                        // Handle window resize - switch between mobile and desktop
+                        let resizeTimeout;
+                        window.addEventListener('resize', function() {
+                            clearTimeout(resizeTimeout);
+                            resizeTimeout = setTimeout(function() {
+                                if (window.innerWidth >= 992) {
+                                    // Switched to desktop - ensure sidebar is visible
+                                    const sidebar = getActiveSidebar();
+                                    if (sidebar) {
+                                        // Remove mobile-specific inline styles
+                                        sidebar.style.left = '';
+                                        sidebar.style.visibility = '';
+                                        sidebar.style.opacity = '';
+                                        sidebar.style.display = '';
 
-                    // Listen for tab changes
-                    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
-                        tab.addEventListener('shown.bs.tab', function(e) {
-                            updateIndicatorPosition(e.target);
+                                        // Ensure sidebar tab content is visible
+                                        const sidebarTabContent = document.getElementById(
+                                            'sidebarTabContent');
+                                        if (sidebarTabContent) {
+                                            sidebarTabContent.style.display = '';
+                                            sidebarTabContent.style.visibility = '';
+                                            sidebarTabContent.style.opacity = '';
+                                        }
 
-                            // Keep active state in sync between desktop and mobile tabs
-                            const targetId = e.target.getAttribute('href');
-                            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(link => {
-                                if (link.getAttribute('href') === targetId) {
-                                    link.classList.add('active');
-                                    link.setAttribute('aria-selected', 'true');
+                                        // Remove overlay
+                                        const overlay = document.querySelector('.sidebar-overlay');
+                                        if (overlay) {
+                                            overlay.classList.remove('active');
+                                        }
+
+                                        // Restore body scroll
+                                        document.body.style.overflow = '';
+                                        document.body.classList.remove('sidebar-open');
+                                    }
                                 } else {
-                                    link.classList.remove('active');
-                                    link.setAttribute('aria-selected', 'false');
+                                    // Switched to mobile - apply mobile styles
+                                    updateSidebarState();
+                                }
+                            }, 150);
+                        });
+
+                        // Check initial state
+                        updateSidebarState();
+
+                        // Handle overlay clicks
+                        document.addEventListener('click', function(e) {
+                            const overlay = document.querySelector('.sidebar-overlay');
+                            if (overlay && e.target === overlay && overlay.classList.contains('active')) {
+                                const sidebar = getActiveSidebar();
+                                if (sidebar) {
+                                    sidebar.classList.remove('show-sidebar');
+                                    updateSidebarState();
+                                }
+                            }
+                        });
+
+                        // Ensure sidebar toggle button works
+                        if (sidebarToggler) {
+                            sidebarToggler.addEventListener('click', function(e) {
+                                // On desktop, let the default sidebar toggle behavior work
+                                if (window.innerWidth >= 992) {
+                                    // Don't prevent default on desktop - let existing sidebar toggle handle it
+                                    return;
+                                }
+
+                                // On mobile, handle toggle
+                                e.preventDefault();
+                                e.stopPropagation();
+                                const sidebar = getActiveSidebar();
+                                if (sidebar) {
+                                    sidebar.classList.toggle('show-sidebar');
+                                    updateSidebarState();
+                                }
+                            });
+                        }
+
+                        // Mobile collapse: document-level delegation (capture phase)
+                        let collapseHandledAt = 0;
+
+                        function handleMobileCollapse(e) {
+                            if (window.innerWidth >= 992) return;
+
+                            const trigger = e.target.closest('[data-bs-toggle="collapse"]');
+                            if (!trigger) return;
+
+                            const sidebarTabContent = document.getElementById('sidebarTabContent');
+                            if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
+
+                            if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
+
+                            // Prevent double-fire from pointerup + click on touch devices
+                            const now = Date.now();
+                            if (now - collapseHandledAt < 400) return;
+                            collapseHandledAt = now;
+
+                            const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') ||
+                                '').replace(/^#/, '');
+                            if (!targetId) return;
+
+                            const targetElement = document.getElementById(targetId);
+                            if (!targetElement) return;
+
+                            if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                                let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
+                                if (!bsCollapse) {
+                                    bsCollapse = new bootstrap.Collapse(targetElement, {
+                                        toggle: false
+                                    });
+                                }
+                                bsCollapse.toggle();
+                                // Accordion: close other collapses in same sidebar-nav
+                                const parentNav = trigger.closest('.sidebar-nav');
+                                if (parentNav) {
+                                    parentNav.querySelectorAll('.collapse').forEach(c => {
+                                        if (c !== targetElement && c.classList.contains('show')) {
+                                            const other = bootstrap.Collapse.getInstance(c);
+                                            if (other) other.hide();
+                                        }
+                                    });
+                                }
+                                // Rotate arrow icon
+                                const icon = trigger.querySelector('.material-icons');
+                                if (icon) {
+                                    setTimeout(() => {
+                                        icon.textContent = targetElement.classList.contains('show') ?
+                                            'keyboard_arrow_up' : 'keyboard_arrow_down';
+                                    }, 350);
+                                }
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }
+
+                        document.addEventListener('pointerup', handleMobileCollapse, true);
+                        document.addEventListener('click', handleMobileCollapse, true);
+
+
+                        // Time format is already set in PHP, no need to override
+
+                        // Active tab indicator animation
+                        const activeTab = document.querySelector('.nav-link.active');
+                        const indicator = document.querySelector('.active-tab-indicator');
+
+                        if (activeTab && indicator) {
+                            updateIndicatorPosition(activeTab);
+
+                            // Listen for tab changes
+                            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                                tab.addEventListener('shown.bs.tab', function(e) {
+                                    updateIndicatorPosition(e.target);
+
+                                    // Keep active state in sync between desktop and mobile tabs
+                                    const targetId = e.target.getAttribute('href');
+                                    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(
+                                        link => {
+                                            if (link.getAttribute('href') === targetId) {
+                                                link.classList.add('active');
+                                                link.setAttribute('aria-selected', 'true');
+                                            } else {
+                                                link.classList.remove('active');
+                                                link.setAttribute('aria-selected', 'false');
+                                            }
+                                        });
+                                });
+                            });
+                        }
+
+                        function updateIndicatorPosition(element) {
+                            const rect = element.getBoundingClientRect();
+                            const parentRect = element.closest('.nav-container').getBoundingClientRect();
+
+                            indicator.style.width = `${rect.width}px`;
+                            indicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
+                        }
+
+                        // Enhanced dropdown interaction
+                        const financialDropdown = document.getElementById('financialDropdown');
+                        if (financialDropdown) {
+                            financialDropdown.addEventListener('focus', function() {
+                                this.setAttribute('aria-expanded', 'true');
+                            });
+
+                            financialDropdown.addEventListener('blur', function(e) {
+                                if (!this.parentElement.contains(e.relatedTarget)) {
+                                    this.setAttribute('aria-expanded', 'false');
+                                }
+                            });
+                        }
+
+                        // Search trigger functionality - scroll to DataTables search or focus search input
+                        const searchTriggers = document.querySelectorAll('.search-trigger');
+                        if (searchTriggers.length) {
+                            searchTriggers.forEach(trigger => {
+                                trigger.addEventListener('click', function(e) {
+                                    e.preventDefault();
+                                    e.stopPropagation();
+                                    this.setAttribute('aria-expanded', 'true');
+                                    // Find DataTables search input on current page
+                                    const dtSearchInput = document.querySelector(
+                                        '.dataTables_filter input');
+                                    if (dtSearchInput) {
+                                        dtSearchInput.scrollIntoView({
+                                            behavior: 'smooth',
+                                            block: 'center'
+                                        });
+                                        dtSearchInput.focus();
+                                    }
+                                });
+                            });
+                        }
+
+                        // Keyboard navigation enhancement
+                        document.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
+                            item.addEventListener('keydown', function(e) {
+                                if (e.key === 'Enter' || e.key === ' ') {
+                                    e.preventDefault();
+                                    this.click();
+                                }
+                            });
+                        });
+
+                        // Mobile tab handling - ensure Bootstrap tabs work
+                        const mobileTabs = document.querySelectorAll('.mobile-tab-link[data-bs-toggle="tab"]');
+                        mobileTabs.forEach(tab => {
+                            tab.addEventListener('click', function(e) {
+                                const href = this.getAttribute('href');
+                                if (!href || href === '#') {
+                                    e.preventDefault();
+                                    return;
+                                }
+
+                                // Find corresponding desktop tab and trigger it
+                                const desktopTab = document.querySelector(
+                                    `#mainNavbar .nav-link[href="${href}"]`);
+                                if (desktopTab) {
+                                    e.preventDefault();
+                                    desktopTab.click();
+                                } else {
+                                    // If no desktop tab found, try Bootstrap tab directly
+                                    if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                                        try {
+                                            const tabElement = new bootstrap.Tab(this);
+                                            tabElement.show();
+                                        } catch (err) {
+                                            console.log('Bootstrap tab error:', err);
+                                        }
+                                    }
                                 }
                             });
                         });
                     });
-                }
 
-                function updateIndicatorPosition(element) {
-                    const rect = element.getBoundingClientRect();
-                    const parentRect = element.closest('.nav-container').getBoundingClientRect();
+                    // Notification functions
+                    const notificationMarkReadUrlTemplate =
+                        '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
+                    const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
+                    const notificationPanelsUrl = '{{ route("admin.notifications.panels") }}';
 
-                    indicator.style.width = `${rect.width}px`;
-                    indicator.style.transform = `translateX(${rect.left - parentRect.left}px)`;
-                }
-
-                // Enhanced dropdown interaction
-                const financialDropdown = document.getElementById('financialDropdown');
-                if (financialDropdown) {
-                    financialDropdown.addEventListener('focus', function() {
-                        this.setAttribute('aria-expanded', 'true');
-                    });
-
-                    financialDropdown.addEventListener('blur', function(e) {
-                        if (!this.parentElement.contains(e.relatedTarget)) {
-                            this.setAttribute('aria-expanded', 'false');
-                        }
-                    });
-                }
-
-                // Search trigger functionality - scroll to DataTables search or focus search input
-                const searchTriggers = document.querySelectorAll('.search-trigger');
-                if (searchTriggers.length) {
-                    searchTriggers.forEach(trigger => {
-                        trigger.addEventListener('click', function(e) {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            this.setAttribute('aria-expanded', 'true');
-                            // Find DataTables search input on current page
-                            const dtSearchInput = document.querySelector('.dataTables_filter input');
-                            if (dtSearchInput) {
-                                dtSearchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                                dtSearchInput.focus();
-                            }
+                    function markAsRead(notificationId) {
+                        console.log('[Notification][Step 1] markAsRead called', {
+                            notificationId,
+                            currentUrl: window.location.href
                         });
-                    });
-                }
-
-                // Keyboard navigation enhancement
-                document.querySelectorAll('.nav-link, .dropdown-item').forEach(item => {
-                    item.addEventListener('keydown', function(e) {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault();
-                            this.click();
-                        }
-                    });
-                });
-
-                // Mobile tab handling - ensure Bootstrap tabs work
-                const mobileTabs = document.querySelectorAll('.mobile-tab-link[data-bs-toggle="tab"]');
-                mobileTabs.forEach(tab => {
-                    tab.addEventListener('click', function(e) {
-                        const href = this.getAttribute('href');
-                        if (!href || href === '#') {
-                            e.preventDefault();
-                            return;
-                        }
-                        
-                        // Find corresponding desktop tab and trigger it
-                        const desktopTab = document.querySelector(`#mainNavbar .nav-link[href="${href}"]`);
-                        if (desktopTab) {
-                            e.preventDefault();
-                            desktopTab.click();
-                        } else {
-                            // If no desktop tab found, try Bootstrap tab directly
-                            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-                                try {
-                                    const tabElement = new bootstrap.Tab(this);
-                                    tabElement.show();
-                                } catch(err) {
-                                    console.log('Bootstrap tab error:', err);
+                        const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
+                        console.log('[Notification][Step 2] Calling endpoint', {
+                            endpoint
+                        });
+                        fetch(endpoint, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
                                 }
-                            }
-                        }
-                    });
-                });
-            });
-
-            // Notification functions
-            const notificationMarkReadUrlTemplate = '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
-            const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
-            const notificationPanelsUrl = '{{ route("admin.notifications.panels") }}';
-            function markAsRead(notificationId) {
-                console.log('[Notification][Step 1] markAsRead called', { notificationId, currentUrl: window.location.href });
-                const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
-                console.log('[Notification][Step 2] Calling endpoint', { endpoint });
-                fetch(endpoint, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                        }
-                    })
-                    .then(response => {
-                        console.log('[Notification][Step 3] HTTP response', {
-                            status: response.status,
-                            ok: response.ok,
-                            redirected: response.redirected,
-                            responseUrl: response.url
-                        });
-                        return response.json().then(data => ({ ok: response.ok, status: response.status, data }));
-                    })
-                    .then(({ ok, status, data }) => {
-                        console.log('[Notification][Step 4] Controller JSON payload', { ok, status, data });
-                        if (data.success && data.redirect_url) {
-                            // Redirect to the appropriate module view
-                            console.log('[Notification][Step 5] Redirecting to redirect_url', { redirectUrl: data.redirect_url });
-                            window.location.href = data.redirect_url;
-                        } else if (data.success) {
-                            // Fallback: reload if no redirect URL
-                            console.log('[Notification][Step 5] success=true but redirect_url missing, triggering reload');
-                            // location.reload(); //ye redirect ho rha h 
-                        } else {
-                            console.log('[Notification][Step 5] Failed to mark notification as read', data);
-                        }
-                    })
-                    .catch(error => {
-                        console.log('[Notification][Step X] Exception in markAsRead', error);
-                        // Fallback to dashboard on error
-                        console.log('[Notification][Fallback] Redirecting to dashboard due to error');
-                        // window.location.href = '{{ route("admin.dashboard") }}';
-                    });
-            }
-
-            // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
-            document.addEventListener('click', function (e) {
-                const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
-                if (!target) return;
-
-                const id = target.getAttribute('data-notification-id');
-                if (!id) return;
-
-                console.log('[Notification][Step 0] Notification clicked', {
-                    id,
-                    elementClass: target.className
-                });
-                markAsRead(id);
-            });
-
-            function updateNotificationBadges(unreadCount) {
-                document.querySelectorAll('.notification-badge, .notification-badge-mobile').forEach(function (el) {
-                    el.remove();
-                });
-                if (!unreadCount || unreadCount <= 0) {
-                    return;
-                }
-                var label = unreadCount > 99 ? '99+' : String(unreadCount);
-                var desktopBtn = document.getElementById('notificationDropdown');
-                if (desktopBtn) {
-                    var desktopBadge = document.createElement('span');
-                    desktopBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge';
-                    desktopBadge.textContent = label;
-                    desktopBtn.appendChild(desktopBadge);
-                }
-                var mobileBtn = document.getElementById('notificationBtnMobile');
-                if (mobileBtn) {
-                    var mobileBadge = document.createElement('span');
-                    mobileBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile';
-                    mobileBadge.style.fontSize = '9px';
-                    mobileBadge.textContent = label;
-                    mobileBtn.appendChild(mobileBadge);
-                }
-            }
-
-            function toggleMarkAllButtons(unreadCount) {
-                document.querySelectorAll('.notification-mark-all-btn').forEach(function (btn) {
-                    btn.classList.toggle('d-none', !unreadCount || unreadCount <= 0);
-                });
-            }
-
-            function refreshNotificationPanels() {
-                return fetch(notificationPanelsUrl, {
-                    headers: {
-                        'Accept': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
+                            })
+                            .then(response => {
+                                console.log('[Notification][Step 3] HTTP response', {
+                                    status: response.status,
+                                    ok: response.ok,
+                                    redirected: response.redirected,
+                                    responseUrl: response.url
+                                });
+                                return response.json().then(data => ({
+                                    ok: response.ok,
+                                    status: response.status,
+                                    data
+                                }));
+                            })
+                            .then(({
+                                ok,
+                                status,
+                                data
+                            }) => {
+                                console.log('[Notification][Step 4] Controller JSON payload', {
+                                    ok,
+                                    status,
+                                    data
+                                });
+                                if (data.success && data.redirect_url) {
+                                    // Redirect to the appropriate module view
+                                    console.log('[Notification][Step 5] Redirecting to redirect_url', {
+                                        redirectUrl: data.redirect_url
+                                    });
+                                    window.location.href = data.redirect_url;
+                                } else if (data.success) {
+                                    // Fallback: reload if no redirect URL
+                                    console.log(
+                                        '[Notification][Step 5] success=true but redirect_url missing, triggering reload'
+                                    );
+                                    // location.reload(); //ye redirect ho rha h 
+                                } else {
+                                    console.log('[Notification][Step 5] Failed to mark notification as read', data);
+                                }
+                            })
+                            .catch(error => {
+                                console.log('[Notification][Step X] Exception in markAsRead', error);
+                                // Fallback to dashboard on error
+                                console.log('[Notification][Fallback] Redirecting to dashboard due to error');
+                                // window.location.href = '{{ route("admin.dashboard") }}';
+                            });
                     }
-                })
-                    .then(function (response) { return response.json(); })
-                    .then(function (data) {
-                        if (!data || !data.success) {
+
+                    // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
+                    document.addEventListener('click', function(e) {
+                        const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
+                        if (!target) return;
+
+                        const id = target.getAttribute('data-notification-id');
+                        if (!id) return;
+
+                        console.log('[Notification][Step 0] Notification clicked', {
+                            id,
+                            elementClass: target.className
+                        });
+                        markAsRead(id);
+                    });
+
+                    function updateNotificationBadges(unreadCount) {
+                        document.querySelectorAll('.notification-badge, .notification-badge-mobile').forEach(function(el) {
+                            el.remove();
+                        });
+                        if (!unreadCount || unreadCount <= 0) {
                             return;
                         }
-                        var desktopList = document.getElementById('notificationList');
-                        var mobileList = document.getElementById('notificationListMobile');
-                        if (desktopList && data.desktop_html) {
-                            desktopList.innerHTML = data.desktop_html;
+                        var label = unreadCount > 99 ? '99+' : String(unreadCount);
+                        var desktopBtn = document.getElementById('notificationDropdown');
+                        if (desktopBtn) {
+                            var desktopBadge = document.createElement('span');
+                            desktopBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge';
+                            desktopBadge.textContent = label;
+                            desktopBtn.appendChild(desktopBadge);
                         }
-                        if (mobileList && data.mobile_html) {
-                            mobileList.innerHTML = data.mobile_html;
+                        var mobileBtn = document.getElementById('notificationBtnMobile');
+                        if (mobileBtn) {
+                            var mobileBadge = document.createElement('span');
+                            mobileBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile';
+                            mobileBadge.style.fontSize = '9px';
+                            mobileBadge.textContent = label;
+                            mobileBtn.appendChild(mobileBadge);
                         }
-                        updateNotificationBadges(data.unread_count || 0);
-                        toggleMarkAllButtons(data.unread_count || 0);
-                    })
-                    .catch(function (error) {
-                        console.error('[Notification] Failed to refresh panels', error);
-                    });
-            }
+                    }
 
-            function markAllAsRead() {
-                fetch(notificationMarkAllReadUrl, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                            'Accept': 'application/json',
-                            'X-Requested-With': 'XMLHttpRequest'
-                        }
-                    })
-                    .then(function (response) { return response.json(); })
-                    .then(function (data) {
-                        if (data && data.success) {
-                            refreshNotificationPanels();
-                        }
-                    })
-                    .catch(function (error) {
-                        console.error('[Notification][AllRead] Exception', error);
-                    });
-            }
-            </script>
+                    function toggleMarkAllButtons(unreadCount) {
+                        document.querySelectorAll('.notification-mark-all-btn').forEach(function(btn) {
+                            btn.classList.toggle('d-none', !unreadCount || unreadCount <= 0);
+                        });
+                    }
+
+                    function refreshNotificationPanels() {
+                        return fetch(notificationPanelsUrl, {
+                                headers: {
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            })
+                            .then(function(response) {
+                                return response.json();
+                            })
+                            .then(function(data) {
+                                if (!data || !data.success) {
+                                    return;
+                                }
+                                var desktopList = document.getElementById('notificationList');
+                                var mobileList = document.getElementById('notificationListMobile');
+                                if (desktopList && data.desktop_html) {
+                                    desktopList.innerHTML = data.desktop_html;
+                                }
+                                if (mobileList && data.mobile_html) {
+                                    mobileList.innerHTML = data.mobile_html;
+                                }
+                                updateNotificationBadges(data.unread_count || 0);
+                                toggleMarkAllButtons(data.unread_count || 0);
+                            })
+                            .catch(function(error) {
+                                console.error('[Notification] Failed to refresh panels', error);
+                            });
+                    }
+
+                    function markAllAsRead() {
+                        fetch(notificationMarkAllReadUrl, {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                                    'Accept': 'application/json',
+                                    'X-Requested-With': 'XMLHttpRequest'
+                                }
+                            })
+                            .then(function(response) {
+                                return response.json();
+                            })
+                            .then(function(data) {
+                                if (data && data.success) {
+                                    refreshNotificationPanels();
+                                }
+                            })
+                            .catch(function(error) {
+                                console.error('[Notification][AllRead] Exception', error);
+                            });
+                    }
+                </script>
         </nav>
     </div>
 </header>
 
 
 
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        function scrollHeaderMainNavActiveTab(link) {
+            var viewport = link.closest('.header-main-nav-scroll__viewport') ||
+                document.querySelector('.header-main-nav-scroll__viewport');
+            if (!viewport || !link) {
+                return;
+            }
+            var linkRect = link.getBoundingClientRect();
+            var vpRect = viewport.getBoundingClientRect();
+            if (linkRect.left < vpRect.left || linkRect.right > vpRect.right) {
+                link.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'nearest',
+                    inline: 'nearest'
+                });
+            }
+        }
+
+        function updateHeaderMainNavScrollState() {
+            document.querySelectorAll('.header-main-nav-scroll').forEach(function(wrap) {
+                var viewport = wrap.querySelector('.header-main-nav-scroll__viewport');
+                if (!viewport) {
+                    return;
+                }
+                var scrollable = viewport.scrollWidth > viewport.clientWidth + 1;
+                wrap.classList.toggle('is-scrollable', scrollable);
+            });
+        }
+
+        document.querySelectorAll('.header-main-nav-scroll__viewport').forEach(function(viewport) {
+            viewport.addEventListener('scroll', updateHeaderMainNavScrollState, {
+                passive: true
+            });
+            if (typeof ResizeObserver !== 'undefined') {
+                new ResizeObserver(updateHeaderMainNavScrollState).observe(viewport);
+            }
+        });
+
+        updateHeaderMainNavScrollState();
+        window.addEventListener('resize', updateHeaderMainNavScrollState);
+        setTimeout(updateHeaderMainNavScrollState, 150);
+
+        document.querySelectorAll('.header-main-nav-scroll__viewport .header-nav-link.active').forEach(function(el) {
+            scrollHeaderMainNavActiveTab(el);
+        });
+
+        document.querySelectorAll('#mainNavbar [data-bs-toggle="tab"]').forEach(function(tab) {
+            tab.addEventListener('shown.bs.tab', function(e) {
+                if (e.target && e.target.classList.contains('header-nav-link')) {
+                    scrollHeaderMainNavActiveTab(e.target);
+                }
+                updateHeaderMainNavScrollState();
+            });
+        });
+    });
+</script>
+
 <!-- 🧠 Search Toggle Script -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    document.querySelectorAll("time").forEach(function(el) {
-        const dt = new Date(el.getAttribute("datetime"));
+    document.addEventListener('DOMContentLoaded', function() {
+        document.querySelectorAll("time").forEach(function(el) {
+            const dt = new Date(el.getAttribute("datetime"));
 
-        const day = String(dt.getDate()).padStart(2, '0');
-        const month = String(dt.getMonth() + 1).padStart(2, '0'); // JS months start at 0
-        const year = dt.getFullYear();
+            const day = String(dt.getDate()).padStart(2, '0');
+            const month = String(dt.getMonth() + 1).padStart(2, '0'); // JS months start at 0
+            const year = dt.getFullYear();
 
-        const hours = String(dt.getHours()).padStart(2, '0');
-        const minutes = String(dt.getMinutes()).padStart(2, '0');
-        const seconds = String(dt.getSeconds()).padStart(2, '0');
+            const hours = String(dt.getHours()).padStart(2, '0');
+            const minutes = String(dt.getMinutes()).padStart(2, '0');
+            const seconds = String(dt.getSeconds()).padStart(2, '0');
 
-        el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+            el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
+        });
     });
-});
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtn = document.getElementById('searchToggleBtn');
-    const searchBox = document.getElementById('searchContainer');
-    const closeBtn = document.getElementById('closeSearchBtn');
-    const searchInput = document.getElementById('tableSearchInput');
+    document.addEventListener('DOMContentLoaded', function() {
+        const toggleBtn = document.getElementById('searchToggleBtn');
+        const searchBox = document.getElementById('searchContainer');
+        const closeBtn = document.getElementById('closeSearchBtn');
+        const searchInput = document.getElementById('tableSearchInput');
 
-    if (toggleBtn && searchBox) {
-        toggleBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            searchBox.classList.toggle('show');
-            if (searchBox.classList.contains('show') && searchInput) {
-                searchInput.focus();
-            } else if (searchInput) {
+        if (toggleBtn && searchBox) {
+            toggleBtn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                searchBox.classList.toggle('show');
+                if (searchBox.classList.contains('show') && searchInput) {
+                    searchInput.focus();
+                } else if (searchInput) {
+                    searchInput.value = '';
+                }
+            });
+        }
+        if (closeBtn && searchBox && searchInput) {
+            closeBtn.addEventListener('click', () => {
+                searchBox.classList.remove('show');
                 searchInput.value = '';
-            }
-        });
-    }
-    if (closeBtn && searchBox && searchInput) {
-        closeBtn.addEventListener('click', () => {
-            searchBox.classList.remove('show');
-            searchInput.value = '';
-        });
-    }
-    if (searchBox && toggleBtn) {
-        document.addEventListener('click', (e) => {
-            if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+            });
+        }
+        if (searchBox && toggleBtn) {
+            document.addEventListener('click', (e) => {
+                if (!searchBox.contains(e.target) && !toggleBtn.contains(e.target)) {
+                    searchBox.classList.remove('show');
+                }
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && searchBox) {
                 searchBox.classList.remove('show');
             }
         });
-    }
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && searchBox) {
-            searchBox.classList.remove('show');
-        }
     });
-});
-
 </script>
 
 <!-- Fallback Tab Switcher (if Bootstrap JS not active) -->
@@ -1470,239 +2126,267 @@ document.addEventListener('DOMContentLoaded', function() {
     window.SARGAM_DASHBOARD_URL = "{{ route('admin.dashboard') }}";
 </script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Include both desktop and mobile tabs
-    const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
-    const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+    document.addEventListener('DOMContentLoaded', function() {
+        // Include both desktop and mobile tabs
+        const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
+        const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
 
-    function showPane(targetId) {
-        if (!targetId || targetId === '#') return; // Skip empty hrefs
+        function showPane(targetId) {
+            if (!targetId || targetId === '#') return; // Skip empty hrefs
 
-        // If the target pane has no server-rendered section on this page,
-        // keep current body content as-is; still switch header/sidebar tab state.
-        const targetPaneId = getMainContentPaneId(targetId);
-        const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
-        const canSwitchBodyPane = !!(targetPane && targetPane.children.length > 0);
+            // If the target pane has no server-rendered section on this page,
+            // keep current body content as-is; still switch header/sidebar tab state.
+            const targetPaneId = getMainContentPaneId(targetId);
+            const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
+            const canSwitchBodyPane = !!(targetPane && targetPane.children.length > 0);
 
-        if (canSwitchBodyPane) {
-            panes.forEach(p => {
-                if ('#' + p.id === targetId) {
-                    p.classList.add('show', 'active');
+            if (canSwitchBodyPane) {
+                panes.forEach(p => {
+                    if ('#' + p.id === targetId) {
+                        p.classList.add('show', 'active');
+                    } else {
+                        p.classList.remove('show', 'active');
+                    }
+                });
+            }
+
+            // Update all tabs (desktop and mobile)
+            tabLinks.forEach(l => {
+                const href = l.getAttribute('href');
+                if (href === targetId) {
+                    l.classList.add('active');
+                    l.setAttribute('aria-selected', 'true');
                 } else {
-                    p.classList.remove('show', 'active');
+                    l.classList.remove('active');
+                    l.setAttribute('aria-selected', 'false');
                 }
             });
+
+            // Save the active tab to localStorage
+            localStorage.setItem('activeMainTab', targetId);
         }
-        
-        // Update all tabs (desktop and mobile)
-        tabLinks.forEach(l => {
-            const href = l.getAttribute('href');
-            if (href === targetId) {
-                l.classList.add('active');
-                l.setAttribute('aria-selected', 'true');
-            } else {
-                l.classList.remove('active');
-                l.setAttribute('aria-selected', 'false');
+
+        function getMainContentPaneId(targetId) {
+            const map = {
+                '#home': 'home',
+                '#tab-setup': 'tab-setup',
+                '#tab-communications': 'tab-communications',
+                '#tab-academics': 'tab-academics',
+                '#tab-material-management': 'tab-material-management'
+            };
+            return map[targetId] || null;
+        }
+
+        function isMainContentPaneEmpty(targetId) {
+            const pid = getMainContentPaneId(targetId);
+            if (!pid) return true;
+            const pane = document.querySelector('#mainNavbarContent #' + pid);
+            if (!pane) return true;
+            return pane.children.length === 0;
+        }
+
+        /**
+         * After a tab switch, show the first mini-nav submenu so the sidebar is never blank.
+         */
+        function activateDefaultSubmenuForPane(targetId) {
+            const sidebarTabMap = {
+                '#home': '#sidebar-home',
+                '#tab-setup': '#sidebar-setup',
+                '#tab-communications': '#sidebar-communications',
+                '#tab-academics': '#sidebar-academics',
+                '#tab-material-management': '#sidebar-purchase-order'
+            };
+            const sidebarPaneSel = sidebarTabMap[targetId];
+            if (!sidebarPaneSel) return;
+
+            const pane = document.querySelector('#sidebarTabContent ' + sidebarPaneSel + '.tab-pane');
+            if (!pane) return;
+
+            const storageKey = 'active-mini-nav-' + (pane.id || 'global');
+            let storedId = localStorage.getItem(storageKey);
+            let itemEl = null;
+            if (storedId) {
+                try {
+                    itemEl = pane.querySelector('#' + (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(
+                        storedId) : storedId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1')));
+                } catch (err) {
+                    itemEl = null;
+                }
             }
-        });
-        
-        // Save the active tab to localStorage
-        localStorage.setItem('activeMainTab', targetId);
-    }
-
-    function getMainContentPaneId(targetId) {
-        const map = {
-            '#home': 'home',
-            '#tab-setup': 'tab-setup',
-            '#tab-communications': 'tab-communications',
-            '#tab-academics': 'tab-academics',
-            '#tab-material-management': 'tab-material-management'
-        };
-        return map[targetId] || null;
-    }
-
-    function isMainContentPaneEmpty(targetId) {
-        const pid = getMainContentPaneId(targetId);
-        if (!pid) return true;
-        const pane = document.querySelector('#mainNavbarContent #' + pid);
-        if (!pane) return true;
-        return pane.children.length === 0;
-    }
-
-    /**
-     * After a tab switch, show the first mini-nav submenu so the sidebar is never blank.
-     */
-    function activateDefaultSubmenuForPane(targetId) {
-        const sidebarTabMap = {
-            '#home': '#sidebar-home',
-            '#tab-setup': '#sidebar-setup',
-            '#tab-communications': '#sidebar-communications',
-            '#tab-academics': '#sidebar-academics',
-            '#tab-material-management': '#sidebar-purchase-order'
-        };
-        const sidebarPaneSel = sidebarTabMap[targetId];
-        if (!sidebarPaneSel) return;
-
-        const pane = document.querySelector('#sidebarTabContent ' + sidebarPaneSel + '.tab-pane');
-        if (!pane) return;
-
-        const storageKey = 'active-mini-nav-' + (pane.id || 'global');
-        let storedId = localStorage.getItem(storageKey);
-        let itemEl = null;
-        if (storedId) {
-            try {
-                itemEl = pane.querySelector('#' + (typeof CSS !== 'undefined' && CSS.escape ? CSS.escape(storedId) : storedId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1')));
-            } catch (err) {
-                itemEl = null;
+            if (!itemEl) {
+                itemEl = pane.querySelector('.mini-nav .mini-nav-item[id]') || pane.querySelector(
+                    '.mini-nav .mini-nav-item');
             }
-        }
-        if (!itemEl) {
-            itemEl = pane.querySelector('.mini-nav .mini-nav-item[id]') || pane.querySelector('.mini-nav .mini-nav-item');
-        }
-        if (!itemEl || !itemEl.id) return;
+            if (!itemEl || !itemEl.id) return;
 
-        pane.querySelectorAll('.mini-nav .mini-nav-item').forEach(el => el.classList.remove('selected'));
-        itemEl.classList.add('selected');
-
-        const targetMenuId = 'menu-right-' + itemEl.id;
-        const allMenus = pane.querySelectorAll('.sidebarmenu nav');
-        allMenus.forEach(nav => {
-            nav.classList.remove('d-block');
-            nav.style.display = 'none';
-        });
-        const safeId = targetMenuId.replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
-        const targetMenu = pane.querySelector('#' + safeId);
-        if (targetMenu) {
-            targetMenu.classList.add('d-block');
-            targetMenu.style.display = 'block';
-            document.body.setAttribute('data-sidebartype', 'full');
-        }
-
-    }
-
-    // Handle clicks on all tabs (desktop and mobile)
-    tabLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            const target = this.getAttribute('href');
-            if (!target || target === '#') {
-                e.preventDefault();
-                return; // Skip tabs without proper href
+            const miniNav = pane.querySelector('.mini-nav');
+            if (miniNav && typeof window.sargamActivateMiniNavItem === 'function') {
+                window.sargamActivateMiniNavItem(miniNav, itemEl, false);
             }
 
-            // From Setup (or any non-Home main tab), "Home" must load the dashboard route
-            // so the main content area is not an empty/stale #home pane.
-            // Note: some setup-only pages (e.g. admin.mess.*) used to leave $activeNavTab as #home;
-            // also detect "effective" setup when #tab-setup has content but #home does not.
-            if (target === '#home' && window.SARGAM_DASHBOARD_URL) {
-                const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-                const setupPane = document.querySelector('#mainNavbarContent #tab-setup.tab-pane');
-                const homePane = document.querySelector('#mainNavbarContent #home.tab-pane');
-                const setupHasContent = !!(setupPane && setupPane.children.length > 0);
-                const homeHasContent = !!(homePane && homePane.children.length > 0);
-                const effectiveSetup = routeTab !== '#home' || (setupHasContent && !homeHasContent);
-                if (effectiveSetup) {
+        }
+
+        // Handle clicks on all tabs (desktop and mobile)
+        tabLinks.forEach(link => {
+            link.addEventListener('click', function(e) {
+                const target = this.getAttribute('href');
+                if (!target || target === '#') {
                     e.preventDefault();
-                    window.location.href = window.SARGAM_DASHBOARD_URL;
-                    return;
+                    return; // Skip tabs without proper href
                 }
-            }
 
-            e.preventDefault();
-            showPane(target);
-            history.replaceState(null, '', target);
-            // Defer so #sidebarTabContent sync (other listeners) runs first
-            setTimeout(function() { activateDefaultSubmenuForPane(target); }, 0);
+                // From Setup (or any non-Home main tab), "Home" must load the dashboard route
+                // so the main content area is not an empty/stale #home pane.
+                // Note: some setup-only pages (e.g. admin.mess.*) used to leave $activeNavTab as #home;
+                // also detect "effective" setup when #tab-setup has content but #home does not.
+                if (target === '#home' && window.SARGAM_DASHBOARD_URL) {
+                    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+                    const setupPane = document.querySelector(
+                        '#mainNavbarContent #tab-setup.tab-pane');
+                    const homePane = document.querySelector('#mainNavbarContent #home.tab-pane');
+                    const setupHasContent = !!(setupPane && setupPane.children.length > 0);
+                    const homeHasContent = !!(homePane && homePane.children.length > 0);
+                    const effectiveSetup = routeTab !== '#home' || (setupHasContent && !
+                        homeHasContent);
+                    if (effectiveSetup) {
+                        e.preventDefault();
+                        window.location.href = window.SARGAM_DASHBOARD_URL;
+                        return;
+                    }
+                }
+
+                e.preventDefault();
+                showPane(target);
+                history.replaceState(null, '', target);
+                // Defer so #sidebarTabContent sync (other listeners) runs first
+                setTimeout(function() {
+                    activateDefaultSubmenuForPane(target);
+                }, 0);
+            });
         });
-    });
 
-    // Determine initial tab.
-    // Prefer server route tab first (source of truth),
-    // then infer from sidebar links, then localStorage fallback.
-    function inferTabFromSidebarByUrl() {
-        const current = new URL(window.location.href);
-        const currentPath = current.pathname.replace(/\/+$/, '');
-        const currentQuery = current.search || '';
-        const sidebarPanes = [
-            { pane: '#sidebar-home', tab: '#home' },
-            { pane: '#sidebar-setup', tab: '#tab-setup' },
-            { pane: '#sidebar-communications', tab: '#tab-communications' },
-            { pane: '#sidebar-academics', tab: '#tab-academics' },
-            { pane: '#sidebar-purchase-order', tab: '#tab-material-management' }
-        ];
+        // Determine initial tab.
+        // Prefer server route tab first (source of truth),
+        // then infer from sidebar links, then localStorage fallback.
+        function inferTabFromSidebarByUrl() {
+            const current = new URL(window.location.href);
+            const currentPath = current.pathname.replace(/\/+$/, '');
+            const currentQuery = current.search || '';
+            const sidebarPanes = [{
+                    pane: '#sidebar-home',
+                    tab: '#home'
+                },
+                {
+                    pane: '#sidebar-setup',
+                    tab: '#tab-setup'
+                },
+                {
+                    pane: '#sidebar-communications',
+                    tab: '#tab-communications'
+                },
+                {
+                    pane: '#sidebar-academics',
+                    tab: '#tab-academics'
+                },
+                {
+                    pane: '#sidebar-purchase-order',
+                    tab: '#tab-material-management'
+                }
+            ];
 
-        for (const item of sidebarPanes) {
-            const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
-            for (const link of links) {
-                if (!link.href) continue;
-                const target = new URL(link.href, window.location.origin);
-                const targetPath = target.pathname.replace(/\/+$/, '');
-                const targetQuery = target.search || '';
-                if (targetPath === currentPath && targetQuery === currentQuery) {
-                    return item.tab;
+            for (const item of sidebarPanes) {
+                const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+                for (const link of links) {
+                    if (!isSidebarNavLink(link)) continue;
+                    const target = new URL(link.href, window.location.origin);
+                    const targetPath = normalizePanePath(target.pathname);
+                    const targetQuery = target.search || '';
+                    if (targetPath === currentPath && targetQuery === currentQuery) {
+                        return item.tab;
+                    }
                 }
             }
+
+            // GET filters add query string; sidebar links are usually path-only. Match path, prefer non-Home panes first.
+            const pathMatchOrder = [...sidebarPanes].sort(function(a, b) {
+                if (a.tab === '#home') return 1;
+                if (b.tab === '#home') return -1;
+                return 0;
+            });
+            for (const item of pathMatchOrder) {
+                const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+                for (const link of links) {
+                    if (!link.href) continue;
+                    const target = new URL(link.href, window.location.origin);
+                    const targetPath = target.pathname.replace(/\/+$/, '');
+                    const targetQuery = target.search || '';
+                    if (targetPath === currentPath && !targetQuery && currentQuery) {
+                        return item.tab;
+                    }
+                }
+            }
+
+            // create/edit/show: longest pathname prefix wins (prefer non-Home on ties)
+            let bestTab = null;
+            let bestLen = -1;
+            for (const item of pathMatchOrder) {
+                const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
+                for (const link of links) {
+                    if (!isSidebarNavLink(link)) continue;
+                    const target = new URL(link.href, window.location.origin);
+                    const targetPath = normalizePanePath(target.pathname);
+                    if (currentPath !== targetPath && !currentPath.startsWith(targetPath + '/')) {
+                        continue;
+                    }
+                    if (targetPath.length > bestLen) {
+                        bestLen = targetPath.length;
+                        bestTab = item.tab;
+                    }
+                }
+            }
+            return bestTab;
         }
 
-        // GET filters add query string; sidebar links are usually path-only. Match path, prefer non-Home panes first.
-        const pathMatchOrder = [...sidebarPanes].sort(function (a, b) {
-            if (a.tab === '#home') return 1;
-            if (b.tab === '#home') return -1;
-            return 0;
-        });
-        for (const item of pathMatchOrder) {
-            const links = document.querySelectorAll(`${item.pane} .sidebar-link[href]`);
-            for (const link of links) {
-                if (!link.href) continue;
-                const target = new URL(link.href, window.location.origin);
-                const targetPath = target.pathname.replace(/\/+$/, '');
-                const targetQuery = target.search || '';
-                if (targetPath === currentPath && !targetQuery && currentQuery) {
-                    return item.tab;
-                }
-            }
-        }
+        const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
+        const savedTab = localStorage.getItem('activeMainTab');
+        const inferredTab = inferTabFromSidebarByUrl();
+        const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
+        const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
+        const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
+        let initial = '#home';
 
-        return null;
-    }
-
-    const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-    const savedTab = localStorage.getItem('activeMainTab');
-    const inferredTab = inferTabFromSidebarByUrl();
-    const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
-    const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
-    const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
-    let initial = '#home';
-
-    if (hasRouteTab) {
-        initial = routeTab;
-        console.log('Initial tab from route:', initial);
-    } else if (hasInferredTab) {
-        initial = inferredTab;
-        console.log('Initial tab from sidebar URL match:', initial);
-    } else if (hasSavedTab) {
-        initial = savedTab;
-        console.log('Initial tab from storage fallback:', initial);
-    } else {
-        console.log('Initial tab fallback to home');
-    }
-    
-    showPane(initial);
-    
-    // Sync mobile tabs with initial state
-    const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
-    allTabs.forEach(tab => {
-        const href = tab.getAttribute('href');
-        if (href === initial) {
-            tab.classList.add('active');
-            tab.setAttribute('aria-selected', 'true');
+        if (hasRouteTab) {
+            initial = routeTab;
+            console.log('Initial tab from route:', initial);
+        } else if (hasInferredTab) {
+            initial = inferredTab;
+            console.log('Initial tab from sidebar URL match:', initial);
+        } else if (hasSavedTab) {
+            initial = savedTab;
+            console.log('Initial tab from storage fallback:', initial);
         } else {
-            tab.classList.remove('active');
-            tab.setAttribute('aria-selected', 'false');
+            console.log('Initial tab fallback to home');
         }
+
+        showPane(initial);
+
+        // Sync mobile tabs with initial state
+        const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
+        allTabs.forEach(tab => {
+            const href = tab.getAttribute('href');
+            if (href === initial) {
+                tab.classList.add('active');
+                tab.setAttribute('aria-selected', 'true');
+            } else {
+                tab.classList.remove('active');
+                tab.setAttribute('aria-selected', 'false');
+            }
+        });
+
+        // Apply default submenu/content for initial tab (after sidebar init)
+        setTimeout(function() {
+            activateDefaultSubmenuForPane(initial);
+        }, 0);
     });
-    
-    // Apply default submenu/content for initial tab (after sidebar init)
-    setTimeout(function() { activateDefaultSubmenuForPane(initial); }, 0);
-});
 </script>
 <!-- 🌟 Header End -->

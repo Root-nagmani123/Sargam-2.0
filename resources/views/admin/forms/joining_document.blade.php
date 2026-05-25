@@ -157,7 +157,7 @@
     <div class="header sticky-top bg-white shadow-sm">
         <div class="container-fluid">
             <nav class="navbar navbar-expand-lg">
-                <div class="container-fluid px-0">
+                <div class="container-fluid">
                     <a class="navbar-brand me-2" href="#">
                         <img src="https://i.pinimg.com/736x/a8/fa/ef/a8faef978e6230b6a12d1c29c62d5edf.jpg"
                             alt="Logo 1" height="40">
@@ -205,7 +205,7 @@
     </div>
 
     <main style="flex: 1;">
-        <div class="container-fluid mt-3">
+        <div class="container-fluid">
             <div class="row">
                 <!-- Left Sidebar -->
                 <div class="col-md-3 col-lg-2 sidebar">

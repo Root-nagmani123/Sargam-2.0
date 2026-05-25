@@ -106,13 +106,6 @@
     }
 
     /* Basic container */
-    .calendar-component {
-        max-width: 100%;
-        background: #fff;
-        border-radius: 12px;
-        padding: 14px;
-        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-    }
 
     .calendar-header .form-select {
         max-width: 120px;
@@ -186,10 +179,6 @@
 
     /* Responsive behavior */
     @media (max-width: 480px) {
-        .calendar-component {
-            padding: 10px;
-            max-width: 100%;
-        }
 
         .calendar-header {
             gap: .5rem;
@@ -486,11 +475,15 @@
         50% { transform: scale(1.2); background: #0d6efd; }
     }
 
-    /* Sidebar toggle icon rotation */
+    /* Sidebar toggle icon (+ 17px per layout spec) */
+    .sidebarToggleIcon,
     #sidebarToggleIcon {
         transition: transform 0.3s ease-in-out;
         display: inline-block;
+        font-size: 17px !important;
+        line-height: 1;
     }
+    .sidebarToggleIcon.rotated,
     #sidebarToggleIcon.rotated {
         transform: rotate(180deg);
     }
@@ -498,9 +491,11 @@
 
     {{-- Page-specific styles stack --}}
     @stack('styles')
+    {{-- DataTables UI overrides (must load after page @push styles) --}}
+    <link rel="stylesheet" href="{{ asset('css/datatables-enhanced.css') }}?v={{ @filemtime(public_path('css/datatables-enhanced.css')) ?: time() }}">
 </head>
 
-<body data-sidebartype="full" @class(['admin-mess-module' => request()->routeIs('admin.mess.*')])>
+<body data-sidebartype="full">
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
     <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status" aria-live="polite" aria-label="Loading Sargam 2.0">
         <div class="sargam-loader-particles">
@@ -564,6 +559,9 @@
                 str_starts_with($path, 'admin/family-idcard') ||
                 str_starts_with($path, 'security/')
             ) {
+                $activeNavTab = '#home';
+            } elseif (request()->routeIs('member.profile.edit')) {
+                // Edit Profile lives in Home sidebar and @section('content'), not Setup.
                 $activeNavTab = '#home';
             } elseif (
                 request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
@@ -647,7 +645,6 @@
 
     @include('admin.layouts.footer')
      <script src="{{ asset('js/forms.js') }}"></script>
-    <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -657,6 +654,12 @@
     @endif
     @stack('scripts')
     @yield('scripts')
+    <script>
+    if (typeof window.sargamEnhanceDataTables === 'function') {
+        window.sargamEnhanceDataTables();
+        setTimeout(window.sargamEnhanceDataTables, 250);
+    }
+    </script>
     <script>
 document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('searchToggle');
@@ -699,7 +702,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const toggleBtn = document.getElementById("headerCollapse");
     if (!sidebar || !toggleBtn) return;
     // Query all icons across all tabs (multiple instances due to tab structure)
-    const icons = document.querySelectorAll("#sidebarToggleIcon");
+    const icons = document.querySelectorAll(".sidebarToggleIcon, #sidebarToggleIcon");
     const body = document.body;
     const sidebarmenus = document.querySelectorAll(".sidebarmenu");
     const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
@@ -735,66 +738,18 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Apply saved sidebar type preference; default to collapsed on first login
-    try {
-        const savedType = localStorage.getItem('SidebarType');
-        if (savedType) {
-            body.setAttribute('data-sidebartype', savedType);
-        } else {
-            // Default to collapsed (mini-sidebar) for new users
-            body.setAttribute('data-sidebartype', 'mini-sidebar');
-            localStorage.setItem('SidebarType', 'mini-sidebar');
-        }
-    } catch (e) {}
-
-    // Initialize collapsed state on page load
-    const sidebarType = body.getAttribute("data-sidebartype");
-    console.log('Initial sidebar type:', sidebarType);
-    console.log('Icon elements found:', icons.length);
-
-    if (sidebarType === "mini-sidebar") {
-        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
-        sidebar.classList.remove("show-sidebar");
-        // Add close class to sidebarmenu elements
-        sidebarmenus.forEach(function(el) {
-            el.classList.add("close");
-        });
-        // Set all icon instances to expand (collapsed state)
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.remove("rotated");
-        });
-        console.log('Set all icons to non-rotated (collapsed state)');
-        // After initial collapse state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
-    } else {
-        // Sidebar should be expanded
-        sidebar.classList.add("show-sidebar");
-        sidebarmenus.forEach(function(el) {
-            el.classList.remove("close");
-        });
-        // Set all icon instances to rotated (expanded state)
-        icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.add("rotated");
-        });
-        console.log('Set all icons to rotated (expanded state)');
-        // After initial expanded state, adjust DataTables to new layout
-        setTimeout(adjustAllDataTables, 300);
+    // Sidebar expand/collapse is handled by sidebar-navigation-fixed.js (click toggle only).
+    if (typeof window.sargamSyncSidebarToggleIcons === 'function') {
+        window.sargamSyncSidebarToggleIcons(body.getAttribute('data-sidebartype') || 'full');
     }
+    setTimeout(adjustAllDataTables, 300);
 
     // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
     function syncIconWithSidebar(type) {
-        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
-        allIcons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            if (type === "full") {
-                icon.classList.add("rotated");
-            } else {
-                icon.classList.remove("rotated");
-            }
-        });
-        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
+        if (typeof window.sargamSyncSidebarToggleIcons === 'function') {
+            window.sargamSyncSidebarToggleIcons(type);
+            return;
+        }
     }
 
     const observer = new MutationObserver(function(mutations) {

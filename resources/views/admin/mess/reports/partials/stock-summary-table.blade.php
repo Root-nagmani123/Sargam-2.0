@@ -10,7 +10,7 @@
                 <p class="ssr-toolbar-sub mb-0 small text-body-secondary">Opening, purchase, sale and closing by item</p>
             </div>
         </div>
-        <div class="d-flex align-items-center gap-2 flex-shrink-0">
+        <div class="d-flex align-items-center gap-1 flex-shrink-0">
             <span class="ssr-count-badge" title="Total items in this report">
                 <span class="material-symbols-rounded ssr-count-badge-icon" aria-hidden="true">inventory_2</span>
                 <span class="ssr-count-badge-label">{{ isset($reportPage) ? $reportPage->total() : (isset($reportData) ? count($reportData) : 0) }}</span>

@@ -1,4 +1,4 @@
-<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-mini-11" data-simplebar="init">
+<nav class="sidebar-nav sargam-menu-flyout simplebar-scrollable-y" id="menu-right-mini-11" data-mini-nav-target="mini-11" data-simplebar="init">
     <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
         <div class="simplebar-height-auto-observer-wrapper">
             <div class="simplebar-height-auto-observer"></div>
@@ -256,7 +256,6 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">Define Block/Building</span>
                                     </a>
                                 </li>
-                                {{-- Define Pay Scale - commented out
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.estate.define-pay-scale.*') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.define-pay-scale.index') }}">
@@ -306,39 +305,34 @@
                             </li>
                             <ul class="collapse list-unstyled ps-3" id="estateReportsCollapse">
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.pending-meter-reading') ? 'active' : '' }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.estate.reports.pending-meter-reading') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.pending-meter-reading') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Pending Meter Reading</span>
+                                        <span class="hide-menu">Pending Meter Reading</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.house-status') ? 'active' : '' }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.estate.reports.house-status') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.house-status') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">House Status</span>
+                                        <span class="hide-menu">House Status</span>
                                     </a>
                                 </li>
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.bill-report-grid') ? 'active' : '' }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.estate.reports.bill-report-grid') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.bill-report-grid') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report - Grid View</span>
+                                        <span class="hide-menu">Estate Bill Report - Grid View</span>
                                     </a>
                                 </li>
-                                <!-- <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.bill-report-print') ? 'active' : '' }}"
-                                        href="{{ route('admin.estate.reports.bill-report-print') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Estate Bill Report for Print</span>
-                                    </a>
-                                </li> -->
                                 <li class="sidebar-item">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.estate.reports.migration-report') ? 'active' : '' }}"
+                                    <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.estate.reports.migration-report') ? 'active' : '' }}"
                                         href="{{ route('admin.estate.reports.migration-report') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Migration Report (1998–2026)</span>
+                                        <span class="hide-menu">Migration Report (1998–2026)</span>
                                     </a>
                                 </li>
                             </ul>
                             @endif
 
                         </ul>
+
                     </div>
                 </div>
             </div>
@@ -349,7 +343,6 @@
         <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
     </div>
     <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
-        <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);">
-        </div>
+        <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);"></div>
     </div>
 </nav>

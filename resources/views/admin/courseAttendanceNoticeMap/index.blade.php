@@ -351,7 +351,7 @@
     padding-right: 2.25rem !important;
 }
 </style>
-<div class="container-fluid py-2 py-md-3">
+<div class="container-fluid">
        <x-breadcrum title="Notice /Memo Management" />
             <x-session_message />
 
@@ -438,7 +438,7 @@
                     </div>
                 </div>
                 <div class="col-12 col-xl-6">
-                    <div class="mb-3 d-flex align-items-center gap-2 flex-wrap justify-content-xl-end">
+                    <div class="mb-3 d-flex align-items-center gap-1 flex-wrap justify-content-xl-end">
                         <a href="{{ route('memo.notice.management.index') }}" class="btn btn-outline-secondary">
                             <i class="bi bi-x-circle me-1"></i> Clear Filters
                         </a>
@@ -519,7 +519,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 @endphp
                             <!-- Conversations -->
                             <td class="conversation">
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
+                                <div class="d-flex align-items-center gap-1 flex-wrap">
                                     @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
                                     @if($memo->notice_id)
                                     <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"

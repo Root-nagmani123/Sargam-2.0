@@ -5,7 +5,12 @@
 @section('setup_content')
 
 <div class="container-fluid">
-    <x-breadcrum title="Programme" />
+    <x-breadcrum title="Edit Course" :items="[
+        ['label' => 'Home', 'url' => url('/')],
+        'Academic',
+        ['label' => 'Course Master', 'url' => route('programme.index')],
+        'Edit Course'
+    ]" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
     <div class="card" style="border-left: 4px solid #004a93;">

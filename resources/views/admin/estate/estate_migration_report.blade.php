@@ -3,14 +3,14 @@
 @section('title', 'Estate Migration Report (1998–2026) - Sargam')
 
 @section('content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
+<div class="container-fluid">
     <x-breadcrum title="Estate Migration Report (1998–2026)"></x-breadcrum>
 
     <x-session_message />
 
     <div class="card shadow-sm border-0 rounded-3 mb-4">
         <div class="card-header bg-transparent border-0 pt-4 px-4 pb-0">
-            <h2 class="h6 fw-semibold text-body mb-0 d-flex align-items-center gap-2">
+            <h2 class="h6 fw-semibold text-body mb-0 d-flex align-items-center gap-1">
                 <i class="material-symbols-rounded fs-5">filter_list</i>
                 Filters
             </h2>

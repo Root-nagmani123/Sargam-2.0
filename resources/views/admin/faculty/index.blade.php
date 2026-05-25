@@ -2,70 +2,146 @@
 
 @section('title', 'Faculty')
 
-@push('styles')
-    <style>
-        .faculty-index-page .card-faculty-accent {
-            border-left: 4px solid #004a93;
-        }
-        @media (min-width: 768px) {
-            .faculty-index-page .faculty-actions .btn {
-                white-space: nowrap;
-            }
-        }
-    </style>
-@endpush
-
 @section('setup_content')
-<div class="container-fluid">
-<x-breadcrum title="Faculty"></x-breadcrum>
+<style>
+    .faculty-page-shell .fac-card {
+        border: none;
+        border-radius: 1rem;
+        box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+        overflow: hidden;
+    }
+    .faculty-page-shell .fac-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e9ecef;
+        background: transparent;
+    }
+    .faculty-page-shell .fac-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #004a93;
+        margin: 0;
+    }
+    .faculty-page-shell .fac-actions .btn {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+    .faculty-page-shell .fac-actions .btn:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    }
+    .faculty-page-shell .table thead th {
+        background: #f8f9fa;
+        font-weight: 600;
+        font-size: 0.8rem;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+        color: #495057;
+        border-bottom: 2px solid #dee2e6;
+        padding: 0.65rem 1rem;
+        white-space: nowrap;
+    }
+    .faculty-page-shell .table tbody td {
+        padding: 0.65rem 1rem;
+        vertical-align: middle;
+        border-color: #f0f0f0;
+        font-size: 0.875rem;
+    }
+    .faculty-page-shell .table tbody tr {
+        transition: background-color 0.15s ease;
+    }
+    .faculty-page-shell .table tbody tr:hover {
+        background-color: rgba(0, 74, 147, 0.05);
+    }
+    /* Compact DataTable pagination */
+    .faculty-page-shell .dataTables_paginate .paginate_button {
+        font-size: 0.8rem !important;
+        padding: 0.25rem 0.65rem !important;
+        min-width: 1.85rem;
+        border-radius: 0.45rem !important;
+        margin: 0 2px !important;
+        border: 1px solid #dee2e6 !important;
+        background: #f8f9fa !important;
+        color: #495057 !important;
+        font-weight: 500;
+    }
+    .faculty-page-shell .dataTables_paginate .paginate_button.current {
+        background: #004a93 !important;
+        border-color: #004a93 !important;
+        color: #fff !important;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
+    }
+    .faculty-page-shell .dataTables_paginate .paginate_button:hover:not(.current) {
+        background: rgba(0, 74, 147, 0.08) !important;
+        border-color: #004a93 !important;
+        color: #004a93 !important;
+    }
+    .faculty-page-shell .dataTables_paginate .paginate_button.disabled {
+        opacity: 0.4;
+        pointer-events: none;
+    }
+    .faculty-page-shell .dataTables_info,
+    .faculty-page-shell .dataTables_length label,
+    .faculty-page-shell .dataTables_filter label {
+        font-size: 0.8125rem;
+        color: #6c757d;
+    }
+    .faculty-page-shell .dataTables_length select,
+    .faculty-page-shell .dataTables_filter input {
+        font-size: 0.8125rem;
+        border-radius: 0.4rem;
+    }
+</style>
+<div class="container-fluid faculty-page-shell">
+    <x-breadcrum title="Faculty"></x-breadcrum>
     <!--<x-session_message />-->
     <div id="status-msg"></div>
 
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left:4px solid #004a93;">
-            <div class="card-body">
+        <div class="card fac-card">
+            <div class="fac-header d-flex flex-wrap align-items-center justify-content-between gap-3">
+                <h4 class="fac-title d-flex align-items-center gap-1">
+                    <span class="material-icons material-symbols-rounded" style="font-size:1.4rem;">school</span>
+                    Faculty
+                </h4>
+                <div class="d-flex flex-wrap align-items-center gap-2 fac-actions">
+                    <!-- Add Faculty -->
+                    <a href="{{ route('faculty.create') }}"
+                        class="btn btn-primary d-inline-flex align-items-center gap-1 shadow-sm btn-sm"
+                        style="background:#004a93; border-color:#004a93;"
+                        aria-label="Add New Faculty">
+                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">add</span>
+                        Add Faculty
+                    </a>
+
+                    <!-- Export Excel -->
+                    <a href="{{ route('faculty.excel.export') }}"
+                        class="btn btn-outline-primary d-inline-flex align-items-center gap-1 btn-sm"
+                        style="border-color:#004a93; color:#004a93;"
+                        aria-label="Export Faculty Excel">
+                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">download</span>
+                        Export Excel
+                    </a>
+
+                    <!-- Print Blank Form -->
+                    <a href="{{ route('faculty.printBlank') }}"
+                        class="btn btn-outline-success d-inline-flex align-items-center gap-1 btn-sm"
+                        aria-label="Print Blank Form">
+                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">print</span>
+                        Print Blank Form
+                    </a>
+                </div>
+            </div>
+            <div class="card-body pt-3 px-4 pb-4">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4 class="fw-semibold text-primary mb-0" style="color:#004a93 !important;">
-                                Faculty
-                            </h4>
-                        </div>
-
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-3">
-
-                                <!-- Add Faculty -->
-                                <a href="{{ route('faculty.create') }}"
-                                    class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
-                                    style="background-color:#004a93; border-color:#004a93;"
-                                    aria-label="Add New Faculty">
-                                    <span class="material-symbols-rounded fs-5">add</span>
-                                    Add Faculty
-                                </a>
-
-                                <!-- Export Excel -->
-                                <a href="{{ route('faculty.excel.export') }}"
-                                    class="btn btn-outline-primary d-flex align-items-center gap-1 shadow-sm"
-                                    style="border-color:#004a93; color:#004a93;" aria-label="Export Faculty Excel">
-                                    <span class="material-symbols-rounded fs-5">export_notes</span>
-                                    Export Excel
-                                </a>
-                                <a href="{{ route('faculty.printBlank') }}"  class="btn btn-outline-success">
-									<i class="material-icons">print</i> Print Blank Form
-								</a>
-
-                            </div>
-                        </div>
-                    </div>
-
-                    <hr>
-                    {!! $dataTable->table(['class' => 'table']) !!}
+                    {!! $dataTable->table(['class' => 'table align-middle mb-0']) !!}
                 </div>
             </div>
         </div>
     </div>
+</div>
 @endsection
 
 @push('scripts')

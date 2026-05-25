@@ -2,11 +2,38 @@
 
 @section('title', 'Foundation Course-' . $courseCode . ' | Course Repository Admin')
 
-@section('setup_content')
-<div class="cru-page">
-    <div class="container-fluid px-3 px-md-4 pt-3 pb-0">
-        <x-breadcrum title="Foundation Course-{{ $courseCode }}"></x-breadcrum>
-    </div>
+@section('content')
+<div class="d-flex">
+    <!-- Left Sidebar -->
+    <aside class="course-sidebar-wrapper">
+        <x-course-sidebar />
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-grow-1">
+        <div class="container-fluid" id="main-content">
+            <!-- Title Section with Back Button -->
+            <div class="title-section mb-4">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center gap-3">
+                        <button type="button" 
+                                onclick="window.history.back()" 
+                                class="btn-back btn btn-link p-0 text-decoration-none"
+                                aria-label="Go back">
+                            <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
+                        </button>
+                        <h1 class="h2 mb-0 fw-bold text-dark">Foundation Course-{{ $courseCode }}</h1>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a href="javascript:void(0)" class="btn btn-outline-primary">
+                            <span class="material-icons material-symbols-rounded me-1">cloud_upload</span> Upload Documents
+                        </a>
+                        <a href="javascript:void(0)" class="btn btn-primary">
+                            <span class="material-icons material-symbols-rounded me-1">add_circle</span> Add Category
+                        </a>
+                    </div>
+                </div>
+            </div>
 
     <div class="d-flex cru-layout-with-sidebar align-items-stretch w-100">
 

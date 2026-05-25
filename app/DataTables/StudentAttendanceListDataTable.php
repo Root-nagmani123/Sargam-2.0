@@ -22,13 +22,13 @@ class StudentAttendanceListDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('student_name', fn($row) => '<label class="text-dark">' . $row->studentsMaster->display_name . '</label>')
-            ->addColumn('student_code', fn($row) => '<label class="text-dark">' . $row->studentsMaster->generated_OT_code . '</label>')
-            ->addColumn('attendance_status', fn($row) => $this->renderRadioGroup($row, 'attendance_status', [1 => 'Present', 2 => 'Late', 3 => 'Absent']))
-            ->addColumn('mdo_duty', fn($row) => $this->renderRadio($row, 4, 'MDO'))
-            ->addColumn('escort_duty', fn($row) => $this->renderRadio($row, 5, 'Escort'))
-            ->addColumn('medical_exempt', fn($row) => $this->renderRadio($row, 6, 'Medical Exempted'))
-            ->addColumn('other_exempt', fn($row) => $this->renderRadio($row, 7, 'Other Exempted'))
+            ->addColumn('checkbox', fn($row) => '<input type="checkbox" class="form-check-input student-checkbox" value="' . $row->studentsMaster->pk . '">')
+            ->addColumn('student_code', fn($row) => e($row->studentsMaster->generated_OT_code ?? ''))
+            ->addColumn('student_name', fn($row) => e($row->studentsMaster->display_name ?? ''))
+            ->addColumn('attendance_status', fn($row) => $this->renderStatusBadge($row))
+            ->addColumn('mdo_duty', fn($row) => $this->renderMdoDutyText($row))
+            ->addColumn('escort_duty', fn($row) => $this->renderEscortText($row))
+            ->addColumn('action', fn($row) => $this->renderActionBtn($row))
             ->filterColumn('student_name', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('display_name', 'like', "%{$keyword}%")))
             ->filterColumn('student_code', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('generated_OT_code', 'like', "%{$keyword}%")))
             ->filter(function ($query) {
@@ -43,7 +43,7 @@ class StudentAttendanceListDataTable extends DataTable
                     });
                 }
             }, true)
-            ->rawColumns(['student_name', 'student_code', 'attendance_status', 'mdo_duty', 'escort_duty', 'medical_exempt', 'other_exempt']);
+            ->rawColumns(['checkbox', 'attendance_status', 'mdo_duty', 'escort_duty', 'action']);
     }
 
     public function query(): QueryBuilder
@@ -77,36 +77,157 @@ class StudentAttendanceListDataTable extends DataTable
             ->minifiedAjax()
             ->orderBy(1)
             ->parameters([
-                'paging' => false,           
-                'searching' => false,         
-                'info' => false,             
-                'scrollY' => '100vh',        
-                'scrollCollapse' => true,
-                'responsive' => true,
-                'scrollX' => true,
-                'autoWidth' => false,
+                'paging'         => true,
+                'searching'      => false,
+                'info'           => false,
+                'scrollX'        => true,
+                'autoWidth'      => false,
+                'pageLength'     => 200,
+                'lengthMenu'     => [[50, 100, 200, 500, -1], [50, 100, 200, 500, 'All']],
                 'paginationType' => 'full_numbers',
-
                 'language' => [
-                    'search' => '_INPUT_',
-                    'searchPlaceholder' => 'Search OT Name or OT Code...'
+                    'search'            => '_INPUT_',
+                    'searchPlaceholder' => 'Search OT Name or OT Code...',
+                    'paginate' => [
+                        'first'    => '&laquo;',
+                        'last'     => '&raquo;',
+                        'next'     => '&rsaquo;',
+                        'previous' => '&lsaquo;',
+                    ],
                 ],
-
             ]);
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('OT/Participant Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('student_code')->title('OT/Participant Code')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('attendance_status')->title('Attendance')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('checkbox')
+                ->title('<input type="checkbox" id="selectAllStudents" class="form-check-input">')
+                ->addClass('text-center')
+                ->orderable(false)
+                ->searchable(false)
+                ->exportable(false)
+                ->printable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('student_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('student_name')->title('OT Name')->orderable(false)->searchable(true),
+            Column::make('attendance_status')->title('Attendance Status')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_duty')->title('MDO Duty')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('escort_duty')->title('Escort/Moderator Duty')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('medical_exempt')->title('Medical Exemption')->addClass('text-center')->orderable(false)->searchable(false),
-            Column::make('other_exempt')->title('Other Exemption')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::make('escort_duty')->title('Escort/ Modular Duty')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('action')->title('Action')->addClass('text-center')->orderable(false)->searchable(false),
         ];
+    }
+
+    protected function renderStatusBadge($row): string
+    {
+        $studentId    = $row->studentsMaster->pk;
+        $courseStudent = CourseStudentAttendance::where([
+            ['Student_master_pk', '=', $studentId],
+            ['Course_master_pk', '=', $this->course_pk],
+            ['group_type_master_course_master_map_pk', '=', $this->group_pk],
+            ['timetable_pk', '=', $this->timetable_pk],
+        ])->first();
+
+        if (!$courseStudent || $courseStudent->status == 0) {
+            return '<span class="att-badge att-badge-notmarked">Not Marked</span>';
+        }
+
+        return match ((int) $courseStudent->status) {
+            1       => '<span class="att-badge att-badge-present">Present</span>',
+            2       => '<span class="att-badge att-badge-late">Late</span>',
+            3       => '<span class="att-badge att-badge-absent">Absent</span>',
+            4       => '<span class="att-badge att-badge-mdo">MDO Duty</span>',
+            6       => '<span class="att-badge att-badge-exempt">Medical Exempt</span>',
+            7       => '<span class="att-badge att-badge-exempt">Other Exempt</span>',
+            default => '<span class="att-badge att-badge-notmarked">Not Marked</span>',
+        };
+    }
+
+    protected function renderMdoDutyText($row): string
+    {
+        $studentId = $row->studentsMaster->pk;
+        $timetable = Timetable::select('START_DATE', 'class_session')->where('pk', $this->timetable_pk)->first();
+
+        if (!$timetable) {
+            return '<span class="text-muted">NA</span>';
+        }
+
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+        $mdoType      = $mdoDutyTypes['mdo'] ?? null;
+
+        if ($mdoType) {
+            $mdoDuty = MDOEscotDutyMap::where([
+                ['course_master_pk', '=', $this->course_pk],
+                ['mdo_duty_type_master_pk', '=', $mdoType],
+                ['selected_student_list', '=', $studentId],
+            ])->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
+
+            if ($mdoDuty && $this->checkTimeOverlap($timetable->class_session, $mdoDuty->Time_from, $mdoDuty->Time_to)) {
+                return '<span class="text-success fw-semibold">Yes</span>';
+            }
+        }
+
+        return '<span class="text-muted">No</span>';
+    }
+
+    protected function renderEscortText($row): string
+    {
+        $studentId = $row->studentsMaster->pk;
+        $timetable = Timetable::select('START_DATE', 'class_session')->where('pk', $this->timetable_pk)->first();
+
+        if (!$timetable) {
+            return '<span class="text-muted">NA</span>';
+        }
+
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+        $escortType   = $mdoDutyTypes['escort'] ?? null;
+
+        if ($escortType) {
+            $escortDuty = MDOEscotDutyMap::where([
+                ['course_master_pk', '=', $this->course_pk],
+                ['mdo_duty_type_master_pk', '=', $escortType],
+                ['selected_student_list', '=', $studentId],
+            ])->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
+
+            if ($escortDuty && $this->checkTimeOverlap($timetable->class_session, $escortDuty->Time_from, $escortDuty->Time_to)) {
+                return '<span class="text-info fw-semibold">Escort</span>';
+            }
+        }
+
+        return '<span class="text-muted">NA</span>';
+    }
+
+    protected function renderActionBtn($row): string
+    {
+        $studentId   = $row->studentsMaster->pk;
+        $studentName = htmlspecialchars($row->studentsMaster->display_name ?? '', ENT_QUOTES);
+        $studentCode = htmlspecialchars($row->studentsMaster->generated_OT_code ?? '', ENT_QUOTES);
+
+        $courseStudent = CourseStudentAttendance::where([
+            ['Student_master_pk', '=', $studentId],
+            ['Course_master_pk', '=', $this->course_pk],
+            ['group_type_master_course_master_map_pk', '=', $this->group_pk],
+            ['timetable_pk', '=', $this->timetable_pk]
+        ])->first();
+
+        $status      = $courseStudent ? (int) $courseStudent->status : 1;
+        $radioVal    = in_array($status, [1, 2, 3]) ? $status : 1;
+        $mdoChecked  = ($status === 4) ? 1 : 0;
+        $medChecked  = ($status === 6) ? 1 : 0;
+        $othChecked  = ($status === 7) ? 1 : 0;
+        $iconColor   = ($courseStudent && $status !== 0) ? '#198754' : '#1b3a5c';
+
+        return '<button type="button" class="att-icon-btn att-mark-student-btn"'
+            . ' data-student-id="' . $studentId . '"'
+            . ' data-student-name="' . $studentName . '"'
+            . ' data-student-code="' . $studentCode . '"'
+            . ' data-att="' . $radioVal . '"'
+            . ' data-mdo="' . $mdoChecked . '"'
+            . ' data-med="' . $medChecked . '"'
+            . ' data-oth="' . $othChecked . '"'
+            . ' title="Mark Attendance">'
+            . '<span class="material-symbols-rounded" style="font-size:22px;color:' . $iconColor . ';">fingerprint</span>'
+            . '</button>';
     }
 
     protected function renderRadio($row, int $value, string $label, string $labelClass = 'text-dark'): string

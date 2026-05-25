@@ -28,6 +28,21 @@ class Notification extends Model
     ];
 
     /**
+     * Birthday wish notifications received by an employee today.
+     */
+    public function scopeBirthdayWishesReceivedToday($query, int $receiverUserId)
+    {
+        return $query
+            ->where('receiver_user_id', $receiverUserId)
+            ->where('type', 'birthday')
+            ->where(function ($q) {
+                $q->where('module_name', 'BirthdayWish')
+                    ->orWhereNull('module_name');
+            })
+            ->whereDate('created_at', today());
+    }
+
+    /**
      * Get the sender user
      * Note: Assumes user_credentials table has a user_id field that matches sender_user_id
      */

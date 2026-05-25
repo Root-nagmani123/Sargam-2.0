@@ -125,18 +125,14 @@ class RoleDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax()
             ->parameters([
+                'pagingType' => 'full_numbers',
                 'order' => [],
                 'ordering' => true,//Change for ordering
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'language' => [
-                    'paginate' => [
-                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_left</i>',
-                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">chevron_right</i>'
-                    ]
+                    'paginate' => ['first' => '', 'last' => '', 'next' => '', 'previous' => '']
                 ],
             ])
             ->selectStyleSingle()

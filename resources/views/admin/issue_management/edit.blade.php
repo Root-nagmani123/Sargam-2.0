@@ -28,7 +28,7 @@
 @endsection
 
 @section('setup_content')
-<div class="container-fluid py-3">
+<div class="container-fluid">
     <x-breadcrum title="Edit Issue" />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">

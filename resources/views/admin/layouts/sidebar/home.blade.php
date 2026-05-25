@@ -1,16 +1,16 @@
 @php
-    $isContractualEmployee = false;
-    $authUser = \Illuminate\Support\Facades\Auth::user();
-    if ($authUser && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
-        $userId = $authUser->user_id ?? $authUser->pk ?? null;
-        if ($userId) {
-            $emp = \Illuminate\Support\Facades\DB::table('employee_master')
-                ->where('pk', $userId)
-                ->orWhere('pk_old', $userId)
-                ->first(['payroll']);
-            $isContractualEmployee = $emp && (int) ($emp->payroll ?? 0) !== 0;
-        }
-    }
+$isContractualEmployee = false;
+$authUser = \Illuminate\Support\Facades\Auth::user();
+if ($authUser && \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
+$userId = $authUser->user_id ?? $authUser->pk ?? null;
+if ($userId) {
+$emp = \Illuminate\Support\Facades\DB::table('employee_master')
+->where('pk', $userId)
+->orWhere('pk_old', $userId)
+->first(['payroll']);
+$isContractualEmployee = $emp && (int) ($emp->payroll ?? 0) !== 0;
+}
+}
 @endphp
 <aside class="side-mini-panel with-vertical sidebar-google-style" id="mainSidebar">
     <div class="vh-100 d-flex flex-column overflow-hidden">
@@ -20,16 +20,7 @@
         <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
             <div class="flex-fill d-flex flex-column" style="min-height: 0;">
                 <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
-                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
-    <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
-        data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
-
-        <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
-            menu
-        </i>
-
-    </a>
-</div>
+                    
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
@@ -41,6 +32,7 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
+                                            @include('admin.layouts.sidebar.partials.mini-sidebar-toggle')
                                             <li class="mini-nav-item {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'selected' : '' }}"
                                                 id="mini-1">
                                                 <a href="javascript:void(0)"
@@ -131,116 +123,135 @@
 </aside>
 
 <style>
-/* Google-style sidebar - home (matches setup) */
-#sidebar-home .sidebar-google-style.side-mini-panel {
-    width: 90px;
-}
-#sidebar-home .sidebar-google-style .mini-nav {
-    background: #f0f0f0 !important;
-    border: 1px solid var(--bs-border-color-translucent);
-    padding: 12px 0;
-    border-radius: 10px;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-hamburger {
-    padding: 16px 0;
-    margin: 0;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
-    color: var(--bs-secondary-color) !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item {
-    list-style: none;
-    display: flex !important;
-    justify-content: center !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav ul.mini-nav-ul {
-    padding-inline-start: 0 !important;
-    list-style: none !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 12px 8px !important;
-    padding-left: 8px !important;
-    margin: 4px 8px !important;
-    background: transparent !important;
-    height: auto !important;
-    min-height: 56px;
-    width: 100%;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 4px;
-    text-align: center !important;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 48px;
-    height: 32px;
-    margin-inline: auto;
-    border-radius: 24px;
-    transition: background 0.2s;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
-    line-height: 1 !important;
-    vertical-align: middle !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
-    font-size: 24px !important;
-    color: var(--bs-secondary-color) !important;
-}
-#sidebar-home .sidebar-google-style .sidebar-google-label {
-    font-size: 11px;
-    color: var(--bs-secondary-color) !important;
-    font-weight: 400;
-    text-align: center;
-    line-height: 1.2;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .material-icons,
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:hover .sidebar-google-label {
-    color: var(--bs-emphasis-color) !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item > a:focus-visible {
-    outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
-    outline-offset: 2px;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
-    background: var(--bs-primary-bg-subtle) !important;
-    border-radius: 10px;
-    padding: 10px;
-    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
-    transition: all 0.2s ease;
-    transform: scale(1.05);
-    margin: 4px 8px;
-    width: 100%;
-    height: 100%;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
-    color: var(--bs-primary-text-emphasis) !important;
-}
-#sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected > a:before {
-    display: none !important;
-}
+    /* Google-style sidebar - home (matches setup) */
+    body[data-sidebartype="mini-sidebar"] #sidebar-home .sidebar-google-style.side-mini-panel {
+        width: 90px;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav {
+        border: 1px solid var(--bs-border-color-translucent);
+        padding: 12px 0;
+        border-radius: 10px;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-hamburger {
+        padding: 16px 0;
+        margin: 0;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
+        color: var(--bs-secondary-color) !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item {
+        list-style: none;
+        display: flex !important;
+        justify-content: center !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav ul.mini-nav-ul {
+        padding-inline-start: 0 !important;
+        list-style: none !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a {
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        padding: 12px 8px !important;
+        padding-left: 8px !important;
+        margin: 4px 8px !important;
+        background: transparent !important;
+        height: auto !important;
+        min-height: 56px;
+        width: 100%;
+        transition: background-color 0.2s ease, color 0.2s ease;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-item {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: center !important;
+        justify-content: center !important;
+        gap: 4px;
+        text-align: center !important;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-icon-wrap {
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        width: 48px;
+        height: 32px;
+        margin-inline: auto;
+        border-radius: 24px;
+        transition: background 0.2s;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
+        line-height: 1 !important;
+        vertical-align: middle !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a .material-icons {
+        font-size: 24px !important;
+        color: var(--bs-secondary-color) !important;
+    }
+
+    #sidebar-home .sidebar-google-style .sidebar-google-label {
+        font-size: 11px;
+        color: var(--bs-secondary-color) !important;
+        font-weight: 400;
+        text-align: center;
+        line-height: 1.2;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a:hover .material-icons,
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a:hover .sidebar-google-label {
+        color: var(--bs-emphasis-color) !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item>a:focus-visible {
+        outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
+        outline-offset: 2px;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-icon-wrap {
+        background: var(--bs-primary-bg-subtle) !important;
+        border-radius: 10px;
+        padding: 10px;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
+        transition: all 0.2s ease;
+        transform: scale(1.05);
+        margin: 4px 8px;
+        width: 100%;
+        height: 100%;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected>a .material-icons,
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-label {
+        color: var(--bs-primary-text-emphasis) !important;
+    }
+
+    #sidebar-home .sidebar-google-style .mini-nav .mini-nav-item.selected>a:before {
+        display: none !important;
+    }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Home sidebar script started');
-    const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
-    // Scope to home sidebar (in #sidebar-home tab pane)
-    const sidebarHome = document.getElementById('sidebar-home');
-    if (!sidebarHome) {
-        console.error('Home sidebar not found');
-        return;
-    }
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('Home sidebar script started');
+        const isDashboard = {
+            {
+                (request() - > routeIs('admin.dashboard') || request() - > is('dashboard')) ? 'true' : 'false'
+            }
+        };
+        // Scope to home sidebar (in #sidebar-home tab pane)
+        const sidebarHome = document.getElementById('sidebar-home');
+        if (!sidebarHome) {
+            console.error('Home sidebar not found');
+            return;
+        }
 
         // Initialize mini-navbar functionality for home ONLY
         const miniNavItems = sidebarHome.querySelectorAll('.mini-nav .mini-nav-item');
@@ -249,21 +260,20 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Found mini-nav items in home tab:', miniNavItems.length);
         console.log('Found sidebar menus in home tab:', sidebarMenus.length);
 
-        // Function to manually find and mark active links based on current URL
+        // Active link: exact URL or longest path prefix (index → create/edit/show)
         function markActiveLinks() {
-            const currentUrl = window.location.href;
-            console.log('Current URL:', currentUrl);
-
-            sidebarMenus.forEach(function(nav) {
-                const links = nav.querySelectorAll('.sidebar-link[href]');
-                links.forEach(function(link) {
-                    if (link.href === currentUrl) {
-                        console.log('Found matching link:', link.href, 'in nav:', nav
-                            .id);
-                        link.classList.add('active');
-                    }
+            if (typeof window.sargamMarkSidebarActiveLinks === 'function') {
+                window.sargamMarkSidebarActiveLinks(sidebarMenus);
+            } else {
+                const currentUrl = window.location.href;
+                sidebarMenus.forEach(function(nav) {
+                    nav.querySelectorAll('.sidebar-link[href]').forEach(function(link) {
+                        if (link.href === currentUrl) {
+                            link.classList.add('active');
+                        }
+                    });
                 });
-            });
+            }
         }
 
         // Function to keep sidebar menu visible
@@ -287,34 +297,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to show sidebar menu and save state
         function showSidebarMenu(miniId) {
-            console.log('Showing sidebar for miniId:', miniId);
-            // Remove selected from all mini-nav-items
-            miniNavItems.forEach(function(navItem) {
-                navItem.classList.remove('selected');
-            });
-            // Add selected only to the clicked/active one
+            const miniNav = sidebarHome.querySelector('.mini-nav');
             const selectedItem = document.getElementById(miniId);
-            if (selectedItem) {
-                selectedItem.classList.add('selected');
-                console.log('Selected mini-nav item:', miniId);
+            if (miniNav && selectedItem && typeof window.sargamActivateMiniNavItem === 'function') {
+                window.sargamActivateMiniNavItem(miniNav, selectedItem, true);
+                return;
             }
-            sidebarMenus.forEach(function(nav) {
-                nav.classList.remove('d-block');
-                nav.style.display = 'none';
-            });
-            const targetMenuId = 'menu-right-' + miniId;
-            const targetMenu = document.getElementById(targetMenuId);
-            if (targetMenu) {
-                targetMenu.classList.add('d-block');
-                targetMenu.style.display = 'block';
-                document.body.setAttribute('data-sidebartype', 'full');
-                console.log('Displayed menu:', targetMenu.id);
-                // Periodically keep sidebar visible
-                keepSidebarVisible(targetMenuId, 3000);
-            } else {
-                console.error('Target menu not found:', targetMenuId);
-            }
-            localStorage.setItem('selectedHomeMiniNav', miniId);
+            console.warn('Flyout menu activation fallback for:', miniId);
         }
 
         // MutationObserver to keep sidebar visible
@@ -344,7 +333,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Found active links in', nav.id, ':', activeLinks.length);
                 activeLinks.forEach(function(activeLink) {
                     console.log('Processing active link:', activeLink.textContent
-                    .trim());
+                        .trim());
                     let parent = activeLink.closest('.collapse');
                     while (parent) {
                         console.log('Expanding collapse:', parent.id);
@@ -419,5 +408,5 @@ document.addEventListener('DOMContentLoaded', function() {
         window.addEventListener('focus', function() {
             setTimeout(restoreSidebarMenu, 100);
         });
-});
- </script>
+    });
+</script>

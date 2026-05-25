@@ -442,7 +442,7 @@
                 </div>
                 <div class="col-6">
                     <div class="d-flex justify-content-end align-items-center gap-2">
-                        <button type="button" class="btn btn-primary d-flex align-items-center gap-2" onclick="printContent()" style="background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-light) 100%); border: none; border-radius: 6px; padding: 10px 16px; transition: var(--transition);">
+                        <button type="button" class="btn btn-primary d-flex align-items-center gap-1" onclick="printContent()" style="background: linear-gradient(135deg, var(--primary-blue) 0%, var(--primary-light) 100%); border: none; border-radius: 6px; padding: 10px 16px; transition: var(--transition);">
                             <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 20px;">print</i>
                             Print
                         </button>

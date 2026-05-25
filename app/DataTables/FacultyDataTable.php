@@ -76,7 +76,7 @@ class FacultyDataTable extends DataTable
                 $deleteStyle = $isActive ? 'opacity:0.5;cursor:not-allowed;' : 'cursor:pointer;';
 
                 return '
-                    <div class="d-flex align-items-center gap-2" style="white-space:nowrap;">
+                    <div class="d-flex align-items-center gap-1" style="white-space:nowrap;">
                         <a href="'.$editUrl.'" class="btn bg-transparent border-0 p-0 text-primary" title="Edit">
                             <i class="material-icons" style="font-size:20px;">edit</i>
                         </a>
@@ -167,18 +167,14 @@ class FacultyDataTable extends DataTable
                     ->orderBy(1)
                     ->selectStyleSingle()
                     ->parameters([
+                        'pagingType' => 'full_numbers',
                         'order' => [],
                         'ordering' => false,
                         'searching' => true,
                         'lengthChange' => true,
                         'pageLength' => 10,
                         'language' => [
-                            'paginate' => [
-                                'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">chevron_left</i>',
-                                'next' => '<i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 24px;">chevron_right</i>'
-                            ]
+                            'paginate' => ['first' => '', 'last' => '', 'next' => '', 'previous' => '']
                         ],
                     ])
                     ->buttons([

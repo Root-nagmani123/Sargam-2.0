@@ -4,7 +4,7 @@
 
 @section('setup_content')
 
-<div class="container-fluid py-4">
+<div class="container-fluid">
     <x-breadcrum title="Who's Who"></x-breadcrum>
 
     <!-- Filter Section -->
@@ -429,7 +429,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Pagination Info with Bootstrap 5 styling
         paginationInfo.innerHTML = `
-            <div class="d-flex align-items-center gap-2">
+            <div class="d-flex align-items-center gap-1">
                 <i class="bi bi-info-circle text-primary"></i>
                 <span class="text-muted">Showing <strong class="text-dark">${pagination.from}</strong> to <strong class="text-dark">${pagination.to}</strong> of <strong class="text-dark">${pagination.total}</strong> students</span>
             </div>

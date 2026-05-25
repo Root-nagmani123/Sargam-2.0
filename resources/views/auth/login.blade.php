@@ -1076,13 +1076,21 @@
         <div class="bg-carousel-container" aria-hidden="true">
             <div id="bgCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="6000" data-bs-pause="false">
                 <div class="carousel-inner">
-                    @for($i = 1; $i <= 10; $i++)
-                    <div class="carousel-item {{ $i === 1 ? 'active' : '' }}">
-                        <img src="{{ asset('images/carasoul/' . $i . '.webp') }}"
-                            alt=""
-                            loading="{{ $i <= 2 ? 'eager' : 'lazy' }}">
-                    </div>
-                    @endfor
+                    @forelse($loginCarouselImages as $index => $carouselImage)
+                        <div class="carousel-item {{ $index === 0 ? 'active' : '' }}">
+                            <img src="{{ asset('storage/' . $carouselImage->image_path) }}"
+                                alt=""
+                                loading="{{ $index <= 1 ? 'eager' : 'lazy' }}">
+                        </div>
+                    @empty
+                        @for($i = 1; $i <= 10; $i++)
+                            <div class="carousel-item {{ $i === 1 ? 'active' : '' }}">
+                                <img src="{{ asset('images/carasoul/' . $i . '.webp') }}"
+                                    alt=""
+                                    loading="{{ $i <= 2 ? 'eager' : 'lazy' }}">
+                            </div>
+                        @endfor
+                    @endforelse
                 </div>
             </div>
             <div class="bg-overlay"></div>
@@ -1133,10 +1141,10 @@
         </header>
 
         <!-- Main Content -->
-        <main class="main-content" role="main">
-            <div class="login-card">
+        <main class="main-content d-flex align-items-center justify-content-center flex-grow-1 w-100" role="main">
+            <div class="login-card shadow-lg w-100" style="max-width: 480px;">
                 <!-- Logo & Title -->
-                <div class="login-logo">
+                <div class="login-logo mb-4 text-center">
                     <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" 
                         alt="Sargam - LBSNAA Portal"
                         loading="eager"
@@ -1165,14 +1173,13 @@
                 @endif
 
                 <!-- Login Form -->
-                <form action="{{ route('post_login') }}" method="POST" id="loginForm" novalidate>
+                <form action="{{ route('post_login') }}" method="POST" id="loginForm" novalidate class="needs-validation" autocomplete="off">
                     @csrf
-
                     <!-- Username -->
                     <div class="form-group">
                         <label for="username" class="form-label-custom">
                             <i class="bi bi-person-fill" aria-hidden="true"></i>
-                            Username <span class="text-danger">*</span>
+                            <span>Username <span class="text-danger">*</span></span>
                         </label>
                         <input type="text" 
                             class="form-control-custom @error('username') is-invalid @enderror" 
@@ -1185,13 +1192,12 @@
                             autofocus>
                         <div class="form-hint">Your official registration number or ID</div>
                     </div>
-
                     <!-- Password -->
-                    <div class="form-group">
+                    <div class="form-group mb-3">
                         <div class="d-flex justify-content-between align-items-center mb-2">
                             <label for="password" class="form-label-custom mb-0">
                                 <i class="bi bi-lock-fill" aria-hidden="true"></i>
-                                Password <span class="text-danger">*</span>
+                                <span>Password <span class="text-danger">*</span></span>
                             </label>
                         </div>
                         <div class="password-input-group">
@@ -1205,7 +1211,6 @@
                             <button type="button" class="password-toggle-btn" id="togglePassword" aria-label="Show password">
                                 <i class="bi bi-eye fs-5" aria-hidden="true"></i>
                             </button>
-                            
                         </div>
                         <div class="d-flex justify-content-end mt-2">
                             <a href="{{ route('password.request') ?? '#' }}" class="forgot-link">
@@ -1213,27 +1218,35 @@
                             </a>
                         </div>
                     </div>
-
                     <!-- Submit -->
                     <button type="submit" class="btn-login mt-1" id="loginBtn">
                         <i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>
-                        Sign In
+                        <span>Sign In</span>
                     </button>
-
                     <!-- Security -->
-                    <div class="security-badge">
+                    <div class="security-badge mt-2">
                         <i class="bi bi-shield-lock-fill" aria-hidden="true"></i>
                         <span>Secure & Encrypted Connection</span>
                     </div>
                 </form>
 
                 <!-- Word of Day -->
-                <div class="word-of-day">
-                    <p class="wod-label mb-1">
-                        <i class="bi bi-translate" aria-hidden="true"></i>
+                <div class="word-of-day mt-4 pt-3 border-top text-center" aria-labelledby="word-of-day-heading">
+                    <h6 id="word-of-day-heading" class="text-muted fw-semibold mb-2">
+                        <i class="bi bi-translate me-1" aria-hidden="true"></i>
                         आज का शब्द / Word of the Day
+                    </h6>
+                    <p class="mb-0 fs-6" aria-live="polite">
+                        @if(!empty($wordOfTheDay))
+                            <span lang="hi">{{ $wordOfTheDay->hindi_text }}</span>
+                            <span aria-hidden="true"> — </span>
+                            <span lang="en">{{ $wordOfTheDay->english_text }}</span>
+                        @else
+                            <span lang="hi">अर्हक अंक</span>
+                            <span aria-hidden="true"> — </span>
+                            <span lang="en">Qualifying marks</span>
+                        @endif
                     </p>
-                    <p class="wod-text">अर्हक अंक - Qualifying marks</p>
                 </div>
             </div>
         </main>

@@ -3,7 +3,7 @@
 @section('title', 'Generate Estate Bill for Other - Sargam')
 
 @section('content')
-<div class="container-fluid px-2 px-sm-3 px-md-4">
+<div class="container-fluid">
     <x-breadcrum title="Generate Estate Bill for Other"></x-breadcrum>
     <x-session_message />
 
@@ -177,7 +177,7 @@ $(document).ready(function() {
             var col = this;
             var header = $(col.header()).text().trim();
             if (!header || header === 'S.NO.') return;
-            var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-2 cursor-pointer mb-0"><input type="checkbox" class="form-check-input column-toggle" data-column="' + i + '"> ' + header + '</label></li>');
+            var $li = $('<li><label class="dropdown-item d-flex align-items-center gap-1 cursor-pointer mb-0"><input type="checkbox" class="form-check-input column-toggle" data-column="' + i + '"> ' + header + '</label></li>');
             $li.find('input').prop('checked', col.visible());
             menu.append($li);
         });

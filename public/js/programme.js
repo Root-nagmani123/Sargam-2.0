@@ -1,8 +1,21 @@
 document.addEventListener('DOMContentLoaded', function () {
     const container = document.getElementById('assistant-coordinators-container');
-    const addBtn = document.getElementById('add-coordinator');
     const coordinatorSelect = document.querySelector('select[name="coursecoordinator"]');
     const rowTemplate = container ? container.querySelector('.assistant-coordinator-row')?.cloneNode(true) : null;
+
+    function refreshCoordinatorAddButtons() {
+        if (!container) {
+            return;
+        }
+        const rows = container.querySelectorAll('.assistant-coordinator-row');
+        rows.forEach(function (row, idx) {
+            const addInline = row.querySelector('.add-coordinator-inline');
+            if (!addInline) {
+                return;
+            }
+            addInline.classList.toggle('d-none', idx !== rows.length - 1);
+        });
+    }
     const choicesInstances = new WeakMap();
     let isUpdating = false; // Flag to prevent infinite loops
     let updateTimeout = null; // For debouncing
@@ -141,29 +154,38 @@ document.addEventListener('DOMContentLoaded', function () {
 
     initAllDropdownChoices(document);
 
-    if (container && addBtn && rowTemplate) {
-        let coordinatorIndex = container.querySelectorAll('.assistant-coordinator-row').length || 1;
+    function appendCoordinatorRowFromTemplate() {
+        if (!container || !rowTemplate) {
+            return;
+        }
+        const coordinatorIndex = container.querySelectorAll('.assistant-coordinator-row').length;
+        const newRow = rowTemplate.cloneNode(true);
+        newRow.setAttribute('data-index', coordinatorIndex);
 
-        addBtn.addEventListener('click', function () {
-            const newRow = rowTemplate.cloneNode(true);
-            newRow.setAttribute('data-index', coordinatorIndex);
+        const assistantSelect = newRow.querySelector('select[name="assistantcoursecoordinator[]"]');
+        const roleSelect = newRow.querySelector('select[name="assistant_coordinator_role[]"]');
 
-            const assistantSelect = newRow.querySelector('select[name="assistantcoursecoordinator[]"]');
-            const roleSelect = newRow.querySelector('select[name="assistant_coordinator_role[]"]');
+        if (assistantSelect) {
+            assistantSelect.value = '';
+            assistantSelect.id = 'assistant_coordinator_' + coordinatorIndex;
+        }
+        if (roleSelect) {
+            roleSelect.value = '';
+        }
 
-            if (assistantSelect) {
-                assistantSelect.value = '';
-                assistantSelect.id = 'assistant_coordinator_' + coordinatorIndex;
+        container.appendChild(newRow);
+        initAllDropdownChoices(newRow);
+        debounceUpdateOptions();
+        refreshCoordinatorAddButtons();
+    }
+
+    if (container && rowTemplate) {
+        document.addEventListener('click', function (event) {
+            const addTrigger = event.target.closest('.add-coordinator-inline');
+            if (!addTrigger || !container.contains(addTrigger)) {
+                return;
             }
-            if (roleSelect) {
-                roleSelect.value = '';
-            }
-
-            container.appendChild(newRow);
-            coordinatorIndex += 1;
-
-            initAllDropdownChoices(newRow);
-            debounceUpdateOptions();
+            appendCoordinatorRowFromTemplate();
         });
 
         document.addEventListener('click', function (event) {
@@ -188,6 +210,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
                 row.remove();
                 debounceUpdateOptions();
+                refreshCoordinatorAddButtons();
             } else {
                 alert('At least one assistant coordinator is required.');
             }
@@ -211,6 +234,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Initialize options after Choices.js is ready
     setTimeout(function() {
         updateAssistantOptionsNow();
+        refreshCoordinatorAddButtons();
     }, 200);
 
     const startDateInput = document.querySelector('input[name="startdate"]');

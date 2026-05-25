@@ -67,6 +67,10 @@ function syncSidebarWithMainTabs() {
         const sidebarTab = document.querySelector(sidebarTabId);
         if (sidebarTab) {
             sidebarTab.classList.add('show', 'active');
+            const miniNav = sidebarTab.querySelector('.mini-nav');
+            if (miniNav && typeof window.sargamRestoreOrActivatePaneMiniNav === 'function') {
+                window.sargamRestoreOrActivatePaneMiniNav(miniNav);
+            }
         }
     }
     

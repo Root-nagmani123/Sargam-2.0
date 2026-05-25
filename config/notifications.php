@@ -111,6 +111,13 @@ return [
         ],
     ],
 
+    'birthday_reply' => [
+        'BirthdayWish' => [
+            'route' => 'admin.dashboard',
+            'params' => [],
+        ],
+    ],
+
     // Faculty Notifications
     'faculty' => [
         'Faculty' => [

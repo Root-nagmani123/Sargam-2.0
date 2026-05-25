@@ -220,40 +220,26 @@
                                     @endforeach
                                 </select>
 
-                            </div>
+                {{-- Faculty Name --}}
+                <select class="form-select form-select-sm" id="faFacultySelect" name="faculty_name" style="max-width:175px;">
+                    <option value="">Faculty Name</option>
+                    @foreach ($faculties as $key => $faculty)
+                        <option value="{{ $key }}" {{ ($currentFaculty ?? '') == $key ? 'selected' : '' }}>{{ $faculty }}</option>
+                    @endforeach
+                </select>
 
-                            <div class="mb-3">
-                                <label class="form-label">Faculty Name</label>
-                                <select class="form-select select2" name="faculty_name">
-                                    <option value="">All Faculty</option>
-                                    @foreach ($faculties as $key => $faculty)
-                                        <option value="{{ $key }}" {{ $currentFaculty == $key ? 'selected' : '' }}>
-                                            {{ $faculty }}
-                                        </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label">From Date</label>
-                                <input type="date" class="form-control" name="from_date" value="{{ $fromDate ?? '' }}" />
-                            </div>
-
-                            <div class="mb-4">
-                                <label class="form-label">To Date</label>
-                                <input type="date" class="form-control" name="to_date" value="{{ $toDate ?? '' }}" />
-                            </div>
-
-                            <div class="d-grid gap-2 d-flex">
-                                <button type="submit" class="btn btn-primary flex-fill rounded-pill">
-                                    <i class="fas fa-search me-1"></i> Apply
-                                </button>
-                                <button type="button" class="btn btn-outline-secondary flex-fill rounded-pill"
-                                    onclick="resetFilters()">
-                                    <i class="fas fa-undo me-1"></i> Reset
-                                </button>
-                            </div>
-                        </form>
+                {{-- Time Period --}}
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">Time Period</button>
+                    <div class="dropdown-menu p-3" style="min-width:300px;">
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold mb-1">From</label>
+                            <input type="date" id="faFromDate" class="form-control form-control-sm" value="{{ $fromDate ?? '' }}">
+                        </div>
+                        <div>
+                            <label class="form-label small fw-semibold mb-1">To</label>
+                            <input type="date" id="faToDate" class="form-control form-control-sm" value="{{ $toDate ?? '' }}">
+                        </div>
                     </div>
                 </div>
             </aside>
@@ -378,9 +364,10 @@
                         </div>
                     </div>
                 </div>
-            </main>
+            </div>
         </div>
     </div>
+</div>
 
     <script>
         function resetFilters() {
@@ -417,60 +404,72 @@
             const excelBaseUrl = "{{ $fr['average_export_excel'] }}";
             const pdfBaseUrl = "{{ $fr['average_export_pdf'] }}";
 
-            // Find all export links
-            const exportLinks = document.querySelectorAll('.export-btn-group a');
+    document.querySelectorAll('.export-link-excel').forEach(function(link) {
+        var url = new URL(excelBaseUrl, window.location.origin);
+        url.searchParams.set('course_type',  courseType);
+        url.searchParams.set('program_name', programName);
+        url.searchParams.set('faculty_name', facultyName);
+        url.searchParams.set('from_date',    fromDate);
+        url.searchParams.set('to_date',      toDate);
+        link.href = url.toString();
+    });
+    document.querySelectorAll('.export-link-pdf').forEach(function(link) {
+        var url = new URL(pdfBaseUrl, window.location.origin);
+        url.searchParams.set('course_type',  courseType);
+        url.searchParams.set('program_name', programName);
+        url.searchParams.set('faculty_name', facultyName);
+        url.searchParams.set('from_date',    fromDate);
+        url.searchParams.set('to_date',      toDate);
+        link.href = url.toString();
+    });
+}
 
-            exportLinks.forEach(link => {
-                if (link.href.includes('export-excel')) {
-                    // Update Excel link
-                    const url = new URL(excelBaseUrl, window.location.origin);
-                    url.searchParams.set('course_type', courseType);
-                    url.searchParams.set('program_name', programName);
-                    url.searchParams.set('faculty_name', facultyName);
-                    url.searchParams.set('from_date', fromDate);
-                    url.searchParams.set('to_date', toDate);
-                    link.href = url.toString();
-                    link.title = `Export to Excel (Program: ${programName})`;
-                } else if (link.href.includes('export-pdf')) {
-                    // Update PDF link
-                    const url = new URL(pdfBaseUrl, window.location.origin);
-                    url.searchParams.set('course_type', courseType);
-                    url.searchParams.set('program_name', programName);
-                    url.searchParams.set('faculty_name', facultyName);
-                    url.searchParams.set('from_date', fromDate);
-                    url.searchParams.set('to_date', toDate);
-                    link.href = url.toString();
-                    link.title = `Export to PDF (Program: ${programName})`;
-                }
-            });
+function exportToExcel() {
+    var params = faGetParams();
+    var url = "{{ route('feedback.average.export.excel') }}?" + params.toString();
+    window.open(url, '_blank');
+}
 
-            console.log('Export links updated with:', {
-                courseType,
-                programName,
-                facultyName,
-                fromDate,
-                toDate
-            });
-        }
+function exportToPDF() {
+    var params = faGetParams();
+    var url = "{{ route('feedback.average.export.pdf') }}?" + params.toString();
+    window.open(url, '_blank');
+}
 
-        // AJAX function to load data without page refresh
-        function loadFeedbackData() {
-            // Show loading spinner
-            document.getElementById('loadingSpinner').style.display = 'block';
-            document.getElementById('tableContainer').style.display = 'none';
+function printReport() {
+    var params = faGetParams();
+    var url = "{{ route('feedback.average.print') }}?" + params.toString();
+    window.open(url, '_blank');
+}
 
-            // Get form data
-            const form = document.getElementById('filterForm');
-            const formData = new FormData(form);
+function loadProgramsByCourseType(courseType) {
+    fetch("{{ route('feedback.average') }}?course_type=" + courseType + "&_=" + Date.now(), {
+        headers: {'Cache-Control':'no-cache'}
+    })
+    .then(function(r){ return r.text(); })
+    .then(function(html){
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var newSel = doc.getElementById('faProgramSelect');
+        var curSel = document.getElementById('faProgramSelect');
+        if (newSel && curSel) curSel.innerHTML = newSel.innerHTML;
+    })
+    .catch(function(err){ console.error('Error loading programs:', err); });
+}
 
-            // Convert FormData to URL parameters
-            const params = new URLSearchParams();
-            for (const [key, value] of formData) {
-                params.append(key, value);
-            }
+function faUpdateBottomRow(totalRecords) {
+    var info = document.getElementById('faTotalInfo');
+    if (info) info.textContent = 'of ' + totalRecords + ' items';
+}
 
-            // Add cache busting parameter
-            params.append('_', Date.now());
+function loadFeedbackData() {
+    faSyncForm();
+    var spinner  = document.getElementById('faLoadingSpinner');
+    var container = document.getElementById('tableContainer');
+    spinner.classList.add('fa-loading');
+    container.style.opacity = '0.5';
+
+    var params = faGetParams();
+    params.append('_', Date.now());
 
             // Make AJAX request
             fetch(`{{ $fr['average'] }}?${params.toString()}`, {
@@ -568,122 +567,48 @@
                 .catch(error => console.error('Error loading programs:', error));
         }
 
-        document.addEventListener('DOMContentLoaded', function() {
-            // Set default to "current" courses if not already set
-            const currentCourseRadio = document.querySelector('input[name="course_type"][value="current"]');
-            const archivedCourseRadio = document.querySelector('input[name="course_type"][value="archived"]');
+document.addEventListener('DOMContentLoaded', function() {
+    var programSel = document.getElementById('faProgramSelect');
+    var facultySel = document.getElementById('faFacultySelect');
+    var fromDate   = document.getElementById('faFromDate');
+    var toDate     = document.getElementById('faToDate');
+    var resetBtn   = document.getElementById('faResetButton');
+    var applyBtn   = document.getElementById('faApplyBtn');
 
-            // If no course type is selected, default to "current"
-            if (!currentCourseRadio.checked && !archivedCourseRadio.checked) {
-                currentCourseRadio.checked = true;
-            }
-
-            // Update export links on page load
-            setTimeout(() => {
-                updateExportLinks();
-            }, 200);
-
-            // Handle course type change separately (special handling)
-            document.querySelectorAll('input[name="course_type"]').forEach(radio => {
-                radio.addEventListener('change', function() {
-                    const courseType = this.value;
-
-                    // Show loading spinner
-                    document.getElementById('loadingSpinner').style.display = 'block';
-                    document.getElementById('tableContainer').style.display = 'none';
-
-                    // First load programs for the selected course type
-                    loadProgramsByCourseType(courseType);
-
-                    // Then load feedback data with a slight delay to ensure programs are updated
-                    setTimeout(() => {
-                        loadFeedbackData();
-                    }, 300);
-
-                    // Update export links after course type change
-                    setTimeout(() => {
-                        updateExportLinks();
-                    }, 600);
-                });
-            });
-
-            // Handle other filter changes (select, date inputs)
-            const filterInputs = document.querySelectorAll(
-                '#filterForm select:not([name="course_type"]), #filterForm input[type="date"]'
-            );
-
-            filterInputs.forEach(input => {
-                // Remove any existing event listeners and add new one
-                input.removeEventListener('change', loadFeedbackData);
-                input.addEventListener('change', function() {
-                    loadFeedbackData();
-                    // Update export links after filter change
-                    setTimeout(updateExportLinks, 300);
-                });
-            });
-
-            // Handle program dropdown changes specifically
-            const programSelect = document.querySelector('select[name="program_name"]');
-            if (programSelect) {
-                programSelect.addEventListener('change', function() {
-                    // Update export links immediately when program changes
-                    setTimeout(updateExportLinks, 100);
-                });
-            }
-
-            // Handle faculty dropdown changes
-            const facultySelect = document.querySelector('select[name="faculty_name"]');
-            if (facultySelect) {
-                facultySelect.addEventListener('change', function() {
-                    setTimeout(updateExportLinks, 100);
-                });
-            }
-
-            // Handle date inputs changes
-            const fromDateInput = document.querySelector('input[name="from_date"]');
-            const toDateInput = document.querySelector('input[name="to_date"]');
-
-            if (fromDateInput) {
-                fromDateInput.addEventListener('change', function() {
-                    setTimeout(updateExportLinks, 100);
-                });
-            }
-
-            if (toDateInput) {
-                toDateInput.addEventListener('change', function() {
-                    setTimeout(updateExportLinks, 100);
-                });
-            }
-
-            // Handle form submit to prevent page refresh
-            document.getElementById('filterForm').addEventListener('submit', function(e) {
-                e.preventDefault(); // Prevent form submission
-                loadFeedbackData(); // Load data via AJAX
-            });
-
-            // Initial load of data
-            // Small delay to ensure DOM is fully ready
-            setTimeout(() => {
-                loadFeedbackData();
-            }, 100);
+    document.querySelectorAll('.fa-course-radio').forEach(function(r) {
+        r.addEventListener('change', function() {
+            var courseType = this.value;
+            document.getElementById('faLoadingSpinner').classList.add('fa-loading');
+            document.getElementById('tableContainer').style.opacity = '0.5';
+            loadProgramsByCourseType(courseType);
+            setTimeout(function() { loadFeedbackData(); }, 300);
         });
+    });
 
-        // Optional: Add debounce function for better performance if needed
-        function debounce(func, wait) {
-            let timeout;
-            return function executedFunction(...args) {
-                const later = () => {
-                    clearTimeout(timeout);
-                    func(...args);
-                };
-                clearTimeout(timeout);
-                timeout = setTimeout(later, wait);
-            };
-        }
+    if (programSel) programSel.addEventListener('change', function() { loadFeedbackData(); });
+    if (facultySel) facultySel.addEventListener('change', function() { loadFeedbackData(); });
+    if (fromDate)   fromDate.addEventListener('change', function() { loadFeedbackData(); });
+    if (toDate)     toDate.addEventListener('change', function() { loadFeedbackData(); });
+    if (applyBtn)   applyBtn.addEventListener('click', function() { loadFeedbackData(); });
 
-        // Also update export links after any AJAX content is loaded
-        document.addEventListener('ajaxComplete', function() {
-            setTimeout(updateExportLinks, 300);
+    if (resetBtn) {
+        resetBtn.addEventListener('click', function() {
+            document.querySelectorAll('.fa-course-radio').forEach(function(r){ r.checked=(r.value==='current'); });
+            if (programSel) programSel.value = '';
+            if (facultySel) facultySel.value = '';
+            if (fromDate)   fromDate.value   = '';
+            if (toDate)     toDate.value     = '';
+            loadFeedbackData();
         });
-    </script>
+    }
+
+    document.getElementById('filterForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        loadFeedbackData();
+    });
+
+    setTimeout(function() { updateExportLinks(); }, 200);
+    setTimeout(function() { loadFeedbackData(); }, 100);
+});
+</script>
 @endsection

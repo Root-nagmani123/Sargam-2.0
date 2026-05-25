@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
+use Yajra\DataTables\Html\Button;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 use Illuminate\Support\Facades\DB;
@@ -62,90 +63,36 @@ class GroupMappingDataTable extends DataTable
                 return $row->Faculty->full_name ?? '-';
             })
             ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
-            ->addColumn('view_download', function ($row) {
-                $id = encrypt($row->pk);
-                    if (!empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
-                        $exportUrl = route('group.mapping.export.student.list', $id);
-                        $html = <<<HTML
-    <a href="javascript:void(0)" class="view-student" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">visibility</i>
-    </a>
-    <a href="{$exportUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">download</i>
-    </a>
-    HTML;
-                    return $html;
-                }
-                return "<span class='text-muted'>No Students</span>";
-            })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
                 $editUrl = route('group.mapping.edit', ['id' => $id]);
                 $deleteUrl = route('group.mapping.delete', ['id' => $id]);
+                $exportUrl = route('group.mapping.export.student.list', $id);
                 $isActive = $row->active_inactive == 1;
+                $checked = $isActive ? 'checked' : '';
                 $csrf = csrf_token();
+                $hasStudents = !empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0;
 
-                $html = <<<HTML
-<td class="text-center">
-    <div class="d-inline-flex align-items-center gap-2"
-         role="group"
-         aria-label="Row actions">
+                $s = 'display:inline-flex;align-items:center;justify-content:center;padding:0;text-decoration:none;border:none;background:transparent;cursor:pointer;';
 
-        <!-- Edit -->
-        <a
-            href="{$editUrl}"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-            aria-label="Edit group name mapping"
-        >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">
-                edit
-            </span>
-            <span class="d-none d-lg-inline">Edit</span>
-        </a>
+                $viewHtml = $hasStudents
+                    ? '<a href="javascript:void(0)" class="view-student" data-id="' . $id . '" title="View Students" style="' . $s . 'color:#1b3a5c;"><i class="material-icons material-symbols-rounded" style="font-size:20px;">visibility</i></a>'
+                    : '';
 
-        <!-- Delete -->
-        <?php if ($isActive): ?>
-<button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none" disabled
-    aria-disabled="true" title="Cannot delete active group mapping">
-    <span class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;"
-        aria-hidden="true">
-        delete
-    </span>
-</button>
-<?php else: ?>
-<form action="{$deleteUrl}" method="POST" class="d-inline">
-    <input type="hidden" name="_token" value="{$csrf}">
-    <input type="hidden" name="_method" value="DELETE">
+                $editHtml = '<a href="' . $editUrl . '" title="Edit" style="' . $s . 'color:#1b3a5c;"><i class="material-icons material-symbols-rounded" style="font-size:20px;">edit</i></a>';
 
-    <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-        aria-label="Delete group name mapping"
-        onclick="return confirm('Are you sure you want to delete this group name mapping?');">
-        <span class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;"
-            aria-hidden="true">
-            delete
-        </span>
-    </button>
-</form>
-<?php endif; ?>
+                $statusHtml = '<div class="form-check form-switch d-inline-flex align-items-center mb-0">'
+                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch" data-table="group_type_master_course_master_map" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>'
+                    . '</div>';
 
-</div>
-</td>
+                $downloadHtml = $hasStudents
+                    ? '<a href="' . $exportUrl . '" title="Download" style="' . $s . 'color:#1b3a5c;"><i class="material-icons material-symbols-rounded" style="font-size:20px;">download</i></a>'
+                    : '';
 
-HTML;
-return $html;
-})
+                $deleteHtml = '<form action="' . $deleteUrl . '" method="POST" class="d-inline"><input type="hidden" name="_token" value="' . $csrf . '"><input type="hidden" name="_method" value="DELETE"><button type="submit" title="Delete" style="' . $s . 'color:#dc3545;" onclick="return confirm(\'Are you sure you want to delete this group mapping?\');"><i class="material-icons material-symbols-rounded" style="font-size:20px;">delete</i></button></form>';
 
-->addColumn('status', function ($row) {
-$checked = $row->active_inactive == 1 ? 'checked' : '';
-return "
-<div class='form-check form-switch d-inline-block'>
-    <input class='form-check-input status-toggle' type='checkbox' role='switch'
-        data-table='group_type_master_course_master_map' data-column='active_inactive' data-id='{$row->pk}' {$checked}>
-</div>
-";
-})
+                return '<div class="d-inline-flex align-items-center gap-3 flex-nowrap">' . $viewHtml . $editHtml . $statusHtml . $downloadHtml . $deleteHtml . '</div>';
+            })
 ->filterColumn('course_name', function ($query, $keyword) {
 $query->whereHas('courseGroup', function ($q) use ($keyword) {
 $q->where('course_name', 'like', "%{$keyword}%");
@@ -182,7 +129,7 @@ $existsQuery->select(DB::raw(1))
 }
 })
 
-->rawColumns(['course_name', 'group_name', 'type_name', 'view_download', 'action', 'status']);
+->rawColumns(['course_name', 'group_name', 'type_name', 'action']);
 }
 
 public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
@@ -244,7 +191,7 @@ $courseQuery->whereNotNull('end_date')
     ->orderBy(1)
     ->responsive(false)
     ->selectStyleSingle()
-    ->addTableClass('table table-bordered table-hover align-middle custom-mapping-table')
+    ->addTableClass('table table-hover align-middle custom-mapping-table')
     ->parameters([
     'responsive' => false,
     'scrollX' => false,
@@ -253,14 +200,21 @@ $courseQuery->whereNotNull('end_date')
     'searching' => true,
     'lengthChange' => true,
     'pageLength' => 10,
+    'lengthMenu' => [[10, 25, 50, 100, 200, 500], [10, 25, 50, 100, 200, 500]],
     'order' => [],
-    'pagingType' => 'simple_numbers', // Bootstrap 5 pagination style
+    'pagingType' => 'full_numbers',
+    'dom' => '<"table-responsive"rt><"d-flex flex-wrap justify-content-between align-items-center gap-2 pt-3 mt-1 border-top"p<"d-flex align-items-center gap-1 text-muted small"li>>',
     'language' => [
-    'paginate' => [
-    'previous' => '&laquo;',
-    'next' => '&raquo;',
+    'paginate' => ['first' => '&laquo;', 'last' => '&raquo;', 'next' => '&rsaquo;', 'previous' => '&lsaquo;'],
+    'info' => 'of _MAX_ Items',
+    'infoEmpty' => '0 Items',
+    'infoFiltered' => '',
+    'lengthMenu' => 'Showing _MENU_',
     ]
-    ]
+    ])
+    ->buttons([
+        Button::make('excel'),
+        Button::make('pdf'),
     ]);
     }
 
@@ -269,44 +223,36 @@ $courseQuery->whereNotNull('end_date')
     public function getColumns(): array
     {
     return [
-    Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
+    Column::computed('DT_RowIndex')->title('S. No.')->width('5%'),
     Column::make('course_name')
     ->title('Course Name')
-    ->addClass('text-center')
+    ->width('25%')
     ->searchable(true)
     ->orderable(false),
     Column::make('type_name')
     ->title('Group Type')
-    ->addClass('text-center')
+    ->width('12%')
     ->searchable(false)
     ->orderable(false),
     Column::make('group_name')
     ->title('Group Name')
-    ->addClass('text-center')
+    ->width('12%')
     ->searchable(true),
     Column::make('Faculty')
     ->title('Faculty')
-    ->addClass('text-center')
+    ->width('10%')
     ->searchable(false)
     ->orderable(false),
     Column::computed('student_count')
-    ->title('Student Count')
-    ->addClass('text-center')
+    ->title('Students')
+    ->width('8%')
     ->searchable(false)
     ->orderable(false),
-    Column::computed('view_download')
-    ->title('View/Download')
-    ->addClass('text-center')
+    Column::computed('action')
+    ->title('Action')
+    ->width('18%')
     ->searchable(false)
     ->orderable(false)
-    ->exportable(false)
-    ->printable(false),
-    Column::computed('status')
-    ->addClass('text-center')
-    ->exportable(false)
-    ->printable(false),
-    Column::computed('action')
-    ->addClass('text-center')
     ->exportable(false)
     ->printable(false)
     ];

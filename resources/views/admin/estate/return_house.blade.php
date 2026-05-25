@@ -28,7 +28,7 @@
         z-index: 2;
     }
 </style>
-<div class="container-fluid py-2">
+<div class="container-fluid">
     <!-- Breadcrumb -->
     <x-breadcrum :title="'Return House'" :items="['Home', 'Estate Management', 'Return House']" />
 
@@ -98,7 +98,7 @@
                         <div class="row g-3 mb-2">
                             <div class="col-md-6">
                                 <label for="request_employee_name" class="form-label fw-medium">Employee Name <span class="text-danger">*</span></label>
-                                <div class="position-relative d-flex align-items-center gap-2">
+                                <div class="position-relative d-flex align-items-center gap-1">
                                     <select class="form-select flex-grow-1" id="request_employee_name" name="estate_other_req_pk" required>
                                         <option value="">--Select Employee Type then Name--</option>
                                         @if($canManageOtherEmployees)

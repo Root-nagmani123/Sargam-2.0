@@ -4,7 +4,7 @@
 
 @section('setup_content')
 
-<div class="container-fluid py-4">
+<div class="container-fluid">
     <x-breadcrum title="Assign Role" />
     <x-session_message />
     

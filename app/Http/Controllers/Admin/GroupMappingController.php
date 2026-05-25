@@ -34,7 +34,7 @@ class GroupMappingController extends Controller
         $data_course_id = get_Role_by_course();
 
         $epoch = DataTableRedisCache::readListEpoch(GroupMappingDataTable::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'group_mapping_index_dropdowns:v1:' . md5(json_encode([
+        $cacheKey = 'group_mapping_index_dropdowns:v2:' . md5(json_encode([
             'epoch' => $epoch,
             'data_course_id' => $data_course_id,
             'date' => now()->toDateString(),
@@ -59,19 +59,37 @@ class GroupMappingController extends Controller
                     ->pluck('course_name', 'pk')
                     ->toArray();
 
+                $archivedQ = CourseMaster::where('active_inactive', '1')
+                    ->whereNotNull('end_date')
+                    ->whereDate('end_date', '<', now()->toDateString());
+
+                if (! empty($data_course_id)) {
+                    $archivedQ->whereIn('pk', $data_course_id);
+                }
+
+                $archivedCourses = $archivedQ->orderBy('course_name')
+                    ->pluck('course_name', 'pk')
+                    ->toArray();
+
                 $groupTypes = CourseGroupTypeMaster::where('active_inactive', 1)
                     ->orderBy('type_name')
                     ->pluck('type_name', 'pk')
                     ->toArray();
 
-                return compact('courses', 'groupTypes');
+                return compact('courses', 'archivedCourses', 'groupTypes');
             }
         );
 
         $courses = $dropdowns['courses'];
+        $archivedCourses = $dropdowns['archivedCourses'];
         $groupTypes = $dropdowns['groupTypes'];
 
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
+        $facilities = FacultyMaster::where('active_inactive', 1)
+            ->orderBy('full_name')
+            ->pluck('full_name', 'pk')
+            ->toArray();
+
+        return $dataTable->render('admin.group_mapping.index', compact('courses', 'archivedCourses', 'groupTypes', 'facilities'));
     }
 
 

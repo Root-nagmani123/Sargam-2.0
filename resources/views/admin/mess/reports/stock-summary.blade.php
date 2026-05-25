@@ -6,7 +6,7 @@
     /** @var array<int> $storeIds */
     $storeIds = $storeIds ?? [];
 @endphp
-<div class="container-fluid stock-summary-report pb-4">
+<div class="container-fluid stock-summary-report">
     <div id="stock-summary-print-meta" class="d-none" hidden data-store-name="{{ e($selectedStoreName ?? ($storeType == 'main' ? 'Officer\'s Main Mess(Primary)' : 'All Sub Stores')) }}"></div>
     <x-breadcrum title="Stock Summary Report"></x-breadcrum>
 

@@ -56,6 +56,7 @@ class EstateBlockDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
+                'pagingType' => 'full_numbers',
                 'order' => [[1, 'asc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
@@ -64,12 +65,7 @@ class EstateBlockDataTable extends DataTable
                     'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
                     'infoEmpty' => 'Showing 0 to 0 of 0 entries',
                     'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => [
-                        'first' => 'First',
-                        'last' => 'Last',
-                        'next' => 'Next',
-                        'previous' => 'Previous',
-                    ],
+                    'paginate' => ['first' => '', 'last' => '', 'next' => '', 'previous' => ''],
                     'emptyTable' => 'No block/building found. <a href="' . route('admin.estate.define-block-building.create') . '">Add one</a>.',
                 ],
                 'dom' => '<"row mb-3"<"col-12 col-md-6"l><"col-12 col-md-6"f>>rt<"row mt-3"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',

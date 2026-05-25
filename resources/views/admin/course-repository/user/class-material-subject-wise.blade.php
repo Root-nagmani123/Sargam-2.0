@@ -7,6 +7,28 @@
     <div class="container-fluid px-3 px-md-4 pt-3 pb-0">
         <x-breadcrum title="Class Material (Subject Wise)"></x-breadcrum>
     </div>
+@section('content')
+<div class="d-flex">
+    <!-- Left Sidebar -->
+    <aside class="course-sidebar-wrapper">
+        <x-course-sidebar />
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-grow-1">
+        <div class="container-fluid" id="main-content">
+            <!-- Title Section with Back Button -->
+            <div class="title-section mb-4">
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" 
+                            onclick="window.history.back()" 
+                            class="btn-back btn btn-link p-0 text-decoration-none"
+                            aria-label="Go back">
+                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
+                    </button>
+                    <h1 class="h2 mb-0 fw-bold text-dark">Class Material (Subject Wise)</h1>
+                </div>
+            </div>
 
     <div class="container-fluid px-3 px-md-4 py-4" id="main-content">
         <div class="cru-panel bg-white border rounded-3 shadow-sm p-3 p-md-4">

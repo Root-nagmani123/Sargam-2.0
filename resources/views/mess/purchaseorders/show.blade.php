@@ -11,7 +11,7 @@
                     <h5 class="mb-1 fw-semibold">PO {{ $purchaseOrder->po_number }}</h5>
                     <p class="mb-0 text-body-secondary small">Created by {{ $purchaseOrder->creator->name ?? 'N/A' }}</p>
                 </div>
-                <div class="d-flex align-items-center gap-2">
+                <div class="d-flex align-items-center gap-1">
                     <span class="text-body-secondary small">Status</span>
                     <span class="badge rounded-pill bg-{{ $purchaseOrder->status == 'approved' ? 'success' : ($purchaseOrder->status == 'rejected' ? 'danger' : ($purchaseOrder->status == 'completed' ? 'primary' : 'warning')) }}">
                         {{ ucfirst($purchaseOrder->status) }}
