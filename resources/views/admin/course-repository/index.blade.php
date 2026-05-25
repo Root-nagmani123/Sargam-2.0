@@ -131,6 +131,38 @@
         border-color: #dc3545;
         color: #b02a37;
     }
+
+    /* Category / sub-category / documents links */
+    a.cr-link-category {
+        color: #004a93 !important;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    a.cr-link-category:hover,
+    a.cr-link-category:focus {
+        color: #003366 !important;
+        text-decoration: underline;
+    }
+    a.cr-link-subcategory {
+        color: #087990 !important;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    a.cr-link-subcategory:hover,
+    a.cr-link-subcategory:focus {
+        color: #055160 !important;
+        text-decoration: underline;
+    }
+    a.cr-link-documents {
+        color: #146c43 !important;
+        text-decoration: none;
+        font-weight: 600;
+    }
+    a.cr-link-documents:hover,
+    a.cr-link-documents:focus {
+        color: #0d5132 !important;
+        text-decoration: underline;
+    }
 </style>
 <div class="container-fluid">
     <!-- Breadcrumb -->
@@ -204,7 +236,7 @@
                         <tr class="border-bottom border-light">
                             <td class="ps-4 text-muted">{{ $repositories->firstItem() + $key }}</td>
                             <td>
-                                @if($repo->category_image && \Storage::disk('public')->exists($repo->category_image))
+                                @if(filled($repo->category_image) && \Storage::disk('public')->exists($repo->category_image))
                                 <img src="{{ asset('storage/' . $repo->category_image) }}"
                                     alt="{{ $repo->course_repository_name }}" class="rounded object-fit-cover"
                                     style="width: 48px; height: 48px;">
@@ -218,19 +250,19 @@
                             </td>
                             <td>
                                 <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-decoration-none fw-medium text-dark">
+                                    class="cr-link-category">
                                     {{ $repo->course_repository_name }}
                                 </a>
                             </td>
                             <td>
                                 <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-primary border-bottom">
+                                    class="cr-link-subcategory">
                                     {{ $repo->children->count() }} - sub-categories
                                 </a>
                             </td>
                             <td>
                                 <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-primary border-bottom">{{ $repo->getDocumentCount() }} - documents</a>
+                                    class="cr-link-documents">{{ $repo->getDocumentCount() }} - documents</a>
                             </td>
                             <td class="pe-4">
                                 <div class="d-flex gap-1" role="group" aria-label="Category actions">

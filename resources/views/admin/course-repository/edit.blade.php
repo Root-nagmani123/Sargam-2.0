@@ -37,7 +37,7 @@
                             <div class="mb-3">
                                 <label for="category_image" class="form-label"><strong>Category Image</strong></label>
                                 
-                                @if($repository->category_image && \Storage::disk('public')->exists($repository->category_image))
+                                @if(filled($repository->category_image) && \Storage::disk('public')->exists($repository->category_image))
                                     <div class="mb-2">
                                         <p class="text-muted mb-1"><small>Current Image:</small></p>
                                         <img src="{{ asset('storage/' . $repository->category_image) }}" alt="Current Image" 

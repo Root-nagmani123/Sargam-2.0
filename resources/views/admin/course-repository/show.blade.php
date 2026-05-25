@@ -127,6 +127,38 @@
     color: #0d6efd;
     margin-bottom: 0.5rem;
 }
+
+/* Category / sub-category / documents links */
+a.cr-link-category {
+    color: #004a93 !important;
+    text-decoration: none;
+    font-weight: 600;
+}
+a.cr-link-category:hover,
+a.cr-link-category:focus {
+    color: #003366 !important;
+    text-decoration: underline;
+}
+a.cr-link-subcategory {
+    color: #087990 !important;
+    text-decoration: none;
+    font-weight: 600;
+}
+a.cr-link-subcategory:hover,
+a.cr-link-subcategory:focus {
+    color: #055160 !important;
+    text-decoration: underline;
+}
+a.cr-link-documents {
+    color: #146c43 !important;
+    text-decoration: none;
+    font-weight: 600;
+}
+a.cr-link-documents:hover,
+a.cr-link-documents:focus {
+    color: #0d5132 !important;
+    text-decoration: underline;
+}
 </style>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -172,7 +204,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     @foreach ($ancestors as $ancestor)
                     <li class="breadcrumb-item">
                         <a href="{{ route('course-repository.show', $ancestor->pk) }}"
-                            class="text-decoration-none text-muted">{{ $ancestor->course_repository_name }}</a>
+                            class="cr-link-category">{{ $ancestor->course_repository_name }}</a>
                     </li>
                     @endforeach
                     @endif
@@ -265,7 +297,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         {{ $loop->iteration }}
                                     </td>
                                     <td>
-                                        @if($child->category_image &&
+                                        @if(filled($child->category_image) &&
                                         \Storage::disk('public')->exists($child->category_image))
                                         <img src="{{ asset('storage/' . $child->category_image) }}" alt="Category Image"
                                             class="rounded-2 shadow-sm"
@@ -280,7 +312,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </td>
                                     <td>
                                         <a href="{{ route('course-repository.show', $child->pk) }}"
-                                            class="text-decoration-none fw-semibold text-dark hover-primary">
+                                            class="cr-link-subcategory">
                                             {{ $child->course_repository_name }}
                                         </a>
                                     </td>
@@ -288,9 +320,17 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <span
                                             class="text-muted small">{{ Str::limit($child->course_repository_details ?? 'N/A', 50) }}</span>
                                     </td>
-                                    <td>{{ $child->children->count() }} - sub-categories
+                                    <td>
+                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                            class="cr-link-subcategory">
+                                            {{ $child->children->count() }} - sub-categories
+                                        </a>
                                     </td>
-                                    <td>{{ $child->getDocumentCount() }} - documents
+                                    <td>
+                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                            class="cr-link-documents">
+                                            {{ $child->getDocumentCount() }} - documents
+                                        </a>
                                     </td>
                                     <td>
                                         <div class="btn-group d-flex gap-2 text-primary" role="group">

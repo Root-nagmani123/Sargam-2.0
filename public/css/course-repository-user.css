@@ -227,6 +227,11 @@
     color: var(--cru-primary-hover) !important;
 }
 
+.cru-btn-video:hover,
+.cru-btn-video-download:hover {
+    color: #b02a37 !important;
+}
+
 .cru-table-actions .btn-link {
     line-height: 1;
     transition: color var(--cru-transition), transform var(--cru-transition);
@@ -234,6 +239,32 @@
 
 .cru-table-actions .btn-link:hover {
     transform: scale(1.08);
+}
+
+.cru-table-toolbar {
+    min-height: 2.75rem;
+}
+
+.cru-column-toggle-menu {
+    min-width: 12rem;
+    max-height: 16rem;
+    overflow-y: auto;
+}
+
+.cru-column-toggle-menu .dropdown-header {
+    font-size: 0.7rem;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+}
+
+.cru-column-toggle-menu label.dropdown-item {
+    font-size: 0.875rem;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+
+.cru-col-hidden {
+    display: none !important;
 }
 
 .cru-table-footer {

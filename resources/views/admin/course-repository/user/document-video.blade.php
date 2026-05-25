@@ -19,8 +19,24 @@
                         </button>
                     </div>
                     @if($document->videolink)
+                        <div class="d-flex flex-wrap gap-2 mb-3">
+                            <a href="{{ $document->videolink }}"
+                               class="btn btn-sm btn-outline-primary"
+                               target="_blank"
+                               rel="noopener noreferrer">
+                                <i class="bi bi-box-arrow-up-right me-1" aria-hidden="true"></i>Open video link
+                            </a>
+                            @if(preg_match('/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i', $document->videolink))
+                                <a href="{{ $document->videolink }}"
+                                   class="btn btn-sm btn-primary"
+                                   download>
+                                    <i class="bi bi-download me-1" aria-hidden="true"></i>Download video
+                                </a>
+                            @endif
+                        </div>
                         <div class="ratio ratio-16x9 rounded-3 overflow-hidden shadow-sm">
-                            <iframe src="{{ $document->videolink }}"
+                            <iframe src="{{ $document->video_embed_url }}"
+                                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                                     allowfullscreen
                                     title="Video Content">
                             </iframe>

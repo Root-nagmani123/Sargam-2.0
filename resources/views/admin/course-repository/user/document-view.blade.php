@@ -11,7 +11,7 @@
                     <button class="btn btn-sm btn-outline-secondary" type="button" aria-label="Menu">
                         <i class="bi bi-list" aria-hidden="true"></i>
                     </button>
-                    <span class="fw-semibold text-truncate">{{ $pdfDocument->document_path ?? 'Document' }}</span>
+                    <span class="fw-semibold text-truncate">{{ $pdfDocument->upload_document ?? $pdfDocument->file_title ?? 'Document' }}</span>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2">
                     <div class="btn-group btn-group-sm" role="group" aria-label="Page navigation">
@@ -34,9 +34,22 @@
                     <button class="btn btn-sm btn-outline-secondary" type="button" aria-label="Fit to page">
                         <i class="bi bi-arrows-fullscreen" aria-hidden="true"></i>
                     </button>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" aria-label="Download">
-                        <i class="bi bi-download" aria-hidden="true"></i>
-                    </button>
+                    @if($pdfDocument ?? null)
+                        <a href="{{ route('course-repository.document.download', $pdfDocument->pk) }}?file={{ urlencode($pdfDocument->upload_document) }}"
+                           class="btn btn-sm btn-outline-secondary"
+                           title="Download document"
+                           aria-label="Download document">
+                            <i class="bi bi-download" aria-hidden="true"></i>
+                        </a>
+                    @endif
+                    @if($document->videolink ?? null)
+                        <a href="{{ route('admin.course-repository.user.document-video', $document->pk) }}"
+                           class="btn btn-sm btn-outline-danger"
+                           title="View video"
+                           aria-label="View video">
+                            <i class="bi bi-play-btn" aria-hidden="true"></i>
+                        </a>
+                    @endif
                     <button class="btn btn-sm btn-outline-secondary" type="button" aria-label="Print">
                         <i class="bi bi-printer" aria-hidden="true"></i>
                     </button>
@@ -53,8 +66,8 @@
             <div class="row justify-content-center">
                 <div class="col-xl-10">
                     <div class="pdf-container bg-white shadow-sm rounded-3 p-3 p-md-4">
-                        @if($pdfDocument && Storage::exists($pdfDocument->document_path))
-                            <iframe src="{{ Storage::url($pdfDocument->document_path) }}"
+                        @if(!empty($pdfViewUrl))
+                            <iframe src="{{ $pdfViewUrl }}"
                                     class="w-100 rounded-2"
                                     style="height: 80vh; border: none;"
                                     title="PDF Document Viewer">

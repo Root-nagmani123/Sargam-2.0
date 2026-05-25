@@ -1,60 +1,82 @@
 @php
     $documents = $documents ?? collect();
     $totalCount = $documents->count();
+    $cruTableId = 'cruDocumentsTable';
+    $cruColumnStorageKey = 'cru-user-documents-columns';
+    $cruColumns = [
+        ['key' => 'sno', 'label' => 'S. No.', 'locked' => true],
+        ['key' => 'document_name', 'label' => 'Document Name', 'default' => true],
+        ['key' => 'file_title', 'label' => 'File Title', 'default' => true],
+        ['key' => 'course', 'label' => 'Course', 'default' => true],
+        ['key' => 'subject', 'label' => 'Subject', 'default' => true],
+        ['key' => 'topic', 'label' => 'Topic', 'default' => true],
+        ['key' => 'session_date', 'label' => 'Session Date', 'default' => true],
+        ['key' => 'author', 'label' => 'Author', 'default' => true],
+        ['key' => 'action', 'label' => 'Action', 'locked' => true],
+    ];
 @endphp
-<div class="card cru-table-card border rounded-3 shadow-sm overflow-hidden">
+<div class="card cru-table-card border rounded-3 shadow-sm overflow-hidden" data-cru-table-card="{{ $cruTableId }}">
+    @if($totalCount > 0)
+    <div class="cru-table-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 px-3 py-2 border-bottom bg-white">
+        @include('admin.course-repository.user.partials.table-column-toggle', [
+            'cruTableId' => $cruTableId,
+            'cruColumnStorageKey' => $cruColumnStorageKey,
+            'cruColumns' => $cruColumns,
+        ])
+    </div>
+    @endif
     <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle cru-table">
+        <table class="table table-hover mb-0 align-middle cru-table" id="{{ $cruTableId }}">
             <thead>
                 <tr>
-                    <th class="text-center text-nowrap">S. No.</th>
-                    <th>Document Name</th>
-                    <th>File Title</th>
-                    <th>Course</th>
-                    <th>Subject</th>
-                    <th>Topic</th>
-                    <th class="text-nowrap">Session Date</th>
-                    <th>Author</th>
-                    <th class="text-center">Action</th>
+                    <th class="text-center text-nowrap cru-col-sno" data-col="sno">S. No.</th>
+                    <th class="cru-col-document_name" data-col="document_name">Document Name</th>
+                    <th class="cru-col-file_title" data-col="file_title">File Title</th>
+                    <th class="cru-col-course" data-col="course">Course</th>
+                    <th class="cru-col-subject" data-col="subject">Subject</th>
+                    <th class="cru-col-topic" data-col="topic">Topic</th>
+                    <th class="text-nowrap cru-col-session_date" data-col="session_date">Session Date</th>
+                    <th class="cru-col-author" data-col="author">Author</th>
+                    <th class="text-center cru-col-action" data-col="action">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($documents as $doc)
                 <tr>
-                    <td class="text-center">{{ $loop->iteration }}</td>
-                    <td class="text-truncate" style="max-width: 12rem;">
+                    <td class="text-center cru-col-sno">{{ $loop->iteration }}</td>
+                    <td class="text-truncate cru-col-document_name" style="max-width: 12rem;">
                         <span class="fw-semibold text-dark">{{ Str::limit($doc->upload_document ?? 'N/A', 40) }}</span>
                     </td>
-                    <td class="text-truncate" style="max-width: 10rem;">{{ Str::limit($doc->file_title ?? 'N/A', 35) }}</td>
-                    <td>
+                    <td class="text-truncate cru-col-file_title" style="max-width: 10rem;">{{ Str::limit($doc->file_title ?? 'N/A', 35) }}</td>
+                    <td class="cru-col-course">
                         @if($doc->detail && $doc->detail->course)
                             {{ $doc->detail->course->course_name }}
                         @else
                             NA
                         @endif
                     </td>
-                    <td>
+                    <td class="cru-col-subject">
                         @if($doc->detail && $doc->detail->subject)
                             {{ Str::limit($doc->detail->subject->subject_name, 25) }}
                         @else
                             NA
                         @endif
                     </td>
-                    <td>
+                    <td class="cru-col-topic">
                         @if($doc->detail && $doc->detail->topic)
                             {{ Str::limit($doc->detail->topic->subject_topic, 20) }}
                         @else
                             NA
                         @endif
                     </td>
-                    <td class="text-nowrap">
+                    <td class="text-nowrap cru-col-session_date">
                         @if($doc->detail && $doc->detail->session_date)
                             {{ $doc->detail->session_date->format('d/m/Y') }}
                         @else
                             NA
                         @endif
                     </td>
-                    <td>
+                    <td class="cru-col-author">
                         @if($doc->detail && $doc->detail->author)
                             {{ Str::limit($doc->detail->author->full_name, 20) }}
                         @elseif($doc->detail && $doc->detail->author_name)
@@ -63,32 +85,8 @@
                             NA
                         @endif
                     </td>
-                    <td class="text-center">
-                        <div class="d-inline-flex align-items-center justify-content-center gap-2 cru-table-actions">
-                            @if($doc->course_repository_details_pk)
-                                <a href="{{ route('admin.course-repository.user.document-view', $doc->course_repository_details_pk) }}"
-                                   class="btn btn-link btn-sm text-primary p-0 cru-btn-view"
-                                   title="View"
-                                   aria-label="View document">
-                                    <i class="bi bi-eye fs-5" aria-hidden="true"></i>
-                                </a>
-                            @elseif($doc->public_file_url ?? null)
-                                <a href="{{ $doc->public_file_url }}"
-                                   class="btn btn-link btn-sm text-primary p-0 cru-btn-view"
-                                   target="_blank"
-                                   rel="noopener noreferrer"
-                                   title="View"
-                                   aria-label="View document in new tab">
-                                    <i class="bi bi-eye fs-5" aria-hidden="true"></i>
-                                </a>
-                            @endif
-                            <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
-                               class="btn btn-link btn-sm text-primary p-0 cru-btn-download"
-                               title="Download"
-                               aria-label="Download document">
-                                <i class="bi bi-download fs-5" aria-hidden="true"></i>
-                            </a>
-                        </div>
+                    <td class="text-center cru-col-action">
+                        @include('admin.course-repository.user.partials.document-actions', ['doc' => $doc])
                     </td>
                 </tr>
                 @empty
@@ -108,3 +106,11 @@
     </div>
     @endif
 </div>
+
+@push('scripts')
+@include('admin.course-repository.user.partials.column-toggle-script', [
+    'cruTableId' => $cruTableId,
+    'cruColumnStorageKey' => $cruColumnStorageKey,
+    'cruColumns' => $cruColumns,
+])
+@endpush

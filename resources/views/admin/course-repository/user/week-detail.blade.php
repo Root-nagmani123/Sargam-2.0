@@ -37,41 +37,67 @@
                                 <p class="mb-0">No documents found for this week.</p>
                             </div>
                             @else
-                            <div class="card cru-table-card border rounded-3 shadow-sm overflow-hidden">
+                            @php
+                                $cruTableId = 'cruWeekDetailTable';
+                                $cruColumnStorageKey = 'cru-user-week-detail-columns';
+                                $cruColumns = [
+                                    ['key' => 'sno', 'label' => 'S. No.', 'locked' => true],
+                                    ['key' => 'course', 'label' => 'Course Name', 'default' => true],
+                                    ['key' => 'subject', 'label' => 'Major Subject Name', 'default' => true],
+                                    ['key' => 'topic', 'label' => 'Topic Name', 'default' => true],
+                                    ['key' => 'action', 'label' => 'Action', 'locked' => true],
+                                ];
+                            @endphp
+                            <div class="card cru-table-card border rounded-3 shadow-sm overflow-hidden" data-cru-table-card="{{ $cruTableId }}">
+                                <div class="cru-table-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 px-3 py-2 border-bottom bg-white">
+                                    @include('admin.course-repository.user.partials.table-column-toggle', [
+                                        'cruTableId' => $cruTableId,
+                                        'cruColumnStorageKey' => $cruColumnStorageKey,
+                                        'cruColumns' => $cruColumns,
+                                    ])
+                                </div>
                                 <div class="table-responsive">
-                                    <table class="table table-hover mb-0 align-middle cru-table">
+                                    <table class="table table-hover mb-0 align-middle cru-table" id="{{ $cruTableId }}">
                                         <thead>
                                             <tr>
-                                                <th class="text-center">S. No.</th>
-                                                <th>Course Name</th>
-                                                <th>Major Subject Name</th>
-                                                <th>Topic Name</th>
+                                                <th class="text-center cru-col-sno" data-col="sno">S. No.</th>
+                                                <th class="cru-col-course" data-col="course">Course Name</th>
+                                                <th class="cru-col-subject" data-col="subject">Major Subject Name</th>
+                                                <th class="cru-col-topic" data-col="topic">Topic Name</th>
+                                                <th class="text-center cru-col-action" data-col="action">Action</th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             @foreach($documents as $document)
                                             <tr>
-                                                <td class="text-center">{{ $loop->iteration }}</td>
-                                                <td>
+                                                <td class="text-center cru-col-sno">{{ $loop->iteration }}</td>
+                                                <td class="cru-col-course">
                                                     @if($document->detail && $document->detail->course)
                                                         {{ $document->detail->course->course_name }}
                                                     @else
                                                         NA
                                                     @endif
                                                 </td>
-                                                <td>
+                                                <td class="cru-col-subject">
                                                     @if($document->detail && $document->detail->subject)
                                                         {{ $document->detail->subject->subject_name }}
                                                     @else
                                                         NA
                                                     @endif
                                                 </td>
-                                                <td>
+                                                <td class="cru-col-topic">
                                                     @if($document->detail && $document->detail->topic)
                                                         {{ $document->detail->topic->subject_topic }}
                                                     @else
                                                         NA
                                                     @endif
+                                                </td>
+                                                <td class="text-center cru-col-action">
+                                                    @include('admin.course-repository.user.partials.document-actions', [
+                                                        'detailPk' => $document->pk,
+                                                        'detail' => $document,
+                                                        'fileDoc' => $document->documents->first(),
+                                                    ])
                                                 </td>
                                             </tr>
                                             @endforeach
@@ -103,6 +129,21 @@
 
 @include('admin.course-repository.user.partials.pdf-details-modal')
 @include('admin.course-repository.user.partials.assets')
+@if(!empty($documents) && $documents->isNotEmpty())
+@push('scripts')
+@include('admin.course-repository.user.partials.column-toggle-script', [
+    'cruTableId' => 'cruWeekDetailTable',
+    'cruColumnStorageKey' => 'cru-user-week-detail-columns',
+    'cruColumns' => [
+        ['key' => 'sno', 'label' => 'S. No.', 'locked' => true],
+        ['key' => 'course', 'label' => 'Course Name', 'default' => true],
+        ['key' => 'subject', 'label' => 'Major Subject Name', 'default' => true],
+        ['key' => 'topic', 'label' => 'Topic Name', 'default' => true],
+        ['key' => 'action', 'label' => 'Action', 'locked' => true],
+    ],
+])
+@endpush
+@endif
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('pdfDetailsModal');
