@@ -1,31 +1,15 @@
-@extends('admin.layouts.timetable')
+@extends('admin.layouts.master')
 
 @section('title', 'Class Material (Week Wise) | Course Repository Admin')
 
-@section('content')
-<div class="d-flex">
-    <!-- Left Sidebar -->
-    <aside class="course-sidebar-wrapper">
-        <x-course-sidebar />
-    </aside>
+@section('setup_content')
+<div class="cru-page">
+    <div class="container-fluid px-3 px-md-4 pt-3 pb-0">
+        <x-breadcrum title="Class Material (Week Wise)"></x-breadcrum>
+    </div>
 
-    <!-- Main Content -->
-    <main class="flex-grow-1">
-        <div class="container-fluid px-4 py-4" id="main-content">
-            <!-- Title Section with Back Button -->
-            <div class="title-section mb-4">
-                <div class="d-flex align-items-center gap-3">
-                    <button type="button" 
-                            onclick="window.history.back()" 
-                            class="btn-back btn btn-link p-0 text-decoration-none"
-                            aria-label="Go back">
-                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
-                    </button>
-                    <h1 class="h2 mb-0 fw-bold text-dark">Class Material (Week Wise)</h1>
-                </div>
-            </div>
-
-            <!-- Filter Card -->
+    <div class="container-fluid px-3 px-md-4 py-4" id="main-content">
+        <div class="cru-panel bg-white border rounded-3 shadow-sm p-3 p-md-4">
             @include('admin.course-repository.user.partials.filter-card', [
                 'route' => route('admin.course-repository.user.class-material-week-wise', $courseCode),
                 'courses' => $courses,
@@ -34,20 +18,19 @@
                 'filters' => $filters,
             ])
 
-            <!-- Material Cards Grid -->
-            <div class="material-cards-grid mt-4">
-                <div class="row g-4">
+            <div class="material-cards-grid mb-4">
+                <div class="row g-3 g-md-4">
                     @php
                         $cardColors = ['bg-success-subtle', 'bg-warning-subtle', 'bg-info-subtle'];
                         $colorIndex = 0;
                     @endphp
                     @foreach(['Class Material (Subject Wise)', 'Class Material (Week Wise)', 'Hindi Reading Material'] as $cardTitle)
-                        <div class="col-md-4 col-lg-4">
-                            <div class="card material-card shadow-sm h-100 {{ $cardColors[$colorIndex % count($cardColors)] }}">
-                                <div class="card-body">
+                        <div class="col-sm-6 col-lg-4">
+                            <div class="card material-card border h-100 rounded-3 shadow-sm {{ $cardColors[$colorIndex % count($cardColors)] }}">
+                                <div class="card-body p-4">
                                     <div class="d-flex align-items-start gap-3">
                                         <div class="material-icon-wrapper">
-                                            <span class="material-icons material-symbols-rounded">folder</span>
+                                            <i class="bi bi-folder2-open fs-4" aria-hidden="true"></i>
                                         </div>
                                         <div class="flex-grow-1">
                                             <h5 class="card-title fw-bold mb-2">{{ $cardTitle }}</h5>
@@ -62,23 +45,22 @@
                 </div>
             </div>
 
-            <!-- Weeks List -->
-            <div class="weeks-list mt-4">
+            <div class="weeks-list">
                 <div class="row g-3">
                     @foreach($weeks as $week)
                         <div class="col-md-6 col-lg-4">
-                            <a href="{{ route('admin.course-repository.user.week-detail', [$courseCode, $week['number']]) }}" 
-                               class="text-decoration-none">
-                                <div class="card week-item shadow-sm">
-                                    <div class="card-body">
+                            <a href="{{ route('admin.course-repository.user.week-detail', [$courseCode, $week['number']]) }}"
+                               class="text-decoration-none text-dark">
+                                <div class="card week-item border h-100 rounded-3 shadow-sm">
+                                    <div class="card-body p-3 p-md-4">
                                         <div class="d-flex align-items-center justify-content-between">
                                             <div class="d-flex align-items-center gap-3">
                                                 <div class="week-icon-wrapper">
-                                                    <span class="material-icons material-symbols-rounded">folder</span>
+                                                    <i class="bi bi-folder2 fs-5" aria-hidden="true"></i>
                                                 </div>
                                                 <span class="fw-semibold">{{ $week['label'] }}</span>
                                             </div>
-                                            <span class="material-icons material-symbols-rounded">chevron_right</span>
+                                            <i class="bi bi-chevron-right text-muted" aria-hidden="true"></i>
                                         </div>
                                     </div>
                                 </div>
@@ -88,8 +70,8 @@
                 </div>
             </div>
         </div>
-    </main>
+    </div>
 </div>
 
-<link rel="stylesheet" href="{{ asset('css/course-repository-user.css') }}">
+@include('admin.course-repository.user.partials.assets')
 @endsection

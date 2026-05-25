@@ -1,73 +1,45 @@
-@extends('admin.layouts.timetable')
+@extends('admin.layouts.master')
 
 @section('title', 'Foundation Course | Course Repository Admin')
 
-@section('content')
-<div class="d-flex">
-    <!-- Left Sidebar -->
-    <aside class="course-sidebar-wrapper">
-        <x-course-sidebar />
-    </aside>
+@section('setup_content')
+<div class="cru-page">
+    <div class="container-fluid px-3 px-md-4 pt-3 pb-0">
+        <x-breadcrum title="Foundation Course"></x-breadcrum>
+    </div>
 
-    <!-- Main Content -->
-    <main class="flex-grow-1">
-        <div class="container-fluid px-4 py-4" id="main-content">
-            <!-- Title Section with Back Button -->
-            <div class="title-section mb-4">
-                <div class="d-flex align-items-center gap-3">
-                    <button type="button" 
-                            onclick="window.history.back()" 
-                            class="btn-back btn btn-link p-0 text-decoration-none"
-                            aria-label="Go back">
-                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
-                    </button>
-                    <h1 class="h2 mb-0 fw-bold text-dark">Foundation Course</h1>
-                </div>
-            </div>
+    <div class="d-flex cru-layout-with-sidebar align-items-stretch w-100">
 
-            <!-- Filter Card -->
-            @include('admin.course-repository.user.partials.filter-card', [
-                'route' => route('admin.course-repository.user.foundation-course'),
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => $filters,
-            ])
+        <main class="flex-grow-1 min-vw-0">
+            <div class="container-fluid px-3 px-md-4 py-4" id="main-content">
+                <div class="cru-panel bg-white border rounded-3 shadow-sm p-3 p-md-4">
+                    @include('admin.course-repository.user.partials.filter-card', [
+                        'route' => route('admin.course-repository.user.foundation-course'),
+                        'courses' => $courses,
+                        'subjects' => $subjects,
+                        'faculties' => $faculties,
+                        'filters' => $filters,
+                    ])
 
-            <!-- Material Cards Grid -->
-            <div class="material-cards-grid mt-4">
-                <div class="row g-4">
-                    @forelse($repositories as $repository)
-                        <div class="col-md-4 col-lg-4">
-                            <div class="card material-card shadow-sm h-100">
-                                <div class="card-body">
-                                    <div class="d-flex align-items-start gap-3">
-                                        <div class="material-icon-wrapper">
-                                            <span class="material-icons material-symbols-rounded">folder</span>
-                                        </div>
-                                        <div class="flex-grow-1">
-                                            <h5 class="card-title fw-bold mb-2">{{ $repository->course_repository_name }}</h5>
-                                            <p class="text-muted small mb-0">
-                                                {{ $repository->documents->count() }} Files • {{ $repository->children->count() }} Resources
-                                            </p>
-                                        </div>
-                                    </div>
+                    @include('admin.course-repository.user.partials.page-toolbar', ['showViewToggle' => true])
+
+                    <div class="course-cards-grid" id="courseCardsGrid">
+                        <div class="row g-3 g-md-4">
+                            @forelse($repositories as $repository)
+                                @include('admin.course-repository.user.partials.repository-card', ['repository' => $repository])
+                            @empty
+                                <div class="col-12 text-center py-5 text-muted">
+                                    <i class="bi bi-inbox display-6 d-block mb-2" aria-hidden="true"></i>
+                                    <p class="mb-0 fw-semibold">No materials found.</p>
                                 </div>
-                            </div>
+                            @endforelse
                         </div>
-                    @empty
-                        <div class="col-12">
-                            <div class="alert alert-info text-center">
-                                <span class="material-icons material-symbols-rounded me-2">info</span>
-                                No materials found.
-                            </div>
-                        </div>
-                    @endforelse
+                    </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 </div>
 
-<link rel="stylesheet" href="{{ asset('css/course-repository-user.css') }}">
+@include('admin.course-repository.user.partials.assets')
 @endsection

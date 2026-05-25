@@ -1,695 +1,418 @@
-/* ============================================
-   Course Repository User Page Styles
-   Modern Bootstrap 5.3+ Design
-   ============================================ */
+/* Course Repository User — Bootstrap 5.3 government portal UI */
 
-/* CSS Custom Properties */
 :root {
-    --govt-blue-dark: #1e3a5f;
-    --govt-blue-light: #4a90e2;
-    --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
-    --border-radius: 12px;
-    --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --cru-primary: #004a93;
+    --cru-primary-hover: #003d7a;
+    --cru-primary-light: #5b9bd5;
+    --cru-banner-from: #e8f4fc;
+    --cru-banner-to: #ffffff;
+    --cru-border: #dee2e6;
+    --cru-radius: 0.5rem;
+    --cru-radius-lg: 0.75rem;
+    --cru-shadow: 0 1px 3px rgba(0, 40, 80, 0.06);
+    --cru-shadow-hover: 0 8px 24px rgba(0, 40, 80, 0.1);
+    --cru-transition: 0.2s ease;
 }
 
-/* Government Header */
-.govt-header {
-    position: sticky;
-    top: 0;
-    z-index: 1030;
+.cru-page {
+    --bs-primary: var(--cru-primary);
+    --bs-primary-rgb: 0, 74, 147;
+    background-color: #f4f6f8;
 }
 
-.govt-header-top {
-    background-color: var(--govt-blue-dark) !important;
+.cru-panel {
+    overflow: visible;
+}
+
+.cru-layout-with-sidebar {
+    align-items: stretch;
+    width: 100%;
+}
+
+.cru-layout-with-sidebar > main {
+    min-width: 0;
+    width: 100%;
+}
+
+.cru-page .course-sidebar-wrapper {
+    flex-shrink: 0;
+}
+
+/* View toggle */
+.cru-toolbar .cru-view-toggle .btn {
     font-size: 0.875rem;
-}
-
-.govt-header-bottom {
-    background-color: var(--govt-blue-light) !important;
-    font-size: 1rem;
-}
-
-.govt-header-top .btn-link,
-.govt-header-top .dropdown-toggle {
-    color: rgba(255, 255, 255, 0.9) !important;
-    text-decoration: none;
-    transition: var(--transition);
-}
-
-.govt-header-top .btn-link:hover,
-.govt-header-top .dropdown-toggle:hover {
-    color: #fff !important;
-    text-decoration: underline;
-}
-
-/* Title Section */
-.title-section {
-    padding: 1.5rem 0;
-}
-
-.btn-back {
-    transition: var(--transition);
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.btn-back:hover {
-    background-color: rgba(0, 0, 0, 0.05);
-    transform: translateX(-4px);
-}
-
-.title-section h1 {
-    font-size: clamp(1.5rem, 4vw, 2rem);
-    letter-spacing: -0.02em;
-}
-
-/* Filter Card */
-.filter-card {
-    border-radius: var(--border-radius);
-    border: none;
+    padding: 0.35rem 0.85rem;
+    border-color: var(--cru-border);
+    color: #495057;
     background: #fff;
 }
 
-.filter-card .form-label {
-    font-size: 0.875rem;
-    color: #495057;
-    margin-bottom: 0.5rem;
+.cru-view-toggle .btn.active {
+    background-color: #fff;
+    border-color: var(--cru-primary);
+    color: var(--cru-primary);
+    box-shadow: inset 0 0 0 1px var(--cru-primary);
 }
 
+.cru-filter-label {
+    color: #6c757d;
+    white-space: nowrap;
+}
+
+/* Filters */
 .filter-card .form-control,
-.filter-card .form-select {
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    padding: 0.625rem 0.75rem;
+.filter-card .form-select,
+.filter-card.choices-bs-scope .choices .choices__inner {
+    border-color: var(--cru-border);
+    border-radius: var(--cru-radius);
     font-size: 0.875rem;
-    transition: var(--transition);
+    min-height: 2.125rem;
 }
 
-.filter-card .form-control:focus,
-.filter-card .form-select:focus {
-    border-color: var(--govt-blue-light);
-    box-shadow: 0 0 0 0.2rem rgba(0, 102, 204, 0.15);
+.filter-card.choices-bs-scope .choices {
+    margin-bottom: 0;
+    width: 100%;
 }
 
-.filter-card .input-group-text {
-    border-left: none;
-    border-color: #dee2e6;
+.filter-card.choices-bs-scope .choices__list--dropdown,
+.filter-card.choices-bs-scope .choices__list[aria-expanded] {
+    z-index: 1080;
 }
 
-.filter-card .btn-primary {
-    background-color: var(--govt-blue-dark);
-    border-color: var(--govt-blue-dark);
-    padding: 0.625rem 1.5rem;
-    border-radius: 8px;
-    transition: var(--transition);
+.filter-card .btn-outline-danger {
+    font-size: 0.875rem;
+    border-radius: var(--cru-radius);
 }
 
-.filter-card .btn-primary:hover {
-    background-color: var(--govt-blue-light);
-    border-color: var(--govt-blue-light);
-    transform: translateY(-1px);
-    box-shadow: var(--card-shadow);
+.cru-btn-search-icon {
+    min-width: 2.5rem;
+    border-radius: var(--cru-radius) !important;
+    color: #495057;
 }
 
-/* Course Cards */
+.cru-btn-search-icon:hover {
+    background-color: #f8f9fa;
+    border-color: #adb5bd;
+}
+
+/* Category cards */
 .course-cards-grid {
-    margin-top: 2rem;
+    margin-top: 0.5rem;
 }
 
 .course-card {
-    border-radius: var(--border-radius);
-    border: none;
-    overflow: hidden;
-    transition: var(--transition);
-    height: 100%;
-    display: flex;
-    flex-direction: column;
+    border: 1px solid var(--cru-border) !important;
+    border-radius: var(--cru-radius-lg) !important;
+    box-shadow: var(--cru-shadow);
+    transition: transform var(--cru-transition), box-shadow var(--cru-transition);
+    background: #fff;
 }
 
 .course-card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--card-shadow-hover);
+    transform: translateY(-3px);
+    box-shadow: var(--cru-shadow-hover);
 }
 
-.card-img-wrapper {
-    width: 100%;
-    height: 200px;
+.cru-card-banner {
+    min-height: 7.5rem;
+    background: linear-gradient(180deg, var(--cru-banner-from) 0%, var(--cru-banner-to) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
     overflow: hidden;
-    background-color: #f8f9fa;
-    position: relative;
 }
 
-.course-card .card-img-top {
+.cru-card-banner-img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: var(--transition);
 }
 
-.course-card:hover .card-img-top {
-    transform: scale(1.05);
+.cru-card-banner-text {
+    position: relative;
+    z-index: 1;
+    text-align: center;
+    padding: 1rem;
+    width: 100%;
+}
+
+.cru-card-banner-label {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    color: var(--cru-primary);
+    line-height: 1.35;
+    word-break: break-word;
 }
 
 .course-card .card-body {
-    padding: 1.5rem;
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
+    background: #fff;
 }
 
-.course-card .card-title {
-    font-size: 1.125rem;
+.cru-btn-primary {
+    background-color: var(--cru-primary);
+    border-color: var(--cru-primary);
+    border-radius: var(--cru-radius);
+    padding: 0.5rem 1rem;
+    font-size: 0.9375rem;
+}
+
+.cru-btn-primary:hover,
+.cru-btn-primary:focus {
+    background-color: var(--cru-primary-hover);
+    border-color: var(--cru-primary-hover);
+    color: #fff;
+}
+
+/* List view toggle */
+.course-cards-grid.cru-view-list .cru-card-col {
+    flex: 0 0 100%;
+    max-width: 100%;
+}
+
+.course-cards-grid.cru-view-list .course-card {
+    flex-direction: row;
+}
+
+.course-cards-grid.cru-view-list .cru-card-banner {
+    width: 220px;
+    min-width: 220px;
+    min-height: 7rem;
+    flex-shrink: 0;
+}
+
+.course-cards-grid.cru-view-list .card-body {
+    text-align: left !important;
+}
+
+.course-cards-grid.cru-view-list .card-title,
+.course-cards-grid.cru-view-list .card-body p {
+    text-align: left !important;
+}
+
+/* Documents table */
+.cru-table-card {
+    border-color: var(--cru-border) !important;
+    border-radius: var(--cru-radius-lg) !important;
+}
+
+.cru-table thead th {
+    background-color: #f1f3f5;
+    color: #495057;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    border-bottom: 1px solid var(--cru-border);
+    padding: 0.75rem 0.65rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.cru-table tbody td {
+    font-size: 0.875rem;
     color: #212529;
-    min-height: 3rem;
+    padding: 0.7rem 0.65rem;
+    border-bottom: 1px solid #f1f3f5;
+    vertical-align: middle;
+}
+
+.cru-table tbody tr:hover {
+    background-color: rgba(0, 74, 147, 0.03);
+}
+
+.cru-btn-download:hover,
+.cru-btn-view:hover {
+    color: var(--cru-primary-hover) !important;
+}
+
+.cru-table-actions .btn-link {
+    line-height: 1;
+    transition: color var(--cru-transition), transform var(--cru-transition);
+}
+
+.cru-table-actions .btn-link:hover {
+    transform: scale(1.08);
+}
+
+.cru-table-footer {
+    font-size: 0.875rem;
+}
+
+/* Sidebar */
+.course-sidebar-wrapper {
+    width: 250px;
+    min-height: 100vh;
+    background-color: var(--cru-primary);
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+
+.course-sidebar {
+    padding: 1.5rem 0;
+}
+
+.sidebar-header {
+    padding: 0 1.5rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.sidebar-title {
+    color: #fff;
+    font-size: 1.125rem;
+}
+
+.sidebar-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.75rem 1.5rem;
+    color: rgba(255, 255, 255, 0.92);
+    text-decoration: none;
+    border-left: 3px solid transparent;
+    transition: background-color var(--cru-transition), color var(--cru-transition);
+}
+
+.sidebar-link:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+.sidebar-link.active {
+    background-color: #fff;
+    color: var(--cru-primary);
+    border-left-color: var(--cru-primary-light);
+    font-weight: 600;
+}
+
+/* Material / subject / week list cards */
+.material-card,
+.subject-item,
+.week-item {
+    transition: transform var(--cru-transition), box-shadow var(--cru-transition);
+}
+
+.material-card:hover,
+.subject-item:hover,
+.week-item:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--cru-shadow-hover) !important;
+}
+
+.material-icon-wrapper,
+.subject-icon-wrapper,
+.week-icon-wrapper {
+    width: 2.75rem;
+    height: 2.75rem;
     display: flex;
     align-items: center;
     justify-content: center;
+    border-radius: var(--cru-radius);
+    background-color: rgba(0, 74, 147, 0.08);
+    color: var(--cru-primary);
+    flex-shrink: 0;
 }
 
-.course-card .btn-outline-primary {
-    border-color: var(--govt-blue-dark);
-    color: var(--govt-blue-dark);
-    border-width: 2px;
-    padding: 0.625rem 1.5rem;
-    border-radius: 8px;
-    transition: var(--transition);
+.title-section .btn-back:hover {
+    background-color: rgba(0, 74, 147, 0.08);
 }
 
-.course-card .btn-outline-primary:hover {
-    background-color: var(--govt-blue-dark);
-    border-color: var(--govt-blue-dark);
+.cru-nav-tabs .nav-link.active {
+    color: var(--cru-primary);
+    font-weight: 600;
+}
+
+.document-viewer-wrapper {
+    background-color: #f4f6f8;
+    min-height: 100vh;
+}
+
+.pdf-viewer-header {
+    z-index: 1020;
+    border-bottom: 1px solid var(--cru-border);
+}
+
+#pdfDetailsModal .modal-header {
+    background: linear-gradient(135deg, var(--cru-primary) 0%, var(--cru-primary-hover) 100%);
     color: #fff;
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 61, 122, 0.3);
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-    .govt-header-top .col-md-6 {
-        margin-bottom: 0.5rem;
-    }
+#pdfDetailsModal .modal-header .btn-close {
+    filter: invert(1);
+}
 
-    .govt-header-top .d-flex {
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
+.cru-repo-path {
+    --bs-breadcrumb-divider: "›";
+    font-size: 0.8125rem;
+}
 
-    .filter-card .row > div {
-        margin-bottom: 1rem;
-    }
+.cru-repo-path .breadcrumb-item + .breadcrumb-item::before {
+    color: #adb5bd;
+    font-weight: 600;
+}
 
-    .filter-card .col-md-2:last-child {
-        margin-bottom: 0;
-    }
+.cru-repo-path .breadcrumb-item.active {
+    color: #212529;
+    font-weight: 600;
+}
 
-    .course-card .card-img-wrapper {
-        height: 180px;
-    }
-
-    .title-section h1 {
-        font-size: 1.5rem;
+@media (max-width: 991.98px) {
+    .course-sidebar-wrapper {
+        width: 200px;
     }
 }
 
-@media (max-width: 576px) {
-    .govt-header-top {
-        font-size: 0.75rem;
+@media (max-width: 767.98px) {
+    .course-cards-grid.cru-view-list .course-card {
+        flex-direction: column;
     }
 
-    .govt-header-bottom {
-        font-size: 0.875rem;
+    .course-cards-grid.cru-view-list .cru-card-banner {
+        width: 100%;
+        min-width: 100%;
     }
 
-    .filter-card {
-        padding: 1rem !important;
+    .cru-layout-with-sidebar {
+        flex-direction: column;
     }
 
-    .course-card .card-body {
-        padding: 1rem;
+    .cru-page .course-sidebar-wrapper {
+        width: 100%;
+        min-height: auto;
+        height: auto;
+        position: relative;
     }
 
-    .course-card .card-title {
-        font-size: 1rem;
+    .cru-page .sidebar-nav {
+        display: flex;
+        overflow-x: auto;
+        padding: 0.5rem;
+    }
+
+    .cru-page .sidebar-item {
+        flex-shrink: 0;
+    }
+
+    .cru-page .sidebar-link {
+        padding: 0.5rem 1rem;
+        white-space: nowrap;
+    }
+
+    .cru-table thead th,
+    .cru-table tbody td {
+        font-size: 0.8125rem;
+        padding: 0.5rem;
     }
 }
 
-/* Accessibility */
-.btn:focus-visible,
-.form-control:focus-visible,
-.form-select:focus-visible {
-    outline: 3px solid rgba(0, 102, 204, 0.5);
-    outline-offset: 2px;
-}
-
-/* Print Styles */
 @media print {
-    .govt-header,
     .filter-card,
+    .cru-toolbar,
+    .course-sidebar-wrapper,
     .btn {
-        display: none;
-    }
-
-    .course-card {
-        break-inside: avoid;
-        page-break-inside: avoid;
-    }
-}
-
-/* Course Sidebar */
-.course-sidebar-wrapper {
-    width: 250px;
-    min-height: 100vh;
-    background-color: var(--govt-blue-dark);
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-}
-
-.course-sidebar {
-    padding: 1.5rem 0;
-}
-
-.sidebar-header {
-    padding: 0 1.5rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.sidebar-title {
-    color: #fff;
-    font-size: 1.125rem;
-}
-
-.sidebar-nav {
-    padding: 0.5rem 0;
-}
-
-.sidebar-item {
-    margin: 0;
-}
-
-.sidebar-link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1.5rem;
-    color: rgba(255, 255, 255, 0.9);
-    text-decoration: none;
-    transition: var(--transition);
-    border-left: 3px solid transparent;
-}
-
-.sidebar-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    border-left-color: var(--govt-blue-light);
-}
-
-.sidebar-link.active {
-    background-color: rgba(255, 255, 255, 0.95);
-    color: var(--govt-blue-dark);
-    border-left-color: var(--govt-blue-light);
-    font-weight: 600;
-}
-
-.sidebar-link.active i {
-    color: var(--govt-blue-dark);
-}
-
-/* Material Cards */
-.material-cards-grid {
-    margin-top: 2rem;
-}
-
-.material-card {
-    border-radius: var(--border-radius);
-    border: none;
-    transition: var(--transition);
-}
-
-.material-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--card-shadow-hover);
-}
-
-.material-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.05);
-    font-size: 1.5rem;
-    color: var(--govt-blue-dark);
-    flex-shrink: 0;
-}
-
-.material-card.bg-success-subtle .material-icon-wrapper {
-    background-color: rgba(25, 135, 84, 0.1);
-    color: #198754;
-}
-
-.material-card.bg-warning-subtle .material-icon-wrapper {
-    background-color: rgba(255, 193, 7, 0.1);
-    color: #ffc107;
-}
-
-.material-card.bg-info-subtle .material-icon-wrapper {
-    background-color: rgba(13, 202, 240, 0.1);
-    color: #0dcaf0;
-}
-
-.material-card.bg-primary-subtle .material-icon-wrapper {
-    background-color: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
-}
-
-/* Subject/Week Items */
-.subjects-list,
-.weeks-list {
-    margin-top: 2rem;
-}
-
-.subject-item,
-.week-item {
-    border-radius: var(--border-radius);
-    border: none;
-    transition: var(--transition);
-    cursor: pointer;
-}
-
-.subject-item:hover,
-.week-item:hover {
-    transform: translateX(4px);
-    box-shadow: var(--card-shadow-hover);
-}
-
-.subject-icon-wrapper,
-.week-icon-wrapper {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.05);
-    font-size: 1.25rem;
-    color: var(--govt-blue-dark);
-    flex-shrink: 0;
-}
-
-/* Document Items */
-.documents-list {
-    margin-top: 2rem;
-}
-
-.document-item {
-    border-radius: var(--border-radius);
-    border: none;
-    transition: var(--transition);
-}
-
-.document-item:hover {
-    box-shadow: var(--card-shadow-hover);
-}
-
-/* PDF Viewer */
-.document-viewer-wrapper {
-    min-height: 100vh;
-    background-color: #f8f9fa;
-}
-
-.pdf-viewer-header {
-    z-index: 1020;
-}
-
-.pdf-viewer-content {
-    padding-top: 1rem;
-}
-
-.pdf-container {
-    border-radius: var(--border-radius);
-    overflow: hidden;
-}
-
-/* Responsive adjustments for sidebar */
-@media (max-width: 991.98px) {
-    .course-sidebar-wrapper {
-        width: 200px;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .d-flex {
-        flex-direction: column;
-    }
-
-    .course-sidebar-wrapper {
-        width: 100%;
-        min-height: auto;
-        height: auto;
-        position: relative;
-    }
-
-    .course-sidebar {
-        padding: 1rem 0;
-    }
-
-    .sidebar-nav {
-        display: flex;
-        overflow-x: auto;
-        padding: 0.5rem;
-    }
-
-    .sidebar-item {
-        flex-shrink: 0;
-    }
-
-    .sidebar-link {
-        padding: 0.5rem 1rem;
-        white-space: nowrap;
-    }
-}
-
-/* Course Sidebar */
-.course-sidebar-wrapper {
-    width: 250px;
-    min-height: 100vh;
-    background-color: var(--govt-blue-dark);
-    position: sticky;
-    top: 0;
-    height: 100vh;
-    overflow-y: auto;
-}
-
-.course-sidebar {
-    padding: 1.5rem 0;
-}
-
-.sidebar-header {
-    padding: 0 1.5rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.sidebar-title {
-    color: #fff;
-    font-size: 1.125rem;
-}
-
-.sidebar-nav {
-    padding: 0.5rem 0;
-}
-
-.sidebar-item {
-    margin: 0;
-}
-
-.sidebar-link {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0.75rem 1.5rem;
-    color: rgba(255, 255, 255, 0.9);
-    text-decoration: none;
-    transition: var(--transition);
-    border-left: 3px solid transparent;
-}
-
-.sidebar-link:hover {
-    background-color: rgba(255, 255, 255, 0.1);
-    color: #fff;
-    border-left-color: var(--govt-blue-light);
-}
-
-.sidebar-link.active {
-    background-color: rgba(255, 255, 255, 0.95);
-    color: var(--govt-blue-dark);
-    border-left-color: var(--govt-blue-light);
-    font-weight: 600;
-}
-
-.sidebar-link.active i {
-    color: var(--govt-blue-dark);
-}
-
-/* Material Cards */
-.material-cards-grid {
-    margin-top: 2rem;
-}
-
-.material-card {
-    border-radius: var(--border-radius);
-    border: none;
-    transition: var(--transition);
-}
-
-.material-card:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--card-shadow-hover);
-}
-
-.material-icon-wrapper {
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.05);
-    font-size: 1.5rem;
-    color: var(--govt-blue-dark);
-    flex-shrink: 0;
-}
-
-.material-card.bg-success-subtle .material-icon-wrapper {
-    background-color: rgba(25, 135, 84, 0.1);
-    color: #198754;
-}
-
-.material-card.bg-warning-subtle .material-icon-wrapper {
-    background-color: rgba(255, 193, 7, 0.1);
-    color: #ffc107;
-}
-
-.material-card.bg-info-subtle .material-icon-wrapper {
-    background-color: rgba(13, 202, 240, 0.1);
-    color: #0dcaf0;
-}
-
-.material-card.bg-primary-subtle .material-icon-wrapper {
-    background-color: rgba(13, 110, 253, 0.1);
-    color: #0d6efd;
-}
-
-/* Subject/Week Items */
-.subjects-list,
-.weeks-list {
-    margin-top: 2rem;
-}
-
-.subject-item,
-.week-item {
-    border-radius: var(--border-radius);
-    border: none;
-    transition: var(--transition);
-    cursor: pointer;
-}
-
-.subject-item:hover,
-.week-item:hover {
-    transform: translateX(4px);
-    box-shadow: var(--card-shadow-hover);
-}
-
-.subject-icon-wrapper,
-.week-icon-wrapper {
-    width: 40px;
-    height: 40px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 8px;
-    background-color: rgba(0, 0, 0, 0.05);
-    font-size: 1.25rem;
-    color: var(--govt-blue-dark);
-    flex-shrink: 0;
-}
-
-/* Document Items */
-.documents-list {
-    margin-top: 2rem;
-}
-
-.document-item {
-    border-radius: var(--border-radius);
-    border: none;
-    transition: var(--transition);
-}
-
-.document-item:hover {
-    box-shadow: var(--card-shadow-hover);
-}
-
-/* PDF Viewer */
-.document-viewer-wrapper {
-    min-height: 100vh;
-    background-color: #f8f9fa;
-}
-
-.pdf-viewer-header {
-    z-index: 1020;
-}
-
-.pdf-viewer-content {
-    padding-top: 1rem;
-}
-
-.pdf-container {
-    border-radius: var(--border-radius);
-    overflow: hidden;
-}
-
-/* Responsive adjustments for sidebar */
-@media (max-width: 991.98px) {
-    .course-sidebar-wrapper {
-        width: 200px;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .d-flex {
-        flex-direction: column;
-    }
-
-    .course-sidebar-wrapper {
-        width: 100%;
-        min-height: auto;
-        height: auto;
-        position: relative;
-    }
-
-    .course-sidebar {
-        padding: 1rem 0;
-    }
-
-    .sidebar-nav {
-        display: flex;
-        overflow-x: auto;
-        padding: 0.5rem;
-    }
-
-    .sidebar-item {
-        flex-shrink: 0;
-    }
-
-    .sidebar-link {
-        padding: 0.5rem 1rem;
-        white-space: nowrap;
+        display: none !important;
     }
 }
