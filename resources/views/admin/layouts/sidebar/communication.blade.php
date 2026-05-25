@@ -19,8 +19,7 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-                                            @include('admin.layouts.sidebar.partials.mini-sidebar-toggle')
-                                            <li class="mini-nav-item {{ request()->routeIs('admin.birthday-wish.*', 'admin.word-of-day.*', 'admin.login-carousel-images.*') ? 'selected' : '' }}"
+                                            <li class="mini-nav-item {{ request()->routeIs('admin.birthday-wish.*', 'admin.word-of-day.*') ? 'selected' : '' }}"
                                                 id="mini-12">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">

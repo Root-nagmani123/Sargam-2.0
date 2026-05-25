@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Auth;
 
 use App\Http\Controllers\Controller;
-use App\Models\LoginCarouselImage;
 use App\Models\User;
 use App\Models\WordOfTheDay;
 use Adldap\Laravel\Facades\Adldap;
@@ -33,9 +32,8 @@ class LoginController extends Controller
     public function showLoginForm()
     {
         $wordOfTheDay = WordOfTheDay::wordForToday();
-        $loginCarouselImages = LoginCarouselImage::activeForLogin();
 
-        return view('auth.login', compact('wordOfTheDay', 'loginCarouselImages'));
+        return view('auth.login', compact('wordOfTheDay'));
     }
 
     public function authenticate(Request $request)
