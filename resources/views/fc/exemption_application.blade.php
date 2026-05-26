@@ -61,6 +61,16 @@
                                         @endfor
                                     </select>
                                 </div>
+
+                                <div class="col-md-6">
+                                    <label for="institution_name" class="form-label fw-semibold">Institution
+                                        Name <span class="text-danger">*</span></label>
+                                    <input type="text"
+                                        class="form-control rounded-3 @error('institution_name') is-invalid @enderror"
+                                        id="institution_name" name="institution_name"
+                                        placeholder="Enter institution name" value="{{ old('institution_name') }}"
+                                        required>
+                                </div>
                             @endif
 
                             @php

@@ -10,12 +10,12 @@ use App\Models\FC\{
     StudentMaster, StudentMasterFirst, StudentMasterSecond,
     StudentMasterQualificationDetails, NewRegistrationBankDetailsMaster,
     FcJoiningRelatedDocumentsDetailsMaster, FcJoiningRelatedDocumentsMaster,
-    StudentConfirmMaster, StudentTravelPlanMaster, JbpUser
+    FcFormDocumentVerification,
+    StudentConfirmMaster, StudentTravelPlanMaster,
 };
 use Illuminate\Support\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 
 class RegistrationService
 {
@@ -27,16 +27,16 @@ class RegistrationService
      * Return a progress array for the dashboard progress bar.
      * Mirrors the logic used in HomeController.java to determine step completion.
      */
-    public function getProgress(string $username): array
+    public function getProgress(int $userId): array
     {
-        $master = StudentMaster::where('username', $username)->first();
-        $step1  = StudentMasterFirst::where('username', $username)->where('step1_completed', 1)->exists();
-        $step2  = StudentMasterSecond::where('username', $username)->where('step2_completed', 1)->exists();
+        $master = StudentMaster::forUser($userId)->first();
+        $step1  = StudentMasterFirst::forUser($userId)->where('step1_completed', 1)->exists();
+        $step2  = StudentMasterSecond::forUser($userId)->where('step2_completed', 1)->exists();
         $step3  = $master?->step3_done ?? false;
-        $bank   = NewRegistrationBankDetailsMaster::where('username', $username)->exists();
+        $bank   = NewRegistrationBankDetailsMaster::forUser($userId)->exists();
         $travel = (bool) ($master?->travel_done ?? false);
-        $docs   = $this->allMandatoryDocsUploaded($username);
-        $confirmed = StudentConfirmMaster::where('username', $username)->where('declaration_accepted', 1)->exists();
+        $docs   = $this->allMandatoryDocsUploaded($userId);
+        $confirmed = StudentConfirmMaster::forUser($userId)->where('declaration_accepted', 1)->exists();
 
         $steps = [
             'step1'     => $step1,
@@ -62,23 +62,9 @@ class RegistrationService
     }
 
     /**
-     * Create a new FC user account (called from admin or seeder).
-     */
-    public function createFcUser(string $username, string $password, string $email = null): JbpUser
-    {
-        return JbpUser::create([
-            'username' => $username,
-            'password' => Hash::make($password),
-            'email'    => $email,
-            'role'     => 'FC',
-            'enabled'  => 1,
-        ]);
-    }
-
-    /**
      * Check if all mandatory documents have been uploaded.
      */
-    public function allMandatoryDocsUploaded(string $username): bool
+    public function allMandatoryDocsUploaded(int $userId): bool
     {
         $mandatoryIds = FcJoiningRelatedDocumentsMaster::where('is_active', 1)
             ->where('is_mandatory', 1)->pluck('id');
@@ -87,7 +73,7 @@ class RegistrationService
             return false;
         }
 
-        $uploadedIds = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+        $uploadedIds = FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)
             ->where('is_uploaded', 1)->pluck('document_master_id');
 
         return $mandatoryIds->diff($uploadedIds)->isEmpty();
@@ -106,14 +92,14 @@ class RegistrationService
      *     remarks: ?string
      * }>
      */
-    public function joiningDocumentChecklistForDisplay(string $username): Collection
+    public function joiningDocumentChecklistForDisplay(int $userId): Collection
     {
         $masters = FcJoiningRelatedDocumentsMaster::where('is_active', 1)
             ->orderBy('display_order')
             ->orderBy('id')
             ->get();
 
-        $uploadedByMasterId = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+        $uploadedByMasterId = FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)
             ->get()
             ->keyBy('document_master_id');
 
@@ -132,14 +118,164 @@ class RegistrationService
     }
 
     /**
+     * Joining document rows for dynamic forms (file fields on the form's document step).
+     *
+     * @return Collection<int, object{
+     *     documentMaster: null,
+     *     document_name: string,
+     *     file_path: ?string,
+     *     is_uploaded: bool,
+     *     is_mandatory: bool,
+     *     is_verified: bool,
+     *     remarks: ?string,
+     *     form_field_id: int
+     * }>
+     */
+    public function dynamicFormDocumentsForDisplay(int $userId, FcForm $form): Collection
+    {
+        $docsStep = app(FcRegistrationFlowService::class)->documentsStep($form);
+        if (! $docsStep) {
+            return collect();
+        }
+
+        $fields = $docsStep->activeFields()
+            ->where('field_type', 'file')
+            ->orderBy('display_order')
+            ->get();
+
+        if ($fields->isEmpty()) {
+            return collect();
+        }
+
+        $table = $docsStep->target_table ?: 'student_master_firsts';
+        $row = DB::table($table)->where(fc_user_col($table), fc_user_val($table, $userId))->first();
+        
+
+        $verifications = FcFormDocumentVerification::query()
+            ->where(fc_user_col('fc_form_document_verifications'), fc_user_val('fc_form_document_verifications', $userId))
+            ->whereIn('form_field_id', $fields->pluck('id'))
+            ->get()
+            ->keyBy('form_field_id');
+
+        return $fields->map(function (FcFormField $field) use ($row, $verifications) {
+            $path = $this->readStoredFieldValue($row, $field);
+            $verification = $verifications->get($field->id);
+
+            return (object) [
+                'documentMaster' => null,
+                'form_field_id'  => (int) $field->id,
+                'document_name'  => (string) ($field->label ?: $field->field_name),
+                'file_path'      => filled($path) ? (string) $path : null,
+                'is_uploaded'    => filled($path),
+                'is_mandatory'   => (bool) $field->is_required,
+                'is_verified'    => (bool) ($verification?->is_verified ?? false),
+                'remarks'        => $verification?->remarks,
+            ];
+        });
+    }
+
+    /**
+     * Save admin verification for a dynamic form document field.
+     */
+    public function saveDynamicFormDocumentVerification(
+        int $userId,
+        int $formFieldId,
+        bool $isVerified,
+        ?string $remarks
+    ): string {
+        $field = FcFormField::query()
+            ->with('step')
+            ->where('id', $formFieldId)
+            ->where('field_type', 'file')
+            ->where('is_active', 1)
+            ->firstOrFail();
+
+        $step = $field->step;
+        $table = $field->target_table ?: $step?->target_table;
+        if (! $table) {
+            throw new \InvalidArgumentException('Document field storage table is not configured.');
+        }
+
+        $row = DB::table($table)->where(fc_user_col($table), fc_user_val($table, $userId))->first();
+        if (! filled($this->readStoredFieldValue($row, $field))) {
+            throw new \InvalidArgumentException(
+                '"'.($field->label ?: $field->field_name).'" is not uploaded yet, so it cannot be verified.'
+            );
+        }
+
+        
+
+        FcFormDocumentVerification::updateOrCreate(
+            [
+                fc_user_col('fc_form_document_verifications') => fc_user_val('fc_form_document_verifications', $userId),
+                'form_field_id' => $formFieldId,
+            ],
+            [
+                'is_verified' => $isVerified,
+                'verified_by_user_id' => $isVerified ? auth()->id() : null,
+                'verified_at' => $isVerified ? now() : null,
+                'remarks' => filled($remarks) ? $remarks : null,
+            ]
+        );
+
+        return (string) ($field->label ?: $field->field_name);
+    }
+
+    /**
+     * Header summary for admin student report (service, state, session, email).
+     *
+     * @return array{service_label:string,state_label:string,session_label:string,email:?string}
+     */
+    public function resolveStudentHeaderMeta(?StudentMasterFirst $step1): array
+    {
+        if (! $step1) {
+            return [
+                'service_label' => '—',
+                'state_label' => '—',
+                'session_label' => '—',
+                'email' => null,
+            ];
+        }
+
+        $serviceName = $step1->service?->service_name;
+        $serviceCode = $step1->service?->service_code ?? $step1->service?->service_short_name;
+        if (! $serviceName && filled($step1->service_id)) {
+            $svc = DB::table('service_master')->where('pk', $step1->service_id)->first();
+            $serviceName = $svc->service_name ?? null;
+            $serviceCode = $serviceCode ?: ($svc->service_short_name ?? $svc->service_code ?? null);
+        }
+
+        $stateName = $step1->allottedState?->state_name;
+        if (! $stateName && filled($step1->allotted_state_id)) {
+            $stateName = DB::table('state_master')->where('pk', $step1->allotted_state_id)->value('state_name');
+        }
+
+        $sessionName = $step1->session?->session_name;
+        if (! $sessionName && filled($step1->session_id)) {
+            $sessionName = DB::table('session_masters')->where('id', $step1->session_id)->value('session_name');
+        }
+
+        $serviceLabel = $serviceName
+            ? trim($serviceName.' ('.($serviceCode ?: '—').')')
+            : '—';
+
+        return [
+            'service_label' => $serviceLabel,
+            'state_label' => $stateName ?: '—',
+            'session_label' => $sessionName ?: '—',
+            'email' => filled($step1->email ?? null) ? (string) $step1->email : null,
+        ];
+    }
+
+    /**
      * Resolve additional dynamic flat fields (configured in form builder) for reports/PDF.
      * Excludes legacy hardcoded columns already rendered in static report blocks.
      *
      * @return Collection<int, object{step_slug:string, step_name:string, label:string, value:string}>
      */
-    public function additionalDynamicFlatFieldsForDisplay(string $username): Collection
+    public function additionalDynamicFlatFieldsForDisplay(int $userId): Collection
     {
-        $form = FcForm::resolveForUsername($username);
+        $form = FcForm::resolveForUserId($userId);
         if (! $form) {
             return collect();
         }
@@ -185,7 +321,7 @@ class RegistrationService
                 }
 
                 if (! array_key_exists($table, $tableRows)) {
-                    $tableRows[$table] = DB::table($table)->where('username', $username)->first();
+                    $tableRows[$table] = DB::table($table)->where(fc_user_col($table), fc_user_val($table, $userId))->first();
                 }
                 $row = $tableRows[$table];
                 if (! $row || ! isset($row->{$column})) {
@@ -248,9 +384,9 @@ class RegistrationService
      *
      * @return list<array{key:string,title_en:string,title_hi:string,type:string,rows?:list<array{en:string,hi:string,value:mixed}>,columns?:list<string>,head_hi?:list<string>,body?:list<list<string>>}>
      */
-    public function buildPdfSectionsFromFormDefinition(string $username, ?FcForm $form = null): array
+    public function buildPdfSectionsFromFormDefinition(int $userId, ?FcForm $form = null): array
     {
-        $form = $form ?? FcForm::resolveForUsername($username);
+        $form = $form ?? FcForm::resolveForUserId($userId);
         if (! $form) {
             return [];
         }
@@ -280,22 +416,24 @@ class RegistrationService
                 foreach ($flatFields as $field) {
                     $sectionTitle = trim((string) ($field->section_heading ?? '')) ?: (string) $step->step_name;
                     $table = $field->target_table ?: $step->target_table;
-                    $column = $field->target_column ?: $field->field_name;
                     $raw = null;
-                    if ($table && $column) {
+                    if ($table) {
                         if (! array_key_exists($table, $tableRows)) {
-                            $tableRows[$table] = DB::table($table)->where('username', $username)->first();
+                            $tableRows[$table] = DB::table($table)->where(fc_user_col($table), fc_user_val($table, $userId))->first();
                         }
-                        $row = $tableRows[$table];
-                        $raw = $row->{$column} ?? null;
+                        $raw = $this->readStoredFieldValue($tableRows[$table], $field);
                     }
 
-                    $stepRows[] = [
+                    $row = [
                         'group' => $sectionTitle,
                         'en' => (string) ($field->label ?: $field->field_name),
                         'hi' => $this->hindiLabel((string) ($field->label ?: $field->field_name)),
                         'value' => $this->formatDynamicValue($field, $raw, $lookupCache),
                     ];
+                    if (($field->field_type ?? '') === 'file') {
+                        $row['file_href'] = filled($raw) ? view_file_link((string) $raw) : null;
+                    }
+                    $stepRows[] = $row;
                 }
 
                 $stepRows = array_values(array_filter(
@@ -321,7 +459,7 @@ class RegistrationService
                 if ($groupFields->isEmpty()) {
                     continue;
                 }
-                $rows = $this->dynamicFormService->getExistingGroupRows($group, $username);
+                $rows = $this->dynamicFormService->getExistingGroupRows($group, $userId);
                 $body = [];
                 foreach ($rows as $r) {
                     $line = [];
@@ -348,7 +486,7 @@ class RegistrationService
             }
         }
 
-        $travelSection = $this->buildTravelPlanPdfSection($username);
+        $travelSection = $this->buildTravelPlanPdfSection($userId);
         if ($travelSection !== null) {
             $sections[] = $travelSection;
         }
@@ -360,6 +498,16 @@ class RegistrationService
         unset($sec);
 
         return $sections;
+    }
+
+    /**
+     * Admin HTML report sections (same data as PDF, includes file view links).
+     *
+     * @return list<array<string,mixed>>
+     */
+    public function buildReportSectionsFromFormDefinition(int $userId, ?FcForm $form = null): array
+    {
+        return $this->buildPdfSectionsFromFormDefinition($userId, $form);
     }
 
     /**
@@ -384,12 +532,81 @@ class RegistrationService
     }
 
     /**
+     * Stored path for trainee photograph (photo_path column or form file field).
+     */
+    public function resolveStudentPhotoPath(?StudentMasterFirst $step1, ?FcForm $form, int $userId): ?string
+    {
+        $candidates = [];
+
+        if ($step1 && filled($step1->photo_path ?? null)) {
+            $candidates[] = (string) $step1->photo_path;
+        }
+
+        if ($form) {
+            foreach ($form->activeSteps()->with('activeFields')->orderBy('step_number')->get() as $step) {
+                $photoField = $step->activeFields->first(function (FcFormField $f) {
+                    if (($f->field_type ?? '') !== 'file') {
+                        return false;
+                    }
+                    $col = strtolower((string) ($f->target_column ?? $f->field_name ?? ''));
+                    $name = strtolower((string) ($f->field_name ?? ''));
+
+                    if ($col === 'signature_path' || str_contains($col, 'signature')) {
+                        return false;
+                    }
+
+                    return $col === 'photo_path'
+                        || $name === 'photo'
+                        || str_contains($col, 'photograph');
+                });
+
+                if (! $photoField) {
+                    continue;
+                }
+
+                $table = $photoField->target_table ?: $step->target_table;
+                $column = $photoField->target_column ?: $photoField->field_name;
+                if (! $table || ! $column) {
+                    continue;
+                }
+
+                $row = DB::table($table)->where(fc_user_col($table), fc_user_val($table, $userId))->first();
+                $stored = $row->{$column} ?? null;
+                if (filled($stored)) {
+                    $candidates[] = (string) $stored;
+                }
+            }
+        }
+
+        $uploadDir = storage_path('app/public/uploads/'.$userId);
+        if (is_dir($uploadDir)) {
+            $globbed = array_merge(
+                glob($uploadDir.'/photo_*.*') ?: [],
+                glob($uploadDir.'/photo.*') ?: []
+            );
+            foreach ($globbed as $full) {
+                if (is_file($full)) {
+                    $candidates[] = 'uploads/'.$userId.'/'.basename($full);
+                }
+            }
+        }
+
+        foreach (array_unique($candidates) as $path) {
+            if (fc_resolve_storage_file_path($path) !== null) {
+                return $path;
+            }
+        }
+
+        return null;
+    }
+
+    /**
      * @return array{key:string,title_en:string,title_hi:string,type:string,rows:list<array{group?:string,en:string,hi:string,value:string}>,sort_order:int}|null
      */
-    public function buildTravelPlanPdfSection(string $username): ?array
+    public function buildTravelPlanPdfSection(int $userId): ?array
     {
         $plan = StudentTravelPlanMaster::query()
-            ->where('username', $username)
+            ->where(fc_user_col('student_travel_plan_masters'), fc_user_val('student_travel_plan_masters', $userId))
             ->with('fcArrivalSlot')
             ->first();
 
@@ -535,6 +752,40 @@ class RegistrationService
         return $map[$label] ?? $label;
     }
 
+    /**
+     * Read a stored column value, with fallbacks for legacy *_path column naming.
+     */
+    private function readStoredFieldValue(?object $row, FcFormField $field): mixed
+    {
+        if (! $row) {
+            return null;
+        }
+
+        $column = $field->target_column ?: $field->field_name;
+        $raw = $row->{$column} ?? null;
+        if (filled($raw)) {
+            return $raw;
+        }
+
+        if (($field->field_type ?? '') !== 'file') {
+            return $raw;
+        }
+
+        if (! str_ends_with($column, '_path')) {
+            $pathCol = $column.'_path';
+            if (isset($row->{$pathCol}) && filled($row->{$pathCol})) {
+                return $row->{$pathCol};
+            }
+        } else {
+            $baseCol = substr($column, 0, -5);
+            if ($baseCol !== '' && isset($row->{$baseCol}) && filled($row->{$baseCol})) {
+                return $row->{$baseCol};
+            }
+        }
+
+        return null;
+    }
+
     private function resolveLookupLabelSafely(string $table, string $valueColumn, string $labelColumn, mixed $raw): ?string
     {
         try {
@@ -577,16 +828,16 @@ class RegistrationService
     /**
      * Get all data for a student (used in admin report / print view).
      */
-    public function getFullStudentProfile(string $username): array
+    public function getFullStudentProfile(int $userId): array
     {
         return [
-            'step1'        => StudentMasterFirst::where('username', $username)->with(['session','service','allottedState'])->first(),
-            'step2'        => StudentMasterSecond::where('username', $username)->with(['category','religion','permState','presState'])->first(),
-            'master'       => StudentMaster::where('username', $username)->first(),
-            'bank'         => NewRegistrationBankDetailsMaster::where('username', $username)->first(),
-            'documents'    => FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)->with('documentMaster')->get(),
-            'confirmed'    => StudentConfirmMaster::where('username', $username)->first(),
-            'progress'     => $this->getProgress($username),
+            'step1'        => StudentMasterFirst::forUser($userId)->with(['session','service','allottedState'])->first(),
+            'step2'        => StudentMasterSecond::forUser($userId)->with(['category','religion','permState','presState'])->first(),
+            'master'       => StudentMaster::forUser($userId)->first(),
+            'bank'         => NewRegistrationBankDetailsMaster::forUser($userId)->first(),
+            'documents'    => FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)->with('documentMaster')->get(),
+            'confirmed'    => StudentConfirmMaster::forUser($userId)->first(),
+            'progress'     => $this->getProgress($userId),
         ];
     }
 }

@@ -25,14 +25,14 @@ class FcTravelArrivalSlot extends Model
         return $this->hasMany(StudentTravelPlanMaster::class, 'fc_travel_arrival_slot_id');
     }
 
-    public function countOtherBookings(string $username): int
+    public function countOtherBookings(int $userId): int
     {
         return $this->travelPlans()
-            ->where('username', '!=', $username)
+            ->where('user_id', '!=', $userId)
             ->count();
     }
 
-    public function hasRoomForUser(?string $username): bool
+    public function hasRoomForUser(?int $userId): bool
     {
         // null = no cap; 0 = closed/unavailable.
         if ($this->max_capacity === null) {
@@ -41,8 +41,8 @@ class FcTravelArrivalSlot extends Model
         if ((int) $this->max_capacity < 1) {
             return false;
         }
-        $n = $username
-            ? $this->countOtherBookings($username)
+        $n = $userId
+            ? $this->countOtherBookings($userId)
             : $this->travelPlans()->count();
 
         return $n < (int) $this->max_capacity;

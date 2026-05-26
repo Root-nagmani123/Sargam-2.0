@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\FC;
 
 use App\Http\Controllers\Controller;
+use App\Services\FC\FcRegistrationFlowService;
 use App\Services\FC\RegistrationService;
 use App\DataTables\FC\FcFormOverviewDataTable;
 use App\Models\FC\FcForm;
@@ -25,6 +26,39 @@ use Symfony\Component\Process\Process;
 
 class ReportController extends Controller
 {
+    /**
+     * Limit aggregated report queries to trainees registered on a specific form.
+     */
+    private function constrainToForm(Request $request, $query, string $studentMasterAlias = 'sm'): void
+    {
+        if (! $request->filled('form_id') || ! Schema::hasColumn('student_masters', 'form_id')) {
+            return;
+        }
+
+        $query->where("{$studentMasterAlias}.form_id", (int) $request->input('form_id'));
+    }
+
+    private function scopedFormFromRequest(Request $request): ?FcForm
+    {
+        if (! $request->filled('form_id')) {
+            return null;
+        }
+
+        return FcForm::find((int) $request->input('form_id'));
+    }
+
+    /**
+     * Active FC forms for aggregated report filters (scoped via student_masters.form_id).
+     */
+    private function reportFormsForFilter()
+    {
+        return FcForm::query()
+            ->with('courseMaster:pk,course_name')
+            ->where('is_active', true)
+            ->orderBy('form_name')
+            ->get(['id', 'form_name', 'form_slug', 'course_master_pk']);
+    }
+
     // ── 1. Registration Overview (all students, progress status) ─────
     public function overview(Request $request)
     {
@@ -35,15 +69,27 @@ class ReportController extends Controller
             ->get();
         $states   = StateMaster::orderBy('state_name')->get();
 
+        $smUserCol = fc_user_col('student_masters');
+        $s1UserCol = fc_user_col('student_master_firsts');
+        $scUserCol = fc_user_col('student_confirm_masters');
+
         $query = StudentMaster::with([
                 'session',
             ])
-            ->leftJoin('student_master_firsts as s1','student_masters.username','=','s1.username')
+            ->leftJoin('student_master_firsts as s1',"student_masters.{$smUserCol}","=","s1.{$s1UserCol}")
             ->leftJoin('service_master as svc','s1.service_id','=','svc.pk')
             ->leftJoin('state_masters as st','s1.allotted_state_id','=','st.id')
-            ->leftJoin('student_confirm_masters as sc','student_masters.username','=','sc.username')
-            ->select(
-                'student_masters.username',
+            ->leftJoin('student_confirm_masters as sc',"student_masters.{$smUserCol}","=","sc.{$scUserCol}");
+
+        // Always expose an integer user_id for routing
+        if ($smUserCol === 'user_id') {
+            $query->addSelect(DB::raw('student_masters.user_id'));
+        } else {
+            $query->leftJoin('user_credentials as uc', "student_masters.{$smUserCol}", '=', 'uc.user_name')
+                  ->addSelect(DB::raw('uc.pk as user_id'));
+        }
+
+        $query->addSelect(
                 'student_masters.status',
                 'student_masters.step1_done',
                 'student_masters.step2_done',
@@ -89,8 +135,8 @@ class ReportController extends Controller
         }
         if ($request->filled('search')) {
             $s = '%'.$request->search.'%';
-            $query->where(function($q) use ($s) {
-                $q->where('student_masters.username','like',$s)
+            $query->where(function($q) use ($s, $smUserCol) {
+                $q->where("student_masters.{$smUserCol}",'like',$s)
                   ->orWhere('s1.full_name','like',$s)
                   ->orWhere('s1.mobile_no','like',$s)
                   ->orWhere('s1.email','like',$s);
@@ -125,16 +171,31 @@ class ReportController extends Controller
         $steps        = $dataTable->steps;
         $totalSteps   = $dataTable->totalSteps;
         $trackerTable = $form->trackerStorageTable();
-        $userKey      = $form->user_identifier ?: 'username';
+        $userKey      = fc_user_col($trackerTable);
+        $t            = $trackerTable;
 
         // Summary counts — always computed from DB (not paginated)
         $trackerBase = fn () => DB::table($trackerTable)
             ->when(Schema::hasColumn($trackerTable, 'form_id'), fn ($q) => $q->where('form_id', $form->id));
 
+        $stepsDoneExpr = $totalSteps > 0
+            ? $steps->map(fn ($s) => "CASE WHEN `{$t}`.`{$s->tracker_column}`=1 THEN 1 ELSE 0 END")
+                    ->implode(' + ')
+            : '0';
+
         $summary = [
             'total'      => $trackerBase()->count(),
             'submitted'  => $trackerBase()->where('status', 'SUBMITTED')->count(),
-            'incomplete' => $trackerBase()->where('status', 'INCOMPLETE')->count(),
+            'complete'   => $totalSteps > 0
+                ? $trackerBase()->where('status', '!=', 'SUBMITTED')
+                    ->whereRaw("({$stepsDoneExpr}) >= {$totalSteps}")
+                    ->count()
+                : 0,
+            'incomplete' => $totalSteps > 0
+                ? $trackerBase()->where('status', '!=', 'SUBMITTED')
+                    ->whereRaw("({$stepsDoneExpr}) < {$totalSteps}")
+                    ->count()
+                : $trackerBase()->where('status', 'INCOMPLETE')->count(),
         ];
         foreach ($steps as $step) {
             $summary[$step->tracker_column] = $trackerBase()
@@ -147,19 +208,24 @@ class ReportController extends Controller
             ->get();
 
         // Build paginated student query with filters
-        $t = $trackerTable;
         $u = $userKey;
-
-        $stepsDoneExpr = $totalSteps > 0
-            ? $steps->map(fn ($s) => "CASE WHEN `{$t}`.`{$s->tracker_column}`=1 THEN 1 ELSE 0 END")
-                    ->implode(' + ')
-            : '0';
+        $s1UserCol = fc_user_col('student_master_firsts');
 
         $query = DB::table($t)
-            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', 's1.username')
+            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', "s1.{$s1UserCol}")
             ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
-            ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id')
-            ->select([
+            ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id');
+
+        // Always resolve integer user_id for routing (pre-migration: join user_credentials)
+        if ($u === 'user_id') {
+            $query->addSelect(DB::raw("`{$t}`.`user_id` as route_user_id"));
+        } else {
+            $ucJoinCol = ($u === 'userid') ? 'user_name' : 'user_name';
+            $query->leftJoin('user_credentials as uc', "{$t}.{$u}", '=', 'uc.user_name')
+                  ->addSelect(DB::raw('uc.pk as route_user_id'));
+        }
+
+        $query->addSelect([
                 "{$t}.{$u}",
                 "{$t}.status",
                 's1.full_name',
@@ -210,7 +276,7 @@ class ReportController extends Controller
         $steps        = $dataTable->steps;
         $totalSteps   = $dataTable->totalSteps;
         $trackerTable = $form->trackerStorageTable();
-        $userKey      = $form->user_identifier ?: 'username';
+        $userKey      = fc_user_col($trackerTable);
         $t            = $trackerTable;
         $u            = $userKey;
 
@@ -220,11 +286,11 @@ class ReportController extends Controller
             : '0';
 
         $query = DB::table($t)
-            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', 's1.username')
+            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', 's1.' . fc_user_col('student_master_firsts'))
             ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
             ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id')
             ->select([
-                "{$t}.{$u} as username",
+                "{$t}.{$u} as user_id",
                 "{$t}.status",
                 's1.full_name',
                 's1.mobile_no',
@@ -280,7 +346,7 @@ class ReportController extends Controller
 
             foreach ($rows as $row) {
                 $line = [
-                    $row->{$userKey} ?? $row->username,
+                    $row->{$userKey} ?? $row->user_id,
                     $row->full_name ?? '',
                     $row->mobile_no ?? '',
                     $row->service_code ?? '',
@@ -302,58 +368,92 @@ class ReportController extends Controller
     }
 
     // ── 2. Student Detail View ────────────────────────────────────────
-    public function studentDetail(string $username)
+    public function studentDetail(int $userId)
     {
-        $step1        = StudentMasterFirst::where('username',$username)->with(['session','service','allottedState'])->first();
-        $step2        = StudentMasterSecond::where('username',$username)->with(['category','religion','permState','fatherProfession'])->first();
-        $master       = StudentMaster::where('username',$username)->first();
-        $bank         = NewRegistrationBankDetailsMaster::where('username',$username)->first();
-        $documents = app(RegistrationService::class)->joiningDocumentChecklistForDisplay($username);
-        $confirmation = StudentConfirmMaster::where('username',$username)->first();
-        $qualifications = DB::table('student_master_qualification_details')
-                           ->where('username', $username)
-                           ->get()
-                           ->map(function ($row) {
-                               $row->qualification_name = $this->fcResolveLookupLabel(
-                                   ['qualification_masters', 'qualification_master'],
-                                   ['id', 'pk'],
-                                   'qualification_name',
-                                   $row->qualification_id ?? null
-                               );
-                               $row->board_name = $this->fcResolveLookupLabel(
-                                   ['board_name_masters', 'board_name_master'],
-                                   ['id', 'pk'],
-                                   'board_name',
-                                   $row->board_id ?? null
-                               );
-                               return $row;
-                           });
-        $employments  = DB::table('student_master_employment_details')
-                          ->leftJoin('job_type_masters','student_master_employment_details.job_type_id','=','job_type_masters.id')
-                          ->where('student_master_employment_details.username',$username)
-                          ->select('student_master_employment_details.*','job_type_masters.job_type_name')
-                          ->get();
-        $languages    = DB::table('student_master_language_knowns')
-                          ->where('username', $username)
-                          ->get()
-                          ->map(function ($row) {
-                              $row->language_name = $this->fcResolveLookupLabel(
-                                  ['language_master', 'language_masters'],
-                                  ['id', 'pk'],
-                                  'language_name',
-                                  $row->language_id ?? null
-                              );
-                              return $row;
-                          });
-        abort_unless($step1, 404, "Student '{$username}' not found.");
+        $step1 = StudentMasterFirst::forUser($userId)->with(['session', 'service', 'allottedState'])->first();
+        abort_unless($step1, 404, "Student '{$userId}' not found.");
+
+        $master = StudentMaster::forUser($userId)->first();
+        $confirmation = StudentConfirmMaster::forUser($userId)->first();
+
+        $registrationService = app(RegistrationService::class);
+        $registrationFlow = app(FcRegistrationFlowService::class);
+        $reportForm = FcForm::resolveForUserId($userId);
+        $sections = $registrationService->buildReportSectionsFromFormDefinition($userId, $reportForm);
+        $displayName = $registrationService->resolveStudentDisplayName($step1);
+        $photoPath = $registrationService->resolveStudentPhotoPath($step1, $reportForm, $userId);
+        $photoUrl = view_file_link($photoPath);
+
+        $formProgress = [];
+        $progressDone = 0;
+        $progressTotal = 0;
+        if ($reportForm) {
+            $formSteps = $reportForm->activeSteps()->get();
+            $stepStatus = $registrationFlow->buildStepCompletionByStepId($reportForm, $formSteps, $userId);
+            foreach ($formSteps as $step) {
+                $done = (bool) ($stepStatus[$step->id] ?? false);
+                $formProgress[] = ['label' => $step->step_name, 'done' => $done];
+                $progressTotal++;
+                if ($done) {
+                    $progressDone++;
+                }
+                if (($step->tracker_column ?? '') === 'bank_done') {
+                    $travelDone = $registrationFlow->isTravelComplete($userId, $reportForm);
+                    $formProgress[] = ['label' => 'Travel Plan', 'done' => $travelDone];
+                    $progressTotal++;
+                    if ($travelDone) {
+                        $progressDone++;
+                    }
+                }
+            }
+        } else {
+            $legacySteps = [
+                'Step 1' => $master?->step1_done,
+                'Step 2' => $master?->step2_done,
+                'Step 3' => $master?->step3_done,
+                'Bank' => $master?->bank_done,
+                'Docs' => $master?->docs_done,
+            ];
+            foreach ($legacySteps as $label => $done) {
+                $formProgress[] = ['label' => $label, 'done' => (bool) $done];
+                $progressTotal++;
+                if ($done) {
+                    $progressDone++;
+                }
+            }
+        }
+
+        $registrationComplete = $progressTotal > 0 && $progressDone >= $progressTotal;
+        $headerMeta = $registrationService->resolveStudentHeaderMeta($step1);
+
+        if ($reportForm && ! $registrationFlow->usesLegacyDocumentChecklist($reportForm)) {
+            $documents = $registrationService->dynamicFormDocumentsForDisplay($userId, $reportForm);
+            $documentSource = 'dynamic';
+        } else {
+            $documents = $registrationService->joiningDocumentChecklistForDisplay($userId);
+            $documentSource = 'legacy';
+        }
 
         return view('fc.report.student-detail', compact(
-            'username','step1','step2','master','bank',
-            'documents','confirmation','qualifications','employments','languages'
+            'userId',
+            'step1',
+            'master',
+            'confirmation',
+            'reportForm',
+            'sections',
+            'displayName',
+            'photoUrl',
+            'formProgress',
+            'progressDone',
+            'progressTotal',
+            'registrationComplete',
+            'headerMeta',
+            'documents',
+            'documentSource'
         ));
     }
 
-    public function updateStudentDocumentVerification(Request $request, string $username, int $documentMasterId)
+    public function updateStudentDocumentVerification(Request $request, int $userId, int $documentMasterId)
     {
         $request->validate([
             'is_verified' => 'nullable|boolean',
@@ -364,7 +464,7 @@ class ReportController extends Controller
             ->where('is_active', 1)
             ->firstOrFail();
 
-        $doc = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+        $doc = FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)
             ->where('document_master_id', $documentMasterId)
             ->first();
 
@@ -377,7 +477,7 @@ class ReportController extends Controller
 
         $doc->update([
             'is_verified' => $isVerified,
-            'verified_by' => $isVerified ? ((string) (auth()->user()->username ?? auth()->id())) : null,
+            'verified_by' => $isVerified ? auth()->id() : null,
             'verified_at' => $isVerified ? now() : null,
             'remarks' => $remarks !== '' ? $remarks : null,
         ]);
@@ -385,24 +485,45 @@ class ReportController extends Controller
         return back()->with('success', "\"{$docMaster->document_name}\" verification updated successfully.");
     }
 
+    public function updateDynamicFormDocumentVerification(Request $request, int $userId, int $formFieldId)
+    {
+        $request->validate([
+            'is_verified' => 'nullable|boolean',
+            'remarks' => 'nullable|string|max:500',
+        ]);
+
+        try {
+            $documentName = app(RegistrationService::class)->saveDynamicFormDocumentVerification(
+                $userId,
+                $formFieldId,
+                (bool) $request->boolean('is_verified'),
+                trim((string) $request->input('remarks', '')) ?: null
+            );
+        } catch (\InvalidArgumentException $e) {
+            return back()->with('error', $e->getMessage());
+        }
+
+        return back()->with('success', "\"{$documentName}\" verification updated successfully.");
+    }
+
     /**
      * Bilingual “descriptive profile” PDF — prefers headless Chrome when available, else Dompdf.
      * Noto is embedded via data: URLs so fonts actually load (Dompdf ignores many file:// @font-face paths).
      */
-    public function studentDetailPdf(string $username)
+    public function studentDetailPdf(int $userId)
     {
-        $step1 = StudentMasterFirst::where('username', $username)
+        $step1 = StudentMasterFirst::forUser($userId)
             ->with(['session', 'service', 'allottedState'])
             ->first();
-        abort_unless($step1, 404, "Student '{$username}' not found.");
+        abort_unless($step1, 404, "Student '{$userId}' not found.");
 
-        $step2 = StudentMasterSecond::where('username', $username)
+        $step2 = StudentMasterSecond::forUser($userId)
             ->with(['category', 'religion', 'permState', 'presState', 'fatherProfession'])
             ->first();
-        $master = StudentMaster::where('username', $username)->first();
-        $bank = NewRegistrationBankDetailsMaster::where('username', $username)->first();
+        $master = StudentMaster::where(fc_user_col('student_masters'), fc_user_val('student_masters', $userId))->first();
+        $bank = NewRegistrationBankDetailsMaster::where(fc_user_col('new_registration_bank_details_masters'), fc_user_val('new_registration_bank_details_masters', $userId))->first();
         $qualifications = DB::table('student_master_qualification_details')
-            ->where('username', $username)
+            ->where(fc_user_col('student_master_qualification_details'), fc_user_val('student_master_qualification_details', $userId))
             ->get()
             ->map(function ($row) {
                 $row->qualification_name = $this->fcResolveLookupLabel(
@@ -421,11 +542,11 @@ class ReportController extends Controller
             });
         $employments = DB::table('student_master_employment_details')
             ->leftJoin('job_type_masters', 'student_master_employment_details.job_type_id', '=', 'job_type_masters.id')
-            ->where('student_master_employment_details.username', $username)
+            ->where('student_master_employment_details.' . fc_user_col('student_master_employment_details'), fc_user_val('student_master_employment_details', $userId))
             ->select('student_master_employment_details.*', 'job_type_masters.job_type_name')
             ->get();
         $languages = DB::table('student_master_language_knowns')
-            ->where('username', $username)
+            ->where(fc_user_col('student_master_language_knowns'), fc_user_val('student_master_language_knowns', $userId))
             ->get()
             ->map(function ($row) {
                 $row->language_name = $this->fcResolveLookupLabel(
@@ -437,12 +558,14 @@ class ReportController extends Controller
                 return $row;
             });
         $registrationService = app(RegistrationService::class);
-        $pdfForm = FcForm::resolveForUsername($username);
+        $pdfForm = FcForm::resolveForUserId($userId);
         $sections = $this->fcStudentPdfSanitizeSections(
-            $registrationService->buildPdfSectionsFromFormDefinition($username, $pdfForm)
+            $registrationService->buildPdfSectionsFromFormDefinition($userId, $pdfForm)
         );
         $printedAt = $this->fcPdfSanitizeText(now()->format('d/m/Y H:i'));
-        $photoDataUri = $this->fcRegistrationPhotoDataUri($step1->photo_path);
+        $photoPath = $registrationService->resolveStudentPhotoPath($step1, $pdfForm, $userId);
+        $photoUrl = view_file_link($photoPath);
+        $photoDataUri = fc_photo_data_uri($photoPath);
 
         $pdfFontFaceCss = $this->fcRegistrationEmbeddedFontFaceCss();
         $pdfFontFamilyCss = $pdfFontFaceCss !== ''
@@ -451,19 +574,20 @@ class ReportController extends Controller
 
         $viewData = [
             'sections' => $sections,
-            'username' => $this->fcPdfSanitizeText($username),
+            'userId' => $userId,
             'step1' => $step1,
             'pdfFullName' => $this->fcPdfSanitizeText($registrationService->resolveStudentDisplayName($step1)),
             'pdfFormName' => $this->fcPdfSanitizeText((string) ($pdfForm?->form_name ?? '')),
             'printedAt' => $printedAt,
             'photoDataUri' => $photoDataUri,
+            'photoUrl' => $photoUrl,
             'pdfFontFaceCss' => $pdfFontFaceCss,
             'pdfFontFamilyCss' => $pdfFontFamilyCss,
         ];
 
         $html = view('fc.report.student-detail-pdf', $viewData)->render();
 
-        $filename = 'FC_Registration_'.$username.'_'.now()->format('Ymd_His').'.pdf';
+        $filename = 'FC_Registration_'.$userId.'_'.now()->format('Ymd_His').'.pdf';
         $engine = strtolower((string) env('FC_REGISTRATION_PDF_ENGINE', 'auto'));
 
         if ($engine !== 'dompdf' && ($engine === 'chrome' || $engine === 'auto')) {
@@ -486,7 +610,7 @@ class ReportController extends Controller
             ->setOption('isRemoteEnabled', true)
             ->setOption('isFontSubsettingEnabled', false)
             ->setPaper('a4', 'portrait')
-            ->addInfo(['Title' => 'FC Registration - '.$username])
+            ->addInfo(['Title' => 'FC Registration - '.$userId])
             ->stream($filename);
     }
 
@@ -767,87 +891,35 @@ class ReportController extends Controller
      */
     private function fcRegistrationPhotoDataUri(?string $path): ?string
     {
-        if ($path === null || $path === '') {
-            return null;
-        }
-        $path = trim(str_replace('\\', '/', (string) $path));
-        $path = ltrim($path, '/');
-        if (str_starts_with($path, 'public/')) {
-            $path = substr($path, strlen('public/'));
-        }
-        if (str_starts_with($path, 'storage/')) {
-            $path = substr($path, strlen('storage/'));
-        }
-        $full = storage_path('app/public/'.$path);
-        if (! is_file($full)) {
-            return null;
-        }
-        $mime = @mime_content_type($full) ?: 'image/jpeg';
-        if (! str_starts_with((string) $mime, 'image/')) {
-            return null;
-        }
-
-        $binary = (string) file_get_contents($full);
-        if (function_exists('imagecreatefromstring')) {
-            $src = @imagecreatefromstring($binary);
-            if ($src !== false) {
-                $w = imagesx($src);
-                $h = imagesy($src);
-                $maxW = 110;
-                $maxH = 140;
-                if ($w > 0 && $h > 0 && ($w > $maxW || $h > $maxH)) {
-                    $scale = min($maxW / $w, $maxH / $h);
-                    $nw = max(1, (int) round($w * $scale));
-                    $nh = max(1, (int) round($h * $scale));
-                    $dst = imagecreatetruecolor($nw, $nh);
-                    if ($dst !== false) {
-                        if ($mime === 'image/png' || $mime === 'image/gif') {
-                            imagealphablending($dst, false);
-                            imagesavealpha($dst, true);
-                            $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
-                            imagefilledrectangle($dst, 0, 0, $nw, $nh, $transparent);
-                        } else {
-                            imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
-                        }
-                        imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
-                        ob_start();
-                        imagejpeg($dst, null, 88);
-                        $binary = (string) ob_get_clean();
-                        $mime = 'image/jpeg';
-                        imagedestroy($dst);
-                    }
-                }
-                imagedestroy($src);
-            }
-        }
-
-        return 'data:'.$mime.';base64,'.base64_encode($binary);
+        return fc_photo_data_uri($path);
     }
 
     // ── 3. Service-wise Report ────────────────────────────────────────
     public function byService(Request $request)
     {
-        $sessions = SessionMaster::orderByDesc('id')->get();
+        $forms = $this->reportFormsForFilter();
         $services = DB::table('service_master')->orderBy('service_name')->select('pk', 'service_name', 'service_short_name')->get();
 
         $base = DB::table('student_master_firsts as s1')
             ->join('service_master as svc','s1.service_id','=','svc.pk')
-            ->leftJoin('student_masters as sm','s1.username','=','sm.username')
-            ->leftJoin('student_master_seconds as s2','s1.username','=','s2.username')
+            ->leftJoin('student_masters as sm','s1.user_id','=','sm.user_id')
+            ->leftJoin('student_master_seconds as s2','s1.user_id','=','s2.user_id')
             ->leftJoin('category_masters as cat','s2.category_id','=','cat.id')
             ->leftJoin('state_masters as st','s1.allotted_state_id','=','st.id')
-            ->when($request->session_id, fn($q,$v) => $q->where('sm.session_id',$v))
             ->when(!empty((array) $request->input('service_ids', [])), function ($q) use ($request) {
                 $serviceIds = array_values(array_filter((array) $request->input('service_ids', []), fn ($v) => $v !== null && $v !== ''));
                 if (!empty($serviceIds)) {
                     $q->whereIn('s1.service_id', $serviceIds);
                 }
-            })
-            ->select(
+            });
+
+        $this->constrainToForm($request, $base);
+
+        $base = $base->select(
                 'svc.pk as service_pk',
                 'svc.service_name',
                 DB::raw('COALESCE(svc.service_short_name, svc.service_name) as service_code'),
-                DB::raw('COUNT(s1.username) as total'),
+                DB::raw('COUNT(s1.user_id) as total'),
                 DB::raw('SUM(CASE WHEN s1.gender="Male" THEN 1 ELSE 0 END) as male'),
                 DB::raw('SUM(CASE WHEN s1.gender="Female" THEN 1 ELSE 0 END) as female'),
                 DB::raw('SUM(CASE WHEN sm.status="SUBMITTED" THEN 1 ELSE 0 END) as submitted'),
@@ -910,13 +982,15 @@ class ReportController extends Controller
             ]);
         }
 
-        return view('fc.report.by-service', compact('sessions','services'));
+        return view('fc.report.by-service', compact('forms', 'services') + [
+            'scopedForm' => $this->scopedFormFromRequest($request),
+        ]);
     }
 
     // ── 4. State-wise Report ──────────────────────────────────────────
     public function byState(Request $request)
     {
-        $sessions = SessionMaster::orderByDesc('id')->get();
+        $forms = $this->reportFormsForFilter();
         $states = DB::table('state_master')
             ->orderBy('state_name')
             ->selectRaw('Pk as pk, state_name')
@@ -924,18 +998,20 @@ class ReportController extends Controller
 
         $base = DB::table('student_master_firsts as s1')
             ->join('state_master as st','s1.allotted_state_id','=','st.Pk')
-            ->leftJoin('student_masters as sm','s1.username','=','sm.username')
-            ->when($request->session_id, fn($q,$v) => $q->where('sm.session_id',$v))
+            ->leftJoin('student_masters as sm','s1.user_id','=','sm.user_id')
             ->when(!empty((array) $request->input('state_ids', [])), function ($q) use ($request) {
                 $stateIds = array_values(array_filter((array) $request->input('state_ids', []), fn ($v) => $v !== null && $v !== ''));
                 if (!empty($stateIds)) {
                     $q->whereIn('s1.allotted_state_id', $stateIds);
                 }
-            })
-            ->select(
+            });
+
+        $this->constrainToForm($request, $base);
+
+        $base = $base->select(
                 'st.state_name',
                 DB::raw('CAST(st.Pk AS CHAR) as state_code'),
-                DB::raw('COUNT(s1.username) as total'),
+                DB::raw('COUNT(s1.user_id) as total'),
                 DB::raw('SUM(CASE WHEN s1.gender="Male" THEN 1 ELSE 0 END) as male'),
                 DB::raw('SUM(CASE WHEN s1.gender="Female" THEN 1 ELSE 0 END) as female'),
                 DB::raw('SUM(CASE WHEN sm.status="SUBMITTED" THEN 1 ELSE 0 END) as submitted')
@@ -990,44 +1066,49 @@ class ReportController extends Controller
             ]);
         }
 
-        return view('fc.report.by-state', compact('sessions','states'));
+        return view('fc.report.by-state', compact('forms', 'states') + [
+            'scopedForm' => $this->scopedFormFromRequest($request),
+        ]);
     }
 
     // ── 5. Document Checklist Report ──────────────────────────────────
     public function documents(Request $request)
     {
-        $sessions  = SessionMaster::orderByDesc('id')->get();
+        $forms  = $this->reportFormsForFilter();
         $docMasters = FcJoiningRelatedDocumentsMaster::where('is_active',1)->orderBy('display_order')->get();
 
         $docUploadedSql = '(d.is_uploaded = 1 OR (d.file_path IS NOT NULL AND d.file_path != \'\'))';
 
-        $students = DB::table('student_master_firsts as s1')
-            ->leftJoin('student_masters as sm','s1.username','=','sm.username')
+        $studentsQuery = DB::table('student_master_firsts as s1')
+            ->leftJoin('student_masters as sm','s1.user_id','=','sm.user_id')
             ->leftJoin('service_masters as svc','s1.service_id','=','svc.id')
-            ->when($request->session_id, fn($q,$v) => $q->where('sm.session_id',$v))
             ->when($request->filled('doc_status'), function($q) use ($request, $docUploadedSql) {
                 $totalMandatory = FcJoiningRelatedDocumentsMaster::where('is_active',1)->where('is_mandatory',1)->count();
                 if ($request->doc_status === 'complete') {
                     $q->whereRaw("(SELECT COUNT(*) FROM fc_joining_related_documents_details_masters d
-                                   WHERE d.username=s1.username AND {$docUploadedSql}
+                                   WHERE d.user_id=s1.user_id AND {$docUploadedSql}
                                    AND d.document_master_id IN (SELECT id FROM fc_joining_related_documents_masters WHERE is_mandatory=1))
                                    = {$totalMandatory}");
                 } else {
                     $q->whereRaw("(SELECT COUNT(*) FROM fc_joining_related_documents_details_masters d
-                                   WHERE d.username=s1.username AND {$docUploadedSql}
+                                   WHERE d.user_id=s1.user_id AND {$docUploadedSql}
                                    AND d.document_master_id IN (SELECT id FROM fc_joining_related_documents_masters WHERE is_mandatory=1))
                                    < {$totalMandatory}");
                 }
-            })
-            ->select('s1.username','s1.full_name','svc.service_code','s1.cadre')
+            });
+
+        $this->constrainToForm($request, $studentsQuery);
+
+        $students = $studentsQuery
+            ->select('s1.user_id','s1.full_name','svc.service_code','s1.cadre')
             ->orderBy('s1.full_name')
             ->get();
 
-        $usernames = $students->pluck('username')->filter()->unique()->values();
+        $userIds = $students->pluck('user_id')->filter()->unique()->values();
         // Treat as uploaded if flagged OR a file path exists (legacy / partial saves).
-        $allUploaded = $usernames->isEmpty()
+        $allUploaded = $userIds->isEmpty()
             ? collect()
-            : FcJoiningRelatedDocumentsDetailsMaster::whereIn('username', $usernames)
+            : FcJoiningRelatedDocumentsDetailsMaster::whereIn('user_id', $userIds)
                 ->where(function ($q) {
                     $q->where('is_uploaded', 1)
                         ->orWhere(function ($q2) {
@@ -1035,40 +1116,47 @@ class ReportController extends Controller
                         });
                 })
                 ->get()
-                ->groupBy(fn ($row) => (string) $row->username);
+                ->groupBy(fn ($row) => (string) $row->user_id);
 
         return view('fc.report.documents', compact(
-            'students','docMasters','allUploaded','sessions'
-        ));
+            'students', 'docMasters', 'allUploaded', 'forms'
+        ) + [
+            'scopedForm' => $this->scopedFormFromRequest($request),
+        ]);
     }
 
     // ── 6. Bank Details Report ────────────────────────────────────────
     public function bankDetails(Request $request)
     {
-        $sessions = SessionMaster::orderByDesc('id')->get();
+        $forms = $this->reportFormsForFilter();
 
-        $students = DB::table('student_master_firsts as s1')
-            ->leftJoin('student_masters as sm','s1.username','=','sm.username')
-            ->leftJoin('new_registration_bank_details_masters as b','s1.username','=','b.username')
+        $studentsQuery = DB::table('student_master_firsts as s1')
+            ->leftJoin('student_masters as sm','s1.user_id','=','sm.user_id')
+            ->leftJoin('new_registration_bank_details_masters as b','s1.user_id','=','b.user_id')
             ->leftJoin('service_masters as svc','s1.service_id','=','svc.id')
-            ->when($request->session_id, fn($q,$v) => $q->where('sm.session_id',$v))
             ->when($request->filled('bank_status'), function($q) use ($request) {
                 if ($request->bank_status === 'filled') $q->whereNotNull('b.account_no');
                 else $q->whereNull('b.account_no');
             })
             ->when($request->filled('search'), function($q) use ($request) {
                 $s = '%'.$request->search.'%';
-                $q->where(fn($qq) => $qq->where('s1.full_name','like',$s)->orWhere('s1.username','like',$s));
-            })
+                $q->where(fn($qq) => $qq->where('s1.full_name','like',$s)->orWhere('s1.user_id','like',$s));
+            });
+
+        $this->constrainToForm($request, $studentsQuery);
+
+        $students = $studentsQuery
             ->select(
-                's1.username','s1.full_name','svc.service_code','s1.cadre',
+                's1.user_id','s1.full_name','svc.service_code','s1.cadre',
                 'b.bank_name','b.branch_name','b.ifsc_code',
                 'b.account_no','b.account_holder_name','b.account_type','b.is_verified'
             )
             ->orderBy('s1.full_name')
             ->paginate(50)->withQueryString();
 
-        return view('fc.report.bank-details', compact('students','sessions'));
+        return view('fc.report.bank-details', compact('students', 'forms') + [
+            'scopedForm' => $this->scopedFormFromRequest($request),
+        ]);
     }
 
     // ── Export to CSV ─────────────────────────────────────────────────
@@ -1094,14 +1182,14 @@ class ReportController extends Controller
     private function exportOverviewCsv(): void
     {
         $out = fopen('php://output','w');
-        fputcsv($out, ['S.No','Username','Full Name','Gender','Service','Service Code','Cadre',
+        fputcsv($out, ['S.No','User ID','Full Name','Gender','Service','Service Code','Cadre',
                        'Allotted State','Mobile','Email','Step1','Step2','Step3','Bank','Travel','Docs','Status','Confirmed']);
 
         DB::table('student_master_firsts as s1')
-          ->leftJoin('student_masters as sm','s1.username','=','sm.username')
+          ->leftJoin('student_masters as sm','s1.user_id','=','sm.user_id')
           ->leftJoin('service_masters as svc','s1.service_id','=','svc.id')
           ->leftJoin('state_masters as st','s1.allotted_state_id','=','st.id')
-          ->leftJoin('student_confirm_masters as sc','s1.username','=','sc.username')
+          ->leftJoin('student_confirm_masters as sc','s1.user_id','=','sc.user_id')
           ->select('s1.*','svc.service_name','svc.service_code','st.state_name',
                    'sm.status','sm.step1_done','sm.step2_done','sm.step3_done',
                    'sm.bank_done','sm.travel_done','sm.docs_done','sc.declaration_accepted')
@@ -1110,7 +1198,7 @@ class ReportController extends Controller
               static $i = 0;
               foreach ($rows as $r) {
                   fputcsv($out, [
-                      ++$i, $r->username, $r->full_name, $r->gender ?? '',
+                      ++$i, $r->user_id, $r->full_name, $r->gender ?? '',
                       $r->service_name ?? '', $r->service_code ?? '', $r->cadre ?? '',
                       $r->state_name ?? '', $r->mobile_no ?? '', $r->email ?? '',
                       $r->step1_done ? 'Yes':'No', $r->step2_done ? 'Yes':'No',
@@ -1129,7 +1217,7 @@ class ReportController extends Controller
         fputcsv($out, ['Service','Code','Total','Male','Female','Submitted','Docs Done']);
         DB::table('student_master_firsts as s1')
           ->join('service_masters as svc','s1.service_id','=','svc.id')
-          ->leftJoin('student_masters as sm','s1.username','=','sm.username')
+          ->leftJoin('student_masters as sm','s1.user_id','=','sm.user_id')
           ->select('svc.service_name','svc.service_code',
                    DB::raw('COUNT(*) as total'),
                    DB::raw('SUM(s1.gender="Male") as male'),
@@ -1148,7 +1236,7 @@ class ReportController extends Controller
         fputcsv($out, ['State','Code','Total','Male','Female','Submitted']);
         DB::table('student_master_firsts as s1')
           ->join('state_masters as st','s1.allotted_state_id','=','st.id')
-          ->leftJoin('student_masters as sm','s1.username','=','sm.username')
+          ->leftJoin('student_masters as sm','s1.user_id','=','sm.user_id')
           ->select('st.state_name','st.state_code',
                    DB::raw('COUNT(*) as total'),
                    DB::raw('SUM(s1.gender="Male") as male'),
@@ -1163,15 +1251,15 @@ class ReportController extends Controller
     private function exportBankCsv(): void
     {
         $out = fopen('php://output','w');
-        fputcsv($out, ['Username','Full Name','Service','Bank Name','Branch','IFSC','Account No','Holder Name','Type','Verified']);
+        fputcsv($out, ['User ID','Full Name','Service','Bank Name','Branch','IFSC','Account No','Holder Name','Type','Verified']);
         DB::table('student_master_firsts as s1')
           ->leftJoin('service_masters as svc','s1.service_id','=','svc.id')
-          ->leftJoin('new_registration_bank_details_masters as b','s1.username','=','b.username')
+          ->leftJoin('new_registration_bank_details_masters as b','s1.user_id','=','b.user_id')
           ->whereNotNull('b.account_no')
-          ->select('s1.username','s1.full_name','svc.service_code','b.*')
+          ->select('s1.user_id','s1.full_name','svc.service_code','b.*')
           ->orderBy('s1.full_name')
           ->each(fn($r) => fputcsv($out, [
-              $r->username,$r->full_name,$r->service_code ?? '',
+              $r->user_id,$r->full_name,$r->service_code ?? '',
               $r->bank_name ?? '',$r->branch_name ?? '',$r->ifsc_code ?? '',
               $r->account_no ?? '',$r->account_holder_name ?? '',
               $r->account_type ?? '',$r->is_verified ? 'Yes':'No',

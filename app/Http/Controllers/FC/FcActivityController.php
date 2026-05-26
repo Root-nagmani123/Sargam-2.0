@@ -27,7 +27,7 @@ class FcActivityController extends Controller
             'actvalue' => 'required|string|max:500',
         ]);
 
-        $result = $this->svc->store($request->only(['otcode', 'ccode', 'uactivity', 'actvalue']), Auth::user()->username);
+        $result = $this->svc->store($request->only(['otcode', 'ccode', 'uactivity', 'actvalue']), Auth::user()->user_name ?? '');
 
         return response()->json(['status' => $result]);
     }

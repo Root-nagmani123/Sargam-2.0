@@ -15,7 +15,6 @@ use App\Http\Controllers\FC\{
     BankDetailsController,
     DocumentUploadController,
     RegistrationStatusController,
-    FcJoiningAttendanceController,
     FormBuilderController,
     FormManagementController,
     GenericFormController,
@@ -103,15 +102,6 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::post('/doc-masters/reorder',   [FormBuilderController::class, 'reorderDocMasters'])->name('doc-master.reorder');
     });
 
-    Route::prefix('joining')->name('joining.')->group(function () {
-        Route::get('/attendance/{hostel}',       [FcJoiningAttendanceController::class, 'showHostelList'])->name('hostel');
-        Route::post('/attendance/{hostel}',      [FcJoiningAttendanceController::class, 'markAttendance'])->name('mark');
-        Route::post('/attendance/{hostel}/bulk', [FcJoiningAttendanceController::class, 'bulkMark'])->name('bulk');
-        Route::get('/medical/{username}',        [FcJoiningAttendanceController::class, 'showMedicalForm'])->name('medical');
-        Route::post('/medical/{username}',       [FcJoiningAttendanceController::class, 'saveMedicalDetails'])->name('medical.save');
-    });
-
-    // ── Form Management (Create / Edit / Delete forms) ───────────────
     // ── Post-arrival setup (coordinators: departments + activity master CRUD)
     Route::prefix('activity-setup')->middleware(['fc.activity.coordinator'])->name('activity-setup.')->group(function () {
         Route::get('departments/data', [FcActivityDepartmentController::class, 'dataTable'])->name('departments.data');
@@ -133,7 +123,7 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         // API: get columns for a table
         Route::get('/api/table-columns',       [FormManagementController::class, 'getTableColumns'])->name('api.table-columns');
 
-        // Step CRUD within a form
+        // Step CRUD within a forms
         Route::post('/{form}/steps',           [FormManagementController::class, 'storeStep'])->name('step.store');
         Route::put('/steps/{step}',            [FormManagementController::class, 'updateStep'])->name('step.update');
         Route::delete('/steps/{step}',         [FormManagementController::class, 'deleteStep'])->name('step.delete');
@@ -158,9 +148,7 @@ Route::middleware(['auth'])->prefix('fc-reg/admin')->name('fc-reg.admin.')->grou
         Route::prefix('status')->name('status.')->group(function () {
             Route::get('/', [FcActivityStatusController::class, 'picker'])->name('index');
             Route::get('/grid/{deptCode}', [FcActivityStatusController::class, 'departmentGrid'])->name('grid');
-            Route::get('/matrix', [FcActivityStatusController::class, 'matrix'])
-                ->middleware(['fc.activity.matrix'])
-                ->name('matrix');
+            Route::get('/matrix', [FcActivityStatusController::class, 'matrix'])->name('matrix');
         });
 
         Route::prefix('reports')->name('reports.')->group(function () {
@@ -201,9 +189,9 @@ Route::middleware(['auth'])->prefix('fc-reg/forms')->name('fc-reg.forms.')->grou
 // ── FC Travel plans (admin) ────────────────────────────────────
 Route::middleware(['auth'])->prefix('admin/travel')->name('admin.travel.')->group(function () {
     Route::get('/',                    [TravelPlanReportController::class, 'index'])->name('index');
-    Route::get('/student/{username}',[TravelPlanReportController::class, 'show'])->name('show');
-    Route::get('/student/{username}/edit', [TravelPlanReportController::class, 'edit'])->name('edit');
-    Route::put('/student/{username}', [TravelPlanReportController::class, 'update'])->name('update');
+    Route::get('/student/{userId}',[TravelPlanReportController::class, 'show'])->name('show');
+    Route::get('/student/{userId}/edit', [TravelPlanReportController::class, 'edit'])->name('edit');
+    Route::put('/student/{userId}', [TravelPlanReportController::class, 'update'])->name('update');
     Route::get('/export/joining',   [TravelPlanReportController::class, 'exportJoiningReport'])->name('export.joining');
     Route::prefix('slots')->name('slots.')->group(function () {
         Route::get('/',              [FcTravelArrivalSlotController::class, 'index'])->name('index');
@@ -220,10 +208,12 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     Route::get('/',              [ReportController::class, 'overview'])->name('overview');
 
     // Individual student full profile
-    Route::get('/student/{username}', [ReportController::class, 'studentDetail'])->name('student');
-    Route::get('/student/{username}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
-    Route::post('/student/{username}/documents/{documentMasterId}/verify', [ReportController::class, 'updateStudentDocumentVerification'])
+    Route::get('/student/{userId}', [ReportController::class, 'studentDetail'])->name('student');
+    Route::get('/student/{userId}/pdf', [ReportController::class, 'studentDetailPdf'])->name('student.pdf');
+    Route::post('/student/{userId}/documents/{documentMasterId}/verify', [ReportController::class, 'updateStudentDocumentVerification'])
         ->name('student.documents.verify');
+    Route::post('/student/{userId}/form-documents/{formFieldId}/verify', [ReportController::class, 'updateDynamicFormDocumentVerification'])
+        ->name('student.form-documents.verify');
 
     // Form-specific dynamic report (works for any form, any number of steps)
     Route::get('/form/{form}',        [ReportController::class, 'formOverview'])->name('form');

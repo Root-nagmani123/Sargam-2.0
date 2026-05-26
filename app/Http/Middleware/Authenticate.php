@@ -9,6 +9,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 
 use App\Models\User;
+use App\Services\FC\FcRosterAuthService;
 
 class Authenticate extends Middleware
 {
@@ -90,15 +91,32 @@ class Authenticate extends Middleware
             }
         }
 
-        // STEP 2: Check if user is now authenticated (either via token or session)
+        // STEP 2: FC trainee session from /fc/login (fc_registration_master; not main /login)
+        if (! Auth::check()) {
+            app(FcRosterAuthService::class)->hydrateStagedUserFromSession();
+        }
+
+        // STEP 3: Check if user is now authenticated (main login, Moodle token, or FC roster session)
         if (Auth::check()) {
             return $next($request);
         }
 
-        // STEP 3: User not authenticated, redirect to login
+        // STEP 4: User not authenticated, redirect to login
         session(['url.intended' => $request->fullUrl()]);
 
         return $this->unauthenticated($request, $guards);
+    }
+
+    /**
+     * @param  \Illuminate\Http\Request  $request
+     */
+    protected function redirectTo($request)
+    {
+        if ($request->is('fc-reg', 'fc-reg/*')) {
+            return route('fc.login');
+        }
+
+        return route('login');
     }
 
     /**

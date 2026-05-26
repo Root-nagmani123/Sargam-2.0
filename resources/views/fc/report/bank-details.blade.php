@@ -5,7 +5,7 @@
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h4 class="fw-bold mb-0" style="color:#1a3c6e;"><i class="bi bi-bank me-2"></i>Bank Details Report</h4>
         <div class="d-flex gap-2">
-            <a href="{{ route('admin.reports.overview') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+            @include('fc.report.partials.scoped-form-back', ['scopedForm' => $scopedForm ?? null])
             <a href="{{ route('admin.reports.export','bank') }}{{ request()->getQueryString() ? '?'.request()->getQueryString() : '' }}" class="btn btn-sm btn-success">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
             </a>
@@ -14,13 +14,7 @@
 
     <form method="GET" class="card border-0 shadow-sm mb-3 px-3 py-2">
         <div class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label small mb-1">Session</label>
-                <select name="session_id" class="form-select form-select-sm">
-                    <option value="">All Sessions</option>
-                    @foreach($sessions as $s)<option value="{{ $s->id }}" {{ request('session_id')==$s->id?'selected':'' }}>{{ $s->session_name }}</option>@endforeach
-                </select>
-            </div>
+            @include('fc.report.partials.form-filter-select', ['forms' => $forms])
             <div class="col-md-2">
                 <label class="form-label small mb-1">Status</label>
                 <select name="bank_status" class="form-select form-select-sm">
@@ -48,13 +42,13 @@
         <div class="table-responsive">
             <table class="table table-hover table-sm mb-0" style="font-size:12px;">
                 <thead class="table-dark">
-                    <tr><th class="px-3">#</th><th>Username</th><th>Full Name</th><th>Service</th><th>Bank Name</th><th>Branch</th><th>IFSC</th><th>Account No</th><th>Holder Name</th><th>Type</th><th class="text-center">Verified</th></tr>
+                    <tr><th class="px-3">#</th><th>User ID</th><th>Full Name</th><th>Service</th><th>Bank Name</th><th>Branch</th><th>IFSC</th><th>Account No</th><th>Holder Name</th><th>Type</th><th class="text-center">Verified</th></tr>
                 </thead>
                 <tbody>
                 @forelse($students as $idx => $s)
                     <tr>
                         <td class="px-3">{{ $students->firstItem() + $idx }}</td>
-                        <td><code style="font-size:10px">{{ $s->username }}</code></td>
+                        <td><code style="font-size:10px">{{ $s->user_id }}</code></td>
                         <td>{{ $s->full_name }}</td>
                         <td><span class="badge bg-primary-subtle text-primary" style="font-size:10px;">{{ $s->service_code ?? '—' }}</span></td>
                         <td>{{ $s->bank_name ?? '<span class="text-muted">—</span>' }}</td>

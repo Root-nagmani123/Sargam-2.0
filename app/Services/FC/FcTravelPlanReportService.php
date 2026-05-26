@@ -2,8 +2,8 @@
 
 namespace App\Services\FC;
 
+use App\Models\FC\FcForm;
 use App\Models\FC\FcTravelArrivalSlot;
-use App\Models\FC\SessionMaster;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Query\Builder;
@@ -15,13 +15,17 @@ class FcTravelPlanReportService
      */
     public static function baseQuery(): Builder
     {
+        $tpCol = fc_user_col('student_travel_plan_masters');
+        $s1Col = fc_user_col('student_master_firsts');
+        $smCol = fc_user_col('student_masters');
+
         return DB::table('student_travel_plan_masters as tp')
-            ->leftJoin('student_master_firsts as s1', 'tp.username', '=', 's1.username')
-            ->leftJoin('student_masters as sm', 'sm.username', '=', 'tp.username')
+            ->leftJoin('student_master_firsts as s1', "tp.{$tpCol}", '=', "s1.{$s1Col}")
+            ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "tp.{$tpCol}")
             ->leftJoin('fc_travel_arrival_slots as fslot', 'tp.fc_travel_arrival_slot_id', '=', 'fslot.id')
             ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id')
             ->select([
-                'tp.username',
+                "tp.{$tpCol} as user_id",
                 'tp.joining_date',
                 'tp.mode_of_journey',
                 'tp.journey_vehicle_no',
@@ -42,8 +46,8 @@ class FcTravelPlanReportService
 
     public static function applyFilters($query, Request $request): void
     {
-        if ($request->filled('filter_session_id')) {
-            $query->where('s1.session_id', (int) $request->filter_session_id);
+        if ($request->filled('form_id') && \Illuminate\Support\Facades\Schema::hasColumn('student_masters', 'form_id')) {
+            $query->where('sm.form_id', (int) $request->input('form_id'));
         }
 
         if ($request->filled('filter_slot_id')) {
@@ -83,7 +87,7 @@ class FcTravelPlanReportService
         if ($search !== '') {
             $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $search) . '%';
             $query->where(function ($q) use ($like) {
-                $q->where('tp.username', 'like', $like)
+                $q->where('tp.' . fc_user_col('student_travel_plan_masters'), 'like', $like)
                     ->orWhere('s1.full_name', 'like', $like)
                     ->orWhere('sm.full_name', 'like', $like)
                     ->orWhere('s1.roll_no', 'like', $like)
@@ -99,9 +103,9 @@ class FcTravelPlanReportService
     public static function exportFilterDescription(Request $request): string
     {
         $bits = [];
-        if ($request->filled('filter_session_id')) {
-            $s = SessionMaster::find((int) $request->filter_session_id);
-            $bits[] = 'Session: '.($s?->session_name ?? $request->filter_session_id);
+        if ($request->filled('form_id')) {
+            $form = FcForm::find((int) $request->input('form_id'));
+            $bits[] = 'Form: '.($form?->form_name ?? $request->form_id);
         }
         if ($request->filled('filter_slot_id')) {
             $sl = FcTravelArrivalSlot::find((int) $request->filter_slot_id);

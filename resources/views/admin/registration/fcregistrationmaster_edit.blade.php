@@ -174,6 +174,50 @@
                                 <div class="invalid-feedback">{{ $message }}</div>
                             @enderror
                         </div>
+
+                        <div class="col-12">
+                            <hr class="my-2">
+                            <h6 class="text-muted mb-0">Application status (admin override)</h6>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Application Type (current)</label>
+                            <input type="text" class="form-control" readonly
+                                value="{{ $currentApplicationTypeLabel }}">
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="application_type" class="form-label">Set status to</label>
+                            <select id="application_type" name="application_type"
+                                class="form-select @error('application_type') is-invalid @enderror" required>
+                                @foreach ($applicationTypeOptions as $value => $label)
+                                    <option value="{{ $value }}"
+                                        {{ (string) old('application_type', $registration->application_type ?? 0) === (string) $value ? 'selected' : '' }}>
+                                        {{ $label }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('application_type')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        <div class="col-md-6" id="exemptionCategoryWrap">
+                            <label for="fc_exemption_master_pk" class="form-label">Exemption Category</label>
+                            <select id="fc_exemption_master_pk" name="fc_exemption_master_pk"
+                                class="form-select @error('fc_exemption_master_pk') is-invalid @enderror">
+                                <option value="">-- Select exemption category --</option>
+                                @foreach ($exemptionCategories as $pk => $name)
+                                    <option value="{{ $pk }}"
+                                        {{ (string) old('fc_exemption_master_pk', $registration->fc_exemption_master_pk ?? '') === (string) $pk ? 'selected' : '' }}>
+                                        {{ $name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('fc_exemption_master_pk')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
                     </div>
 
                     <hr class="mt-4">
@@ -187,3 +231,28 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    <script>
+        (function () {
+            var typeSelect = document.getElementById('application_type');
+            var exemptionWrap = document.getElementById('exemptionCategoryWrap');
+            var exemptionSelect = document.getElementById('fc_exemption_master_pk');
+            if (!typeSelect || !exemptionWrap) return;
+
+            function syncExemptionField() {
+                var isExemption = typeSelect.value === '2';
+                exemptionWrap.style.display = isExemption ? '' : 'none';
+                if (exemptionSelect) {
+                    exemptionSelect.required = isExemption;
+                    if (!isExemption) {
+                        exemptionSelect.value = '';
+                    }
+                }
+            }
+
+            typeSelect.addEventListener('change', syncExemptionField);
+            syncExemptionField();
+        })();
+    </script>
+@endpush

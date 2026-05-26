@@ -2,14 +2,16 @@
 
 namespace App\Models\FC;
 
+use App\Models\FC\Concerns\FcUserAware;
 use Illuminate\Database\Eloquent\Model;
 
 class StudentTravelPlanMaster extends Model
 {
+    use FcUserAware;
     protected $table = 'student_travel_plan_masters';
 
     protected $fillable = [
-        'username', 'joining_date', 'joining_time',
+        'user_id', 'username', 'joining_date', 'joining_time',
         'special_requirements', 'is_submitted',
         'fc_travel_arrival_slot_id', 'mode_of_journey', 'journey_vehicle_no', 'academy_arrival_date',
         'arrival_time_dehradun', 'require_academy_vehicle',

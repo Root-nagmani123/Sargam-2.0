@@ -8,9 +8,7 @@
         <h4 class="fw-bold mb-0" style="color:#1a3c6e;">Post-Arrival Activities</h4>
         <div class="d-flex gap-2 flex-wrap">
             <a href="{{ route('fc-reg.admin.activities.status.index') }}" class="btn btn-sm btn-outline-primary">Status</a>
-            @if($showSetupLinks ?? false)
-                <a href="{{ route('fc-reg.admin.activities.status.matrix') }}" class="btn btn-sm btn-outline-primary">All-deps matrix</a>
-            @endif
+            <a href="{{ route('fc-reg.admin.activities.status.matrix') }}" class="btn btn-sm btn-outline-primary">All-deps matrix</a>
             <a href="{{ route('fc-reg.admin.activities.reports.summary') }}" class="btn btn-sm btn-outline-secondary">Reports</a>
             @if($canAccessMedical ?? false)
                 <a href="{{ route('fc-reg.admin.activities.medical.index') }}" class="btn btn-sm btn-outline-primary">Medical</a>
@@ -30,8 +28,8 @@
             <p class="small text-muted mb-2"><span class="text-danger" aria-hidden="true">*</span> Required to save an activity.</p>
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <label class="form-label small mb-1" for="selcourse">Course <span class="text-danger" title="Required">*</span></label>
-                    <select id="selcourse" class="form-select form-select-sm" required aria-required="true"><option value="">Select Course</option></select>
+                    <label class="form-label small mb-1" for="selcourse">Form <span class="text-danger" title="Required">*</span></label>
+                    <select id="selcourse" class="form-select form-select-sm" required aria-required="true"><option value="">Select Form</option></select>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-2">
                     <label class="form-label small mb-1" for="txtotcode">OT code <span class="text-danger" title="Required">*</span></label>
@@ -65,7 +63,7 @@
                     <button type="button" id="btnSaveActivity" class="btn btn-sm btn-primary w-100 w-lg-auto px-lg-4">Save activity</button>
                 </div>
             </div>
-            <p class="small text-muted mb-0 mt-3 pt-2 border-top"><strong>FC activity coordinators</strong> and users with <strong>full setup access</strong> see every active activity. Other users see only activities for <strong>departments you are assigned to</strong> (Activity setup → Departments, or your single department in staff access). <strong>Upsert</strong> updates the last value; <strong>repeat</strong> keeps a new reading each time (medical report shows full history). If the list stays empty after choosing a course, ask a coordinator to assign the right department(s).</p>
+            <p class="small text-muted mb-0 mt-3 pt-2 border-top"><strong>FC activity coordinators</strong> and users with <strong>full setup access</strong> see every active activity. Other users see only activities for <strong>departments you are assigned to</strong> (Activity setup → Departments, or your single department in staff access). <strong>Upsert</strong> updates the last value; <strong>repeat</strong> keeps a new reading each time (medical report shows full history). If the list stays empty after choosing a form, ask a coordinator to assign the right department(s).</p>
         </div>
     </div>
 
@@ -74,8 +72,8 @@
             <p class="small fw-semibold text-secondary text-uppercase mb-3" style="letter-spacing: 0.04em;">Activity log filters</p>
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <label class="form-label small mb-1" for="fcGridCourse">Course</label>
-                    <select id="fcGridCourse" class="form-select form-select-sm"><option value="">All courses</option></select>
+                    <label class="form-label small mb-1" for="fcGridCourse">Form</label>
+                    <select id="fcGridCourse" class="form-select form-select-sm"><option value="">All forms</option></select>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label small mb-1" for="fcGridOtcode">OT code contains</label>
@@ -102,7 +100,7 @@
             <table id="fcActivitiesDataTable" class="table table-sm table-hover mb-0 js-fc-datatable"
                 data-export-title="FC Post-Arrival Activities"
                 data-server-ajax="{{ route('fc-reg.admin.activities.data') }}"
-                data-filter-course="#fcGridCourse"
+                data-filter-form="#fcGridCourse"
                 data-filter-otcode="#fcGridOtcode"
                 data-filter-activity="#fcGridActivity">
                 <thead class="table-light">
@@ -212,24 +210,31 @@
         });
     }
 
+    function selectedFormCourseCode($sel) {
+        const opt = $sel.find('option:selected');
+        return opt.data('course-code') || '';
+    }
+
     $.get(R.courses, function(data) {
         const rows = asArray(data);
         const selEntry = $('#selcourse');
         const selGrid = $('#fcGridCourse');
         rows.forEach(function(c){
-            selEntry.append(`<option value="${c.c_code}">${c.c_name}</option>`);
-            selGrid.append(`<option value="${c.c_code}">${c.c_name}</option>`);
+            const label = c.c_name || c.form_id;
+            const opt = $('<option>').val(c.form_id).attr('data-course-code', c.c_code || '').text(label);
+            selEntry.append(opt.clone());
+            selGrid.append(opt);
         });
         fillActivitySelect($('#fcGridActivity'), '', 'All activities');
     }).fail(function() {
-        alert('Unable to load courses. Please refresh the page.');
+        alert('Unable to load forms. Please refresh the page.');
     });
 
     $('#selcourse').on('change', function() {
-        fillActivitySelect($('#selactivity'), this.value, 'Select Activity');
+        fillActivitySelect($('#selactivity'), selectedFormCourseCode($(this)), 'Select Activity');
     });
     $('#fcGridCourse').on('change', function() {
-        fillActivitySelect($('#fcGridActivity'), this.value, 'All activities');
+        fillActivitySelect($('#fcGridActivity'), selectedFormCourseCode($(this)), 'All activities');
     });
 
     $('#fcGridApply').on('click', function() { reloadFcActivitiesGrid(); });
@@ -242,7 +247,7 @@
     $('#txtotcode').on('blur', function() {
         const otcode = this.value.trim();
         if (!otcode) return;
-        const course = ($('#selcourse').val() || '').trim();
+        const course = selectedFormCourseCode($('#selcourse'));
         $.get(R.otName, { otcode, course }, function(d) {
             $('#selot').val(d.name || '');
             $('#prewarning').toggleClass('d-none', !d.warning);
@@ -255,12 +260,12 @@
     $('#btnSaveActivity').on('click', function() {
         const payload = {
             _token: '{{ csrf_token() }}',
-            ccode: $('#selcourse').val(),
+            ccode: selectedFormCourseCode($('#selcourse')),
             otcode: $('#txtotcode').val().trim(),
             uactivity: $('#selactivity').val(),
             actvalue: $('#txtactvalue').val().trim(),
         };
-        if (!payload.ccode || !payload.otcode || !payload.uactivity || !payload.actvalue) {
+        if (!payload.ccode || !$('#selcourse').val() || !payload.otcode || !payload.uactivity || !payload.actvalue) {
             alert('All fields are mandatory.');
             return;
         }

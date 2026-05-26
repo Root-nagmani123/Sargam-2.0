@@ -35,6 +35,128 @@ function getEmployeeIdsForUser($userId)
 }
 
 /**
+ * Resolve the user-identifier column for a given FC table.
+ *
+ * After the username→user_id migration all FC tables use `user_id`.
+ * Before the migration they still use `username` (or `userid` for
+ * fc_pre_history / fc_path_report). A static cache avoids repeated
+ * Schema::hasColumn() calls within the same request.
+ */
+function fc_user_col(string $table): string
+{
+    static $cache = [];
+    if (! array_key_exists($table, $cache)) {
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'user_id')) {
+            $cache[$table] = 'user_id';
+        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'userid')) {
+            $cache[$table] = 'userid';
+        } else {
+            $cache[$table] = 'username';
+        }
+    }
+    return $cache[$table];
+}
+
+/**
+ * Resolve the correct user-identifier VALUE for a given FC table and userId.
+ *
+ * Post-migration: all FC tables use `user_id` (integer) → returns $userId.
+ * Pre-migration: tables use `username` or `userid` (string) → looks up the
+ * username string from user_credentials and returns that.
+ *
+ * This ensures WHERE clauses, insertions and updateOrCreate calls always use
+ * the right type and value regardless of whether the migration has run yet.
+ *
+ * A static per-request cache is used to avoid repeated DB lookups.
+ */
+function fc_user_val(string $table, int $userId): string|int
+{
+    static $usernameCache = [];
+    $col = fc_user_col($table);
+
+    // Staged /fc/login (Auth id = -fc_registration_master.pk).
+    if ($userId < 0) {
+        if ($col === 'user_id') {
+            // Placeholder until migration: store fc_registration_master.pk in user_id columns.
+            return abs($userId);
+        }
+        if (! array_key_exists($userId, $usernameCache)) {
+            $usernameCache[$userId] = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+                ->where('pk', abs($userId))
+                ->value('user_id') ?? ''));
+        }
+
+        return $usernameCache[$userId];
+    }
+
+    if ($col === 'user_id') {
+        return $userId;
+    }
+
+    // Pre-migration: resolve the username string from user_credentials.
+    if (! array_key_exists($userId, $usernameCache)) {
+        $usernameCache[$userId] = \Illuminate\Support\Facades\DB::table('user_credentials')
+            ->where('pk', $userId)
+            ->value('user_name') ?? '';
+    }
+    return $usernameCache[$userId];
+}
+
+/**
+ * Folder segment for FC uploads (staged Auth id is negative; paths use roster pk).
+ */
+function fc_upload_path_segment(int $userId): string
+{
+    return (string) ($userId < 0 ? abs($userId) : $userId);
+}
+
+/**
+ * Resolve a stored upload path to an absolute filesystem path (public disk and legacy locations).
+ */
+function fc_resolve_storage_file_path(?string $path): ?string
+{
+    if ($path === null || $path === '') {
+        return null;
+    }
+    if (! is_string($path)) {
+        return null;
+    }
+    $path = trim(str_replace('\\', '/', $path));
+    if ($path === '') {
+        return null;
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return null;
+    }
+    $path = ltrim($path, '/');
+    if (str_starts_with($path, 'public/')) {
+        $path = substr($path, strlen('public/'));
+    }
+    if (str_starts_with($path, 'storage/')) {
+        $path = substr($path, strlen('storage/'));
+    }
+
+    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+        return \Illuminate\Support\Facades\Storage::disk('public')->path($path);
+    }
+
+    $candidates = [
+        storage_path('app/public/'.$path),
+        public_path('storage/'.$path),
+        public_path($path),
+        storage_path('app/'.$path),
+    ];
+
+    foreach ($candidates as $full) {
+        if (is_file($full)) {
+            return $full;
+        }
+    }
+
+    return null;
+}
+
+/**
  * Public URL for a file stored on the default public disk (storage/app/public) or an absolute URL.
  * Handles DB values like "uploads/user/photo.jpg", "storage/uploads/...", or full http(s) URLs.
  */
@@ -61,7 +183,62 @@ function view_file_link($path)
         return asset($path);
     }
 
+    if (fc_resolve_storage_file_path($path) !== null) {
+        return asset('storage/' . $path);
+    }
+
     return asset('storage/' . $path);
+}
+
+/**
+ * Embed trainee photograph as a data URI for PDF output.
+ */
+function fc_photo_data_uri(?string $path): ?string
+{
+    $full = fc_resolve_storage_file_path($path);
+    if ($full === null) {
+        return null;
+    }
+    $mime = @mime_content_type($full) ?: 'image/jpeg';
+    if (! str_starts_with((string) $mime, 'image/')) {
+        return null;
+    }
+
+    $binary = (string) file_get_contents($full);
+    if (function_exists('imagecreatefromstring')) {
+        $src = @imagecreatefromstring($binary);
+        if ($src !== false) {
+            $w = imagesx($src);
+            $h = imagesy($src);
+            $maxW = 110;
+            $maxH = 140;
+            if ($w > 0 && $h > 0 && ($w > $maxW || $h > $maxH)) {
+                $scale = min($maxW / $w, $maxH / $h);
+                $nw = max(1, (int) round($w * $scale));
+                $nh = max(1, (int) round($h * $scale));
+                $dst = imagecreatetruecolor($nw, $nh);
+                if ($dst !== false) {
+                    if ($mime === 'image/png' || $mime === 'image/gif') {
+                        imagealphablending($dst, false);
+                        imagesavealpha($dst, true);
+                        $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
+                        imagefilledrectangle($dst, 0, 0, $nw, $nh, $transparent);
+                    } else {
+                        imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+                    }
+                    imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                    ob_start();
+                    imagejpeg($dst, null, 88);
+                    $binary = (string) ob_get_clean();
+                    $mime = 'image/jpeg';
+                    imagedestroy($dst);
+                }
+            }
+            imagedestroy($src);
+        }
+    }
+
+    return 'data:'.$mime.';base64,'.base64_encode($binary);
 }
 
 function format_date($date, $format = 'd-m-Y')

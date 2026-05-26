@@ -22,10 +22,10 @@ class RegistrationStep2Controller extends Controller
     // ── SHOW Step 2 ──────────────────────────────────────────────────
     public function showStep2()
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
         // Guard: Step 1 must be done
-        $step1 = StudentMasterFirst::where('username', $username)
+        $step1 = StudentMasterFirst::forUser($userId)
             ->where('step1_completed', 1)->first();
         if (! $step1) {
             return redirect()->route('fc-reg.registration.step1')
@@ -37,7 +37,7 @@ class RegistrationStep2Controller extends Controller
 
         // Fallback to original view if no dynamic fields configured
         if ($fields->isEmpty()) {
-            $step2             = StudentMasterSecond::where('username', $username)->first();
+            $step2             = StudentMasterSecond::forUser($userId)->first();
             $categories        = CategoryMaster::all();
             $religions         = ReligionMaster::all();
             $states            = StateMaster::orderBy('state_name')->get();
@@ -49,7 +49,7 @@ class RegistrationStep2Controller extends Controller
         }
 
         $lookups      = $this->formService->getLookupData($fields);
-        $existingData = $this->formService->getExistingData('step2', $username);
+        $existingData = $this->formService->getExistingData('step2', $userId);
 
         return view('fc.registration.dynamic-step', [
             'step'         => $step,
@@ -64,11 +64,11 @@ class RegistrationStep2Controller extends Controller
     // ── SAVE Step 2 ──────────────────────────────────────────────────
     public function saveStep2(Request $request)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
         $fields   = $this->formService->getStepFields('step2');
 
         if ($fields->isEmpty()) {
-            return $this->saveStep2Legacy($request, $username);
+            return $this->saveStep2Legacy($request, $userId);
         }
 
         $rules     = $this->formService->buildValidationRules($fields);
@@ -84,13 +84,13 @@ class RegistrationStep2Controller extends Controller
             $validated['pres_country_id']    = $validated['perm_country_id'] ?? null;
         }
 
-        $this->formService->saveStepData('step2', $username, $validated, $request);
+        $this->formService->saveStepData('step2', $userId, $validated, $request);
 
         return redirect()->route('fc-reg.registration.step3')
             ->with('success', 'Step 2 saved. Please complete Step 3.');
     }
 
-    private function saveStep2Legacy(Request $request, string $username)
+    private function saveStep2Legacy(Request $request, int $userId)
     {
         $validated = $request->validate([
             'category_id'                => 'required|exists:caste_category_master,pk',
@@ -131,11 +131,12 @@ class RegistrationStep2Controller extends Controller
             $validated['pres_country_id']    = $validated['perm_country_id'];
         }
 
-        $validated['username']        = $username;
         $validated['step2_completed'] = 1;
 
-        StudentMasterSecond::updateOrCreate(['username' => $username], $validated);
-        StudentMaster::where('username', $username)->update(['step2_done' => 1]);
+        StudentMasterSecond::updateOrCreate([fc_user_col('student_master_seconds') => fc_user_val('student_master_seconds', $userId)], $validated);
+        StudentMaster::forUser($userId)->update(['step2_done' => 1]);
+
+        app(\App\Services\FC\FcRegistrationRegisteredSyncService::class)->syncForCredentialsUser($userId);
 
         return redirect()->route('fc-reg.registration.step3')
             ->with('success', 'Step 2 saved. Please complete Step 3.');

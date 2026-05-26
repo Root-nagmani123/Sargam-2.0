@@ -49,6 +49,11 @@
             <i class="bi bi-train-front me-2"></i>FC Travel Plans
         </h4>
         <div class="d-flex gap-2 flex-wrap">
+            @if(!empty($scopedForm))
+                <a href="{{ route('admin.reports.form', $scopedForm) }}" class="btn btn-sm btn-outline-secondary">
+                    <i class="bi bi-arrow-left me-1"></i>Back to {{ Str::limit($scopedForm->form_name, 28) }}
+                </a>
+            @endif
             <a href="{{ route('admin.travel.slots.index') }}" class="btn btn-sm btn-outline-primary">
                 <i class="bi bi-clock-history me-1"></i>Manage arrival slots
             </a>
@@ -78,11 +83,13 @@
     <div class="card border-0 shadow-sm mb-3 px-3 py-3">
         <div class="row g-2 align-items-end">
             <div class="col-md-2">
-                <label class="form-label small mb-0">Session</label>
-                <select id="f_session_id" class="form-select form-select-sm">
+                <label class="form-label small mb-0">Form</label>
+                <select id="f_form_id" class="form-select form-select-sm">
                     <option value="">All</option>
-                    @foreach($sessions as $s)
-                        <option value="{{ $s->id }}">{{ $s->session_name }}</option>
+                    @foreach($forms as $form)
+                        <option value="{{ $form->id }}" {{ (string) request('form_id') === (string) $form->id ? 'selected' : '' }}>
+                            {{ $form->form_name }}@if($form->courseMaster?->course_name) — {{ $form->courseMaster->course_name }}@endif
+                        </option>
                     @endforeach
                 </select>
             </div>
@@ -147,7 +154,7 @@
     }
     document.getElementById('btnApplyFilters')?.addEventListener('click', applyAndReload);
     document.getElementById('btnResetFilters')?.addEventListener('click', function () {
-        document.getElementById('f_session_id').value = '';
+        document.getElementById('f_form_id').value = '';
         document.getElementById('f_slot_id').value = '';
         document.getElementById('f_mode').value = '';
         document.getElementById('f_vehicle').value = '';
@@ -157,7 +164,7 @@
     });
     document.getElementById('btnExportJoining')?.addEventListener('click', function () {
         const p = new URLSearchParams();
-        p.set('filter_session_id', document.getElementById('f_session_id')?.value || '');
+        p.set('form_id', document.getElementById('f_form_id')?.value || '');
         p.set('filter_slot_id', document.getElementById('f_slot_id')?.value || '');
         p.set('filter_mode', document.getElementById('f_mode')?.value || '');
         p.set('filter_vehicle', document.getElementById('f_vehicle')?.value || '');

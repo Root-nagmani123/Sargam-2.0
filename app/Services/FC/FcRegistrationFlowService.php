@@ -23,9 +23,9 @@ class FcRegistrationFlowService
         $formId = (int) session(FcRegistrationIntentService::SESSION_FORM_ID, 0);
 
         if ($formId < 1) {
-            $username = Auth::user()?->username;
-            if ($username && Schema::hasTable('student_masters') && Schema::hasColumn('student_masters', 'form_id')) {
-                $formId = (int) (StudentMaster::where('username', $username)->value('form_id') ?? 0);
+            $userId = Auth::id();
+            if ($userId && Schema::hasTable('student_masters') && Schema::hasColumn('student_masters', 'form_id')) {
+                $formId = (int) (StudentMaster::where(fc_user_col('student_masters'), fc_user_val('student_masters', $userId))->value('form_id') ?? 0);
             }
         }
 
@@ -41,12 +41,12 @@ class FcRegistrationFlowService
         session([FcRegistrationIntentService::SESSION_FORM_ID => (int) $form->id]);
     }
 
-    public function isBankCompleteForTravel(string $username): bool
+    public function isBankCompleteForTravel(int $userId): bool
     {
         $form = $this->activeFormFromSession();
         if ($form) {
             $steps = $form->activeSteps()->get();
-            $status = $this->buildStepCompletionByStepId($form, $steps, $username);
+            $status = $this->buildStepCompletionByStepId($form, $steps, $userId);
             foreach ($steps as $step) {
                 if (($step->tracker_column ?? '') === 'bank_done'
                     || str_contains(strtolower((string) ($step->step_slug ?? '')), 'bank')) {
@@ -55,18 +55,18 @@ class FcRegistrationFlowService
             }
         }
 
-        return (bool) StudentMaster::where('username', $username)->value('bank_done');
+        return (bool) StudentMaster::where(fc_user_col('student_masters'), fc_user_val('student_masters', $userId))->value('bank_done');
     }
 
-    public function isTravelComplete(string $username, ?FcForm $form = null): bool
+    public function isTravelComplete(int $userId, ?FcForm $form = null): bool
     {
         $form = $form ?? $this->activeFormFromSession();
 
         if ($form) {
             $trackerTable = $form->trackerStorageTable();
-            $userKey = $form->user_identifier ?: 'username';
+            $userKey = fc_user_col($trackerTable);
             if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'travel_done')) {
-                $query = DB::table($trackerTable)->where($userKey, $username);
+                $query = DB::table($trackerTable)->where($userKey, fc_user_val($trackerTable, $userId));
                 if (Schema::hasColumn($trackerTable, 'form_id')) {
                     $query->where('form_id', $form->id);
                 }
@@ -76,17 +76,17 @@ class FcRegistrationFlowService
             }
         }
 
-        $plan = StudentTravelPlanMaster::where('username', $username)->first();
+        $plan = StudentTravelPlanMaster::where(fc_user_col('student_travel_plan_masters'), fc_user_val('student_travel_plan_masters', $userId))->first();
 
         return (bool) ($plan?->is_submitted)
-            || (bool) StudentMaster::where('username', $username)->value('travel_done');
+            || (bool) StudentMaster::where(fc_user_col('student_masters'), fc_user_val('student_masters', $userId))->value('travel_done');
     }
 
     /**
      * @param  Collection<int, FcFormStep>  $steps
      * @return array<int, bool> keyed by fc_form_steps.id
      */
-    public function buildStepCompletionByStepId(FcForm $form, Collection $steps, string $username): array
+    public function buildStepCompletionByStepId(FcForm $form, Collection $steps, int $userId): array
     {
         $trackerTable = $form->trackerStorageTable();
         $masterRow = null;
@@ -95,9 +95,9 @@ class FcRegistrationFlowService
 
         if ($steps->contains(fn ($s) => filled($s->tracker_column))
             && Schema::hasTable($trackerTable)
-            && Schema::hasColumn($trackerTable, $form->user_identifier ?: 'username')) {
-            $userKey = $form->user_identifier ?: 'username';
-            $trackerQuery = DB::table($trackerTable)->where($userKey, $username);
+            && Schema::hasColumn($trackerTable, fc_user_col($trackerTable))) {
+            $userKey = fc_user_col($trackerTable);
+            $trackerQuery = DB::table($trackerTable)->where($userKey, fc_user_val($trackerTable, $userId));
             if ($trackerIsFormScoped) {
                 $trackerQuery->where('form_id', $form->id);
             }
@@ -109,7 +109,8 @@ class FcRegistrationFlowService
             $stepStatus[$step->id] = false;
 
             if (! $trackerIsFormScoped && $step->target_table) {
-                $row = DB::table($step->target_table)->where($form->user_identifier ?: 'username', $username)->first();
+                $t = $step->target_table;
+                $row = DB::table($t)->where(fc_user_col($t), fc_user_val($t, $userId))->first();
                 if ($row && $step->completion_column && isset($row->{$step->completion_column})) {
                     $stepStatus[$step->id] = (bool) $row->{$step->completion_column};
                 }
@@ -129,11 +130,11 @@ class FcRegistrationFlowService
      *
      * @return array{form: FcForm, items: list<array{label: string, url: ?string, done: bool, current: bool}>}|null
      */
-    public function buildTravelStepNav(FcForm $form, string $username): array
+    public function buildTravelStepNav(FcForm $form, int $userId): array
     {
         $steps = $form->activeSteps()->get();
-        $stepStatus = $this->buildStepCompletionByStepId($form, $steps, $username);
-        $travelDone = $this->isTravelComplete($username, $form);
+        $stepStatus = $this->buildStepCompletionByStepId($form, $steps, $userId);
+        $travelDone = $this->isTravelComplete($userId, $form);
 
         $items = [];
         $travelInserted = false;
@@ -199,17 +200,17 @@ class FcRegistrationFlowService
             });
     }
 
-    public function isDynamicDocumentsComplete(FcForm $form, string $username): bool
+    public function isDynamicDocumentsComplete(FcForm $form, int $userId): bool
     {
         if ($this->usesLegacyDocumentChecklist($form)) {
-            return app(RegistrationService::class)->allMandatoryDocsUploaded($username);
+            return app(RegistrationService::class)->allMandatoryDocsUploaded($userId);
         }
 
         $trackerTable = $form->trackerStorageTable();
-        $userKey = $form->user_identifier ?: 'username';
+        $userKey = fc_user_col($trackerTable);
 
         if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'docs_done')) {
-            $query = DB::table($trackerTable)->where($userKey, $username);
+            $query = DB::table($trackerTable)->where($userKey, fc_user_val($trackerTable, $userId));
             if (Schema::hasColumn($trackerTable, 'form_id')) {
                 $query->where('form_id', $form->id);
             }
@@ -220,7 +221,8 @@ class FcRegistrationFlowService
 
         $docsStep = $this->documentsStep($form);
         if ($docsStep && filled($docsStep->completion_column) && filled($docsStep->target_table)) {
-            $row = DB::table($docsStep->target_table)->where('username', $username)->first();
+            $t = $docsStep->target_table;
+            $row = DB::table($t)->where(fc_user_col($t), fc_user_val($t, $userId))->first();
             if ($row && ! empty($row->{$docsStep->completion_column})) {
                 return true;
             }
@@ -229,12 +231,12 @@ class FcRegistrationFlowService
         return false;
     }
 
-    public function redirectAfterTravelSubmit(string $username, string $successMessage = 'Travel plan submitted.'): RedirectResponse
+    public function redirectAfterTravelSubmit(int $userId, string $successMessage = 'Travel plan submitted.'): RedirectResponse
     {
         $form = $this->activeFormFromSession();
 
         if ($form) {
-            if ($this->isDynamicDocumentsComplete($form, $username)) {
+            if ($this->isDynamicDocumentsComplete($form, $userId)) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
                     ->with('success', $successMessage);
             }
@@ -251,7 +253,7 @@ class FcRegistrationFlowService
                 ->with('success', $successMessage);
         }
 
-        if (StudentMaster::where('username', $username)->value('docs_done')) {
+        if (StudentMaster::where(fc_user_col('student_masters'), fc_user_val('student_masters', $userId))->value('docs_done')) {
             return redirect()->route('fc-reg.registration.status')
                 ->with('success', $successMessage);
         }
@@ -263,7 +265,7 @@ class FcRegistrationFlowService
     /**
      * @return array{backUrl: string, backLabel: string, continueUrl: ?string, continueLabel: ?string}
      */
-    public function travelViewContext(string $username): array
+    public function travelViewContext(int $userId): array
     {
         $form = $this->activeFormFromSession();
 
@@ -271,7 +273,7 @@ class FcRegistrationFlowService
             $backUrl = route('fc-reg.forms.dashboard', $form);
             $backLabel = 'Back to '.$form->form_name;
 
-            if ($this->isDynamicDocumentsComplete($form, $username)) {
+            if ($this->isDynamicDocumentsComplete($form, $userId)) {
                 return [
                     'backUrl' => $backUrl,
                     'backLabel' => $backLabel,
