@@ -34,6 +34,10 @@
                 @csrf
                 <h3 class="text-center mb-4 fw-bold" style="color: #004a93;">Create Your Login Credentials
                 </h3>
+                <p class="text-muted small text-center mb-3">
+                    Your username and password are saved to your registration record first.
+                    Login is enabled after the administrator runs data migration.
+                </p>
                 <hr>
 
                 <!-- Username -->

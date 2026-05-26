@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Travel Plan – FC Registration')
 @php
-    $username = auth()->user()->username;
+    $userId = auth()->id();
 @endphp
 
 @section('setup_content')
@@ -198,9 +198,9 @@
                         @foreach($slots as $s)
                             @php
                                 $sel = (string) old('fc_travel_arrival_slot_id', $plan?->fc_travel_arrival_slot_id) === (string) $s->id;
-                                $noRoom = ! $s->hasRoomForUser($username) && ! $sel;
+                                $noRoom = ! $s->hasRoomForUser($userId) && ! $sel;
                                 $cap = $s->max_capacity;
-                                $other = $s->countOtherBookings($username);
+                                $other = $s->countOtherBookings($userId);
                                 $left = $cap ? max(0, (int) $cap - $other) : null;
                             @endphp
                             @if($noRoom)

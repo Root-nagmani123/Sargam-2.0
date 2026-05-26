@@ -37,6 +37,48 @@
             .fc-dt-toolbar-wrap .dropdown-menu {
                 max-height: 260px;
                 overflow: auto;
+                min-width: 220px;
+            }
+            .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-item {
+                display: flex;
+                align-items: center;
+                gap: 0.55rem;
+                padding: 0.4rem 0.85rem;
+                margin: 0;
+                cursor: pointer;
+                white-space: normal;
+            }
+            .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-item:hover {
+                background-color: var(--bs-dropdown-link-hover-bg, #f8f9fa);
+            }
+            .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-checkbox {
+                float: none;
+                position: static;
+                margin: 0;
+                width: 1rem;
+                height: 1rem;
+                min-width: 1rem;
+                flex-shrink: 0;
+                border: 2px solid #495057;
+                background-color: #fff;
+                cursor: pointer;
+                opacity: 1;
+                box-shadow: none;
+            }
+            .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-checkbox:checked {
+                background-color: #004a93;
+                border-color: #004a93;
+            }
+            .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-checkbox:focus {
+                border-color: #004a93;
+                box-shadow: 0 0 0 0.15rem rgba(0, 74, 147, 0.25);
+            }
+            .fc-dt-toolbar-wrap .fc-colvis-menu .fc-colvis-label {
+                flex: 1;
+                font-size: 12px;
+                line-height: 1.35;
+                cursor: pointer;
+                user-select: none;
             }
             .fc-dt-toolbar-wrap .btn {
                 border-radius: 6px !important;
@@ -101,6 +143,22 @@
                     return out;
                 }
 
+                function extractCellText(cellNode) {
+                    if (!cellNode) return '';
+                    var $cell = $(cellNode).clone();
+                    $cell.find('input,button,select,textarea,a').remove();
+                    var $titled = $cell.find('[title]').first();
+                    if ($titled.length) {
+                        var title = String($titled.attr('title') || '').trim();
+                        if (title) return title;
+                    }
+                    return ($cell.text() || '').replace(/\s+/g, ' ').trim();
+                }
+
+                function exportRows(dt) {
+                    return dt.rows({ search: 'applied', page: 'all' });
+                }
+
                 function buildPrintableTableHtml(dt, visIdx) {
                     var html = '<thead><tr>';
                     visIdx.forEach(function (ci) {
@@ -108,19 +166,13 @@
                     });
                     html += '</tr></thead><tbody>';
 
-                    dt.rows({ search: 'applied' }).nodes().each(function (rowNode) {
+                    exportRows(dt).nodes().each(function (rowNode) {
                         var $row = $(rowNode);
                         if ($row.hasClass('child')) return;
                         html += '<tr>';
                         visIdx.forEach(function (ci) {
                             var cellNode = dt.cell(rowNode, ci).node();
-                            var cellHtml = '';
-                            if (cellNode) {
-                                var $cell = $(cellNode).clone();
-                                $cell.find('input,button,select,textarea,a').remove();
-                                cellHtml = ($cell.text() || '').trim();
-                            }
-                            html += '<td>' + cellHtml + '</td>';
+                            html += '<td>' + extractCellText(cellNode) + '</td>';
                         });
                         html += '</tr>';
                     });
@@ -146,7 +198,7 @@
                         '.report-title-block{text-align:center;margin-bottom:10px}.report-title-block h2{font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;margin:0 0 4px;color:#1a1a1a}' +
                         '.date-pill{display:inline-block;background:#004a93;color:#fff;padding:3px 14px;border-radius:10px;font-size:10px;font-weight:500;border:1px solid #004a93}' +
                         '.report-meta{font-size:10px;line-height:1.7;margin:8px 0 10px;color:#333}' +
-                        '.data-table{width:100%;border-collapse:collapse;font-size:10px}.data-table th,.data-table td{padding:4px 6px;border:1px solid #bbb;vertical-align:middle;word-break:break-word;white-space:normal}' +
+                        '.data-table{width:max-content;min-width:100%;border-collapse:collapse;font-size:9px}.data-table th,.data-table td{padding:3px 5px;border:1px solid #bbb;vertical-align:middle;word-break:normal;white-space:nowrap}' +
                         '.data-table thead th{background:#004a93;color:#fff;font-weight:600;font-size:10px;text-align:left}' +
                         '.data-table tbody tr:nth-child(even) td{background:#f9fafb}' +
                         '.footer{border-top:1px solid #dee2e6;font-size:8px;color:#666;text-align:center;padding-top:4px;margin-top:8px}' +
@@ -183,27 +235,51 @@
                     });
                     body.push(header);
 
-                    dt.rows({ search: 'applied' }).nodes().each(function (rowNode) {
+                    exportRows(dt).nodes().each(function (rowNode) {
                         var row = [];
                         visIdx.forEach(function (ci) {
                             var cellNode = dt.cell(rowNode, ci).node();
-                            var txt = '';
-                            if (cellNode) {
-                                txt = ($(cellNode).text() || '').replace(/\s+/g, ' ').trim();
-                            }
-                            row.push(txt);
+                            row.push(extractCellText(cellNode));
                         });
                         body.push(row);
                     });
                     return body;
                 }
 
-                function buildPdfColumnWidths(visCount) {
+                function isWideExportTable($table, visCount) {
+                    return visCount > 10
+                        || String($table.data('exportWide') ?? $table.data('export-wide') ?? '') === '1'
+                        || $table.data('exportWide') === true
+                        || $table.data('export-wide') === true;
+                }
+
+                function buildPdfColumnWidths($table, visCount) {
+                    if (isWideExportTable($table, visCount) && visCount > 2) {
+                        var widths = [72, 58];
+                        for (var i = 2; i < visCount; i++) {
+                            widths.push(34);
+                        }
+                        return widths;
+                    }
                     var widths = [];
-                    for (var i = 0; i < visCount; i++) {
+                    for (var j = 0; j < visCount; j++) {
                         widths.push('*');
                     }
                     return widths;
+                }
+
+                function buildPdfPageSize($table, visCount) {
+                    if (!isWideExportTable($table, visCount)) {
+                        return { pageSize: 'A4', pageOrientation: 'landscape' };
+                    }
+                    var tableWidth = 130 + Math.max(0, visCount - 2) * 34;
+                    return {
+                        pageSize: {
+                            width: Math.min(Math.max(841.89, tableWidth), 2400),
+                            height: 595.28
+                        },
+                        pageOrientation: 'landscape'
+                    };
                 }
 
                 function wireFcDtToolbar($table, $toolbar, dt, title) {
@@ -221,19 +297,14 @@
                         var label = ($(col.header()).text() || '').trim();
                         if (!label) return;
                         var item = $(
-                            '<li><div class="dropdown-item px-3 py-1">' +
-                            '<div class="form-check d-flex align-items-center mb-0">' +
-                            '<input type="checkbox" class="form-check-input me-2" data-col="' + idx + '">' +
-                            '<label class="form-check-label cursor-pointer">' + label + '</label>' +
-                            '</div></div></li>'
+                            '<li>' +
+                            '<label class="dropdown-item fc-colvis-item mb-0">' +
+                            '<input type="checkbox" class="form-check-input fc-colvis-checkbox" data-col="' + idx + '">' +
+                            '<span class="fc-colvis-label">' + label + '</span>' +
+                            '</label></li>'
                         );
                         item.find('input').prop('checked', col.visible()).on('change', function () {
                             col.visible($(this).prop('checked'));
-                        });
-                        item.find('label').on('click', function (e) {
-                            e.preventDefault();
-                            var $cb = item.find('input');
-                            $cb.prop('checked', !$cb.prop('checked')).trigger('change');
                         });
                         $colMenu.append(item);
                     });
@@ -243,25 +314,40 @@
                         if (info.serverSide) {
                             return info.recordsDisplay;
                         }
-                        return dt.rows({ search: 'applied' }).count();
+                        return exportRows(dt).count();
                     }
 
                     $toolbar.find('.fc-btn-print').on('click', function () {
+                        var vis = getExportColumnIndexes(dt);
+                        if (vis.length === 0) {
+                            window.alert('Select at least one column using the Columns menu before exporting.');
+                            return;
+                        }
                         var n = exportRowCount();
                         if (n > 4000 && !window.confirm('This export has ' + n + ' rows. Printing may take a long time or freeze the tab. Continue?')) {
                             return;
                         }
-                        var vis = getExportColumnIndexes(dt);
                         openBrandedPrintWindow(title, buildFilterSummary(dt), buildPrintableTableHtml(dt, vis), true);
                     });
 
                     $toolbar.find('.fc-btn-excel').on('click', function () {
+                        var vis = getExportColumnIndexes(dt);
+                        if (vis.length === 0) {
+                            window.alert('Select at least one column using the Columns menu before exporting.');
+                            return;
+                        }
                         dt.button('.fc-dt-excel').trigger();
                     });
 
                     $toolbar.find('.fc-btn-pdf').on('click', function () {
                         var $pdfBtn = $(this);
                         if ($pdfBtn.prop('disabled')) return;
+
+                        var vis = getExportColumnIndexes(dt);
+                        if (vis.length === 0) {
+                            window.alert('Select at least one column using the Columns menu before exporting.');
+                            return;
+                        }
 
                         var rowCount = exportRowCount();
                         if (rowCount > 4000 && !window.confirm('This export has ' + rowCount + ' rows. PDF generation may freeze the page for a minute or more. Continue?')) {
@@ -274,8 +360,9 @@
                         setTimeout(function () {
                             (async function () {
                                 try {
-                        var vis = getExportColumnIndexes(dt);
                         var filterLine = buildFilterSummary(dt);
+                        var wide = isWideExportTable($table, vis.length);
+                        var pageLayout = buildPdfPageSize($table, vis.length);
                         var emblemUrl = '{{ asset("images/ashoka.png") }}';
                         var logoUrl = '{{ asset("admin_assets/images/logos/logo.png") }}';
                         var emblemData = null;
@@ -284,9 +371,9 @@
                         try { logoData = await toDataUrl(logoUrl); } catch (e) { logoData = null; }
 
                         var docDefinition = {
-                            pageSize: 'A4',
-                            pageOrientation: 'landscape',
-                            pageMargins: [14, 14, 14, 14],
+                            pageSize: pageLayout.pageSize,
+                            pageOrientation: pageLayout.pageOrientation,
+                            pageMargins: [10, 10, 10, 10],
                             content: [
                                 {
                                     columns: [
@@ -312,7 +399,7 @@
                                 {
                                     table: {
                                         headerRows: 1,
-                                        widths: buildPdfColumnWidths(vis.length),
+                                        widths: buildPdfColumnWidths($table, vis.length),
                                         body: toPdfMakeTableBody(dt, vis)
                                     },
                                     layout: {
@@ -337,14 +424,14 @@
                                     bold: true,
                                     color: 'white',
                                     fillColor: '#004a93',
-                                    fontSize: 8,
-                                    alignment: 'center',
+                                    fontSize: wide ? 5 : 8,
+                                    alignment: 'left',
                                     noWrap: false
                                 }
                             },
                             defaultStyle: {
-                                fontSize: 7,
-                                alignment: 'center',
+                                fontSize: wide ? 5 : 7,
+                                alignment: 'left',
                                 noWrap: false
                             }
                         };
@@ -396,11 +483,17 @@
                             var line = buildFilterSummary(dt);
                             return line || null;
                         },
-                        exportOptions: { columns: ':visible:not(.fc-dt-no-export)' }
+                        exportOptions: {
+                            columns: function (idx, data, node) {
+                                if ($(node).hasClass('fc-dt-no-export')) return false;
+                                return dt.column(idx).visible();
+                            },
+                            modifier: { search: 'applied', page: 'all' }
+                        }
                     };
 
                     if (serverAjax) {
-                        var fcCourseSel = $table.data('filterCourse');
+                        var fcFormSel = $table.data('filterForm');
                         var fcOtcodeInp = $table.data('filterOtcode');
                         var fcActSel = $table.data('filterActivity');
                         dt = $table.DataTable({
@@ -418,7 +511,7 @@
                             ajax: {
                                 url: serverAjax,
                                 data: function (d) {
-                                    d.filter_course = fcCourseSel ? String($(fcCourseSel).val() || '').trim() : '';
+                                    d.filter_form_id = fcFormSel ? String($(fcFormSel).val() || '').trim() : '';
                                     d.filter_otcode = fcOtcodeInp ? String($(fcOtcodeInp).val() || '').trim() : '';
                                     d.filter_activity = fcActSel ? String($(fcActSel).val() || '').trim() : '';
                                 }

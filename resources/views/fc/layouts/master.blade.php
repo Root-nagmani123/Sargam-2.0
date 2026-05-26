@@ -6,6 +6,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
     @include('fc.layouts.pre_header')
+    @stack('styles')
+</head>
 
 <body>
     @include('fc.layouts.header')

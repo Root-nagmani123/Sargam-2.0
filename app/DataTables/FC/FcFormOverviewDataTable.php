@@ -21,7 +21,7 @@ class FcFormOverviewDataTable extends DataTable
     {
         $this->form         = $form;
         $this->trackerTable = $form->trackerStorageTable();
-        $this->userKey      = $form->user_identifier ?: 'username';
+        $this->userKey      = $form->user_identifier ?: 'user_id';
 
         // Only steps with a whitelisted tracker_column are treated as progress columns.
         $this->steps = $form->activeSteps()
@@ -39,6 +39,7 @@ class FcFormOverviewDataTable extends DataTable
     {
         $t = $this->trackerTable;
         $u = $this->userKey;
+        $s1Col = fc_user_col('student_master_firsts');
 
         $stepsDoneExpr = $this->totalSteps > 0
             ? $this->steps
@@ -47,10 +48,18 @@ class FcFormOverviewDataTable extends DataTable
             : '0';
 
         $query = DB::table($t)
-            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', 's1.username')
+            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', "s1.{$s1Col}")
             ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
-            ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id')
-            ->select([
+            ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id');
+
+        if ($u === 'user_id') {
+            $query->addSelect(DB::raw("`{$t}`.`user_id` as route_user_id"));
+        } else {
+            $query->leftJoin('user_credentials as uc', "{$t}.{$u}", '=', 'uc.user_name')
+                ->addSelect(DB::raw('uc.pk as route_user_id'));
+        }
+
+        $query->select([
                 "{$t}.{$u}",
                 "{$t}.status",
                 's1.full_name',
@@ -121,15 +130,21 @@ class FcFormOverviewDataTable extends DataTable
         });
 
         // Status badge
-        $dt->editColumn('status', fn ($row) =>
-            $row->status === 'SUBMITTED'
-                ? '<span class="badge bg-success" style="font-size:10px;">Submitted</span>'
-                : '<span class="badge bg-warning text-dark" style="font-size:10px;">Incomplete</span>'
-        );
+        $dt->editColumn('status', function ($row) use ($totalSteps) {
+            if ($row->status === 'SUBMITTED') {
+                return '<span class="badge bg-success" style="font-size:10px;">Submitted</span>';
+            }
+            if ($totalSteps > 0 && (int) ($row->steps_done ?? 0) >= $totalSteps) {
+                return '<span class="badge bg-success" style="font-size:10px;">Complete</span>';
+            }
+
+            return '<span class="badge bg-warning text-dark" style="font-size:10px;">Incomplete</span>';
+        });
 
         // Action button
         $dt->addColumn('action', function ($row) use ($userKey) {
-            $url = route('admin.reports.student', $row->{$userKey});
+            $routeId = $row->route_user_id ?? $row->{$userKey};
+            $url = route('admin.reports.student', $routeId);
             return '<a href="' . e($url) . '" class="btn btn-outline-primary py-0 px-2" style="font-size:11px;" title="View Profile">'
                 . '<i class="bi bi-eye"></i></a>';
         });
@@ -215,7 +230,7 @@ class FcFormOverviewDataTable extends DataTable
                 ->width('40px'),
 
             Column::make($this->userKey)
-                ->title('Username'),
+                ->title($this->userKey === 'user_id' ? 'User ID' : 'Username'),
 
             Column::make('full_name')
                 ->title('Full Name'),

@@ -37,18 +37,18 @@ class FcActivityService
         // Medical department: always append a new row (history) so vitals (height, weight, etc.) are not
         // overwritten by upsert — even if the master is still set to "upsert" in Activity setup.
         if ($this->isMedicalDepartmentActivity($master)) {
-            return $this->insertRow($ot->username, $data, $staffUsername) ? 'ok' : 'no';
+            return $this->insertRow($ot->user_id, $data, $staffUsername) ? 'ok' : 'no';
         }
 
         if ($master->entry_policy === 'repeat') {
-            return $this->insertRow($ot->username, $data, $staffUsername) ? 'ok' : 'no';
+            return $this->insertRow($ot->user_id, $data, $staffUsername) ? 'ok' : 'no';
         }
 
         if ($master->entry_policy === 'upsert') {
-            return $this->upsertRow($ot->username, $data, $staffUsername) ? 'ok' : 'no';
+            return $this->upsertRow($ot->user_id, $data, $staffUsername) ? 'ok' : 'no';
         }
 
-        $exists = FcOtActivity::where('username', $ot->username)
+        $exists = FcOtActivity::where(fc_user_col('fc_otactivity_details'), $ot->user_id)
             ->where('activity', $data['uactivity'])
             ->where(function ($q) use ($data) {
                 $q->where('course', $data['ccode'])
@@ -59,7 +59,7 @@ class FcActivityService
             return 'al';
         }
 
-        return $this->insertRow($ot->username, $data, $staffUsername) ? 'ok' : 'no';
+        return $this->insertRow($ot->user_id, $data, $staffUsername) ? 'ok' : 'no';
     }
 
     private function isMedicalDepartmentActivity(FcActivityMaster $master): bool
@@ -72,14 +72,14 @@ class FcActivityService
         return (int) $master->department_id === $medId;
     }
 
-    private function insertRow(string $username, array $data, string $staffUsername): bool
+    private function insertRow(int $userId, array $data, string $staffUsername): bool
     {
         $activityId = $data['ccode'] . 'Act' . strtoupper(Str::random(8));
 
         try {
             FcOtActivity::create([
                 'activityid' => $activityId,
-                'username' => $username,
+                fc_user_col('fc_otactivity_details') => fc_user_val('fc_otactivity_details', $userId),
                 'activity' => $data['uactivity'],
                 'activityval' => $data['actvalue'],
                 'activitydt' => now()->format('d-m-Y/ h:i:s'),
@@ -94,10 +94,10 @@ class FcActivityService
         return true;
     }
 
-    private function upsertRow(string $username, array $data, string $staffUsername): bool
+    private function upsertRow(int $userId, array $data, string $staffUsername): bool
     {
         $existing = FcOtActivity::query()
-            ->where('username', $username)
+            ->where(fc_user_col('fc_otactivity_details'), fc_user_val('fc_otactivity_details', $userId))
             ->where('activity', $data['uactivity'])
             ->where(function ($q) use ($data) {
                 $q->where('course', $data['ccode'])
@@ -121,7 +121,7 @@ class FcActivityService
             }
 
             $payload['activityid'] = $data['ccode'] . 'Act' . strtoupper(Str::random(8));
-            $payload['username'] = $username;
+            $payload[fc_user_col('fc_otactivity_details')] = fc_user_val('fc_otactivity_details', $userId);
             $payload['activity'] = $data['uactivity'];
 
             FcOtActivity::create($payload);
@@ -174,7 +174,7 @@ class FcActivityService
             ->where('status', 1)
             ->whereIn('activity', $menuids)
             ->select(['activity'])
-            ->selectRaw('COUNT(DISTINCT username) as c')
+            ->selectRaw('COUNT(DISTINCT ' . fc_user_col('fc_otactivity_details') . ') as c')
             ->groupBy('activity')
             ->pluck('c', 'activity')
             ->toArray();
@@ -192,11 +192,11 @@ class FcActivityService
         }
 
         return FcOtActivity::query()
-            ->join('fc_ot_details', 'fc_otactivity_details.username', '=', 'fc_ot_details.username')
+            ->join('fc_ot_details', 'fc_otactivity_details.' . fc_user_col('fc_otactivity_details'), '=', 'fc_ot_details.' . fc_user_col('fc_ot_details'))
             ->where('fc_otactivity_details.activity', $joinedMenuid)
             ->where('fc_otactivity_details.status', 1)
             ->where('fc_ot_details.status', 1)
-            ->selectRaw('fc_ot_details.service as svc, COUNT(DISTINCT fc_ot_details.username) as total')
+            ->selectRaw('fc_ot_details.service as svc, COUNT(DISTINCT fc_ot_details.' . fc_user_col('fc_ot_details') . ') as total')
             ->groupBy('fc_ot_details.service')
             ->pluck('total', 'svc')
             ->toArray();

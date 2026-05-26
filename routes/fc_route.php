@@ -198,10 +198,9 @@ Route::get('/fc/forget-password', function () {
     return view('fc.forget');
 })->name('fc.forget');
 
-//status page
-Route::get('/fc/status', function () {
-    return view('fc.status');
-})->name('fc.status');
+//status page (fc_registration_master dashboard)
+Route::get('/fc/status', [FrontPageController::class, 'student_status'])->name('fc.status');
+Route::get('/fc/status/data', [FrontPageController::class, 'student_statusFragment'])->name('fc.status.data');
 
 
 //reset passowrd index
@@ -227,7 +226,7 @@ Route::post('/admin/joining-documents/save-remark/{user_id}', [FcJoiningDocument
 
 //student page status
 
-Route::get('/foundation-course/status', [FrontPageController::class, 'student_status'])->name('foundation.course.status');
+Route::redirect('/foundation-course/status', '/fc/status', 301)->name('foundation.course.status');
 
 //admin migration route
 Route::get('/admin/migrate-students', [StudentImportController::class, 'index'])->name('students.index'); // index page

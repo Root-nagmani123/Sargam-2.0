@@ -21,11 +21,11 @@ class DocumentUploadController extends Controller
 {
     public function show(FcRegistrationFlowService $registrationFlow)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
         $form = $registrationFlow->activeFormFromSession();
         if ($form && ! $registrationFlow->usesLegacyDocumentChecklist($form)) {
-            if ($registrationFlow->isDynamicDocumentsComplete($form, $username)) {
+            if ($registrationFlow->isDynamicDocumentsComplete($form, $userId)) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
                     ->with('info', 'Joining documents are already completed on your registration form.');
             }
@@ -37,13 +37,13 @@ class DocumentUploadController extends Controller
             }
         }
 
-        $bankDone = StudentMaster::where('username', $username)->value('bank_done');
+        $bankDone = StudentMaster::forUser($userId)->value('bank_done');
         if (! $bankDone) {
             return redirect()->route('fc-reg.registration.bank')
                 ->with('error', 'Please complete bank details first.');
         }
 
-        $travelDone = StudentMaster::where('username', $username)->value('travel_done');
+        $travelDone = StudentMaster::forUser($userId)->value('travel_done');
         if (! $travelDone) {
             return redirect()->route('fc-reg.registration.travel')
                 ->with('error', 'Please submit your travel plan before uploading documents.');
@@ -54,7 +54,7 @@ class DocumentUploadController extends Controller
             ->orderBy('display_order')->get();
 
         // Already-uploaded docs by this user
-        $uploadedDocs = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+        $uploadedDocs = FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)
             ->get()->keyBy('document_master_id');
 
         return view('fc.registration.documents', compact('docMasters', 'uploadedDocs'));
@@ -62,9 +62,9 @@ class DocumentUploadController extends Controller
 
     public function upload(Request $request, int $documentMasterId)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
-        if (! StudentMaster::where('username', $username)->value('travel_done')) {
+        if (! StudentMaster::forUser($userId)->value('travel_done')) {
             return redirect()->route('fc-reg.registration.travel')
                 ->with('error', 'Please submit your travel plan before uploading documents.');
         }
@@ -77,13 +77,13 @@ class DocumentUploadController extends Controller
 
         $file     = $request->file('document_file');
         $filePath = $file->storeAs(
-            "uploads/{$username}/documents",
+            "uploads/{$userId}/documents",
             $documentMasterId . '_' . time() . '.' . $file->extension(),
             'public'
         );
 
         FcJoiningRelatedDocumentsDetailsMaster::updateOrCreate(
-            ['username' => $username, 'document_master_id' => $documentMasterId],
+            [fc_user_col('fc_joining_related_documents_details_masters') => fc_user_val('fc_joining_related_documents_details_masters', $userId), 'document_master_id' => $documentMasterId],
             [
                 'document_name'     => $docMaster->document_name,
                 'file_path'         => $filePath,
@@ -94,21 +94,21 @@ class DocumentUploadController extends Controller
         );
 
         // Check if all mandatory docs are uploaded, mark docs_done
-        $this->checkAndMarkDocsDone($username);
+        $this->checkAndMarkDocsDone($userId);
 
         return back()->with('success', "\"{$docMaster->document_name}\" uploaded successfully.");
     }
 
     public function delete(Request $request, int $documentMasterId)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
-        if (! StudentMaster::where('username', $username)->value('travel_done')) {
+        if (! StudentMaster::forUser($userId)->value('travel_done')) {
             return redirect()->route('fc-reg.registration.travel')
                 ->with('error', 'Please submit your travel plan before managing documents.');
         }
 
-        $doc = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+        $doc = FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)
             ->where('document_master_id', $documentMasterId)->first();
 
         if ($doc) {
@@ -119,16 +119,16 @@ class DocumentUploadController extends Controller
             $doc->delete();
         }
 
-        StudentMaster::where('username', $username)->update(['docs_done' => 0]);
+        StudentMaster::forUser($userId)->update(['docs_done' => 0]);
 
         return back()->with('success', 'Document removed.');
     }
 
     public function finalSubmit(Request $request, FcCourseEnrollmentService $enrollment)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
-        if (! StudentMaster::where('username', $username)->value('travel_done')) {
+        if (! StudentMaster::forUser($userId)->value('travel_done')) {
             return redirect()->route('fc-reg.registration.travel')
                 ->with('error', 'Please submit your travel plan before final document submission.');
         }
@@ -137,7 +137,7 @@ class DocumentUploadController extends Controller
         $mandatoryIds = FcJoiningRelatedDocumentsMaster::where('is_active', 1)
             ->where('is_mandatory', 1)->pluck('id');
 
-        $uploadedIds = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+        $uploadedIds = FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)
             ->where('is_uploaded', 1)->pluck('document_master_id');
 
         $missing = $mandatoryIds->diff($uploadedIds);
@@ -146,12 +146,12 @@ class DocumentUploadController extends Controller
         }
 
         // Mark overall submission complete
-        StudentMaster::where('username', $username)->update([
+        StudentMaster::forUser($userId)->update([
             'docs_done' => 1,
             'status'    => 'SUBMITTED',
         ]);
 
-        $enrollResult = $enrollment->enrollTrainee($username);
+        $enrollResult = $enrollment->enrollTrainee($userId);
         $flash = 'Registration submitted successfully! Please note your roll number.';
         if ($enrollResult['enrolled']) {
             $flash .= ' You are enrolled in the linked programme.';
@@ -161,15 +161,15 @@ class DocumentUploadController extends Controller
             ->with('success', $flash);
     }
 
-    private function checkAndMarkDocsDone(string $username): void
+    private function checkAndMarkDocsDone(int $userId): void
     {
         $mandatoryIds = FcJoiningRelatedDocumentsMaster::where('is_active', 1)
             ->where('is_mandatory', 1)->pluck('id');
-        $uploadedIds = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+        $uploadedIds = FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)
             ->where('is_uploaded', 1)->pluck('document_master_id');
 
         if ($mandatoryIds->diff($uploadedIds)->isEmpty()) {
-            StudentMaster::where('username', $username)->update(['docs_done' => 1]);
+            StudentMaster::forUser($userId)->update(['docs_done' => 1]);
         }
     }
 }

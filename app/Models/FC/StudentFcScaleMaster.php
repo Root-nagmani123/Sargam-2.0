@@ -5,5 +5,5 @@ use Illuminate\Database\Eloquent\Model;
 
 class StudentFcScaleMaster extends Model {
     protected $table = 'student_fc_scale_masters';
-    protected $fillable = ['username','pay_level','basic_pay','grade_pay'];
+    protected $fillable = ['user_id','pay_level','basic_pay','grade_pay'];
 }

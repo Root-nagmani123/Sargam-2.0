@@ -14,7 +14,6 @@ class FcRegistrationMaster extends Model
         'display_name',
         'email',
         'contact_no',
-        'display_name',
         'schema_id',
         'first_name',
         'middle_name',
@@ -22,9 +21,14 @@ class FcRegistrationMaster extends Model
         'rank',
         'exam_year',
         'service_master_pk',
+        'course_master_pk',
         'web_auth',
         'cadre_master_pk',
         'dob',
+        'application_type',
+        'fc_exemption_master_pk',
+        'is_registered',
+        'user_id',
     ];
 
 

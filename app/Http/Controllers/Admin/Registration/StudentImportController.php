@@ -2,35 +2,56 @@
 
 namespace App\Http\Controllers\Admin\Registration;
 
+use App\DataTables\FC\FcMigrateStudentsDataTable;
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Hash;
 use Carbon\Carbon;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class StudentImportController extends Controller
 {
-
-    public function index()
+    public function index(FcMigrateStudentsDataTable $dataTable)
     {
-        // $students = DB::table('students')->orderBy('created_date', 'desc')->get();
-        return view('admin.registration.import_students');
+        $courses = DB::table('course_master')
+            ->where('active_inactive', 1)
+            ->orderBy('course_name')
+            ->get(['pk', 'course_name', 'couse_short_name']);
+
+        $services = DB::table('service_master')
+            ->orderBy('service_name')
+            ->get(['pk', 'service_name', 'service_short_name']);
+
+        return $dataTable->render('admin.registration.import_students', compact('courses', 'services'));
     }
 
-
-    //final
-    public function migrate()
+    public function migrate(Request $request)
     {
+        $request->validate([
+            'selected_pks' => 'required|string',
+        ]);
+
+        $pks = array_values(array_unique(array_filter(array_map(
+            'intval',
+            explode(',', (string) $request->input('selected_pks', ''))
+        ))));
+
+        if ($pks === []) {
+            return back()->with('error', 'Please select at least one eligible record to migrate.');
+        }
+
         DB::beginTransaction();
 
         try {
             $batchSize = 500;
             $now = Carbon::now();
+            $studentMasterColumns = Schema::getColumnListing('student_master');
+            $migratedCount = 0;
 
-            DB::table('fc_registration_master')
-                ->where('fc_exemption_master_pk', 0)
-                ->where('admission_status', 1)
+            $this->eligibleRosterQuery()
+                ->whereIn('pk', $pks)
                 ->orderBy('pk')
-                ->chunk($batchSize, function ($chunkedRecords) use ($now) {
+                ->chunk($batchSize, function ($chunkedRecords) use ($now, $studentMasterColumns, &$migratedCount) {
                     $studentsToInsert = [];
                     $studentsToUpdate = [];
                     $credentialsToInsert = [];
@@ -38,154 +59,47 @@ class StudentImportController extends Controller
                     $courseMapsToInsert = [];
                     $updateIds = [];
 
-                    // Get all user_ids from current batch
-                    $userIds = array_filter($chunkedRecords->pluck('user_id')->toArray());
+                    // Usernames must be strings (OT codes like 4117353 are numeric in DB).
+                    $userIds = [];
+                    foreach ($chunkedRecords as $chunkRecord) {
+                        if (!empty($chunkRecord->user_id)) {
+                            $userIds[] = $this->normalizeLoginUsername($chunkRecord->user_id);
+                        }
+                    }
+                    $userIds = array_values(array_unique($userIds));
 
                     // Pre-fetch existing records
                     $existingStudents = DB::table('student_master')
                         ->whereIn('user_id', $userIds)
                         ->get()
-                        ->keyBy('user_id');
+                        ->keyBy(fn ($row) => $this->normalizeLoginUsername($row->user_id));
 
                     $existingCredentials = DB::table('user_credentials')
                         ->whereIn('user_name', $userIds)
                         ->get()
-                        ->keyBy('user_name');
+                        ->keyBy(fn ($row) => $this->normalizeLoginUsername($row->user_name));
 
                     // Process each record
                     foreach ($chunkedRecords as $record) {
                         if (empty($record->user_id)) {
                             continue;
                         }
+                        $migratedCount++;
+
+                        $userName = $this->normalizeLoginUsername($record->user_id);
+
+                        $alternateEmail = $this->rosterValue($record, 'alternative_email')
+                            ?? $this->rosterValue($record, 'pemail_id');
 
                         // 1. Handle student_master table
-                        $existingStudent = $existingStudents[$record->user_id] ?? null;
+                        $existingStudent = $existingStudents[$userName] ?? null;
 
                         if (!$existingStudent) {
-                            // Prepare student data for insertion
-                            $studentData = [
-                                'email'                      => $record->email,
-                                'contact_no'                 => $record->contact_no,
-                                'user_id'                    => $record->user_id ?? 0,
-                                'display_name'               => $record->display_name,
-                                'password'                   => $record->password,
-                                'schema_id'                  => $record->schema_id,
-                                'final_submit'               => $record->final_submit ?? 0,
-                                'submit_date'                => $record->submit_date,
-                                'created_date'               => $record->created_date ?? $now,
-                                'first_name'                 => $record->first_name,
-                                'middle_name'                => $record->middle_name,
-                                'last_name'                  => $record->last_name,
-                                'admission_status'           => $record->admission_status,
-                                'rank'                       => $record->rank,
-                                'exam_year'                  => $record->exam_year,
-                                'service_master_pk'         => $record->service_master_pk ?? 0,
-                                'web_auth'                   => $record->web_auth,
-                                'dob'                        => $record->dob,
-                                'status'                     => $record->status,
-                                'course_master_pk'           => $record->course_master_pk,
-                                'finance_bookEntityCode'     => $record->finance_bookEntityCode,
-                                'refund_status'              => $record->refund_status,
-                                'enrollment'                 => $record->enrollment,
-                                'admission_category_pk'      => $record->admission_category_pk,
-                                'gender'                     => $record->gender,
-                                'photo_path'                 => $record->photo_path,
-                                'address'                    => $record->address,
-                                'country_master_pk'          => $record->country_master_pk,
-                                'state_master_pk'            => $record->state_master_pk,
-                                'city'                       => $record->city,
-                                'pin_code'                   => $record->pin_code,
-                                'merital_status'             => $record->merital_status,
-                                'religion_master_pk'         => $record->religion_master_pk,
-                                'background'                 => $record->background,
-                                'father_fname'               => $record->father_fname,
-                                'father_mname'               => $record->father_mname,
-                                'father_lname'               => $record->father_lname,
-                                'father_profession'          => $record->father_profession,
-                                'mother_name'                => $record->mother_name,
-                                'family_annual_income'       => $record->family_annual_income,
-                                'university_medium'          => $record->university_medium,
-                                'pre_university_medium'      => $record->pre_university_medium,
-                                'upsc_exam_medium'           => $record->upsc_exam_medium,
-                                'upsc_viva_medium'           => $record->upsc_viva_medium,
-                                'academic_medium'            => $record->academic_medium,
-                                'height'                     => $record->height,
-                                'weight'                     => $record->weight,
-                                'blood_group'                => $record->blood_group,
-                                'dietary'                    => $record->dietary,
-                                'signature_path'             => $record->signature_path,
-                                'postal_address'             => $record->postal_address,
-                                'postal_country_pk'          => $record->postal_country_pk,
-                                'postal_state_pk'            => $record->postal_state_pk,
-                                'postal_city'                => $record->postal_city,
-                                'postal_pin_code'            => $record->postal_pin_code,
-                                'fax'                        => $record->fax,
-                                'domicile_state_pk'          => $record->domicile_state_pk,
-                                'state_district_mapping_pk'  => $record->state_district_mapping_pk,
-                                'town_village'               => $record->town_village,
-                                'pcontact_no'                => $record->pcontact_no,
-                                'pemail_id'                  => $record->pemail_id,
-                                'pfax'                       => $record->pfax,
-                                'generated_OT_code'          => $record->generated_OT_code,
-                                'enrollment_no'              => $record->enrollment_no,
-                                'anniversary_date'           => $record->anniversary_date,
-                                'cadre_master_pk'            => $record->cadre_master_pk,
-                                'current_sem'                => $record->current_sem,
-                                'spouse_name'                => $record->spouse_name,
-                                'spouse_dob'                 => $record->spouse_dob,
-                                'designation'                => $record->designation,
-                                'department'                 => $record->department,
-                                'passport_no'                => $record->passport_no,
-                                'rr_scs'                     => $record->rr_scs,
-                                'last_service_pk'            => $record->last_service_pk,
-                                'birth_place'                => $record->birth_place,
-                                'birth_city_village_name'    => $record->birth_city_village_name,
-                                'city_type'                  => $record->city_type,
-                                'pcity_type'                 => $record->pcity_type,
-                                'pass_in_char'               => $record->pass_in_char,
-                                'highest_stream_pk'          => $record->highest_stream_pk,
-                                'emergency_contact_person'   => $record->emergency_contact_person,
-                                'emergency_contact_person_mobile' => $record->emergency_contact_person_mobile,
-                                'passport_issue_date'        => $record->passport_issue_date,
-                                'passport_expire_date'       => $record->passport_expire_date,
-                                'fc_exemption_master_pk'     => $record->fc_exemption_master_pk,
-                                'conform_student'            => $record->conform_student,
-                                'father_husband'             => $record->father_husband,
-                                'csestatus'                  => $record->csestatus,
-                                'aadhar_card'                => $record->aadhar_card,
-                                'pan_card'                   => $record->pan_card,
-                                'instagram_id'               => $record->instagram_id,
-                                'twitter_id'                 => $record->twitter_id,
-                                'guardian_contact'           => $record->guardian_contact,
-                                'guardian_email'             => $record->guardian_email,
-                                'birth_state'                => $record->birth_state,
-                                'medical_history'            => $record->medical_history,
-                                'guardian_firstname'         => $record->guardian_firstname,
-                                'guardian_middlename'        => $record->guardian_middlename,
-                                'guardian_lastname'          => $record->guardian_lastname,
-                                'highattitude_trek'          => $record->highattitude_trek,
-                                'mother_firstname'           => $record->mother_firstname,
-                                'mother_middlename'          => $record->mother_middlename,
-                                'mother_lastname'            => $record->mother_lastname,
-                                'mother_qualification'       => $record->mother_qualification,
-                                'mother_profession'          => $record->mother_profession,
-                                'father_qualification'       => $record->father_qualification,
-                                'nationality'                => $record->nationality,
-                                'pdistrict_id'               => $record->pdistrict_id,
-                                'mdistrict_id'               => $record->mdistrict_id,
-                                'highattremarks'             => $record->highattremarks,
-                                'isspouse'                   => $record->isspouse,
-                                'hindiname'                  => $record->hindiname,
-                                'id_card'                    => $record->id_card,
-                                'idcard_created_by'          => $record->idcard_created_by,
-                                'idcard_date'                => $record->idcard_date,
-                                'cgname'                     => $record->cgname,
-                                'ph'                         => $record->ph,
-                                'cgno'                       => $record->cgno,
-                                // Add other fields as needed...
-                            ];
-
-                            $studentsToInsert[$record->user_id] = $studentData;
+                            $studentsToInsert[$userName] = $this->buildStudentDataFromRoster(
+                                $record,
+                                $now,
+                                $studentMasterColumns
+                            );
                         } else {
                             // Check if any data has changed and needs update
                             $updateData = [];
@@ -222,8 +136,11 @@ class StudentImportController extends Controller
                             ];
 
                             foreach ($fieldsToCheck as $field) {
-                                if (isset($record->$field) && $record->$field != $existingStudent->$field) {
-                                    $updateData[$field] = $record->$field;
+                                if (!property_exists($record, $field)) {
+                                    continue;
+                                }
+                                if ($record->{$field} != ($existingStudent->{$field} ?? null)) {
+                                    $updateData[$field] = $record->{$field};
                                 }
                             }
 
@@ -234,28 +151,28 @@ class StudentImportController extends Controller
                         }
 
                         // 2. Handle user_credentials table
-                        $existingCredential = $existingCredentials[$record->user_id] ?? null;
+                        $existingCredential = $existingCredentials[$userName] ?? null;
 
                         if (!$existingCredential) {
-                            // Prepare credentials for insertion
-                            $credentialsToInsert[$record->user_id] = [
-                                'user_name' => $record->user_id,
-                                'first_name' => $record->first_name,
-                                'last_name' => $record->last_name,
-                                'jbp_password' => $record->password,
-                                'email_id' => $record->email,
-                                'mobile_no' => $record->contact_no,
-                                'alternate_mailid' => $record->pemail_id,
-                                'reg_date' => $record->submit_date ?? $now,
+                            // fc_registration_master → user_credentials (created at migration only)
+                            $credentialsToInsert[$userName] = [
+                                'user_name' => $userName,
+                                'first_name' => $this->rosterValue($record, 'first_name'),
+                                'last_name' => $this->rosterValue($record, 'last_name'),
+                                'jbp_password' => $this->rosterValue($record, 'password'),
+                                'email_id' => $this->rosterValue($record, 'email'),
+                                'mobile_no' => $this->rosterValue($record, 'contact_no'),
+                                'alternate_mailid' => $alternateEmail,
+                                'reg_date' => $this->rosterValue($record, 'submit_date', $now),
                                 'jbp_enabled' => 1,
                                 'login_status' => 1,
                                 'schemaid' => 1,
                                 'user_id' => 0, // Will be updated after student insertion
                                 'last_login' => $now,
                                 'security_question' => 'What Is Your Web Authentication Code?',
-                                'security_answer' => $record->web_auth,
+                                'security_answer' => $this->rosterValue($record, 'web_auth'),
                                 'entity_id' => 5,
-                                'image_path' => $record->photo_path,
+                                'image_path' => $this->rosterValue($record, 'photo_path'),
                                 'user_category' => 'S',
                                 'Active_inactive' => 1,
                                 'remember_token' => null,
@@ -281,20 +198,24 @@ class StudentImportController extends Controller
                                     'jbp_password' => 'password',
                                     'email_id' => 'email',
                                     'mobile_no' => 'contact_no',
-                                    'alternate_mailid' => 'pemail_id',
+                                    'alternate_mailid' => 'alternative_email',
                                     'security_answer' => 'web_auth',
                                     'image_path' => 'photo_path',
                                     default => $field
                                 };
 
-                                if (isset($record->$sourceField) && $record->$sourceField != $existingCredential->$field) {
-                                    $updateCredentialData[$field] = $record->$sourceField;
+                                $sourceValue = $field === 'alternate_mailid'
+                                    ? $alternateEmail
+                                    : $this->rosterValue($record, $sourceField);
+
+                                if ($sourceValue !== null && $sourceValue != $existingCredential->$field) {
+                                    $updateCredentialData[$field] = $sourceValue;
                                 }
                             }
 
                             // If there are changes, add to update array
                             if (!empty($updateCredentialData)) {
-                                $credentialsToUpdate[$record->user_id] = $updateCredentialData;
+                                $credentialsToUpdate[$userName] = $updateCredentialData;
                             }
                         }
 
@@ -303,7 +224,7 @@ class StudentImportController extends Controller
                             $studentPk = $existingStudent->pk ?? null;
 
                             $courseMapsToInsert[] = [
-                                'user_id' => $record->user_id, // For reference
+                                'user_id' => $userName, // For reference
                                 'course_master_pk' => $record->course_master_pk,
                                 'student_master_pk' => $studentPk, // Will be updated if null
                                 'active_inactive' => 1,
@@ -353,9 +274,23 @@ class StudentImportController extends Controller
                         }
                     }
 
-                    // Batch insert credentials
+                    // Resolve student PKs for this batch (new inserts + existing rows)
+                    $studentPkByUserId = [];
+                    foreach ($userIds as $userId) {
+                        if (isset($insertedStudents[$userId])) {
+                            $studentPkByUserId[$userId] = $insertedStudents[$userId];
+                        } elseif (isset($existingStudents[$userId])) {
+                            $studentPkByUserId[$userId] = $existingStudents[$userId]->pk;
+                        }
+                    }
+
+                    // Batch insert credentials only when student_master row exists
                     if (!empty($credentialsToInsert)) {
-                        foreach ($credentialsToInsert as $credentialData) {
+                        foreach ($credentialsToInsert as $userId => $credentialData) {
+                            if (!isset($studentPkByUserId[$userId])) {
+                                continue;
+                            }
+                            $credentialData['user_id'] = $studentPkByUserId[$userId];
                             try {
                                 DB::table('user_credentials')->insertOrIgnore($credentialData);
                             } catch (\Exception $e) {
@@ -368,10 +303,36 @@ class StudentImportController extends Controller
                     foreach ($credentialsToUpdate as $userName => $updateData) {
                         try {
                             DB::table('user_credentials')
-                                ->where('user_name', $userName)
+                                ->where('user_name', '=', $this->normalizeLoginUsername($userName))
                                 ->update($updateData);
                         } catch (\Exception $e) {
                             continue;
+                        }
+                    }
+
+                    // Link user_credentials.user_id → student_master.pk (string match on user_name)
+                    foreach ($studentPkByUserId as $userId => $studentPk) {
+                        $loginName = $this->normalizeLoginUsername($userId);
+                        if ($loginName === '' || !is_numeric($studentPk)) {
+                            continue;
+                        }
+
+                        DB::table('user_credentials')
+                            ->where('user_name', '=', $loginName)
+                            ->update(['user_id' => (int) $studentPk]);
+                    }
+
+                    // Re-key form rows saved with roster pk placeholder → user_credentials.pk
+                    foreach ($chunkedRecords as $record) {
+                        if (empty($record->user_id) || empty($record->pk)) {
+                            continue;
+                        }
+                        $loginName = $this->normalizeLoginUsername($record->user_id);
+                        $credentialsPk = DB::table('user_credentials')
+                            ->where('user_name', '=', $loginName)
+                            ->value('pk');
+                        if ($credentialsPk) {
+                            $this->rekeyFcFormUserIdFromRosterPk((int) $record->pk, (int) $credentialsPk);
                         }
                     }
 
@@ -419,12 +380,6 @@ class StudentImportController extends Controller
                     }
 
 
-                    // Mark source records as processed
-                    if (!empty($updateIds)) {
-                        DB::table('fc_registration_master')
-                            ->whereIn('pk', $updateIds)
-                            ->update(['is_registered' => 1]);
-                    }
                 });
 
             // Find and delete records with fc_exemption_master_pk != 0 from all three tables
@@ -451,7 +406,7 @@ class StudentImportController extends Controller
 
                         // Delete from user_credentials
                         DB::table('user_credentials')
-                            ->whereIn('user_name', $userIds)
+                            ->whereIn('user_name', array_map(fn ($id) => $this->normalizeLoginUsername($id), $userIds))
                             ->delete();
 
                         // Delete from student_master
@@ -463,10 +418,149 @@ class StudentImportController extends Controller
             }
 
             DB::commit();
-            return back()->with('success', 'Migration completed successfully');
+
+            if ($migratedCount === 0) {
+                return back()->with('error', 'No eligible records were migrated. Check selection and filters.');
+            }
+
+            return back()->with('success', "Migration completed successfully for {$migratedCount} record(s).");
         } catch (\Exception $e) {
             DB::rollBack();
+
             return back()->with('error', 'Migration failed: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Rows eligible for admin migration (same rules as DataTable "Ready to migrate").
+     */
+    private function eligibleRosterQuery()
+    {
+        return DB::table('fc_registration_master')
+            ->where(function ($query) {
+                $query->where('fc_exemption_master_pk', 0)
+                    ->orWhereNull('fc_exemption_master_pk');
+            })
+            ->where('is_registered', 1)
+            ->whereNotNull('user_id')
+            ->where('user_id', '!=', '')
+            ->whereNotNull('password')
+            ->where('password', '!=', '');
+    }
+
+    /**
+     * FC usernames may be numeric OT codes; always use string for user_credentials.user_name lookups.
+     */
+    private function normalizeLoginUsername(mixed $userId): string
+    {
+        return trim((string) $userId);
+    }
+
+    /**
+     * FC forms may store fc_registration_master.pk in user_id before migration; switch to user_credentials.pk.
+     */
+    private function rekeyFcFormUserIdFromRosterPk(int $rosterPk, int $credentialsPk): void
+    {
+        if ($rosterPk < 1 || $credentialsPk < 1 || $rosterPk === $credentialsPk) {
+            return;
+        }
+
+        $tables = [
+            'student_masters',
+            'student_master_firsts',
+            'student_master_seconds',
+            'student_master_spouse_masters',
+            'student_knowledge_hindi_masters',
+            'student_master_hobbies_details',
+            'student_master_module_masters',
+            'student_master_exempted_masters',
+            'student_fc_scale_masters',
+            'student_confirm_masters',
+            'student_master_incomplet_masters',
+            'new_registration_bank_details_masters',
+            'registration_bank_details_masters',
+            'student_travel_plan_masters',
+            'student_master_qualification_details',
+            'student_master_higher_educational_details',
+            'student_master_employment_details',
+            'student_master_language_knowns',
+            'student_skill_details_masters',
+            'student_master_academic_distinctions',
+            'student_sports_fitness_teach_masters',
+            'student_sports_trg_teach_masters',
+            'fc_joining_related_documents_details_masters',
+            'fc_ot_details',
+            'fc_otactivity_details',
+            'fc_pre_history',
+            'fc_path_report',
+        ];
+
+        foreach ($tables as $table) {
+            if (! \Illuminate\Support\Facades\Schema::hasTable($table)
+                || ! \Illuminate\Support\Facades\Schema::hasColumn($table, 'user_id')) {
+                continue;
+            }
+            try {
+                DB::table($table)->where('user_id', $rosterPk)->update(['user_id' => $credentialsPk]);
+            } catch (\Exception $e) {
+                continue;
+            }
+        }
+    }
+
+    /**
+     * Read a roster column only when it exists on fc_registration_master (avoids undefined stdClass properties).
+     */
+    private function rosterValue(object $record, string $field, mixed $default = null): mixed
+    {
+        return property_exists($record, $field) ? $record->{$field} : $default;
+    }
+
+    private function buildStudentDataFromRoster(object $record, Carbon $now, array $studentMasterColumns): array
+    {
+        $fields = [
+            'email', 'contact_no', 'display_name', 'password', 'schema_id', 'submit_date',
+            'first_name', 'middle_name', 'last_name', 'admission_status', 'rank', 'exam_year',
+            'web_auth', 'dob', 'status', 'course_master_pk', 'finance_bookEntityCode', 'refund_status',
+            'enrollment', 'admission_category_pk', 'gender', 'photo_path', 'address', 'country_master_pk',
+            'state_master_pk', 'city', 'pin_code', 'merital_status', 'religion_master_pk', 'background',
+            'father_fname', 'father_mname', 'father_lname', 'father_profession', 'mother_name',
+            'family_annual_income', 'university_medium', 'pre_university_medium', 'upsc_exam_medium',
+            'upsc_viva_medium', 'academic_medium', 'height', 'weight', 'blood_group', 'dietary',
+            'signature_path', 'postal_address', 'postal_country_pk', 'postal_state_pk', 'postal_city',
+            'postal_pin_code', 'fax', 'domicile_state_pk', 'state_district_mapping_pk', 'town_village',
+            'pcontact_no', 'pemail_id', 'pfax', 'generated_OT_code', 'enrollment_no', 'anniversary_date',
+            'cadre_master_pk', 'current_sem', 'spouse_name', 'spouse_dob', 'designation', 'department',
+            'passport_no', 'rr_scs', 'last_service_pk', 'birth_place', 'birth_city_village_name',
+            'city_type', 'pcity_type', 'pass_in_char', 'highest_stream_pk', 'emergency_contact_person',
+            'emergency_contact_person_mobile', 'passport_issue_date', 'passport_expire_date',
+            'fc_exemption_master_pk', 'conform_student', 'father_husband', 'csestatus', 'aadhar_card',
+            'pan_card', 'instagram_id', 'twitter_id', 'guardian_contact', 'guardian_email', 'birth_state',
+            'medical_history', 'guardian_firstname', 'guardian_middlename', 'guardian_lastname',
+            'highattitude_trek', 'mother_firstname', 'mother_middlename', 'mother_lastname',
+            'mother_qualification', 'mother_profession', 'father_qualification', 'nationality',
+            'pdistrict_id', 'mdistrict_id', 'highattremarks', 'isspouse', 'hindiname', 'id_card',
+            'idcard_created_by', 'idcard_date', 'cgname', 'ph', 'cgno',
+        ];
+
+        $data = [];
+        foreach ($fields as $field) {
+            $data[$field] = $this->rosterValue($record, $field);
+        }
+
+        $data['user_id'] = $this->normalizeLoginUsername($this->rosterValue($record, 'user_id', ''));
+        $data['final_submit'] = $this->rosterValue($record, 'final_submit', 0);
+        $data['service_master_pk'] = (int) ($this->rosterValue($record, 'service_master_pk', 0) ?? 0);
+        $data['created_date'] = $this->rosterValue($record, 'created_date', $now);
+
+        // Only columns that exist on student_master; omit nulls so NOT NULL defaults (e.g. last_service_pk = 0) apply.
+        $data = array_intersect_key($data, array_flip($studentMasterColumns));
+        $data = array_filter($data, static fn ($value) => $value !== null);
+
+        if (in_array('service_master_pk', $studentMasterColumns, true) && !isset($data['service_master_pk'])) {
+            $data['service_master_pk'] = (int) ($this->rosterValue($record, 'service_master_pk', 0) ?? 0);
+        }
+
+        return $data;
     }
 }

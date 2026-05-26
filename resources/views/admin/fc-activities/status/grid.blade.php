@@ -190,7 +190,9 @@
     @else
         <div class="card border-0 shadow-sm fc-status-grid-card">
             <div class="card-body p-0">
-                <table class="table table-sm table-hover mb-0 js-fc-datatable fc-status-grid-table" data-export-title="FC Activity status{{ $combined ? ' (matrix)' : '' }}">
+                <table class="table table-sm table-hover mb-0 js-fc-datatable fc-status-grid-table"
+                       data-export-title="FC Activity status{{ $combined ? ' (matrix)' : '' }}"
+                       data-export-wide="{{ ($combined ?? false) ? '1' : '0' }}">
                     <thead class="table-light">
                         <tr>
                             <th class="fc-status-sticky-1">OT name</th>

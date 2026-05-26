@@ -36,7 +36,6 @@ class AppServiceProvider extends ServiceProvider
         View::composer('components.menu.fc-sidebar', function ($view) {
             if (! Auth::check()) {
                 $view->with('fcActivityNavDepartments', collect());
-                $view->with('fcActivityNavCoordinator', false);
                 $view->with('fcActivityNavCanSetup', false);
                 $view->with('fcSidebarShowMedical', false);
 
@@ -44,7 +43,6 @@ class AppServiceProvider extends ServiceProvider
             }
             $svc = app(FcPostArrivalAccessService::class);
             $view->with('fcActivityNavDepartments', $svc->visibleDepartments());
-            $view->with('fcActivityNavCoordinator', $svc->isCoordinator());
             $view->with('fcActivityNavCanSetup', $svc->canManageActivitySetup());
             $view->with('fcSidebarShowMedical', $svc->canAccessMedicalModule());
         });

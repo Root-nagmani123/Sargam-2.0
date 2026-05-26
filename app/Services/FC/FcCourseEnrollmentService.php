@@ -23,9 +23,9 @@ class FcCourseEnrollmentService
     /**
      * @return array{enrolled: bool, course_master_pk: ?int, message: ?string}
      */
-    public function enrollTrainee(string $username, FcForm|int|null $form = null): array
+    public function enrollTrainee(int $userId, FcForm|int|null $form = null): array
     {
-        $form = $this->resolveForm($username, $form);
+        $form = $this->resolveForm($userId, $form);
         if (! $form) {
             return ['enrolled' => false, 'course_master_pk' => null, 'message' => 'No registration form linked.'];
         }
@@ -35,7 +35,7 @@ class FcCourseEnrollmentService
             return ['enrolled' => false, 'course_master_pk' => null, 'message' => 'Form is not linked to a Course Master programme.'];
         }
 
-        $studentMasterPk = $this->resolveStudentMasterPk($username);
+        $studentMasterPk = $this->resolveStudentMasterPk($userId);
         if (! $studentMasterPk) {
             return [
                 'enrolled' => false,
@@ -45,8 +45,8 @@ class FcCourseEnrollmentService
         }
 
         try {
-            DB::transaction(function () use ($username, $form, $coursePk, $studentMasterPk) {
-                $this->syncFcTrackerFormId($username, $form);
+            DB::transaction(function () use ($userId, $form, $coursePk, $studentMasterPk) {
+                $this->syncFcTrackerFormId($userId, $form);
 
                 StudentMasterCourseMap::where('student_master_pk', $studentMasterPk)
                     ->where('course_master_pk', '!=', $coursePk)
@@ -73,7 +73,7 @@ class FcCourseEnrollmentService
             return ['enrolled' => true, 'course_master_pk' => $coursePk, 'message' => null];
         } catch (\Throwable $e) {
             Log::error('FC course enrollment failed', [
-                'username' => $username,
+                'user_id' => $userId,
                 'form_id' => $form->id,
                 'course_master_pk' => $coursePk,
                 'error' => $e->getMessage(),
@@ -83,7 +83,7 @@ class FcCourseEnrollmentService
         }
     }
 
-    protected function resolveForm(string $username, FcForm|int|null $form): ?FcForm
+    protected function resolveForm(int $userId, FcForm|int|null $form): ?FcForm
     {
         if ($form instanceof FcForm) {
             return $form;
@@ -95,7 +95,7 @@ class FcCourseEnrollmentService
 
         $formId = null;
         if (Schema::hasColumn('student_masters', 'form_id')) {
-            $formId = FcStudentMaster::query()->where('username', $username)->value('form_id');
+            $formId = FcStudentMaster::query()->where(fc_user_col('student_masters'), fc_user_val('student_masters', $userId))->value('form_id');
         }
 
         if (! $formId) {
@@ -109,7 +109,7 @@ class FcCourseEnrollmentService
         return FcForm::activeRegistrationDynamicForm();
     }
 
-    protected function resolveStudentMasterPk(string $username): ?int
+    protected function resolveStudentMasterPk(int $userId): ?int
     {
         $user = Auth::user();
         if ($user instanceof User && ($user->user_category ?? null) === 'S' && ! empty($user->user_id)) {
@@ -117,20 +117,21 @@ class FcCourseEnrollmentService
         }
 
         $pk = User::query()
-            ->where('user_name', $username)
+            ->where('pk', $userId)
             ->where('user_category', 'S')
-            ->value('user_id');
+            ->value('pk');
 
         return $pk ? (int) $pk : null;
     }
 
-    protected function syncFcTrackerFormId(string $username, FcForm $form): void
+    protected function syncFcTrackerFormId(int $userId, FcForm $form): void
     {
         if (! Schema::hasColumn('student_masters', 'form_id')) {
             return;
         }
 
-        $keys = ['username' => $username];
+        $uCol = fc_user_col('student_masters');
+        $keys = [$uCol => fc_user_val('student_masters', $userId)];
         if (Schema::hasColumn('student_masters', 'form_id')) {
             $keys['form_id'] = $form->id;
         }

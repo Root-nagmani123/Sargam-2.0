@@ -24,9 +24,9 @@ class RegistrationStep1Controller extends Controller
             return redirect()->route('fc-reg.forms.dashboard', $dynamicForm);
         }
 
-        $username = Auth::user()->username;
-        $progress = $this->regService->getProgress($username);
-        $step1    = StudentMasterFirst::where('username', $username)->first();
+        $userId = Auth::id();
+        $progress = $this->regService->getProgress($userId);
+        $step1    = StudentMasterFirst::forUser($userId)->first();
 
         return view('fc.registration.dashboard', compact('progress', 'step1'));
     }
@@ -34,15 +34,15 @@ class RegistrationStep1Controller extends Controller
     // ── SHOW Step 1 form ─────────────────────────────────────────────
     public function showStep1()
     {
-        $username     = Auth::user()->username;
+        $userId = Auth::id();
         $step         = $this->formService->getStep('step1');
         $fields       = $this->formService->getStepFields('step1');
         $lookups      = $this->formService->getLookupData($fields);
-        $existingData = $this->formService->getExistingData('step1', $username);
+        $existingData = $this->formService->getExistingData('step1', $userId);
 
         // Fallback: if no dynamic fields configured, use original view
         if ($fields->isEmpty()) {
-            $step1    = StudentMasterFirst::where('username', $username)->first();
+            $step1    = StudentMasterFirst::forUser($userId)->first();
             $sessions = SessionMaster::where('is_active', 1)->get();
             $services = ServiceMaster::all();
             $states   = StateMaster::orderBy('state_name')->get();
@@ -62,24 +62,24 @@ class RegistrationStep1Controller extends Controller
     // ── SAVE Step 1 ──────────────────────────────────────────────────
     public function saveStep1(Request $request)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
         $fields   = $this->formService->getStepFields('step1');
 
         if ($fields->isEmpty()) {
             // Fallback to original hardcoded save
-            return $this->saveStep1Legacy($request, $username);
+            return $this->saveStep1Legacy($request, $userId);
         }
 
         $rules     = $this->formService->buildValidationRules($fields);
         $validated = $request->validate($rules);
 
-        $this->formService->saveStepData('step1', $username, $validated, $request);
+        $this->formService->saveStepData('step1', $userId, $validated, $request);
 
         return redirect()->route('fc-reg.registration.step2')
             ->with('success', 'Step 1 saved successfully. Please complete Step 2.');
     }
 
-    private function saveStep1Legacy(Request $request, string $username)
+    private function saveStep1Legacy(Request $request, int $userId)
     {
         $validated = $request->validate([
             'full_name'         => 'required|string|max:200',
@@ -98,27 +98,29 @@ class RegistrationStep1Controller extends Controller
         ]);
 
         $data = $validated;
-        $data['username'] = $username;
+        $data[fc_user_col('student_master_firsts')] = fc_user_val('student_master_firsts', $userId);
         $data['step1_completed'] = 1;
 
         if ($request->hasFile('photo')) {
             $photo = $request->file('photo');
-            $data['photo_path'] = $photo->storeAs("uploads/{$username}", 'photo_' . time() . '.' . $photo->extension(), 'public');
+            $data['photo_path'] = $photo->storeAs('uploads/'.fc_upload_path_segment($userId), 'photo_' . time() . '.' . $photo->extension(), 'public');
         }
         if ($request->hasFile('signature')) {
             $sig = $request->file('signature');
-            $data['signature_path'] = $sig->storeAs("uploads/{$username}", 'signature_' . time() . '.' . $sig->extension(), 'public');
+            $data['signature_path'] = $sig->storeAs('uploads/'.fc_upload_path_segment($userId), 'signature_' . time() . '.' . $sig->extension(), 'public');
         }
 
-        StudentMasterFirst::updateOrCreate(['username' => $username], $data);
+        StudentMasterFirst::updateOrCreate([fc_user_col('student_master_firsts') => fc_user_val('student_master_firsts', $userId)], $data);
 
-        StudentMaster::updateOrCreate(['username' => $username], [
+        StudentMaster::updateOrCreate([fc_user_col('student_masters') => fc_user_val('student_masters', $userId)], [
             'session_id'   => $validated['session_id'],
             'full_name'    => $validated['full_name'],
             'service_code' => ServiceMaster::find($validated['service_id'])?->service_code,
             'cadre'        => $validated['cadre'],
             'step1_done'   => 1,
         ]);
+
+        app(\App\Services\FC\FcRegistrationRegisteredSyncService::class)->syncForCredentialsUser($userId);
 
         return redirect()->route('fc-reg.registration.step2')
             ->with('success', 'Step 1 saved successfully. Please complete Step 2.');

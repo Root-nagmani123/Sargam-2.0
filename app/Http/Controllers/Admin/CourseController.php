@@ -42,22 +42,26 @@ class CourseController extends Controller
     {
         $status = $request->input('status', 'active');
         $currentDate = Carbon::now()->format('Y-m-d');
+        $data_course_id = get_Role_by_course();
+
+        $query = CourseMaster::query();
+        if (! empty($data_course_id)) {
+            $query->whereIn('pk', $data_course_id);
+        }
 
         if ($status === 'active') {
-            $courses = CourseMaster::where('end_date', '>=', $currentDate)
-                ->orderBy('course_name')
-                ->pluck('course_name', 'pk')
-                ->toArray();
+            $query->where('end_date', '>=', $currentDate);
         } else {
-            $courses = CourseMaster::where('end_date', '<', $currentDate)
-                ->orderBy('course_name')
-                ->pluck('course_name', 'pk')
-                ->toArray();
+            $query->where('end_date', '<', $currentDate);
         }
+
+        $courses = $query->orderBy('course_name')
+            ->pluck('course_name', 'pk')
+            ->toArray();
 
         return response()->json([
             'success' => true,
-            'courses' => $courses
+            'courses' => $courses,
         ]);
     }
 

@@ -11,7 +11,8 @@ use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Html\Editor\Editor;
 use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
-use Illuminate\Support\Facades\DB; // Add this for joins
+use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 
 class FcRegistrationMasterListDaTable extends DataTable
@@ -48,8 +49,8 @@ class FcRegistrationMasterListDaTable extends DataTable
             ->addColumn('service_master_pk', function ($row) {
                 return $row->service_short_name ?? 'N/A';
             })
-            ->addColumn('group_service_name', function ($row) {
-                return $row->group_service_name ?? 'N/A';
+            ->addColumn('group_type', function ($row) {
+                return $row->group_type ?? 'N/A';
             })
             ->addColumn('generated_OT_code', function ($row) {
                 return $row->generated_OT_code ?? 'N/A';
@@ -154,19 +155,31 @@ class FcRegistrationMasterListDaTable extends DataTable
             ->leftJoin('service_master as s', 'fc_registration_master.service_master_pk', '=', 's.pk')
             ->leftJoin('fc_exemption_master as e', 'fc_registration_master.fc_exemption_master_pk', '=', 'e.Pk')
             ->leftJoin('cadre_master as c', 'fc_registration_master.cadre_master_pk', '=', 'c.pk')
+            ->leftJoin('course_master as cm', 'fc_registration_master.course_master_pk', '=', 'cm.pk')
             ->select(
                 'fc_registration_master.*',
+                'cm.course_name',
                 's.service_short_name',
                 'e.Exemption_name as exemption_name',
                 'c.cadre_name as cadre_name',
-                's.group_service_name as group_type', // <-- alias here
+                's.group_service_name as group_type',
                 DB::raw('(SELECT COUNT(*) FROM fc_registration_master f2 WHERE f2.email = fc_registration_master.email) as email_count')
-
             );
 
-        // Apply DataTable filters
         if ($course = request('course_name')) {
-            $query->where('fc_registration_master.formid', $course);
+            $query->where('fc_registration_master.course_master_pk', $course);
+        }
+
+        $statusFilter = request('course_status_filter', 'active');
+        $currentDate = Carbon::now()->format('Y-m-d');
+        if ($statusFilter === 'archive') {
+            $query->whereNotNull('fc_registration_master.course_master_pk')
+                ->where('cm.end_date', '<', $currentDate);
+        } else {
+            $query->where(function ($q) use ($currentDate) {
+                $q->whereNull('fc_registration_master.course_master_pk')
+                    ->orWhere('cm.end_date', '>=', $currentDate);
+            });
         }
 
         if ($exemption = request('exemption_category')) {
@@ -212,7 +225,7 @@ class FcRegistrationMasterListDaTable extends DataTable
             ->minifiedAjax() // keep empty
             ->selectStyleSingle()
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'scrollX' => true,
                 'autoWidth' => false,
                 'order' => [],
@@ -223,6 +236,11 @@ class FcRegistrationMasterListDaTable extends DataTable
                     $(row).css('background-color', '');
                 }
             }",
+                'initComplete' => "function() {
+                    if (typeof window.fcRegMasterListColVisInit === 'function') {
+                        window.fcRegMasterListColVisInit();
+                    }
+                }",
             ])
             ->buttons([
                 Button::make('excel'),
@@ -263,7 +281,7 @@ class FcRegistrationMasterListDaTable extends DataTable
             Column::make('generated_OT_code')->title('Generated OT Code')->searchable(false)->orderable(false),
             Column::make('exam_year')->title('Exam Year')->searchable(true)->orderable(false),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('email_count')->visible(false),
+            Column::make('email_count')->title('')->visible(false)->exportable(false)->printable(false),
             Column::computed('action')
                 ->exportable(false)
                 ->printable(false)
