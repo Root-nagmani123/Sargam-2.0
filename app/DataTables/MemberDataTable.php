@@ -55,7 +55,7 @@ class MemberDataTable extends DataTable
     {
         return (new EloquentDataTable($query))
             ->addIndexColumn()
-            ->addColumn('employee_name', 
+            ->addColumn('employee_name',
             function($row) {
                 return '<label class="text-dark">' . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
             })
@@ -86,6 +86,17 @@ class MemberDataTable extends DataTable
             ->filterColumn('email', function ($query, $keyword) {
                 $query->where('email', 'like', "%{$keyword}%");
             })
+            ->addColumn('status', function ($row) {
+                $checked = $row->status == 1 ? 'checked' : '';
+                return "
+                <div class='form-check form-switch d-inline-block'>
+                    <input class='form-check-input status-toggle' type='checkbox' role='switch'
+                        data-table='employee_master'
+                        data-column='status'
+                        data-id='{$row->pk}' {$checked}>
+                </div>
+                ";
+            })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
 
@@ -99,10 +110,10 @@ class MemberDataTable extends DataTable
                     });
                 }
             }, true)
-            ->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email']);
+            ->rawColumns(['employee_name', 'employee_id', 'actions', 'mobile_no', 'email','status']);
     }
 
-    
+
     public function query(EmployeeMaster $model): QueryBuilder
     {
         return $model->newQuery()->orderBy('pk', 'desc');
@@ -138,7 +149,7 @@ class MemberDataTable extends DataTable
                     ]);
     }
 
-    
+
     public function getColumns(): array
     {
         return [
@@ -147,6 +158,7 @@ class MemberDataTable extends DataTable
             Column::make('employee_id')->title('Employee ID')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mobile_no')->title('Mobile No')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('email')->title('Email')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
             Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false)->searchable(false),
         ];
     }
