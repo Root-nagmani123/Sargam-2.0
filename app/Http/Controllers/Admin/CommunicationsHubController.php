@@ -217,6 +217,7 @@ class CommunicationsHubController extends Controller
                 'employee_master.last_name',
                 'employee_master.email',
                 'employee_master.mobile',
+                'employee_master.office_extension_no',
                 'employee_master.profile_picture',
                 'designation_master.designation_name'
             )
@@ -234,6 +235,9 @@ class CommunicationsHubController extends Controller
                     'employee_master.pk',
                     'employee_master.first_name',
                     'employee_master.last_name',
+                    'employee_master.email',
+                    'employee_master.mobile',
+                    'employee_master.office_extension_no',
                     'employee_master.profile_picture',
                     'employee_master.dob',
                     'designation_master.designation_name'

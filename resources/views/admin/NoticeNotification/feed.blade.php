@@ -4,6 +4,7 @@
 
 @push('styles')
 @include('admin.NoticeNotification.partials.module-styles')
+@include('admin.communications.partials.comms-feed-cards-styles')
 @endpush
 
 @section('setup_content')
@@ -71,60 +72,81 @@
                 @foreach($noticeCategoryTabs as $tab)
                     @php $isActive = $tab['key'] === $activeTabKey; @endphp
                     <div class="notice-feed-pane {{ $isActive ? '' : 'd-none' }}" data-feed-pane="{{ $tab['key'] }}" role="tabpanel">
-                        <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3 pb-2 border-bottom">
-                            <h2 class="h6 mb-0 fw-bold text-body">
-                                <span class="fw-bold">{{ str_pad((string) $tab['total'], 2, '0', STR_PAD_LEFT) }}</span>
-                                {{ $tab['total'] === 1 ? 'Notice' : 'Notices' }}
-                            </h2>
-                            <div class="d-flex align-items-center gap-3">
-                                @if(hasRole('Admin') || hasRole('Super Admin'))
-                                    <a href="{{ route('admin.notice.index') }}" class="small text-primary fw-semibold text-decoration-underline">
-                                        <i class="bi bi-gear me-1" aria-hidden="true"></i>Manage notices
-                                    </a>
-                                @endif
+                        <div class="comms-hub-section-header d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                            <div class="d-flex align-items-center gap-2">
+                                <span class="comms-hub-feed-icon rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0" aria-hidden="true">
+                                    <i class="bi bi-megaphone-fill"></i>
+                                </span>
+                                <h2 class="h6 mb-0 fw-bold text-body">
+                                    <span class="badge text-bg-primary rounded-pill me-1">{{ str_pad((string) $tab['total'], 2, '0', STR_PAD_LEFT) }}</span>
+                                    {{ $tab['total'] === 1 ? 'Notice' : 'Notices' }}
+                                </h2>
                             </div>
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            <a href="{{ route('admin.notice.index') }}" class="btn btn-sm btn-outline-primary rounded-pill">
+                                <i class="bi bi-gear me-1" aria-hidden="true"></i>Manage notices
+                            </a>
+                            @endif
                         </div>
 
+                        <div class="comms-hub-feed-list vstack gap-2">
                         @forelse($tab['notices'] as $notice)
                             @php
                                 $when = $notice->display_date ?? $notice->created_at ?? null;
                                 $whenCarbon = $when ? \Carbon\Carbon::parse($when) : null;
                                 $whenLabel = $whenCarbon ? $whenCarbon->format('d/m/Y h:i A') : '—';
                                 $plainDesc = trim(preg_replace('/\s+/', ' ', strip_tags((string) ($notice->description ?? ''))));
+                                $isHighlighted = !empty($highlightNoticePk) && (int) $notice->pk === (int) $highlightNoticePk;
+                                $descPreview = \Illuminate\Support\Str::words($plainDesc, 20, '…');
+                                $hasMoreDesc = $plainDesc !== '' && \Illuminate\Support\Str::wordCount($plainDesc) > 20;
                             @endphp
                             <article
                                 id="notice-feed-card-{{ $notice->pk }}"
-                                class="notice-feed-card {{ !empty($highlightNoticePk) && (int) $notice->pk === (int) $highlightNoticePk ? 'notice-feed-card-highlight' : '' }}"
+                                class="notice-feed-card comms-hub-notice-card comms-hub-desc-expandable shadow-sm {{ $isHighlighted ? 'notice-feed-card-highlight' : '' }}"
+                                tabindex="0"
                             >
-                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2">
-                                    <h3 class="notice-feed-card-title">{{ $notice->notice_title }}</h3>
-                                    <div class="notice-feed-card-meta text-md-end">
-                                        ~by {{ $notice->creator_display ?? '—' }} on {{ $whenLabel }}
+                                <div class="d-flex flex-wrap align-items-start justify-content-between gap-2 mb-2">
+                                    <div class="min-w-0 flex-grow-1">
+                                        <h3 class="notice-feed-card-title h6 fw-semibold mb-1">{{ $notice->notice_title }}</h3>
+                                        @if(!empty($notice->subcategory_name))
+                                        <span class="badge rounded-pill text-bg-info border border-info-subtle">
+                                            <i class="bi bi-tag-fill me-1" aria-hidden="true"></i>{{ $notice->subcategory_name }}
+                                        </span>
+                                        @endif
+                                    </div>
+                                    <div class="notice-feed-card-meta small text-muted text-md-end flex-shrink-0">
+                                        <i class="bi bi-person me-1" aria-hidden="true"></i>{{ $notice->creator_display ?? '—' }}
+                                        <span class="mx-1 opacity-50">·</span>
+                                        <i class="bi bi-clock me-1" aria-hidden="true"></i>{{ $whenLabel }}
                                     </div>
                                 </div>
-                                @if(!empty($notice->subcategory_name))
-                                    <div class="small text-muted mt-1">
-                                        <i class="bi bi-tag me-1" aria-hidden="true"></i>{{ $notice->subcategory_name }}
+                                @if($plainDesc !== '')
+                                <div class="comms-hub-desc-wrap">
+                                    <p class="comms-hub-desc-preview notice-feed-card-body small text-body-secondary lh-base mb-0">{{ $descPreview }}</p>
+                                    @if($hasMoreDesc)
+                                    <div class="comms-hub-desc-detail-block">
+                                        <div class="small text-muted mb-1 fw-semibold">Full description</div>
+                                        <div class="notice-feed-card-body small text-body-secondary lh-base">{{ $plainDesc }}</div>
                                     </div>
+                                    @endif
+                                </div>
                                 @endif
-                                <div class="notice-feed-card-body">
-                                    {{ \Illuminate\Support\Str::limit($plainDesc, 600) }}
-                                </div>
                                 @if(!empty($notice->document))
-                                    <div class="mt-2">
-                                        <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" rel="noopener" class="text-danger text-decoration-none small fw-semibold d-inline-flex align-items-center gap-1">
-                                            <i class="bi bi-paperclip" aria-hidden="true"></i>
-                                            View attachment
-                                        </a>
-                                    </div>
+                                <div class="mt-3 pt-2 border-top border-light-subtle">
+                                    <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" rel="noopener"
+                                        class="btn btn-sm btn-outline-danger rounded-pill">
+                                        <i class="bi bi-paperclip me-1" aria-hidden="true"></i>View attachment
+                                    </a>
+                                </div>
                                 @endif
                             </article>
                         @empty
-                            <div class="text-center text-muted py-4 rounded-3 bg-body-tertiary">
+                            <div class="comms-hub-empty-state text-center text-muted py-4">
                                 <i class="bi bi-inbox d-block mb-2 fs-3 opacity-50" aria-hidden="true"></i>
-                                <p class="small mb-0">No notices in this category.</p>
+                                <p class="small mb-0 fw-semibold">No notices in this category.</p>
                             </div>
                         @endforelse
+                        </div>
                     </div>
                 @endforeach
             </div>
