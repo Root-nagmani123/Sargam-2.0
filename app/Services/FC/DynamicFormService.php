@@ -21,6 +21,28 @@ class DynamicFormService
     /** @var array<string, string|null> */
     protected static array $columnTypeCache = [];
 
+    /** @var array<string, string> Per-table user-column name cache (migration-safe). */
+    protected static array $userColCache = [];
+
+    /**
+     * Resolve the user-identifier column name for a given table.
+     * Delegates to the global fc_user_col() helper.
+     */
+    private function userCol(string $table): string
+    {
+        return fc_user_col($table);
+    }
+
+    /**
+     * Resolve the correct user-identifier VALUE for a given table.
+     * Post-migration returns $userId (int); pre-migration resolves the
+     * username string via fc_user_val() (looks up user_credentials.user_name).
+     */
+    private function userVal(string $table, int $userId): string|int
+    {
+        return fc_user_val($table, $userId);
+    }
+
     /**
      * Get a form by slug.
      */
@@ -270,39 +292,42 @@ class DynamicFormService
     /**
      * Get existing data for a step from its target table.
      */
-    public function getExistingData(string $stepSlug, string $username): ?object
+    public function getExistingData(string $stepSlug, int $userId): ?object
     {
         $step = $this->getStep($stepSlug);
         if (! $step) {
             return null;
         }
-        return DB::table($step->target_table)->where('username', $username)->first();
+        $t = $step->target_table;
+        return DB::table($t)->where($this->userCol($t), $this->userVal($t, $userId))->first();
     }
 
     /**
      * Get existing rows for a repeatable group.
      */
-    public function getExistingGroupRows(FcFormFieldGroup $group, string $username): Collection
+    public function getExistingGroupRows(FcFormFieldGroup $group, int $userId): Collection
     {
         if ($group->target_table === 'fc_pre_history') {
-            $course = $this->registrationPreMedicalCourse($username);
+            $course = $this->registrationPreMedicalCourse($userId);
+            $col = $this->userCol('fc_pre_history');
             $row = DB::table('fc_pre_history')
-                ->where('userid', $username)
+                ->where($col, $this->userVal('fc_pre_history', $userId))
                 ->where('course', $course)
                 ->first();
 
             return $row ? collect([$row]) : collect();
         }
 
-        return collect(DB::table($group->target_table)->where('username', $username)->get());
+        $t = $group->target_table;
+        return collect(DB::table($t)->where($this->userCol($t), $this->userVal($t, $userId))->get());
     }
 
     /**
      * Session/course label for fc_pre_history (matches RegistrationStep3Controller).
      */
-    public function registrationPreMedicalCourse(string $username): string
+    public function registrationPreMedicalCourse(int $userId): string
     {
-        $first = StudentMasterFirst::with('session')->where('username', $username)->first();
+        $first = StudentMasterFirst::with('session')->where(fc_user_col('student_master_firsts'), fc_user_val('student_master_firsts', $userId))->first();
 
         return trim((string) ($first?->session?->session_name ?? ''));
     }
@@ -311,20 +336,20 @@ class DynamicFormService
      * Route validated data to correct target tables and save.
      * Handles file uploads as well.
      */
-    public function saveStepData(string $stepSlug, string $username, array $validatedData, $request = null, bool $markStepComplete = true): void
+    public function saveStepData(string $stepSlug, int $userId, array $validatedData, $request = null, bool $markStepComplete = true): void
     {
         $step   = $this->getStep($stepSlug);
         if (! $step) {
             return;
         }
 
-        $this->saveStepDataForStep($step, $username, $validatedData, $request, $markStepComplete);
+        $this->saveStepDataForStep($step, $userId, $validatedData, $request, $markStepComplete);
     }
 
     /**
      * Upload one document field (per-row Upload button) without marking the step complete.
      */
-    public function saveSingleFileField(FcFormStep $step, FcFormField $field, string $username, $request): void
+    public function saveSingleFileField(FcFormStep $step, FcFormField $field, int $userId, $request): void
     {
         if ($field->field_type !== 'file' || ! $request || ! $request->hasFile($field->field_name)) {
             throw \Illuminate\Validation\ValidationException::withMessages([
@@ -333,30 +358,33 @@ class DynamicFormService
         }
 
         $targetTable = $field->target_table ?: $step->target_table;
-        $path = $this->storeUploadedFieldFile($step, $field, $username, $request->file($field->field_name));
+        $path = $this->storeUploadedFieldFile($step, $field, $userId, $request->file($field->field_name));
+        $uCol = $this->userCol($targetTable);
+        $uVal = $this->userVal($targetTable, $userId);
 
         DB::table($targetTable)->updateOrInsert(
-            ['username' => $username],
+            [$uCol => $uVal],
             [
                 $field->target_column => $path,
                 'updated_at' => now(),
             ]
         );
 
-        $existing = DB::table($targetTable)->where('username', $username)->first();
+        $existing = DB::table($targetTable)->where($uCol, $uVal)->first();
         if ($existing && empty($existing->created_at)) {
-            DB::table($targetTable)->where('username', $username)->update(['created_at' => now()]);
+            DB::table($targetTable)->where($uCol, $uVal)->update(['created_at' => now()]);
         }
     }
 
-    public function documentStepRequiredFilesSatisfied(FcFormStep $step, string $username): bool
+    public function documentStepRequiredFilesSatisfied(FcFormStep $step, int $userId): bool
     {
         $fileFields = $step->activeFields->filter(fn ($f) => $f->field_type === 'file' && $f->is_required);
         if ($fileFields->isEmpty()) {
             return true;
         }
 
-        $row = DB::table($step->target_table)->where('username', $username)->first();
+        $t = $step->target_table;
+        $row = DB::table($t)->where($this->userCol($t), $this->userVal($t, $userId))->first();
         foreach ($fileFields as $field) {
             $col = $field->target_column ?: $field->field_name;
             if (! $row || blank($row->{$col} ?? null)) {
@@ -370,9 +398,9 @@ class DynamicFormService
     /**
      * Mark document step complete when every required file field has a stored path.
      */
-    public function syncDocumentStepCompletion(FcFormStep $step, string $username): void
+    public function syncDocumentStepCompletion(FcFormStep $step, int $userId): void
     {
-        if (! $this->documentStepRequiredFilesSatisfied($step, $username)) {
+        if (! $this->documentStepRequiredFilesSatisfied($step, $userId)) {
             return;
         }
 
@@ -387,12 +415,13 @@ class DynamicFormService
             $data[$step->completion_column] = 1;
         }
 
-        DB::table($step->target_table)->updateOrInsert(['username' => $username], $data);
+        $t = $step->target_table;
+        DB::table($t)->updateOrInsert([$this->userCol($t) => $this->userVal($t, $userId)], $data);
 
         if ($step->tracker_column && $form) {
             $trackerTable = $form->trackerStorageTable();
-            $userKey = $form->user_identifier ?: 'username';
-            $trackerKey = [$userKey => $username];
+            $userKey = fc_user_col($trackerTable);
+            $trackerKey = [$userKey => fc_user_val($trackerTable, $userId)];
             $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
             if (Schema::hasColumn($trackerTable, 'form_id')) {
                 $trackerKey['form_id'] = $form->id;
@@ -400,9 +429,11 @@ class DynamicFormService
             }
             DB::table($trackerTable)->updateOrInsert($trackerKey, $trackerData);
         }
+
+        app(FcRegistrationRegisteredSyncService::class)->syncForCredentialsUser($userId, $form);
     }
 
-    public function saveStepDataForStep(FcFormStep $step, string $username, array $validatedData, $request = null, bool $markStepComplete = true): void
+    public function saveStepDataForStep(FcFormStep $step, int $userId, array $validatedData, $request = null, bool $markStepComplete = true): void
     {
         $fields = $step->activeFields;
 
@@ -427,7 +458,7 @@ class DynamicFormService
                     $tableData[$targetTable][$field->target_column] = $this->storeUploadedFieldFile(
                         $step,
                         $field,
-                        $username,
+                        $userId,
                         $request->file($field->field_name)
                     );
                 }
@@ -465,24 +496,26 @@ class DynamicFormService
         }
 
         // Save to each target table
-        DB::transaction(function () use ($tableData, $username, $step, $markStepComplete) {
+        DB::transaction(function () use ($tableData, $userId, $step, $markStepComplete) {
             $form = $step->form;
 
             foreach ($tableData as $table => $data) {
-                $data['username'] = $username;
+                $uCol = $this->userCol($table);
+                $uVal = $this->userVal($table, $userId);
+                $data[$uCol] = $uVal;
 
                 if ($markStepComplete && $table === $step->target_table && $step->completion_column) {
                     $data[$step->completion_column] = 1;
                 }
 
                 DB::table($table)->updateOrInsert(
-                    ['username' => $username],
+                    [$uCol => $uVal],
                     array_merge($data, ['updated_at' => now()])
                 );
 
-                $existing = DB::table($table)->where('username', $username)->first();
+                $existing = DB::table($table)->where($uCol, $uVal)->first();
                 if ($existing && empty($existing->created_at)) {
-                    DB::table($table)->where('username', $username)->update(['created_at' => now()]);
+                    DB::table($table)->where($uCol, $uVal)->update(['created_at' => now()]);
                 }
             }
 
@@ -490,7 +523,7 @@ class DynamicFormService
                 $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
 
                 if ($step->step_slug === 'step1' || str_contains((string) $step->step_slug, 'step1')) {
-                    $step1Data = DB::table('student_master_firsts')->where('username', $username)->first();
+                    $step1Data = DB::table('student_master_firsts')->where(fc_user_col('student_master_firsts'), fc_user_val('student_master_firsts', $userId))->first();
                     if ($step1Data) {
                         $trackerData['full_name']    = $step1Data->full_name ?? null;
                         $trackerData['session_id']   = $step1Data->session_id ?? null;
@@ -501,8 +534,8 @@ class DynamicFormService
                 }
 
                 $trackerTable = $form->trackerStorageTable();
-                $userKey = $form->user_identifier ?: 'username';
-                $trackerKey = [$userKey => $username];
+                $userKey = fc_user_col($trackerTable);
+                $trackerKey = [$userKey => fc_user_val($trackerTable, $userId)];
                 if (Schema::hasColumn($trackerTable, 'form_id')) {
                     $trackerKey['form_id'] = $form->id;
                     $trackerData['form_id'] = $form->id;
@@ -517,12 +550,14 @@ class DynamicFormService
         if ($markStepComplete) {
             $fileFields = $fields->filter(fn ($f) => $f->field_type === 'file');
             if ($fileFields->count() === $fields->count() && $fileFields->isNotEmpty()) {
-                $this->syncDocumentStepCompletion($step, $username);
+                $this->syncDocumentStepCompletion($step, $userId);
             }
+
+            app(FcRegistrationRegisteredSyncService::class)->syncForCredentialsUser($userId, $step->form);
         }
     }
 
-    private function storeUploadedFieldFile(FcFormStep $step, FcFormField $field, string $username, $file): string
+    private function storeUploadedFieldFile(FcFormStep $step, FcFormField $field, int $userId, $file): string
     {
         $slug = (string) $step->step_slug;
         $subfolder = match (true) {
@@ -530,7 +565,7 @@ class DynamicFormService
             $slug === 'bank' || str_contains($slug, 'bank') => 'bank',
             default => '',
         };
-        $dir = 'uploads/'.$username.($subfolder !== '' ? '/'.$subfolder : '');
+        $dir = 'uploads/'.fc_upload_path_segment($userId).($subfolder !== '' ? '/'.$subfolder : '');
 
         return $file->storeAs(
             $dir,
@@ -542,14 +577,14 @@ class DynamicFormService
     /**
      * Save repeatable group data (delete-and-recreate or upsert).
      */
-    public function saveGroupData(FcFormFieldGroup $group, string $username, array $rows, ?Request $request = null): void
+    public function saveGroupData(FcFormFieldGroup $group, int $userId, array $rows, ?Request $request = null): void
     {
         $fields = $group->activeGroupFields->isNotEmpty()
             ? $group->activeGroupFields
             : $group->groupFields;
 
         if ($group->target_table === 'fc_pre_history') {
-            $this->saveFcPreHistoryGroup($group, $username, $rows, $fields, $request);
+            $this->saveFcPreHistoryGroup($group, $userId, $rows, $fields, $request);
 
             return;
         }
@@ -562,33 +597,34 @@ class DynamicFormService
             }
         }
 
-        DB::transaction(function () use ($group, $username, $rows, $fields) {
+        DB::transaction(function () use ($group, $userId, $rows, $fields) {
+            $gt = $group->target_table;
+            $uCol = $this->userCol($gt);
+            $uVal = $this->userVal($gt, $userId);
+
             if ($group->save_mode === 'replace_all') {
-                DB::table($group->target_table)->where('username', $username)->delete();
+                DB::table($gt)->where($uCol, $uVal)->delete();
 
                 foreach ($rows as $row) {
-                    $data = ['username' => $username, 'created_at' => now(), 'updated_at' => now()];
+                    $data = [$uCol => $uVal, 'created_at' => now(), 'updated_at' => now()];
                     foreach ($fields as $field) {
                         $value = $row[$field->field_name] ?? null;
                         $data[$field->target_column] = $this->normalizeGroupFieldStoredValue($field, $value);
                     }
-                    DB::table($group->target_table)->insert($data);
+                    DB::table($gt)->insert($data);
                 }
             } else {
                 // upsert mode (single-row tables like spouse, hobbies)
-                $data = ['username' => $username, 'updated_at' => now()];
+                $data = [$uCol => $uVal, 'updated_at' => now()];
                 $row  = $rows[0] ?? [];
                 foreach ($fields as $field) {
                     $value = $row[$field->field_name] ?? null;
                     $data[$field->target_column] = $this->normalizeGroupFieldStoredValue($field, $value);
                 }
-                DB::table($group->target_table)->updateOrInsert(
-                    ['username' => $username],
-                    $data
-                );
-                $existing = DB::table($group->target_table)->where('username', $username)->first();
+                DB::table($gt)->updateOrInsert([$uCol => $uVal], $data);
+                $existing = DB::table($gt)->where($uCol, $uVal)->first();
                 if ($existing && ! $existing->created_at) {
-                    DB::table($group->target_table)->where('username', $username)->update(['created_at' => now()]);
+                    DB::table($gt)->where($uCol, $uVal)->update(['created_at' => now()]);
                 }
             }
         });
@@ -624,13 +660,15 @@ class DynamicFormService
      */
     private function saveFcPreHistoryGroup(
         FcFormFieldGroup $group,
-        string $username,
+        int $userId,
         array $rows,
         Collection $fields,
         ?Request $request
     ): void {
-        $course = $this->registrationPreMedicalCourse($username);
+        $course = $this->registrationPreMedicalCourse($userId);
         $row = $rows[0] ?? [];
+        $uCol = $this->userCol('fc_pre_history');
+        $uVal = $this->userVal('fc_pre_history', $userId);
 
         foreach ($fields as $field) {
             if ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
@@ -638,10 +676,10 @@ class DynamicFormService
             }
         }
 
-        $existing = FcPreHistory::where('userid', $username)->where('course', $course)->first();
+        $existing = FcPreHistory::where($uCol, $uVal)->where('course', $course)->first();
 
         $payload = [
-            'userid' => $username,
+            $uCol    => $uVal,
             'course' => $course,
             'status' => 1,
         ];
@@ -674,7 +712,7 @@ class DynamicFormService
                 if ($file->isValid()) {
                     $stored = $file->storeAs(
                         'fc/pre_history',
-                        $username.'_'.uniqid('', true).'.'.$file->getClientOriginalExtension(),
+                        $userId.'_'.uniqid('', true).'.'.$file->getClientOriginalExtension(),
                         'public'
                     );
                     $docPath = 'storage/'.$stored;
@@ -686,7 +724,7 @@ class DynamicFormService
         }
 
         FcPreHistory::updateOrCreate(
-            ['userid' => $username, 'course' => $course],
+            [$uCol => $uVal, 'course' => $course],
             $payload
         );
     }

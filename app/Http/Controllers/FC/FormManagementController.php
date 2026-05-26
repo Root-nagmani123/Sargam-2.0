@@ -156,8 +156,8 @@ class FormManagementController extends Controller
         $sourceFormId = $validated['source_form_id'] ?? null;
         unset($validated['source_form_id']);
 
-        $validated['icon']            = $validated['icon'] ?: 'bi-file-text';
-        $validated['user_identifier'] = $validated['user_identifier'] ?: 'username';
+        $validated['icon']            = $validated['icon'] ?? 'bi-file-text';
+        $validated['user_identifier'] = $validated['user_identifier'] ?? 'user_id';
         $validated['is_active']       = 1;
 
         $form = FcForm::create($validated);
@@ -280,7 +280,7 @@ class FormManagementController extends Controller
         $validated['form_id']     = $form->id;
         $validated['step_number'] = ($form->steps()->max('step_number') ?? 0) + 1;
         $validated['is_active']   = 1;
-        $validated['icon']        = $validated['icon'] ?: 'bi-file-text';
+        $validated['icon']        = $validated['icon'] ?? 'bi-file-text';
 
         unset($validated['has_groups']);
         FcFormStep::create($validated);

@@ -4,8 +4,8 @@ namespace App\Http\Controllers\FC;
 
 use App\DataTables\FC\FcTravelPlanReportDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\FC\FcForm;
 use App\Models\FC\FcTravelArrivalSlot;
-use App\Models\FC\SessionMaster;
 use App\Models\FC\StudentMaster;
 use App\Models\FC\StudentMasterFirst;
 use App\Models\FC\StudentTravelPlanMaster;
@@ -18,33 +18,42 @@ class TravelPlanReportController extends Controller
 {
     public function index(Request $request, FcTravelPlanReportDataTable $dataTable)
     {
-        $sessions = SessionMaster::orderByDesc('id')->get();
+        $forms = FcForm::query()
+            ->with('courseMaster:pk,course_name')
+            ->where('is_active', true)
+            ->orderBy('form_name')
+            ->get(['id', 'form_name', 'form_slug', 'course_master_pk']);
         $slots = FcTravelArrivalSlot::orderBy('sort_order')->orderBy('id')->get();
         $modes = ['By Air', 'By Road', 'By Train'];
+
+        $summaryBase = FcTravelPlanReportService::baseQuery();
+        FcTravelPlanReportService::applyFilters($summaryBase, $request);
         $summary = [
-            'total'     => StudentTravelPlanMaster::count(),
-            'submitted' => StudentTravelPlanMaster::where('is_submitted', 1)->count(),
-            'vehicle_yes' => StudentTravelPlanMaster::where('require_academy_vehicle', 1)->count(),
-            'vehicle_no'  => StudentTravelPlanMaster::where(function ($q) {
-                $q->where('require_academy_vehicle', 0)->orWhereNull('require_academy_vehicle');
+            'total'       => (clone $summaryBase)->count(),
+            'submitted'   => (clone $summaryBase)->where('tp.is_submitted', 1)->count(),
+            'vehicle_yes' => (clone $summaryBase)->where('tp.require_academy_vehicle', 1)->count(),
+            'vehicle_no'  => (clone $summaryBase)->where(function ($q) {
+                $q->where('tp.require_academy_vehicle', 0)->orWhereNull('tp.require_academy_vehicle');
             })->count(),
         ];
 
-        return $dataTable->render('admin.travel.index', compact('sessions', 'slots', 'modes', 'summary'));
+        return $dataTable->render('admin.travel.index', compact('forms', 'slots', 'modes', 'summary') + [
+            'scopedForm' => $request->filled('form_id') ? FcForm::find((int) $request->input('form_id')) : null,
+        ]);
     }
 
-    public function show(string $username)
+    public function show(int $userId)
     {
-        $plan = StudentTravelPlanMaster::where('username', $username)
+        $plan = StudentTravelPlanMaster::forUser($userId)
             ->with(['fcArrivalSlot'])
             ->firstOrFail();
 
-        $step1 = StudentMasterFirst::where('username', $username)->first();
-        $studentMaster = StudentMaster::where('username', $username)->first();
+        $step1 = StudentMasterFirst::forUser($userId)->first();
+        $studentMaster = StudentMaster::forUser($userId)->first();
 
         $displayName = trim((string) ($step1?->full_name ?? '')) !== ''
             ? $step1->full_name
-            : (trim((string) ($studentMaster?->full_name ?? '')) !== '' ? $studentMaster->full_name : $username);
+            : (trim((string) ($studentMaster?->full_name ?? '')) !== '' ? $studentMaster->full_name : (string) $userId);
         $displayMobile = $step1?->mobile_no;
 
         $rollS1 = trim((string) ($step1?->roll_no ?? ''));
@@ -54,16 +63,16 @@ class TravelPlanReportController extends Controller
         return view('admin.travel.show', compact(
             'plan',
             'step1',
-            'username',
+            'userId',
             'displayCode',
             'displayName',
             'displayMobile'
         ));
     }
 
-    public function edit(string $username)
+    public function edit(int $userId)
     {
-        $plan = StudentTravelPlanMaster::where('username', $username)->firstOrFail();
+        $plan = StudentTravelPlanMaster::forUser($userId)->firstOrFail();
         $slots = FcTravelArrivalSlot::query()
             ->where('is_active', true)
             ->whereNotNull('slot_date')
@@ -78,23 +87,23 @@ class TravelPlanReportController extends Controller
             ->unique()
             ->values();
 
-        $step1 = StudentMasterFirst::where('username', $username)->first();
-        $studentMaster = StudentMaster::where('username', $username)->first();
+        $step1 = StudentMasterFirst::forUser($userId)->first();
+        $studentMaster = StudentMaster::forUser($userId)->first();
         $displayName = trim((string) ($step1?->full_name ?? ''))
-            ?: (trim((string) ($studentMaster?->full_name ?? '')) ?: $username);
+            ?: (trim((string) ($studentMaster?->full_name ?? '')) ?: (string) $userId);
 
         return view('admin.travel.edit', compact(
             'plan',
-            'username',
+            'userId',
             'slots',
             'availableDates',
             'displayName'
         ));
     }
 
-    public function update(Request $request, string $username)
+    public function update(Request $request, int $userId)
     {
-        $plan = StudentTravelPlanMaster::where('username', $username)->firstOrFail();
+        $plan = StudentTravelPlanMaster::forUser($userId)->firstOrFail();
 
         $validated = $request->validate([
             'joining_date'              => 'required|date',
@@ -115,7 +124,7 @@ class TravelPlanReportController extends Controller
         if (! $slot->slot_date || $slot->slot_date->format('Y-m-d') !== $validated['joining_date']) {
             return back()->withInput()->with('error', 'Please select a slot for the chosen arrival date.');
         }
-        if (! $slot->hasRoomForUser($username)) {
+        if (! $slot->hasRoomForUser($userId)) {
             return back()->withInput()->with('error', 'This time slot is full. Please pick another slot.');
         }
 
@@ -129,7 +138,7 @@ class TravelPlanReportController extends Controller
             'special_requirements'      => $validated['special_requirements'] ?? null,
         ]);
 
-        return redirect()->route('admin.travel.show', $username)
+        return redirect()->route('admin.travel.show', $userId)
             ->with('success', 'Travel plan updated successfully.');
     }
 
@@ -137,7 +146,8 @@ class TravelPlanReportController extends Controller
     {
         $q = FcTravelPlanReportService::baseQuery();
         FcTravelPlanReportService::applyFilters($q, $request);
-        $rows = $q->orderByRaw("COALESCE(NULLIF(TRIM(s1.full_name), ''), NULLIF(TRIM(sm.full_name), ''), tp.username)")->get();
+        $rows = $q->orderByRaw("COALESCE(NULLIF(TRIM(s1.full_name), ''), NULLIF(TRIM(sm.full_name), ''), tp.user_id) ASC")
+            ->get();
 
         $filterDescription = FcTravelPlanReportService::exportFilterDescription($request);
         $fileName = 'fc_travel_joining_'.now()->format('Ymd_His').'.xlsx';

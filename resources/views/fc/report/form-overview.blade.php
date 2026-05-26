@@ -17,21 +17,18 @@
             </small>
         </div>
         <div class="d-flex gap-2 flex-wrap">
-            {{-- Form-specific aggregated reports (only available for the original fc-registration form) --}}
-            @if($form->form_slug === 'fc-registration')
-                <a href="{{ route('admin.reports.service') }}"   class="btn btn-sm btn-outline-primary"><i class="bi bi-briefcase me-1"></i>By Service</a>
-                <a href="{{ route('admin.reports.state') }}"     class="btn btn-sm btn-outline-primary"><i class="bi bi-geo-alt me-1"></i>By State</a>
-                <a href="{{ route('admin.reports.documents') }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-check me-1"></i>Documents</a>
-                <a href="{{ route('admin.reports.bank') }}"      class="btn btn-sm btn-outline-primary"><i class="bi bi-bank me-1"></i>Bank Details</a>
-                <a href="{{ route('admin.travel.index') }}"      class="btn btn-sm btn-outline-primary"><i class="bi bi-train-front me-1"></i>Travel Plans</a>
-                <a href="{{ route('admin.reports.export','overview') }}{{ request()->getQueryString() ? '?'.request()->getQueryString() : '' }}" class="btn btn-sm btn-success">
-                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
-                </a>
-            @else
-                <a href="{{ route('admin.reports.form.export', $form) }}{{ request()->getQueryString() ? '?'.request()->getQueryString() : '' }}" class="btn btn-sm btn-success">
-                    <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
-                </a>
-            @endif
+            @php
+                $formScopeQuery = http_build_query(['form_id' => $form->id]);
+                $exportQuery = request()->getQueryString();
+            @endphp
+            <a href="{{ route('admin.reports.service') }}?{{ $formScopeQuery }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-briefcase me-1"></i>By Service</a>
+            <a href="{{ route('admin.reports.state') }}?{{ $formScopeQuery }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-geo-alt me-1"></i>By State</a>
+            <a href="{{ route('admin.reports.documents') }}?{{ $formScopeQuery }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-file-earmark-check me-1"></i>Documents</a>
+            <a href="{{ route('admin.reports.bank') }}?{{ $formScopeQuery }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-bank me-1"></i>Bank Details</a>
+            <a href="{{ route('admin.travel.index') }}?{{ $formScopeQuery }}" class="btn btn-sm btn-outline-primary"><i class="bi bi-train-front me-1"></i>Travel Plans</a>
+            <a href="{{ route('admin.reports.form.export', $form) }}{{ $exportQuery ? '?'.$exportQuery : '' }}" class="btn btn-sm btn-success">
+                <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
+            </a>
             <a href="{{ route('fc-reg.admin.forms.edit', $form) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-pencil-square me-1"></i>Edit Form
             </a>
@@ -56,6 +53,13 @@
                 <div><i class="bi bi-send-check-fill fs-4" style="color:#16a34a;"></i></div>
                 <div class="fw-bold" style="font-size:1.3rem;color:#16a34a;">{{ number_format($summary['submitted']) }}</div>
                 <div class="text-muted" style="font-size:.68rem;line-height:1.2;">Submitted</div>
+            </div>
+        </div>
+        <div class="col-6 col-sm-4 col-md-3 col-xl-auto" style="flex:1 1 100px">
+            <div class="card border-0 shadow-sm text-center py-2 px-2 h-100" style="border-radius:8px;">
+                <div><i class="bi bi-check-circle-fill fs-4" style="color:#059669;"></i></div>
+                <div class="fw-bold" style="font-size:1.3rem;color:#059669;">{{ number_format($summary['complete'] ?? 0) }}</div>
+                <div class="text-muted" style="font-size:.68rem;line-height:1.2;">Complete</div>
             </div>
         </div>
         <div class="col-6 col-sm-4 col-md-3 col-xl-auto" style="flex:1 1 100px">
@@ -185,12 +189,14 @@
                         <td class="text-center">
                             @if($s->status === 'SUBMITTED')
                                 <span class="badge bg-success" style="font-size:10px;">Submitted</span>
+                            @elseif($totalSteps > 0 && (int) ($s->steps_done ?? 0) >= $totalSteps)
+                                <span class="badge bg-success" style="font-size:10px;">Complete</span>
                             @else
                                 <span class="badge bg-warning text-dark" style="font-size:10px;">Incomplete</span>
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('admin.reports.student', $s->{$userKey}) . '?ref=' . urlencode(request()->fullUrl()) }}"
+                            <a href="{{ route('admin.reports.student', $s->route_user_id ?? $s->{$userKey}) . '?ref=' . urlencode(request()->fullUrl()) }}"
                                class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px;">
                                 <i class="bi bi-eye"></i>
                             </a>

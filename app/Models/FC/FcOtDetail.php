@@ -1,15 +1,17 @@
 <?php
 
 namespace App\Models\FC;
+use App\Models\FC\Concerns\FcUserAware;
 
 use Illuminate\Database\Eloquent\Model;
 
 class FcOtDetail extends Model
 {
+    use FcUserAware;
     protected $table = 'fc_ot_details';
 
     protected $fillable = [
-        'username',
+        'user_id', 'username',
         'otname',
         'otcode',
         'course',
@@ -38,12 +40,12 @@ class FcOtDetail extends Model
 
     public function activities()
     {
-        return $this->hasMany(FcOtActivity::class, 'username', 'username');
+        return $this->hasMany(FcOtActivity::class, 'user_id', 'username', 'user_id');
     }
 
     public function preHistory()
     {
-        return $this->hasMany(FcPreHistory::class, 'userid', 'username');
+        return $this->hasMany(FcPreHistory::class, 'user_id', 'username', 'user_id');
     }
 
     public function scopeActive($query)

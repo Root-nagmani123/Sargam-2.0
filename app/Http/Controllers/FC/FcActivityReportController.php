@@ -39,7 +39,7 @@ class FcActivityReportController extends Controller
 
         $ots = FcOtDetail::query()
             ->join('fc_otactivity_details', function ($join) use ($menuid) {
-                $join->on('fc_ot_details.username', '=', 'fc_otactivity_details.username')
+                $join->on('fc_ot_details.user_id', '=', 'fc_otactivity_details.user_id')
                     ->where('fc_otactivity_details.activity', '=', $menuid)
                     ->where('fc_otactivity_details.status', '=', 1);
             })
@@ -82,14 +82,14 @@ class FcActivityReportController extends Controller
             ->where('activity', $joinedCode)
             ->where('status', 1)
             ->distinct()
-            ->pluck('username')
+            ->pluck('user_id')
             ->flip()
             ->all();
 
         $rows = $allOts->map(fn ($ot) => [
             'otname' => $ot->otname,
             'otcode' => $ot->otcode,
-            'joined' => isset($joinedUsernameSet[$ot->username]),
+            'joined' => isset($joinedUsernameSet[$ot->user_id]),
         ]);
 
         $joinedCount = count($joinedUsernameSet);

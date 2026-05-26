@@ -13,8 +13,8 @@ class EnsureFcActivityMatrixAccess
 {
     public function handle(Request $request, Closure $next)
     {
-        if (! app(FcPostArrivalAccessService::class)->isCoordinator()) {
-            abort(403, 'Combined matrix is only available to coordinators.');
+        if (! app(FcPostArrivalAccessService::class)->canAccessActivityMatrix()) {
+            abort(403, 'Combined matrix is only available to FC activity coordinators.');
         }
 
         return $next($request);

@@ -8,6 +8,7 @@ use App\Models\FC\FcOtDetail;
 use App\Services\FC\FcPostArrivalAccessService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\Facades\DataTables;
 use Yajra\DataTables\Services\DataTable;
 
@@ -24,42 +25,44 @@ class FcActivitiesHomeDataTable extends DataTable
     public function dataTable($query)
     {
         $tbl = (new FcOtActivity)->getTable();
+        $actUserCol = fc_user_col('fc_otactivity_details');
+        $otUserCol = fc_user_col('fc_ot_details');
         $request = $this->request();
 
         return DataTables::eloquent($query)
-            ->filter(function (Builder $q) use ($request, $tbl) {
+            ->filter(function (Builder $q) use ($request, $tbl, $actUserCol) {
                 $kw = trim((string) data_get($request->input('search'), 'value', ''));
                 if ($kw === '') {
                     return true;
                 }
                 $like = '%'.addcslashes($kw, '%_\\').'%';
-                $q->where(function (Builder $w) use ($like, $tbl) {
+                $q->where(function (Builder $w) use ($like, $tbl, $actUserCol) {
                     $w->where($tbl.'.course', 'like', $like)
                         ->orWhere($tbl.'.activityval', 'like', $like)
                         ->orWhere($tbl.'.activitydt', 'like', $like)
-                        ->orWhere($tbl.'.username', 'like', $like)
+                        ->orWhere($tbl.'.'.$actUserCol, 'like', $like)
                         ->orWhereHas('ot', fn (Builder $qq) => $qq->where('otname', 'like', $like)->orWhere('otcode', 'like', $like))
                         ->orWhereHas('activityMaster', fn (Builder $qq) => $qq->where('menun', 'like', $like));
                 });
 
                 return false;
             })
-            ->orderColumn('ot_name', function (Builder $q, string $order) use ($tbl) {
+            ->orderColumn('ot_name', function (Builder $q, string $order) use ($tbl, $actUserCol, $otUserCol) {
                 $dir = strtolower($order) === 'asc' ? 'asc' : 'desc';
                 $q->orderBy(
                     FcOtDetail::query()
                         ->select('otname')
-                        ->whereColumn('username', $tbl.'.username')
+                        ->whereColumn($otUserCol, $tbl.'.'.$actUserCol)
                         ->limit(1),
                     $dir
                 );
             })
-            ->orderColumn('ot_code', function (Builder $q, string $order) use ($tbl) {
+            ->orderColumn('ot_code', function (Builder $q, string $order) use ($tbl, $actUserCol, $otUserCol) {
                 $dir = strtolower($order) === 'asc' ? 'asc' : 'desc';
                 $q->orderBy(
                     FcOtDetail::query()
                         ->select('otcode')
-                        ->whereColumn('username', $tbl.'.username')
+                        ->whereColumn($otUserCol, $tbl.'.'.$actUserCol)
                         ->limit(1),
                     $dir
                 );
@@ -118,17 +121,30 @@ class FcActivitiesHomeDataTable extends DataTable
 
     public function query(): Builder
     {
-        $user = Auth::user();
         $request = $this->request();
+        $submittedBy = trim((string) (Auth::user()?->user_name ?? ''));
 
-        $query = $this->activitiesGridBaseQuery($user->username, $this->access->departmentIdsForActivityEntry());
+        if ($submittedBy === '') {
+            return FcOtActivity::query()->whereRaw('0 = 1');
+        }
+
+        $query = $this->activitiesGridBaseQuery($submittedBy, $this->access->departmentIdsForActivityEntry());
 
         $tbl = (new FcOtActivity)->getTable();
-        $course = trim((string) $request->input('filter_course', ''));
+        $formId = trim((string) $request->input('filter_form_id', ''));
         $otcode = trim((string) $request->input('filter_otcode', ''));
         $menuid = trim((string) $request->input('filter_activity', ''));
 
-        $query->when($course !== '', fn (Builder $q) => $q->where($tbl.'.course', $course))
+        $query->when($formId !== '' && Schema::hasColumn('student_masters', 'form_id'), function (Builder $q) use ($formId, $tbl) {
+            $uCol = fc_user_col('fc_otactivity_details');
+            $smCol = fc_user_col('student_masters');
+            $q->whereExists(function ($sub) use ($formId, $tbl, $uCol, $smCol) {
+                $sub->selectRaw('1')
+                    ->from('student_masters as sm')
+                    ->whereColumn("sm.{$smCol}", "{$tbl}.{$uCol}")
+                    ->where('sm.form_id', (int) $formId);
+            });
+        })
             ->when($otcode !== '', fn (Builder $q) => $q->whereHas('ot', fn (Builder $qq) => $qq->where('otcode', 'like', '%'.$otcode.'%')))
             ->when($menuid !== '', fn (Builder $q) => $q->where($tbl.'.activity', $menuid));
 
@@ -141,10 +157,11 @@ class FcActivitiesHomeDataTable extends DataTable
     private function activitiesGridBaseQuery(string $submittedBy, ?array $deptIds): Builder
     {
         $tbl = (new FcOtActivity)->getTable();
+        $otUserCol = fc_user_col('fc_ot_details');
 
         $query = FcOtActivity::query()
             ->with([
-                'ot' => static fn ($q) => $q->select('username', 'otname', 'otcode', 'house', 'housen'),
+                'ot' => static fn ($q) => $q->select($otUserCol, 'otname', 'otcode', 'house', 'housen'),
                 'activityMaster' => static fn ($q) => $q->select('menuid', 'menun', 'department_id'),
             ])
             ->where($tbl.'.submitedby', $submittedBy)

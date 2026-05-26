@@ -45,7 +45,7 @@ class FcActivityStatusController extends Controller
             ->get(['id', 'menuid', 'menun']);
 
         $ots = FcOtDetail::query()->active()->orderBy('otcode')->get([
-            'username', 'otname', 'otcode', 'mobileno', 'service',
+            'user_id', 'otname', 'otcode', 'mobileno', 'service',
         ]);
 
         $menuids = $masters->pluck('menuid')->all();
@@ -53,8 +53,8 @@ class FcActivityStatusController extends Controller
         $actMap = FcOtActivity::query()
             ->where('status', 1)
             ->when($menuids !== [], fn ($q) => $q->whereIn('activity', $menuids))
-            ->get(['username', 'activity', 'activityval'])
-            ->groupBy('username')
+            ->get(['user_id', 'activity', 'activityval'])
+            ->groupBy('user_id')
             ->map(fn ($acts) => $acts->pluck('activityval', 'activity'));
 
         $columnDefs = $masters->map(fn ($m) => [
@@ -63,10 +63,10 @@ class FcActivityStatusController extends Controller
         ]);
 
         $rows = $ots->map(function ($ot) use ($actMap, $menuids) {
-            $vals = $actMap[$ot->username] ?? collect();
+            $vals = $actMap[$ot->user_id] ?? collect();
 
             return [
-                'username' => $ot->username,
+                'user_id' => $ot->user_id,
                 'otname' => $ot->otname,
                 'otcode' => $ot->otcode,
                 'mobileno' => $ot->mobileno,
@@ -113,25 +113,25 @@ class FcActivityStatusController extends Controller
 
         $columnDefs = $masters->map(fn ($row) => [
             'menuid' => $row['menuid'],
-            'header' => $row['dept_name'].' — '.$row['menun'],
+            'header' => FcActivityMaster::shortLabel($row['menun']),
         ]);
 
         $ots = FcOtDetail::query()->active()->orderBy('otcode')->get([
-            'username', 'otname', 'otcode',
+            'user_id', 'otname', 'otcode',
         ]);
 
         $actMap = FcOtActivity::query()
             ->where('status', 1)
             ->when($menuids !== [], fn ($q) => $q->whereIn('activity', $menuids))
-            ->get(['username', 'activity', 'activityval'])
-            ->groupBy('username')
+            ->get(['user_id', 'activity', 'activityval'])
+            ->groupBy('user_id')
             ->map(fn ($acts) => $acts->pluck('activityval', 'activity'));
 
         $rows = $ots->map(function ($ot) use ($actMap, $menuids) {
-            $vals = $actMap[$ot->username] ?? collect();
+            $vals = $actMap[$ot->user_id] ?? collect();
 
             return [
-                'username' => $ot->username,
+                'user_id' => $ot->user_id,
                 'otname' => $ot->otname,
                 'otcode' => $ot->otcode,
                 'activities' => array_combine(

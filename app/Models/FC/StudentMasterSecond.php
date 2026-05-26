@@ -1,12 +1,14 @@
 <?php
 namespace App\Models\FC;
+use App\Models\FC\Concerns\FcUserAware;
 use Illuminate\Database\Eloquent\Model;
 
 class StudentMasterSecond extends Model
 {
+    use FcUserAware;
     protected $table = 'student_master_seconds';
     protected $fillable = [
-        'username','category_id','religion_id','nationality','domicile_state',
+        'user_id', 'username','category_id','religion_id','nationality','domicile_state',
         'marital_status','blood_group','height_cm','weight_kg',
         'identification_mark1','identification_mark2',
         'perm_address_line1','perm_address_line2','perm_city','perm_state_id','perm_pincode','perm_country_id',

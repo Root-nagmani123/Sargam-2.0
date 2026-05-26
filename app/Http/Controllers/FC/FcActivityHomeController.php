@@ -5,8 +5,8 @@ namespace App\Http\Controllers\FC;
 use App\DataTables\FC\FcActivitiesHomeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcActivityMaster;
+use App\Models\FC\FcForm;
 use App\Models\FC\FcOtDetail;
-use App\Models\FC\SessionMaster;
 use App\Services\FC\FcPostArrivalAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,7 +28,7 @@ class FcActivityHomeController extends Controller
 
     /**
      * Server-side list of activities entered by the current user (scoped by department access).
-     * Query params: DataTables standard + filter_course, filter_otcode, filter_activity.
+     * Query params: DataTables standard + filter_form_id, filter_otcode, filter_activity.
      */
     public function dataTable(FcActivitiesHomeDataTable $dataTable): JsonResponse
     {
@@ -37,10 +37,17 @@ class FcActivityHomeController extends Controller
 
     public function ajaxCourses(): JsonResponse
     {
-        $courses = SessionMaster::query()
-            ->where('is_active', 1)
-            ->selectRaw('session_name as c_code, session_name as c_name')
-            ->get();
+        $forms = FcForm::query()
+            ->with('courseMaster:pk,course_name')
+            ->where('is_active', true)
+            ->orderBy('form_name')
+            ->get(['id', 'form_name', 'form_slug', 'course_master_pk']);
+
+        $courses = $forms->map(fn (FcForm $form) => [
+            'form_id' => $form->id,
+            'c_code' => trim((string) ($form->courseMaster?->course_name ?? $form->form_name)),
+            'c_name' => $form->form_name.($form->courseMaster?->course_name ? ' — '.$form->courseMaster->course_name : ''),
+        ])->values();
 
         return response()->json($courses);
     }
@@ -48,7 +55,7 @@ class FcActivityHomeController extends Controller
     public function ajaxOts(Request $request): JsonResponse
     {
         $course = $request->query('course', '');
-        $ots = FcOtDetail::active()->byCourse($course)->select('username', 'otname', 'otcode')->orderBy('otname')->get();
+        $ots = FcOtDetail::active()->byCourse($course)->select('user_id', 'otname', 'otcode')->orderBy('otname')->get();
 
         return response()->json($ots);
     }
@@ -65,7 +72,7 @@ class FcActivityHomeController extends Controller
 
         return response()->json([
             'name' => $ot->otname,
-            'username' => $ot->username,
+            'user_id' => $ot->user_id,
             'warning' => $course !== '' ? $ot->hasPreHistory($course) : $ot->hasPreHistory(),
         ]);
     }

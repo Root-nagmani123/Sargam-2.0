@@ -1,47 +1,108 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Import Students')
+@section('title', 'Migrate FC Students')
 
 @push('styles')
     <style>
-        body {
-            background-color: #f8f9fa;
+        #fc-migrate-page .enrollment-dt-wrap .dataTables_filter {
+            text-align: right;
         }
 
-        .card {
-            border-radius: 15px;
-            box-shadow: 0px 4px 20px rgba(0, 0, 0, 0.05);
+        #fc-migrate-page .enrollment-dt-wrap .dataTables_filter label {
+            font-weight: 600;
         }
 
-        .card-header {
-            background: linear-gradient(135deg, #0d6efd, #0a58ca);
-            color: white;
-            font-size: 1.25rem;
-            font-weight: bold;
-            border-radius: 15px 15px 0 0;
+        #fc-migrate-page thead th {
+            white-space: nowrap;
+            vertical-align: middle;
         }
 
-        .btn-primary {
-            padding: 10px 20px;
-            font-weight: 500;
-            font-size: 1rem;
-            border-radius: 8px;
-            transition: 0.3s;
+        #fc-migrate-page #fcMigrateStudentsTable thead tr:first-child th {
+            vertical-align: middle;
         }
 
-        .btn-primary:hover {
-            transform: scale(1.05);
+        #fc-migrate-page .migrate-select-th,
+        #fc-migrate-page .migrate-select-td {
+            width: 48px;
+            min-width: 48px;
+            max-width: 48px;
+            text-align: center !important;
+            vertical-align: middle !important;
+            padding-left: 0.5rem;
+            padding-right: 0.5rem;
         }
 
-        .status-message {
-            font-size: 0.95rem;
+        #fc-migrate-page .migrate-select-cell {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 1.25rem;
+        }
+
+        #fc-migrate-page .migrate-select-cell .form-check-input {
+            margin: 0;
+            float: none;
+            cursor: pointer;
+        }
+
+        /* White checkbox on dark blue table header (#004a93) */
+        #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th .migrate-header-checkbox,
+        #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th .js-migrate-select-all {
+            width: 1.125rem;
+            height: 1.125rem;
+            min-width: 1.125rem;
+            min-height: 1.125rem;
+            margin: 0;
+            cursor: pointer;
+            background-color: #ffffff !important;
+            border: 2px solid #ffffff !important;
+            box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35);
+            accent-color: #004a93;
+            --bs-form-check-bg: #ffffff;
+        }
+
+        #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th .migrate-header-checkbox:checked,
+        #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th .js-migrate-select-all:checked {
+            background-color: #ffffff !important;
+            border-color: #ffffff !important;
+            --bs-form-check-bg-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 20 20'%3e%3cpath fill='none' stroke='%23004a93' stroke-linecap='round' stroke-linejoin='round' stroke-width='3' d='M6 10l3 3l6-6'/%3e%3c/svg%3e");
+        }
+
+        #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th.sorting,
+        #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th.sorting_asc,
+        #fc-migrate-page #fcMigrateStudentsTable thead .migrate-select-th.sorting_desc {
+            background-image: none !important;
+            cursor: default;
+            padding-right: 0.5rem !important;
+        }
+
+        #fc-migrate-page #fcMigrateStudentsTable tbody .migrate-select-td .form-check-input {
+            accent-color: #004a93;
+        }
+
+        #fc-migrate-page #filter_course + .choices,
+        #fc-migrate-page #filter_services + .choices {
+            max-width: 100%;
+        }
+
+        #fc-migrate-page #filter_course + .choices .choices__inner,
+        #fc-migrate-page #filter_services + .choices .choices__inner {
+            min-height: calc(1.5em + 0.75rem + 2px);
+        }
+
+        #fc-migrate-page #filter_services + .choices .choices__list--multiple .choices__item {
+            margin-bottom: 0;
+            padding: 0.125rem 0.5rem;
+            font-size: 0.875rem;
         }
     </style>
 @endpush
 
 @section('setup_content')
-    <div class="container-fluid mt-5">
-        <x-breadcrum title="Import Students"></x-breadcrum>
+    @include('admin.partials.choices-bootstrap5')
+    <div id="fc-migrate-page" class="container-fluid choices-bs-scope">
+        <x-breadcrum title="Migrate FC Students" />
+
         @if (session('success'))
             <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
                 {{ session('success') }}
@@ -54,19 +115,206 @@
             </div>
         @endif
 
-        <div class="card mx-auto">
-            <div class="card-body text-center">
-                <p class="mb-4 text-muted status-message">
-                    Click the button below to import students from the source table into the system.
-                </p>
-                <form action="{{ route('admin.migrate.fc') }}" method="POST">
-                    @csrf
-                    <button type="submit" class="btn btn-primary">
-                        Migrate Students
-                    </button>
-                </form>
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-header">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <h4 class="mb-1">Migrate Students</h4>
+                        <p class="mb-0 text-muted small">
+                            Lists roster rows with <strong>is_registered = 1</strong> (form steps complete), staged credentials,
+                            and not yet in <strong>user_credentials</strong>. Use filters to find records, then migrate checked rows only.
+                        </p>
+                    </div>
+                </div>
+                <hr class="mb-0">
 
+                <div class="pt-3">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-md-3">
+                            <label for="filter_course" class="form-label">Course</label>
+                            <select id="filter_course" class="form-select" data-placeholder="All courses" data-search="true">
+                                <option value="">All courses</option>
+                                @foreach ($courses as $course)
+                                    <option value="{{ $course->pk }}"
+                                        data-short="{{ e($course->couse_short_name ?? '') }}">
+                                        {{ $course->course_name }}@if ($course->couse_short_name) ({{ $course->couse_short_name }})@endif
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-3">
+                            <label for="filter_services" class="form-label">Service</label>
+                            <select id="filter_services" class="form-select" name="filter_services[]" multiple
+                                data-placeholder="All services" data-search="true">
+                                @foreach ($services as $service)
+                                    <option value="{{ $service->pk }}"
+                                        data-short="{{ e($service->service_short_name ?? '') }}">
+                                        {{ $service->service_name }}@if ($service->service_short_name) ({{ $service->service_short_name }})@endif
+                                    </option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="col-md-4">
+                            <label for="filter_search" class="form-label">Quick search</label>
+                            <input type="text" id="filter_search" class="form-control"
+                                placeholder="Username, email, mobile, OT code, course/service short name…">
+                        </div>
+
+                        <div class="col-md-12 d-flex flex-wrap gap-2 align-items-center">
+                            <button type="button" id="filterBtn" class="btn btn-primary btn-sm">
+                                <i class="fas fa-filter"></i> Apply filters
+                            </button>
+                            <button type="button" id="resetFilterBtn" class="btn btn-outline-secondary btn-sm">
+                                Reset
+                            </button>
+                            <span class="text-muted small ms-2">
+                                Total matching: <strong id="migrateRecordCount">0</strong>
+                                · Selected: <strong id="migrateSelectedCount">0</strong>
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-body">
+                <form method="POST" action="{{ route('admin.migrate.fc') }}" id="migrateForm">
+                    @csrf
+                    <input type="hidden" name="selected_pks" id="selectedPksInput" value="">
+
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                        <h5 class="mb-0">
+                            Eligible records (<span id="migrateRecordCountHeader">0</span>)
+                        </h5>
+                        <button type="submit" class="btn btn-primary btn-sm" id="migrateSubmitBtn">
+                            <i class="bi bi-database-up"></i> Migrate selected
+                        </button>
+                    </div>
+
+                    <div class="table-responsive enrollment-dt-wrap">
+                        {!! $dataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100']) !!}
+                    </div>
+                </form>
             </div>
         </div>
     </div>
 @endsection
+
+@push('scripts')
+    {!! $dataTable->scripts() !!}
+    <script>
+        $(function() {
+            var migrateRoot = document.getElementById('fc-migrate-page');
+            if (migrateRoot && typeof window.initChoicesBootstrap5In === 'function') {
+                window.initChoicesBootstrap5In(migrateRoot);
+            }
+
+            var table = window.LaravelDataTables && window.LaravelDataTables['fcMigrateStudentsTable'];
+            if (!table) {
+                return;
+            }
+
+            function $migrateWrapper() {
+                return $('#fcMigrateStudentsTable').closest('.dataTables_wrapper');
+            }
+
+            function $migrateRowChecks() {
+                return $('#fcMigrateStudentsTable tbody .migrate-row-checkbox');
+            }
+
+            function $migrateHeaderChecks() {
+                return $migrateWrapper().find('thead .js-migrate-select-all');
+            }
+
+            function syncMigrateCheckboxState() {
+                var info = table.page.info();
+                $('#migrateRecordCount, #migrateRecordCountHeader').text(info.recordsTotal || 0);
+
+                var $rows = $migrateRowChecks();
+                var total = $rows.length;
+                var selected = $rows.filter(':checked').length;
+                var allChecked = total > 0 && selected === total;
+
+                $('#migrateSelectedCount').text(selected);
+                $migrateHeaderChecks().each(function() {
+                    this.checked = allChecked;
+                    this.indeterminate = selected > 0 && selected < total;
+                });
+            }
+
+            function setAllMigrateRowsChecked(checked) {
+                $migrateRowChecks().prop('checked', !!checked);
+                syncMigrateCheckboxState();
+            }
+
+            function reloadTable() {
+                table.ajax.reload(null, false);
+            }
+
+            $('#filterBtn').on('click', function() {
+                reloadTable();
+            });
+
+            $('#resetFilterBtn').on('click', function() {
+                $('#filter_course').val('');
+                $('#filter_search').val('');
+                var courseEl = document.getElementById('filter_course');
+                var servicesEl = document.getElementById('filter_services');
+                if (servicesEl) {
+                    $('#filter_services').val([]);
+                    if (typeof window.reinitChoicesBootstrap5 === 'function') {
+                        window.reinitChoicesBootstrap5(servicesEl);
+                    } else if (servicesEl._choicesBs && typeof servicesEl._choicesBs.removeActiveItems === 'function') {
+                        servicesEl._choicesBs.removeActiveItems();
+                    }
+                }
+                if (courseEl && typeof window.reinitChoicesBootstrap5 === 'function') {
+                    window.reinitChoicesBootstrap5(courseEl);
+                }
+                reloadTable();
+            });
+
+            $('#filter_search').on('keypress', function(e) {
+                if (e.which === 13) {
+                    e.preventDefault();
+                    reloadTable();
+                }
+            });
+
+            table.on('init.dt draw.dt', function() {
+                requestAnimationFrame(syncMigrateCheckboxState);
+            });
+
+            $migrateWrapper().on('change', 'thead .js-migrate-select-all', function() {
+                setAllMigrateRowsChecked(this.checked);
+            });
+
+            $('#fcMigrateStudentsTable').on('change', 'tbody .migrate-row-checkbox', function() {
+                syncMigrateCheckboxState();
+            });
+
+            $('#migrateForm').on('submit', function(e) {
+                var pks = [];
+                $('#fcMigrateStudentsTable tbody .migrate-row-checkbox:checked').each(function() {
+                    pks.push($(this).val());
+                });
+
+                if (!pks.length) {
+                    e.preventDefault();
+                    alert('Please select at least one eligible record to migrate.');
+                    return false;
+                }
+
+                if (!confirm('Migrate ' + pks.length + ' selected record(s)?')) {
+                    e.preventDefault();
+                    return false;
+                }
+
+                $('#selectedPksInput').val(pks.join(','));
+            });
+
+            requestAnimationFrame(syncMigrateCheckboxState);
+        });
+    </script>
+@endpush

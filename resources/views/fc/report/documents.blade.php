@@ -4,18 +4,12 @@
 <div class="container-fluid px-3">
     <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
         <h4 class="fw-bold mb-0" style="color:#1a3c6e;"><i class="bi bi-file-earmark-check me-2"></i>Document Checklist Report</h4>
-        <a href="{{ route('admin.reports.overview') }}" class="btn btn-sm btn-outline-secondary"><i class="bi bi-arrow-left me-1"></i>Back</a>
+        @include('fc.report.partials.scoped-form-back', ['scopedForm' => $scopedForm ?? null])
     </div>
 
     <form method="GET" class="card border-0 shadow-sm mb-3 px-3 py-2">
         <div class="row g-2 align-items-end">
-            <div class="col-md-3">
-                <label class="form-label small mb-1">Session</label>
-                <select name="session_id" class="form-select form-select-sm">
-                    <option value="">All Sessions</option>
-                    @foreach($sessions as $s)<option value="{{ $s->id }}" {{ request('session_id')==$s->id?'selected':'' }}>{{ $s->session_name }}</option>@endforeach
-                </select>
-            </div>
+            @include('fc.report.partials.form-filter-select', ['forms' => $forms])
             <div class="col-md-3">
                 <label class="form-label small mb-1">Doc Status</label>
                 <select name="doc_status" class="form-select form-select-sm">
@@ -49,13 +43,13 @@
                 <tbody>
                 @forelse($students as $i => $s)
                     @php
-                        $uploaded = $allUploaded[(string) $s->username] ?? $allUploaded[$s->username] ?? collect();
+                        $uploaded = $allUploaded[(string) $s->user_id] ?? collect();
                         $uploadedIds = $uploaded->pluck('document_master_id')->filter()->map(fn ($id) => (int) $id)->unique()->values()->all();
                         $totalUploaded = $uploaded->count();
                     @endphp
                     <tr>
                         <td class="px-3">{{ $i+1 }}</td>
-                        <td><code style="font-size:10px">{{ $s->username }}</code></td>
+                        <td><code style="font-size:10px">{{ $s->user_id }}</code></td>
                         <td style="white-space:nowrap">{{ $s->full_name }}</td>
                         <td><span class="badge bg-primary-subtle text-primary" style="font-size:9px;">{{ $s->service_code }}</span></td>
                         @foreach($docMasters as $dm)

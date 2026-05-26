@@ -38,6 +38,17 @@ class FcForm extends Model
     }
 
     /**
+     * Normalise user_identifier: treat legacy 'username' value as 'user_id' so
+     * code that reads $form->user_identifier always gets the correct column name
+     * even before the DB migration has been run.
+     */
+    public function getUserIdentifierAttribute(?string $value): string
+    {
+        $v = $value ?? '';
+        return ($v === '' || $v === 'username') ? 'user_id' : $v;
+    }
+
+    /**
      * Table where step tracker flags (e.g. step1_done) are written and read for dynamic forms.
      * When no consolidation table is configured, the app uses student_masters (same as DynamicFormService).
      */
@@ -88,12 +99,12 @@ class FcForm extends Model
     }
 
     /**
-     * FC form used for reports/PDF for a trainee (99th batch, legacy, etc.).
+     * FC form used for reports/PDF for a trainee — resolved via user_id.
      */
-    public static function resolveForUsername(string $username): ?self
+    public static function resolveForUserId(int $userId): ?self
     {
-        if ($username !== '' && Schema::hasTable('student_masters') && Schema::hasColumn('student_masters', 'form_id')) {
-            $formId = (int) (StudentMaster::where('username', $username)->value('form_id') ?? 0);
+        if ($userId > 0 && Schema::hasTable('student_masters') && Schema::hasColumn('student_masters', 'form_id')) {
+            $formId = (int) (StudentMaster::where(fc_user_col('student_masters'), fc_user_val('student_masters', $userId))->value('form_id') ?? 0);
             if ($formId > 0) {
                 $form = static::query()->whereKey($formId)->where('is_active', true)->first();
                 if ($form) {

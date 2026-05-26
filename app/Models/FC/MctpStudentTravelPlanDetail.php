@@ -9,7 +9,7 @@ class MctpStudentTravelPlanDetail extends Model
     protected $table = 'mctp_student_travel_plan_details';
 
     protected $fillable = [
-        'username', 'travel_plan_id', 'leg_number', 'leg_no',
+        'user_id', 'travel_plan_id', 'leg_number', 'leg_no',
         'from_station', 'to_station',
         'travel_mode', 'travel_mode_id',
         'travel_date', 'departure_time', 'arrival_time',
