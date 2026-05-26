@@ -315,7 +315,7 @@ class FcActivityMedicalController extends Controller
             ->firstOrFail();
 
         $required = filter_var($validated['consultation_required'], FILTER_VALIDATE_BOOLEAN);
-        $marker = Auth::user()->username ?? '';
+        $marker = Auth::user()->user_name ?? '' ?? '';
 
         $ot->forceFill([
             'consultation_required' => $required,
@@ -344,7 +344,7 @@ class FcActivityMedicalController extends Controller
             ->where('course', $request->string('course'))
             ->firstOrFail();
 
-        $preHistory = $this->resolvePreHistoryForOt($ot->username, (string) $ot->course);
+        $preHistory = $this->resolvePreHistoryForOt($ot->user_id, (string) $ot->course);
 
         $html = view('admin.fc-activities.medical.partials.pre-history-block', compact('preHistory'))->render();
 
@@ -386,10 +386,10 @@ class FcActivityMedicalController extends Controller
 
         $actCodes = $masters->pluck('menuid')->all();
 
-        $preHistory = $this->resolvePreHistoryForOt($ot->username, $course);
+        $preHistory = $this->resolvePreHistoryForOt($ot->user_id, $course);
 
         $activityRows = FcOtActivity::query()
-            ->where('username', $ot->username)
+            ->where(fc_user_col('fc_otactivity_details'), $ot->user_id)
             ->where(function ($q) use ($course) {
                 $q->where('course', $course)
                     ->orWhereRaw('TRIM(course) = ?', [trim($course)]);
@@ -444,8 +444,8 @@ class FcActivityMedicalController extends Controller
             }
         }
 
-        $pathReports = FcPathReport::where('userid', $ot->username)->where('course', $course)->get();
-        $finalFindings = FcFinalFinding::where('userid', $ot->username)->where('course', $course)->get();
+        $pathReports = FcPathReport::where(fc_user_col('fc_path_report'), $ot->user_id)->where('course', $course)->get();
+        $finalFindings = FcFinalFinding::where(fc_user_col('fc_final_findings'), $ot->user_id)->where('course', $course)->get();
 
         $vitalsOrdered = $masters->map(function (FcActivityMaster $m) use ($byActivity) {
             $rows = $byActivity->get($m->menuid, collect());
@@ -564,15 +564,15 @@ class FcActivityMedicalController extends Controller
      * Pre-history from registration is keyed by userid + course (session name).
      * Prefer exact course match; if missing, fall back to the latest row for this user (handles minor course string drift).
      */
-    private function resolvePreHistoryForOt(string $username, string $course): ?FcPreHistory
+    private function resolvePreHistoryForOt(int $userId, string $course): ?FcPreHistory
     {
         $course = trim($course);
-        $exact = FcPreHistory::where('userid', $username)->where('course', $course)->first();
+        $exact = FcPreHistory::forUser($userId)->where('course', $course)->first();
         if ($exact) {
             return $exact;
         }
         if ($course !== '') {
-            $normalized = FcPreHistory::where('userid', $username)
+            $normalized = FcPreHistory::forUser($userId)
                 ->whereRaw('TRIM(course) = ?', [$course])
                 ->first();
             if ($normalized) {
@@ -580,7 +580,7 @@ class FcActivityMedicalController extends Controller
             }
         }
 
-        return FcPreHistory::where('userid', $username)->orderByDesc('updated_at')->orderByDesc('id')->first();
+        return FcPreHistory::forUser($userId)->orderByDesc('updated_at')->orderByDesc('id')->first();
     }
 
     public function upload(Request $request): JsonResponse
@@ -609,22 +609,22 @@ class FcActivityMedicalController extends Controller
         }
 
         if (! $pathreport && $findings) {
-            $existing = FcPathReport::where('userid', $ot->username)->where('course', $request->course)->first();
+            $existing = FcPathReport::where(fc_user_col('fc_path_report'), $ot->user_id)->where('course', $request->course)->first();
             FcPathReport::updateOrCreate(
-                ['userid' => $ot->username, 'course' => $request->course],
+                [fc_user_col('fc_path_report') => $ot->user_id, 'course' => $request->course],
                 ['path_report' => $existing->path_report ?? null, 'status' => 1, 'submit_dt' => now()]
             );
             FcFinalFinding::create([
-                'userid' => $ot->username,
+                fc_user_col('fc_final_findings') => $ot->user_id,
                 'findings' => ucwords($findings),
                 'course' => $request->course,
-                'submited_by' => Auth::user()->username ?? '',
+                'submited_by' => Auth::user()->user_name ?? '' ?? '',
                 'status' => 1,
                 'submit_dt' => now(),
             ]);
         } elseif ($pathreport && ! $findings) {
             FcPathReport::create([
-                'userid' => $ot->username,
+                fc_user_col('fc_path_report') => $ot->user_id,
                 'path_report' => $pathreport,
                 'course' => $request->course,
                 'status' => 1,
@@ -632,17 +632,17 @@ class FcActivityMedicalController extends Controller
             ]);
         } else {
             FcPathReport::create([
-                'userid' => $ot->username,
+                fc_user_col('fc_path_report') => $ot->user_id,
                 'path_report' => $pathreport,
                 'course' => $request->course,
                 'status' => 1,
                 'submit_dt' => now(),
             ]);
             FcFinalFinding::create([
-                'userid' => $ot->username,
+                fc_user_col('fc_final_findings') => $ot->user_id,
                 'findings' => ucwords($findings),
                 'course' => $request->course,
-                'submited_by' => Auth::user()->username ?? '',
+                'submited_by' => Auth::user()->user_name ?? '' ?? '',
                 'status' => 1,
                 'submit_dt' => now(),
             ]);

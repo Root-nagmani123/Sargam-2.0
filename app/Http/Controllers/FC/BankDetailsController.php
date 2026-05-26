@@ -14,10 +14,10 @@ class BankDetailsController extends Controller
 
     public function show()
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
         // Guard: Step 3 must be done
-        $step3Done = StudentMaster::where('username', $username)->value('step3_done');
+        $step3Done = StudentMaster::forUser($userId)->value('step3_done');
         if (! $step3Done) {
             return redirect()->route('fc-reg.registration.step3')
                 ->with('error', 'Please complete Step 3 before filling bank details.');
@@ -28,12 +28,12 @@ class BankDetailsController extends Controller
 
         // Fallback to original view if no dynamic fields configured
         if ($fields->isEmpty()) {
-            $bank = NewRegistrationBankDetailsMaster::where('username', $username)->first();
+            $bank = NewRegistrationBankDetailsMaster::forUser($userId)->first();
             return view('fc.registration.bank', compact('bank'));
         }
 
         $lookups      = $this->formService->getLookupData($fields);
-        $existingData = $this->formService->getExistingData('bank', $username);
+        $existingData = $this->formService->getExistingData('bank', $userId);
 
         return view('fc.registration.dynamic-step', [
             'step'         => $step,
@@ -47,26 +47,26 @@ class BankDetailsController extends Controller
 
     public function save(Request $request)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
         $fields   = $this->formService->getStepFields('bank');
 
         if ($fields->isEmpty()) {
-            return $this->saveLegacy($request, $username);
+            return $this->saveLegacy($request, $userId);
         }
 
         $rules     = $this->formService->buildValidationRules($fields);
         $validated = $request->validate($rules);
 
-        $this->formService->saveStepData('bank', $username, $validated, $request);
+        $this->formService->saveStepData('bank', $userId, $validated, $request);
 
         // Mark bank_done on tracker
-        StudentMaster::where('username', $username)->update(['bank_done' => 1]);
+        StudentMaster::forUser($userId)->update(['bank_done' => 1]);
 
         return redirect()->route('fc-reg.registration.travel')
             ->with('success', 'Bank details saved. Please complete your travel plan next.');
     }
 
-    private function saveLegacy(Request $request, string $username)
+    private function saveLegacy(Request $request, int $userId)
     {
         $validated = $request->validate([
             'bank_name'           => 'required|string|max:200',
@@ -82,17 +82,17 @@ class BankDetailsController extends Controller
         if ($request->hasFile('bank_passbook')) {
             $file = $request->file('bank_passbook');
             $validated['bank_passbook_path'] = $file->storeAs(
-                "uploads/{$username}/bank",
+                "uploads/{$userId}/bank",
                 'passbook_' . time() . '.' . $file->extension(),
                 'public'
             );
         }
 
         unset($validated['account_no_confirm'], $validated['bank_passbook']);
-        $validated['username'] = $username;
+        $validated[fc_user_col('new_registration_bank_details_masters')] = fc_user_val('new_registration_bank_details_masters', $userId);
 
-        NewRegistrationBankDetailsMaster::updateOrCreate(['username' => $username], $validated);
-        StudentMaster::where('username', $username)->update(['bank_done' => 1]);
+        NewRegistrationBankDetailsMaster::updateOrCreate([fc_user_col('new_registration_bank_details_masters') => fc_user_val('new_registration_bank_details_masters', $userId)], $validated);
+        StudentMaster::forUser($userId)->update(['bank_done' => 1]);
 
         return redirect()->route('fc-reg.registration.travel')
             ->with('success', 'Bank details saved. Please complete your travel plan next.');

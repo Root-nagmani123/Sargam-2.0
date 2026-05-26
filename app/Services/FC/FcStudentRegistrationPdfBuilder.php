@@ -19,7 +19,7 @@ class FcStudentRegistrationPdfBuilder
         public Collection $employments,
         public Collection $languages,
         public Collection $additionalDynamicFields,
-        public string $username,
+        public int $userId,
     ) {}
 
     /**
@@ -124,7 +124,7 @@ class FcStudentRegistrationPdfBuilder
         $s1 = $this->step1;
 
         return $this->filterEmptyRows([
-            ['en' => 'Username / OT ID', 'hi' => 'उपयोगकर्ता नाम', 'value' => $this->username],
+            ['en' => 'Username / OT ID', 'hi' => 'उपयोगकर्ता नाम', 'value' => $this->userId],
             ['en' => 'Full name', 'hi' => 'पूरा नाम', 'value' => $s1->full_name ?? null],
             ['en' => 'Roll number', 'hi' => 'अनुक्रमांक', 'value' => $s1->roll_no ?? null],
             ['en' => 'Session / course', 'hi' => 'सत्र / पाठ्यक्रम', 'value' => $s1->session->session_name ?? null],

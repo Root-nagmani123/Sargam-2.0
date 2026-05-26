@@ -27,9 +27,9 @@ class RegistrationStep3Controller extends Controller
     // ── SHOW Step 3 (tabbed form) ────────────────────────────────────
     public function showStep3()
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
-        $step2 = StudentMasterSecond::where('username', $username)
+        $step2 = StudentMasterSecond::forUser($userId)
             ->where('step2_completed', 1)->first();
         if (! $step2) {
             return redirect()->route('fc-reg.registration.step2')
@@ -41,7 +41,7 @@ class RegistrationStep3Controller extends Controller
 
         // If no dynamic groups configured, fall back to original view
         if ($groups->isEmpty()) {
-            return $this->showStep3Legacy($username);
+            return $this->showStep3Legacy($userId);
         }
 
         // Fetch existing data for each group
@@ -50,7 +50,7 @@ class RegistrationStep3Controller extends Controller
         $completedGroups = [];
 
         foreach ($groups as $group) {
-            $rows = $this->formService->getExistingGroupRows($group, $username);
+            $rows = $this->formService->getExistingGroupRows($group, $userId);
             $existingRows[$group->group_name] = $rows;
             $completedGroups[$group->group_name] = $rows->isNotEmpty();
             $fieldsForLookups = $group->activeGroupFields->isNotEmpty()
@@ -67,7 +67,7 @@ class RegistrationStep3Controller extends Controller
     // ── SAVE a dynamic group ─────────────────────────────────────────
     public function saveGroup(Request $request, FcFormFieldGroup $group)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
         // Build validation rules from the group's field definitions
         $rules     = $this->formService->buildGroupValidationRules($group);
@@ -80,7 +80,7 @@ class RegistrationStep3Controller extends Controller
             $rows = [$validated[$group->group_name] ?? $validated];
         }
 
-        $this->formService->saveGroupData($group, $username, $rows, $request);
+        $this->formService->saveGroupData($group, $userId, $rows, $request);
 
         // Check if this is the last group (module choice) — mark step3 done
         $step       = $group->step;
@@ -88,7 +88,7 @@ class RegistrationStep3Controller extends Controller
         $lastGroup  = $allGroups->last();
 
         if ($group->id === $lastGroup->id) {
-            StudentMaster::where('username', $username)->update(['step3_done' => 1]);
+            StudentMaster::forUser($userId)->update(['step3_done' => 1]);
             return redirect()->route('fc-reg.registration.bank')
                 ->with('success', 'Step 3 completed. Please fill in bank details.');
         }
@@ -100,20 +100,20 @@ class RegistrationStep3Controller extends Controller
     // LEGACY METHODS (fallback when no dynamic config exists)
     // ═══════════════════════════════════════════════════════════════════
 
-    private function showStep3Legacy(string $username)
+    private function showStep3Legacy(int $userId)
     {
-        $qualifications    = StudentMasterQualificationDetails::where('username', $username)->get();
-        $higherEdus        = StudentMasterHigherEducationalDetails::where('username', $username)->get();
-        $employments       = StudentMasterEmploymentDetails::where('username', $username)->get();
-        $spouse            = StudentMasterSpouseMaster::where('username', $username)->first();
-        $languages         = StudentMasterLanguageKnown::where('username', $username)->with('language')->get();
-        $hindi             = StudentKnowledgeHindiMaster::where('username', $username)->first();
-        $hobbies           = StudentMasterHobbiesDetails::where('username', $username)->first();
-        $skills            = StudentSkillDetailsMaster::where('username', $username)->get();
-        $distinctions      = StudentMasterAcademicDistinction::where('username', $username)->get();
-        $sportsPlayed      = StudentSportsFitnessTeachMaster::where('username', $username)->with('sport')->get();
-        $sportsTrg         = StudentSportsTrgTeachMaster::where('username', $username)->with('sport')->get();
-        $moduleChoice      = StudentMasterModuleMaster::where('username', $username)->first();
+        $qualifications    = StudentMasterQualificationDetails::forUser($userId)->get();
+        $higherEdus        = StudentMasterHigherEducationalDetails::forUser($userId)->get();
+        $employments       = StudentMasterEmploymentDetails::forUser($userId)->get();
+        $spouse            = StudentMasterSpouseMaster::forUser($userId)->first();
+        $languages         = StudentMasterLanguageKnown::forUser($userId)->with('language')->get();
+        $hindi             = StudentKnowledgeHindiMaster::forUser($userId)->first();
+        $hobbies           = StudentMasterHobbiesDetails::forUser($userId)->first();
+        $skills            = StudentSkillDetailsMaster::forUser($userId)->get();
+        $distinctions      = StudentMasterAcademicDistinction::forUser($userId)->get();
+        $sportsPlayed      = StudentSportsFitnessTeachMaster::forUser($userId)->with('sport')->get();
+        $sportsTrg         = StudentSportsTrgTeachMaster::forUser($userId)->with('sport')->get();
+        $moduleChoice      = StudentMasterModuleMaster::forUser($userId)->first();
 
         $qualificationMasters = QualificationMaster::all();
         $boardMasters         = BoardNameMaster::all();
@@ -123,8 +123,8 @@ class RegistrationStep3Controller extends Controller
         $sportsMasters        = SportsMaster::orderBy('sport_name')->get();
         $degreeMasters        = DB::table('degree_master')->orderBy('degree_name')->get();
 
-        $preMedicalCourse = $this->registrationSessionName($username);
-        $preMedical = FcPreHistory::where('userid', $username)->where('course', $preMedicalCourse)->first();
+        $preMedicalCourse = $this->registrationSessionName($userId);
+        $preMedical = FcPreHistory::where(fc_user_col('fc_pre_history'), fc_user_val('fc_pre_history', $userId))->where('course', $preMedicalCourse)->first();
 
         return view('fc.registration.step3', compact(
             'qualifications','higherEdus','employments','spouse','languages','hindi',
@@ -138,9 +138,9 @@ class RegistrationStep3Controller extends Controller
     /**
      * Session / course label for FC pre-history (matches fc_pre_history.course used post-arrival).
      */
-    private function registrationSessionName(string $username): string
+    private function registrationSessionName(int $userId): string
     {
-        $first = StudentMasterFirst::with('session')->where('username', $username)->first();
+        $first = StudentMasterFirst::with('session')->forUser($userId)->first();
 
         return trim((string) ($first?->session?->session_name ?? ''));
     }
@@ -151,8 +151,8 @@ class RegistrationStep3Controller extends Controller
      */
     public function savePreMedicalHistory(Request $request)
     {
-        $username = Auth::user()->username;
-        $course = $this->registrationSessionName($username);
+        $userId = Auth::id();
+        $course = $this->registrationSessionName($userId);
 
         $validated = $request->validate([
             'allergy_illness' => 'nullable|string|max:60000',
@@ -163,21 +163,21 @@ class RegistrationStep3Controller extends Controller
             'pre_med_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
         ]);
 
-        $existing = FcPreHistory::where('userid', $username)->where('course', $course)->first();
+        $existing = FcPreHistory::where(fc_user_col('fc_pre_history'), fc_user_val('fc_pre_history', $userId))->where('course', $course)->first();
 
         $docPath = $existing?->doc_path;
         if ($request->hasFile('pre_med_doc') && $request->file('pre_med_doc')->isValid()) {
             $file = $request->file('pre_med_doc');
             $stored = $file->storeAs(
                 'fc/pre_history',
-                $username.'_'.uniqid('', true).'.'.$file->getClientOriginalExtension(),
+                $userId.'_'.uniqid('', true).'.'.$file->getClientOriginalExtension(),
                 'public'
             );
             $docPath = 'storage/'.$stored;
         }
 
         FcPreHistory::updateOrCreate(
-            ['userid' => $username, 'course' => $course],
+            [fc_user_col('fc_pre_history') => fc_user_val('fc_pre_history', $userId), 'course' => $course],
             [
                 'allergy_illness' => $validated['allergy_illness'] ?? null,
                 'prolonged_medication' => $validated['prolonged_medication'] ?? null,
@@ -196,7 +196,7 @@ class RegistrationStep3Controller extends Controller
 
     public function saveQualifications(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'qualifications'                    => 'required|array|min:1',
             'qualifications.*.qualification_id' => 'required|exists:qualification_master,pk',
@@ -208,10 +208,10 @@ class RegistrationStep3Controller extends Controller
             'qualifications.*.stream_id'        => 'nullable|exists:stream_master,pk',
             'qualifications.*.subject_details'  => 'nullable|string|max:500',
         ]);
-        DB::transaction(function () use ($username, $validated) {
-            StudentMasterQualificationDetails::where('username', $username)->delete();
+        DB::transaction(function () use ($userId, $validated) {
+            StudentMasterQualificationDetails::forUser($userId)->delete();
             foreach ($validated['qualifications'] as $q) {
-                StudentMasterQualificationDetails::create(array_merge($q, ['username' => $username]));
+                StudentMasterQualificationDetails::create(array_merge($q, [fc_user_col('student_master_qualification_details') => fc_user_val('student_master_qualification_details', $userId)]));
             }
         });
         return back()->with('success', 'Qualification details saved.');
@@ -219,7 +219,7 @@ class RegistrationStep3Controller extends Controller
 
     public function saveHigherEducation(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'higher_edus'                   => 'nullable|array',
             'higher_edus.*.degree_type'     => 'required|exists:degree_master,pk',
@@ -228,10 +228,10 @@ class RegistrationStep3Controller extends Controller
             'higher_edus.*.year_of_passing' => 'required|digits:4',
             'higher_edus.*.percentage_cgpa' => 'nullable|string|max:20',
         ]);
-        DB::transaction(function () use ($username, $validated) {
-            StudentMasterHigherEducationalDetails::where('username', $username)->delete();
+        DB::transaction(function () use ($userId, $validated) {
+            StudentMasterHigherEducationalDetails::forUser($userId)->delete();
             foreach ($validated['higher_edus'] ?? [] as $h) {
-                StudentMasterHigherEducationalDetails::create(array_merge($h, ['username' => $username]));
+                StudentMasterHigherEducationalDetails::create(array_merge($h, [fc_user_col('student_master_higher_educational_details') => fc_user_val('student_master_higher_educational_details', $userId)]));
             }
         });
         return back()->with('success', 'Higher education details saved.');
@@ -239,7 +239,7 @@ class RegistrationStep3Controller extends Controller
 
     public function saveEmployment(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'employments'                     => 'nullable|array',
             'employments.*.organisation_name' => 'required|string|max:300',
@@ -249,11 +249,11 @@ class RegistrationStep3Controller extends Controller
             'employments.*.to_date'           => 'nullable|date|after:employments.*.from_date',
             'employments.*.is_current'        => 'nullable|boolean',
         ]);
-        DB::transaction(function () use ($username, $validated) {
-            StudentMasterEmploymentDetails::where('username', $username)->delete();
+        DB::transaction(function () use ($userId, $validated) {
+            StudentMasterEmploymentDetails::forUser($userId)->delete();
             foreach ($validated['employments'] ?? [] as $e) {
                 $e['is_current'] = $e['is_current'] ?? 0;
-                StudentMasterEmploymentDetails::create(array_merge($e, ['username' => $username]));
+                StudentMasterEmploymentDetails::create(array_merge($e, [fc_user_col('student_master_employment_details') => fc_user_val('student_master_employment_details', $userId)]));
             }
         });
         return back()->with('success', 'Employment details saved.');
@@ -261,7 +261,7 @@ class RegistrationStep3Controller extends Controller
 
     public function saveSpouse(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'spouse_name'         => 'nullable|string|max:200',
             'spouse_dob'          => 'nullable|date|before:today',
@@ -270,14 +270,14 @@ class RegistrationStep3Controller extends Controller
             'no_of_children'      => 'nullable|string|max:10',
             'children_details'    => 'nullable|string|max:500',
         ]);
-        $validated['username'] = $username;
-        StudentMasterSpouseMaster::updateOrCreate(['username' => $username], $validated);
+        $validated[fc_user_col('student_master_spouse_masters')] = fc_user_val('student_master_spouse_masters', $userId);
+        StudentMasterSpouseMaster::updateOrCreate([fc_user_col('student_master_spouse_masters') => fc_user_val('student_master_spouse_masters', $userId)], $validated);
         return back()->with('success', 'Spouse details saved.');
     }
 
     public function saveLanguages(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'languages'                    => 'required|array|min:1',
             'languages.*.language_id'      => 'required|' . $this->formService->languageMasterExistsRule(),
@@ -290,15 +290,15 @@ class RegistrationStep3Controller extends Controller
             'hindi_subject_studied'        => 'nullable|boolean',
             'highest_hindi_exam'           => 'nullable|string|max:150',
         ]);
-        DB::transaction(function () use ($username, $validated) {
-            StudentMasterLanguageKnown::where('username', $username)->delete();
+        DB::transaction(function () use ($userId, $validated) {
+            StudentMasterLanguageKnown::forUser($userId)->delete();
             foreach ($validated['languages'] as $l) {
                 $l['can_read']  = $l['can_read'] ?? 0;
                 $l['can_write'] = $l['can_write'] ?? 0;
                 $l['can_speak'] = $l['can_speak'] ?? 0;
-                StudentMasterLanguageKnown::create(array_merge($l, ['username' => $username]));
+                StudentMasterLanguageKnown::create(array_merge($l, [fc_user_col('student_master_language_knowns') => fc_user_val('student_master_language_knowns', $userId)]));
             }
-            StudentKnowledgeHindiMaster::updateOrCreate(['username' => $username], [
+            StudentKnowledgeHindiMaster::updateOrCreate([fc_user_col('student_knowledge_hindi_masters') => fc_user_val('student_knowledge_hindi_masters', $userId)], [
                 'medium_of_study'       => $validated['medium_of_study'] ?? null,
                 'hindi_medium_school'   => $validated['hindi_medium_school'] ?? 0,
                 'hindi_subject_studied' => $validated['hindi_subject_studied'] ?? 0,
@@ -310,7 +310,7 @@ class RegistrationStep3Controller extends Controller
 
     public function saveHobbies(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'hobbies'           => 'nullable|string',
             'special_skills'    => 'nullable|string',
@@ -320,16 +320,16 @@ class RegistrationStep3Controller extends Controller
             'skills.*.skill_level'  => 'nullable|string|max:100',
             'skills.*.year_acquired'=> 'nullable|digits:4',
         ]);
-        DB::transaction(function () use ($username, $validated) {
-            StudentMasterHobbiesDetails::updateOrCreate(['username' => $username], [
-                'username'          => $username,
+        DB::transaction(function () use ($userId, $validated) {
+            StudentMasterHobbiesDetails::updateOrCreate([fc_user_col('student_master_hobbies_details') => fc_user_val('student_master_hobbies_details', $userId)], [
+                fc_user_col('student_master_hobbies_details') => fc_user_val('student_master_hobbies_details', $userId),
                 'hobbies'           => $validated['hobbies'] ?? null,
                 'special_skills'    => $validated['special_skills'] ?? null,
                 'extra_curricular'  => $validated['extra_curricular'] ?? null,
             ]);
-            StudentSkillDetailsMaster::where('username', $username)->delete();
+            StudentSkillDetailsMaster::forUser($userId)->delete();
             foreach ($validated['skills'] ?? [] as $s) {
-                StudentSkillDetailsMaster::create(array_merge($s, ['username' => $username]));
+                StudentSkillDetailsMaster::create(array_merge($s, [fc_user_col('student_skill_details_masters') => fc_user_val('student_skill_details_masters', $userId)]));
             }
         });
         return back()->with('success', 'Hobbies and skills saved.');
@@ -337,7 +337,7 @@ class RegistrationStep3Controller extends Controller
 
     public function saveDistinctions(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'distinctions'                     => 'nullable|array',
             'distinctions.*.distinction_type'  => 'required|string|max:200',
@@ -345,10 +345,10 @@ class RegistrationStep3Controller extends Controller
             'distinctions.*.year'              => 'nullable|digits:4',
             'distinctions.*.awarding_body'     => 'nullable|string|max:200',
         ]);
-        DB::transaction(function () use ($username, $validated) {
-            StudentMasterAcademicDistinction::where('username', $username)->delete();
+        DB::transaction(function () use ($userId, $validated) {
+            StudentMasterAcademicDistinction::forUser($userId)->delete();
             foreach ($validated['distinctions'] ?? [] as $d) {
-                StudentMasterAcademicDistinction::create(array_merge($d, ['username' => $username]));
+                StudentMasterAcademicDistinction::create(array_merge($d, [fc_user_col('student_master_academic_distinctions') => fc_user_val('student_master_academic_distinctions', $userId)]));
             }
         });
         return back()->with('success', 'Academic distinctions saved.');
@@ -356,7 +356,7 @@ class RegistrationStep3Controller extends Controller
 
     public function saveSports(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'sports_played'              => 'nullable|array',
             'sports_played.*.sport_id'   => 'required|exists:sports_masters,id',
@@ -369,14 +369,14 @@ class RegistrationStep3Controller extends Controller
             'sports_training.*.duration'          => 'nullable|string|max:100',
             'sports_training.*.year'              => 'nullable|digits:4',
         ]);
-        DB::transaction(function () use ($username, $validated) {
-            StudentSportsFitnessTeachMaster::where('username', $username)->delete();
+        DB::transaction(function () use ($userId, $validated) {
+            StudentSportsFitnessTeachMaster::forUser($userId)->delete();
             foreach ($validated['sports_played'] ?? [] as $sp) {
-                StudentSportsFitnessTeachMaster::create(array_merge($sp, ['username' => $username]));
+                StudentSportsFitnessTeachMaster::create(array_merge($sp, [fc_user_col('student_sports_fitness_teach_masters') => fc_user_val('student_sports_fitness_teach_masters', $userId)]));
             }
-            StudentSportsTrgTeachMaster::where('username', $username)->delete();
+            StudentSportsTrgTeachMaster::forUser($userId)->delete();
             foreach ($validated['sports_training'] ?? [] as $st) {
-                StudentSportsTrgTeachMaster::create(array_merge($st, ['username' => $username]));
+                StudentSportsTrgTeachMaster::create(array_merge($st, [fc_user_col('student_sports_trg_teach_masters') => fc_user_val('student_sports_trg_teach_masters', $userId)]));
             }
         });
         return back()->with('success', 'Sports details saved.');
@@ -384,14 +384,14 @@ class RegistrationStep3Controller extends Controller
 
     public function saveModuleChoice(Request $request)
     {
-        $username  = Auth::user()->username;
+        $userId = Auth::id();
         $validated = $request->validate([
             'chosen_module' => 'required|string|max:100',
             'second_module' => 'nullable|string|max:100',
         ]);
-        $validated['username'] = $username;
-        StudentMasterModuleMaster::updateOrCreate(['username' => $username], $validated);
-        StudentMaster::where('username', $username)->update(['step3_done' => 1]);
+        $validated[fc_user_col('student_master_module_masters')] = fc_user_val('student_master_module_masters', $userId);
+        StudentMasterModuleMaster::updateOrCreate([fc_user_col('student_master_module_masters') => fc_user_val('student_master_module_masters', $userId)], $validated);
+        StudentMaster::forUser($userId)->update(['step3_done' => 1]);
         return redirect()->route('fc-reg.registration.bank')
             ->with('success', 'Step 3 completed. Please fill in bank details.');
     }

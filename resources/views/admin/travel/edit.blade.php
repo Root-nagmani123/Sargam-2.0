@@ -1,12 +1,12 @@
 @extends('admin.layouts.master')
-@section('title', 'Edit Travel Plan — '.($displayName ?? $username))
+@section('title', 'Edit Travel Plan — '.($displayName ?? $userId))
 
 @section('setup_content')
 <div class="container-fluid px-3">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb mb-0 small">
             <li class="breadcrumb-item"><a href="{{ route('admin.travel.index') }}">Travel Plans</a></li>
-            <li class="breadcrumb-item"><a href="{{ route('admin.travel.show', $username) }}">{{ $username }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ route('admin.travel.show', $userId) }}">{{ $displayName ?? $userId }}</a></li>
             <li class="breadcrumb-item active">Edit</li>
         </ol>
     </nav>
@@ -18,14 +18,14 @@
                     <h5 class="fw-bold mb-0" style="color:#1a3c6e;">
                         <i class="bi bi-pencil-square me-2"></i>Edit Travel Plan
                     </h5>
-                    <small class="text-muted">{{ $displayName ?? $username }}</small>
+                    <small class="text-muted">{{ $displayName ?? $userId }}</small>
                 </div>
                 <div class="card-body p-4">
                     @if(session('error'))
                         <div class="alert alert-danger small py-2">{{ session('error') }}</div>
                     @endif
 
-                    <form method="POST" action="{{ route('admin.travel.update', $username) }}">
+                    <form method="POST" action="{{ route('admin.travel.update', $userId) }}">
                         @csrf
                         @method('PUT')
 
@@ -49,9 +49,9 @@
                                     @foreach($slots as $s)
                                         @php
                                             $sel = (string) old('fc_travel_arrival_slot_id', $plan->fc_travel_arrival_slot_id) === (string) $s->id;
-                                            $noRoom = ! $s->hasRoomForUser($username) && ! $sel;
+                                            $noRoom = ! $s->hasRoomForUser($userId) && ! $sel;
                                             $cap = $s->max_capacity;
-                                            $other = $s->countOtherBookings($username);
+                                            $other = $s->countOtherBookings($userId);
                                             $left = $cap ? max(0, (int) $cap - $other) : null;
                                         @endphp
                                         @if($noRoom)
@@ -123,7 +123,7 @@
                         </div>
 
                         <div class="d-flex justify-content-between flex-wrap gap-2 border-top pt-3">
-                            <a href="{{ route('admin.travel.show', $username) }}" class="btn btn-outline-secondary btn-sm">Cancel</a>
+                            <a href="{{ route('admin.travel.show', $userId) }}" class="btn btn-outline-secondary btn-sm">Cancel</a>
                             <button type="submit" class="btn btn-success px-4">
                                 <i class="bi bi-save me-1"></i>Save Changes
                             </button>

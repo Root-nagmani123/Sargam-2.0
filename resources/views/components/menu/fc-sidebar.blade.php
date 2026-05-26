@@ -315,14 +315,12 @@
                     </a>
                 </li>
                 @endforeach
-                @if($fcActivityNavCoordinator ?? false)
                 <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.activities.status.matrix') ? 'active' : '' }}">
                     <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.activities.status.matrix') ? 'active' : '' }}"
                         href="{{ route('fc-reg.admin.activities.status.matrix') }}">
                         <span class="hide-menu small small-sm-normal text-nowrap">All departments (matrix)</span>
                     </a>
                 </li>
-                @endif
             </ul>
         @endif
 @include('components.menu.partials.panel-shell-close')

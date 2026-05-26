@@ -65,6 +65,20 @@ class FcActivityMaster extends Model
     }
 
     /**
+     * Display label without trailing "(Department)" suffix stored in menun.
+     */
+    public static function shortLabel(?string $menun): string
+    {
+        $label = trim((string) $menun);
+        if ($label === '') {
+            return '';
+        }
+        $stripped = preg_replace('/\s*\([^)]*\)\s*$/', '', $label);
+
+        return $stripped !== '' ? $stripped : $label;
+    }
+
+    /**
      * Activity menuid used for joined/arrival reporting (not-joined list, service-wise counts).
      * Uses the active master row whose menuid is the literal string `joined`.
      */

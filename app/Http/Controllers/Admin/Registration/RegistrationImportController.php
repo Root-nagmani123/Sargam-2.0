@@ -12,8 +12,12 @@ use Illuminate\Support\Facades\Session;
 use App\Exports\FcRegistrationExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\DataTables\FC\FcRegistrationMasterListDaTable;
+use App\Models\CourseMaster;
 use App\Models\FcRegistrationExportMaster as ModelsFcRegistrationExportMaster;
+use Carbon\Carbon;
+use App\Services\FC\FcRosterApplicationGuardService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\Rule;
 use Maatwebsite\Excel\Excel as ExcelFormat;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 use PhpOffice\PhpSpreadsheet\Style\Border;
@@ -254,17 +258,7 @@ class RegistrationImportController extends Controller
 
             if ($existingSameService) {
                 // ✅ Update existing record with same email & service
-                $existingSameService->update([
-                    'contact_no'        => $contactNo,
-                    'display_name'      => $row['display_name'] ?? null,
-                    'schema_id'         => $row['schema_id'] ?? null,
-                    'first_name'        => $row['first_name'] ?? null,
-                    'middle_name'       => $row['middle_name'] ?? null,
-                    'last_name'         => $row['last_name'] ?? null,
-                    'rank'              => $row['rank'] ?? null,
-                    'exam_year'         => $row['exam_year'] ?? null,
-                    'web_auth'          => $row['web_auth'] ?? null,
-                ]);
+                $existingSameService->update($this->mapTemplate1ImportAttributes($row, $contactNo, $serviceMaster));
                 continue;
             }
 
@@ -276,19 +270,10 @@ class RegistrationImportController extends Controller
 
             if ($existingDifferentService) {
                 // ✅ Insert new record since service changed
-                FcRegistrationMaster::create([
-                    'email'             => $email,
-                    'contact_no'        => $contactNo,
-                    'display_name'      => $row['display_name'] ?? null,
-                    'schema_id'         => $row['schema_id'] ?? null,
-                    'first_name'        => $row['first_name'] ?? null,
-                    'middle_name'       => $row['middle_name'] ?? null,
-                    'last_name'         => $row['last_name'] ?? null,
-                    'rank'              => $row['rank'] ?? null,
-                    'exam_year'         => $row['exam_year'] ?? null,
-                    'service_master_pk' => $serviceMaster,
-                    'web_auth'          => $row['web_auth'] ?? null,
-                ]);
+                FcRegistrationMaster::create(array_merge(
+                    ['email' => $email, 'service_master_pk' => $serviceMaster],
+                    $this->mapTemplate1ImportAttributes($row, $contactNo, $serviceMaster)
+                ));
                 continue;
             }
 
@@ -299,32 +284,13 @@ class RegistrationImportController extends Controller
 
             if ($existing) {
                 // ✅ Update existing record (same contact & email)
-                $existing->update([
-                    'display_name'      => $row['display_name'] ?? null,
-                    'schema_id'         => $row['schema_id'] ?? null,
-                    'first_name'        => $row['first_name'] ?? null,
-                    'middle_name'       => $row['middle_name'] ?? null,
-                    'last_name'         => $row['last_name'] ?? null,
-                    'rank'              => $row['rank'] ?? null,
-                    'exam_year'         => $row['exam_year'] ?? null,
-                    'service_master_pk' => $serviceMaster,
-                    'web_auth'          => $row['web_auth'] ?? null,
-                ]);
+                $existing->update($this->mapTemplate1ImportAttributes($row, $contactNo, $serviceMaster));
             } else {
                 // 4️⃣ Completely new record
-                FcRegistrationMaster::create([
-                    'email'             => $email,
-                    'contact_no'        => $contactNo,
-                    'display_name'      => $row['display_name'] ?? null,
-                    'schema_id'         => $row['schema_id'] ?? null,
-                    'first_name'        => $row['first_name'] ?? null,
-                    'middle_name'       => $row['middle_name'] ?? null,
-                    'last_name'         => $row['last_name'] ?? null,
-                    'rank'              => $row['rank'] ?? null,
-                    'exam_year'         => $row['exam_year'] ?? null,
-                    'service_master_pk' => $serviceMaster,
-                    'web_auth'          => $row['web_auth'] ?? null,
-                ]);
+                FcRegistrationMaster::create(array_merge(
+                    ['email' => $email, 'service_master_pk' => $serviceMaster],
+                    $this->mapTemplate1ImportAttributes($row, $contactNo, $serviceMaster)
+                ));
             }
         }
 
@@ -340,7 +306,7 @@ class RegistrationImportController extends Controller
 
     public function fc_masterindex(FcRegistrationMasterListDaTable $dataTable)
     {
-        $courses = DB::table('local_form')->where('visible', 1)->where('parent_id', '=', null)->pluck('name', 'id');
+        $courses = $this->programmeCoursesForStatus('active');
         $exemptionCategories = DB::table('fc_exemption_master')->pluck('Exemption_name', 'Pk');
         $applicationTypes = [1 => 'Registration', 2 => 'Exemption'];
         $serviceMasters = DB::table('service_master')->pluck('service_name', 'pk');
@@ -373,7 +339,24 @@ class RegistrationImportController extends Controller
             ->where('active_inactive', 1) // only active
             ->pluck('cadre_name', 'pk'); // key = pk, value = cadre_name
 
-        return view('admin.registration.fcregistrationmaster_edit', compact('registration', 'serviceMasters', 'cadres'));
+        $guard = app(FcRosterApplicationGuardService::class);
+        $applicationTypeOptions = $guard->adminApplicationTypeOptions();
+        $currentApplicationTypeLabel = $guard->applicationTypeLabel($registration->application_type);
+
+        $exemptionCategories = \DB::table('fc_exemption_master')
+            ->where('is_notice', false)
+            ->where('visible', true)
+            ->orderBy('Exemption_name')
+            ->pluck('Exemption_name', 'Pk');
+
+        return view('admin.registration.fcregistrationmaster_edit', compact(
+            'registration',
+            'serviceMasters',
+            'cadres',
+            'applicationTypeOptions',
+            'exemptionCategories',
+            'currentApplicationTypeLabel',
+        ));
     }
 
 
@@ -389,24 +372,51 @@ class RegistrationImportController extends Controller
             'service_master_pk' => 'nullable|string|max:255',
             'exam_year' => 'nullable|string|max:255',
             'cadre_master_pk' => 'nullable|string|max:255',
+            'application_type' => [
+                'required',
+                Rule::in([
+                    FcRosterApplicationGuardService::APPLICATION_NA,
+                    FcRosterApplicationGuardService::APPLICATION_REGISTRATION,
+                    FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
+                ]),
+            ],
+            'fc_exemption_master_pk' => [
+                'nullable',
+                'integer',
+                Rule::requiredIf(fn () => (int) $request->input('application_type') === FcRosterApplicationGuardService::APPLICATION_EXEMPTION),
+                Rule::exists('fc_exemption_master', 'Pk'),
+            ],
         ]);
 
         $record = FcRegistrationMaster::findOrFail($id);
-        $record->update($request->only([
-            'email',
-            'contact_no',
-            'first_name',
-            'middle_name',
-            'last_name',
-            'rank',
-            'exam_year',
-            'web_auth',
-            'dob',
-            'display_name',
-            'schema_id',
-            'service_master_pk',
-            'cadre_master_pk'
-        ]));
+
+        $guard = app(FcRosterApplicationGuardService::class);
+        $applicationType = (int) $request->input('application_type');
+        $statusPayload = $guard->adminApplicationTypePayload(
+            $applicationType,
+            $applicationType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION
+                ? (int) $request->input('fc_exemption_master_pk')
+                : null
+        );
+
+        $record->update(array_merge(
+            $request->only([
+                'email',
+                'contact_no',
+                'first_name',
+                'middle_name',
+                'last_name',
+                'rank',
+                'exam_year',
+                'web_auth',
+                'dob',
+                'display_name',
+                'schema_id',
+                'service_master_pk',
+                'cadre_master_pk',
+            ]),
+            $statusPayload
+        ));
 
         return redirect()->route('admin.registration.index')->with('success', 'Record updated successfully.');
     }
@@ -418,6 +428,53 @@ class RegistrationImportController extends Controller
         return back()->with('success', 'Record deleted.');
     }
 
+    /**
+     * Programme (course_master) options — same rules as /programme Active / Archived tabs.
+     *
+     * @return \Illuminate\Support\Collection<int|string, string>
+     */
+    private function programmeCoursesForStatus(string $status = 'active')
+    {
+        $currentDate = Carbon::now()->format('Y-m-d');
+        $data_course_id = get_Role_by_course();
+
+        $query = CourseMaster::query();
+        if (! empty($data_course_id)) {
+            $query->whereIn('pk', $data_course_id);
+        }
+
+        if ($status === 'archive') {
+            $query->where('end_date', '<', $currentDate);
+        } else {
+            $query->where('end_date', '>=', $currentDate);
+        }
+
+        return $query->orderBy('course_name')->pluck('course_name', 'pk');
+    }
+
+    /**
+     * Apply programme course + Active/Archive scope to FC registration queries.
+     */
+    private function applyFcMasterCourseFilters($query, Request $request): void
+    {
+        if ($course = $request->input('course_name')) {
+            $query->where('fc_registration_master.course_master_pk', $course);
+        }
+
+        $statusFilter = $request->input('course_status_filter', 'active');
+        $currentDate = Carbon::now()->format('Y-m-d');
+
+        if ($statusFilter === 'archive') {
+            $query->whereNotNull('fc_registration_master.course_master_pk')
+                ->where('cm.end_date', '<', $currentDate);
+        } else {
+            $query->where(function ($q) use ($currentDate) {
+                $q->whereNull('fc_registration_master.course_master_pk')
+                    ->orWhere('cm.end_date', '>=', $currentDate);
+            });
+        }
+    }
+
     // Export filtered data
     public function export(Request $request)
     {
@@ -426,8 +483,10 @@ class RegistrationImportController extends Controller
             ->leftJoin('service_master as s', 'fc_registration_master.service_master_pk', '=', 's.pk')
             ->leftJoin('fc_exemption_master as e', 'fc_registration_master.fc_exemption_master_pk', '=', 'e.Pk')
             ->leftJoin('cadre_master as c', 'fc_registration_master.cadre_master_pk', '=', 'c.pk')
+            ->leftJoin('course_master as cm', 'fc_registration_master.course_master_pk', '=', 'cm.pk')
             ->select(
-                'fc_registration_master.formid as course_master_pk',
+                'fc_registration_master.course_master_pk',
+                'cm.course_name',
                 'fc_registration_master.application_type',
                 'fc_registration_master.fc_exemption_master_pk',
                 's.service_short_name',     // optional, if you want short name
@@ -449,10 +508,7 @@ class RegistrationImportController extends Controller
 
             );
 
-        // Apply filters
-        if ($course = $request->course_name) {
-            $query->where('fc_registration_master.formid', $course);
-        }
+        $this->applyFcMasterCourseFilters($query, $request);
 
         if ($exemption = $request->exemption_category) {
             $query->where('e.Exemption_name', $exemption);
@@ -494,6 +550,33 @@ class RegistrationImportController extends Controller
         return redirect()->back()->with('error', 'Invalid format selected.');
     }
 
+    /**
+     * Template1 (Bulk Upload) column mapping → fc_registration_master.
+     */
+    private function mapTemplate1ImportAttributes(array $row, ?string $contactNo, $serviceMaster): array
+    {
+        $courseMasterPk = $row['course_master_pk'] ?? null;
+        if ($courseMasterPk === '' || $courseMasterPk === null) {
+            $courseMasterPk = null;
+        } else {
+            $courseMasterPk = (int) $courseMasterPk;
+        }
+
+        return [
+            'contact_no'        => $contactNo,
+            'display_name'      => $row['display_name'] ?? null,
+            'schema_id'         => $row['schema_id'] ?? null,
+            'first_name'        => $row['first_name'] ?? null,
+            'middle_name'       => $row['middle_name'] ?? null,
+            'last_name'         => $row['last_name'] ?? null,
+            'rank'              => $row['rank'] ?? null,
+            'exam_year'         => $row['exam_year'] ?? null,
+            'service_master_pk' => $serviceMaster,
+            'course_master_pk'  => $courseMasterPk,
+            'web_auth'          => $row['web_auth'] ?? null,
+        ];
+    }
+
     // Download FC Registration Template
 public function downloadFcRegistrationTemplate(): StreamedResponse
 {
@@ -509,6 +592,7 @@ public function downloadFcRegistrationTemplate(): StreamedResponse
         'rank',
         'exam_year',
         'service_master_pk',
+        'course_master_pk',
         'web_auth',
     ];
 

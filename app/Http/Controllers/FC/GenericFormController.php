@@ -11,6 +11,7 @@ use App\Services\FC\DynamicFormService;
 use App\Services\FC\FcProgrammeContextService;
 use App\Services\FC\FcRegistrationFlowService;
 use App\Services\FC\FcRegistrationIntentService;
+use App\Services\FC\FcRegistrationRegisteredSyncService;
 use App\Services\FC\RegistrationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,21 +32,21 @@ class GenericFormController extends Controller
     // ── Form Dashboard — list steps for a form ───────────────────────
     public function formDashboard(FcForm $form): View
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
         $this->programmeContext->rememberCourseForForm($form);
         session([FcRegistrationIntentService::SESSION_FORM_ID => (int) $form->id]);
 
         $steps    = $form->activeSteps()->withCount(['fields', 'fieldGroups'])->get();
-        $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $username);
+        $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $userId);
 
         $registrationProgress = null;
         $fcRegistrationMeta = null;
         if ($form->form_slug === 'fc-registration') {
             $registrationProgress = fc_registration_progress_view(
-                $this->registrationService->getProgress($username)
+                $this->registrationService->getProgress($userId)
             );
             $fcRegistrationMeta = [
-                'master_status' => StudentMaster::where('username', $username)->value('status'),
+                'master_status' => StudentMaster::forUser($userId)->value('status'),
             ];
         }
 
@@ -53,7 +54,7 @@ class GenericFormController extends Controller
         $travelDone = false;
         $trackerTable = $form->trackerStorageTable();
         if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, 'travel_done')) {
-            $tq = DB::table($trackerTable)->where($form->user_identifier ?: 'username', $username);
+            $tq = DB::table($trackerTable)->where(fc_user_col($trackerTable), fc_user_val($trackerTable, $userId));
             if (Schema::hasColumn($trackerTable, 'form_id')) {
                 $tq->where('form_id', $form->id);
             }
@@ -77,8 +78,8 @@ class GenericFormController extends Controller
             abort(404);
         }
 
-        $username = Auth::user()->username;
-        $guard = $this->guardSequentialFormAccess($form, $step, $username);
+        $userId = Auth::id();
+        $guard = $this->guardSequentialFormAccess($form, $step, $userId);
         if ($guard) {
             return $guard;
         }
@@ -99,7 +100,7 @@ class GenericFormController extends Controller
             $completedGroups = [];
 
             foreach ($groups as $group) {
-                $rows = $this->formService->getExistingGroupRows($group, $username);
+                $rows = $this->formService->getExistingGroupRows($group, $userId);
                 $existingRows[$group->group_name] = $rows;
                 $completedGroups[$group->group_name] = $rows->isNotEmpty();
                 $fieldsForLookups = $group->activeGroupFields->isNotEmpty()
@@ -136,7 +137,7 @@ class GenericFormController extends Controller
 
         // Flat fields step
         $lookups      = $this->formService->getLookupData($fields);
-        $existingData = $this->formService->getExistingData($step->step_slug, $username);
+        $existingData = $this->formService->getExistingData($step->step_slug, $userId);
 
         $allSteps  = $form->activeSteps;
         $stepIndex = $allSteps->search(fn($s) => $s->id === $step->id);
@@ -162,8 +163,8 @@ class GenericFormController extends Controller
             abort(404);
         }
 
-        $username = Auth::user()->username;
-        $guard = $this->guardSequentialFormAccess($form, $step, $username);
+        $userId = Auth::id();
+        $guard = $this->guardSequentialFormAccess($form, $step, $userId);
         if ($guard) {
             return $guard;
         }
@@ -184,7 +185,7 @@ class GenericFormController extends Controller
 
             $rules = $this->formService->buildValidationRules(collect([$field]));
             $request->validate($rules);
-            $this->formService->saveSingleFileField($step, $field, $username, $request);
+            $this->formService->saveSingleFileField($step, $field, $userId, $request);
 
             return redirect()->route('fc-reg.forms.step', [$form, $step])
                 ->with('success', $field->label.' uploaded successfully.');
@@ -193,10 +194,10 @@ class GenericFormController extends Controller
         $allFileFields = $fields->isNotEmpty() && $fields->every(fn ($f) => $f->field_type === 'file');
 
         if ($allFileFields) {
-            if (! $this->formService->documentStepRequiredFilesSatisfied($step, $username)) {
+            if (! $this->formService->documentStepRequiredFilesSatisfied($step, $userId)) {
                 return back()->with('error', 'Please upload all mandatory documents before continuing.');
             }
-            $this->formService->syncDocumentStepCompletion($step, $username);
+            $this->formService->syncDocumentStepCompletion($step, $userId);
 
             $allSteps  = $form->activeSteps;
             $stepIndex = $allSteps->search(fn ($s) => $s->id === $step->id);
@@ -224,7 +225,7 @@ class GenericFormController extends Controller
             $validated['same_as_permanent']  = 1;
         }
 
-        $this->formService->saveStepDataForStep($step, $username, $validated, $request);
+        $this->formService->saveStepDataForStep($step, $userId, $validated, $request);
 
         // Navigate to next step or back to dashboard
         $allSteps  = $form->activeSteps;
@@ -248,8 +249,8 @@ class GenericFormController extends Controller
             abort(404);
         }
 
-        $username = Auth::user()->username;
-        $guard = $this->guardSequentialFormAccess($form, $step, $username);
+        $userId = Auth::id();
+        $guard = $this->guardSequentialFormAccess($form, $step, $userId);
         if ($guard) {
             return $guard;
         }
@@ -263,7 +264,7 @@ class GenericFormController extends Controller
             $rows = [$validated[$group->group_name] ?? $validated];
         }
 
-        $this->formService->saveGroupData($group, $username, $rows, $request);
+        $this->formService->saveGroupData($group, $userId, $rows, $request);
 
         // Check if last group — mark step done and move to next step
         $allGroups = $step->activeFieldGroups()->orderBy('display_order')->get();
@@ -273,8 +274,9 @@ class GenericFormController extends Controller
             // Mark step as complete
             if ($step->tracker_column) {
                 $trackerTable = $form->trackerStorageTable();
-                if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, $form->user_identifier)) {
-                    $trackerKey  = [$form->user_identifier => $username];
+                $uCol = fc_user_col($trackerTable);
+                if (Schema::hasTable($trackerTable) && Schema::hasColumn($trackerTable, $uCol)) {
+                    $trackerKey  = [$uCol => fc_user_val($trackerTable, $userId)];
                     $trackerData = [$step->tracker_column => 1, 'updated_at' => now()];
                     if (Schema::hasColumn($trackerTable, 'form_id')) {
                         $trackerKey['form_id']  = $form->id;
@@ -283,6 +285,8 @@ class GenericFormController extends Controller
                     DB::table($trackerTable)->updateOrInsert($trackerKey, $trackerData);
                 }
             }
+
+            app(FcRegistrationRegisteredSyncService::class)->syncForCredentialsUser($userId, $form);
 
             $allSteps  = $form->activeSteps;
             $stepIndex = $allSteps->search(fn($s) => $s->id === $step->id);
@@ -300,17 +304,17 @@ class GenericFormController extends Controller
         return back()->with('success', "{$group->group_label} saved.");
     }
 
-    private function guardSequentialFormAccess(FcForm $form, FcFormStep $step, string $username): ?RedirectResponse
+    private function guardSequentialFormAccess(FcForm $form, FcFormStep $step, string $userId): ?RedirectResponse
     {
         $steps = $form->activeSteps;
-        $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $username);
+        $stepStatus = $this->registrationFlow->buildStepCompletionByStepId($form, $steps, $userId);
         $isDone = $stepStatus[$step->id] ?? false;
 
         if ($form->form_slug === 'fc-registration') {
             if ($isDone) {
                 return null;
             }
-            $progress = fc_registration_progress_view($this->registrationService->getProgress($username));
+            $progress = fc_registration_progress_view($this->registrationService->getProgress($userId));
             if (! fc_registration_dynamic_form_step_accessible($step->step_slug, $progress['steps'], false)) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
                     ->with('error', 'Please complete the previous steps first.');

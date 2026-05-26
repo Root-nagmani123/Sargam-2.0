@@ -25,7 +25,7 @@ class FcTravelPlanReportDataTable extends DataTable
                     return e($smName);
                 }
 
-                return '<span class="text-muted" title="No student_master_firsts row">' . e($row->username ?? '—') . '</span>';
+                return '<span class="text-muted" title="No student_master_firsts row">' . e($row->user_id ?? '—') . '</span>';
             })
             ->editColumn('mobile_no', fn ($row) => ($row->mobile_no !== null && (string) $row->mobile_no !== '') ? e($row->mobile_no) : '—')
             ->editColumn('roll_no', fn ($row) => ($row->roll_no !== null && (string) $row->roll_no !== '') ? $row->roll_no : '—')
@@ -57,8 +57,8 @@ class FcTravelPlanReportDataTable extends DataTable
                     : '<span class="badge bg-warning text-dark">Draft</span>';
             })
             ->addColumn('action', function ($row) {
-                $showUrl = route('admin.travel.show', $row->username);
-                $editUrl = route('admin.travel.edit', $row->username);
+                $showUrl = route('admin.travel.show', $row->user_id);
+                $editUrl = route('admin.travel.edit', $row->user_id);
 
                 return '<div class="d-flex gap-1">'
                     .'<a href="'.e($showUrl).'" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px" title="View"><i class="bi bi-eye"></i></a>'
@@ -66,7 +66,7 @@ class FcTravelPlanReportDataTable extends DataTable
                     .'</div>';
             })
             ->rawColumns(['full_name', 'slot_display', 'require_academy_vehicle', 'is_submitted', 'action'])
-            ->orderColumn('full_name', 'COALESCE(NULLIF(TRIM(s1.full_name), \'\'), NULLIF(TRIM(sm.full_name), \'\'), tp.username) $1')
+            ->orderColumn('full_name', 'COALESCE(NULLIF(TRIM(s1.full_name), \'\'), NULLIF(TRIM(sm.full_name), \'\'), tp.user_id) $1')
             ->orderColumn('roll_no', 'COALESCE(NULLIF(TRIM(s1.roll_no), \'\'), sm.roll_no, s1.roll_no) $1')
             ->orderColumn('mobile_no', 'COALESCE(s1.mobile_no, \'\') $1')
             ->orderColumn('joining_date', 'tp.joining_date $1')
@@ -89,7 +89,7 @@ class FcTravelPlanReportDataTable extends DataTable
     public function html(): HtmlBuilder
     {
         $ajaxData = "function (d) {
-            d.filter_session_id = document.getElementById('f_session_id') ? document.getElementById('f_session_id').value : '';
+            d.form_id = document.getElementById('f_form_id') ? document.getElementById('f_form_id').value : '';
             d.filter_slot_id = document.getElementById('f_slot_id') ? document.getElementById('f_slot_id').value : '';
             d.filter_mode = document.getElementById('f_mode') ? document.getElementById('f_mode').value : '';
             d.filter_vehicle = document.getElementById('f_vehicle') ? document.getElementById('f_vehicle').value : '';

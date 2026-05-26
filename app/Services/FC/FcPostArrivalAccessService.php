@@ -26,7 +26,7 @@ class FcPostArrivalAccessService
         }
         $this->memoizedAccess = true;
 
-        $u = Auth::user()?->username;
+        $u = Auth::user()?->user_name ?? null;
         if (! $u) {
             return null;
         }
@@ -40,6 +40,15 @@ class FcPostArrivalAccessService
         $row = $this->accessRow();
 
         return $row !== null && $row->department_id === null;
+    }
+
+    /**
+     * Institution-wide OT × activity matrix (all departments).
+     * Coordinators and legacy full-access FC admins; not single-dept staff.
+     */
+    public function canAccessActivityMatrix(): bool
+    {
+        return $this->isCoordinator() || $this->hasLegacyFullAdminActivitiesAccess();
     }
 
     /**

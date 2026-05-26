@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="utf-8">
-    <title>FC Registration - {{ $username }}</title>
+    <title>FC Registration - {{ $userId }}</title>
     <style>
         {!! $pdfFontFaceCss ?? '' !!}
         /* Tighter print margins (Chrome + Dompdf); default print margins leave a large empty band */
@@ -208,14 +208,16 @@
         <td class="photo-cell" rowspan="3">
             @if(!empty($photoDataUri))
                 <img src="{{ $photoDataUri }}" alt="Photo" width="96" height="124">
+            @elseif(!empty($photoUrl))
+                <img src="{{ $photoUrl }}" alt="Photo" width="96" height="124">
             @else
                 <span style="font-size:8pt;color:#888;">Photo<br/>फोटो<br/>-</span>
             @endif
         </td>
     </tr>
     <tr>
-        <td class="label">Username / उपयोगकर्ता</td>
-        <td>{{ $username }}</td>
+        <td class="label">User ID / उपयोगकर्ता</td>
+        <td>{{ $userId }}</td>
     </tr>
     <tr>
         <td class="label">Generated / जारी दिनांक</td>

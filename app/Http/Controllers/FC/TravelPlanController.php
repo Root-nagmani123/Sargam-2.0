@@ -19,9 +19,9 @@ class TravelPlanController extends Controller
 
     public function show()
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
-        if (! $this->registrationFlow->isBankCompleteForTravel($username)) {
+        if (! $this->registrationFlow->isBankCompleteForTravel($userId)) {
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
@@ -32,7 +32,7 @@ class TravelPlanController extends Controller
                 ->with('error', 'Please complete bank details before the travel plan.');
         }
 
-        $plan = StudentTravelPlanMaster::where('username', $username)
+        $plan = StudentTravelPlanMaster::forUser($userId)
             ->with(['fcArrivalSlot', 'legs.travelMode'])
             ->first();
 
@@ -50,19 +50,19 @@ class TravelPlanController extends Controller
             ->unique()
             ->values();
 
-        $step1 = StudentMasterFirst::where('username', $username)->first();
-        $master = StudentMaster::where('username', $username)->first();
+        $step1 = StudentMasterFirst::forUser($userId)->first();
+        $master = StudentMaster::forUser($userId)->first();
         $rollS1 = trim((string) ($step1?->roll_no ?? ''));
         $rollSm = trim((string) ($master?->roll_no ?? ''));
         $displayCode = $rollS1 !== '' ? $step1?->roll_no : ($rollSm !== '' ? $master?->roll_no : null);
 
-        $travelNav = $this->registrationFlow->travelViewContext($username);
+        $travelNav = $this->registrationFlow->travelViewContext($userId);
 
         $formStepNav = null;
         $form = $this->registrationFlow->activeFormFromSession();
         if ($form) {
             $this->registrationFlow->rememberActiveFormInSession($form);
-            $formStepNav = $this->registrationFlow->buildTravelStepNav($form, $username);
+            $formStepNav = $this->registrationFlow->buildTravelStepNav($form, $userId);
         }
 
         return view('fc.registration.travel', [
@@ -79,9 +79,9 @@ class TravelPlanController extends Controller
 
     public function save(Request $request)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
-        if (! $this->registrationFlow->isBankCompleteForTravel($username)) {
+        if (! $this->registrationFlow->isBankCompleteForTravel($userId)) {
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
@@ -92,10 +92,10 @@ class TravelPlanController extends Controller
                 ->with('error', 'Please complete bank details first.');
         }
 
-        $existing = StudentTravelPlanMaster::where('username', $username)->first();
+        $existing = StudentTravelPlanMaster::forUser($userId)->first();
         if ($existing?->is_submitted) {
             return $this->registrationFlow->redirectAfterTravelSubmit(
-                $username,
+                $userId,
                 'Your travel plan is already submitted.'
             )->with('error', 'Your travel plan is already submitted and cannot be changed.');
         }
@@ -121,12 +121,12 @@ class TravelPlanController extends Controller
         if (! $slot->slot_date || $slot->slot_date->format('Y-m-d') !== $request->joining_date) {
             return back()->withInput()->with('error', 'Please select a slot for the chosen arrival date.');
         }
-        if (! $slot->hasRoomForUser($username)) {
+        if (! $slot->hasRoomForUser($userId)) {
             return back()->withInput()->with('error', 'This time slot is full. Please pick another slot.');
         }
 
         $plan = StudentTravelPlanMaster::updateOrCreate(
-            ['username' => $username],
+            [fc_user_col('student_travel_plan_masters') => fc_user_val('student_travel_plan_masters', $userId)],
             [
                 'joining_date'              => $request->joining_date,
                 'joining_time'              => $request->joining_time,
@@ -143,7 +143,7 @@ class TravelPlanController extends Controller
 
         // Ensure draft is never treated as completed in FC pipeline (e.g. travel_done back-filled from docs_done).
         $plan->forceFill(['is_submitted' => false])->save();
-        StudentMaster::where('username', $username)->update(['travel_done' => 0]);
+        StudentMaster::forUser($userId)->update(['travel_done' => 0]);
 
         return redirect()->route('fc-reg.registration.travel')
             ->with('success', 'Travel plan saved as draft. Review and submit when ready.');
@@ -151,9 +151,9 @@ class TravelPlanController extends Controller
 
     public function submit(Request $request)
     {
-        $username = Auth::user()->username;
+        $userId = Auth::id();
 
-        if (! $this->registrationFlow->isBankCompleteForTravel($username)) {
+        if (! $this->registrationFlow->isBankCompleteForTravel($userId)) {
             $form = $this->registrationFlow->activeFormFromSession();
             if ($form) {
                 return redirect()->route('fc-reg.forms.dashboard', $form)
@@ -176,9 +176,9 @@ class TravelPlanController extends Controller
             'special_requirements'      => 'nullable|string|max:1000',
         ]);
 
-        $existing = StudentTravelPlanMaster::where('username', $username)->first();
+        $existing = StudentTravelPlanMaster::forUser($userId)->first();
         if ($existing?->is_submitted) {
-            return $this->registrationFlow->redirectAfterTravelSubmit($username);
+            return $this->registrationFlow->redirectAfterTravelSubmit($userId);
         }
 
         $slot = FcTravelArrivalSlot::where('id', $request->fc_travel_arrival_slot_id)
@@ -190,12 +190,12 @@ class TravelPlanController extends Controller
         if (! $slot->slot_date || $slot->slot_date->format('Y-m-d') !== $request->joining_date) {
             return back()->withInput()->with('error', 'Please select a slot for the chosen arrival date.');
         }
-        if (! $slot->hasRoomForUser($username)) {
+        if (! $slot->hasRoomForUser($userId)) {
             return back()->withInput()->with('error', 'The selected time slot is full. Please choose another slot.');
         }
 
         $plan = StudentTravelPlanMaster::updateOrCreate(
-            ['username' => $username],
+            [fc_user_col('student_travel_plan_masters') => fc_user_val('student_travel_plan_masters', $userId)],
             [
                 'joining_date'              => $request->joining_date,
                 'joining_time'              => $request->joining_time,
@@ -210,10 +210,10 @@ class TravelPlanController extends Controller
             ]
         );
 
-        StudentMaster::where('username', $username)->update(['travel_done' => 1]);
+        StudentMaster::forUser($userId)->update(['travel_done' => 1]);
 
         return $this->registrationFlow->redirectAfterTravelSubmit(
-            $username,
+            $userId,
             'Travel plan submitted.'
         );
     }

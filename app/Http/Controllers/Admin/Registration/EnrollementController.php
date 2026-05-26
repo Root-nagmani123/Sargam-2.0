@@ -96,7 +96,7 @@ class EnrollementController extends Controller
             ->get(['pk', 'course_name', 'couse_short_name']);
 
         // Get services
-        $services = ServiceMaster::all(['pk', 'service_name']);
+        $services = ServiceMaster::orderBy('service_name')->get(['pk', 'service_name', 'service_short_name']);
 
         return view(
             'admin.registration.enrollement',
@@ -262,7 +262,9 @@ class EnrollementController extends Controller
                 DB::raw("CONCAT(sm.first_name, ' ', COALESCE(sm.middle_name, ''), ' ', sm.last_name) as student_name"),
                 'sm.generated_OT_code as ot_code',
                 'cm.course_name',
+                'cm.couse_short_name as course_short_name',
                 'svm.service_name',
+                'svm.service_short_name',
                 'smcm.active_inactive as enrollment_status'
             )
             ->distinct();
@@ -284,7 +286,9 @@ class EnrollementController extends Controller
                 'last_name' => $student->last_name,
                 'ot_code' => $student->ot_code,
                 'course_name' => $student->course_name,
+                'course_short_name' => $student->course_short_name,
                 'service_name' => $student->service_name,
+                'service_short_name' => $student->service_short_name,
                 'edit_url' => route('enrollment.edit', $student->student_pk)
             ];
         });

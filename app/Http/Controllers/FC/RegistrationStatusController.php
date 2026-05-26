@@ -19,14 +19,14 @@ class RegistrationStatusController extends Controller
 {
     public function show()
     {
-        $username  = Auth::user()->username;
-        $master    = StudentMaster::where('username', $username)->first();
-        $step1     = StudentMasterFirst::where('username', $username)->first();
-        $step2     = StudentMasterSecond::where('username', $username)->first();
-        $bank      = NewRegistrationBankDetailsMaster::where('username', $username)->first();
-        $documents = FcJoiningRelatedDocumentsDetailsMaster::where('username', $username)
+        $userId = Auth::id();
+        $master    = StudentMaster::forUser($userId)->first();
+        $step1     = StudentMasterFirst::forUser($userId)->first();
+        $step2     = StudentMasterSecond::forUser($userId)->first();
+        $bank      = NewRegistrationBankDetailsMaster::forUser($userId)->first();
+        $documents = FcJoiningRelatedDocumentsDetailsMaster::forUser($userId)
             ->with('documentMaster')->get();
-        $confirmation = StudentConfirmMaster::where('username', $username)->first();
+        $confirmation = StudentConfirmMaster::forUser($userId)->first();
 
         $stepFlagMap = [
             'step1'     => 'step1_done',
@@ -58,8 +58,8 @@ class RegistrationStatusController extends Controller
 
     public function confirm(Request $request, FcCourseEnrollmentService $enrollment)
     {
-        $username = Auth::user()->username;
-        $master   = StudentMaster::where('username', $username)->first();
+        $userId = Auth::id();
+        $master   = StudentMaster::forUser($userId)->first();
 
         if (! $master || $master->status !== 'SUBMITTED') {
             return back()->with('error', 'Please complete all registration steps before confirming.');
@@ -69,13 +69,13 @@ class RegistrationStatusController extends Controller
             'declaration' => 'required|accepted',
         ]);
 
-        StudentConfirmMaster::updateOrCreate(['username' => $username], [
+        StudentConfirmMaster::updateOrCreate([fc_user_col('student_confirm_masters') => fc_user_val('student_confirm_masters', $userId)], [
             'declaration_accepted' => 1,
             'confirmed_at'         => now(),
             'ip_address'           => $request->ip(),
         ]);
 
-        $enrollResult = $enrollment->enrollTrainee($username);
+        $enrollResult = $enrollment->enrollTrainee($userId);
         $flash = 'Declaration accepted. Your registration is now confirmed.';
         if ($enrollResult['enrolled']) {
             $flash .= ' You are enrolled in the linked programme.';
