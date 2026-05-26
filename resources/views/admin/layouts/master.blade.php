@@ -532,7 +532,11 @@
             // Must run in this view (not in header include) so tab panes below see $activeNavTab.
             $activeNavTab = '#home';
             $path = request()->path();
-            if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
+            if (
+                request()->routeIs('admin.dashboard') ||
+                request()->routeIs('admin.dashboard.*') ||
+                request()->routeIs('admin.communications.hub')
+            ) {
                 $activeNavTab = '#home';
             } elseif (
                 // Modules moved from Setup to Home
@@ -557,6 +561,7 @@
                 str_starts_with($path, 'admin/employee-idcard') ||
                 str_starts_with($path, 'admin/duplicate-idcard') ||
                 str_starts_with($path, 'admin/family-idcard') ||
+                str_starts_with($path, 'admin/notice') ||
                 str_starts_with($path, 'security/')
             ) {
                 $activeNavTab = '#home';
@@ -584,8 +589,9 @@
             ) {
                 $activeNavTab = '#tab-setup';
             } elseif (
-                str_starts_with($path, 'communications') ||
-                request()->routeIs('*communications*') ||
+                (str_starts_with($path, 'communications') && ! request()->routeIs('admin.communications.hub')) ||
+                (request()->routeIs('*communications*') && ! request()->routeIs('admin.communications.hub')) ||
+                (request()->routeIs('admin.communications.*') && ! request()->routeIs('admin.communications.hub')) ||
                 request()->routeIs('admin.birthday-wish.*')
             ) {
                 $activeNavTab = '#tab-communications';

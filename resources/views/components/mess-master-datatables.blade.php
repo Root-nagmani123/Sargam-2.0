@@ -1,7 +1,7 @@
 {{--
     Reusable DataTable with pagination and live auto-search for mess master modules.
     Options: tableId, searchPlaceholder, orderColumn (int|array), orderDir, actionColumnIndex (int|array),
-    infoLabel, searchDelay, ordering, pageLength, lengthMenu, responsive (bool), scrollX (bool),
+    infoLabel, lengthMenuLabel, infoPattern, infoEmptyPattern, searchDelay, ordering, pageLength, lengthMenu, responsive (bool), scrollX (bool),
     searchHighlight (bool), searchHighlightExcludeColumns (int[] — extra columns to skip, merged with action columns),
     dom (string|null) — custom DataTables dom layout.
     columnManager (bool) — enable Columns show/hide dropdown (default true).
@@ -16,6 +16,9 @@
     $actionColumnIndex = $actionColumnIndex ?? -1;
     $actionColumnIndices = is_array($actionColumnIndex) ? $actionColumnIndex : ($actionColumnIndex >= 0 ? [$actionColumnIndex] : []);
     $infoLabel = $infoLabel ?? 'entries';
+    $lengthMenuLabel = $lengthMenuLabel ?? 'Show _MENU_ ' . $infoLabel;
+    $infoPattern = $infoPattern ?? 'Showing _START_ to _END_ of _TOTAL_ ' . $infoLabel;
+    $infoEmptyPattern = $infoEmptyPattern ?? 'Showing 0 to 0 of 0 ' . $infoLabel;
     $searchDelay = (int) ($searchDelay ?? 300);
     $ordering = isset($ordering) ? (bool) $ordering : true;
     $pageLength = (int) ($pageLength ?? 10);

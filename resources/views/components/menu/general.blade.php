@@ -54,35 +54,37 @@
                                 </a>
                             </li>
                             @endif
-
-                            {{-- Notice Notifications --}}
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1 {{ request()->routeIs('admin.notice.*') ? 'active' : '' }}"
-                                    href="{{ route('admin.notice.index') }}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">notifications</i>
-                                    <span class="hide-menu">Notice Notifications</span>
-                                </a>
-                            </li>
-                            <li class="sidebar-item mb-1">
-                                    <a class="sidebar-link {{ request()->routeIs('admin.word-of-day.*') ? 'active' : '' }}"
-                                        href="{{ route('admin.word-of-day.index') }}">
-                                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">book</i>
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Word of the Day</span>
-                                    </a>
-                                </li>
-
-                            @if(hasRole('Doctor'))
-                            {{-- Student Medical Exemption --}}
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-1"
-                                    href="{{ route('student.medical.exemption.index') }}">
-                                    <i class="material-icons material-symbols-rounded" style="font-size:20px;">medical_services</i>
-                                    <span class="hide-menu">Student Medical Exemption (Doctor)</span>
-                                </a>
-                            </li>
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            <!-- Notice Notification Route (admin manage list only) -->
+                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.notice.index') }}">
+                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">notifications</i>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice
+                                        Notifications</span>
+                                </a></li>
+                            @endif
+                            @if(hasRole('Admin') || hasRole('Training-Induction'))
+                            <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.notice.category-master.*') ? 'active' : '' }}" href="{{ route('admin.notice.category-master.index') }}">
+                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">category</i>       
+                            <span class="hide-menu small small-sm-normal text-nowrap">Notice category master</span>
+                                </a></li>
+                            <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.notice.subcategory-master.*') ? 'active' : '' }}" href="{{ route('admin.notice.subcategory-master.index') }}">
+                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">topic</i>       
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice subcategory master</span>
+                                </a></li>
                             @endif
 
-                            {{-- ── Quick Links (collapsible) ── --}}
+                            <!-- Faculty Dashboard Route -->
+                            @if(hasRole('Doctor'))
+                            <li class="sidebar-item"><a class="sidebar-link"
+                                    href="{{ route('student.medical.exemption.index') }}">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Student Medical Exemption
+                                        (Doctor)</span>
+                                </a></li>
+                            @endif
+
+
+
+                            <ul class="sidebar-menu" id="sidebarnav">
                             <li class="sidebar-item mb-1">
                                 <a class="sidebar-link d-flex align-items-center justify-content-between gap-2"
                                     data-bs-toggle="collapse" href="#generalCollapse" role="button"
@@ -94,13 +96,13 @@
                                     <i class="material-icons material-symbols-rounded menu-icon" style="font-size:20px;">keyboard_arrow_right</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled" id="generalCollapse">
-                                @php
-                                $quickLinks = \App\Models\QuickLink::query()
-                                ->active()
-                                ->orderBy('position')
-                                ->get(['id', 'label', 'url', 'target_blank']);
-                                @endphp
+                                <ul class="collapse list-unstyled ps-3" id="generalCollapse">
+                                    @php
+                                    $quickLinks = \App\Models\QuickLink::query()
+                                    ->active()
+                                    ->orderBy('position')
+                                    ->get(['id', 'label', 'url', 'target_blank']);
+                                    @endphp
 
                                 @if ($quickLinks->isEmpty())
                                 @php
