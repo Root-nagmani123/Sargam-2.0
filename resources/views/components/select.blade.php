@@ -1,6 +1,6 @@
 
 @if($label)
-    <label class="{{ $formLabelClass ?? 'form-label' }}" for="{{ $id ?? $name }}">{{ $label }} <span class="text-danger">{{ $labelRequired ? '*' : '' }}</span></label>
+    <label class="form-label" for="{{ $id ?? $name }}">{{ $label }} <span class="text-danger">{{ $labelRequired ? '*' : '' }}</span></label>
 @endif
 
 @php
@@ -14,7 +14,7 @@
     @if($required) required @endif
     @if($multiple) multiple @endif
 >
-    <option value="">{{ $placeholder }}</option>
+    <option value="">Select</option>
     @foreach($options as $optionValue => $optionLabel)
         <option value="{{ $optionValue }}" 
             @if($multiple) 

@@ -2,13 +2,7 @@
 @section('title', 'Process Mess Bills')
 @section('content')
 <div class="container-fluid py-3 py-md-4 process-mess-bills-employee-report">
-    <x-breadcrum title="Process Mess Bills">
-        <a data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal"
-            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
-            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
-            <span>Generate Invoice</span>
-        </a>
-    </x-breadcrum>
+    <x-breadcrum title="Process Mess Bills"></x-breadcrum>
     {{-- Report Header (Print Only) --}}
     @php
         $dateFromDisplay = $effectiveDateFrom ?? now()->startOfMonth()->format('d-m-Y');
@@ -25,6 +19,21 @@
         <h4 class="fw-bold">Process Mess Bills</h4>
         <p class="mb-1">Period: {{ $dateFromDisplay }} to {{ $dateToDisplay }}</p>
         <p class="text-muted mb-0 small">Generated on: {{ now()->format('d-m-Y H:i:s') }}</p>
+    </div>
+
+    {{-- Page header --}}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
+        <div>
+            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
+                <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
+                Process Mess Bills
+            </h4>
+            <p class="mb-0 small opacity-90 text-white">View mess bills for Employee, OT, Course & Other, generate invoices, and mark payments. Filter by date to see bills from Selling Voucher and Date Range reports.</p>
+        </div>
+        <button type="button" class="btn btn-light shadow d-inline-flex align-items-center gap-2 px-4" data-bs-toggle="modal" data-bs-target="#addProcessMessBillsModal" style="font-weight: 600;">
+            <i class="material-symbols-rounded" style="font-size: 1.3rem;">add_circle</i>
+            Generate Invoice
+        </button>
     </div>
 
     {{-- Summary cards --}}
@@ -959,7 +968,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="modal-dialog modal-xl modal-dialog-scrollable modal-fullscreen-md-down modal-dialog-centered">
         <div class="modal-content border-0 shadow-lg rounded-3">
             <div class="modal-header bg-light border-0 py-3">
-                <h5 class="modal-title fw-semibold d-flex align-items-center gap-1" id="addProcessMessBillsModalLabel">
+                <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="addProcessMessBillsModalLabel">
                     <span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center" style="width: 32px; height: 32px;">
                         <i class="material-symbols-rounded" style="font-size: 1.3rem;">receipt_long</i>
                     </span>
@@ -1051,7 +1060,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 </div>
 
                 <div class="d-flex flex-wrap justify-content-between align-items-center mb-3">
-                    <div class="d-flex align-items-center gap-1">
+                    <div class="d-flex align-items-center gap-2">
                         <span class="small text-muted fw-semibold">Show</span>
                         <select id="modalPerPage" class="form-select form-select-sm" style="width: auto;">
                             <option value="10" selected>10</option>
@@ -1061,7 +1070,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         </select>
                         <span class="small text-muted fw-semibold">entries</span>
                     </div>
-                    <div class="d-flex align-items-center gap-1">
+                    <div class="d-flex align-items-center gap-2">
                         <div class="input-group input-group-sm shadow-sm" style="width: 240px; max-width: 100%;">
                             <span class="input-group-text bg-white border-end-0">
                                 <i class="material-symbols-rounded text-muted" style="font-size: 1.1rem;">search</i>
@@ -3349,7 +3358,7 @@ function printProcessMessBillsTable() {
           <tr>
             <th colspan="${columnsCount}">
               <div class="d-flex justify-content-between align-items-center mb-2">
-                <div class="d-flex align-items-center gap-1">
+                <div class="d-flex align-items-center gap-2">
                   <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="India Emblem" height="40">
                   <div>
                     <div class="brand-line-1">Government of India</div>

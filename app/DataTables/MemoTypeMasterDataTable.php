@@ -19,7 +19,10 @@ class MemoTypeMasterDataTable extends DataTable
             ->addIndexColumn()
             ->editColumn('memo_type_name', fn($row) => $row->memo_type_name ?? 'N/A')
             ->editColumn('document', function ($row) {
-                return $row->memo_doc_upload ? 'Available' : 'NA';
+                if ($row->memo_doc_upload) {
+                    return '<a href="' . asset('storage/' . $row->memo_doc_upload) . '" target="_blank">View</a>';
+                }
+                return 'N/A';
             })
             ->filterColumn('memo_type_name', function ($query, $keyword) {
                 $query->where('memo_type_name', 'like', "%{$keyword}%");
@@ -34,43 +37,62 @@ class MemoTypeMasterDataTable extends DataTable
                 }
             }, true)
             ->addColumn('actions', function ($row) {
-                $deleteUrl = route('master.memo.type.master.delete', ['id' => encrypt($row->pk)]);
-                $isActive  = ($row->active_inactive == 1);
-                $docUrl    = $row->memo_doc_upload ? asset('storage/' . $row->memo_doc_upload) : '';
 
-                $eyeBtn = $docUrl
-                    ? '<a href="' . $docUrl . '" target="_blank" class="mt-action-btn text-secondary" title="View Document"><span class="material-symbols-rounded">visibility</span></a>'
-                    : '<span class="mt-action-btn text-muted" style="opacity:0.35;cursor:default;" title="No Document"><span class="material-symbols-rounded">visibility</span></span>';
+    $editUrl   = route('master.memo.type.master.edit', ['id' => $row->pk]);
+    $deleteUrl = route('master.memo.type.master.delete', ['id' => encrypt($row->pk)]);
+    $isActive  = ($row->active_inactive == 1);
 
-                $editBtn = '<a href="javascript:void(0);" class="mt-action-btn text-primary editMemo"'
-                    . ' data-pk="' . $row->pk . '"'
-                    . ' data-name="' . htmlspecialchars($row->memo_type_name, ENT_QUOTES) . '"'
-                    . ' data-status="' . $row->active_inactive . '"'
-                    . ' data-file="' . $docUrl . '"'
-                    . ' title="Edit"><span class="material-symbols-rounded">edit</span></a>';
+    // 🔹 Delete button logic (NO Blade here)
+    if ($isActive) {
+        $deleteButton = '
+            <button type="button"
+                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                disabled
+                title="Cannot delete active memo type">
+                <span class="material-icons material-symbols-rounded" style="font-size:18px;">
+                    delete
+                </span>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>';
+    } else {
+        $deleteButton = '
+            <button type="button"
+                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 deleteBtn"
+                data-pk="' . $row->pk . '"
+                data-url="' . $deleteUrl . '"
+                aria-label="Delete memo type">
+                <span class="material-icons material-symbols-rounded" style="font-size:18px;">
+                    delete
+                </span>
+                <span class="d-none d-md-inline">Delete</span>
+            </button>';
+    }
 
-                $toggleBtn = '<div class="form-check form-switch d-inline-block mb-0" style="min-height:0;">'
-                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
-                    . ' data-table="memo_type_master" data-column="active_inactive"'
-                    . ' data-id="' . $row->pk . '" ' . ($isActive ? 'checked' : '') . '>'
-                    . '</div>';
+    return '
+        <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Memo type actions">
 
-                $deleteBtn = $isActive
-                    ? '<button type="button" class="mt-action-btn text-muted" disabled style="opacity:0.35;cursor:not-allowed;" title="Cannot delete active record"><span class="material-symbols-rounded">delete</span></button>'
-                    : '<button type="button" class="mt-action-btn text-danger deleteBtn"'
-                        . ' data-pk="' . $row->pk . '"'
-                        . ' data-url="' . $deleteUrl . '"'
-                        . ' title="Delete"><span class="material-symbols-rounded">delete</span></button>';
+            <!-- Edit -->
+            <a href="javascript:void(0);"
+                class="editMemo btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                data-pk="' . $row->pk . '"
+                data-name="' . e($row->memo_type_name) . '"
+                data-status="' . $row->active_inactive . '"
+                data-file="' . ($row->memo_doc_upload ? asset('storage/' . $row->memo_doc_upload) : '') . '">
+                <span class="material-icons material-symbols-rounded" style="font-size:18px;">edit</span>
+                <span class="d-none d-md-inline">Edit</span>
+            </a>
 
-                return '<div class="d-inline-flex align-items-center gap-1">'
-                    . $eyeBtn . $editBtn . $toggleBtn . $deleteBtn
-                    . '</div>';
-            })
+            <!-- Delete -->
+            ' . $deleteButton . '
+
+        </div>';
+})
 
             ->addColumn('status', function ($row) {
-                return $row->active_inactive == 1
-                    ? '<span class="mt-badge-active">Active</span>'
-                    : '<span class="mt-badge-inactive">Inactive</span>';
+                return '<div class="form-check form-switch d-inline-block">
+                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                data-table="memo_type_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
+                        </div>';
             })
             ->rawColumns(['memo_type_name', 'document', 'actions', 'status']);
     }
@@ -90,14 +112,17 @@ class MemoTypeMasterDataTable extends DataTable
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
-                'pagingType' => 'full_numbers',
                 'ordering' => false,
                 'searching' => true,
-                'dom' => 'rtp',
-                'info' => false,
+                'lengthChange' => true,
                 'pageLength' => 10,
                 'language' => [
-                    'paginate' => ['first' => '«', 'last' => '»', 'next' => '›', 'previous' => '‹']
+                    'paginate' => [
+                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_left</i>',
+                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_right</i>'
+                    ]
                 ],
             ]);
     }

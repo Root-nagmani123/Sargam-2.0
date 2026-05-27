@@ -3,7 +3,7 @@
 @section('title', 'Define Estate/Campus - Sargam')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid px-2 px-sm-3 px-md-4">
  <x-breadcrum title="Define Estate/Campus" />
 
     <x-session_message />

@@ -3,7 +3,7 @@
 @section('title', 'Change Request Details - Sargam')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <x-breadcrum title="Change Request Details" />
     <x-session_message />
 

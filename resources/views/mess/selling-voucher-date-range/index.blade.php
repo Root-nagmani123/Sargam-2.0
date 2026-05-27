@@ -16,38 +16,33 @@ $selectedStores = collect((array) request()->input('store', []))
 $selectedReturnStatus = (string) request()->input('return_status', '');
 $selectedClientType = (string) request()->input('client_type', '');
 @endphp
-    <div class="container-fluid sv-dr-page py-2 py-md-3">
-    <x-breadcrum title="Selling Voucher with Date Range">
-        <a data-bs-toggle="modal" data-bs-target="#addReportModal"
-            class="btn btn-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 rounded-2 shadow-sm px-3 fw-semibold text-nowrap">
-            <span class="material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</span>
-            <span>Add Voucher</span>
-        </a>
-    </x-breadcrum>
+<div class="container-fluid py-2 py-lg-3">
+    <x-breadcrum title="Selling Voucher with Date Range"></x-breadcrum>
 
 
     @if(session('success'))
-    <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm border-0">{{ session('success') }}
+    <div class="alert alert-success alert-dismissible fade show">{{ session('success') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
     @if(session('error'))
-    <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm border-0">{{ session('error') }}
+    <div class="alert alert-danger alert-dismissible fade show">{{ session('error') }}
         <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
     </div>
     @endif
 
-    <div class="card mb-4 border-0 shadow-sm rounded-4 selling-voucher-filter sv-dr-filter-card">
-        <div class="card-header bg-white border-0 pt-4 px-4 pb-0">
-            <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+    <div class="card mb-4 border-0 shadow-sm rounded-4 selling-voucher-filter">
+        <div class="card-body p-3 p-lg-4">
+            <div class="d-flex justify-content-between align-items-start align-items-md-center mb-4 flex-wrap gap-3">
                 <div>
-                    <h5 class="mb-1 fw-semibold text-dark">Filters</h5>
-                    <p class="mb-0 small text-muted">Refine vouchers by status, store, client, buyer, and date range.</p>
+                    <h4 class="mb-1 fw-semibold">Selling Voucher with Date Range</h4>
+                    <p class="mb-0 small">Review and manage selling vouchers across a selected date range.</p>
                 </div>
-                <span class="badge rounded-pill text-bg-light border text-secondary fw-normal px-3 py-2">
-                    <span class="material-symbols-rounded align-middle me-1" style="font-size: 1rem;">tune</span>
-                    Smart filters
-                </span>
+                <button type="button" class="btn btn-primary shadow-sm d-inline-flex align-items-center gap-2 px-3"
+                    data-bs-toggle="modal" data-bs-target="#addReportModal">
+                    <i class="material-symbols-rounded" style="font-size: 1.1rem;">add</i>
+                    <span>Add Voucher</span>
+                </button>
             </div>
             <hr class="my-4">
             <form method="GET" action="{{ route('admin.mess.selling-voucher-date-range.index') }}" id="sellingVoucherFilterForm">
@@ -129,12 +124,12 @@ $selectedClientType = (string) request()->input('client_type', '');
                     </div>
                 </div>
                 <div class="d-flex flex-wrap gap-2 justify-content-lg-end align-items-center mt-3 pt-3 border-top">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1 px-3 rounded-2 shadow-sm">
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-1 px-3">
                         <i class="material-symbols-rounded" style="font-size: 1rem;">filter_list</i>
                         <span>Filter</span>
                     </button>
                     <a href="{{ route('admin.mess.selling-voucher-date-range.index') }}"
-                        class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 px-3 rounded-2">
+                        class="btn btn-outline-secondary d-inline-flex align-items-center gap-1 px-3">
                         <i class="material-symbols-rounded" style="font-size: 1rem;">refresh</i>
                         <span>Clear</span>
                     </a>
@@ -154,25 +149,23 @@ $selectedClientType = (string) request()->input('client_type', '');
                         placeholder="Search person, item, store…" autocomplete="off">
                 </div>
             </div>
-        </div>
-        <div class="card-body pt-3 px-4 pb-4">
-            <div class="table-responsive selling-voucher-table-wrap rounded-3 border">
-                <table class="table table-sm table-hover align-middle mb-0 w-100 sv-dr-data-table" id="sellingVoucherDateRangeTable">
-                    <thead class="table-light position-sticky top-0 sv-dr-thead" style="z-index: 1;">
-                        <tr class="small">
-                            <th scope="col" class="ps-3 text-center text-secondary fw-semibold text-uppercase">#</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Item Name</th>
-                            <th scope="col" class="text-end text-secondary fw-semibold text-uppercase">Qty</th>
-                            <th scope="col" class="text-end text-secondary fw-semibold text-uppercase">Return Qty</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Store</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Client Type</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Client Name</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Name</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Payment</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Request Date</th>
-                            <th scope="col" class="text-center text-secondary fw-semibold text-uppercase">Status</th>
-                            <th scope="col" class="text-secondary fw-semibold text-uppercase">Return</th>
-                            <th scope="col" class="text-end pe-3 text-secondary fw-semibold text-uppercase">Action</th>
+            <div class="table-responsive selling-voucher-table-wrap">
+                <table class="table table-sm align-middle mb-0 w-100" id="sellingVoucherDateRangeTable">
+                    <thead class="position-sticky top-0" style="z-index: 1;">
+                        <tr>
+                            <th scope="col" class="ps-3 text-center">#</th>
+                            <th scope="col">Item Name</th>
+                            <th scope="col" class="text-end">Qty</th>
+                            <th scope="col" class="text-end">Return Qty</th>
+                            <th scope="col">Store</th>
+                            <th scope="col">Client Type</th>
+                            <th scope="col">Client Name</th>
+                            <th scope="col">Name</th>
+                            <th scope="col">Payment</th>
+                            <th scope="col">Request Date</th>
+                            <th scope="col" class="text-center">Status</th>
+                            <th scope="col">Return</th>
+                            <th scope="col" class="text-end pe-3">Action</th>
                         </tr>
                     </thead>
                     <tbody class="border-top-0 small"></tbody>
@@ -819,133 +812,6 @@ $selectedClientType = (string) request()->input('client_type', '');
     vertical-align: middle;
 }
 
-/* Selling voucher date range — modern list UI */
-.sv-dr-page .alert {
-    border-radius: 0.75rem;
-    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.04);
-}
-
-.sv-dr-filter-card .btn {
-    border-radius: 0.375rem;
-}
-
-.sv-dr-search {
-    position: relative;
-    width: 100%;
-    max-width: 280px;
-}
-
-.sv-dr-search .form-control {
-    padding-left: 2.25rem;
-    border-color: var(--bs-border-color);
-    background-color: #fff;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.sv-dr-search .form-control:focus {
-    border-color: #6f42c1;
-    box-shadow: 0 0 0 0.2rem rgba(111, 66, 193, 0.12);
-}
-
-.sv-dr-search-icon {
-    position: absolute;
-    left: 0.85rem;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 1.1rem;
-    color: var(--bs-secondary-color);
-    pointer-events: none;
-    z-index: 2;
-}
-
-.sv-dr-list-card .sv-dr-thead th {
-    font-size: 0.7rem;
-    letter-spacing: 0.04em;
-    border-bottom-width: 1px;
-}
-
-.sv-dr-data-table tbody tr {
-    transition: background-color 0.12s ease;
-}
-
-.sv-dr-dt-modern .dataTables_paginate {
-    margin: 0;
-}
-
-.sv-dr-dt-modern .dataTables_paginate .pagination {
-    gap: 0.35rem;
-    margin: 0;
-    flex-wrap: wrap;
-}
-
-.sv-dr-dt-modern .dataTables_paginate .page-link {
-    border: none;
-    background: transparent;
-    color: var(--bs-secondary-color);
-    padding: 0.35rem 0.65rem;
-    border-radius: 0.5rem;
-    font-weight: 500;
-    box-shadow: none;
-    transition: color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.sv-dr-dt-modern .dataTables_paginate .page-item.active .page-link,
-.sv-dr-dt-modern .dataTables_paginate .page-item.active .page-link:focus {
-    color: var(--bs-body-color);
-    font-weight: 600;
-    background: #fff;
-    box-shadow: 0 0 0 1px #6f42c1;
-}
-
-.sv-dr-dt-modern .dataTables_paginate .page-link:hover {
-    color: var(--bs-body-color);
-    background: var(--bs-light);
-}
-
-.sv-dr-dt-modern .dataTables_info {
-    color: var(--bs-secondary-color);
-    font-size: 0.875rem;
-    padding: 0;
-    margin: 0;
-    white-space: normal;
-}
-
-.sv-dr-dt-modern .dataTables_length label {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    gap: 0.5rem;
-    margin: 0;
-    color: var(--bs-secondary-color);
-    font-size: 0.875rem;
-    font-weight: 400;
-}
-
-.sv-dr-dt-modern .dataTables_length select {
-    width: auto;
-    min-width: 4.5rem;
-    border-radius: 0.5rem;
-    padding: 0.25rem 2rem 0.25rem 0.65rem;
-    font-size: 0.875rem;
-}
-
-.sv-dr-dt-footer {
-    --bs-gutter-x: 1rem;
-}
-
-@media (max-width: 1199.98px) {
-    .sv-dr-dt-modern .dataTables_paginate {
-        justify-content: center;
-        display: flex;
-    }
-
-    .sv-dr-dt-modern .dataTables_length,
-    .sv-dr-dt-modern .dataTables_info {
-        justify-content: center;
-        text-align: center;
-    }
-}
-
 /* Keep DataTable search box pinned and not floating while scrolling */
 .selling-voucher-card .dataTables_wrapper {
     position: relative;
@@ -956,7 +822,7 @@ $selectedClientType = (string) request()->input('client_type', '');
     /* hide default DataTables search for this table */
 }
 
-.selling-voucher-search-wrapper:not(.sv-dr-search) {
+.selling-voucher-search-wrapper {
     max-width: 260px;
 }
 
@@ -1188,7 +1054,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                             </div>
                         </div>
                         <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <div class="d-flex align-items-center gap-1">
+                            <div class="d-flex align-items-center gap-2">
                                 <span class="fw-semibold">Grand Total:</span>
                                 <span class="fs-5 text-primary fw-bold" id="addModalGrandTotal">₹0.00</span>
                             </div>
@@ -1663,7 +1529,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                             </div>
                         </div>
                         <div class="card-footer bg-light d-flex justify-content-end align-items-center">
-                            <div class="d-flex align-items-center gap-1">
+                            <div class="d-flex align-items-center gap-2">
                                 <span class="fw-semibold">Grand Total:</span>
                                 <span class="fs-5 text-primary fw-bold" id="editModalGrandTotal">₹0.00</span>
                             </div>

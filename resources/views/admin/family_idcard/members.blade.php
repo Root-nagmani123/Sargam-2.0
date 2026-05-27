@@ -54,13 +54,13 @@
                         <option value="{{ $n }}">{{ $n }} entries</option>
                     @endforeach
                 </select>
-                <div class="ms-auto d-flex align-items-center gap-1 flex-wrap">
+                <div class="ms-auto d-flex align-items-center gap-2 flex-wrap">
                     <div class="dropdown">
                         <button class="btn btn-outline-secondary btn-sm dropdown-toggle" type="button" id="showHideColsMembers" data-bs-toggle="dropdown" aria-expanded="false">Show / hide columns</button>
                         <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="showHideColsMembers">
                             <li class="dropdown-item-text small text-muted">Toggle column visibility</li>
                             @foreach(['sno','request_date','guardians','id_number','name','relation','dob','individual_photo','valid_from','valid_to','family_photo','status','duplicate'] as $col)
-                                <li><label class="dropdown-item d-flex align-items-center gap-1 mb-0 cursor-pointer"><input type="checkbox" class="form-check-input col-toggle-m" data-col="{{ $col }}" checked> <span class="text-capitalize">{{ str_replace('_', ' ', $col) }}</span></label></li>
+                                <li><label class="dropdown-item d-flex align-items-center gap-2 mb-0 cursor-pointer"><input type="checkbox" class="form-check-input col-toggle-m" data-col="{{ $col }}" checked> <span class="text-capitalize">{{ str_replace('_', ' ', $col) }}</span></label></li>
                             @endforeach
                         </ul>
                     </div>

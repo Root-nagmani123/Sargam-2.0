@@ -3,7 +3,7 @@
 @section('title', 'Possession View - Sargam')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <x-breadcrum title="Possession View"></x-breadcrum>
     <x-session_message />
     <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">

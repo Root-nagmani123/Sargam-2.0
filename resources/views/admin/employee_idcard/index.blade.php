@@ -10,7 +10,7 @@
         <div class="card-body">
         <div class="d-flex flex-wrap justify-content-between align-items-center gap-3 mb-4 p-3 p-md-4 border border-body-secondary rounded-4 bg-body shadow-sm">
         
-        <div class="d-flex align-items-center gap-1 flex-wrap">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
             @php
                 $exportParams = array_filter([
                     'search' => $search ?? '',
@@ -20,7 +20,7 @@
                 ]);
             @endphp
             <div class="dropdown">
-                <button class="btn btn-success-subtle border border-success-subtle text-success-emphasis dropdown-toggle d-flex align-items-center gap-1 px-4 py-2 rounded-3 shadow-sm focus-ring" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-success-subtle border border-success-subtle text-success-emphasis dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-3 shadow-sm focus-ring" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="material-icons material-symbols-rounded fs-5">download</i>
                     Export
                 </button>
@@ -32,7 +32,7 @@
                     </li>
                     <li>
                         <a  href="#"
-                            class="dropdown-item d-flex align-items-center gap-1 py-2 export-link"
+                            class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
                             data-format="xlsx"
                             data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'xlsx'], $exportParams)) }}">
                             <i class="material-icons material-symbols-rounded text-success fs-6">table_chart</i>
@@ -41,7 +41,7 @@
                     </li>
                     <li>
                         <a  href="#"
-                            class="dropdown-item d-flex align-items-center gap-1 py-2 export-link"
+                            class="dropdown-item d-flex align-items-center gap-2 py-2 export-link"
                             data-format="pdf"
                             data-base-url="{{ route('admin.employee_idcard.export', array_merge(['format' => 'pdf'], $exportParams)) }}">
                             <i class="material-icons material-symbols-rounded text-danger fs-6">picture_as_pdf</i>
@@ -50,7 +50,7 @@
                     </li>
                 </ul>
             </div>
-            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary px-4 py-2 rounded-3 d-flex align-items-center gap-1 shadow-sm focus-ring">
+            <a href="{{ route('admin.employee_idcard.create') }}" class="btn btn-primary px-4 py-2 rounded-3 d-flex align-items-center gap-2 shadow-sm focus-ring">
                
                 Add New ID card
             </a>

@@ -12,7 +12,7 @@
         $dateToDisplay = $effectiveDateTo ?? '';
     }
 @endphp
-<div class="container-fluid process-mess-bills-employee-report mess-my-bills-page">
+<div class="container-fluid py-3 py-md-4 process-mess-bills-employee-report mess-my-bills-page">
     <x-breadcrum title="My Mess Bills"></x-breadcrum>
 
     <div class="report-header text-center mb-4">
@@ -23,7 +23,7 @@
 
     <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 no-print p-4 rounded-3 shadow-sm" style="background: #004a93; color: white;">
         <div>
-            <h4 class="mb-2 fw-bold d-flex align-items-center gap-1">
+            <h4 class="mb-2 fw-bold d-flex align-items-center gap-2">
                 <i class="material-symbols-rounded" style="font-size: 2rem;">receipt_long</i>
                 My Mess Bills
             </h4>

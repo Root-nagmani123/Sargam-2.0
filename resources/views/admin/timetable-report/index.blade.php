@@ -3,7 +3,7 @@
 @section('title', 'Timetable Session Report - Sargam')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid px-2 px-sm-3 px-md-4">
     <!-- Breadcrumb -->
     <x-breadcrum title="Timetable Session Report"></x-breadcrum>
 

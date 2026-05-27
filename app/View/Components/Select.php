@@ -18,15 +18,12 @@ class Select extends Component
     public $labelRequired;
     public $id;
 
-    /** First empty option label (e.g. “Select the year”). */
-    public $placeholder;
-
     /**
      * Create a new component instance.
      *
      * @return void
      */
-    public function __construct($name, $label = null, $options = [], $value = null, $required = false, $formLabelClass = null, $formSelectClass = null, $multiple = false, $labelRequired = false, $id = null, $placeholder = null)
+    public function __construct($name, $label = null, $options = [], $value = null, $required = false, $formLabelClass = null, $formSelectClass = null, $multiple = false, $labelRequired = false, $id = null)
     {
         $this->name = $name;
         $this->label = $label;
@@ -38,7 +35,6 @@ class Select extends Component
         $this->multiple = $multiple;
         $this->labelRequired = $labelRequired;
         $this->id = $id;
-        $this->placeholder = $placeholder ?? 'Select';
     }
 
     /**

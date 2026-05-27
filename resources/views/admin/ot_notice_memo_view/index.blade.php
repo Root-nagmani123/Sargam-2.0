@@ -8,7 +8,7 @@
     Skip to main content
 </a>
 
-<main id="main-content" class="container-fluid" role="main" aria-label="OT Notice and Memo Details">
+<main id="main-content" class="container-fluid py-4" role="main" aria-label="OT Notice and Memo Details">
     <!-- Breadcrumb -->
     <nav aria-label="Breadcrumb navigation">
         <x-breadcrum title="OT Notice / Memo View"></x-breadcrum>
@@ -37,11 +37,11 @@
                 </div>
                 <div class="col-md-6">
                     <div class="d-flex justify-content-md-end gap-2">
-                        <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-1 d-print-none" onclick="window.print()" aria-label="Print this page">
+                        <button type="button" class="btn btn-outline-primary d-flex align-items-center gap-2 d-print-none" onclick="window.print()" aria-label="Print this page">
                             <i class="material-icons fs-6" aria-hidden="true">print</i>
                             <span>Print</span>
                         </button>
-                        <button type="button" class="btn btn-primary d-flex align-items-center gap-1 d-print-none" onclick="history.back()" aria-label="Go back to previous page">
+                        <button type="button" class="btn btn-primary d-flex align-items-center gap-2 d-print-none" onclick="history.back()" aria-label="Go back to previous page">
                             <i class="material-icons fs-6" aria-hidden="true">arrow_back</i>
                             <span>Back</span>
                         </button>
@@ -55,7 +55,7 @@
             <!-- Student Information Card -->
             <div class="card border-primary border-start border-4 bg-light bg-opacity-10 mb-5 shadow-sm">
                 <div class="card-body p-4">
-                    <h2 class="h5 mb-4 text-primary fw-bold d-flex align-items-center gap-1">
+                    <h2 class="h5 mb-4 text-primary fw-bold d-flex align-items-center gap-2">
                         <i class="material-icons" aria-hidden="true">person</i>
                         Student Information
                     </h2>
@@ -115,7 +115,7 @@
             <!-- Records Section -->
             <section aria-label="Notice and Memo Records">
                 <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h2 class="h4 mb-0 fw-bold d-flex align-items-center gap-1">
+                    <h2 class="h4 mb-0 fw-bold d-flex align-items-center gap-2">
                         <i class="material-icons text-primary" aria-hidden="true">list_alt</i>
                         Records
                         <span class="badge bg-primary rounded-pill ms-2">{{ $studentData['total_count'] ?? 0 }}</span>
@@ -123,7 +123,7 @@
                     
                     @if(isset($studentData['has_records']) && $studentData['has_records'] && count($studentData['records']) > 0)
                     <div class="dropdown d-print-none">
-                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-1" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Filter records">
+                        <button class="btn btn-outline-secondary btn-sm dropdown-toggle d-flex align-items-center gap-2" type="button" id="filterDropdown" data-bs-toggle="dropdown" aria-expanded="false" aria-label="Filter records">
                             <i class="material-icons fs-6" aria-hidden="true">filter_list</i>
                             Filter
                         </button>
@@ -238,7 +238,7 @@
                                             <!-- Conversation Section -->
                                             @if(isset($record->conversations) && $record->conversations->count() > 0)
                                                 <section class="border-top pt-4 mt-4" aria-label="Conversation history">
-                                                    <div class="d-flex align-items-center gap-1 mb-4">
+                                                    <div class="d-flex align-items-center gap-2 mb-4">
                                                         <div class="bg-primary bg-opacity-10 p-2 rounded">
                                                             <i class="material-icons text-primary fs-5" aria-hidden="true">chat</i>
                                                         </div>
@@ -326,7 +326,7 @@
                 </div>
                 <div class="col-md-6">
                     <div class="d-flex justify-content-md-end gap-2">
-                        <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Scroll to top of page">
+                        <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2" onclick="window.scrollTo({top: 0, behavior: 'smooth'})" aria-label="Scroll to top of page">
                             <i class="material-icons fs-6" aria-hidden="true">arrow_upward</i>
                             <span>Back to Top</span>
                         </button>

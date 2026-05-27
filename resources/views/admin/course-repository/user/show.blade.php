@@ -48,7 +48,7 @@
 
     <!-- Main Content -->
     <main class="flex-grow-1">
-        <div class="container-fluid" id="main-content">
+        <div class="container-fluid px-4 py-4" id="main-content">
             <!-- Filter Card -->
             @if(isset($courses) && isset($subjects) && isset($faculties))
             @include('admin.course-repository.user.partials.filter-card', [

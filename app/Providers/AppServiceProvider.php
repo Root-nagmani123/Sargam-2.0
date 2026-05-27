@@ -2,11 +2,9 @@
 
 namespace App\Providers;
 
-use App\Models\LoginCarouselImage;
 use App\Support\FeedbackReportRouteRegistry;
 use App\Services\NotificationService;
 use Illuminate\Pagination\Paginator;
-use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -33,16 +31,6 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Paginator::useBootstrap();
-
-        Route::bind('loginCarouselImage', function (string $value) {
-            abort_unless(
-                LoginCarouselImage::tableExists(),
-                503,
-                'Login carousel is not set up yet. Run the login_carousel_images migration.'
-            );
-
-            return LoginCarouselImage::query()->findOrFail($value);
-        });
 
         View::composer([
             'admin.feedback.feedback_details',
