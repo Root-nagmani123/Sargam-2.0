@@ -65,93 +65,40 @@ class CourseMasterDataTable extends DataTable
                 return $row->end_date ? Carbon::parse($row->end_date)->format('d-m-Y') : '';
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                        data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
-                </div>';
+                if ((int) $row->active_inactive === 1) {
+                    return '<span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>';
+                }
+
+                return '<span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>';
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
                 $viewUrl = route('programme.show', ['id' => encrypt($row->pk)]);
                 $deleteUrl = route('programme.destroy', ['id' => encrypt($row->pk)]);
-                $isActive = $row->active_inactive == 1;
+                $isActive = (int) $row->active_inactive === 1;
+                $checked = $isActive ? 'checked' : '';
                 $csrf = csrf_token();
-                $btnId = 'dropdown-btn-' . $row->pk;
 
-                $html = <<<HTML
-<td class="text-center">
-    <div class="d-inline-flex align-items-center gap-2"
-         role="group"
-         aria-label="Row actions">
+                $deleteHtml = $isActive
+                    ? '<button type="button" class="programme-action-btn programme-action-btn--danger d-none" disabled aria-disabled="true" title="Cannot delete active course"><i class="bi bi-trash3" aria-hidden="true"></i></button>'
+                    : '<form action="'.$deleteUrl.'" method="POST" class="d-inline-flex m-0 programme-delete-form">'
+                        .'<input type="hidden" name="_token" value="'.$csrf.'">'
+                        .'<input type="hidden" name="_method" value="DELETE">'
+                        .'<button type="submit" class="programme-action-btn programme-action-btn--danger programme-delete-btn" aria-label="Delete course">'
+                        .'<i class="bi bi-trash3" aria-hidden="true"></i>'
+                        .'</button>'
+                        .'</form>';
 
-        <!-- View -->
-        <a
-            href="{$viewUrl}"
-            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-            aria-label="View course"
-        >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">
-                visibility
-            </span>
-        </a>
-
-        <!-- Edit -->
-        <a
-            href="{$editUrl}"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-            aria-label="Edit course"
-        >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">
-                edit
-            </span>
-        </a>
-
-        <!-- Delete -->
-        <?php if ($isActive): ?>
-            <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none bg-transparent border-0 p-0 text-primary"
-                disabled
-                aria-disabled="true"
-                title="Cannot delete active course"
-            >
-                <span class="material-icons material-symbols-rounded"
-                      style="font-size:18px;"
-                      aria-hidden="true">
-                    delete
-                </span>
-            </button>
-        <?php else: ?>
-            <form action="{$deleteUrl}" method="POST" class="d-inline">
-                <input type="hidden" name="_token" value="{$csrf}">
-                <input type="hidden" name="_method" value="DELETE">
-
-                <button
-                    type="submit"
-                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-                    aria-label="Delete course"
-                    onclick="return confirm('Are you sure you want to delete this course?');"
-                >
-                    <span class="material-icons material-symbols-rounded"
-                          style="font-size:18px;"
-                          aria-hidden="true">
-                        delete
-                    </span>
-                </button>
-            </form>
-        <?php endif; ?>
-
-    </div>
-</td>
-
-HTML;
-                return $html;
+                return '
+                <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
+                    <a href="'.$viewUrl.'" class="programme-action-btn" aria-label="View course"><i class="bi bi-eye" aria-hidden="true"></i></a>
+                    <a href="'.$editUrl.'" class="programme-action-btn" aria-label="Edit course"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                    <div class="form-check form-switch programme-action-switch mb-0">
+                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                            data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
+                    </div>
+                    '.$deleteHtml.'
+                </div>';
             })
             ->filterColumn('course_name', function ($query, $keyword) {
                 $query->where('course_name', 'like', "%{$keyword}%");
@@ -235,13 +182,26 @@ HTML;
             ->responsive(true)
             ->parameters([
                 'responsive' => true,
-                'scrollX' => true,
+                'scrollX' => false,
                 'autoWidth' => false,
                 'ordering' => false,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
+                'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
                 'order' => [],
+                'language' => [
+                    'search' => '',
+                    'searchPlaceholder' => 'Search',
+                    'paginate' => [
+                        'previous' => '‹',
+                        'next' => '›',
+                    ],
+                    'lengthMenu' => 'Showing _MENU_',
+                    'info' => 'of _TOTAL_ items',
+                    'infoEmpty' => 'of 0 items',
+                    'infoFiltered' => 'of _MAX_ items',
+                ],
             ])
             ->buttons([
                 Button::make('excel'),
@@ -261,15 +221,14 @@ HTML;
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('course_name')->title('Course Name')->orderable(false)->searchable(true),
             Column::make('couse_short_name')->title('Short Name')->orderable(false)->searchable(true),
-            Column::make('course_year')->title('Course Year')->orderable(false)->searchable(true),
-            Column::make('start_year')->title('Start Date')->orderable(false)->searchable(false),
-            Column::make('end_date')->title('End Date')->orderable(false)->searchable(false),
-                Column::computed('status')->orderable(false)->searchable(false),
-            Column::computed('action')->orderable(false)->searchable(false),
-        
+            Column::make('course_year')->title('Course Year')->orderable(false)->searchable(true)->addClass('text-center'),
+            Column::make('start_year')->title('Start Date')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::make('end_date')->title('End Date')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::computed('status')->title('Status')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::computed('action')->title('Action')->orderable(false)->searchable(false)->addClass('text-center'),
         ];
     }
 

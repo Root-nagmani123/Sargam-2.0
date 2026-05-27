@@ -241,7 +241,7 @@
                             @endforeach
                         </ol>
                     </nav>
-                    <h1 class="modern-breadcrumb-title mb-0 text-dark">{{ $title }}</h1>
+                    <h4 class="modern-breadcrumb-title mb-0 text-dark">{{ $title }}</h4>
                 </div>
             </div>
 
@@ -290,7 +290,7 @@
     }
 
     .modern-breadcrumb-title {
-        font-size: clamp(1.35rem, 2vw, 2rem);
+        font-size: 1.25rem;
         font-weight: 700;
         line-height: 1.15;
         letter-spacing: -0.01em;
