@@ -38797,7 +38797,6 @@ pre.code-view code.hljs {
     width: 100%;
     background: var(--bs-body-bg);
     z-index: 9;
-    padding: 0 15px;
 }
 
 .topbar .navbar {
@@ -51268,7 +51267,7 @@ h6 {
 
 .header-fp .navbar .navbar-nav .nav-link.active {
     background-color: var(--bs-primary-bg-subtle);
-    color: var(--bs-primary) !important;
+    color: white !important;
 }
 
 .tabs-pills .nav-item .nav-link {
@@ -51451,7 +51450,7 @@ h6 {
 }
 .navbar-nav .nav-link.active {
     background-color: transparent;
-    color: #004a93 !important;
+    color: #ffffff !important;
     font-size: 16px !important;
     line-height: 24px;
     font-weight: 500 !important;

@@ -41,7 +41,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Function to sync sidebar tabs with main content tabs
 function syncSidebarWithMainTabs() {
-    const mainTabLinks = document.querySelectorAll('#mainNavbar .nav-link[data-bs-toggle="tab"]');
+    const mainTabLinks = document.querySelectorAll(
+        '#mainNavbar .nav-link[data-bs-toggle="tab"], .header-main-nav .nav-link[data-bs-toggle="tab"]'
+    );
     const sidebarTabPanes = document.querySelectorAll('#sidebarTabContent .tab-pane');
     
     // Map main tab IDs to sidebar tab IDs
@@ -85,7 +87,9 @@ function syncSidebarWithMainTabs() {
     });
     
     // Activate sidebar tab based on initial active main tab
-    const activeMainTab = document.querySelector('#mainNavbar .nav-link[data-bs-toggle="tab"].active');
+    const activeMainTab = document.querySelector(
+        '#mainNavbar .nav-link[data-bs-toggle="tab"].active, .header-main-nav .nav-link[data-bs-toggle="tab"].active'
+    );
     if (activeMainTab) {
         const targetTab = activeMainTab.getAttribute('href');
         activateSidebarTab(targetTab);
