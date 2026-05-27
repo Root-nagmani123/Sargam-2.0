@@ -1,4 +1,3 @@
-
 <!-- Tab Content Container -->
 
 <!-- //admin tabs -->
@@ -11,12 +10,6 @@
         </div>
         <div class="tab-pane fade" id="sidebar-communications" role="tabpanel" aria-labelledby="communications-tab">
             @include('admin.layouts.sidebar.communication') 
-        </div>
-        <div class="tab-pane fade" id="sidebar-academics" role="tabpanel" aria-labelledby="academics-tab">
-            @include('admin.layouts.sidebar.academics')
-        </div>
-        <div class="tab-pane fade" id="sidebar-purchase-order" role="tabpanel" aria-labelledby="purchase-order-tab">
-            @include('admin.layouts.sidebar.material')
         </div>
     </div>
 

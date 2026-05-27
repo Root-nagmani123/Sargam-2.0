@@ -17900,7 +17900,7 @@ progress {
 .container-sm,
 .container-xl,
 .container-xxl {
-    --bs-gutter-x: 30px;
+    --bs-gutter-x: 10px;
     --bs-gutter-y: 0;
     width: 100%;
     padding-right: calc(var(--bs-gutter-x) * 0.5);
@@ -38294,9 +38294,9 @@ fieldset:disabled .btn {
     margin-left: calc(90px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
-    border-radius: 30px;
+    border-radius: 10px;
     background: #f2f2f2;
-    min-height: calc(100vh - 102px);
+    min-height: calc(100vh - 155px);
 }
 @media (max-width: 480px) {
     .body-wrapper {
@@ -38311,7 +38311,7 @@ fieldset:disabled .btn {
 .container-sm,
 .container-xl,
 .container-xxl {
-    padding: 30px;
+    padding: 10px;
 }
 
 @media (max-width: 991.98px) {
