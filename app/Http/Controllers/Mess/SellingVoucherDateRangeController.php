@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\Mess\SellingVoucherDateRangeReportItem;
@@ -19,6 +20,7 @@ use App\Models\StudentMaster;
 use App\Models\KitchenIssueMaster;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +33,16 @@ use Illuminate\Support\MessageBag;
  */
 class SellingVoucherDateRangeController extends Controller
 {
+    private const SV_DATE_RANGE_DT_LIST_EPOCH = 'selling_voucher_date_range_dt_list_epoch';
+
+    /**
+     * Invalidate Redis-backed Selling Voucher (Date Range) DataTables JSON after listing mutations.
+     */
+    public static function bumpSellingVoucherDateRangeListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::SV_DATE_RANGE_DT_LIST_EPOCH, 'SellingVoucherDateRangeController@datatable');
+    }
+
     /**
      * Historical mess_client_types.id values still stored on sv_date_range_reports rows
      * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
@@ -248,8 +260,55 @@ class SellingVoucherDateRangeController extends Controller
 
     /**
      * Server-side DataTables JSON for Selling Voucher with Date Range listing (one row per item line).
+     * Cached via Redis ({@see DataTableRedisCache}); tune with SELLING_VOUCHER_DATE_RANGE_DATATABLE_CACHE_* in .env.
      */
-    public function datatable(Request $request)
+    public function datatable(Request $request): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $request,
+            'sv_date_range_dt:v1:',
+            self::SV_DATE_RANGE_DT_LIST_EPOCH,
+            [
+                'enabled' => 'SELLING_VOUCHER_DATE_RANGE_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'SELLING_VOUCHER_DATE_RANGE_DATATABLE_CACHE_SECONDS',
+            ],
+            'SellingVoucherDateRangeController@datatable',
+            fn () => $this->buildSellingVoucherDateRangeDatatableResponse($request),
+            $this->sellingVoucherDateRangeDatatableFilterFingerprint($request)
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sellingVoucherDateRangeDatatableFilterFingerprint(Request $request): array
+    {
+        $store = collect((array) $request->input('store', []))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (string) $value)
+            ->values()
+            ->all();
+
+        $status = collect((array) $request->input('status', []))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (string) $value)
+            ->values()
+            ->all();
+
+        return [
+            'store' => $store,
+            'status' => $status,
+            'client_type' => $request->input('client_type'),
+            'client_type_pk' => $request->input('client_type_pk'),
+            'buyer_name' => trim((string) $request->input('buyer_name', '')),
+            'return_status' => strtolower(trim((string) $request->input('return_status', ''))),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+            'can_delete' => function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin')),
+        ];
+    }
+
+    private function buildSellingVoucherDateRangeDatatableResponse(Request $request): JsonResponse
     {
         $draw = (int) $request->input('draw', 1);
         $start = max(0, (int) $request->input('start', 0));
@@ -591,6 +650,7 @@ class SellingVoucherDateRangeController extends Controller
             $report->increment('total_amount', $grandTotal);
 
             DB::commit();
+            self::bumpSellingVoucherDateRangeListingCacheEpoch();
 
             // AJAX request: return JSON so frontend can keep modal open without full page reload
             if ($request->ajax() || $request->wantsJson()) {
@@ -909,6 +969,7 @@ class SellingVoucherDateRangeController extends Controller
             $report->update(['total_amount' => $grandTotal]);
 
             DB::commit();
+            self::bumpSellingVoucherDateRangeListingCacheEpoch();
 
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->with('success', 'Date Range Report updated successfully.');
@@ -924,6 +985,8 @@ class SellingVoucherDateRangeController extends Controller
         $report = SellingVoucherDateRangeReport::findOrFail($id);
         $report->items()->delete();
         $report->delete();
+        self::bumpSellingVoucherDateRangeListingCacheEpoch();
+
         return redirect()->route('admin.mess.selling-voucher-date-range.index')
             ->with('success', 'Date Range Report deleted successfully.');
     }
@@ -1020,6 +1083,7 @@ class SellingVoucherDateRangeController extends Controller
                 ]);
             }
             DB::commit();
+            self::bumpSellingVoucherDateRangeListingCacheEpoch();
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([

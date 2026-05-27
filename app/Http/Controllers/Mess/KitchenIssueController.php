@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use App\Models\KitchenIssueMaster;
 use App\Services\Mess\AvailableQuantityService;
@@ -20,6 +21,7 @@ use App\Models\DepartmentMaster;
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +32,16 @@ use Carbon\Carbon;
 
 class KitchenIssueController extends Controller
 {
+    private const SELLING_VOUCHER_DT_LIST_EPOCH = 'selling_voucher_dt_list_epoch';
+
+    /**
+     * Invalidate Redis-backed Selling Voucher DataTables JSON after listing mutations.
+     */
+    public static function bumpSellingVoucherListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::SELLING_VOUCHER_DT_LIST_EPOCH, 'KitchenIssueController@sellingVouchersDatatable');
+    }
+
     /**
      * Historical mess_client_types.id values still stored on kitchen_issue_master rows
      * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
@@ -328,8 +340,47 @@ class KitchenIssueController extends Controller
 
     /**
      * Server-side DataTables JSON for Selling Voucher listing (one row per item line).
+     * Cached via Redis ({@see DataTableRedisCache}); tune with SELLING_VOUCHER_DATATABLE_CACHE_* in .env.
      */
-    public function sellingVouchersDatatable(Request $request)
+    public function sellingVouchersDatatable(Request $request): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $request,
+            'selling_voucher_dt:v1:',
+            self::SELLING_VOUCHER_DT_LIST_EPOCH,
+            [
+                'enabled' => 'SELLING_VOUCHER_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'SELLING_VOUCHER_DATATABLE_CACHE_SECONDS',
+            ],
+            'KitchenIssueController@sellingVouchersDatatable',
+            fn () => $this->buildSellingVouchersDatatableResponse($request),
+            $this->sellingVoucherDatatableFilterFingerprint($request)
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sellingVoucherDatatableFilterFingerprint(Request $request): array
+    {
+        $store = $request->input('store');
+        $status = $request->input('status');
+
+        return [
+            'store' => is_array($store) ? array_values($store) : (($store !== null && $store !== '') ? [$store] : []),
+            'status' => is_array($status) ? array_values($status) : (($status !== null && $status !== '') ? [$status] : []),
+            'payment_type' => $request->input('payment_type'),
+            'client_type' => $request->input('client_type'),
+            'client_type_pk' => $request->input('client_type_pk'),
+            'buyer_name' => trim((string) $request->input('buyer_name', '')),
+            'return_status' => strtolower(trim((string) $request->input('return_status', ''))),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+            'can_delete' => function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin')),
+        ];
+    }
+
+    private function buildSellingVouchersDatatableResponse(Request $request): JsonResponse
     {
         $draw = (int) $request->input('draw', 1);
         $start = max(0, (int) $request->input('start', 0));
@@ -1115,6 +1166,7 @@ class KitchenIssueController extends Controller
             }
 
             DB::commit();
+            self::bumpSellingVoucherListingCacheEpoch();
 
             // Modal / fetch: return JSON so the form can reset without full page reload (header + respond_json flag)
             $returnJson = $request->ajax()
@@ -1505,6 +1557,7 @@ class KitchenIssueController extends Controller
             }
 
             DB::commit();
+            self::bumpSellingVoucherListingCacheEpoch();
 
             return redirect()->route('admin.mess.material-management.index')
                            ->with('success', 'Selling Voucher updated successfully');
@@ -1528,6 +1581,7 @@ class KitchenIssueController extends Controller
         try {
             $kitchenIssue->items()->delete();
             $kitchenIssue->delete();
+            self::bumpSellingVoucherListingCacheEpoch();
 
             return redirect()->route('admin.mess.material-management.index')
                            ->with('success', 'Selling Voucher deleted successfully');
@@ -1628,6 +1682,8 @@ class KitchenIssueController extends Controller
                 ]);
             }
             DB::commit();
+            self::bumpSellingVoucherListingCacheEpoch();
+
             return redirect()->route('admin.mess.material-management.index')
                 ->with('success', 'Return updated successfully.');
         } catch (\Exception $e) {
@@ -1684,6 +1740,7 @@ class KitchenIssueController extends Controller
                 'status' => KitchenIssueMaster::STATUS_PROCESSING,
                 'modified_by' => Auth::id(),
             ]);
+            self::bumpSellingVoucherListingCacheEpoch();
 
             return back()->with('success', 'Material Management sent for approval successfully');
         } catch (\Exception $e) {
