@@ -4,13 +4,14 @@ namespace App\Services\FC;
 
 use App\Models\FC\FcActivityMaster;
 use App\Models\FC\FcOtActivity;
-use App\Models\FC\FcOtDetail;
 use Illuminate\Support\Str;
 
 class FcActivityService
 {
-    public function __construct(private FcPostArrivalAccessService $access)
-    {
+    public function __construct(
+        private FcPostArrivalAccessService $access,
+        private FcActivityStudentResolver $trainees
+    ) {
     }
 
     public function store(array $data, string $staffUsername): string
@@ -19,8 +20,12 @@ class FcActivityService
             return 'no';
         }
 
-        $ot = FcOtDetail::where('otcode', $data['otcode'])->first();
-        if (! $ot) {
+        $courseMasterPk = isset($data['course_master_pk']) ? (int) $data['course_master_pk'] : null;
+        $trainee = $this->trainees->findByOtCode($data['otcode'], $courseMasterPk ?: null);
+        if (! $trainee && $courseMasterPk) {
+            $trainee = $this->trainees->findByOtCode($data['otcode'], null);
+        }
+        if (! $trainee) {
             return 'no';
         }
 
@@ -34,21 +39,33 @@ class FcActivityService
 
         $this->access->assertMenuidAllowedForOtEntry($data['uactivity']);
 
-        // Medical department: always append a new row (history) so vitals (height, weight, etc.) are not
-        // overwritten by upsert — even if the master is still set to "upsert" in Activity setup.
+        $courseStored = Str::limit(trim((string) ($data['ccode'] ?? '')), 20, '');
+        $data['ccode'] = $courseStored;
+
+        $activityUserId = (int) ($trainee->credentials_pk ?? 0);
+        if ($activityUserId < 1) {
+            return 'no';
+        }
+
+        try {
+            $this->trainees->syncMedicalOtDetail($trainee, $courseStored !== '' ? $courseStored : null);
+        } catch (\Throwable $e) {
+            report($e);
+        }
+
         if ($this->isMedicalDepartmentActivity($master)) {
-            return $this->insertRow($ot->user_id, $data, $staffUsername) ? 'ok' : 'no';
+            return $this->insertRow($activityUserId, $data, $staffUsername) ? 'ok' : 'no';
         }
 
         if ($master->entry_policy === 'repeat') {
-            return $this->insertRow($ot->user_id, $data, $staffUsername) ? 'ok' : 'no';
+            return $this->insertRow($activityUserId, $data, $staffUsername) ? 'ok' : 'no';
         }
 
         if ($master->entry_policy === 'upsert') {
-            return $this->upsertRow($ot->user_id, $data, $staffUsername) ? 'ok' : 'no';
+            return $this->upsertRow($activityUserId, $data, $staffUsername) ? 'ok' : 'no';
         }
 
-        $exists = FcOtActivity::where(fc_user_col('fc_otactivity_details'), $ot->user_id)
+        $exists = FcOtActivity::where(fc_user_col('fc_otactivity_details'), fc_user_val('fc_otactivity_details', $activityUserId))
             ->where('activity', $data['uactivity'])
             ->where(function ($q) use ($data) {
                 $q->where('course', $data['ccode'])
@@ -59,7 +76,7 @@ class FcActivityService
             return 'al';
         }
 
-        return $this->insertRow($ot->user_id, $data, $staffUsername) ? 'ok' : 'no';
+        return $this->insertRow($activityUserId, $data, $staffUsername) ? 'ok' : 'no';
     }
 
     private function isMedicalDepartmentActivity(FcActivityMaster $master): bool
@@ -191,13 +208,23 @@ class FcActivityService
             return [];
         }
 
+        $actCol = fc_user_col('fc_otactivity_details');
+        $serviceCol = \Illuminate\Support\Facades\Schema::hasColumn('service_master', 'service_name')
+            ? 'service_name'
+            : 'service_short_name';
+
         return FcOtActivity::query()
-            ->join('fc_ot_details', 'fc_otactivity_details.' . fc_user_col('fc_otactivity_details'), '=', 'fc_ot_details.' . fc_user_col('fc_ot_details'))
+            ->join('user_credentials as uc', "fc_otactivity_details.{$actCol}", '=', 'uc.pk')
+            ->join('student_master as sm', 'sm.pk', '=', 'uc.user_id')
+            ->leftJoin('service_master as svc', 'svc.pk', '=', 'sm.service_master_pk')
             ->where('fc_otactivity_details.activity', $joinedMenuid)
             ->where('fc_otactivity_details.status', 1)
-            ->where('fc_ot_details.status', 1)
-            ->selectRaw('fc_ot_details.service as svc, COUNT(DISTINCT fc_ot_details.' . fc_user_col('fc_ot_details') . ') as total')
-            ->groupBy('fc_ot_details.service')
+            ->when(
+                \Illuminate\Support\Facades\Schema::hasColumn('student_master', 'status'),
+                fn ($q) => $q->where('sm.status', 1)
+            )
+            ->selectRaw("COALESCE(svc.{$serviceCol}, '') as svc, COUNT(DISTINCT fc_otactivity_details.{$actCol}) as total")
+            ->groupBy('svc')
             ->pluck('total', 'svc')
             ->toArray();
     }

@@ -6,15 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Models\FC\FcActivityDepartment;
 use App\Models\FC\FcActivityMaster;
 use App\Models\FC\FcOtActivity;
-use App\Models\FC\FcOtDetail;
+use App\Services\FC\FcActivityStudentResolver;
 use App\Services\FC\FcPostArrivalAccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\View\View;
 
 class FcActivityStatusController extends Controller
 {
-    public function __construct(private FcPostArrivalAccessService $access)
-    {
+    public function __construct(
+        private FcPostArrivalAccessService $access,
+        private FcActivityStudentResolver $trainees
+    ) {
     }
 
     public function picker(): RedirectResponse|View
@@ -44,9 +46,7 @@ class FcActivityStatusController extends Controller
             ->ordered()
             ->get(['id', 'menuid', 'menun']);
 
-        $ots = FcOtDetail::query()->active()->orderBy('otcode')->get([
-            'user_id', 'otname', 'otcode', 'mobileno', 'service',
-        ]);
+        $ots = $this->trainees->listForActivityGrids();
 
         $menuids = $masters->pluck('menuid')->all();
 
@@ -116,9 +116,7 @@ class FcActivityStatusController extends Controller
             'header' => FcActivityMaster::shortLabel($row['menun']),
         ]);
 
-        $ots = FcOtDetail::query()->active()->orderBy('otcode')->get([
-            'user_id', 'otname', 'otcode',
-        ]);
+        $ots = $this->trainees->listForActivityGrids();
 
         $actMap = FcOtActivity::query()
             ->where('status', 1)

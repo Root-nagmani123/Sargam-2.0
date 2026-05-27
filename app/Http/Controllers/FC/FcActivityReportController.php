@@ -5,16 +5,18 @@ namespace App\Http\Controllers\FC;
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcActivityMaster;
 use App\Models\FC\FcOtActivity;
-use App\Models\FC\FcOtDetail;
 use App\Services\FC\FcActivityService;
+use App\Services\FC\FcActivityStudentResolver;
 use App\Services\FC\FcPostArrivalAccessService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
 
 class FcActivityReportController extends Controller
 {
     public function __construct(
         private FcActivityService $svc,
-        private FcPostArrivalAccessService $access
+        private FcPostArrivalAccessService $access,
+        private FcActivityStudentResolver $trainees
     ) {
     }
 
@@ -37,19 +39,24 @@ class FcActivityReportController extends Controller
     {
         $this->access->assertMenuidAllowedForUser($menuid);
 
-        $ots = FcOtDetail::query()
-            ->join('fc_otactivity_details', function ($join) use ($menuid) {
-                $join->on('fc_ot_details.user_id', '=', 'fc_otactivity_details.user_id')
-                    ->where('fc_otactivity_details.activity', '=', $menuid)
-                    ->where('fc_otactivity_details.status', '=', 1);
-            })
-            ->select(
-                'fc_ot_details.otname',
-                'fc_ot_details.otcode',
-                'fc_ot_details.mobileno',
-                'fc_ot_details.service'
-            )
-            ->orderBy('fc_ot_details.service')
+        $actCol = fc_user_col('fc_otactivity_details');
+        $serviceCol = \Illuminate\Support\Facades\Schema::hasColumn('service_master', 'service_name')
+            ? 'service_name'
+            : 'service_short_name';
+
+        $ots = DB::table('fc_otactivity_details')
+            ->join('user_credentials as uc', "fc_otactivity_details.{$actCol}", '=', 'uc.pk')
+            ->join('student_master as sm', 'sm.pk', '=', 'uc.user_id')
+            ->leftJoin('service_master as svc', 'svc.pk', '=', 'sm.service_master_pk')
+            ->where('fc_otactivity_details.activity', $menuid)
+            ->where('fc_otactivity_details.status', 1)
+            ->select([
+                DB::raw('COALESCE(NULLIF(TRIM(sm.display_name), ""), TRIM(CONCAT(COALESCE(sm.first_name,""), " ", COALESCE(sm.middle_name,""), " ", COALESCE(sm.last_name,"")))) as otname'),
+                'sm.generated_OT_code as otcode',
+                'sm.contact_no as mobileno',
+                DB::raw("COALESCE(svc.{$serviceCol}, '') as service"),
+            ])
+            ->orderBy('service')
             ->get();
 
         $label = FcActivityMaster::query()->where('menuid', $menuid)->value('menun');
@@ -77,7 +84,7 @@ class FcActivityReportController extends Controller
             ]);
         }
 
-        $allOts = FcOtDetail::active()->orderBy('otcode')->get();
+        $allOts = $this->trainees->listForActivityGrids();
         $joinedUsernameSet = FcOtActivity::query()
             ->where('activity', $joinedCode)
             ->where('status', 1)
