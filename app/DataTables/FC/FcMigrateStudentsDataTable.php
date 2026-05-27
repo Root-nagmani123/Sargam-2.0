@@ -218,10 +218,6 @@ JS;
     {
         $query->where('r.is_registered', 1)
             ->whereNull('uc.pk')
-            ->where(function ($q) {
-                $q->where('r.fc_exemption_master_pk', 0)
-                    ->orWhereNull('r.fc_exemption_master_pk');
-            })
             ->whereNotNull('r.user_id')
             ->where('r.user_id', '!=', '')
             ->whereNotNull('r.password')
