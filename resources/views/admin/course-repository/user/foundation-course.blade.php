@@ -4,11 +4,6 @@
 
 @section('content')
 <div class="d-flex">
-    <!-- Left Sidebar -->
-    <aside class="course-sidebar-wrapper">
-        <x-course-sidebar />
-    </aside>
-
     <!-- Main Content -->
     <main class="flex-grow-1">
         <div class="container-fluid px-4 py-4" id="main-content">

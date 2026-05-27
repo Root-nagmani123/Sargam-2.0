@@ -15,9 +15,12 @@
         ['key' => 'action', 'label' => 'Action', 'locked' => true],
     ];
 @endphp
-<div class="card cru-table-card border rounded-3 shadow-sm overflow-hidden" data-cru-table-card="{{ $cruTableId }}">
+<div class="card cru-table-card border-0 shadow-sm rounded-4 overflow-hidden" data-cru-table-card="{{ $cruTableId }}">
     @if($totalCount > 0)
-    <div class="cru-table-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 px-3 py-2 border-bottom bg-white">
+    <div class="cru-table-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 px-md-4 py-3 border-bottom bg-white">
+        <p class="small text-muted mb-0 d-none d-sm-block">
+            <i class="bi bi-table me-1" aria-hidden="true"></i>Manage visible columns
+        </p>
         @include('admin.course-repository.user.partials.table-column-toggle', [
             'cruTableId' => $cruTableId,
             'cruColumnStorageKey' => $cruColumnStorageKey,
@@ -26,18 +29,18 @@
     </div>
     @endif
     <div class="table-responsive">
-        <table class="table table-hover mb-0 align-middle cru-table" id="{{ $cruTableId }}">
-            <thead>
+        <table class="table mb-0 align-middle cru-table" id="{{ $cruTableId }}">
+            <thead class="table-light">
                 <tr>
-                    <th class="text-center text-nowrap cru-col-sno" data-col="sno">S. No.</th>
-                    <th class="cru-col-document_name" data-col="document_name">Document Name</th>
-                    <th class="cru-col-file_title" data-col="file_title">File Title</th>
-                    <th class="cru-col-course" data-col="course">Course</th>
-                    <th class="cru-col-subject" data-col="subject">Subject</th>
-                    <th class="cru-col-topic" data-col="topic">Topic</th>
-                    <th class="text-nowrap cru-col-session_date" data-col="session_date">Session Date</th>
-                    <th class="cru-col-author" data-col="author">Author</th>
-                    <th class="text-center cru-col-action" data-col="action">Action</th>
+                    <th class="text-center text-nowrap cru-col-sno small text-uppercase" data-col="sno">S. No.</th>
+                    <th class="cru-col-document_name small text-uppercase" data-col="document_name">Document Name</th>
+                    <th class="cru-col-file_title small text-uppercase" data-col="file_title">File Title</th>
+                    <th class="cru-col-course small text-uppercase" data-col="course">Course</th>
+                    <th class="cru-col-subject small text-uppercase" data-col="subject">Subject</th>
+                    <th class="cru-col-topic small text-uppercase" data-col="topic">Topic</th>
+                    <th class="text-nowrap cru-col-session_date small text-uppercase" data-col="session_date">Session Date</th>
+                    <th class="cru-col-author small text-uppercase" data-col="author">Author</th>
+                    <th class="text-center cru-col-action small text-uppercase" data-col="action">Action</th>
                 </tr>
             </thead>
             <tbody>
@@ -91,7 +94,10 @@
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="9" class="text-center text-muted py-5">No documents found.</td>
+                    <td colspan="9" class="text-center text-muted py-5">
+                        <i class="bi bi-file-earmark-x d-block fs-3 mb-2" aria-hidden="true"></i>
+                        No documents found.
+                    </td>
                 </tr>
                 @endforelse
             </tbody>

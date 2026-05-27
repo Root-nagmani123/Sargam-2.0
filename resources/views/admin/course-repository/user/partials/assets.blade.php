@@ -8,13 +8,26 @@
         var toggles = document.querySelectorAll('[data-cru-view]');
         if (!grid || !toggles.length) return;
 
+        var cardsPanel = grid.querySelector('.cru-view-cards');
+        var listPanel = grid.querySelector('.cru-view-grid');
+
         function setView(view) {
-            grid.classList.toggle('cru-view-list', view === 'grid');
+            var isGrid = view === 'grid';
+
+            if (cardsPanel && listPanel) {
+                cardsPanel.classList.toggle('d-none', isGrid);
+                listPanel.classList.toggle('d-none', !isGrid);
+                grid.classList.remove('cru-view-list');
+            } else {
+                grid.classList.toggle('cru-view-list', isGrid);
+            }
+
             toggles.forEach(function (btn) {
                 var isActive = btn.getAttribute('data-cru-view') === view;
                 btn.classList.toggle('active', isActive);
                 btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
             });
+
             try { localStorage.setItem('cru-view', view); } catch (e) {}
         }
 
@@ -26,7 +39,9 @@
 
         try {
             var saved = localStorage.getItem('cru-view');
-            if (saved === 'grid' || saved === 'card') setView(saved);
+            if (saved === 'grid' || saved === 'card') {
+                setView(saved);
+            }
         } catch (e) {}
     });
 })();

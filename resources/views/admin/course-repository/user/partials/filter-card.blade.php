@@ -6,14 +6,11 @@
 @endphp
 
 <!-- Filter Card Partial -->
-<div class="filter-card choices-bs-scope mb-3 mb-md-4 overflow-visible" id="cruFilterCard">
-    <form method="GET" action="{{ $route }}" id="filterForm" novalidate>
-        <div class="row g-2 g-md-3 align-items-center">
-            <div class="col-12 col-lg-auto">
-                <span class="cru-filter-label text-muted small fw-normal mb-0">Filters</span>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg">
+<div class="card filter-card mb-4 choices-bs-scope" id="cruFilterCard">
+    <div class="card-body p-4">
+        <form method="GET" action="{{ $route }}" id="filterForm" novalidate>
+            <div class="row g-2 g-md-3 align-items-center cru-filter-row">
+            <div class="col-6 col-md-4 col-lg cru-filter-col">
                 <label for="filter_date" class="visually-hidden">Date</label>
                 <div class="input-group input-group-sm cru-input-group">
                     <input type="date"
@@ -28,7 +25,7 @@
                 </div>
             </div>
 
-            <div class="col-6 col-md-4 col-lg">
+            <div class="col-6 col-md-4 col-lg cru-filter-col">
                 <label for="filter_course" class="visually-hidden">Course</label>
                 <select class="form-select form-select-sm js-cru-filter-choice" id="filter_course" name="course" data-placeholder="Course">
                     <option value="">Course</option>
@@ -40,7 +37,7 @@
                 </select>
             </div>
 
-            <div class="col-6 col-md-4 col-lg">
+            <div class="col-6 col-md-4 col-lg cru-filter-col">
                 <label for="filter_subject" class="visually-hidden">Subject</label>
                 <select class="form-select form-select-sm js-cru-filter-choice" id="filter_subject" name="subject" data-placeholder="Subject">
                     <option value="">Subject</option>
@@ -52,7 +49,7 @@
                 </select>
             </div>
 
-            <div class="col-6 col-md-4 col-lg">
+            <div class="col-6 col-md-4 col-lg cru-filter-col">
                 <label for="filter_week" class="visually-hidden">Week</label>
                 <select class="form-select form-select-sm js-cru-filter-choice" id="filter_week" name="week" data-placeholder="Week">
                     <option value="">Week</option>
@@ -64,7 +61,7 @@
                 </select>
             </div>
 
-            <div class="col-6 col-md-4 col-lg">
+            <div class="col-6 col-md-4 col-lg cru-filter-col">
                 <label for="filter_faculty" class="visually-hidden">Faculty</label>
                 <select class="form-select form-select-sm js-cru-filter-choice" id="filter_faculty" name="faculty" data-placeholder="Faculty">
                     <option value="">Faculty</option>
@@ -75,7 +72,7 @@
                     @endforeach
                 </select>
             </div>
-            <div class="col-6 col-md-4 col-lg">
+            <div class="col-6 col-md-4 col-lg cru-filter-col">
                 <label for="filter_sector" class="visually-hidden">Sector (required)</label>
                 <select class="form-select form-select-sm js-cru-filter-choice js-cru-filter-sector"
                         id="filter_sector"
@@ -92,7 +89,7 @@
                 </select>
             </div>
 
-            <div class="col-6 col-md-4 col-lg">
+            <div class="col-6 col-md-4 col-lg cru-filter-col">
                 <label for="filter_ministry" class="visually-hidden">Ministry (required)</label>
                 <select class="form-select form-select-sm js-cru-filter-choice js-cru-filter-ministry"
                         id="filter_ministry"
@@ -110,19 +107,22 @@
                 </select>
             </div>
 
-            <div class="col-6 col-md-auto">
-                <a href="{{ $route }}" class="btn btn-outline-danger btn-sm w-100 fw-normal px-3">
+            <div class="col-6 col-md-auto cru-filter-col">
+                <button type="button"
+                        class="btn btn-outline-danger btn-sm w-100 fw-normal px-3"
+                        id="cruFilterReset">
                     Reset Filters
-                </a>
+                </button>
             </div>
 
-            <div class="col-6 col-md-auto ms-md-auto">
-                <button type="submit" class="btn btn-light border btn-sm cru-btn-search-icon w-100" title="Apply filters" aria-label="Apply filters">
+            <div class="col-6 col-md-auto ms-md-auto cru-filter-col d-none" aria-hidden="true">
+                <button type="submit" class="btn btn-light border btn-sm cru-btn-search-icon w-100" tabindex="-1">
                     <i class="bi bi-search" aria-hidden="true"></i>
                 </button>
             </div>
         </div>
     </form>
+    </div>
 </div>
 
 @push('scripts')
@@ -132,6 +132,22 @@
 
     var ministriesUrl = @json(route('course-repository.ministries-by-sector'));
     var preservedMinistry = @json($filters['ministry'] ?? '');
+    var applyTimer = null;
+    var suppressAutoApply = false;
+    var autoApplyDelayMs = 350;
+
+    function cruFilterChoiceOptions(el) {
+        return {
+            searchEnabled: true,
+            shouldSort: false,
+            allowHTML: false,
+            itemSelectText: '',
+            placeholder: true,
+            placeholderValue: el.getAttribute('data-placeholder') || 'Choose…',
+            searchPlaceholderValue: 'Search…',
+            position: 'bottom'
+        };
+    }
 
     function initCruFilterChoiceEl(el) {
         if (!el || typeof Choices === 'undefined') return;
@@ -145,24 +161,92 @@
             parent.remove();
         }
         try {
-            el._choicesBs = new Choices(el, {
-                searchEnabled: true,
-                shouldSort: false,
-                allowHTML: false,
-                itemSelectText: '',
-                placeholder: true,
-                placeholderValue: el.getAttribute('data-placeholder') || 'Choose…',
-                searchPlaceholderValue: 'Search…',
-                position: 'bottom'
-            });
+            el._choicesBs = new Choices(el, cruFilterChoiceOptions(el));
         } catch (e) {
             console.warn('Course repository filter Choices init failed', e);
         }
     }
 
-    function setMinistryOptions(ministries, selectedPk) {
+    function getSelectValue(el) {
+        if (!el) return '';
+        if (el._choicesBs && typeof el._choicesBs.getValue === 'function') {
+            var choice = el._choicesBs.getValue(true);
+            if (choice && choice.value) return String(choice.value);
+        }
+        return el.value ? String(el.value) : '';
+    }
+
+    function setSelectValue(el, value) {
+        if (!el) return;
+        var val = value == null ? '' : String(value);
+        el.value = val;
+        if (el._choicesBs) {
+            try {
+                el._choicesBs.removeActiveItems();
+                if (val) {
+                    el._choicesBs.setChoiceByValue(val);
+                }
+            } catch (e) {
+                /* native value already set */
+            }
+        }
+    }
+
+    function applyCruFilters() {
+        if (suppressAutoApply) return;
+        var form = document.getElementById('filterForm');
+        if (!form) return;
+
+        clearTimeout(applyTimer);
+        applyTimer = setTimeout(function () {
+            if (typeof form.requestSubmit === 'function') {
+                form.requestSubmit();
+            } else {
+                form.submit();
+            }
+        }, autoApplyDelayMs);
+    }
+
+    function resetCruFilters(e) {
+        if (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        var form = document.getElementById('filterForm');
+        if (!form) return;
+
+        suppressAutoApply = true;
+        clearTimeout(applyTimer);
+
+        var dateEl = document.getElementById('filter_date');
+        if (dateEl) dateEl.value = '';
+
+        preservedMinistry = '';
+        form.querySelectorAll('select.js-cru-filter-choice').forEach(function (el) {
+            if (el.id === 'filter_ministry') return;
+            setSelectValue(el, '');
+        });
+        setMinistryOptions([], '', false);
+
+        suppressAutoApply = false;
+        form.dispatchEvent(new CustomEvent('cru:filters-reset', { bubbles: true }));
+        applyCruFilters();
+    }
+
+    function setMinistryOptions(ministries, selectedPk, enabled) {
         var ministryEl = document.getElementById('filter_ministry');
         if (!ministryEl) return;
+
+        if (ministryEl._choicesBs) {
+            try { ministryEl._choicesBs.destroy(); } catch (e) { /* ignore */ }
+            ministryEl._choicesBs = null;
+        }
+        if (ministryEl.parentElement && ministryEl.parentElement.classList.contains('choices')) {
+            var parent = ministryEl.parentElement;
+            parent.parentNode.insertBefore(ministryEl, parent);
+            parent.remove();
+        }
 
         ministryEl.innerHTML = '<option value="">Ministry *</option>';
         (ministries || []).forEach(function (m) {
@@ -175,66 +259,100 @@
             ministryEl.appendChild(opt);
         });
 
-        ministryEl.disabled = !(ministries && ministries.length);
+        if (enabled) {
+            ministryEl.removeAttribute('disabled');
+        } else {
+            ministryEl.setAttribute('disabled', 'disabled');
+        }
+
         initCruFilterChoiceEl(ministryEl);
+        if (!ministryEl.dataset.cruAutoApplyBound) {
+            ministryEl.dataset.cruAutoApplyBound = '1';
+            ministryEl.addEventListener('change', applyCruFilters);
+        }
     }
 
     function loadMinistriesForSector(sectorPk, selectedMinistry) {
         if (!sectorPk) {
-            setMinistryOptions([], '');
+            setMinistryOptions([], '', false);
             return;
         }
         fetch(ministriesUrl + '?sector_pk=' + encodeURIComponent(sectorPk), {
-            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+            headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' },
+            credentials: 'same-origin'
         })
-            .then(function (res) { return res.json(); })
+            .then(function (res) {
+                if (!res.ok) throw new Error('Failed to load ministries');
+                return res.json();
+            })
             .then(function (json) {
                 if (json && json.success && Array.isArray(json.data)) {
-                    setMinistryOptions(json.data, selectedMinistry || '');
+                    setMinistryOptions(json.data, selectedMinistry || '', true);
+                    if (selectedMinistry) {
+                        applyCruFilters();
+                    }
                 } else {
-                    setMinistryOptions([], '');
+                    setMinistryOptions([], '', true);
                 }
             })
             .catch(function () {
-                setMinistryOptions([], '');
+                setMinistryOptions([], '', true);
             });
     }
 
+    function onSectorChange() {
+        var sectorEl = document.getElementById('filter_sector');
+        var sectorPk = getSelectValue(sectorEl);
+        preservedMinistry = '';
+        if (!sectorPk) {
+            setMinistryOptions([], '', false);
+            applyCruFilters();
+            return;
+        }
+        loadMinistriesForSector(sectorPk, '');
+    }
+
     function initCruFilterChoices() {
-        var root = document.getElementById('cruFilterCard');
+        var root = document.getElementById('cruFilterCard') || document.getElementById('filterForm');
         if (!root) return;
 
-        if (typeof window.initChoicesBootstrap5In === 'function') {
-            window.initChoicesBootstrap5In(root);
-        } else {
-            root.querySelectorAll('select.js-cru-filter-choice').forEach(initCruFilterChoiceEl);
-        }
+        root.querySelectorAll('select.js-cru-filter-choice').forEach(initCruFilterChoiceEl);
 
         var sectorEl = document.getElementById('filter_sector');
         var ministryEl = document.getElementById('filter_ministry');
         var form = document.getElementById('filterForm');
 
-        if (sectorEl) {
-            sectorEl.addEventListener('change', function () {
-                preservedMinistry = '';
-                loadMinistriesForSector(this.value, '');
-            });
-            if (sectorEl.value && ministryEl && ministryEl.options.length <= 1) {
-                loadMinistriesForSector(sectorEl.value, preservedMinistry);
+        if (sectorEl && !sectorEl.dataset.cruAutoApplyBound) {
+            sectorEl.dataset.cruAutoApplyBound = '1';
+            sectorEl.addEventListener('change', onSectorChange);
+            var sectorValue = getSelectValue(sectorEl);
+            if (sectorValue && ministryEl && ministryEl.options.length <= 1) {
+                loadMinistriesForSector(sectorValue, preservedMinistry);
             }
         }
 
-        if (form) {
-            form.addEventListener('submit', function (e) {
-                var sector = sectorEl ? sectorEl.value : '';
-                var ministry = ministryEl ? ministryEl.value : '';
-                if (!sector || !ministry) {
-                    e.preventDefault();
-                    window.alert('Please select both Sector and Ministry before applying filters.');
-                    if (!sector && sectorEl) sectorEl.focus();
-                    else if (!ministry && ministryEl) ministryEl.focus();
-                }
+        if (form && !form.dataset.cruAutoApplyBound) {
+            form.dataset.cruAutoApplyBound = '1';
+
+            var dateEl = document.getElementById('filter_date');
+            if (dateEl) {
+                dateEl.addEventListener('change', applyCruFilters);
+            }
+
+            form.querySelectorAll('select.js-cru-filter-choice').forEach(function (el) {
+                if (el.id === 'filter_sector' || el.id === 'filter_ministry') return;
+                el.addEventListener('change', applyCruFilters);
             });
+
+            if (ministryEl && !ministryEl.dataset.cruAutoApplyBound) {
+                ministryEl.dataset.cruAutoApplyBound = '1';
+                ministryEl.addEventListener('change', applyCruFilters);
+            }
+        }
+
+        var resetBtn = document.getElementById('cruFilterReset');
+        if (resetBtn) {
+            resetBtn.addEventListener('click', resetCruFilters);
         }
     }
 

@@ -21,8 +21,8 @@
         : $subCategoryCount . ' ' . Str::plural('Sub-category', $subCategoryCount));
 @endphp
 <div class="col-sm-6 col-lg-4 cru-card-col">
-    <article class="card course-card h-100 overflow-hidden">
-        <div class="cru-card-banner position-relative">
+    <article class="card course-card h-100 overflow-hidden border-0 shadow-sm rounded-4">
+        <div class="cru-card-banner position-relative rounded-top-4">
             @if($imageUrl)
                 <img src="{{ $imageUrl }}"
                      alt="{{ $displayName }}"
@@ -34,9 +34,11 @@
                 <span class="cru-card-banner-label">{{ $bannerTitle }}</span>
             </div>
         </div>
-        <div class="card-body d-flex flex-column text-center px-3 py-4">
+        <div class="card-body d-flex flex-column text-start px-3 px-md-4 py-3 py-md-4">
             <h5 class="card-title fw-bold mb-2 lh-sm text-dark">{{ $displayName }}</h5>
-            <p class="text-muted small mb-4">{{ $metaText }}</p>
+            <p class="text-muted small mb-4">
+                <i class="bi bi-diagram-3 me-1" aria-hidden="true"></i>{{ $metaText }}
+            </p>
             <div class="mt-auto">
                 <a href="{{ $routeUrl }}" class="btn btn-primary w-100 fw-semibold cru-btn-primary">
                     Click Here

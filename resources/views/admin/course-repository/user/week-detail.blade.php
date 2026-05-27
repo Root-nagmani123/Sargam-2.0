@@ -67,7 +67,7 @@
                                     ['key' => 'action', 'label' => 'Action', 'locked' => true],
                                 ];
                             @endphp
-                            <div class="card cru-table-card border rounded-3 shadow-sm overflow-hidden" data-cru-table-card="{{ $cruTableId }}">
+                            <div class="card cru-table-card overflow-hidden" data-cru-table-card="{{ $cruTableId }}">
                                 <div class="cru-table-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 px-3 py-2 border-bottom bg-white">
                                     @include('admin.course-repository.user.partials.table-column-toggle', [
                                         'cruTableId' => $cruTableId,
@@ -76,7 +76,7 @@
                                     ])
                                 </div>
                                 <div class="table-responsive">
-                                    <table class="table table-hover mb-0 align-middle cru-table" id="{{ $cruTableId }}">
+                                    <table class="table mb-0 align-middle cru-table" id="{{ $cruTableId }}">
                                         <thead>
                                             <tr>
                                                 <th class="text-center cru-col-sno" data-col="sno">S. No.</th>
