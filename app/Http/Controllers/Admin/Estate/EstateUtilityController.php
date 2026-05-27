@@ -154,7 +154,7 @@ class EstateUtilityController extends Controller
 
     private function authorizeEstateReports(): void
     {
-        abort_unless(hasRole('Estate'), 403, 'You do not have permission to access this estate section.');
+        abort_unless(hasRole('Estate') || hasRole('Super Admin'), 403, 'You do not have permission to access this estate section.');
     }
 
     private function actorPk(): ?int

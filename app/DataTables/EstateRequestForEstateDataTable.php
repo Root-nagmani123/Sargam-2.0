@@ -102,9 +102,9 @@ class EstateRequestForEstateDataTable extends DataTable
         $applySelfEmployeeFilter = false;
         if ($user) {
             // Only Estate (+ HAC listing behaviour) sees all rows; Admin / Super Admin behave like Staff (own rows).
-            if (! (hasRole('Estate') || hasRole('HAC Person'))) {
+            if (! (hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person'))) {
                 $applySelfEmployeeFilter = true;
-            } elseif ($r->input('scope') === 'self' && hasRole('Estate')) {
+            } elseif ($r->input('scope') === 'self' && (hasRole('Estate') || hasRole('Super Admin'))) {
                 $applySelfEmployeeFilter = true;
             }
         }
@@ -262,7 +262,7 @@ class EstateRequestForEstateDataTable extends DataTable
                 $currentAlot = trim((string) ($row->current_alot ?? ''));
                 $hasChangeStatus = (int) ($row->change_status ?? 0) === 1;
                 // Estate office (not ?scope=self): can raise change request for others. Admin / Super Admin follow self-service actions only.
-                $isEstateAuthority = hasRole('Estate') && request('scope') !== 'self';
+                $isEstateAuthority = (hasRole('Estate') || hasRole('Super Admin')) && request('scope') !== 'self';
 
                 // Existing authority-only change request link (no change here).
                 $canRaiseChangeRequest = $isEstateAuthority && $currentAlot !== '' && ! $hasChangeStatus;
@@ -302,7 +302,7 @@ class EstateRequestForEstateDataTable extends DataTable
                     && (int) ($row->change_status ?? 0) === 0
                     && ! $hasActive
                     && ! $isReturnedEffective;
-                $canShowPossessionButtonForRole = ! hasRole('Estate') || request('scope') === 'self';
+                $canShowPossessionButtonForRole = ! (hasRole('Estate') || hasRole('Super Admin')) || request('scope') === 'self';
                 if ($canAllot && $canShowPossessionButtonForRole) {
                     // Always open generic Add Possession page; no preselected requester in URL.
                     $url = route('admin.estate.possession-details.create');
@@ -456,9 +456,9 @@ class EstateRequestForEstateDataTable extends DataTable
         $user = Auth::user();
         $applySelfEmployeeFilter = false;
         if ($user) {
-            if (! (hasRole('Estate') || hasRole('HAC Person'))) {
+            if (! (hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person'))) {
                 $applySelfEmployeeFilter = true;
-            } elseif (request('scope') === 'self' && hasRole('Estate')) {
+            } elseif (request('scope') === 'self' && (hasRole('Estate') || hasRole('Super Admin'))) {
                 $applySelfEmployeeFilter = true;
             }
         }

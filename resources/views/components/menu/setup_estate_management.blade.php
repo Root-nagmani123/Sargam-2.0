@@ -48,27 +48,26 @@
                                 // - All self-service estate roles (Staff, Student-OT, Doctor, Guest Faculty, Internal Faculty)
                                 //   They will still be restricted inside the menu to only their own-data items.
                                 $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person') || $estateSelfServiceRoles;
-                                $isEstateAdmin = hasRole('Estate');
+                                $isEstateAdmin = hasRole('Estate') || hasRole('Super Admin');
                                 $isHACPerson = hasRole('HAC Person');
-                                // Estate authority menus (Put In HAC, Possession Details, etc.): Estate role only.
-                                // Admin / Super Admin use self-service items (Request + My Estate Bill) like Staff.
-                                // Training roles must NOT get "all estate" access.
-                                $canSeeAllEstate = hasRole('Estate');
+                                // Estate authority menus (Put In HAC, Possession Details, etc.): Estate + Super Admin.
+                                // Admin uses self-service items (Request + My Estate Bill) like Staff.
+                                $canSeeAllEstate = hasRole('Estate') || hasRole('Super Admin');
                                 $estateManagementOpen = request()->routeIs('admin.estate.*');
                                 // HAC menus (Put In HAC / HAC Approved) visible ONLY to HAC Person + Estate/Admin.
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
                                 // Staff/self-service: Request For Estate + Generate Estate Bill only. HAC Person (without Staff) sees only Put In HAC + HAC Approved.
                                 $canSeeRequestAndBill = $canSeeAllEstate || $estateSelfServiceRoles || hasRole('Admin') || hasRole('Super Admin');
                                 $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles || hasRole('Admin') || hasRole('Super Admin');
-                                // Meter menus: Estate role only (Admin / Super Admin follow staff estate menu).
-                                $canSeeUpdateMeterNo = hasRole('Estate');
-                                $canSeeListMeterReading = hasRole('Estate');
-                                // "Other" estate operations: Estate role only.
+                                // Meter menus: Estate + Super Admin.
+                                $canSeeUpdateMeterNo = hasRole('Estate') || hasRole('Super Admin');
+                                $canSeeListMeterReading = hasRole('Estate') || hasRole('Super Admin');
+                                // "Other" estate operations: Estate + Super Admin.
                                 $canManageOthersEstate = $isEstateAdmin;
                                 // For client requirement: Return House menu should NOT appear for self-service users.
                                 $canSeeReturnHouse = $canManageOthersEstate;
-                                // Estate role sees full bill view label on authority screen; everyone else (incl. Admin / Super Admin) sees "My Estate Bill".
-                                $estateBillMenuLabel = hasRole('Estate') ? 'View Estate Bill' : 'My Estate Bill';
+                                // Estate / Super Admin see full bill view label on authority screen; others see "My Estate Bill".
+                                $estateBillMenuLabel = (hasRole('Estate') || hasRole('Super Admin')) ? 'View Estate Bill' : 'My Estate Bill';
                             @endphp
 
                             @if($showEstateSection)
@@ -217,7 +216,7 @@
                             @endif
 
                             {{-- ESTATE MASTER --}}
-                            @if(hasRole('Estate'))
+                            @if(hasRole('Estate') || hasRole('Super Admin'))
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -290,7 +289,7 @@
                             @endif
 
                             {{-- ESTATE REPORTS --}}
-                            @if(hasRole('Estate'))
+                            @if(hasRole('Estate') || hasRole('Super Admin'))
                             <li class="sidebar-item mt-2" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
