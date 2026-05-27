@@ -92,9 +92,7 @@ class MemberDataTable extends DataTable
                 $checked = $row->status == 1 ? 'checked' : '';
                 return "
                 <div class='form-check form-switch d-inline-block'>
-                    <input class='form-check-input status-toggle' type='checkbox' role='switch'
-                        data-table='employee_master'
-                        data-column='status'
+                    <input class='form-check-input member-status-toggle' type='checkbox' role='switch'
                         data-id='{$row->pk}' {$checked}>
                 </div>
                 ";

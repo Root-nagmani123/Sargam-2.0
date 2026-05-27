@@ -304,6 +304,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update-validate-step/{step}/{id}', 'updateValidateStep');
         Route::post('/store', 'store')->name('store');
         Route::post('update', 'update')->name('update');
+        Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');
         Route::get('excel-export', 'excelExport')->name('excel.export');
         Route::delete('delete/{id}', 'destroy')->name('destroy');
     });
