@@ -215,7 +215,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     
     function initializeHeaderTabs() {
-        const headerTabs = document.querySelectorAll('.navbar-nav [data-bs-toggle="tab"]');
+        const headerTabs = document.querySelectorAll(
+            '#mainNavbar [data-bs-toggle="tab"], .mobile-tabbar [data-bs-toggle="tab"]'
+        );
         
         console.log('Found', headerTabs.length, 'header tab links');
         
@@ -325,10 +327,12 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Auto-activating tab based on content:', activeTabId);
             
             // Find and activate the corresponding header tab
-            const headerTab = document.querySelector('.navbar-nav a[href="' + activeTabId + '"]');
+            const headerTab = document.querySelector(
+                '#mainNavbar a[href="' + activeTabId + '"], .mobile-tabbar a[href="' + activeTabId + '"]'
+            );
             if (headerTab) {
                 // Remove active from all tabs
-                document.querySelectorAll('.navbar-nav [data-bs-toggle="tab"]').forEach(function(tab) {
+                document.querySelectorAll('#mainNavbar [data-bs-toggle="tab"], .mobile-tabbar [data-bs-toggle="tab"]').forEach(function(tab) {
                     tab.classList.remove('active');
                     tab.setAttribute('aria-selected', 'false');
                 });
