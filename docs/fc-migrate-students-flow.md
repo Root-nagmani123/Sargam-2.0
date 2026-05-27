@@ -109,7 +109,7 @@ Synced automatically via `FcRegistrationRegisteredSyncService` after each step s
 - `is_registered = 1`
 - `user_id` not empty
 - `password` not empty
-- `fc_exemption_master_pk = 0` or NULL
+- Not already in `user_credentials` (same `user_name` as roster `user_id`)
 
 ### A. `fc_registration_master` → `student_master`
 
@@ -132,12 +132,6 @@ Created **only during migration** (not at credential step):
 Plus standard student fields: `user_category = S`, `security_answer` = `web_auth`, etc.
 
 After `student_master` insert: `user_credentials.user_id` = `student_master.pk`.
-
-### C. Exemption cleanup
-
-Rows with `fc_exemption_master_pk != 0` are removed from `student_master`, `user_credentials`, and course map.
-
----
 
 ## Step 4 — Course mapping
 
