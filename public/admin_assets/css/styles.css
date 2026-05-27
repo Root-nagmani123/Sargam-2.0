@@ -51449,7 +51449,7 @@ h6 {
 
 .header-fp .navbar .navbar-nav .nav-link.active {
     background-color: var(--bs-primary-bg-subtle);
-    color: var(--bs-primary) !important;
+    color: white !important;
 }
 
 .tabs-pills .nav-item .nav-link {
@@ -51631,6 +51631,9 @@ h6 {
     text-overflow: unset;
 }
 .navbar-nav .nav-link.active {
+    background-color: transparent;
+    color: #ffffff !important;
+    font-size: 16px !important;
     line-height: 24px;
     font-weight: 500 !important;
     padding: 20px !important;
