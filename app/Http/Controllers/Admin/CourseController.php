@@ -139,7 +139,7 @@ class CourseController extends Controller
             $supportingSectionList = UserRoleMaster::pluck('user_role_display_name', 'pk')->toArray();
             $selectedSupportingSection = $courseMasterObj->user_role_master_pk ?? '';
             
-            return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
+            return view('admin.programme.edit', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Invalid course ID');
         }
