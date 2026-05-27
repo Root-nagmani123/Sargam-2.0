@@ -270,7 +270,7 @@
     }
 
     .modern-breadcrumb-shell {
-        background: #f7f8fa;
+        background: #ffffff;
         border: 1px solid #eef1f4;
         transition: box-shadow 0.2s ease;
     }
