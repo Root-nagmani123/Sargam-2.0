@@ -86,6 +86,15 @@ class MemberDataTable extends DataTable
             ->filterColumn('email', function ($query, $keyword) {
                 $query->where('email', 'like', "%{$keyword}%");
             })
+            ->addColumn('status', function ($row) {
+                $checked = $row->status == 1 ? 'checked' : '';
+                return "
+                <div class='form-check form-switch d-inline-block'>
+                    <input class='form-check-input member-status-toggle' type='checkbox' role='switch'
+                        data-id='{$row->pk}' {$checked}>
+                </div>
+                ";
+            })
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
 

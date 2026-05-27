@@ -480,6 +480,50 @@ class MemberController extends Controller
         return Excel::download(new MemberExport, $fileName);
     }
 
+    public function toggleStatus(Request $request, $id)
+    {
+        try {
+            // Find the member
+            $member = EmployeeMaster::findOrFail($id);
+
+            // Toggle status: 1 (active) ↔ 2 (inactive)
+            $newStatus = $member->status == 1 ? 2 : 1;
+
+            // Update the status
+            $member->update(['status' => $newStatus]);
+
+            // Bump cache epoch to refresh datatable
+            MemberDataTable::bumpListingCacheEpoch();
+
+            // Prepare response message
+            $statusLabel = $newStatus == 1 ? 'Active' : 'Inactive';
+
+            // Return JSON response for AJAX
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Status updated to {$statusLabel}.",
+                    'status' => $newStatus,
+                    'statusLabel' => $statusLabel
+                ], 200);
+            }
+
+            // Redirect with success message for non-AJAX requests
+            return redirect()->route('member.index')->with('success', "Status updated to {$statusLabel}.");
+        } catch (\Exception $e) {
+            $errorMessage = 'Error toggling status: ' . $e->getMessage();
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage
+                ], 500);
+            }
+
+            return redirect()->route('member.index')->with('error', $errorMessage);
+        }
+    }
+
     public function destroy($id)
     {
         try {
