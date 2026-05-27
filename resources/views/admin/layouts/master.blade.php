@@ -770,6 +770,7 @@
     @include('admin.layouts.footer')
     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
+    <script src="{{ asset('admin_assets/js/sidebar-panel-accordion.js') }}?v=2"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <script src="{{ asset('admin_assets/js/nav-state.js') }}"></script>
     <!-- SweetAlert2 -->
@@ -981,6 +982,7 @@
                     window.hideSargamLoader();
                 }
             }
+            icon.classList.remove("rotated");
         });
     </script>
     <script src="{{ asset('admin_assets/js/sidebar-dynamic-toggle.js') }}"></script>
