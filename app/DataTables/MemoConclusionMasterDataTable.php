@@ -38,38 +38,61 @@ class MemoConclusionMasterDataTable extends DataTable
         }, true)
 
         ->addColumn('actions', function ($row) {
-                $deleteUrl = route('master.memo.conclusion.master.delete', $row->pk);
-                $isActive  = ($row->active_inactive == 1);
 
-                $editBtn = '<a href="javascript:void(0)" class="mc-action-btn text-primary editshowConclusionAlert"'
-                    . ' data-pk="' . $row->pk . '"'
-                    . ' data-discussion_name="' . htmlspecialchars($row->discussion_name, ENT_QUOTES) . '"'
-                    . ' data-pt_discusion="' . htmlspecialchars($row->pt_discusion ?? '', ENT_QUOTES) . '"'
-                    . ' data-active_inactive="' . $row->active_inactive . '"'
-                    . ' title="Edit"><span class="material-symbols-rounded">edit</span></a>';
+            $deleteUrl = route('master.memo.conclusion.master.delete', $row->pk);
+            $isActive  = ($row->active_inactive == 1);
 
-                $toggleBtn = '<div class="form-check form-switch d-inline-block mb-0" style="min-height:0;">'
-                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
-                    . ' data-table="memo_conclusion_master" data-column="active_inactive"'
-                    . ' data-id="' . $row->pk . '" ' . ($isActive ? 'checked' : '') . '>'
-                    . '</div>';
+            /* 🔹 DELETE BUTTON LOGIC */
+            if ($isActive) {
+                $deleteButton = '
+                    <button type="button"
+                        class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
+                        disabled
+                        title="Cannot delete active memo conclusion">
+                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">delete</span>
+                        <span class="d-none d-md-inline">Delete</span>
+                    </button>';
+            } else {
+                $deleteButton = '
+                    <button type="button"
+                        class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 deleteBtn"
+                        data-url="' . $deleteUrl . '"
+                        data-id="' . $row->pk . '">
+                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">delete</span>
+                        <span class="d-none d-md-inline">Delete</span>
+                    </button>';
+            }
 
-                $deleteBtn = $isActive
-                    ? '<button type="button" class="mc-action-btn text-muted" disabled style="opacity:0.35;cursor:not-allowed;" title="Cannot delete active record"><span class="material-symbols-rounded">delete</span></button>'
-                    : '<button type="button" class="mc-action-btn text-danger deleteBtn"'
-                        . ' data-url="' . $deleteUrl . '"'
-                        . ' data-id="' . $row->pk . '"'
-                        . ' title="Delete"><span class="material-symbols-rounded">delete</span></button>';
+            return '
+                <div class="d-inline-flex align-items-center gap-2" role="group">
 
-                return '<div class="d-inline-flex align-items-center gap-1">'
-                    . $editBtn . $toggleBtn . $deleteBtn
-                    . '</div>';
+                    <!-- Edit -->
+                    <a href="javascript:void(0)"
+                        class="editshowConclusionAlert btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
+                        data-pk="' . $row->pk . '"
+                        data-discussion_name="' . e($row->discussion_name) . '"
+                        data-pt_discusion="' . e($row->pt_discusion) . '"
+                        data-active_inactive="' . $row->active_inactive . '">
+                        <span class="material-icons material-symbols-rounded" style="font-size:18px;">edit</span>
+                        <span class="d-none d-md-inline">Edit</span>
+                    </a>
+
+                    <!-- Delete -->
+                    ' . $deleteButton . '
+
+                </div>';
         })
 
         ->addColumn('status', function ($row) {
-                return $row->active_inactive == 1
-                    ? '<span class="mc-badge-active">Active</span>'
-                    : '<span class="mc-badge-inactive">Inactive</span>';
+            return '
+                <div class="form-check form-switch d-inline-block">
+                    <input class="form-check-input status-toggle"
+                        type="checkbox"
+                        data-table="memo_conclusion_master"
+                        data-column="active_inactive"
+                        data-id="' . $row->pk . '"
+                        ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
+                </div>';
         })
 
         ->rawColumns(['discussion_name', 'pt_discusion', 'actions', 'status']);
@@ -91,15 +114,10 @@ class MemoConclusionMasterDataTable extends DataTable
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
-                'pagingType' => 'full_numbers',
                 'ordering' => false,
                 'searching' => true,
-                'dom' => 'rtp',
-                'info' => false,
+                'lengthChange' => true,
                 'pageLength' => 10,
-                'language' => [
-                    'paginate' => ['first' => '«', 'last' => '»', 'next' => '›', 'previous' => '‹']
-                ],
             ]);
     }
 

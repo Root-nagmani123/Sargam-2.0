@@ -63,14 +63,14 @@
             <!-- Export Buttons -->
             <div class="d-flex justify-content-end gap-2 mb-3">
                 <div class="dropdown">
-                    <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-1 px-3 py-2" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-3 py-2" type="button" id="exportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">download</i>
                         Export
                     </button>
                     <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="exportDropdown">
                         <li><h6 class="dropdown-header text-muted small text-uppercase">Export with Current Filters</h6></li>
-                        <li><a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '1', 'format' => 'xlsx'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i> Excel</a></li>
-                        <li><a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '1', 'format' => 'pdf'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i> PDF</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '1', 'format' => 'xlsx'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i> Excel</a></li>
+                        <li><a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.employee_idcard_approval.export', array_merge(['stage' => '1', 'format' => 'pdf'], request()->query())) }}"><i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i> PDF</a></li>
                     </ul>
                 </div>
             </div>

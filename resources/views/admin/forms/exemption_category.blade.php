@@ -18,7 +18,7 @@
                 </div>
                 <div class="col-6">
                     <div class="d-flex justify-content-end align-items-end mb-3">
-                        <div class="d-flex align-items-center gap-1">
+                        <div class="d-flex align-items-center gap-2">
 
                             <!-- Add New Button -->
                             <a href="{{ route('exemptionCreate') }}"

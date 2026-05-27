@@ -5,18 +5,18 @@
 @section('setup_content')
 <div class="document-viewer-wrapper cru-page">
     <div class="pdf-viewer-header bg-white shadow-sm sticky-top">
-        <div class="container-fluid px-3 px-md-4 py-2">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
-                <div class="d-flex align-items-center gap-2 gap-md-3 min-w-0">
-                    <button class="btn btn-sm btn-outline-secondary" type="button" aria-label="Menu">
-                        <i class="bi bi-list" aria-hidden="true"></i>
+        <div class="container-fluid px-4 py-2">
+            <div class="d-flex align-items-center justify-content-between">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="btn btn-sm btn-link" aria-label="Menu">
+                        <span class="material-icons material-symbols-rounded">menu</span>
                     </button>
                     <span class="fw-semibold text-truncate">{{ $pdfDocument->upload_document ?? $pdfDocument->file_title ?? 'Document' }}</span>
                 </div>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <div class="btn-group btn-group-sm" role="group" aria-label="Page navigation">
-                        <button class="btn btn-outline-secondary" type="button" aria-label="Previous page">
-                            <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                <div class="d-flex align-items-center gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <button class="btn btn-sm btn-outline-secondary" aria-label="Previous page">
+                            <span class="material-icons material-symbols-rounded">chevron_left</span>
                         </button>
                         <span class="btn btn-outline-secondary disabled small px-3">1 / 2</span>
                         <button class="btn btn-outline-secondary" type="button" aria-label="Next page">
@@ -62,7 +62,7 @@
     </div>
 
     <div class="pdf-viewer-content">
-        <div class="container-fluid px-3 px-md-4 py-4">
+        <div class="container-fluid px-4 py-4">
             <div class="row justify-content-center">
                 <div class="col-xl-10">
                     <div class="pdf-container bg-white shadow-sm rounded-3 p-3 p-md-4">

@@ -155,7 +155,7 @@
 
 .breadcrumb {
     --bs-breadcrumb-divider: '';
-    font-size: 0.75rem;
+    font-size: 0.875rem;
     gap: 0.5rem;
 }
 

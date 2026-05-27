@@ -291,7 +291,7 @@
     <div class="header sticky-top bg-white shadow-sm">
         <div class="container-fluid">
             <nav class="navbar navbar-expand-lg">
-                <div class="container-fluid">
+                <div class="container-fluid px-0">
                     <a class="navbar-brand me-2" href="#">
                         <img src="https://i.pinimg.com/736x/a8/fa/ef/a8faef978e6230b6a12d1c29c62d5edf.jpg"
                             alt="Logo 1" height="80">
@@ -336,7 +336,7 @@
     </div>
 
     <main style="flex: 1;">
-        <div class="container-fluid">
+        <div class="container-fluid py-4">
             <div class="row mb-4">
                 <div class="row align-items-center">
                     <!-- Left Logo -->

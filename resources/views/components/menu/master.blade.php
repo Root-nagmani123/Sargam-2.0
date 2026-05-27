@@ -1,28 +1,7 @@
-<nav class="sidebar-nav sargam-menu-flyout simplebar-scrollable-y" id="menu-right-mini-2" data-mini-nav-target="mini-2" data-simplebar="init">
-    <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
-        <div class="simplebar-height-auto-observer-wrapper">
-            <div class="simplebar-height-auto-observer"></div>
-        </div>
-        <div class="simplebar-mask">
-            <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
-                <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
-                    style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content">
+<nav class="sidebar-nav scroll-sidebar" id="menu-right-mini-2" data-simplebar>
+    <ul class="sidebar-menu" id="sidebarnav">
+        
+       
 
-                        <ul class="sidebar-menu list-unstyled" id="sidebarnav">
-                        </ul>
-
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="simplebar-placeholder" style="width: auto; height: 0px;"></div>
-    </div>
-    <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
-        <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
-    </div>
-    <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
-        <div class="simplebar-scrollbar"
-            style="height: 25px; transform: translate3d(0px, 0px, 0px); display: block;"></div>
-    </div>
+    </ul>
 </nav>

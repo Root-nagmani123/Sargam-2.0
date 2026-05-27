@@ -58,45 +58,15 @@ $user = Auth::user();
 $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 @endphp
 
-<div class="container-fluid birthday-wish-page">
+<div class="container-fluid px-3 px-lg-4 birthday-wish-page">
     <x-breadcrum title="Birthday Wishes" />
-
-    @if(!empty($isMyBirthday))
-    <div class="card border-0 rounded-4 shadow-sm mb-4 overflow-hidden"
-        style="background: linear-gradient(135deg, #e91e63 0%, #9c27b0 45%, #673ab7 100%);">
-        <div class="card-body px-4 py-3 text-white">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
-                <div class="d-flex align-items-center gap-1 min-w-0">
-                    <span class="material-icons material-symbols-rounded flex-shrink-0" style="font-size: 2rem;">cake</span>
-                    <div class="min-w-0">
-                        <div class="fw-bold">Happy Birthday, {{ $senderName }}!</div>
-                        <div class="small text-white-50">Wishes from colleagues appear below — open to see who wrote and reply.</div>
-                    </div>
-                </div>
-                @if(($myBirthdayWishCount ?? 0) > 0)
-                <button type="button"
-                    class="btn btn-light rounded-pill text-primary fw-semibold shadow-sm flex-shrink-0"
-                    data-bs-toggle="modal" data-bs-target="#birthdayWishesReceivedModal">
-                    <span class="material-icons material-symbols-rounded align-middle" style="font-size: 18px;">redeem</span>
-                    {{ $myBirthdayWishCount }} {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }} received today — view &amp; reply
-                </button>
-                @else
-                <span class="small text-white-50 flex-shrink-0">No wishes yet today — check back later.</span>
-                @endif
-            </div>
-        </div>
-    </div>
-    @if(($myBirthdayWishCount ?? 0) > 0)
-        @include('admin.birthday-wish.partials.received_wishes_modal')
-    @endif
-    @endif
 
     <div class="row g-4">
         {{-- Left: Today's Birthdays --}}
         <div class="col-lg-5 col-xl-4">
             <div class="card rounded-4 border-0 shadow-sm">
                 <div class="card-header bg-transparent border-bottom-0 py-3 px-4">
-                    <h6 class="mb-0 fw-semibold d-flex align-items-center gap-1">
+                    <h6 class="mb-0 fw-semibold d-flex align-items-center gap-2">
                         <span class="material-icons material-symbols-rounded text-primary">cake</span>
                         Today's Birthdays
                         <span class="badge rounded-pill text-bg-primary ms-auto">{{ $todayBirthdays->count() }}</span>
@@ -159,7 +129,7 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         <div class="col-lg-7 col-xl-8">
             <div class="card rounded-4 border-0 shadow-sm">
                 <div class="card-header bg-transparent border-bottom-0 py-3 px-4">
-                    <h6 class="mb-0 fw-semibold d-flex align-items-center gap-1">
+                    <h6 class="mb-0 fw-semibold d-flex align-items-center gap-2">
                         <span class="material-icons material-symbols-rounded text-primary">edit_note</span>
                         Compose Message
                     </h6>
@@ -210,7 +180,7 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                     {{-- Channel Selection --}}
                     <label class="form-label fw-semibold small mb-2">Send via</label>
                     <div class="d-flex gap-3 mb-4 flex-wrap">
-                        <label class="channel-btn d-flex align-items-center gap-1" id="channel-whatsapp-btn">
+                        <label class="channel-btn d-flex align-items-center gap-2" id="channel-whatsapp-btn">
                             <input type="checkbox" class="form-check-input" id="compose-via-whatsapp">
                             <span class="material-icons material-symbols-rounded text-success" style="font-size:20px;">chat</span>
                             <span class="fw-semibold small">WhatsApp</span>
@@ -219,7 +189,7 @@ $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 
                     {{-- Send Button --}}
                     <div class="d-flex gap-3">
-                        <button class="btn btn-primary rounded-pill px-5 d-flex align-items-center gap-1" id="btn-send-compose">
+                        <button class="btn btn-primary rounded-pill px-5 d-flex align-items-center gap-2" id="btn-send-compose">
                             <span class="material-icons material-symbols-rounded" style="font-size:18px;">send</span>
                             Send to Selected (<span id="selected-count">0</span>)
                         </button>

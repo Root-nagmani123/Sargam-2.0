@@ -20,8 +20,8 @@
     <div class="card border-0 shadow-sm">
         <div class="card-body">
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3">
-                <div class="d-flex align-items-center gap-1">
-                    <form method="GET" class="d-flex align-items-center gap-1">
+                <div class="d-flex align-items-center gap-2">
+                    <form method="GET" class="d-flex align-items-center gap-2">
                         <label class="text-muted small">Show</label>
                         <select name="per_page" class="form-select form-select-sm" style="width:90px" onchange="this.form.submit()">
                             @foreach([10,25,50,100] as $n)
@@ -114,7 +114,7 @@
                                 <td>{{ $r->request_date ? \Carbon\Carbon::parse($r->request_date)->format('d-m-Y') : '--' }}</td>
                                 <td>
                                     @if(!empty($r->user_may_edit))
-                                        <div class="d-flex align-items-center gap-1">
+                                        <div class="d-flex align-items-center gap-2">
                                             <a href="{{ route('admin.duplicate_idcard.edit', $r->id) }}" class="btn btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit">
                                                 <i class="material-icons material-symbols-rounded" style="font-size:16px;">edit</i>
                                             </a>

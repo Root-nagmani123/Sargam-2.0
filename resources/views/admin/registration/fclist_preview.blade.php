@@ -3,7 +3,7 @@
 @section('title', 'Preview Bulk Upload')
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid py-5">
     <x-breadcrum title="Preview Bulk Upload" />
     <x-session_message />
 

@@ -20,7 +20,7 @@
     </style>
 @endsection
 @section('setup_content')
-    <div class="container-fluid form-builder-page">
+    <div class="container-fluid px-2 px-sm-3 px-md-4 pb-4 pb-lg-5 form-builder-page">
         <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
             <div class="card-header bg-body-secondary bg-opacity-50 border-0 py-3 px-4">
                 <div class="d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-3">
@@ -89,7 +89,7 @@
             const sectionHtml = `
     <div class="section-entry card border-0 shadow-sm rounded-4 overflow-hidden" id="section_${index}">
         <div class="card-header bg-primary bg-opacity-10 border-0 py-3 px-3 px-md-4 d-flex flex-column flex-sm-row align-items-start align-items-sm-center justify-content-between gap-2">
-            <h2 class="h5 fw-semibold text-body mb-0 d-flex align-items-center gap-1">
+            <h2 class="h5 fw-semibold text-body mb-0 d-flex align-items-center gap-2">
                 <span class="badge rounded-pill bg-primary">Section ${index + 1}</span>
             </h2>
         </div>

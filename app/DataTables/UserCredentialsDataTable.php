@@ -115,14 +115,18 @@ class UserCredentialsDataTable extends DataTable
             ->orderBy(0)
             ->selectStyleSingle()
             ->parameters([
-                'pagingType' => 'full_numbers',
                 'order' => [],
                 'ordering' => false,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
                 'language' => [
-                    'paginate' => ['first' => '', 'last' => '', 'next' => '', 'previous' => '']
+                    'paginate' => [
+                        'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_left</i>',
+                        'next' => '<i class="material-icons menu-icon material-symbols-rounded"
+                                            style="font-size: 24px;">chevron_right</i>'
+                    ]
                 ],
             ])
             ->buttons([

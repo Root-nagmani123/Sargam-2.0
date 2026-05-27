@@ -3,15 +3,20 @@
 @section('title', 'All Issues - Sargam | Lal Bahadur')
 
 @section('content')
-<div class="container-fluid">
-    <x-breadcrum title="Issue Management - All Issues">
-    <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary  d-flex align-items-center gap-1 shadow-sm">
-        <i class="material-icons material-symbols-rounded">add</i>
-        Add New Issue
-    </a>
-</x-breadcrum>
+<div class="container-fluid issue-management-index">
+    <x-breadcrum title="All Issues" />
     <div class="datatables">
         <div class="card">
+            <div class="card-header d-flex flex-wrap align-items-center justify-content-between gap-2">
+                <div class="d-flex align-items-center gap-2">
+                    <h1 class="h4 fw-semibold mb-1">Issue Management - All Issues</h1>
+                </div>
+                <a href="{{ route('admin.issue-management.create') }}" class="btn btn-primary  d-flex align-items-center gap-2 shadow-sm">
+                    <i class="material-icons material-symbols-rounded">add</i>
+                    Add New Issue
+                </a>
+            </div>
+            <hr class="my-2">
             <div class="card-body">
                 <!-- Filters -->
                 <form method="GET" action="{{ route('admin.issue-management.index') }}" class="filter-card p-3 mb-4">

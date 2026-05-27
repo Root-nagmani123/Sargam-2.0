@@ -20,7 +20,15 @@
         <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
             <div class="flex-fill d-flex flex-column" style="min-height: 0;">
                 <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
-                    
+                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
+                        <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
+                            data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
+
+                            <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
+                                menu
+                            </i>
+                        </a>
+                    </div>
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
@@ -32,7 +40,6 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-                                            @include('admin.layouts.sidebar.partials.mini-sidebar-toggle')
                                             <li class="mini-nav-item {{ request()->is('academic*') ? 'selected' : '' }}" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -150,11 +157,12 @@
 
 <style>
     /* Google-style sidebar - light gray, icon above text, oval selected state */
-    body[data-sidebartype="mini-sidebar"] #sidebar-setup .sidebar-google-style.side-mini-panel {
+    #sidebar-setup .sidebar-google-style.side-mini-panel {
         width: 90px;
     }
 
     #sidebar-setup .sidebar-google-style .mini-nav {
+        background: #f0f0f0 !important;
         border: 1px solid var(--bs-border-color-translucent);
         padding: 12px 0;
         border-radius: 10px;
@@ -184,6 +192,9 @@
         flex-direction: column !important;
         align-items: center !important;
         justify-content: center !important;
+        padding: 12px 8px !important;
+        padding-left: 8px !important;
+        margin: 4px 8px !important;
         background: transparent !important;
         height: auto !important;
         min-height: 56px;
@@ -345,19 +356,21 @@
     console.log('Found mini-nav items in setup tab:', miniNavItems.length);
     console.log('Found sidebar menus in setup tab:', sidebarMenus.length);
 
+    // Function to manually find and mark active links based on current URL
     function markActiveLinks() {
-        if (typeof window.sargamMarkSidebarActiveLinks === 'function') {
-            window.sargamMarkSidebarActiveLinks(sidebarMenus);
-        } else {
-            const currentUrl = window.location.href;
-            sidebarMenus.forEach(function(nav) {
-                nav.querySelectorAll('.sidebar-link[href]').forEach(function(link) {
-                    if (link.href === currentUrl) {
-                        link.classList.add('active');
-                    }
-                });
+        const currentUrl = window.location.href;
+        console.log('Current URL:', currentUrl);
+
+        sidebarMenus.forEach(function(nav) {
+            const links = nav.querySelectorAll('.sidebar-link[href]');
+            links.forEach(function(link) {
+                if (link.href === currentUrl) {
+                    console.log('Found matching link:', link.href, 'in nav:', nav
+                        .id);
+                    link.classList.add('active');
+                }
             });
-        }
+        });
     }
 
     // Function to keep sidebar menu visible for a few seconds
@@ -381,13 +394,35 @@
 
     // Function to show sidebar menu and save state
     function showSidebarMenu(miniId) {
-        const miniNav = setupSidebar.querySelector('.mini-nav');
+        console.log('Showing sidebar for miniId:', miniId);
+        // Remove selected from all mini-nav-items
+        miniNavItems.forEach(function(navItem) {
+            navItem.classList.remove('selected');
+        });
+        // Add selected only to the clicked/active one
         const selectedItem = document.getElementById(miniId);
-        if (miniNav && selectedItem && typeof window.sargamActivateMiniNavItem === 'function') {
-            window.sargamActivateMiniNavItem(miniNav, selectedItem, true);
-            return;
+        if (selectedItem) {
+            selectedItem.classList.add('selected');
+            console.log('Selected mini-nav item:', miniId);
         }
-        console.warn('Flyout menu activation fallback for:', miniId);
+        sidebarMenus.forEach(function(nav) {
+            nav.classList.remove('d-block');
+            nav.style.display = 'none';
+        });
+        const targetMenuId = 'menu-right-' + miniId;
+        const targetMenu = document.getElementById(targetMenuId);
+        if (targetMenu) {
+            targetMenu.classList.add('d-block');
+            targetMenu.style.display = 'block';
+            document.body.setAttribute('data-sidebartype', 'full');
+            console.log('Displayed menu:', targetMenu.id);
+            // Periodically keep sidebar visible for 3 seconds
+            keepSidebarVisible(targetMenuId, 3000);
+        } else {
+            console.error('Target menu not found:', targetMenuId);
+        }
+        localStorage.setItem('selectedMiniNav', miniId);
+        // Don't force tab switch - let user's navigation determine the active tab
     }
 
     // MutationObserver to keep sidebar visible

@@ -111,9 +111,16 @@
     <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
         <div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="createModalLabel">Add Category</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Modal Header - Blue Gradient -->
+            <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="createModalLabel">
+                    <span class="header-icon-circle">
+                        <span class="material-icons material-symbols-rounded">add_circle</span>
+                    </span>
+                    Create New Category
+                </h5>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
 
             <form method="POST" id="createForm" action="{{ route('course-repository.store') }}"
@@ -171,9 +178,16 @@
     <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
         <div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="editModalLabel">Edit Category</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Modal Header - Blue Gradient -->
+            <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="editModalLabel">
+                    <span class="header-icon-circle">
+                        <span class="material-icons material-symbols-rounded">edit</span>
+                    </span>
+                    Edit Category
+                </h5>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
 
             <form id="editForm" method="POST" enctype="multipart/form-data">
@@ -242,9 +256,16 @@
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable cr-design-modal-sm">
         <div class="modal-content">
 
-            <div class="modal-header">
-                <h5 class="modal-title" id="uploadModalLabel">Upload Document</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            <!-- Header: blue gradient -->
+            <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="uploadModalLabel">
+                    <span class="header-icon-circle">
+                        <span class="material-icons material-symbols-rounded">cloud_upload</span>
+                    </span>
+                    Upload Document
+                </h5>
+                <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
+                    aria-label="Close"></button>
             </div>
 
             <form id="uploadForm" enctype="multipart/form-data">

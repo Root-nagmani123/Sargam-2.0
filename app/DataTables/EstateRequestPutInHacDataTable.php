@@ -246,7 +246,6 @@ class EstateRequestPutInHacDataTable extends DataTable
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
-                'pagingType' => 'full_numbers',
                 'order' => [[2, 'desc']],
                 'lengthMenu' => [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
                 'language' => [
@@ -255,7 +254,12 @@ class EstateRequestPutInHacDataTable extends DataTable
                     'info' => 'Showing _START_ to _END_ of _TOTAL_ entries',
                     'infoEmpty' => 'Showing 0 to 0 of 0 entries',
                     'infoFiltered' => '(filtered from _MAX_ total entries)',
-                    'paginate' => ['first' => '', 'last' => '', 'next' => '', 'previous' => ''],
+                    'paginate' => [
+                        'first' => 'First',
+                        'last' => 'Last',
+                        'next' => 'Next',
+                        'previous' => 'Previous',
+                    ],
                 ],
                 'dom' => '<"row mb-3"<"col-12 col-md-6"l><"col-12 col-md-6"f>>rt<"row align-items-center mt-3"<"col-12 col-md-5"i><"col-12 col-md-7"p>>',
             ]);

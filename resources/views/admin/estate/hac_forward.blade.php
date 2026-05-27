@@ -3,7 +3,7 @@
 @section('title', 'HAC Forward to Allotment - Request For Estate - Sargam')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="HAC Forward to Allotment" />
     <x-estate-workflow-stepper current="hac-forward" />
 

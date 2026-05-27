@@ -16,7 +16,7 @@
                         </div>
                         <div class="col-6">
                             <div class="d-flex justify-content-end align-items-end mb-3">
-                                <div class="d-flex align-items-center gap-1">
+                                <div class="d-flex align-items-center gap-2">
 
                                     <!-- Add New Button -->
                                     <a href="{{ route('master.city.create') }}"
@@ -74,7 +74,7 @@
                                                 <!-- Edit -->
                                                 <li>
                                                     <a href="{{ route('master.city.edit', $city->pk) }}"
-                                                        class="dropdown-item d-flex align-items-center gap-1">
+                                                        class="dropdown-item d-flex align-items-center gap-2">
                                                         <span
                                                             class="material-symbols-rounded text-primary fs-6">edit</span>
                                                         Edit
@@ -89,7 +89,7 @@
                                                         @method('DELETE')
 
                                                         <button type="button"
-                                                            class="dropdown-item d-flex align-items-center gap-1 text-danger"
+                                                            class="dropdown-item d-flex align-items-center gap-2 text-danger"
                                                             onclick="event.preventDefault();
                             if({{ $city->active_inactive }} == 1) return;
                             if(confirm('Are you sure you want to delete this?')) {

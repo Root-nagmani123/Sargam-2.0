@@ -46,7 +46,6 @@
   <script src="{{asset('admin_assets/js/theme/theme.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/app.min.js')}}"></script>
   <script src="{{asset('admin_assets/js/theme/sidebarmenu.js')}}"></script>
-  <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
 
   <!-- solar icons -->
   <script src="{{asset('admin_assets/css/iconify-icon.min.js')}}"></script>
@@ -70,8 +69,6 @@
   <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
-  <script src="{{asset('js/datatable-pagination.js')}}"></script>
-  <script src="{{ asset('js/datatables-enhanced.js') }}?v={{ @filemtime(public_path('js/datatables-enhanced.js')) ?: time() }}"></script>
   <script src="{{asset('js/dropdown-search.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
   <script>
@@ -80,19 +77,6 @@
       try {
         if (window.jQuery && $.fn && $.fn.dataTable) {
           $.extend(true, $.fn.dataTable.defaults, { autoWidth: false, responsive: true });
-          $(document).on('init.dt', function (event, settings) {
-            if (!settings) return;
-            try {
-              var api = new $.fn.dataTable.Api(settings);
-              var $wrap = $(api.table().container());
-              $wrap.find('.dataTables_paginate ul.pagination').addClass('pagination-sm');
-              $wrap.find('.dataTables_length select').addClass('form-select form-select-sm');
-              $wrap.find('.dataTables_filter input').addClass('form-control form-control-sm');
-              $wrap.find('.dataTables_info').addClass('small text-muted');
-            } catch (err) {
-              console.warn('DataTables compact Bootstrap classes:', err);
-            }
-          });
         }
       } catch (e) {
         console.warn('Failed to set DataTables defaults:', e);
@@ -155,8 +139,8 @@
               ordering: enableOrdering,
               info: enableInfo,
               language: {
-                search: '',
-                searchPlaceholder: 'Search'
+                search: 'Search:',
+                searchPlaceholder: 'Type to filter...'
               },
               initComplete: function() {
                 try {
@@ -166,7 +150,7 @@
             };
 
             if (hasButtons && showExport) {
-              tableOptions.dom = "<'row mb-3'<'col-md-8 d-flex align-items-center gap-1 flex-wrap'Bl><'col-md-4'f>>" +
+              tableOptions.dom = "<'row mb-3'<'col-md-8 d-flex align-items-center gap-2 flex-wrap'Bl><'col-md-4'f>>" +
                                  "<'row'<'col-12'tr>>" +
                                  "<'row mt-3'<'col-md-5'i><'col-md-7'p>>";
               tableOptions.buttons = [
@@ -203,6 +187,7 @@
   </script>
   <script src="{{asset('admin_assets/js/datatable/datatable-basic.init.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/repeater-init.js')}}"></script>
+  <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="{{asset('admin_assets/js/plugins/toastr-init.js')}}"></script>
   <script src="{{asset('admin_assets/js/routes.js')}}"></script>

@@ -73,8 +73,43 @@ document.addEventListener('DOMContentLoaded', function() {
     </x-breadcrum>
 
     <div class="datatables">
-        <div class="card border-0 shadow-sm cr-admin-card">
-            <div class="card-body p-3 p-md-4">
+        <div class="card border-0 shadow-lg modern-card">
+            <div class="card-body p-4">
+                <!-- Page Title and Actions -->
+                <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
+                    <div class="d-flex align-items-center gap-3">
+                        <a href="javascript:void(0)" type="button" onclick="window.history.back()"
+                            class="text-primary p-2 back-btn">
+                            <span class="material-icons material-symbols-rounded">arrow_back_ios</span>
+                        </a>
+                        <div>
+                            <h3 class="mb-0 fw-bold text-primary">{{ $repository->course_repository_name }}</h3>
+                        </div>
+                    </div>
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+
+                        <!-- Upload Documents (Secondary Action) -->
+                        <button type="button"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow-sm btn-hover-lift"
+                            data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <span class="material-icons material-symbols-rounded fs-6">
+                                upload
+                            </span>
+                            <span>Upload Documents</span>
+                        </button>
+
+                        <!-- Add Category (Primary Action) -->
+                        <button type="button"
+                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift" data-bs-toggle="modal" data-bs-target="#createModal">
+                            <span class="material-icons material-symbols-rounded fs-6">
+                                add
+                            </span>
+                            <span>Add Category</span>
+                        </button>
+
+                    </div>
+
+                </div>
 
                 @if($repository->children->count() == 0 && $documents->count() == 0)
                 <div class="text-center py-5 px-3 cr-admin-empty">

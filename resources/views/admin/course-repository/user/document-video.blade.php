@@ -2,8 +2,8 @@
 
 @section('title', 'Video | Course Repository Admin')
 
-@section('setup_content')
-<div class="container-fluid px-3 px-md-4 py-4 cru-page">
+@section('content')
+<div class="container-fluid px-4 py-4">
     <div class="row justify-content-center">
         <div class="col-xl-10">
             <div class="card border-0 shadow-sm rounded-3">

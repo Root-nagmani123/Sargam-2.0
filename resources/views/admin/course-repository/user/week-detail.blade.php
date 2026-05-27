@@ -2,32 +2,51 @@
 
 @section('title', 'Week-{{ str_pad($weekNumber, 2, "0", STR_PAD_LEFT) }} | Course Repository Admin')
 
-@section('setup_content')
-<div class="cru-page">
-    <div class="container-fluid px-3 px-md-4 pt-3 pb-0">
-        <x-breadcrum title="Week-{{ str_pad($weekNumber, 2, '0', STR_PAD_LEFT) }}"></x-breadcrum>
-    </div>
+@section('content')
+<div class="d-flex">
+    <!-- Left Sidebar -->
+    <aside class="course-sidebar-wrapper">
+        <x-course-sidebar />
+    </aside>
 
-    <div class="d-flex cru-layout-with-sidebar align-items-stretch w-100">
-        <main class="flex-grow-1 min-vw-0">
-            <div class="container-fluid px-3 px-md-4 py-4" id="main-content">
-                <div class="cru-panel bg-white border rounded-3 shadow-sm p-3 p-md-4">
-                    @include('admin.course-repository.user.partials.filter-card', [
-                        'route' => route('admin.course-repository.user.week-detail', [$courseCode, $weekNumber]),
-                        'courses' => $courses,
-                        'subjects' => $subjects,
-                        'faculties' => $faculties,
-                        'filters' => $filters,
-                    ])
+    <!-- Main Content -->
+    <main class="flex-grow-1">
+        <div class="container-fluid px-4 py-4" id="main-content">
+            <!-- Title Section with Back Button -->
+            <div class="title-section mb-4">
+                <div class="d-flex align-items-center gap-3">
+                    <button type="button" 
+                            onclick="window.history.back()" 
+                            class="btn-back btn btn-link p-0 text-decoration-none"
+                            aria-label="Go back">
+                        <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
+                    </button>
+                    <h1 class="h2 mb-0 fw-bold text-dark">Week-{{ str_pad($weekNumber, 2, '0', STR_PAD_LEFT) }}</h1>
+                </div>
+            </div>
 
-                    <ul class="nav nav-tabs cru-nav-tabs mb-3" id="weekTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">Active</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive" type="button" role="tab" aria-controls="archive" aria-selected="false">Archive</button>
-                        </li>
-                    </ul>
+            <!-- Filter Card -->
+            @include('admin.course-repository.user.partials.filter-card', [
+                'route' => route('admin.course-repository.user.week-detail', [$courseCode, $weekNumber]),
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => $filters,
+            ])
+
+            <!-- Tabs -->
+            <ul class="nav nav-tabs mb-3" id="weekTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">
+                        Active
+                    </button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive" type="button" role="tab" aria-controls="archive" aria-selected="false">
+                        Archive
+                    </button>
+                </li>
+            </ul>
 
                     <div class="tab-content" id="weekTabContent">
                         <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">

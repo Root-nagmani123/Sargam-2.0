@@ -16,14 +16,14 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-                                            @include('admin.layouts.sidebar.partials.mini-sidebar-toggle')
+
                                             <li class="mini-nav-item" id="setup-mini-8">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link d-flex align-items-center justify-content-between w-100"
                                                     data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip"
                                                     data-bs-placement="right">
 
-                                                    <div class="d-flex align-items-center gap-1">
+                                                    <div class="d-flex align-items-center gap-2">
                                                         <i class="material-icons menu-icon material-symbols-rounded"
                                                             style="font-size: 32px;">
                                                             background_dot_large
@@ -83,32 +83,33 @@
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Academics sidebar script started');
     // Scope to ONLY the academics tab
-    const academicsPane = document.getElementById('sidebar-academics') || document.getElementById('tab-academics');
-    if (!academicsPane) {
-        console.error('Academics sidebar not found');
+    const academicsTab = document.getElementById('tab-academics');
+    if (!academicsTab) {
+        console.error('Academics tab not found');
         return;
     }
 
         // Initialize mini-navbar functionality for academics ONLY
-        const miniNavItems = academicsPane.querySelectorAll('.mini-nav .mini-nav-item');
-        const sidebarMenus = academicsPane.querySelectorAll('.sidebarmenu nav');
+        const miniNavItems = academicsTab.querySelectorAll('.mini-nav .mini-nav-item');
+        const sidebarMenus = academicsTab.querySelectorAll('.sidebarmenu nav');
 
         console.log('Found mini-nav items in academics tab:', miniNavItems.length);
         console.log('Found sidebar menus in academics tab:', sidebarMenus.length);
 
+        // Function to manually find and mark active links based on current URL
         function markActiveLinks() {
-            if (typeof window.sargamMarkSidebarActiveLinks === 'function') {
-                window.sargamMarkSidebarActiveLinks(sidebarMenus);
-            } else {
-                const currentUrl = window.location.href;
-                sidebarMenus.forEach(function(nav) {
-                    nav.querySelectorAll('.sidebar-link[href]').forEach(function(link) {
-                        if (link.href === currentUrl) {
-                            link.classList.add('active');
-                        }
-                    });
+            const currentUrl = window.location.href;
+            console.log('Current URL:', currentUrl);
+
+            sidebarMenus.forEach(function(nav) {
+                const links = nav.querySelectorAll('.sidebar-link[href]');
+                links.forEach(function(link) {
+                    if (link.href === currentUrl) {
+                        console.log('Found matching link:', link.href, 'in nav:', nav.id);
+                        link.classList.add('active');
+                    }
                 });
-            }
+            });
         }
 
         // Function to keep sidebar menu visible
@@ -132,11 +133,34 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Function to show sidebar menu and save state
         function showSidebarMenu(miniId) {
-            const miniNav = academicsPane.querySelector('.mini-nav');
+            console.log('Showing sidebar for miniId:', miniId);
+            // Remove selected from all mini-nav-items
+            miniNavItems.forEach(function(navItem) {
+                navItem.classList.remove('selected');
+            });
+            // Add selected only to the clicked/active one
             const selectedItem = document.getElementById(miniId);
-            if (miniNav && selectedItem && typeof window.sargamActivateMiniNavItem === 'function') {
-                window.sargamActivateMiniNavItem(miniNav, selectedItem, true);
+            if (selectedItem) {
+                selectedItem.classList.add('selected');
+                console.log('Selected mini-nav item:', miniId);
             }
+            sidebarMenus.forEach(function(nav) {
+                nav.classList.remove('d-block');
+                nav.style.display = 'none';
+            });
+            const targetMenuId = 'menu-right-' + miniId;
+            const targetMenu = document.getElementById(targetMenuId);
+            if (targetMenu) {
+                targetMenu.classList.add('d-block');
+                targetMenu.style.display = 'block';
+                document.body.setAttribute('data-sidebartype', 'full');
+                console.log('Displayed menu:', targetMenu.id);
+                // Periodically keep sidebar visible
+                keepSidebarVisible(targetMenuId, 3000);
+            } else {
+                console.error('Target menu not found:', targetMenuId);
+            }
+            localStorage.setItem('selectedAcademicsMiniNav', miniId);
         }
 
         // MutationObserver to keep sidebar visible

@@ -8,215 +8,77 @@
 
 @section('setup_content')
 <style>
-/* ── Programme / Course Master – clean flat design ── */
-.programme-course-page #coursemaster-table_wrapper {
+/* Fix dropdown visibility in table */
+.table-responsive {
     overflow: visible !important;
 }
-.programme-course-page .table td {
+
+.table td {
     overflow: visible !important;
     vertical-align: middle;
 }
 
-.programme-course-page .action-dropdown {
+.action-dropdown {
     position: static;
 }
 
-.programme-course-page .action-dropdown .dropdown-menu {
+.action-dropdown .dropdown-menu {
     z-index: 1050 !important;
     position: fixed !important;
 }
 
-.programme-course-page .dropdown-item {
+/* Ensure dropdown items are clickable */
+.dropdown-item {
     cursor: pointer;
 }
 
-/* Segmented Active / Archived pill */
-.programme-status-pill {
-    --programme-pill-active-bg: #0d1b4d;
-    --programme-pill-active-color: #fff;
+.btn-group[role="group"] .btn {
+    transition: all 0.3s ease-in-out;
+    border-radius: 0;
+    /* Reset for pill-style container */
 }
 
-.programme-status-pill .programme-status-btn {
-    border: 0;
-    background: transparent;
-    color: var(--bs-body-color);
-    font-weight: 600;
-    padding: .4rem 1.15rem;
-    transition: background .15s, color .15s;
+.btn-group[role="group"] .btn:first-child {
+    border-top-left-radius: 50rem !important;
+    border-bottom-left-radius: 50rem !important;
 }
 
-.programme-status-pill .programme-status-btn:hover:not(.programme-status-btn--on) {
-    background-color: var(--bs-tertiary-bg);
+.btn-group[role="group"] .btn:last-child {
+    border-top-right-radius: 50rem !important;
+    border-bottom-right-radius: 50rem !important;
 }
 
-.programme-status-pill .programme-status-btn:focus-visible {
-    outline: 2px solid var(--bs-primary);
+/* Hover + Active States */
+.btn-group .btn:hover {
+    transform: translateY(-1px);
+}
+
+.btn-group .btn.active {
+    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 123, 255, 0.3);
+}
+
+/* Accessibility: Focus ring */
+.btn:focus-visible {
+    outline: 3px solid #0d6efd;
     outline-offset: 2px;
 }
 
-.programme-status-pill .programme-status-btn--on {
-    background-color: var(--programme-pill-active-bg);
-    color: var(--programme-pill-active-color);
-}
-
-/* ── Filter bar ── */
-.programme-filter-bar {
-    background: #f8f9fa;
-    border-bottom: 1px solid var(--bs-border-color);
-}
-
-/* ── Table ── */
-.programme-course-page .programme-course-table {
-    font-size: .875rem;
-}
-
-.programme-course-page .programme-course-table thead th {
-    background: #fff;
-    color: #6c757d;
-    font-weight: 600;
-    font-size: .8125rem;
-    text-transform: none;
-    border-bottom: 2px solid #e9ecef;
-    white-space: nowrap;
-    padding: .75rem 1rem;
-}
-
-.programme-course-page .programme-course-table tbody td {
-    padding: .75rem 1rem;
-    border-bottom: 1px solid #f0f0f0;
-    color: #212529;
-}
-
-.programme-course-page .programme-course-table tbody tr:hover {
-    background-color: #f8f9fb;
-}
-
-/* ── Status badges ── */
-.programme-badge-active {
-    display: inline-block;
-    padding: .3em .75em;
-    font-size: .75rem;
-    font-weight: 600;
-    border-radius: .25rem;
-    color: #198754;
-    background: #d1e7dd;
-    border: 1px solid #badbcc;
-}
-
-.programme-badge-inactive {
-    display: inline-block;
-    padding: .3em .75em;
-    font-size: .75rem;
-    font-weight: 600;
-    border-radius: .25rem;
-    color: #dc3545;
-    background: #f8d7da;
-    border: 1px solid #f5c2c7;
-}
-
-/* ── Action icons ── */
-.programme-course-page .d-inline-flex[role="group"] a {
-    text-decoration: none;
-    cursor: pointer;
-    line-height: 1;
-}
-
-.programme-course-page .d-inline-flex[role="group"] a:hover .material-icons {
-    opacity: .7;
-}
-
-/* ── DataTables overrides ── */
-.programme-course-page #coursemaster-table_wrapper .programme-dt-meta .dataTables_length,
-.programme-course-page #coursemaster-table_wrapper .programme-dt-meta .dataTables_info,
-.programme-course-page #coursemaster-table_wrapper .programme-dt-paginate-wrap .dataTables_paginate {
-    display: block !important;
-    visibility: visible !important;
-}
-.programme-course-page #coursemaster-table_wrapper .programme-dt-meta .dataTables_length label,
-.programme-course-page #coursemaster-table_wrapper .programme-dt-meta .dataTables_info {
-    margin-bottom: 0;
-    font-size: .875rem;
-    color: #6c757d;
-}
-
-.programme-course-page #coursemaster-table_wrapper .programme-dt-meta .dataTables_length select {
-    border-radius: .375rem;
-    border: 1px solid #dee2e6;
-    padding: .25rem .5rem;
-    font-size: .875rem;
-    color: #495057;
-    background-color: #fff;
-}
-
-/* Pagination: plain numbers, active = border box only */
-.programme-course-page #coursemaster-table_wrapper .dataTables_paginate .page-link {
-    border: none !important;
-    background: none !important;
-    margin: 0 !important;
-    padding: .25rem .5rem !important;
-    font-size: .875rem !important;
-    min-width: 28px !important;
-    height: auto !important;
-    text-align: center;
-    color: #495057 !important;
-    border-radius: .25rem !important;
-    line-height: 1.5 !important;
-    box-shadow: none !important;
-    font-weight: 500 !important;
-}
-
-.programme-course-page #coursemaster-table_wrapper .dataTables_paginate .page-link:hover {
-    color: #212529 !important;
-    background-color: #f0f0f0 !important;
-}
-
-.programme-course-page #coursemaster-table_wrapper .dataTables_paginate .page-item.active .page-link {
-    border: 1px solid #495057 !important;
-    color: #212529 !important;
-    background: transparent !important;
-    font-weight: 600 !important;
-}
-
-.programme-course-page #coursemaster-table_wrapper .dataTables_paginate .page-item.disabled .page-link {
-    color: #adb5bd !important;
-    background: none !important;
-}
-
-.programme-course-page #coursemaster-table_wrapper .dataTables_paginate .pagination {
-    gap: .15rem;
-    align-items: center;
-    margin-bottom: 0;
-}
-
-.programme-course-page #coursemaster-table_wrapper .programme-dt-export .dt-buttons .btn {
-    border-radius: .375rem;
-    font-size: .75rem;
-    padding: .25rem .5rem;
-}
-
-/* ── Choices.js integration ── */
-.programme-choices-bootstrap {
-    position: relative;
-    z-index: 10;
-}
-.programme-choices-bootstrap .choices__list--dropdown {
-    z-index: 1060 !important;
-}
+/* Choices + Bootstrap integration for course filter */
 .programme-choices-bootstrap .choices__inner.form-select {
     background-color: var(--bs-body-bg);
     border: var(--bs-border-width) solid var(--bs-border-color);
-    min-height: calc(1.5em + .75rem + var(--bs-border-width) * 2);
-    padding: .375rem;
-    padding-inline-end: 2.25rem;
+    min-height: calc(1.5em + 0.75rem + var(--bs-border-width) * 2);
+    padding-top: 0.375rem;
+    padding-bottom: 0.375rem;
     background-image: none !important;
-    border-radius: .375rem;
+    padding-inline-end: 2.25rem;
 }
 
 .programme-choices-bootstrap .choices.is-focused .choices__inner.form-select,
 .programme-choices-bootstrap .choices.is-open .choices__inner.form-select {
     border-color: var(--bs-focus-border-color);
     outline: 0;
-    box-shadow: 0 0 0 .25rem rgba(var(--bs-focus-ring-rgb), .25);
+    box-shadow: 0 0 0 0.25rem rgba(var(--bs-focus-ring-rgb), 0.25);
 }
 
 .programme-choices-bootstrap .choices__list--dropdown.dropdown-menu,
@@ -224,98 +86,106 @@
     border: var(--bs-border-width) solid var(--bs-border-color);
 }
 </style>
+<div class="container-fluid">
+    <x-breadcrum title="Course Master" />
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" style="border-left: 4px solid #004a93;">
+            <div class="card-body">
 
-<div class="container-fluid programme-course-page">
+                <section class="row align-items-center mb-4" role="region" aria-labelledby="courseMasterHeading">
 
-    {{-- Breadcrumb --}}
-    <x-breadcrum title="Course Master">
-        <a href="{{ route('programme.create') }}"
-            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
-            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
-            <span>Add Course</span>
-        </a>
-    </x-breadcrum>
+                    <!-- Page Title -->
+                    <div class="col-md-4 col-lg-3">
+                        <h1 id="courseMasterHeading" class="h4 fw-bold mb-2 mb-md-0">
+                            Course Master
+                        </h1>
+                    </div>
 
-    {{-- Active / Archived toggle --}}
-    <div class="d-flex justify-content-start mb-3">
-        <div class="d-inline-flex align-items-center rounded-1 bg-white border shadow-sm p-1 programme-status-pill"
-            role="group" aria-label="Filter courses by status">
-            <button type="button" class="btn btn-sm programme-status-btn programme-status-btn--on" id="filterActive"
-                aria-pressed="true" aria-current="true">Active</button>
-            <button type="button" class="btn btn-sm programme-status-btn" id="filterArchive"
-                aria-pressed="false">Archived</button>
-        </div>
-    </div>
+                    <!-- Controls -->
+                    <div class="col-md-8 col-lg-9">
+                        <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
 
-    {{-- Filter bar + Table --}}
-    <div class="bg-white border rounded-3 shadow-sm">
+                            <!-- Status Filter -->
+                            <div class="btn-group shadow-sm rounded-1" role="group"
+                                aria-label="Filter courses by status">
 
-        {{-- Filter row --}}
-        <div class="programme-filter-bar p-3 programme-choices-bootstrap">
-            <div class="row g-3 align-items-center">
-                {{-- "Filters" label --}}
-                <div class="col-auto">
-                    <span class="text-secondary fw-semibold small">Filters</span>
-                </div>
+                                <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
+                                    aria-pressed="true" aria-current="true">
+                                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                                    <span>Active</span>
+                                </button>
 
-                {{-- Course Name dropdown --}}
-                <div class="col-12 col-sm-auto" style="min-width: 220px;">
-                    <select id="courseFilter" class="form-select form-select-sm rounded-3 border js-programme-choice">
-                        <option value="">Course Name</option>
-                        @foreach ($courses ?? [] as $pk => $name)
-                        <option value="{{ $pk }}">{{ $name }}</option>
-                        @endforeach
-                    </select>
-                </div>
+                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold"
+                                    id="filterArchive" aria-pressed="false">
+                                    <i class="bi bi-archive me-1" aria-hidden="true"></i>
+                                    <span>Archived</span>
+                                </button>
+                            </div>
 
-                {{-- Reset Filters --}}
-                <div class="col-auto">
-                    <button type="button" class="btn btn-outline-danger rounded-1 px-3 fw-semibold"
-                        id="resetFilters">Reset Filters</button>
-                </div>
+                            <!-- Primary Action -->
+                            <a href="{{ route('programme.create') }}"
+                                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4"
+                                aria-label="Add a new course">
+                                <i class="bi bi-plus-circle-fill" aria-hidden="true"></i>
+                                <span class="fw-semibold">Add Course</span>
+                            </a>
 
-                {{-- Search --}}
-                <div class="col-12 col-md-3 ms-md-auto">
-                    <label for="programmeTableSearch" class="form-label visually-hidden">Search courses</label>
-                    <div class="input-group input-group-sm">
-                        <span class="input-group-text bg-white border-end-0 rounded-start-1 text-primary">
-                            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">search</i>
-                        </span>
-                        <input type="search" id="programmeTableSearch" class="form-control border-start-0 rounded-end-1"
-                            placeholder="Search" autocomplete="off">
+                        </div>
+                    </div>
+
+                </section>
+
+                <hr>
+
+                <!-- Filter Buttons -->
+                <div class="row mb-3 programme-choices-bootstrap">
+                    <div class="col-4">
+                        <label for="courseFilter" class="form-label mb-1">Course Name</label>
+                        <select id="courseFilter" class="form-control js-programme-choice rounded-1">
+                            <option value="">All Courses</option>
+                            @foreach($courses ?? [] as $pk => $name)
+                            <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-2">
+                        <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
+                        </button>
                     </div>
                 </div>
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table']) !!}
+                </div>
+
             </div>
         </div>
-
-        {{-- Data table --}}
-        <div class="mb-0">
-            {!! $dataTable->table(['class' => 'table align-middle mb-0 programme-course-table']) !!}
-        </div>
+        <!-- end Zero Configuration -->
     </div>
 </div>
 
 <!-- Course View Modal -->
 <div class="modal fade" id="viewCourseModal" tabindex="-1" aria-labelledby="viewCourseModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content border-0 shadow">
-            <div class="modal-header bg-primary text-white">
+        <div class="modal-content">
+            <div class="modal-header bg-info text-white">
                 <h5 class="modal-title" id="viewCourseModalLabel">Course Details</h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                     aria-label="Close"></button>
             </div>
             <div class="modal-body">
                 <div id="courseDetailsContent">
-                    <div class="text-center py-4">
+                    <div class="text-center">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <p class="mt-2 text-secondary">Loading course details...</p>
+                        <p class="mt-2">Loading course details...</p>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer border-top-0">
-                <button type="button" class="btn btn-secondary rounded-3" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -403,15 +273,6 @@ $(document).ready(function() {
         initCourseFilterChoices();
     }
 
-    // Pass filter parameter to server (bind early, before first AJAX)
-    $('#coursemaster-table').on('preXhr.dt', function(e, settings, data) {
-        data.status_filter = currentFilter;
-        var courseFilter = $('#courseFilter').val();
-        if (courseFilter) {
-            data.course_filter = courseFilter;
-        }
-    });
-
     // Wait for DataTable to be initialized
     setTimeout(function() {
         table = $('#coursemaster-table').DataTable();
@@ -498,21 +359,38 @@ $(document).ready(function() {
             });
         }
 
-        // Pill segmented control: Active / Archived
+        // Function to set active button styling
         function setActiveButton(activeBtn) {
-            $('#filterActive, #filterArchive')
-                .removeClass('programme-status-btn--on')
-                .attr('aria-pressed', 'false')
-                .removeAttr('aria-current');
+            // Reset all buttons to outline style
+            $('#filterActive')
+                .removeClass('btn-success active text-white')
+                .addClass('btn-outline-success')
+                .attr('aria-pressed', 'false');
 
-            activeBtn
-                .addClass('programme-status-btn--on')
-                .attr('aria-pressed', 'true')
-                .attr('aria-current', 'true');
+            $('#filterArchive')
+                .removeClass('btn-secondary active text-white')
+                .addClass('btn-outline-secondary')
+                .attr('aria-pressed', 'false');
+
+            // Set the active button
+            if (activeBtn.attr('id') === 'filterActive') {
+                activeBtn.removeClass('btn-outline-success')
+                    .addClass('btn-success text-white active')
+                    .attr('aria-pressed', 'true');
+            } else if (activeBtn.attr('id') === 'filterArchive') {
+                activeBtn.removeClass('btn-outline-secondary')
+                    .addClass('btn-secondary text-white active')
+                    .attr('aria-pressed', 'true');
+            }
         }
 
-        $('#programmeTableSearch').on('keyup change', function() {
-            table.search($(this).val() || '').draw();
+        // Pass filter parameter to server
+        $('#coursemaster-table').on('preXhr.dt', function(e, settings, data) {
+            data.status_filter = currentFilter;
+            var courseFilter = $('#courseFilter').val();
+            if (courseFilter) {
+                data.course_filter = courseFilter;
+            }
         });
 
         // Reinitialize dropdowns after table draw
@@ -538,11 +416,9 @@ $(document).ready(function() {
         // Handle reset filters
         $('#resetFilters').on('click', function() {
             $('#courseFilter').val('');
-            $('#programmeTableSearch').val('');
             rebuildCourseFilterChoices();
             currentFilter = 'active'; // Reset to active by default
             setActiveButton($('#filterActive'));
-            table.search('');
             loadCoursesByStatus('active');
         });
 
@@ -552,57 +428,6 @@ $(document).ready(function() {
             console.log('Course ID:', courseId); // Debug log
             loadCourseDetails(courseId);
         });
-
-        // ── Custom SweetAlert: Delete Course ──
-        $(document).on('click', '.programme-delete-btn', function(e) {
-            e.preventDefault();
-            var $btn = $(this);
-            var deleteUrl = $btn.data('delete-url');
-            var csrfToken = $btn.data('csrf');
-
-            Swal.fire({
-                html: '<div style="text-align:center;">' +
-                    '<div style="margin:0 auto 16px;width:72px;height:72px;border-radius:50%;border:4px solid #dc3545;display:flex;align-items:center;justify-content:center;">' +
-                    '<span class="material-icons material-symbols-rounded" style="font-size:36px;color:#dc3545;">priority_high</span></div>' +
-                    '<h4 style="font-weight:700;margin-bottom:4px;">Delete Course?</h4>' +
-                    '<p style="color:#6c757d;margin:0;">Are you sure you want to delete this course?</p></div>',
-                showCancelButton: true,
-                confirmButtonText: 'Yes, Delete',
-                cancelButtonText: 'Cancel, Keep it',
-                confirmButtonColor: '#dc3545',
-                cancelButtonColor: '#fff',
-                customClass: {
-                    cancelButton: 'btn btn-outline-dark border-2 fw-semibold px-4',
-                    confirmButton: 'btn btn-danger fw-semibold px-4',
-                    actions: 'gap-3 mt-2'
-                },
-                buttonsStyling: false,
-                reverseButtons: true,
-                showCloseButton: false,
-                focusCancel: true
-            }).then(function(result) {
-                if (result.isConfirmed) {
-                    var $form = $('<form>', {
-                        action: deleteUrl,
-                        method: 'POST'
-                    });
-                    $form.append($('<input>', {
-                        type: 'hidden',
-                        name: '_token',
-                        value: csrfToken
-                    }));
-                    $form.append($('<input>', {
-                        type: 'hidden',
-                        name: '_method',
-                        value: 'DELETE'
-                    }));
-                    $('body').append($form);
-                    $form.submit();
-                }
-            });
-        });
-
-        // Status toggle uses global .status-toggle handler in custom.js (form-switch)
     }, 100);
 
     // Function to load course details
