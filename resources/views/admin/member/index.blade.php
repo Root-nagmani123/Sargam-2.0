@@ -3,139 +3,9 @@
 @section('title', 'Member')
 
 @section('setup_content')
-<style>
-#member-table_wrapper .dataTables_length,
-#member-table_wrapper .dataTables_filter,
-#member-table_wrapper .dataTables_info,
-#member-table_wrapper .dt-buttons {
-    display: none !important;
-}
-
-#member-table_wrapper .dataTables_paginate {
-    margin-top: 0 !important;
-    display: flex;
-    align-items: center;
-    gap: 2px;
-}
-
-#member-table_wrapper .paginate_button {
-    border: none !important;
-    background: transparent !important;
-    padding: 5px 10px;
-    border-radius: 4px;
-    font-size: 0.8125rem;
-    cursor: pointer;
-    color: #495057 !important;
-}
-
-#member-table_wrapper .paginate_button:hover:not(.disabled) {
-    background: #f1f3f5 !important;
-}
-
-#member-table_wrapper .paginate_button.current,
-#member-table_wrapper .paginate_button.current:hover {
-    background: #1b3a5c !important;
-    color: #fff !important;
-    border-radius: 4px;
-}
-
-#member-table_wrapper .paginate_button.disabled {
-    opacity: 0.35;
-    cursor: default;
-}
-
-#member-table_wrapper .ellipsis {
-    padding: 5px 4px;
-    color: #adb5bd;
-}
-
-.mem-search-wrap {
-    position: relative;
-    width: min(100%, 260px);
-}
-
-.mem-search-wrap .form-control {
-    border-radius: 8px;
-    border: 1px solid #dee2e6;
-    padding-left: 38px;
-    font-size: 0.875rem;
-}
-
-.mem-search-wrap .mem-search-icon {
-    position: absolute;
-    left: 10px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #adb5bd;
-    font-size: 18px;
-    pointer-events: none;
-}
-
-#member-table {
-    margin-bottom: 0;
-}
-
-#member-table thead th {
-    background-color: #f8f9fa;
-    font-size: 0.8125rem;
-    font-weight: 600;
-    color: #6c757d;
-    border-bottom: 2px solid #dee2e6;
-    padding: 12px 16px;
-    white-space: nowrap;
-    vertical-align: middle;
-}
-
-#member-table tbody td {
-    font-size: 0.875rem;
-    padding: 12px 16px;
-    vertical-align: middle;
-    border-bottom: 1px solid #f1f3f5;
-    color: #212529;
-}
-
-#member-table tbody tr:hover td {
-    background-color: #fafbfc;
-}
-
-.mem-action-btn {
-    background: none;
-    border: none;
-    padding: 3px 5px;
-    cursor: pointer;
-    line-height: 1;
-    display: inline-flex;
-    align-items: center;
-    text-decoration: none;
-}
-
-.mem-action-btn .material-symbols-rounded {
-    font-size: 20px;
-}
-
-.mem-action-btn:hover {
-    opacity: 0.75;
-}
-
-.mem-action-btn.text-danger:hover {
-    opacity: 0.85;
-}
-</style>
-
-<div class="container-fluid px-3 px-lg-4">
-    <x-breadcrum title="Member" subtitle="List of members">
-        <a href="{{ route('member.create') }}"
-            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
-            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
-            <span>Add Member</span>
-        </a>
-        <a href="{{ route('member.excel.export') }}"
-            class="btn btn-sm btn-secondary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
-            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">file_export</i>
-            <span>Export</span>
-        </a>
-    </x-breadcrum>
-
+<div class="container-fluid">
+<x-breadcrum title="Member"></x-breadcrum>
+ <div id="status-msg"></div>
     <div class="datatables">
         <div class="card shadow-sm border-0 rounded-3">
             <div class="card-body p-3 p-md-4">
@@ -191,11 +61,72 @@
 @push('scripts')
 {{ $dataTable->scripts() }}
 <script>
-$(function () {
-    var $tableEl = $('#member-table');
-    if (!$tableEl.length || !$.fn.DataTable || !$.fn.DataTable.isDataTable($tableEl)) {
-        return;
-    }
+$(document).ready(function() {
+    // Handle member status toggle
+    $(document).on('change', '.member-status-toggle', function(e) {
+        const $checkbox = $(this);
+        const memberId = $checkbox.data('id');
+        const isChecked = $checkbox.is(':checked');
+        const newStatus = isChecked ? 1 : 2; // checked=Active(1), unchecked=Inactive(2)
+        const actionText = isChecked ? 'activate' : 'deactivate';
+
+        // Show confirmation dialog
+        Swal.fire({
+            title: 'Confirm Action',
+            text: `Are you sure you want to ${actionText} this member?`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#3085d6',
+            cancelButtonColor: '#d33',
+            confirmButtonText: `Yes, ${actionText}!`
+        }).then((result) => {
+            if (result.isConfirmed) {
+                // Make AJAX request to toggle status
+                $.ajax({
+                    url: `/member/${memberId}/toggle-status`,
+                    type: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content'),
+                        'Content-Type': 'application/json'
+                    },
+                    data: JSON.stringify({ status: newStatus }),
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            // Reload the DataTable silently
+                            $('#member-table').DataTable().ajax.reload();
+                        } else {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: response.message || 'Error updating status'
+                            });
+                            // Revert checkbox state
+                            $checkbox.prop('checked', !isChecked);
+                        }
+                    },
+                    error: function(xhr) {
+                        const response = xhr.responseJSON || {};
+                        const message = response.message || 'Error toggling status';
+
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: message
+                        });
+                        // Revert checkbox state
+                        $checkbox.prop('checked', !isChecked);
+                    }
+                });
+            } else {
+                // User cancelled, revert checkbox
+                $checkbox.prop('checked', !isChecked);
+            }
+        });
+    });
+
+    $(document).on('click', '.member-delete-btn', function(e) {
+        e.preventDefault();
 
     var table = $tableEl.DataTable();
 
