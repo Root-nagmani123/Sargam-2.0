@@ -380,15 +380,15 @@ class UserController extends Controller
             return ['perm' => 0, 'cont' => 0];
         }
 
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+        if (! canSeeSecurityManagement()) {
             return ['perm' => 0, 'cont' => 0];
         }
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
 
-        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isApproval2 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isApproval3 = isSecurityAdminUser() && ! hasRole('Security Card');
 
         // If user has both roles, fall back to Approval II "actionable" definition.
         if (! $isApproval2 && ! $isApproval3) {
@@ -489,8 +489,8 @@ class UserController extends Controller
             return 0;
         }
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isLevel1 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isLevel2 = isSecurityAdminUser() && ! hasRole('Security Card');
         if (! $isLevel1 && ! $isLevel2) {
             return 0;
         }
@@ -546,8 +546,8 @@ class UserController extends Controller
             return 0;
         }
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isLevel1 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isLevel2 = isSecurityAdminUser() && ! hasRole('Security Card');
         if (! $isLevel1 && ! $isLevel2) {
             return 0;
         }
@@ -679,14 +679,14 @@ class UserController extends Controller
             return 0;
         }
 
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+        if (! canSeeSecurityManagement()) {
             return 0;
         }
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isApproval2 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isApproval3 = isSecurityAdminUser() && ! hasRole('Security Card');
 
         // Permanent Duplicate (security_dup_perm_id_apply)
         $base = DB::table('security_dup_perm_id_apply as dup')
@@ -736,14 +736,14 @@ class UserController extends Controller
             return 0;
         }
 
-        if (! (hasRole('Security Card') || hasRole('Admin Security'))) {
+        if (! canSeeSecurityManagement()) {
             return 0;
         }
 
         $start = Carbon::today()->startOfDay()->toDateTimeString();
         $end = Carbon::today()->endOfDay()->toDateTimeString();
-        $isApproval2 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isApproval3 = hasRole('Admin Security') && !hasRole('Security Card');
+        $isApproval2 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isApproval3 = isSecurityAdminUser() && ! hasRole('Security Card');
 
         // Contractual Duplicate (security_dup_other_id_apply with depart_approval_status = 2)
         $base = DB::table('security_dup_other_id_apply as duo')

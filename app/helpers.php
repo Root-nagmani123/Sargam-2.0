@@ -508,12 +508,16 @@ function provision_faculty_profile_from_employee_user(): ?int
 
 /**
  * Whether the current user can access full Mess Management
- * (Mess Staff/Mess Admin role, or employee in Officers Mess department).
+ * (Super Admin, Mess Staff/Mess Admin role, or employee in Officers Mess department).
  */
 function canSeeLowStockAlert()
 {
     $user = Auth::user();
     if (!$user) return false;
+
+    if (hasRole('Super Admin')) {
+        return true;
+    }
 
     if (hasRole('Mess Staff') || hasRole('mess staff')) return true;
     if (hasRole('Mess Admin') || hasRole('mess admin')) return true;
@@ -546,6 +550,60 @@ function canSeeMessSelfServiceSetup(): bool
         || hasRole('Training-Induction')
         || hasRole('Training-MCTP')
         || hasRole('IST');
+}
+
+/**
+ * Whether the current user can access Security operations
+ * (Super Admin, Security Card, or Admin Security).
+ */
+function canSeeSecurityManagement(): bool
+{
+    return hasRole('Super Admin')
+        || hasRole('Security Card')
+        || hasRole('Admin Security');
+}
+
+/**
+ * Security admin-level access (approval III, masters) — Super Admin or Admin Security.
+ */
+function isSecurityAdminUser(): bool
+{
+    return hasRole('Super Admin') || hasRole('Admin Security');
+}
+
+/**
+ * Whether the Security module icon and menu appear on the Home sidebar.
+ */
+function canSeeSecurityHomeSidebar(): bool
+{
+    if (canSeeSecurityManagement()) {
+        return true;
+    }
+
+    if (hasRole('Student-OT')) {
+        return false;
+    }
+
+    $user = Auth::user();
+    if (! $user) {
+        return false;
+    }
+
+    if (! \Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'payroll')) {
+        return true;
+    }
+
+    $userId = $user->user_id ?? $user->pk ?? null;
+    if (! $userId) {
+        return true;
+    }
+
+    $emp = \Illuminate\Support\Facades\DB::table('employee_master')
+        ->where('pk', $userId)
+        ->orWhere('pk_old', $userId)
+        ->first(['payroll']);
+
+    return ! ($emp && (int) ($emp->payroll ?? 0) !== 0);
 }
 
 function get_Role_by_course()

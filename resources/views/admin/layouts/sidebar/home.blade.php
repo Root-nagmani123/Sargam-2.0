@@ -73,7 +73,7 @@
                                                 </a>
                                             </li>
                                             @endif
-                                            @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                                            @if(canSeeSecurityHomeSidebar())
                                             <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -119,8 +119,10 @@
                     <x-menu.general />
                     <x-menu.setup_estate_management />
                     <x-menu.setup_mess_management />
-                    @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                    @if(canSeeSecurityHomeSidebar())
                     <x-menu.setup_security_management />
+                    @endif
+                    @if(! hasRole('Student-OT') && ! $isContractualEmployee)
                     <x-menu.setup_issue_management />
                     @endif
 
