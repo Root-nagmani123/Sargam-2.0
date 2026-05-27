@@ -1,163 +1,70 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Course Master - Sargam | Lal Bahadur')
+@section('title', 'Course Master')
 
 @push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 @endpush
 
 @section('setup_content')
-<style>
-/* Fix dropdown visibility in table */
-.table-responsive {
-    overflow: visible !important;
-}
+<div class="container-fluid programme-index-page">
+    <x-breadcrum
+        title="Course Master"
+        buttonText="Add Course"
+        :buttonUrl="route('programme.create')"
+        buttonIcon="add"
+        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm" />
 
-.table td {
-    overflow: visible !important;
-    vertical-align: middle;
-}
+    <div id="status-msg" class="mb-3"></div>
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white" role="group" aria-label="Filter courses by status">
+                    <li class="nav-item" role="presentation">
+                        <button type="button"
+                            class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                            id="filterActive"
+                            aria-pressed="true"
+                            aria-current="true">
+                            Active
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button type="button"
+                            class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                            id="filterArchive"
+                            aria-pressed="false">
+                            Archived
+                        </button>
+                    </li>
+                </ul>
+            </div>
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
 
-.action-dropdown {
-    position: static;
-}
-
-.action-dropdown .dropdown-menu {
-    z-index: 1050 !important;
-    position: fixed !important;
-}
-
-/* Ensure dropdown items are clickable */
-.dropdown-item {
-    cursor: pointer;
-}
-
-.btn-group[role="group"] .btn {
-    transition: all 0.3s ease-in-out;
-    border-radius: 0;
-    /* Reset for pill-style container */
-}
-
-.btn-group[role="group"] .btn:first-child {
-    border-top-left-radius: 50rem !important;
-    border-bottom-left-radius: 50rem !important;
-}
-
-.btn-group[role="group"] .btn:last-child {
-    border-top-right-radius: 50rem !important;
-    border-bottom-right-radius: 50rem !important;
-}
-
-/* Hover + Active States */
-.btn-group .btn:hover {
-    transform: translateY(-1px);
-}
-
-.btn-group .btn.active {
-    box-shadow: inset 0 0 0 2px #fff, 0 0 0 3px rgba(0, 123, 255, 0.3);
-}
-
-/* Accessibility: Focus ring */
-.btn:focus-visible {
-    outline: 3px solid #0d6efd;
-    outline-offset: 2px;
-}
-
-/* Choices + Bootstrap integration for course filter */
-.programme-choices-bootstrap .choices__inner.form-select {
-    background-color: var(--bs-body-bg);
-    border: var(--bs-border-width) solid var(--bs-border-color);
-    min-height: calc(1.5em + 0.75rem + var(--bs-border-width) * 2);
-    padding-top: 0.375rem;
-    padding-bottom: 0.375rem;
-    background-image: none !important;
-    padding-inline-end: 2.25rem;
-}
-
-.programme-choices-bootstrap .choices.is-focused .choices__inner.form-select,
-.programme-choices-bootstrap .choices.is-open .choices__inner.form-select {
-    border-color: var(--bs-focus-border-color);
-    outline: 0;
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-focus-ring-rgb), 0.25);
-}
-
-.programme-choices-bootstrap .choices__list--dropdown.dropdown-menu,
-.programme-choices-bootstrap .choices__list[aria-expanded].dropdown-menu {
-    border: var(--bs-border-width) solid var(--bs-border-color);
-}
-</style>
-<div class="container-fluid">
-    <x-breadcrum title="Course Master" />
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-
-                <section class="row align-items-center mb-4" role="region" aria-labelledby="courseMasterHeading">
-
-                    <!-- Page Title -->
-                    <div class="col-md-4 col-lg-3">
-                        <h1 id="courseMasterHeading" class="h4 fw-bold mb-2 mb-md-0">
-                            Course Master
-                        </h1>
-                    </div>
-
-                    <!-- Controls -->
-                    <div class="col-md-8 col-lg-9">
-                        <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
-
-                            <!-- Status Filter -->
-                            <div class="btn-group shadow-sm rounded-1" role="group"
-                                aria-label="Filter courses by status">
-
-                                <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
-                                    aria-pressed="true" aria-current="true">
-                                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
-                                    <span>Active</span>
-                                </button>
-
-                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold"
-                                    id="filterArchive" aria-pressed="false">
-                                    <i class="bi bi-archive me-1" aria-hidden="true"></i>
-                                    <span>Archived</span>
-                                </button>
-                            </div>
-
-                            <!-- Primary Action -->
-                            <a href="{{ route('programme.create') }}"
-                                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4"
-                                aria-label="Add a new course">
-                                <i class="bi bi-plus-circle-fill" aria-hidden="true"></i>
-                                <span class="fw-semibold">Add Course</span>
-                            </a>
-
-                        </div>
-                    </div>
-
-                </section>
-
-                <hr>
-
-                <!-- Filter Buttons -->
-                <div class="row mb-3 programme-choices-bootstrap">
-                    <div class="col-4">
-                        <label for="courseFilter" class="form-label mb-1">Course Name</label>
-                        <select id="courseFilter" class="form-control js-programme-choice rounded-1">
-                            <option value="">All Courses</option>
+            <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-4 programme-dt-toolbar programme-choices-bootstrap">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+                    <div class="programme-dt-filter-select">
+                        <select id="courseFilter" class="form-select js-programme-choice">
+                            <option value="">Course Name</option>
                             @foreach($courses ?? [] as $pk => $name)
                             <option value="{{ $pk }}">{{ $name }}</option>
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-2">
-                        <button type="button" class="btn btn-outline-secondary mt-4" id="resetFilters">
-                            <i class="bi bi-arrow-counterclockwise me-1"></i> Reset Filters
-                        </button>
-                    </div>
+                    <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">
+                        Reset Filters
+                    </button>
                 </div>
+                <div id="programmeDtSearch" class="programme-dt-search"></div>
+            </div>
+
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    {!! $dataTable->table(['class' => 'table']) !!}
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
+                <div id="programmeDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
+            </div>
 
             </div>
         </div>
@@ -165,27 +72,55 @@
     </div>
 </div>
 
+<!-- Activate / Deactivate / Delete confirmation -->
+<div class="modal fade programme-confirm-modal-root" id="programmeConfirmModal" tabindex="-1"
+    aria-labelledby="programmeConfirmTitle" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered programme-confirm-dialog">
+        <div class="modal-content programme-confirm-modal border-0 shadow-lg rounded-5 overflow-hidden">
+            <div class="modal-body text-center px-4 px-md-5 py-5">
+                <div id="programmeConfirmIcon" class="programme-confirm-icon programme-confirm-icon--warning mb-4"
+                    role="img" aria-hidden="true">
+                    <i id="programmeConfirmIconBi" class="bi bi-exclamation-lg"></i>
+                </div>
+                <h2 class="programme-confirm-title h4 fw-bold mb-3" id="programmeConfirmTitle">Confirm</h2>
+                <p class="programme-confirm-message mb-4 mb-md-5" id="programmeConfirmMessage"></p>
+                <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center align-items-stretch programme-confirm-actions">
+                    <button type="button" class="btn btn-lg rounded-3 programme-confirm-btn" id="programmeConfirmCancel">
+                        Cancel
+                    </button>
+                    <button type="button" class="btn btn-lg rounded-3 programme-confirm-btn" id="programmeConfirmOk">
+                        Confirm
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Course View Modal -->
 <div class="modal fade" id="viewCourseModal" tabindex="-1" aria-labelledby="viewCourseModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header bg-info text-white">
-                <h5 class="modal-title" id="viewCourseModalLabel">Course Details</h5>
+    <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
+            <div class="modal-header text-white border-0 py-3 px-4">
+                <h5 class="modal-title fw-semibold d-flex align-items-center gap-2 mb-0" id="viewCourseModalLabel">
+                    <i class="bi bi-journal-bookmark-fill" aria-hidden="true"></i>
+                    Course Details
+                </h5>
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
                     aria-label="Close"></button>
             </div>
-            <div class="modal-body">
+            <div class="modal-body p-4">
                 <div id="courseDetailsContent">
-                    <div class="text-center">
+                    <div class="text-center py-5">
                         <div class="spinner-border text-primary" role="status">
                             <span class="visually-hidden">Loading...</span>
                         </div>
-                        <p class="mt-2">Loading course details...</p>
+                        <p class="mt-3 mb-0 text-body-secondary">Loading course details…</p>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+            <div class="modal-footer border-top bg-body-tertiary px-4 py-3">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4 fw-semibold" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -197,249 +132,522 @@
 
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-$(document).ready(function() {
-    var table;
-    var currentFilter = 'active'; // Set Active as default
-    var courseChoices = null;
+    $(document).ready(function() {
+        var table;
+        var currentFilter = 'active'; // Set Active as default
+        var courseChoices = null;
 
-    var programmeChoiceOpts = {
-        searchEnabled: true,
-        shouldSort: false,
-        itemSelectText: '',
-        allowHTML: false,
-        classNames: {
-            containerOuter: ['choices', 'w-100'],
-            containerInner: ['choices__inner', 'form-select', 'shadow-sm'],
-            input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
-            inputCloned: ['choices__input--cloned'],
-            list: ['choices__list'],
-            listItems: ['choices__list--multiple'],
-            listSingle: ['choices__list--single'],
-            listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
-            item: ['choices__item', 'dropdown-item', 'rounded-0'],
-            itemSelectable: ['choices__item--selectable'],
-            itemDisabled: ['choices__item--disabled', 'disabled'],
-            itemChoice: ['choices__item--choice'],
-            description: ['choices__description', 'small', 'text-muted'],
-            placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
-            group: ['choices__group'],
-            groupHeading: ['choices__heading', 'dropdown-header', 'text-uppercase', 'small'],
-            button: ['choices__button'],
-            activeState: ['is-active'],
-            focusState: ['is-focused'],
-            openState: ['is-open'],
-            disabledState: ['is-disabled'],
-            highlightedState: ['is-highlighted', 'active'],
-            flippedState: ['is-flipped'],
-            loadingState: ['is-loading'],
-            invalidState: ['is-invalid'],
-            notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2'],
-            addChoice: ['choices__item--selectable', 'add-choice'],
-            noResults: ['has-no-results'],
-            noChoices: ['has-no-choices'],
-        }
-    };
+        /* ── Confirmation modals (Course Master only) ── */
+        var programmeConfirmModalEl = document.getElementById('programmeConfirmModal');
+        var programmeConfirmModal = programmeConfirmModalEl ? bootstrap.Modal.getOrCreateInstance(programmeConfirmModalEl) : null;
+        var programmeConfirmOnOk = null;
+        var programmeConfirmOnCancel = null;
 
-    function initCourseFilterChoices() {
-        if (typeof Choices === 'undefined') {
-            return;
-        }
+        var programmeConfirmConfigs = {
+            activate: {
+                iconWrap: 'programme-confirm-icon--success',
+                icon: 'bi-check-lg',
+                title: 'Activate Course?',
+                message: 'Are you sure you want to activate this course?',
+                messageClass: 'programme-confirm-message--success',
+                cancelLines: ['Cancel,', 'Keep it deactive'],
+                confirmLines: ['Yes,', 'Activate'],
+                cancelClass: 'programme-confirm-cancel--primary',
+                confirmClass: 'programme-confirm-ok--primary'
+            },
+            deactivate: {
+                iconWrap: 'programme-confirm-icon--warning',
+                icon: 'bi-exclamation-lg',
+                title: 'Deactivate Course?',
+                message: 'Are you sure you want to deactivate this course?',
+                messageClass: 'programme-confirm-message--info',
+                cancelLines: ['Cancel,', 'Keep it active'],
+                confirmLines: ['Yes,', 'Deactivate'],
+                cancelClass: 'programme-confirm-cancel--primary',
+                confirmClass: 'programme-confirm-ok--primary'
+            },
+            delete: {
+                iconWrap: 'programme-confirm-icon--danger',
+                icon: 'bi-exclamation-lg',
+                title: 'Delete Course?',
+                message: 'Are you sure you want to delete this course?',
+                messageClass: 'programme-confirm-message--danger',
+                cancelLines: ['Cancel,', 'Keep it'],
+                confirmLines: ['Yes,', 'Delete'],
+                cancelClass: 'programme-confirm-cancel--danger',
+                confirmClass: 'programme-confirm-ok--danger'
+            }
+        };
 
-        var courseFilterEl = document.getElementById('courseFilter');
-        if (!courseFilterEl || courseFilterEl.dataset.choicesInitialized === 'true') {
-            return;
-        }
+        var programmeConfirmBtnClasses = [
+            'programme-confirm-cancel--primary',
+            'programme-confirm-cancel--danger',
+            'programme-confirm-ok--primary',
+            'programme-confirm-ok--danger',
+            'btn-primary',
+            'btn-danger',
+            'btn-outline-primary',
+            'btn-outline-danger'
+        ];
 
-        courseChoices = new Choices(courseFilterEl, programmeChoiceOpts);
-        courseFilterEl._choicesInstance = courseChoices;
-        courseFilterEl.dataset.choicesInitialized = 'true';
-    }
-
-    function rebuildCourseFilterChoices() {
-        if (typeof Choices === 'undefined') {
-            return;
-        }
-
-        var courseFilterEl = document.getElementById('courseFilter');
-        if (!courseFilterEl || !courseFilterEl._choicesInstance) {
-            initCourseFilterChoices();
-            return;
+        function setProgrammeConfirmButtonLines($btn, lines) {
+            $btn.empty();
+            (lines || []).forEach(function(line) {
+                $('<span>', { 'class': 'programme-confirm-btn-line', text: line }).appendTo($btn);
+            });
         }
 
-        courseFilterEl._choicesInstance.destroy();
-        courseFilterEl.dataset.choicesInitialized = 'false';
-        courseFilterEl._choicesInstance = null;
-        courseChoices = null;
-        initCourseFilterChoices();
-    }
+        function showProgrammeConfirm(type, onConfirm, onCancel) {
+            if (!programmeConfirmModal) {
+                if (onConfirm) {
+                    onConfirm();
+                }
+                return;
+            }
 
-    // Wait for DataTable to be initialized
-    setTimeout(function() {
-        table = $('#coursemaster-table').DataTable();
-        initCourseFilterChoices();
+            var cfg = programmeConfirmConfigs[type];
+            if (!cfg) {
+                return;
+            }
 
-        // Initialize dropdowns after table loads
-        initializeDropdowns();
+            var $icon = $('#programmeConfirmIcon');
+            $icon.removeClass('programme-confirm-icon--success programme-confirm-icon--warning programme-confirm-icon--danger')
+                .addClass(cfg.iconWrap);
+            $('#programmeConfirmIconBi').attr('class', 'bi ' + cfg.icon);
+            $('#programmeConfirmTitle').text(cfg.title);
 
-        // Set initial active state - Active button is already styled as active in HTML
-        // No need to change styling initially
+            var $message = $('#programmeConfirmMessage');
+            $message.removeClass('programme-confirm-message--info programme-confirm-message--success programme-confirm-message--danger')
+                .addClass(cfg.messageClass || 'programme-confirm-message--info')
+                .text(cfg.message);
 
-        // Function to load courses by status
-        function loadCoursesByStatus(status) {
+            var $cancel = $('#programmeConfirmCancel');
+            var $ok = $('#programmeConfirmOk');
+            $cancel.removeClass(programmeConfirmBtnClasses.join(' '))
+                .addClass('btn programme-confirm-btn ' + cfg.cancelClass);
+            $ok.removeClass(programmeConfirmBtnClasses.join(' '))
+                .addClass('btn programme-confirm-btn ' + cfg.confirmClass);
+            setProgrammeConfirmButtonLines($cancel, cfg.cancelLines);
+            setProgrammeConfirmButtonLines($ok, cfg.confirmLines);
+
+            programmeConfirmOnOk = onConfirm || null;
+            programmeConfirmOnCancel = onCancel || null;
+            programmeConfirmModal.show();
+        }
+
+        $('#programmeConfirmOk').on('click', function() {
+            var onOk = programmeConfirmOnOk;
+            programmeConfirmOnOk = null;
+            programmeConfirmOnCancel = null;
+            programmeConfirmModal.hide();
+            if (typeof onOk === 'function') {
+                onOk();
+            }
+        });
+
+        $('#programmeConfirmCancel').on('click', function() {
+            var onCancel = programmeConfirmOnCancel;
+            programmeConfirmOnOk = null;
+            programmeConfirmOnCancel = null;
+            programmeConfirmModal.hide();
+            if (typeof onCancel === 'function') {
+                onCancel();
+            }
+        });
+
+        if (programmeConfirmModalEl) {
+            programmeConfirmModalEl.addEventListener('hidden.bs.modal', function() {
+                if (typeof programmeConfirmOnCancel === 'function') {
+                    programmeConfirmOnCancel();
+                }
+                programmeConfirmOnOk = null;
+                programmeConfirmOnCancel = null;
+            });
+        }
+
+        function programmeUpdateStatus($checkbox) {
+            var status = $checkbox.is(':checked') ? 1 : 0;
+
             $.ajax({
-                url: '{{ route("programme.get.courses.by.status") }}',
-                type: 'GET',
+                url: typeof routes !== 'undefined' ? routes.toggleStatus : '',
+                type: 'POST',
                 data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    table: $checkbox.data('table'),
+                    column: $checkbox.data('column'),
+                    id: $checkbox.data('id'),
+                    id_column: $checkbox.data('id_column'),
                     status: status
                 },
                 success: function(response) {
-                    if (response.success) {
-                        var courseFilter = $('#courseFilter');
-                        var currentValue = courseFilter.val();
-
-                        // Clear existing options except "All Courses"
-                        courseFilter.find('option:not(:first)').remove();
-
-                        // Add new course options
-                        $.each(response.courses, function(pk, name) {
-                            courseFilter.append($('<option>', {
-                                value: pk,
-                                text: name
-                            }));
-                        });
-
-                        // Reset to "All Courses" when status changes
-                        courseFilter.val('');
-                        rebuildCourseFilterChoices();
-
-                        // Reload table
-                        table.ajax.reload();
-                        initializeDropdowns();
-                    }
+                    $('#status-msg').html(
+                        '<div class="alert alert-success alert-dismissible fade show" role="alert">' +
+                        (response.message || 'Status updated successfully') +
+                        '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>'
+                    );
+                    setTimeout(function() {
+                        if ($.fn.DataTable.isDataTable('#coursemaster-table')) {
+                            $('#coursemaster-table').DataTable().ajax.reload(null, false);
+                        }
+                    }, 500);
                 },
-                error: function(xhr) {
-                    console.error('Error loading courses:', xhr);
-                }
-            });
-        }
-
-        // Filter button click handlers
-        $('#filterActive').on('click', function() {
-            setActiveButton($(this));
-            currentFilter = 'active';
-            loadCoursesByStatus('active');
-        });
-
-        $('#filterArchive').on('click', function() {
-            setActiveButton($(this));
-            currentFilter = 'archive';
-            loadCoursesByStatus('archive');
-        });
-
-        // Function to initialize dropdowns
-        function initializeDropdowns() {
-            var dropdownElementList = document.querySelectorAll('[data-bs-toggle="dropdown"]');
-            dropdownElementList.forEach(function(dropdownToggleEl) {
-                // Dispose of existing dropdown instance if any
-                try {
-                    var existingDropdown = bootstrap.Dropdown.getInstance(dropdownToggleEl);
-                    if (existingDropdown) {
-                        existingDropdown.dispose();
+                error: function() {
+                    if (typeof Swal !== 'undefined' && Swal.fire) {
+                        Swal.fire('Error', 'Status update failed', 'error');
                     }
-                } catch (e) {
-                    // Instance doesn't exist, continue
-                }
-
-                // Create new dropdown instance
-                try {
-                    new bootstrap.Dropdown(dropdownToggleEl);
-                } catch (e) {
-                    console.error('Error initializing dropdown:', e);
+                    $checkbox.prop('checked', !status);
                 }
             });
         }
 
-        // Function to set active button styling
-        function setActiveButton(activeBtn) {
-            // Reset all buttons to outline style
-            $('#filterActive')
-                .removeClass('btn-success active text-white')
-                .addClass('btn-outline-success')
-                .attr('aria-pressed', 'false');
+        document.addEventListener('change', function(e) {
+            if (!e.target.matches('#coursemaster-table .status-toggle')) {
+                return;
+            }
+            e.stopPropagation();
+            e.stopImmediatePropagation();
 
-            $('#filterArchive')
-                .removeClass('btn-secondary active text-white')
-                .addClass('btn-outline-secondary')
-                .attr('aria-pressed', 'false');
+            var checkbox = e.target;
+            var $checkbox = $(checkbox);
+            var status = checkbox.checked ? 1 : 0;
+            var type = status === 1 ? 'activate' : 'deactivate';
 
-            // Set the active button
-            if (activeBtn.attr('id') === 'filterActive') {
-                activeBtn.removeClass('btn-outline-success')
-                    .addClass('btn-success text-white active')
-                    .attr('aria-pressed', 'true');
-            } else if (activeBtn.attr('id') === 'filterArchive') {
-                activeBtn.removeClass('btn-outline-secondary')
-                    .addClass('btn-secondary text-white active')
-                    .attr('aria-pressed', 'true');
+            showProgrammeConfirm(type, function() {
+                programmeUpdateStatus($checkbox);
+            }, function() {
+                $checkbox.prop('checked', !status);
+            });
+        }, true);
+
+        $(document).on('submit', '#coursemaster-table .programme-delete-form', function(e) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            var form = this;
+
+            showProgrammeConfirm('delete', function() {
+                HTMLFormElement.prototype.submit.call(form);
+            });
+        });
+
+        var programmeChoiceOpts = {
+            searchEnabled: true,
+            shouldSort: false,
+            itemSelectText: '',
+            allowHTML: false,
+            classNames: {
+                containerOuter: ['choices', 'w-100', 'programme-dt-filter-select'],
+                containerInner: ['choices__inner'],
+                input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                inputCloned: ['choices__input--cloned'],
+                list: ['choices__list'],
+                listItems: ['choices__list--multiple'],
+                listSingle: ['choices__list--single'],
+                listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                itemSelectable: ['choices__item--selectable'],
+                itemDisabled: ['choices__item--disabled', 'disabled'],
+                itemChoice: ['choices__item--choice'],
+                description: ['choices__description', 'small', 'text-muted'],
+                placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                group: ['choices__group'],
+                groupHeading: ['choices__heading', 'dropdown-header', 'text-uppercase', 'small'],
+                button: ['choices__button'],
+                activeState: ['is-active'],
+                focusState: ['is-focused'],
+                openState: ['is-open'],
+                disabledState: ['is-disabled'],
+                highlightedState: ['is-highlighted', 'active'],
+                flippedState: ['is-flipped'],
+                loadingState: ['is-loading'],
+                invalidState: ['is-invalid'],
+                notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2'],
+                addChoice: ['choices__item--selectable', 'add-choice'],
+                noResults: ['has-no-results'],
+                noChoices: ['has-no-choices'],
+            }
+        };
+
+        function initCourseFilterChoices() {
+            if (typeof Choices === 'undefined') {
+                return;
+            }
+
+            var courseFilterEl = document.getElementById('courseFilter');
+            if (!courseFilterEl || courseFilterEl.dataset.choicesInitialized === 'true') {
+                return;
+            }
+
+            courseChoices = new Choices(courseFilterEl, programmeChoiceOpts);
+            courseFilterEl._choicesInstance = courseChoices;
+            courseFilterEl.dataset.choicesInitialized = 'true';
+        }
+
+        function rebuildCourseFilterChoices() {
+            if (typeof Choices === 'undefined') {
+                return;
+            }
+
+            var courseFilterEl = document.getElementById('courseFilter');
+            if (!courseFilterEl || !courseFilterEl._choicesInstance) {
+                initCourseFilterChoices();
+                return;
+            }
+
+            courseFilterEl._choicesInstance.destroy();
+            courseFilterEl.dataset.choicesInitialized = 'false';
+            courseFilterEl._choicesInstance = null;
+            courseChoices = null;
+            initCourseFilterChoices();
+        }
+
+        function enhanceProgrammeDtControls() {
+            var $wrapper = $('#coursemaster-table_wrapper');
+            if (!$wrapper.length) {
+                return;
+            }
+
+            var $searchSlot = $('#programmeDtSearch');
+            var $footer = $('#programmeDtFooter');
+
+            /* ── Search → toolbar right ── */
+            if (!$searchSlot.find('.dataTables_filter').length) {
+                var $filter = $wrapper.find('.dataTables_filter').first();
+                if ($filter.length) {
+                    $filter.find('input')
+                        .addClass('form-control shadow-none')
+                        .attr('placeholder', 'Search')
+                        .attr('aria-label', 'Search courses');
+                    $filter.find('label').contents().filter(function() {
+                        return this.nodeType === 3;
+                    }).remove();
+                    $searchSlot.append($filter);
+                }
+            }
+
+            /* ── Footer: pagination + count (once) ── */
+            if ($footer.data('dtReady')) {
+                updateProgrammeDtCount();
+                return;
+            }
+
+            var $paginate = $wrapper.find('.dataTables_paginate').first();
+            var $length = $wrapper.find('.dataTables_length').first();
+            var $info = $wrapper.find('.dataTables_info').first();
+
+            if (!$footer.length) {
+                return;
+            }
+
+            var $pagCol = $('<div class="programme-dt-pagination"></div>');
+            var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+            if ($paginate.length) {
+                $paginate.find('.pagination').addClass('mb-0');
+                $pagCol.append($paginate);
+            }
+
+            if ($length.length) {
+                var $select = $length.find('select').addClass('form-select form-select-sm');
+                $length.find('label')
+                    .empty()
+                    .append(document.createTextNode('Showing '))
+                    .append($select)
+                    .append(document.createTextNode(' '));
+                $countCol.append($length);
+            }
+
+            if ($info.length) {
+                $info.addClass('mb-0');
+                $countCol.append($info);
+            }
+
+            $footer.append($pagCol).append($countCol);
+            $footer.data('dtReady', true);
+        }
+
+        function updateProgrammeDtCount() {
+            if (!table) {
+                return;
+            }
+            var info = table.page.info();
+            var $info = $('#programmeDtFooter .dataTables_info');
+            if ($info.length && info.recordsDisplay !== undefined) {
+                $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
             }
         }
 
-        // Pass filter parameter to server
-        $('#coursemaster-table').on('preXhr.dt', function(e, settings, data) {
-            data.status_filter = currentFilter;
-            var courseFilter = $('#courseFilter').val();
-            if (courseFilter) {
-                data.course_filter = courseFilter;
+        // Wait for Yajra DataTable init (avoid re-init / duplicate header)
+        setTimeout(function() {
+            if (!$.fn.DataTable.isDataTable('#coursemaster-table')) {
+                return;
             }
-        });
+            table = $('#coursemaster-table').DataTable();
+            initCourseFilterChoices();
+            enhanceProgrammeDtControls();
+            updateProgrammeDtCount();
 
-        // Reinitialize dropdowns after table draw
-        $('#coursemaster-table').on('draw.dt', function() {
+            // Initialize dropdowns after table loads
             initializeDropdowns();
-        });
 
-        // Handle dropdown toggle with event delegation
-        $(document).on('click', '[data-bs-toggle="dropdown"]', function(e) {
-            // Bootstrap will handle the toggle, just ensure it's initialized
-            var el = this;
-            if (!bootstrap.Dropdown.getInstance(el)) {
-                new bootstrap.Dropdown(el);
+            // Set initial active state - Active button is already styled as active in HTML
+            // No need to change styling initially
+
+            // Function to load courses by status
+            function loadCoursesByStatus(status) {
+                $.ajax({
+                    url: '{{ route("programme.get.courses.by.status") }}',
+                    type: 'GET',
+                    data: {
+                        status: status
+                    },
+                    success: function(response) {
+                        if (response.success) {
+                            var courseFilter = $('#courseFilter');
+                            var currentValue = courseFilter.val();
+
+                            // Clear existing options except "All Courses"
+                            courseFilter.find('option:not(:first)').remove();
+
+                            // Add new course options
+                            $.each(response.courses, function(pk, name) {
+                                courseFilter.append($('<option>', {
+                                    value: pk,
+                                    text: name
+                                }));
+                            });
+
+                            // Reset to "All Courses" when status changes
+                            courseFilter.val('');
+                            rebuildCourseFilterChoices();
+
+                            // Reload table
+                            table.ajax.reload();
+                            initializeDropdowns();
+                        }
+                    },
+                    error: function(xhr) {
+                        console.error('Error loading courses:', xhr);
+                    }
+                });
             }
-        });
 
-        // Handle course filter change
-        $('#courseFilter').on('change', function() {
-            table.ajax.reload();
-            initializeDropdowns();
-        });
+            // Filter button click handlers
+            $('#filterActive').on('click', function() {
+                setActiveButton($(this));
+                currentFilter = 'active';
+                loadCoursesByStatus('active');
+            });
 
-        // Handle reset filters
-        $('#resetFilters').on('click', function() {
-            $('#courseFilter').val('');
-            rebuildCourseFilterChoices();
-            currentFilter = 'active'; // Reset to active by default
-            setActiveButton($('#filterActive'));
-            loadCoursesByStatus('active');
-        });
+            $('#filterArchive').on('click', function() {
+                setActiveButton($(this));
+                currentFilter = 'archive';
+                loadCoursesByStatus('archive');
+            });
 
-        // Handle view course button click
-        $(document).on('click', '.view-course-btn', function() {
-            var courseId = $(this).data('id');
-            console.log('Course ID:', courseId); // Debug log
-            loadCourseDetails(courseId);
-        });
-    }, 100);
+            // Function to initialize dropdowns
+            function initializeDropdowns() {
+                var dropdownElementList = document.querySelectorAll('[data-bs-toggle="dropdown"]');
+                dropdownElementList.forEach(function(dropdownToggleEl) {
+                    // Dispose of existing dropdown instance if any
+                    try {
+                        var existingDropdown = bootstrap.Dropdown.getInstance(dropdownToggleEl);
+                        if (existingDropdown) {
+                            existingDropdown.dispose();
+                        }
+                    } catch (e) {
+                        // Instance doesn't exist, continue
+                    }
 
-    // Function to load course details
-    function loadCourseDetails(courseId) {
-        var url = '{{ route("programme.view", ":id") }}'.replace(':id', courseId);
-        console.log('Request URL:', url); // Debug log
+                    // Create new dropdown instance
+                    try {
+                        new bootstrap.Dropdown(dropdownToggleEl);
+                    } catch (e) {
+                        console.error('Error initializing dropdown:', e);
+                    }
+                });
+            }
 
-        $.ajax({
-            url: url,
-            type: 'GET',
-            beforeSend: function() {
-                $('#courseDetailsContent').html(`
+            // Function to set active button styling
+            function setActiveButton(activeBtn) {
+                $('#filterActive, #filterArchive')
+                    .removeClass('active')
+                    .attr('aria-pressed', 'false')
+                    .removeAttr('aria-current');
+
+                activeBtn
+                    .addClass('active')
+                    .attr('aria-pressed', 'true')
+                    .attr('aria-current', 'true');
+            }
+
+            // Pass filter parameter to server
+            $('#coursemaster-table').on('preXhr.dt', function(e, settings, data) {
+                data.status_filter = currentFilter;
+                var courseFilter = $('#courseFilter').val();
+                if (courseFilter) {
+                    data.course_filter = courseFilter;
+                }
+            });
+
+            var $wrapper = $('#coursemaster-table_wrapper');
+
+            // Reinitialize dropdowns after table draw
+            $('#coursemaster-table').on('draw.dt', function() {
+                initializeDropdowns();
+                if ($wrapper.find('.dataTables_paginate').length && !$('#programmeDtFooter .dataTables_paginate').length) {
+                    $('#programmeDtFooter').empty().data('dtReady', false);
+                    enhanceProgrammeDtControls();
+                }
+                updateProgrammeDtCount();
+            });
+
+            setTimeout(function() {
+                enhanceProgrammeDtControls();
+                updateProgrammeDtCount();
+            }, 300);
+
+            // Handle dropdown toggle with event delegation
+            $(document).on('click', '[data-bs-toggle="dropdown"]', function(e) {
+                // Bootstrap will handle the toggle, just ensure it's initialized
+                var el = this;
+                if (!bootstrap.Dropdown.getInstance(el)) {
+                    new bootstrap.Dropdown(el);
+                }
+            });
+
+            // Handle course filter change
+            $('#courseFilter').on('change', function() {
+                table.ajax.reload();
+                initializeDropdowns();
+            });
+
+            // Handle reset filters
+            $('#resetFilters').on('click', function() {
+                $('#courseFilter').val('');
+                rebuildCourseFilterChoices();
+                currentFilter = 'active'; // Reset to active by default
+                setActiveButton($('#filterActive'));
+                loadCoursesByStatus('active');
+            });
+
+            // Handle view course button click
+            $(document).on('click', '.view-course-btn', function() {
+                var courseId = $(this).data('id');
+                console.log('Course ID:', courseId); // Debug log
+                loadCourseDetails(courseId);
+            });
+        }, 100);
+
+        // Function to load course details
+        function loadCourseDetails(courseId) {
+            var url = '{{ route("programme.view", ":id") }}'.replace(':id', courseId);
+            console.log('Request URL:', url); // Debug log
+
+            $.ajax({
+                url: url,
+                type: 'GET',
+                beforeSend: function() {
+                    $('#courseDetailsContent').html(`
                         <div class="text-center">
                             <div class="spinner-border text-primary" role="status">
                                 <span class="visually-hidden">Loading...</span>
@@ -447,11 +655,11 @@ $(document).ready(function() {
                             <p class="mt-2">Loading course details...</p>
                         </div>
                     `);
-            },
-            success: function(response) {
-                if (response.success) {
-                    var course = response.course;
-                    var content = `
+                },
+                success: function(response) {
+                    if (response.success) {
+                        var course = response.course;
+                        var content = `
                             <div class="row">
                                 <div class="col-12">
                                     <h4 class="text-primary mb-4">${course.course_name}</h4>
@@ -503,10 +711,10 @@ $(document).ready(function() {
                                     <div class="mt-2">
                         `;
 
-                    if (course.assistant_coordinators && course.assistant_coordinators.length > 0) {
-                        course.assistant_coordinators.forEach(function(coordinator, index) {
-                            var photo = course.assistant_coordinator_photos[index] || null;
-                            content += `
+                        if (course.assistant_coordinators && course.assistant_coordinators.length > 0) {
+                            course.assistant_coordinators.forEach(function(coordinator, index) {
+                                var photo = course.assistant_coordinator_photos[index] || null;
+                                content += `
                                     <div class="d-flex align-items-center mb-2">
                                         ${photo ? 
                                             `<img src="${photo}" alt="Assistant Coordinator Photo" class="rounded-circle me-2" style="width: 40px; height: 40px; object-fit: cover;">` : 
@@ -517,53 +725,53 @@ $(document).ready(function() {
                                         <span>${coordinator}</span>
                                     </div>
                                 `;
-                        });
-                    } else {
-                        content += '<p class="text-muted">No Assistant Coordinators assigned</p>';
-                    }
+                            });
+                        } else {
+                            content += '<p class="text-muted">No Assistant Coordinators assigned</p>';
+                        }
 
-                    content += `
+                        content += `
                                     </div>
                                 </div>
                             </div>
                         `;
 
-                    $('#courseDetailsContent').html(content);
-                } else {
-                    $('#courseDetailsContent').html(`
+                        $('#courseDetailsContent').html(content);
+                    } else {
+                        $('#courseDetailsContent').html(`
                             <div class="alert alert-danger">
                                 <i class="bi bi-exclamation-triangle"></i>
                                 ${response.message || 'Failed to load course details'}
                             </div>
                         `);
-                }
-            },
-            error: function(xhr, status, error) {
-                console.error('AJAX Error:', {
-                    status: xhr.status,
-                    statusText: xhr.statusText,
-                    responseText: xhr.responseText,
-                    error: error
-                });
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('AJAX Error:', {
+                        status: xhr.status,
+                        statusText: xhr.statusText,
+                        responseText: xhr.responseText,
+                        error: error
+                    });
 
-                var errorMessage = 'Error loading course details. Please try again.';
-                if (xhr.status === 404) {
-                    errorMessage = 'Course not found.';
-                } else if (xhr.status === 400) {
-                    errorMessage = 'Invalid course ID.';
-                } else if (xhr.status === 500) {
-                    errorMessage = 'Server error. Please try again later.';
-                }
+                    var errorMessage = 'Error loading course details. Please try again.';
+                    if (xhr.status === 404) {
+                        errorMessage = 'Course not found.';
+                    } else if (xhr.status === 400) {
+                        errorMessage = 'Invalid course ID.';
+                    } else if (xhr.status === 500) {
+                        errorMessage = 'Server error. Please try again later.';
+                    }
 
-                $('#courseDetailsContent').html(`
+                    $('#courseDetailsContent').html(`
                         <div class="alert alert-danger">
                             <i class="bi bi-exclamation-triangle"></i>
                             ${errorMessage}
                         </div>
                     `);
-            }
-        });
-    }
-});
+                }
+            });
+        }
+    });
 </script>
 @endpush

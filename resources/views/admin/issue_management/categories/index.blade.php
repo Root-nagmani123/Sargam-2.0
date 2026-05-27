@@ -110,22 +110,7 @@
     transform: translateY(0);
 }
 
-/* Status Toggle Enhancement */
-.form-check-input.status-toggle {
-    width: 3rem;
-    height: 1.5rem;
-    cursor: pointer;
-    transition: all 0.3s ease;
-}
-
-.form-check-input.status-toggle:checked {
-    background-color: #198754;
-    border-color: #198754;
-}
-
-.form-check-input.status-toggle:focus {
-    box-shadow: 0 0 0 0.25rem rgba(25, 135, 84, 0.25);
-}
+/* Status Toggle — uses global styles from public/css/custom.css */
 
 /* Empty State */
 .empty-state {
