@@ -85,61 +85,60 @@
 .programme-choices-bootstrap .choices__list[aria-expanded].dropdown-menu {
     border: var(--bs-border-width) solid var(--bs-border-color);
 }
+
+.programme-status-pill {
+    color: var(--bs-primary);
+    background: #fff;
+    border: 1px solid transparent;
+    transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.programme-status-pill:not(.active):hover {
+    background: #fff;
+    border-color: rgba(var(--bs-primary-rgb), 0.35);
+}
+
+.programme-status-pill.active {
+    background: var(--bs-primary);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.25);
+}
 </style>
 <div class="container-fluid">
-    <x-breadcrum title="Course Master" />
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
+    <x-breadcrum
+        title="Course Master"
+        buttonText="Add Course"
+        :buttonUrl="route('programme.create')"
+        buttonIcon="add"
+        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm"
+    />
 
-                <section class="row align-items-center mb-4" role="region" aria-labelledby="courseMasterHeading">
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
 
-                    <!-- Page Title -->
-                    <div class="col-md-4 col-lg-3">
-                        <h1 id="courseMasterHeading" class="h4 fw-bold mb-2 mb-md-0">
-                            Course Master
-                        </h1>
-                    </div>
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+                <ul class="nav nav-pills gap-2 p-1 bg-light rounded-pill border" role="group" aria-label="Filter courses by status">
+                    <li class="nav-item" role="presentation">
+                        <button type="button"
+                            class="nav-link rounded-pill px-4 py-2 fw-semibold programme-status-pill active"
+                            id="filterActive"
+                            aria-pressed="true"
+                            aria-current="true">
+                            Active
+                        </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button type="button"
+                            class="nav-link rounded-pill px-4 py-2 fw-semibold programme-status-pill"
+                            id="filterArchive"
+                            aria-pressed="false">
+                            Archived
+                        </button>
+                    </li>
+                </ul>
+            </div>
 
-                    <!-- Controls -->
-                    <div class="col-md-8 col-lg-9">
-                        <div class="d-flex flex-wrap justify-content-md-end align-items-center gap-3">
-
-                            <!-- Status Filter -->
-                            <div class="btn-group shadow-sm rounded-1" role="group"
-                                aria-label="Filter courses by status">
-
-                                <button type="button" class="btn btn-success px-4 fw-semibold active" id="filterActive"
-                                    aria-pressed="true" aria-current="true">
-                                    <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
-                                    <span>Active</span>
-                                </button>
-
-                                <button type="button" class="btn btn-outline-secondary px-4 fw-semibold"
-                                    id="filterArchive" aria-pressed="false">
-                                    <i class="bi bi-archive me-1" aria-hidden="true"></i>
-                                    <span>Archived</span>
-                                </button>
-                            </div>
-
-                            <!-- Primary Action -->
-                            <a href="{{ route('programme.create') }}"
-                                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4"
-                                aria-label="Add a new course">
-                                <i class="bi bi-plus-circle-fill" aria-hidden="true"></i>
-                                <span class="fw-semibold">Add Course</span>
-                            </a>
-
-                        </div>
-                    </div>
-
-                </section>
-
-                <hr>
-
-                <!-- Filter Buttons -->
-                <div class="row mb-3 programme-choices-bootstrap">
+            <div class="row mb-3 g-3 programme-choices-bootstrap">
                     <div class="col-4">
                         <label for="courseFilter" class="form-label mb-1">Course Name</label>
                         <select id="courseFilter" class="form-control js-programme-choice rounded-1">
@@ -155,13 +154,11 @@
                         </button>
                     </div>
                 </div>
-                <div class="table-responsive">
-                    {!! $dataTable->table(['class' => 'table']) !!}
-                </div>
-
+            <div class="table-responsive rounded-2 border">
+                {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0']) !!}
             </div>
+
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
@@ -361,27 +358,15 @@ $(document).ready(function() {
 
         // Function to set active button styling
         function setActiveButton(activeBtn) {
-            // Reset all buttons to outline style
-            $('#filterActive')
-                .removeClass('btn-success active text-white')
-                .addClass('btn-outline-success')
-                .attr('aria-pressed', 'false');
+            $('#filterActive, #filterArchive')
+                .removeClass('active')
+                .attr('aria-pressed', 'false')
+                .removeAttr('aria-current');
 
-            $('#filterArchive')
-                .removeClass('btn-secondary active text-white')
-                .addClass('btn-outline-secondary')
-                .attr('aria-pressed', 'false');
-
-            // Set the active button
-            if (activeBtn.attr('id') === 'filterActive') {
-                activeBtn.removeClass('btn-outline-success')
-                    .addClass('btn-success text-white active')
-                    .attr('aria-pressed', 'true');
-            } else if (activeBtn.attr('id') === 'filterArchive') {
-                activeBtn.removeClass('btn-outline-secondary')
-                    .addClass('btn-secondary text-white active')
-                    .attr('aria-pressed', 'true');
-            }
+            activeBtn
+                .addClass('active')
+                .attr('aria-pressed', 'true')
+                .attr('aria-current', 'true');
         }
 
         // Pass filter parameter to server

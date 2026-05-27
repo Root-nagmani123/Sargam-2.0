@@ -1152,6 +1152,12 @@
                     display: block !important;
                 }
 
+                /* Modern dual sidebar sits below header */
+                aside.side-mini-panel.sidebar-google-style {
+                    top: var(--sargam-header-offset, 122px) !important;
+                    height: calc(100vh - var(--sargam-header-offset, 122px)) !important;
+                }
+
                 /* Ensure sidebar tab content is visible on desktop */
                 #sidebarTabContent {
                     display: block !important;
@@ -1469,22 +1475,9 @@
                             bsCollapse = new bootstrap.Collapse(targetElement, { toggle: false });
                         }
                         bsCollapse.toggle();
-                        // Accordion: close other collapses in same sidebar-nav
-                        const parentNav = trigger.closest('.sidebar-nav');
-                        if (parentNav) {
-                            parentNav.querySelectorAll('.collapse').forEach(c => {
-                                if (c !== targetElement && c.classList.contains('show')) {
-                                    const other = bootstrap.Collapse.getInstance(c);
-                                    if (other) other.hide();
-                                }
-                            });
-                        }
-                        // Rotate arrow icon
-                        const icon = trigger.querySelector('.material-icons');
-                        if (icon) {
-                            setTimeout(() => {
-                                icon.textContent = targetElement.classList.contains('show') ? 'keyboard_arrow_up' : 'keyboard_arrow_down';
-                            }, 350);
+                        // Accordion: close sibling collapses only (keep nested/parent open)
+                        if (typeof window.sargamCloseSiblingSidebarCollapses === 'function') {
+                            window.sargamCloseSiblingSidebarCollapses(targetElement);
                         }
                         e.preventDefault();
                         e.stopPropagation();
