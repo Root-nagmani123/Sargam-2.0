@@ -9,47 +9,66 @@
     <x-breadcrum title="Course Group Mapping" />
     <x-session_message />
 
-    <div class="datatables">
-        <div class="card" >
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row mb-3">
-                        <div class="row align-items-center mb-4">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
+            aria-label="Filter group mappings by course status">
+            <li class="nav-item" role="presentation">
+                <button type="button"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                    id="filterGroupActive"
+                    aria-pressed="true"
+                    aria-current="true">
+                    Active
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                    id="filterGroupArchive"
+                    aria-pressed="false">
+                    Archived
+                </button>
+            </li>
+        </ul>
+    </div>
 
-                            <div class="col-12 col-md-4">
-                                <h4 class="fw-bold mb-3 mb-md-0">Course Group Mapping</h4>
-                            </div>
+    <div class="card gm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+                    <div class="programme-dt-filter-select">
+                        <select id="courseFilter" class="form-select form-select-sm" aria-label="Filter by course name">
+                            <option value="">Course Name</option>
+                            @foreach($courses ?? [] as $pk => $name)
+                            <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="programme-dt-filter-select">
+                        <select id="groupTypeFilter" class="form-select form-select-sm" aria-label="Filter by group type">
+                            <option value="">Group Type</option>
+                            @foreach($groupTypes ?? [] as $pk => $name)
+                            <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">
+                        Reset Filters
+                    </button>
+                </div>
+                <div id="gmDtSearch" class="programme-dt-search ms-xl-auto" data-dt-search-for="group-mapping-table"></div>
+            </div>
 
-                            <div class="col-12 col-md-8 d-flex justify-content-md-end flex-wrap gap-2">
-
-                                <a href="{{ route('group.mapping.create') }}"
-                                    class="btn btn-primary px-3 d-flex align-items-center shadow-sm">
-                                    <i class="bi bi-plus-circle-fill me-2" aria-hidden="true"></i>
-                                    Add Group Mapping
-                                </a>
-
-                                <button type="button" class="btn btn-info px-3 d-flex align-items-center shadow-sm"
-                                    data-bs-toggle="modal" data-bs-target="#addStudentModal">
-                                    <iconify-icon icon="mdi:account-plus" width="1.2em" height="1.2em" class="me-2">
-                                    </iconify-icon>
-                                    Add Student
-                                </button>
-
-                                <button type="button" class="btn btn-success px-3 d-flex align-items-center shadow-sm"
-                                    data-bs-toggle="modal" data-bs-target="#importModal">
-                                    <iconify-icon icon="mdi:file-excel" width="1.2em" height="1.2em" class="me-2">
-                                    </iconify-icon>
-                                    Import Excel
-                                </button>
-
-                                <a href="{{ route('group.mapping.export.student.list') }}"
-                                    class="btn btn-outline-primary px-3 d-flex align-items-center shadow-sm">
-                                    <iconify-icon icon="material-symbols:sim-card-download-rounded" width="1.4em"
-                                        height="1.4em" class="me-2"></iconify-icon>
-                                    Export Excel
-                                </a>
-                            </div>
-                        </div>
+            <div class="programme-dt-panel gm-dt-panel">
+                <div class="table-responsive gm-dt-scroll">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                </div>
+                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="group-mapping-table"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
                         {{-- Status Filter --}}
                         <div class="row mb-4">
@@ -456,12 +475,26 @@
             }
         });
 
-        $(document).ready(function() {
-            // Set default filter to active courses
-            window.groupMappingCurrentFilter = 'active';
+$(document).ready(function() {
+    window.groupMappingCurrentFilter = 'active';
 
-            setTimeout(function() {
-                var table = $('#group-mapping-table').DataTable();
+    function setActiveFilterButton(activeBtn) {
+        $('#filterGroupActive, #filterGroupArchive')
+            .removeClass('active')
+            .attr('aria-pressed', 'false')
+            .removeAttr('aria-current');
+        activeBtn
+            .addClass('active')
+            .attr('aria-pressed', 'true')
+            .attr('aria-current', 'true');
+    }
+
+    setTimeout(function() {
+        if (!$.fn.DataTable.isDataTable('#group-mapping-table')) {
+            return;
+        }
+
+        var table = $('#group-mapping-table').DataTable();
 
                 // Set Active button as active by default
                 setActiveButton($('#filterGroupActive'));

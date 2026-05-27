@@ -252,15 +252,12 @@ $courseQuery->whereNotNull('end_date')
     'ordering' => false,
     'searching' => true,
     'lengthChange' => true,
-    'pageLength' => 10,
     'order' => [],
-    'pagingType' => 'simple_numbers', // Bootstrap 5 pagination style
     'language' => [
-    'paginate' => [
-    'previous' => '&laquo;',
-    'next' => '&raquo;',
-    ]
-    ]
+    'processing' => '<span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>Loading…',
+    'emptyTable' => 'No group mappings found.',
+    'zeroRecords' => 'No matching group mappings found.',
+    ],
     ]);
     }
 
