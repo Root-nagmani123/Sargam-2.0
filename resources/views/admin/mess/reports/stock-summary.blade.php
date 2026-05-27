@@ -39,7 +39,6 @@
         </div>
         <div class="card-body p-3 p-lg-4">
             <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}" id="stockSummaryFilterForm">
-                <input type="hidden" name="refresh" value="1">
                 <div class="row g-3">
                     <div class="col-12 col-sm-6 col-xl-3">
                         <label for="stock_summary_from_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
@@ -80,7 +79,7 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
-                    <button type="submit" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
+                    <button type="submit" name="refresh" value="1" class="btn btn-primary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3">
                         <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
                         <span>Apply filters</span>
                     </button>
@@ -132,7 +131,6 @@
             <!-- Report Table -->
             <div id="stock-summary-table-wrap">
                 @include('admin.mess.reports.partials.stock-summary-table', [
-                    'reportData' => $reportData,
                     'reportPage' => $reportPage,
                     'reportTotals' => $reportTotals,
                 ])
@@ -380,7 +378,14 @@ document.addEventListener('DOMContentLoaded', function () {
         fetch(targetUrl, {
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         })
-            .then(function (r) { return r.text(); })
+            .then(function (r) {
+                var ms = r.headers.get('X-Stock-Summary-Ms');
+                var cache = r.headers.get('X-Stock-Summary-Cache');
+                if (ms) {
+                    console.info('[Stock Summary] server ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
+                }
+                return r.text();
+            })
             .then(function (html) {
                 container.innerHTML = html;
                 hookLinks();

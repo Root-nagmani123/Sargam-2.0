@@ -32,7 +32,9 @@ use App\Exports\Mess\CategoryWisePrintSlipExport;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Facades\Cache;
+use App\Support\DataTableRedisCache;
+use App\Support\RedisBackedCache;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
 use DB;
 use Illuminate\Support\Facades\Schema;
@@ -40,6 +42,45 @@ use Illuminate\Support\Facades\Schema;
 class ReportController extends Controller
 {
     use SortsMessReportData;
+
+    /** @var array{enabled: string, seconds: string} */
+    private const STOCK_SUMMARY_CACHE_ENV_KEYS = [
+        'enabled' => 'STOCK_SUMMARY_REPORT_CACHE_ENABLED',
+        'seconds' => 'STOCK_SUMMARY_REPORT_CACHE_SECONDS',
+    ];
+
+    /** @var array{enabled: string, seconds: string} */
+    private const STOCK_PURCHASE_DETAILS_CACHE_ENV_KEYS = [
+        'enabled' => 'STOCK_PURCHASE_DETAILS_CACHE_ENABLED',
+        'seconds' => 'STOCK_PURCHASE_DETAILS_CACHE_SECONDS',
+    ];
+
+    /** @var array{enabled: string, seconds: string} */
+    private const SALE_VOUCHER_REPORT_CACHE_ENV_KEYS = [
+        'enabled' => 'SALE_VOUCHER_REPORT_CACHE_ENABLED',
+        'seconds' => 'SALE_VOUCHER_REPORT_CACHE_SECONDS',
+    ];
+
+    /** @var array{enabled: string, seconds: string} */
+    private const STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS = [
+        'enabled' => 'STOCK_BALANCE_TILL_DATE_CACHE_ENABLED',
+        'seconds' => 'STOCK_BALANCE_TILL_DATE_CACHE_SECONDS',
+    ];
+
+    private const SALE_VOUCHER_BUYERS_PER_PAGE = 8;
+    private const STOCK_BALANCE_TILL_DATE_PER_PAGE = 50;
+
+    /** @var array{enabled: string, seconds: string} */
+    private const LOW_STOCK_REPORT_CACHE_ENV_KEYS = [
+        'enabled' => 'LOW_STOCK_REPORT_CACHE_ENABLED',
+        'seconds' => 'LOW_STOCK_REPORT_CACHE_SECONDS',
+    ];
+
+    /** @var array{enabled: string, seconds: string} */
+    private const PURCHASE_SALE_QUANTITY_CACHE_ENV_KEYS = [
+        'enabled' => 'PURCHASE_SALE_QUANTITY_CACHE_ENABLED',
+        'seconds' => 'PURCHASE_SALE_QUANTITY_CACHE_SECONDS',
+    ];
 
     /**
      * Academy Staff list for report filters.
@@ -94,21 +135,140 @@ class ReportController extends Controller
      */
     public function stockPurchaseDetails(Request $request)
     {
-        $queryData = $this->buildStockPurchaseDetailsQuery($request);
+        $startedAt = microtime(true);
+        $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
+        $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
+        $vendorIds = $this->normalizedIdList($request, 'vendor_id');
+        $storeIds = $this->normalizedIdList($request, 'store_id');
+        sort($vendorIds);
+        sort($storeIds);
 
-        $stores = Store::where('status', 'active')->get();
-        $vendors = Vendor::all();
+        $cacheKey = 'stock-purchase-details:v1:' . md5(json_encode([$fromDate, $toDate, $vendorIds, $storeIds]));
+        $loadReport = fn () => $this->buildStockPurchaseDetailsQuery($request);
 
-        return view('admin.mess.reports.stock-purchase-details', [
-            'purchaseOrdersByVendor' => $queryData['purchaseOrdersByVendor'],
-            'grandTotal'             => $queryData['grandTotal'],
+        if ($request->boolean('refresh')) {
+            $queryData = $loadReport();
+            $this->putMessReportCache($cacheKey, $queryData, self::STOCK_PURCHASE_DETAILS_CACHE_ENV_KEYS, 'ReportController@stockPurchaseDetails');
+            $cacheHit = false;
+        } else {
+            [$queryData, $cacheHit] = $this->rememberMessReportCache(
+                $cacheKey,
+                self::STOCK_PURCHASE_DETAILS_CACHE_ENV_KEYS,
+                'ReportController@stockPurchaseDetails',
+                $loadReport
+            );
+        }
+
+        $allLines = $this->flattenStockPurchaseDetailItems($queryData['purchaseOrdersByVendor']);
+        $lineCount = count($allLines);
+        $reportGrandTotalAmount = $this->stockPurchaseGrandTotalWithTax($allLines);
+
+        $printAll = $request->boolean('print_all');
+        $perPage = $printAll ? max(1, $lineCount) : 50;
+        $currentPage = $printAll ? 1 : LengthAwarePaginator::resolveCurrentPage();
+        $pageLines = array_slice($allLines, ($currentPage - 1) * $perPage, $perPage);
+        $reportPage = new LengthAwarePaginator(
+            $pageLines,
+            $lineCount,
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
+        $stores = Store::where('status', 'active')->orderBy('store_name')->get(['id', 'store_name', 'status']);
+        $vendors = Vendor::orderBy('name')->get(['id', 'name', 'contact_person', 'phone', 'email', 'address']);
+
+        $reportTimingMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $reportCacheStatus = $cacheHit ? 'hit' : 'miss';
+
+        $viewData = [
+            'purchaseDetailLines'    => $pageLines,
+            'reportPage'             => $reportPage,
+            'reportGrandTotalAmount' => $reportGrandTotalAmount,
+            'reportLineCount'        => $lineCount,
             'stores'                 => $stores,
             'vendors'                => $vendors,
             'selectedVendors'        => $queryData['selectedVendors'],
             'selectedStores'         => $queryData['selectedStores'],
             'fromDate'               => $queryData['fromDate'],
             'toDate'                 => $queryData['toDate'],
-        ]);
+            'reportTimingMs'         => $reportTimingMs,
+            'reportCacheStatus'      => $reportCacheStatus,
+        ];
+
+        $timingHeaders = $this->messReportTimingHeaders(
+            $startedAt,
+            $cacheHit,
+            'X-Stock-Purchase-Details',
+            'Stock Purchase Details',
+            $lineCount
+        );
+
+        if ($request->ajax() || $request->boolean('ajax')) {
+            return response()
+                ->view('admin.mess.reports.partials.stock-purchase-details-table', $viewData)
+                ->withHeaders($timingHeaders);
+        }
+
+        return response()
+            ->view('admin.mess.reports.stock-purchase-details', $viewData)
+            ->withHeaders($timingHeaders);
+    }
+
+    /**
+     * Flatten grouped PO data into item rows for paginated screen display.
+     *
+     * @param  \Illuminate\Support\Collection<int, array{vendor_id: int, vendor_name: string, vendor: ?Vendor, orders: \Illuminate\Support\Collection}>  $purchaseOrdersByVendor
+     * @return array<int, array<string, mixed>>
+     */
+    private function flattenStockPurchaseDetailItems($purchaseOrdersByVendor): array
+    {
+        $lines = [];
+        $lineNo = 0;
+
+        foreach ($purchaseOrdersByVendor as $vendorGroup) {
+            foreach ($vendorGroup['orders'] as $order) {
+                $billLabel = $order->stockPurchaseReportBillLabel();
+                foreach ($order->items as $item) {
+                    $lineNo++;
+                    $qty = (float) ($item->quantity ?? 0);
+                    $rate = (float) ($item->unit_price ?? 0);
+                    $taxPercent = (float) ($item->tax_percent ?? 0);
+                    $subtotal = $qty * $rate;
+                    $taxAmount = round($subtotal * ($taxPercent / 100), 2);
+                    $sub = $item->itemSubcategory;
+
+                    $lines[] = [
+                        'vendor_id'   => (int) ($vendorGroup['vendor_id'] ?? 0),
+                        'vendor_name' => (string) ($vendorGroup['vendor_name'] ?? 'N/A'),
+                        'order_id'    => (int) $order->id,
+                        'bill_label'  => $billLabel,
+                        'line_no'     => $lineNo,
+                        'item_name'   => $sub->item_name ?? $sub->subcategory_name ?? $sub->name ?? 'N/A',
+                        'item_code'   => $sub->item_code ?? '—',
+                        'unit'        => $item->unit ?? '—',
+                        'qty'         => $qty,
+                        'rate'        => $rate,
+                        'tax_percent' => $taxPercent,
+                        'tax_amount'  => $taxAmount,
+                        'total'       => $subtotal + $taxAmount,
+                    ];
+                }
+            }
+        }
+
+        return $lines;
+    }
+
+    /**
+     * @param  array<int, array<string, mixed>>  $lines
+     */
+    private function stockPurchaseGrandTotalWithTax(array $lines): float
+    {
+        return (float) array_sum(array_column($lines, 'total'));
     }
 
     /**
@@ -195,10 +355,10 @@ class ReportController extends Controller
                 ->values()
                 ->all();
         }
-        if ($items->isEmpty()) {
+        if ($reportData === []) {
             return [];
         }
-        $catName = $items->first()->category ? $items->first()->category->category_name : 'Category';
+        $catName = $reportData[0]['category_name'] ?? 'Category';
 
         return [['category_name' => $catName, 'items' => $reportData]];
     }
@@ -207,25 +367,60 @@ class ReportController extends Controller
      * @param  array<int, string>  $viewTypes
      * @return array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>, groupedData: array|null}>
      */
-    private function buildPurchaseSaleQuantityViewSections(array $viewTypes, string $fromDate, string $toDate, $categoryId, array $itemIds, array $storeIds, Request $request): array
+    /**
+     * @param  array<int, string>  $viewTypes
+     * @return array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>}>
+     */
+    private function buildPurchaseSaleQuantityViewSectionsRaw(array $viewTypes, string $fromDate, string $toDate, $categoryId, array $itemIds, array $storeIds): array
     {
         $sections = [];
         foreach ($viewTypes as $viewType) {
-            [$items, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
-            $reportData = $this->sortMessReportRows($reportData, $request, [
-                'item_name' => 'item_name',
-                'purchase_qty' => 'purchase_qty',
-                'sale_qty' => 'sale_qty',
-            ], 'item_name', 'asc');
+            [, $reportData] = $this->buildPurchaseSaleQuantityData($fromDate, $toDate, $viewType, $categoryId, $itemIds, $storeIds);
             $sections[] = [
                 'viewType' => $viewType,
                 'viewLabel' => $this->purchaseSaleViewTypeLabel($viewType),
                 'reportData' => $reportData,
-                'groupedData' => $this->buildPurchaseSaleGroupedDataForView($viewType, $reportData, $items),
             ];
         }
 
         return $sections;
+    }
+
+    /**
+     * @param  array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>}>  $sections
+     * @return array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>, groupedData: array|null}>
+     */
+    private function finalizePurchaseSaleQuantityViewSections(array $sections, Request $request): array
+    {
+        $out = [];
+        foreach ($sections as $section) {
+            $viewType = $section['viewType'];
+            $reportData = $this->sortMessReportRows($section['reportData'], $request, [
+                'item_name' => 'item_name',
+                'purchase_qty' => 'purchase_qty',
+                'sale_qty' => 'sale_qty',
+            ], 'item_name', 'asc');
+            $out[] = [
+                'viewType' => $viewType,
+                'viewLabel' => $section['viewLabel'],
+                'reportData' => $reportData,
+                'groupedData' => $this->buildPurchaseSaleGroupedDataForView($viewType, $reportData, collect()),
+            ];
+        }
+
+        return $out;
+    }
+
+    /**
+     * @param  array<int, string>  $viewTypes
+     * @return array<int, array{viewType: string, viewLabel: string, reportData: array<int, array>, groupedData: array|null}>
+     */
+    private function buildPurchaseSaleQuantityViewSections(array $viewTypes, string $fromDate, string $toDate, $categoryId, array $itemIds, array $storeIds, Request $request): array
+    {
+        return $this->finalizePurchaseSaleQuantityViewSections(
+            $this->buildPurchaseSaleQuantityViewSectionsRaw($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds),
+            $request
+        );
     }
 
     /**
@@ -387,6 +582,7 @@ class ReportController extends Controller
         $storeIds  = $this->normalizedIdList($request, 'store_id');
 
         $baseQuery = PurchaseOrder::with(['vendor', 'store', 'items.itemSubcategory'])
+            ->where('status', 'approved')
             ->whereDate('po_date', '>=', $fromDate)
             ->whereDate('po_date', '<=', $toDate);
 
@@ -399,14 +595,11 @@ class ReportController extends Controller
 
         $baseQuery->orderBy('po_date', 'asc')->orderBy('id', 'asc');
 
-        // Grand total: sum of (quantity * unit_price) for all filtered POs
-        $poIds = (clone $baseQuery)->pluck('id');
-        $grandTotal = PurchaseOrderItem::whereIn('purchase_order_id', $poIds)
-            ->selectRaw('SUM(quantity * unit_price) as total')
-            ->value('total') ?? 0;
-
-        // Same as Sale Voucher report: load full result set, grouped by vendor in the view
         $purchaseOrders = $baseQuery->get();
+
+        $grandTotal = $purchaseOrders->sum(static function ($po) {
+            return $po->items->sum(static fn ($item) => (float) ($item->quantity ?? 0) * (float) ($item->unit_price ?? 0));
+        });
 
         $purchaseOrdersByVendor = $purchaseOrders
             ->groupBy(static fn ($po) => (int) ($po->vendor_id ?? 0))
@@ -452,6 +645,7 @@ class ReportController extends Controller
      */
     public function stockSummary(Request $request)
     {
+        $startedAt = microtime(true);
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->format('Y-m-d');
         $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
         $storeType = $request->filled('store_type') ? $request->store_type : 'main';
@@ -459,10 +653,9 @@ class ReportController extends Controller
         $storeIds = $this->stockSummaryStoreIdsFromRequest($request, $storeType);
         sort($storeIds);
 
-        // This report is expensive to compute; cache the computed dataset for repeated pagination.
-        // `refresh=1` (Apply filters) bypasses cache so long sessions still see current data.
-        $cacheTtlSeconds = 300;
-        $cacheKey = 'stock-summary:v3:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
+        // Expensive report: cache full dataset (Redis/file via RedisBackedCache). Pagination reuses cache.
+        // Apply filters sends refresh=1 to recompute and overwrite cache.
+        $cacheKey = 'stock-summary:v4:' . md5(json_encode([$fromDate, $toDate, $storeType, $storeIds]));
         $loadReport = function () use ($fromDate, $toDate, $storeIds, $storeType) {
             [$data, $storeName] = $this->getStockSummaryReportData($fromDate, $toDate, $storeIds, $storeType);
             $totals = [
@@ -475,11 +668,12 @@ class ReportController extends Controller
             return [$data, $storeName, $totals];
         };
 
+        $cacheHit = false;
         if ($request->boolean('refresh')) {
             [$reportData, $selectedStoreName, $cachedTotals] = $loadReport();
-            Cache::put($cacheKey, [$reportData, $selectedStoreName, $cachedTotals], $cacheTtlSeconds);
+            $this->putStockSummaryReportCache($cacheKey, [$reportData, $selectedStoreName, $cachedTotals]);
         } else {
-            [$reportData, $selectedStoreName, $cachedTotals] = Cache::remember($cacheKey, $cacheTtlSeconds, $loadReport);
+            [$reportData, $selectedStoreName, $cachedTotals, $cacheHit] = $this->rememberStockSummaryReport($cacheKey, $loadReport);
         }
 
         // Convert report data to collection for convenient pagination & totals
@@ -520,27 +714,143 @@ class ReportController extends Controller
         $stores = Store::where('status', 'active')->get();
         $subStores = SubStore::where('status', 'active')->get();
 
+        $timingHeaders = $this->messReportTimingHeaders($startedAt, $cacheHit, 'X-Stock-Summary', 'Stock Summary', count($reportData));
+
         // If AJAX request (or ajax=1 flag), return only the table partial
         if ($request->ajax() || $request->boolean('ajax')) {
-            return view('admin.mess.reports.partials.stock-summary-table', compact(
-                'reportData',
-                'reportPage',
-                'reportTotals'
-            ));
+            return response()
+                ->view('admin.mess.reports.partials.stock-summary-table', compact(
+                    'reportPage',
+                    'reportTotals'
+                ))
+                ->withHeaders($timingHeaders);
         }
 
-        return view('admin.mess.reports.stock-summary', compact(
-            'reportData',
-            'reportPage',
-            'reportTotals',
-            'stores',
-            'subStores',
-            'fromDate',
-            'toDate',
-            'storeIds',
-            'storeType',
-            'selectedStoreName'
-        ));
+        return response()
+            ->view('admin.mess.reports.stock-summary', compact(
+                'reportPage',
+                'reportTotals',
+                'stores',
+                'subStores',
+                'fromDate',
+                'toDate',
+                'storeIds',
+                'storeType',
+                'selectedStoreName'
+            ))
+            ->withHeaders($timingHeaders);
+    }
+
+    /**
+     * @param  callable(): array{0: array<int, array<string, mixed>>, 1: ?string, 2: array<string, float>}  $loadReport
+     * @return array{0: array<int, array<string, mixed>>, 1: ?string, 2: array<string, float>, 3: bool}
+     */
+    private function rememberStockSummaryReport(string $cacheKey, callable $loadReport): array
+    {
+        [$payload, $cacheHit] = $this->rememberMessReportCache(
+            $cacheKey,
+            self::STOCK_SUMMARY_CACHE_ENV_KEYS,
+            'ReportController@stockSummary',
+            $loadReport
+        );
+        if (! is_array($payload) || count($payload) !== 3) {
+            [$data, $selectedStoreName, $totals] = $loadReport();
+
+            return [$data, $selectedStoreName, $totals, false];
+        }
+
+        return [$payload[0], $payload[1], $payload[2], $cacheHit];
+    }
+
+    /**
+     * @param  array{0: array<int, array<string, mixed>>, 1: ?string, 2: array<string, float>}  $payload
+     */
+    private function putStockSummaryReportCache(string $cacheKey, array $payload): void
+    {
+        $this->putMessReportCache($cacheKey, $payload, self::STOCK_SUMMARY_CACHE_ENV_KEYS, 'ReportController@stockSummary');
+    }
+
+    /**
+     * @param  array{enabled: string, seconds: string}  $envKeys
+     * @param  callable(): mixed  $callback
+     * @return array{0: mixed, 1: bool}
+     */
+    private function rememberMessReportCache(string $cacheKey, array $envKeys, string $logLabel, callable $callback): array
+    {
+        $enabled = ! in_array(
+            strtolower((string) env($envKeys['enabled'], 'true')),
+            ['0', 'false', 'no', 'off'],
+            true
+        );
+        if (! $enabled) {
+            return [$callback(), false];
+        }
+
+        $storeName = RedisBackedCache::projectDefaultStoreName();
+        $repository = RedisBackedCache::repositoryForStore($storeName);
+        try {
+            if ($repository->has($cacheKey)) {
+                $cached = $repository->get($cacheKey);
+                if ($cached !== null) {
+                    return [$cached, true];
+                }
+            }
+        } catch (\Throwable $e) {
+            Log::warning("{$logLabel}: cache read failed.", [
+                'store' => $storeName,
+                'message' => $e->getMessage(),
+            ]);
+        }
+
+        return [
+            DataTableRedisCache::remember($cacheKey, $envKeys, $logLabel, $callback),
+            false,
+        ];
+    }
+
+    /**
+     * @param  array{enabled: string, seconds: string}  $envKeys
+     */
+    private function putMessReportCache(string $cacheKey, mixed $payload, array $envKeys, string $logLabel): void
+    {
+        $enabled = ! in_array(
+            strtolower((string) env($envKeys['enabled'], 'true')),
+            ['0', 'false', 'no', 'off'],
+            true
+        );
+        if (! $enabled) {
+            return;
+        }
+
+        $ttl = max(30, (int) env($envKeys['seconds'], 300));
+        try {
+            RedisBackedCache::repositoryForStore(RedisBackedCache::projectDefaultStoreName())
+                ->put($cacheKey, $payload, $ttl);
+        } catch (\Throwable $e) {
+            Log::warning("{$logLabel}: cache write failed.", [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function messReportTimingHeaders(
+        float $startedAt,
+        bool $cacheHit,
+        string $headerPrefix,
+        string $serverTimingDesc,
+        int $rowCount = 0
+    ): array {
+        $ms = (int) round((microtime(true) - $startedAt) * 1000);
+
+        return [
+            $headerPrefix . '-Ms' => (string) $ms,
+            $headerPrefix . '-Cache' => $cacheHit ? 'hit' : 'miss',
+            $headerPrefix . '-Rows' => (string) $rowCount,
+            'Server-Timing' => 'ssr;desc="' . $serverTimingDesc . '";dur=' . $ms,
+        ];
     }
 
     /**
@@ -1182,9 +1492,10 @@ class ReportController extends Controller
                 ->where('svr.store_type', $kimStoreType)
                 ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds));
 
+            // Line-level issue dates (matches per-item logic elsewhere in this report).
             $dateOperator === 'between'
-                ? $query->whereBetween('svr.issue_date', $dateValue)
-                : $query->where('svr.issue_date', $dateOperator, $dateValue);
+                ? $query->whereBetween('svi.issue_date', $dateValue)
+                : $query->where('svi.issue_date', $dateOperator, $dateValue);
 
             if ($withAmount) {
                 $query->join('mess_item_subcategories as mis', 'mis.id', '=', 'svi.item_subcategory_id')
@@ -1293,59 +1604,10 @@ class ReportController extends Controller
                 'closing_amount' => 0,
             ];
 
-            if ($storeType == 'main') {
-                $previousPurchase = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                    ->whereHas('purchaseOrder', function ($q) use ($previousDate, $storeIds) {
-                        $q->where('status', 'approved')->whereDate('po_date', '<=', $previousDate);
-                        if ($storeIds !== []) {
-                            $q->whereIn('store_id', $storeIds);
-                        }
-                    })
-                    ->sum('quantity');
-                $previousSale = \DB::table('kitchen_issue_items as kii')
-                    ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                    ->where('kii.item_subcategory_id', $item->id)
-                    ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                    ->where('kim.store_type', 'store')
-                    ->whereDate('kim.issue_date', '<=', $previousDate)
-                    ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
-                    ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
-                    ->value('net') ?? 0;
-                $previousSaleSv = \DB::table('sv_date_range_report_items as svi')
-                    ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                    ->where('svi.item_subcategory_id', $item->id)
-                    ->where('svr.store_type', 'store')
-                    ->whereDate('svi.issue_date', '<=', $previousDate)
-                    ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-                    ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
-                    ->value('net') ?? 0;
-                $itemData['opening_qty'] = $previousPurchase - $previousSale - $previousSaleSv;
-            } else {
-                $previousAllocation = \DB::table('mess_store_allocation_items as sai')
-                    ->join('mess_store_allocations as sa', 'sai.store_allocation_id', '=', 'sa.id')
-                    ->where('sai.item_subcategory_id', $item->id)
-                    ->whereDate('sa.allocation_date', '<=', $previousDate)
-                    ->when($storeIds !== [], fn ($q) => $q->whereIn('sa.sub_store_id', $storeIds))
-                    ->sum('sai.quantity');
-                $previousSale = \DB::table('kitchen_issue_items as kii')
-                    ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                    ->where('kii.item_subcategory_id', $item->id)
-                    ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                    ->where('kim.store_type', 'sub_store')
-                    ->whereDate('kim.issue_date', '<=', $previousDate)
-                    ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
-                    ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
-                    ->value('net') ?? 0;
-                $previousSaleSv = \DB::table('sv_date_range_report_items as svi')
-                    ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                    ->where('svi.item_subcategory_id', $item->id)
-                    ->where('svr.store_type', 'sub_store')
-                    ->whereDate('svi.issue_date', '<=', $previousDate)
-                    ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-                    ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
-                    ->value('net') ?? 0;
-                $itemData['opening_qty'] = $previousAllocation - $previousSale - $previousSaleSv;
-            }
+            $openingIncomingQty = (float) ($openingIncoming->get($item->id)->total_qty ?? 0);
+            $openingSaleKiQty = (float) ($openingKitchenIssueSales->get($item->id)->total_qty ?? 0);
+            $openingSaleSvQty = (float) ($openingDateRangeSales->get($item->id)->total_qty ?? 0);
+            $itemData['opening_qty'] = $openingIncomingQty - $openingSaleKiQty - $openingSaleSvQty;
 
             $itemData['opening_amount'] = $itemData['opening_qty'] * $itemData['opening_rate'];
 
@@ -1359,16 +1621,7 @@ class ReportController extends Controller
             $saleQtyKi = (float) ($salesKi->total_qty ?? 0);
             $saleAmountKi = (float) ($salesKi->total_amount ?? 0);
 
-            // Sales from Selling Voucher with Date Range
-            $salesSv = \DB::table('sv_date_range_report_items as svi')
-                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
-                ->where('svi.item_subcategory_id', $item->id)
-                ->where('svr.store_type', $kimStoreType)
-                ->whereBetween('svi.issue_date', [$fromDate, $toDate])
-                ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as total_qty, SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis_sv.standard_cost, 0)) as total_amount')
-                ->first();
+            $salesSv = $periodDateRangeSales->get($item->id);
             $saleQtySv = (float) ($salesSv->total_qty ?? 0);
             $saleAmountSv = (float) ($salesSv->total_amount ?? 0);
 
@@ -1864,7 +2117,29 @@ class ReportController extends Controller
             ));
         }
 
-        $report = $this->buildCategoryWisePrintSlipReportData($request);
+        $startedAt = microtime(true);
+        $cacheKey = 'sale-voucher-report:v2:' . md5(json_encode([
+            $request->input('from_date'),
+            $request->input('to_date'),
+            $cwSlugs,
+            $cwPks,
+            $cwBuyers,
+        ]));
+        $loadReport = fn () => $this->buildCategoryWisePrintSlipReportData($request);
+
+        if ($request->boolean('refresh')) {
+            $report = $loadReport();
+            $this->putMessReportCache($cacheKey, $report, self::SALE_VOUCHER_REPORT_CACHE_ENV_KEYS, 'ReportController@categoryWisePrintSlip');
+            $cacheHit = false;
+        } else {
+            [$report, $cacheHit] = $this->rememberMessReportCache(
+                $cacheKey,
+                self::SALE_VOUCHER_REPORT_CACHE_ENV_KEYS,
+                'ReportController@categoryWisePrintSlip',
+                $loadReport
+            );
+        }
+
         $allBuyersSections = $report['allBuyersSections'];
         $courseBuyerNames = $report['courseBuyerNames'];
         $otherBuyerNames = $report['otherBuyerNames'];
@@ -1872,9 +2147,25 @@ class ReportController extends Controller
         $otCourses = $report['otCourses'];
         $printAll = $request->boolean('print_all');
 
-        // Backwards compatibility: keep variables expected by the view.
+        $buyerSectionsList = $allBuyersSections->values()->all();
+        $reportLineCount = count($buyerSectionsList);
+        $perPage = $printAll ? max(1, $reportLineCount) : self::SALE_VOUCHER_BUYERS_PER_PAGE;
+        $currentPage = $printAll ? 1 : LengthAwarePaginator::resolveCurrentPage();
+        $pageSections = array_slice($buyerSectionsList, ($currentPage - 1) * $perPage, $perPage);
+        $reportPage = new LengthAwarePaginator(
+            $pageSections,
+            $reportLineCount,
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
         $groupedSections = collect();
-        $paginator = null;
+        $paginator = $reportPage;
+        $sectionsToShow = $pageSections;
 
         $clientTypes = ClientType::clientTypes();
         $clientTypeCategories = ClientType::active()
@@ -1901,10 +2192,22 @@ class ReportController extends Controller
 
         $filtersApplied = true;
         $grandTotal = (float) $report['grandTotal'];
+        $reportTimingMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $reportCacheStatus = $cacheHit ? 'hit' : 'miss';
 
-        return view('admin.mess.reports.category-wise-print-slip', compact(
+        $fromDateFormatted = $request->filled('from_date')
+            ? \Carbon\Carbon::parse($request->from_date)->format('d-F-Y')
+            : 'Start';
+        $toDateFormatted = $request->filled('to_date')
+            ? \Carbon\Carbon::parse($request->to_date)->format('d-F-Y')
+            : 'End';
+
+        $viewData = compact(
             'groupedSections',
             'paginator',
+            'reportPage',
+            'sectionsToShow',
+            'reportLineCount',
             'allBuyersSections',
             'printAll',
             'clientTypes',
@@ -1917,8 +2220,34 @@ class ReportController extends Controller
             'courseBuyerNames',
             'otherBuyerNames',
             'sectionBuyerNames',
-            'grandTotal'
-        ));
+            'grandTotal',
+            'fromDateFormatted',
+            'toDateFormatted',
+            'reportTimingMs',
+            'reportCacheStatus'
+        );
+
+        $timingHeaders = $this->messReportTimingHeaders(
+            $startedAt,
+            $cacheHit,
+            'X-Sale-Voucher-Report',
+            'Sale Voucher Report',
+            $reportLineCount
+        );
+
+        if ($request->ajax() || $request->boolean('ajax')) {
+            return response()
+                ->view('admin.mess.reports.partials.category-wise-print-slip-report', array_merge($viewData, [
+                    'freezeSaleVoucherTableHeader' => false,
+                ]))
+                ->withHeaders($timingHeaders);
+        }
+
+        return response()
+            ->view('admin.mess.reports.category-wise-print-slip', array_merge($viewData, [
+                'freezeSaleVoucherTableHeader' => false,
+            ]))
+            ->withHeaders($timingHeaders);
     }
     /**
      * Stock Balance as of Till Date
@@ -1926,13 +2255,36 @@ class ReportController extends Controller
      */
     public function stockBalanceTillDate(Request $request)
     {
+        $startedAt = microtime(true);
         $tillDate = $request->filled('till_date')
             ? $request->till_date
             : now()->format('Y-m-d');
 
         $storeIds = $this->normalizedIdList($request, 'store_id');
+        sort($storeIds);
+        $cacheKey = 'stock-balance-till-date:v2:' . md5(json_encode([$tillDate, $storeIds]));
+        $loadReport = fn () => $this->buildStockBalanceTillDateData($tillDate, $storeIds);
+
+        if ($request->boolean('refresh')) {
+            $rawReportData = $loadReport();
+            $this->putMessReportCache(
+                $cacheKey,
+                $rawReportData,
+                self::STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS,
+                'ReportController@stockBalanceTillDate'
+            );
+            $cacheHit = false;
+        } else {
+            [$rawReportData, $cacheHit] = $this->rememberMessReportCache(
+                $cacheKey,
+                self::STOCK_BALANCE_TILL_DATE_CACHE_ENV_KEYS,
+                'ReportController@stockBalanceTillDate',
+                $loadReport
+            );
+        }
+
         $reportData = $this->sortMessReportRows(
-            $this->buildStockBalanceTillDateData($tillDate, $storeIds),
+            is_array($rawReportData) ? $rawReportData : [],
             $request,
             [
                 'item_name' => 'item_name',
@@ -1943,16 +2295,47 @@ class ReportController extends Controller
             'item_name',
             'asc'
         );
+
+        $reportLineCount = count($reportData);
+        $reportTotalAmount = (float) collect($reportData)->sum('amount');
+        $perPage = self::STOCK_BALANCE_TILL_DATE_PER_PAGE;
+        $currentPage = LengthAwarePaginator::resolveCurrentPage();
+        $pageItems = array_slice($reportData, max(0, ($currentPage - 1) * $perPage), $perPage);
+        $reportPage = new LengthAwarePaginator(
+            $pageItems,
+            $reportLineCount,
+            $perPage,
+            $currentPage,
+            [
+                'path' => $request->url(),
+                'query' => $request->query(),
+            ]
+        );
+
         $stores = Store::where('status', 'active')->get();
         $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
+        $reportTimingMs = (int) round((microtime(true) - $startedAt) * 1000);
+        $reportCacheStatus = $cacheHit ? 'hit' : 'miss';
 
-        return view('admin.mess.reports.stock-balance-till-date', compact(
-            'reportData',
-            'stores',
-            'tillDate',
-            'storeIds',
-            'selectedStoreName'
-        ));
+        return response()
+            ->view('admin.mess.reports.stock-balance-till-date', compact(
+                'stores',
+                'tillDate',
+                'storeIds',
+                'selectedStoreName',
+                'reportPage',
+                'reportLineCount',
+                'reportTotalAmount',
+                'reportTimingMs',
+                'reportCacheStatus'
+            ))
+            ->withHeaders($this->messReportTimingHeaders(
+                $startedAt,
+                $cacheHit,
+                'X-Stock-Balance-Till-Date',
+                'Stock Balance Till Date',
+                $reportLineCount
+            ));
     }
 
     /**
@@ -1969,44 +2352,71 @@ class ReportController extends Controller
 
         $reportData = [];
         $hasAlertQtyColumn = Schema::hasColumn('mess_item_subcategories', 'alert_quantity');
+        $itemIds = $items->pluck('id')->filter()->values()->all();
+        if ($itemIds === []) {
+            return [];
+        }
+
+        $purchaseAgg = DB::table('mess_purchase_order_items as poi')
+            ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+            ->where('po.status', 'approved')
+            ->whereDate('po.po_date', '<=', $tillDate)
+            ->whereIn('poi.item_subcategory_id', $itemIds)
+            ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds))
+            ->groupBy('poi.item_subcategory_id')
+            ->selectRaw('
+                poi.item_subcategory_id,
+                COALESCE(SUM(poi.quantity), 0) as total_qty,
+                COALESCE(SUM(poi.quantity * poi.unit_price), 0) as total_value
+            ')
+            ->get()
+            ->keyBy('item_subcategory_id');
+
+        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('kim.store_type', 'store')
+            ->whereDate('kim.issue_date', '<=', $tillDate)
+            ->whereIn('kii.item_subcategory_id', $itemIds)
+            ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
+            ->groupBy('kii.item_subcategory_id')
+            ->selectRaw('
+                kii.item_subcategory_id,
+                COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as total_issued
+            ')
+            ->get()
+            ->keyBy('item_subcategory_id');
+
+        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
+            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+            ->where('svr.store_type', 'store')
+            ->whereDate('svi.issue_date', '<=', $tillDate)
+            ->whereIn('svi.item_subcategory_id', $itemIds)
+            ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
+            ->groupBy('svi.item_subcategory_id')
+            ->selectRaw('
+                svi.item_subcategory_id,
+                COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as total_issued
+            ')
+            ->get()
+            ->keyBy('item_subcategory_id');
 
         foreach ($items as $item) {
-            $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeIds) {
-                    $q->where('status', 'approved')
-                        ->whereDate('po_date', '<=', $tillDate);
-                    if ($storeIds !== []) {
-                        $q->whereIn('store_id', $storeIds);
-                    }
-                })
-                ->sum('quantity');
-
-            $totalIssuedKi = DB::table('kitchen_issue_items as kii')
-                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                ->where('kii.item_subcategory_id', $item->id)
-                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('kim.store_type', 'store')
-                ->whereDate('kim.issue_date', '<=', $tillDate)
-                ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
-                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
-                ->value('net') ?? 0;
-
-            $totalIssuedSv = DB::table('sv_date_range_report_items as svi')
-                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                ->where('svi.item_subcategory_id', $item->id)
-                ->where('svr.store_type', 'store')
-                ->whereDate('svi.issue_date', '<=', $tillDate)
-                ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
-                ->value('net') ?? 0;
+            $totalPurchased = (float) ($purchaseAgg->get($item->id)->total_qty ?? 0);
+            $totalIssuedKi = (float) ($issuedKiAgg->get($item->id)->total_issued ?? 0);
+            $totalIssuedSv = (float) ($issuedSvAgg->get($item->id)->total_issued ?? 0);
 
             $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
             if ($remainingQty <= 0) {
                 continue;
             }
 
-            $rateWeighted = $this->weightedPurchaseUnitRateForItemUpToDate($item->id, $tillDate, $storeIds);
-            $rate = $rateWeighted ?? (float) ($item->standard_cost ?? 0);
+            $purchaseRow = $purchaseAgg->get($item->id);
+            $purchaseQty = (float) ($purchaseRow->total_qty ?? 0);
+            $purchaseValue = (float) ($purchaseRow->total_value ?? 0);
+            $rate = $purchaseQty > 0
+                ? round($purchaseValue / $purchaseQty, 6)
+                : (float) ($item->standard_cost ?? 0);
             $reportData[] = [
                 'item_code' => $item->item_code ?? $item->subcategory_code ?? '-',
                 'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name,
@@ -2096,42 +2506,73 @@ class ReportController extends Controller
             }
         }
 
+        $displayCol = ItemSubcategory::displayNameColumnForQuery(); // may be item_name OR subcategory_name OR name
+        $unitCol = Schema::hasColumn('mess_item_subcategories', 'unit_measurement')
+            ? 'unit_measurement'
+            : null;
+
+        $selectCols = array_values(array_filter([
+            'id',
+            $displayCol,
+            $unitCol,
+            'alert_quantity',
+        ]));
+
         $items = ItemSubcategory::where('status', 'active')
             ->whereNotNull('alert_quantity')
             ->orderBy('name')
-            ->get();
+            ->get($selectCols);
+
+        $itemIds = $items->pluck('id')->filter()->values()->all();
+        if ($itemIds === []) {
+            return [];
+        }
+
+        $purchaseAgg = DB::table('mess_purchase_order_items as poi')
+            ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+            ->where('po.status', 'approved')
+            ->whereDate('po.po_date', '<=', $tillDate)
+            ->whereIn('poi.item_subcategory_id', $itemIds)
+            ->when($storeIds !== null, fn ($q) => $q->whereIn('po.store_id', $storeIds))
+            ->groupBy('poi.item_subcategory_id')
+            ->selectRaw('poi.item_subcategory_id, COALESCE(SUM(poi.quantity), 0) as total_qty')
+            ->get()
+            ->keyBy('item_subcategory_id');
+
+        $issuedKiAgg = DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('kim.store_type', 'store')
+            ->whereDate('kim.issue_date', '<=', $tillDate)
+            ->whereIn('kii.item_subcategory_id', $itemIds)
+            ->when($storeIds !== null, fn ($q) => $q->whereIn('kim.store_id', $storeIds))
+            ->groupBy('kii.item_subcategory_id')
+            ->selectRaw('kii.item_subcategory_id, COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as total_issued')
+            ->get()
+            ->keyBy('item_subcategory_id');
+
+        $issuedSvAgg = DB::table('sv_date_range_report_items as svi')
+            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+            ->where('svr.store_type', 'store')
+            ->whereDate('svi.issue_date', '<=', $tillDate)
+            ->whereIn('svi.item_subcategory_id', $itemIds)
+            ->when($storeIds !== null, fn ($q) => $q->whereIn('svr.store_id', $storeIds))
+            ->groupBy('svi.item_subcategory_id')
+            ->selectRaw('svi.item_subcategory_id, COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as total_issued')
+            ->get()
+            ->keyBy('item_subcategory_id');
+
         $out = [];
         foreach ($items as $item) {
-            $totalPurchased = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($tillDate, $storeIds) {
-                    $q->where('status', 'approved')->whereDate('po_date', '<=', $tillDate);
-                    if ($storeIds !== null) {
-                        $q->whereIn('store_id', $storeIds);
-                    }
-                })
-                ->sum('quantity');
-            $totalIssuedKi = \DB::table('kitchen_issue_items as kii')
-                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                ->where('kii.item_subcategory_id', $item->id)
-                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('kim.store_type', 'store')
-                ->whereDate('kim.issue_date', '<=', $tillDate)
-                ->when($storeIds !== null, fn ($q) => $q->whereIn('kim.store_id', $storeIds))
-                ->selectRaw('SUM(kii.quantity - COALESCE(kii.return_quantity, 0)) as net')
-                ->value('net') ?? 0;
-            $totalIssuedSv = \DB::table('sv_date_range_report_items as svi')
-                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                ->where('svi.item_subcategory_id', $item->id)
-                ->where('svr.store_type', 'store')
-                ->whereDate('svi.issue_date', '<=', $tillDate)
-                ->when($storeIds !== null, fn ($q) => $q->whereIn('svr.store_id', $storeIds))
-                ->selectRaw('SUM(svi.quantity - COALESCE(svi.return_quantity, 0)) as net')
-                ->value('net') ?? 0;
-            $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
-            $alertQty = (float) $item->alert_quantity;
+            $alertQty = (float) ($item->alert_quantity ?? 0);
             if ($alertQty <= 0) {
                 continue;
             }
+            $totalPurchased = (float) ($purchaseAgg->get($item->id)->total_qty ?? 0);
+            $totalIssuedKi = (float) ($issuedKiAgg->get($item->id)->total_issued ?? 0);
+            $totalIssuedSv = (float) ($issuedSvAgg->get($item->id)->total_issued ?? 0);
+            $remainingQty = $totalPurchased - ($totalIssuedKi + $totalIssuedSv);
+
             if ($remainingQty <= $alertQty) {
                 $out[] = [
                     'item_id' => $item->id,
@@ -2142,6 +2583,7 @@ class ReportController extends Controller
                 ];
             }
         }
+
         return $out;
     }
 
@@ -2151,6 +2593,7 @@ class ReportController extends Controller
      */
     public function lowStockReport(Request $request)
     {
+        $startedAt = microtime(true);
         $tillDate = $request->filled('till_date')
             ? $request->till_date
             : now()->format('Y-m-d');
@@ -2158,7 +2601,24 @@ class ReportController extends Controller
         $selectedStoreIds = $this->normalizedIdList($request, 'store_id');
         $storeFilter = $selectedStoreIds === [] ? null : $selectedStoreIds;
 
-        $items = $this->sortMessReportRows(self::getLowStockAlertItems($tillDate, $storeFilter), $request, [
+        sort($selectedStoreIds);
+        $cacheKey = 'low-stock-report:v2:' . md5(json_encode([$tillDate, $selectedStoreIds]));
+        $loadItems = fn () => self::getLowStockAlertItems($tillDate, $storeFilter);
+
+        if ($request->boolean('refresh')) {
+            $rawItems = $loadItems();
+            $this->putMessReportCache($cacheKey, $rawItems, self::LOW_STOCK_REPORT_CACHE_ENV_KEYS, 'ReportController@lowStockReport');
+            $cacheHit = false;
+        } else {
+            [$rawItems, $cacheHit] = $this->rememberMessReportCache(
+                $cacheKey,
+                self::LOW_STOCK_REPORT_CACHE_ENV_KEYS,
+                'ReportController@lowStockReport',
+                $loadItems
+            );
+        }
+
+        $items = $this->sortMessReportRows(is_array($rawItems) ? $rawItems : [], $request, [
             'item_name' => 'item_name',
             'remaining_quantity' => 'remaining_quantity',
             'alert_quantity' => 'alert_quantity',
@@ -2172,13 +2632,23 @@ class ReportController extends Controller
                 ->pluck('store_name')
                 ->implode(', ');
 
-        return view('admin.mess.reports.low-stock', compact(
-            'items',
-            'stores',
-            'tillDate',
-            'selectedStoreIds',
-            'selectedStoreName'
-        ));
+        $reportLineCount = is_array($items) ? count($items) : 0;
+
+        return response()
+            ->view('admin.mess.reports.low-stock', compact(
+                'items',
+                'stores',
+                'tillDate',
+                'selectedStoreIds',
+                'selectedStoreName'
+            ))
+            ->withHeaders($this->messReportTimingHeaders(
+                $startedAt,
+                $cacheHit,
+                'X-Low-Stock-Report',
+                'Low Stock Report',
+                $reportLineCount
+            ));
     }
 
     /**
@@ -2307,6 +2777,7 @@ class ReportController extends Controller
      */
     public function purchaseSaleQuantityReport(Request $request)
     {
+        $startedAt = microtime(true);
         $fromDate = $request->filled('from_date') ? $request->from_date : now()->startOfMonth()->format('Y-m-d');
         $toDate = $request->filled('to_date') ? $request->to_date : now()->format('Y-m-d');
         $categoryId = $request->filled('category_id') ? $request->category_id : null;
@@ -2314,7 +2785,49 @@ class ReportController extends Controller
         $storeIds = $this->normalizedIdList($request, 'store_id');
 
         $viewTypes = $this->normalizedPurchaseSaleViewTypes($request);
-        $viewTypeSections = $this->buildPurchaseSaleQuantityViewSections($viewTypes, $fromDate, $toDate, $categoryId, $itemIds, $storeIds, $request);
+        $cacheItemIds = $itemIds;
+        $cacheStoreIds = $storeIds;
+        sort($cacheItemIds);
+        sort($cacheStoreIds);
+        $cacheKey = 'purchase-sale-quantity:v2:' . md5(json_encode([
+            $fromDate,
+            $toDate,
+            $categoryId,
+            $cacheItemIds,
+            $cacheStoreIds,
+            $viewTypes,
+        ]));
+        $loadRawSections = fn () => $this->buildPurchaseSaleQuantityViewSectionsRaw(
+            $viewTypes,
+            $fromDate,
+            $toDate,
+            $categoryId,
+            $itemIds,
+            $storeIds
+        );
+
+        if ($request->boolean('refresh')) {
+            $rawSections = $loadRawSections();
+            $this->putMessReportCache(
+                $cacheKey,
+                $rawSections,
+                self::PURCHASE_SALE_QUANTITY_CACHE_ENV_KEYS,
+                'ReportController@purchaseSaleQuantityReport'
+            );
+            $cacheHit = false;
+        } else {
+            [$rawSections, $cacheHit] = $this->rememberMessReportCache(
+                $cacheKey,
+                self::PURCHASE_SALE_QUANTITY_CACHE_ENV_KEYS,
+                'ReportController@purchaseSaleQuantityReport',
+                $loadRawSections
+            );
+        }
+
+        $viewTypeSections = $this->finalizePurchaseSaleQuantityViewSections(
+            is_array($rawSections) ? $rawSections : [],
+            $request
+        );
 
         $allowedPerPage = [10, 25, 50, 100];
         $perPage = (int) $request->input('per_page', 10);
@@ -2325,27 +2838,40 @@ class ReportController extends Controller
 
         $categories = ItemCategory::active()->orderBy('category_name')->get();
 
-        $allItems = ItemSubcategory::where('status', 'active')->orderBy('name')->get();
+        $allItems = ItemSubcategory::where('status', 'active')->orderedByDisplayName()->get();
 
         $stores = Store::where('status', 'active')->orderBy('store_name')->get();
         $selectedStoreName = $this->resolveStoreNamesLabel($storeIds);
         $selectedItemNamesLabel = $this->resolveItemSubcategoryNamesLabel($itemIds);
 
-        return view('admin.mess.reports.purchase-sale-quantity', compact(
-            'viewTypes',
-            'viewTypeSections',
-            'fromDate',
-            'toDate',
-            'categoryId',
-            'itemIds',
-            'categories',
-            'allItems',
-            'stores',
-            'storeIds',
-            'selectedStoreName',
-            'selectedItemNamesLabel',
-            'perPage'
-        ));
+        $reportLineCount = 0;
+        foreach ($viewTypeSections as $section) {
+            $reportLineCount += count($section['reportData'] ?? []);
+        }
+
+        return response()
+            ->view('admin.mess.reports.purchase-sale-quantity', compact(
+                'viewTypes',
+                'viewTypeSections',
+                'fromDate',
+                'toDate',
+                'categoryId',
+                'itemIds',
+                'categories',
+                'allItems',
+                'stores',
+                'storeIds',
+                'selectedStoreName',
+                'selectedItemNamesLabel',
+                'perPage'
+            ))
+            ->withHeaders($this->messReportTimingHeaders(
+                $startedAt,
+                $cacheHit,
+                'X-Item-Report',
+                'Item Report',
+                $reportLineCount
+            ));
     }
 
     /**
@@ -2357,7 +2883,7 @@ class ReportController extends Controller
      */
     private function buildPurchaseSaleQuantityData(string $fromDate, string $toDate, string $viewType, $categoryId, array $itemIds = [], array $storeIds = []): array
     {
-        $itemsQuery = ItemSubcategory::where('status', 'active')->with('category')->orderBy('name');
+        $itemsQuery = ItemSubcategory::where('status', 'active')->with('category')->orderedByDisplayName();
         if ($viewType === 'category_wise') {
             if ($categoryId) {
                 $itemsQuery->where('category_id', $categoryId);
@@ -2370,61 +2896,82 @@ class ReportController extends Controller
         }
         $items = $itemsQuery->get();
 
+        $activeItemIds = $items->pluck('id')->filter()->values()->all();
+        if ($activeItemIds === []) {
+            return [$items, []];
+        }
+
+        $purchaseAgg = DB::table('mess_purchase_order_items as poi')
+            ->join('mess_purchase_orders as po', 'poi.purchase_order_id', '=', 'po.id')
+            ->where('po.status', 'approved')
+            ->whereDate('po.po_date', '>=', $fromDate)
+            ->whereDate('po.po_date', '<=', $toDate)
+            ->whereIn('poi.item_subcategory_id', $activeItemIds)
+            ->when($storeIds !== [], fn ($q) => $q->whereIn('po.store_id', $storeIds))
+            ->groupBy('poi.item_subcategory_id')
+            ->selectRaw('
+                poi.item_subcategory_id,
+                COALESCE(SUM(poi.quantity), 0) as total_qty,
+                COALESCE(SUM(poi.quantity * poi.unit_price), 0) as total_amount
+            ')
+            ->get()
+            ->keyBy('item_subcategory_id');
+
+        $saleKiAgg = DB::table('kitchen_issue_items as kii')
+            ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
+            ->join('mess_item_subcategories as mis_ki', 'mis_ki.id', '=', 'kii.item_subcategory_id')
+            ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('kim.store_type', 'store')
+            ->whereDate('kim.issue_date', '>=', $fromDate)
+            ->whereDate('kim.issue_date', '<=', $toDate)
+            ->whereIn('kii.item_subcategory_id', $activeItemIds)
+            ->when($storeIds !== [], fn ($q) => $q->whereIn('kim.store_id', $storeIds))
+            ->groupBy('kii.item_subcategory_id')
+            ->selectRaw('
+                kii.item_subcategory_id,
+                COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as net_qty,
+                COALESCE(SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, mis_ki.standard_cost, 0)), 0) as net_amount
+            ')
+            ->get()
+            ->keyBy('item_subcategory_id');
+
+        $saleSvAgg = DB::table('sv_date_range_report_items as svi')
+            ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
+            ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
+            ->where('svr.store_type', 'store')
+            ->whereDate('svi.issue_date', '>=', $fromDate)
+            ->whereDate('svi.issue_date', '<=', $toDate)
+            ->whereIn('svi.item_subcategory_id', $activeItemIds)
+            ->when($storeIds !== [], fn ($q) => $q->whereIn('svr.store_id', $storeIds))
+            ->groupBy('svi.item_subcategory_id')
+            ->selectRaw('
+                svi.item_subcategory_id,
+                COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as net_qty,
+                COALESCE(SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis_sv.standard_cost, 0)), 0) as net_amount
+            ')
+            ->get()
+            ->keyBy('item_subcategory_id');
+
         $reportData = [];
         foreach ($items as $item) {
-            $purchaseAgg = PurchaseOrderItem::where('item_subcategory_id', $item->id)
-                ->whereHas('purchaseOrder', function ($q) use ($fromDate, $toDate, $storeIds) {
-                    $q->where('status', 'approved')
-                        ->whereDate('po_date', '>=', $fromDate)
-                        ->whereDate('po_date', '<=', $toDate);
-                    if ($storeIds !== []) {
-                        $q->whereIn('store_id', $storeIds);
-                    }
-                })
-                ->selectRaw('COALESCE(SUM(quantity), 0) as total_qty, COALESCE(SUM(quantity * unit_price), 0) as total_amount')
-                ->first();
-            $purchaseQty = (float) ($purchaseAgg->total_qty ?? 0);
-            $purchaseAmount = (float) ($purchaseAgg->total_amount ?? 0);
+            $purchaseRow = $purchaseAgg->get($item->id);
+            $purchaseQty = (float) ($purchaseRow->total_qty ?? 0);
+            $purchaseAmount = (float) ($purchaseRow->total_amount ?? 0);
             $avgPurchasePrice = $purchaseQty > 0 ? $purchaseAmount / $purchaseQty : null;
 
-            $saleKiQuery = \DB::table('kitchen_issue_items as kii')
-                ->join('kitchen_issue_master as kim', 'kii.kitchen_issue_master_pk', '=', 'kim.pk')
-                ->join('mess_item_subcategories as mis_ki', 'mis_ki.id', '=', 'kii.item_subcategory_id')
-                ->where('kii.item_subcategory_id', $item->id)
-                ->where('kim.kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where('kim.store_type', 'store')
-                ->whereDate('kim.issue_date', '>=', $fromDate)
-                ->whereDate('kim.issue_date', '<=', $toDate);
-            if ($storeIds !== []) {
-                $saleKiQuery->whereIn('kim.store_id', $storeIds);
-            }
-            $saleKi = $saleKiQuery
-                ->selectRaw('COALESCE(SUM(kii.quantity - COALESCE(kii.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((kii.quantity - COALESCE(kii.return_quantity, 0)) * COALESCE(kii.rate, mis_ki.standard_cost, 0)), 0) as net_amount')
-                ->first();
-            $saleQtyKi = (float) ($saleKi->net_qty ?? 0);
-            $saleAmountKi = (float) ($saleKi->net_amount ?? 0);
+            $saleKiRow = $saleKiAgg->get($item->id);
+            $saleQtyKi = (float) ($saleKiRow->net_qty ?? 0);
+            $saleAmountKi = (float) ($saleKiRow->net_amount ?? 0);
 
-            $saleSvQuery = \DB::table('sv_date_range_report_items as svi')
-                ->join('sv_date_range_reports as svr', 'svi.sv_date_range_report_id', '=', 'svr.id')
-                ->join('mess_item_subcategories as mis_sv', 'mis_sv.id', '=', 'svi.item_subcategory_id')
-                ->where('svi.item_subcategory_id', $item->id)
-                ->where('svr.store_type', 'store')
-                ->whereDate('svi.issue_date', '>=', $fromDate)
-                ->whereDate('svi.issue_date', '<=', $toDate);
-            if ($storeIds !== []) {
-                $saleSvQuery->whereIn('svr.store_id', $storeIds);
-            }
-            $saleSv = $saleSvQuery
-                ->selectRaw('COALESCE(SUM(svi.quantity - COALESCE(svi.return_quantity, 0)), 0) as net_qty, COALESCE(SUM((svi.quantity - COALESCE(svi.return_quantity, 0)) * COALESCE(svi.rate, mis_sv.standard_cost, 0)), 0) as net_amount')
-                ->first();
-            $saleQtySv = (float) ($saleSv->net_qty ?? 0);
-            $saleAmountSv = (float) ($saleSv->net_amount ?? 0);
+            $saleSvRow = $saleSvAgg->get($item->id);
+            $saleQtySv = (float) ($saleSvRow->net_qty ?? 0);
+            $saleAmountSv = (float) ($saleSvRow->net_amount ?? 0);
 
             $saleQty = $saleQtyKi + $saleQtySv;
             $saleAmount = $saleAmountKi + $saleAmountSv;
             $avgSalePrice = $saleQty > 0 ? $saleAmount / $saleQty : null;
 
-            $row = [
+            $reportData[] = [
                 'item_name' => $item->item_name ?? $item->subcategory_name ?? $item->name ?? '—',
                 'unit' => $item->unit_measurement ?? 'Unit',
                 'purchase_qty' => $purchaseQty,
@@ -2434,7 +2981,6 @@ class ReportController extends Controller
                 'category_id' => $item->category_id,
                 'category_name' => $item->category ? $item->category->category_name : null,
             ];
-            $reportData[] = $row;
         }
 
         return [$items, $reportData];
