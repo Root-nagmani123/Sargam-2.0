@@ -14,22 +14,42 @@ class EstateElectricSlabDataTable extends DataTable
     public function dataTable(QueryBuilder $query): EloquentDataTable
     {
         return (new EloquentDataTable($query))
+            ->setMultiTerm(false)
             ->addIndexColumn()
             ->addColumn('unit_range', function ($row) {
                 return $row->start_unit_range . ' - ' . $row->end_unit_range;
             })
             ->orderColumn('unit_range', 'start_unit_range $1')
             ->filterColumn('unit_range', function ($query, $keyword) {
-                $query->where(function ($q) use ($keyword) {
-                    $q->where('start_unit_range', 'like', "%{$keyword}%")
-                        ->orWhere('end_unit_range', 'like', "%{$keyword}%");
+                $like = $this->searchLikePattern($keyword);
+                $query->where(function ($q) use ($like) {
+                    $q->where('start_unit_range', 'like', $like)
+                        ->orWhere('end_unit_range', 'like', $like)
+                        ->orWhereRaw("CONCAT(start_unit_range, ' - ', end_unit_range) LIKE ?", [$like]);
                 });
             })
             ->editColumn('rate_per_unit', function ($row) {
                 return number_format((float) $row->rate_per_unit, 2);
             })
+            ->filterColumn('rate_per_unit', function ($query, $keyword) {
+                $like = $this->searchLikePattern($keyword);
+                $query->where(function ($q) use ($like) {
+                    $q->where('rate_per_unit', 'like', $like)
+                        ->orWhereRaw('CAST(rate_per_unit AS CHAR) LIKE ?', [$like]);
+                });
+            })
             ->addColumn('merge_with_house', function ($row) {
                 return $row->unitType ? e($row->unitType->unit_type) : '-';
+            })
+            ->filterColumn('merge_with_house', function ($query, $keyword) {
+                $like = $this->searchLikePattern($keyword);
+                $query->whereHas('unitType', function ($q) use ($like) {
+                    if (config('datatables.search.case_insensitive', true)) {
+                        $q->whereRaw('LOWER(unit_type) LIKE LOWER(?)', [$like]);
+                    } else {
+                        $q->where('unit_type', 'like', $like);
+                    }
+                });
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('admin.estate.define-electric-slab.edit', $row->pk);
@@ -97,9 +117,9 @@ class EstateElectricSlabDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.NO.')->addClass('text-center')->orderable(false)->searchable(false)->width('60px'),
-            Column::computed('unit_range')->title('UNIT RANGE')->orderable(true)->searchable(true),
+            Column::computed('unit_range')->name('unit_range')->title('UNIT RANGE')->orderable(true)->searchable(true),
             Column::make('rate_per_unit')->title('RATE/UNIT')->orderable(true)->searchable(true),
-            Column::computed('merge_with_house')->title('MERGE WITH HOUSE')->orderable(false)->searchable(false),
+            Column::computed('merge_with_house')->name('merge_with_house')->title('MERGE WITH HOUSE')->orderable(false)->searchable(true),
             Column::computed('action')->title('EDIT')->addClass('text-center')->orderable(false)->searchable(false)->width('120px'),
         ];
     }
@@ -107,5 +127,12 @@ class EstateElectricSlabDataTable extends DataTable
     protected function filename(): string
     {
         return 'EstateElectricSlab_' . date('YmdHis');
+    }
+
+    private function searchLikePattern(string $keyword): string
+    {
+        $keyword = trim($keyword);
+
+        return '%' . str_replace(['\\', '%', '_'], ['\\\\', '\\%', '\\_'], $keyword) . '%';
     }
 }

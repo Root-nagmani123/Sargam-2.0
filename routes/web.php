@@ -50,6 +50,7 @@ use App\Http\Controllers\Admin\FeedbackController;
 use App\Http\Controllers\Admin\Estate\{
     EstateCampusController,
     EstateElectricSlabController,
+    EstateUtilityController,
     UnitTypeController,
     UnitSubTypeController,
     EstateBlockController,
@@ -1621,5 +1622,12 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
         Route::get('migration-report', [EstateController::class, 'estateMigrationReport'])->name('migration-report');
         Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
     });
+
+    Route::get('vacant-house-monitoring', [EstateUtilityController::class, 'vacantHouseMonitoring'])->name('vacant-house-monitoring');
+    Route::get('vacant-house-monitoring/export', [EstateUtilityController::class, 'exportVacantHouseMonitoring'])->name('vacant-house-monitoring.export');
+
+    Route::get('contractual-employee-utility', [EstateUtilityController::class, 'contractualEmployeeUtility'])->name('contractual-employee-utility');
+    Route::patch('contractual-employee-utility/{id}/inline', [EstateUtilityController::class, 'updateContractualEmployeeUtilityInline'])->name('contractual-employee-utility.inline');
+    Route::get('contractual-employee-utility/export', [EstateUtilityController::class, 'exportContractualEmployeeUtility'])->name('contractual-employee-utility.export');
 });
 Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);
