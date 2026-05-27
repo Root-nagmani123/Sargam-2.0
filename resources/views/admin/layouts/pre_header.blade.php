@@ -28,6 +28,7 @@
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <!-- Sidebar Menu Enhanced CSS -->
 <link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}?v=7">
 <style>
 .material-symbols-rounded {
   font-variation-settings:

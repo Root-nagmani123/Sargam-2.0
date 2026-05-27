@@ -600,6 +600,7 @@
             }
         @endphp
         @include('admin.layouts.header')
+        <link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}?v=7">
         <div class="page-wrapper">
 
             @include('admin.layouts.sidebar')
@@ -648,6 +649,7 @@
     @include('admin.layouts.footer')
      <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
+    <script src="{{ asset('admin_assets/js/sidebar-panel-accordion.js') }}?v=2"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -735,17 +737,66 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Sidebar expand/collapse is handled by sidebar-navigation-fixed.js (click toggle only).
-    if (typeof window.sargamSyncSidebarToggleIcons === 'function') {
-        window.sargamSyncSidebarToggleIcons(body.getAttribute('data-sidebartype') || 'full');
+    // Apply saved sidebar type preference; default to collapsed on first login
+    try {
+        const savedType = localStorage.getItem('SidebarType');
+        if (savedType) {
+            body.setAttribute('data-sidebartype', savedType);
+        } else {
+            // Default to collapsed (mini-sidebar) for new users
+            body.setAttribute('data-sidebartype', 'mini-sidebar');
+            localStorage.setItem('SidebarType', 'mini-sidebar');
+        }
+    } catch (e) {}
+
+    // Initialize collapsed state on page load
+    const sidebarType = body.getAttribute("data-sidebartype");
+    console.log('Initial sidebar type:', sidebarType);
+    console.log('Icon elements found:', icons.length);
+
+    if (sidebarType === "mini-sidebar") {
+        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
+        sidebar.classList.remove("show-sidebar");
+        // Add close class to sidebarmenu elements
+        sidebarmenus.forEach(function(el) {
+            el.classList.add("close");
+        });
+        // Set all icon instances to expand (collapsed state)
+        icons.forEach(function(icon) {
+            icon.textContent = "left_panel_open";
+            icon.classList.remove("rotated");
+        });
+        console.log('Set all icons to non-rotated (collapsed state)');
+        // After initial collapse state, adjust DataTables to new layout
+        setTimeout(adjustAllDataTables, 300);
+    } else {
+        // Sidebar should be expanded
+        sidebar.classList.add("show-sidebar");
+        sidebarmenus.forEach(function(el) {
+            el.classList.remove("close");
+        });
+        // Set all icon instances to rotated (expanded state)
+        icons.forEach(function(icon) {
+            icon.textContent = "left_panel_close";
+            icon.classList.remove("rotated");
+        });
+        console.log('Set all icons to rotated (expanded state)');
+        // After initial expanded state, adjust DataTables to new layout
+        setTimeout(adjustAllDataTables, 300);
     }
 
     // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
     function syncIconWithSidebar(type) {
-        if (typeof window.sargamSyncSidebarToggleIcons === 'function') {
-            window.sargamSyncSidebarToggleIcons(type);
-            return;
-        }
+        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
+        allIcons.forEach(function(icon) {
+            if (type === "full") {
+                icon.textContent = "left_panel_close";
+            } else {
+                icon.textContent = "left_panel_open";
+            }
+            icon.classList.remove("rotated");
+        });
+        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
     }
 
     const observer = new MutationObserver(function(mutations) {

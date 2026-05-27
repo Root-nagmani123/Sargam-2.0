@@ -638,8 +638,43 @@ function sargamRunSidebarNavigationInit() {
 
                 e.preventDefault();
                 e.stopPropagation();
-
-                global.sargamActivateMiniNavItem(container, miniNavItem, true, true);
+                
+                const itemId = miniNavItem.id;
+                console.log('Mini-nav item clicked:', itemId);
+                const paneRoot = getSidebarPaneFromContainer(container);
+                
+                // Remove selected class only within current pane
+                paneRoot.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
+                    navItem.classList.remove('selected');
+                });
+                
+                // Add selected class to clicked item
+                miniNavItem.classList.add('selected');
+                
+                const targetMenuId = 'menu-right-' + itemId;
+                let targetMenu = paneRoot.querySelector('#' + CSS.escape(targetMenuId));
+                if (!targetMenu) {
+                    targetMenu = document.getElementById(targetMenuId);
+                }
+                if (targetMenu) {
+                    if (typeof window.activateSidebarPanelNav === 'function') {
+                        window.activateSidebarPanelNav(targetMenu);
+                    } else {
+                        paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                            nav.classList.remove('d-block', 'is-active-panel');
+                            nav.style.display = 'none';
+                        });
+                        targetMenu.classList.add('d-block', 'is-active-panel');
+                        targetMenu.style.display = 'flex';
+                    }
+                    document.body.setAttribute('data-sidebartype', 'full');
+                    console.log('Displayed menu:', targetMenuId);
+                }
+                
+                // Store active mini-nav in localStorage
+                if (itemId) {
+                    localStorage.setItem(getStorageKeyForPane(paneRoot), itemId);
+                }
             });
         });
         
@@ -658,12 +693,16 @@ function sargamRunSidebarNavigationInit() {
                 restoreOrActivatePaneMiniNav(miniNav);
             }
             if (targetMenu) {
-                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
-                    nav.classList.remove('d-block');
-                    nav.style.display = 'none';
-                });
-                targetMenu.classList.add('d-block');
-                targetMenu.style.display = 'block';
+                if (typeof window.activateSidebarPanelNav === 'function') {
+                    window.activateSidebarPanelNav(targetMenu);
+                } else {
+                    paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                        nav.classList.remove('d-block', 'is-active-panel');
+                        nav.style.display = 'none';
+                    });
+                    targetMenu.classList.add('d-block', 'is-active-panel');
+                    targetMenu.style.display = 'flex';
+                }
             }
             console.log('Restored active mini-nav:', activeId, 'for pane:', paneRoot.id || 'global');
         });
