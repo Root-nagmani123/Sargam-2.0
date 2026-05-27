@@ -8,7 +8,7 @@
     <x-breadcrum title="Exemption medical speciality" />
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card" >
+        <div class="card">
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
