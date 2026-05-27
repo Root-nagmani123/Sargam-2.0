@@ -9,9 +9,262 @@
     <x-breadcrum title="Course Group Mapping" />
     <x-session_message />
 
-    <div class="datatables">
-        <div class="card" >
-            <div class="card-body">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
+            aria-label="Filter group mappings by course status">
+            <li class="nav-item" role="presentation">
+                <button type="button"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                    id="filterGroupActive"
+                    aria-pressed="true"
+                    aria-current="true">
+                    Active
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                    id="filterGroupArchive"
+                    aria-pressed="false">
+                    Archived
+                </button>
+            </li>
+        </ul>
+    </div>
+
+    <div class="card gm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+                    <div class="programme-dt-filter-select">
+                        <select id="courseFilter" class="form-select form-select-sm" aria-label="Filter by course name">
+                            <option value="">Course Name</option>
+                            @foreach($courses ?? [] as $pk => $name)
+                            <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="programme-dt-filter-select">
+                        <select id="groupTypeFilter" class="form-select form-select-sm" aria-label="Filter by group type">
+                            <option value="">Group Type</option>
+                            @foreach($groupTypes ?? [] as $pk => $name)
+                            <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">
+                        Reset Filters
+                    </button>
+                </div>
+                <div id="gmDtSearch" class="programme-dt-search ms-xl-auto" data-dt-search-for="group-mapping-table"></div>
+            </div>
+
+            <div class="programme-dt-panel gm-dt-panel">
+                <div class="table-responsive gm-dt-scroll">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                </div>
+                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="group-mapping-table"></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Add / Edit Group Mapping Modal -->
+<div class="modal fade gm-mapping-modal" id="gmAddGroupMappingModal" tabindex="-1"
+    aria-labelledby="gmAddGroupMappingModalLabel" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cgt-form-modal border-0">
+            <form action="{{ route('group.mapping.store') }}" method="POST" id="classSessionForm" novalidate>
+                @csrf
+                <input type="hidden" name="pk" id="gmMappingPk" value="">
+                <div class="modal-header">
+                    <h5 class="modal-title mb-0" id="gmAddGroupMappingModalLabel">Add Group Mapping</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="gmAddGroupMappingAlert" class="alert d-none mb-3" role="alert"></div>
+
+                    <div class="gm-mapping-form-fields">
+                        <div class="mb-3">
+                            <label for="gmCourseId" class="form-label cgt-field-label mb-2">Course Name <span class="text-danger">*</span></label>
+                            <select class="form-select" id="gmCourseId" name="course_id" required>
+                                <option value="">Select Course Name</option>
+                                @foreach($courses ?? [] as $pk => $name)
+                                <option value="{{ $pk }}" {{ count($courses ?? []) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="gmTypeId" class="form-label cgt-field-label mb-2">Group Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="gmTypeId" name="type_id" required>
+                                <option value="">Select Group Type</option>
+                                @foreach($groupTypes ?? [] as $pk => $name)
+                                <option value="{{ $pk }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="gmGroupName" class="form-label cgt-field-label mb-2">Group Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" id="gmGroupName" name="group_name"
+                                placeholder="eg. IAS Course" required maxlength="255" autocomplete="off">
+                        </div>
+
+                        <div class="mb-0">
+                            <label for="gmFacilityId" class="form-label cgt-field-label mb-2">Faculty</label>
+                            <select class="form-select js-gm-faculty-choice" id="gmFacilityId" name="facility_id">
+                                <option value="">Select</option>
+                                @foreach($facilities ?? [] as $pk => $name)
+                                <option value="{{ $pk }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 gap-2 justify-content-end">
+                    <button type="button" class="btn btn-outline-primary rounded-3 btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4" id="saveClassSessionForm">
+                        Create Group Mapping
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add Student Modal (Single) -->
+<div class="modal fade" id="addStudentModal" tabindex="-1"
+    aria-labelledby="addStudentModalLabel" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4">
+            <form id="addStudentForm">
+                @csrf
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold mb-0" id="addStudentModalLabel">Add Student</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="addStudentAlert" class="alert d-none" role="alert"></div>
+
+                    <div class="mb-3">
+                        <label for="studentOtCode" class="form-label cgt-field-label">OT Code <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-2" id="studentOtCode" name="otcode"
+                            placeholder="eg. OT1344" required maxlength="255">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="studentName" class="form-label cgt-field-label">OT Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-2" id="studentName" name="name"
+                            placeholder="eg. John Doe" required maxlength="255">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="studentCourse" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
+                        <select class="form-select rounded-2" id="studentCourse" name="course_master_pk" required>
+                            <option value="">Select Course Name</option>
+                            @foreach($courses ?? [] as $pk => $name)
+                            <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="studentGroupType" class="form-label cgt-field-label">Group Type <span class="text-danger">*</span></label>
+                        <select class="form-select rounded-2" id="studentGroupType" name="group_type" required>
+                            <option value="">Select Group Type</option>
+                            @foreach($groupTypes ?? [] as $pk => $name)
+                            <option value="{{ $name }}" data-type-id="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div class="mb-0">
+                        <label for="studentGroupName" class="form-label cgt-field-label">Group Name</label>
+                        <select class="form-select rounded-2" id="studentGroupName" name="group_name" required disabled>
+                            <option value="">Select</option>
+                        </select>
+                        <small class="text-muted d-block mt-1" id="groupNameHelp">Please select a group type first</small>
+                    </div>
+                </div>
+                <div class="modal-footer border-top gap-2">
+                    <button type="button" class="btn btn-outline-primary rounded-1 btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-1 px-4">
+                        Add Student
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Add in Bulk Modal -->
+<div class="modal fade" id="importModal" tabindex="-1"
+    aria-labelledby="importModalLabel" aria-hidden="true" data-bs-backdrop="static"
+    data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content cgt-form-modal gm-bulk-modal border-0 shadow-lg rounded-4">
+            <form method="POST" enctype="multipart/form-data" id="importExcelForm">
+                @csrf
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold mb-0" id="importModalLabel">Add in Bulk</h5>
+                    <button type="button" class="btn-close btn-cancel" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="gm-import-progress-wrap mb-4">
+                        <div class="progress rounded-pill" style="height: 6px;" role="progressbar"
+                            aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
+                            <div class="progress-bar bg-primary rounded-pill" id="gmImportProgress" style="width: 50%;"></div>
+                        </div>
+                    </div>
+
+                    <div id="gmImportStep1">
+                        <label for="importFile" class="form-label cgt-field-label visually-hidden">Upload file</label>
+                        <div class="gm-upload-dropzone rounded-1 text-center" id="gmUploadDropzone" role="button" tabindex="0">
+                            <i class="bi bi-file-earmark-arrow-up gm-upload-icon d-block mb-2" aria-hidden="true"></i>
+                            <p class="fw-semibold text-body mb-1">Drag or click here to upload your file</p>
+                            <p class="text-muted small mb-0">
+                                Allowed: .xlsx, .xls, .csv | Max ~500 MB |
+                                <a href="{{ asset('admin_assets/sample/group_mapping_sample.xlsx') }}" class="text-primary fw-semibold" download>Sample File</a>
+                            </p>
+                            <p class="small text-primary fw-medium mt-2 mb-0 d-none" id="gmImportFileName"></p>
+                        </div>
+                        <input type="file" name="file" id="importFile" class="visually-hidden"
+                            accept=".xlsx, .xls, .csv" required>
+                    </div>
+
+                    <div id="gmImportStep2" class="d-none">
+                        <div id="importBulkInfo" class="alert alert-info d-flex align-items-start gap-2 rounded-1 border-0 d-none" role="status">
+                            <i class="bi bi-info-circle-fill flex-shrink-0 mt-1" aria-hidden="true"></i>
+                            <span id="importBulkInfoText">Your file is ready. Select a course to complete the import.</span>
+                        </div>
+                        <div class="mb-0">
+                            <label for="course_master_pk_model" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
+                            <select name="course_master_pk" id="course_master_pk_model" class="form-select rounded-2" required>
+                                <option value="">Select</option>
+                                @foreach($courses ?? [] as $pk => $name)
+                                <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer border-top gap-2 justify-content-end">
+                    <button type="button" class="btn btn-outline-primary rounded-1 btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4" id="gmImportNext">Next</button>
+                    <button type="button" class="btn btn-primary rounded-1 px-4 d-none" id="upload_import">
+                        Add Course Group Mapping
+                    </button>
+                </div>
+            </form>
+
+            <div id="importErrors" class="alert d-none mx-3 mb-3">
+                <h5 class="text-center mb-3">
+                    <i class="bi bi-exclamation-circle me-1"></i> Validation Errors Found
+                </h5>
                 <div class="table-responsive">
                     <div class="row mb-3">
                         <div class="row align-items-center mb-4">
@@ -423,41 +676,91 @@
         </div>
     </div>
 
-    <style>
-        .datatables .table-responsive {
-            max-height: 70vh;
-            overflow: auto !important;
-        }
-        .datatables .table-responsive table thead th {
-            position: sticky;
-            top: 0;
-            z-index: 10;
-            background: #fff;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-        }
-    </style>
-    @endsection
-    @push('scripts')
-    {!! $dataTable->scripts() !!}
-    <script>
-        $(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) {
-            // Only send filters if they are explicitly set
-            if (window.groupMappingCurrentFilter) {
-                data.status_filter = window.groupMappingCurrentFilter;
-            }
-            var courseFilter = $('#courseFilter').val();
-            var groupTypeFilter = $('#groupTypeFilter').val();
+<!-- Edit Student Modal -->
+<div class="modal fade" id="editStudentModal" tabindex="-1"
+    aria-labelledby="editStudentModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4">
+            <form id="editStudentForm">
+                @csrf
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="editStudentModalLabel">Edit Student</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="editStudentAlert" class="alert d-none" role="alert"></div>
+                    <input type="hidden" name="student_id" id="editStudentId">
+                    <div class="mb-3">
+                        <label for="editStudentName" class="form-label cgt-field-label">Display Name</label>
+                        <input type="text" class="form-control rounded-2" id="editStudentName"
+                            name="display_name" required maxlength="255">
+                    </div>
+                    <div class="mb-3">
+                        <label for="editStudentEmail" class="form-label cgt-field-label">Email</label>
+                        <input type="email" class="form-control rounded-2" id="editStudentEmail"
+                            name="email" maxlength="255">
+                    </div>
+                    <div class="mb-0">
+                        <label for="editStudentContact" class="form-label cgt-field-label">Contact No</label>
+                        <input type="text" class="form-control rounded-2" id="editStudentContact"
+                            name="contact_no" maxlength="20">
+                    </div>
+                </div>
+                <div class="modal-footer border-0 gap-2">
+                    <button type="button" class="btn btn-outline-primary rounded-1" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-1">
+                        <i class="bi bi-check-lg me-1" aria-hidden="true"></i> Save Changes
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+@endsection
 
-            if (courseFilter) {
-                data.course_filter = courseFilter;
-            }
-            if (groupTypeFilter) {
-                data.group_type_filter = groupTypeFilter;
-            }
-        });
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
+{!! $dataTable->scripts() !!}
+<script>
+$(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) {
+    if (window.groupMappingCurrentFilter) {
+        data.status_filter = window.groupMappingCurrentFilter;
+    }
+    var courseFilter = $('#courseFilter').val();
+    var groupTypeFilter = $('#groupTypeFilter').val();
+    if (courseFilter) {
+        data.course_filter = courseFilter;
+    }
+    if (groupTypeFilter) {
+        data.group_type_filter = groupTypeFilter;
+    }
+});
 
-        $(document).ready(function() {
-            // Set default filter to active courses
+$(document).ready(function() {
+    window.groupMappingCurrentFilter = 'active';
+
+    function setActiveFilterButton(activeBtn) {
+        $('#filterGroupActive, #filterGroupArchive')
+            .removeClass('active')
+            .attr('aria-pressed', 'false')
+            .removeAttr('aria-current');
+        activeBtn
+            .addClass('active')
+            .attr('aria-pressed', 'true')
+            .attr('aria-current', 'true');
+    }
+
+    setTimeout(function() {
+        if (!$.fn.DataTable.isDataTable('#group-mapping-table')) {
+            return;
+        }
+
+        var table = $('#group-mapping-table').DataTable();
+
+        setActiveFilterButton($('#filterGroupActive'));
+
+        $('#filterGroupActive').on('click', function() {
+            setActiveFilterButton($(this));
             window.groupMappingCurrentFilter = 'active';
 
             setTimeout(function() {
