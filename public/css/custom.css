@@ -1,6 +1,8 @@
 /* Custom CSS for Sargam 2.0 Application */
 /* Typography: Noto Sans + Noto Sans Devanagari (body/UI); Montserrat (headings) — GIGW-friendly bilingual stack */
 
+@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+
 :root {
     --bs-font-sans-serif: "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
     --bs-body-font-family: var(--bs-font-sans-serif);
@@ -96,7 +98,6 @@ body.custom-loaded {
 .form-check.form-switch:has(.plain-status-toggle),
 .form-check.form-switch:has(.status-toggle-data),
 .form-check.form-switch:has(.status-toggle-subcategory) {
-    padding-left: 2.375rem;
     min-height: var(--sargam-toggle-height);
     display: inline-flex;
     align-items: center;
@@ -242,7 +243,11 @@ body.custom-loaded {
 #coursemaster-table_wrapper .dataTables_length,
 #coursemaster-table_wrapper .dataTables_filter,
 #coursemaster-table_wrapper .dataTables_info,
-#coursemaster-table_wrapper .dataTables_paginate {
+#coursemaster-table_wrapper .dataTables_paginate,
+#coursegrouptype_wrapper .dataTables_length,
+#coursegrouptype_wrapper .dataTables_filter,
+#coursegrouptype_wrapper .dataTables_info,
+#coursegrouptype_wrapper .dataTables_paginate {
     display: none !important;
 }
 
@@ -1074,5 +1079,187 @@ body.custom-loaded {
 
     .programme-show-stat-card.hover-lift:hover {
         transform: none;
+    }
+}
+
+/* ── Course Group Type Master (DataTable) ── */
+.cgt-master-page .cgt-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.cgt-master-page #coursegrouptype tbody td .d-inline-flex[role="group"] {
+    gap: 0.75rem;
+    justify-content: center;
+}
+
+.cgt-master-page #coursegrouptype .edit-btn,
+.cgt-master-page #coursegrouptype .delete-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.cgt-master-page #coursegrouptype .edit-btn:hover,
+.cgt-master-page #coursegrouptype .delete-btn:hover:not([aria-disabled="true"]) {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.cgt-master-page #coursegrouptype .delete-btn {
+    color: #d92d20;
+}
+
+.cgt-master-page #coursegrouptype .delete-btn:hover:not([aria-disabled="true"]) {
+    color: #b42318;
+}
+
+.cgt-master-page #coursegrouptype .delete-btn[aria-disabled="true"],
+.cgt-master-page #coursegrouptype .delete-btn.disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.cgt-master-page #coursegrouptype .edit-btn .material-icons,
+.cgt-master-page #coursegrouptype .delete-btn .material-icons {
+    display: none !important;
+}
+
+.cgt-master-page #coursegrouptype .edit-btn .bi,
+.cgt-master-page #coursegrouptype .delete-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.cgt-master-page #coursegrouptype .programme-action-switch .form-check-input {
+    width: 2.25rem;
+    height: 1.125rem;
+    margin: 0;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.cgt-master-page #coursegrouptype .programme-action-switch .form-check-input:checked {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.cgt-master-page #coursegrouptype .programme-action-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+}
+
+.cgt-master-page #coursegrouptype tbody td:nth-child(3),
+.cgt-master-page #coursegrouptype tbody td:nth-child(4) {
+    text-align: center;
+}
+
+.cgt-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+/* ── Course Group Type — confirmation & form modals ── */
+#cgtConfirmModal .programme-confirm-title {
+    color: #101828;
+}
+
+.cgt-form-modal {
+    border-radius: 1rem !important;
+    box-shadow: 0 12px 40px rgba(16, 24, 40, 0.12);
+}
+
+.cgt-form-modal .modal-header {
+    border-bottom: 1px solid #e4e7ec;
+    padding: 1.25rem 1.5rem;
+}
+
+.cgt-form-modal .modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #101828;
+}
+
+.cgt-form-modal .modal-body {
+    padding: 1.25rem 1.5rem;
+}
+
+.cgt-form-modal .modal-footer {
+    border-top: 1px solid #e4e7ec;
+    padding: 1rem 1.5rem 1.25rem;
+    background: #fff;
+}
+
+.cgt-form-modal .cgt-field-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #344054;
+    margin-bottom: 0.5rem;
+}
+
+.cgt-form-modal .form-control {
+    border: 1px solid #d0d5dd;
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: #101828;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.cgt-form-modal .form-control::placeholder {
+    color: #98a2b3;
+}
+
+.cgt-form-modal .form-control:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.cgt-form-modal .btn-outline-primary {
+    color: #004a93;
+    border-color: #004a93;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+}
+
+.cgt-form-modal .btn-outline-primary:hover {
+    background: #f0f6fc;
+    color: #003d7a;
+    border-color: #003d7a;
+}
+
+.cgt-form-modal .btn-primary {
+    background: #004a93;
+    border-color: #004a93;
+    font-weight: 600;
+    padding: 0.5rem 1.25rem;
+}
+
+.cgt-form-modal .btn-primary:hover {
+    background: #003d7a;
+    border-color: #003d7a;
+}
+
+@media (max-width: 575.98px) {
+    .cgt-form-modal .modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .cgt-form-modal .modal-footer .btn {
+        width: 100%;
     }
 }

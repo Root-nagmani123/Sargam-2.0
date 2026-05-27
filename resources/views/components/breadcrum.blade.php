@@ -7,6 +7,7 @@
     'showBack' => null,
     'buttonText' => null,
     'buttonUrl' => null,
+    'buttonId' => null,
     'buttonIcon' => 'add',
     'buttonClass' => 'btn btn-primary btn-sm d-inline-flex align-items-center gap-2',
 ])
@@ -251,7 +252,9 @@
                         {{ $slot }}
                     @else
                         <a href="{{ $buttonUrl ?: 'javascript:void(0)' }}"
-                           class="{{ $buttonClass }}">
+                           @if(filled($buttonId)) id="{{ $buttonId }}" @endif
+                           class="{{ $buttonClass }}"
+                           @if(filled($buttonId) && !filled($buttonUrl)) role="button" @endif>
                             @if(filled($buttonIcon))
                                 <i class="material-icons material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">{{ $buttonIcon }}</i>
                             @endif
