@@ -156,6 +156,12 @@
               language: $.extend(true, {}, (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_LANGUAGE) || {}, {
                 search: 'Search:',
                 searchPlaceholder: 'Type to filter...'
+              },
+              dom: (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_DOM) || undefined,
+              pagingType: 'full_numbers',
+              language: $.extend(true, {}, (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_LANGUAGE) || {}, {
+                search: 'Search:',
+                searchPlaceholder: 'Type to filter...'
               }),
               initComplete: function() {
                 try {
