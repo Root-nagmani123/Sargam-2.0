@@ -1,0 +1,440 @@
+/**
+ * Dashboard calendar — pixel-perfect (design reference)
+ * Scoped to #dashboard-calendar-container only
+ */
+
+#dashboard-calendar-container {
+    --cal-primary: #004a8f;
+    --cal-primary-hover: #003d75;
+    --cal-header-date: #2c5da7;
+    --cal-gazetted-bg: #ffe4e8;
+    --cal-gazetted-text: #d63384;
+    --cal-restricted-bg: #fff3cd;
+    --cal-restricted-text: #856404;
+    --cal-optional-bg: #e6fffa;
+    --cal-optional-text: #0d9488;
+    --cal-text: #212529;
+    --cal-muted: #adb5bd;
+    --cal-border: #dee2e6;
+    --cal-cell-border: #e9ecef;
+    --cal-other-border: #f0f1f3;
+    --cal-nav-bg: #f8f9fa;
+    --cal-nav-icon: #495057;
+}
+
+/* ── Reset master.blade.php global calendar rules ── */
+#dashboard-calendar-container .calendar-component,
+#dashboard-calendar-container .calendar-component.calendar-component {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0 !important;
+    max-width: 100%;
+}
+
+#dashboard-calendar-container .calendar-component .calendar-cell,
+#dashboard-calendar-container .calendar-component .calendar-cell:hover,
+#dashboard-calendar-container .calendar-component .calendar-cell:focus,
+#dashboard-calendar-container .calendar-component .calendar-cell:focus-visible {
+    outline: none !important;
+    font-weight: inherit;
+    animation: none !important;
+}
+
+#dashboard-calendar-container .calendar-component .calendar-cell .day-number {
+    display: flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-width: 0 !important;
+    animation: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-radius: 0;
+}
+
+#dashboard-calendar-container .calendar-component .calendar-cell.has-event {
+    background-color: #fff !important;
+    color: inherit !important;
+}
+
+/* ── Navigation bar ── */
+#dashboard-calendar-container .calendar-nav-bar {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.75rem;
+    padding: 0.5rem 0.625rem;
+    background: var(--cal-nav-bg);
+    border-radius: 10px;
+}
+
+#dashboard-calendar-container .calendar-nav-bar__side {
+    display: flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+#dashboard-calendar-container .calendar-nav-bar__side--start {
+    justify-content: flex-start;
+}
+
+#dashboard-calendar-container .calendar-nav-bar__side--end {
+    justify-content: flex-end;
+}
+
+#dashboard-calendar-container .calendar-nav-btn {
+    width: 1.75rem;
+    height: 1.75rem;
+    min-width: 1.75rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--cal-border);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--cal-nav-icon);
+    line-height: 1;
+    cursor: pointer;
+}
+
+#dashboard-calendar-container .calendar-nav-btn__icon {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--cal-nav-icon);
+}
+
+#dashboard-calendar-container .calendar-nav-btn:hover {
+    background: #fff;
+    border-color: #adb5bd;
+    color: #212529;
+}
+
+#dashboard-calendar-container .calendar-month-year-label {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--cal-text);
+    text-align: center;
+    line-height: 1.25;
+    white-space: nowrap;
+}
+
+/* ── 7 × 6 grid ── */
+#dashboard-calendar-container .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    gap: 5px;
+    width: 100%;
+}
+
+#dashboard-calendar-container .calendar-grid__weekday {
+    text-align: center;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: var(--cal-muted);
+    line-height: 1.2;
+    padding: 0 0 0.375rem;
+}
+
+#dashboard-calendar-container .calendar-grid__slot {
+    position: relative;
+    aspect-ratio: 1;
+    min-width: 0;
+    min-height: 0;
+}
+
+#dashboard-calendar-container .calendar-grid__slot .calendar-cell {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+    padding: 0;
+    border-radius: 8px;
+    border: 1px solid var(--cal-cell-border);
+    background-color: #fff;
+    box-sizing: border-box;
+    cursor: pointer;
+    max-width: none;
+    max-height: none;
+}
+
+#dashboard-calendar-container .calendar-cell .day-number {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--cal-text);
+    line-height: 1;
+}
+
+/* Previous / next month — faded text, faint border (per design) */
+#dashboard-calendar-container .calendar-cell.calendar-day-other {
+    background-color: #fff !important;
+    border-color: var(--cal-other-border) !important;
+    cursor: default;
+    pointer-events: none;
+}
+
+#dashboard-calendar-container .calendar-cell.calendar-day-other .day-number {
+    color: #ced4da;
+    font-weight: 400;
+}
+
+/* Gazetted holiday */
+#dashboard-calendar-container .calendar-cell.is-holiday-gazetted:not(.is-selected) {
+    background-color: var(--cal-gazetted-bg) !important;
+    border-color: var(--cal-gazetted-bg) !important;
+}
+
+#dashboard-calendar-container .calendar-cell.is-holiday-gazetted:not(.is-selected) .day-number {
+    color: var(--cal-gazetted-text) !important;
+    font-weight: 600;
+}
+
+/* Restricted holiday */
+#dashboard-calendar-container .calendar-cell.is-holiday-restricted:not(.is-selected) {
+    background-color: var(--cal-restricted-bg) !important;
+    border-color: var(--cal-restricted-bg) !important;
+}
+
+#dashboard-calendar-container .calendar-cell.is-holiday-restricted:not(.is-selected) .day-number {
+    color: var(--cal-restricted-text) !important;
+    font-weight: 600;
+}
+
+/* Optional holiday */
+#dashboard-calendar-container .calendar-cell.is-holiday-optional:not(.is-selected) {
+    background-color: var(--cal-optional-bg) !important;
+    border-color: var(--cal-optional-bg) !important;
+}
+
+#dashboard-calendar-container .calendar-cell.is-holiday-optional:not(.is-selected) .day-number {
+    color: var(--cal-optional-text) !important;
+    font-weight: 600;
+}
+
+/* Selected / active day — solid navy */
+#dashboard-calendar-container .calendar-cell.is-selected,
+#dashboard-calendar-container .calendar-cell.is-selected:hover,
+#dashboard-calendar-container .calendar-cell.is-selected:focus,
+#dashboard-calendar-container .calendar-cell.is-selected:focus-visible,
+#dashboard-calendar-container .calendar-cell.is-selected.is-today,
+#dashboard-calendar-container .calendar-cell.is-selected.has-event,
+#dashboard-calendar-container .calendar-cell.is-selected.is-holiday-gazetted,
+#dashboard-calendar-container .calendar-cell.is-selected.is-holiday-restricted,
+#dashboard-calendar-container .calendar-cell.is-selected.is-holiday-optional,
+#dashboard-calendar-container .calendar-cell.is-selected.is-birthday {
+    background-color: var(--cal-primary) !important;
+    border-color: var(--cal-primary) !important;
+    box-shadow: none !important;
+}
+
+#dashboard-calendar-container .calendar-cell.is-selected .day-number,
+#dashboard-calendar-container .calendar-cell.is-selected.is-holiday-gazetted .day-number,
+#dashboard-calendar-container .calendar-cell.is-selected.is-holiday-restricted .day-number,
+#dashboard-calendar-container .calendar-cell.is-selected.is-holiday-optional .day-number {
+    color: #fff !important;
+    font-weight: 600;
+}
+
+/* Today when not selected — regular white cell (design highlights only 08 as selected) */
+#dashboard-calendar-container .calendar-cell.is-today:not(.is-selected) {
+    background-color: #fff !important;
+    border-color: var(--cal-cell-border) !important;
+}
+
+#dashboard-calendar-container .calendar-cell.is-birthday:not(.is-selected):not(.is-holiday-gazetted):not(.is-holiday-restricted):not(.is-holiday-optional) {
+    background-color: #fff5f8 !important;
+    border-color: #f5c2d7 !important;
+}
+
+/* Hover — regular days only */
+#dashboard-calendar-container .calendar-cell:not(.calendar-day-other):not(.is-selected):not(.is-holiday-gazetted):not(.is-holiday-restricted):not(.is-holiday-optional):hover {
+    background-color: #f8f9fa !important;
+    border-color: var(--cal-border) !important;
+}
+
+/* ── Legend ── */
+#dashboard-calendar-container .calendar-legend-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 0.75rem 1rem;
+    margin-top: 1rem;
+}
+
+#dashboard-calendar-container .calendar-legend {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+#dashboard-calendar-container .calendar-legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: #495057;
+    line-height: 1.35;
+}
+
+#dashboard-calendar-container .calendar-legend-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+#dashboard-calendar-container .calendar-legend-dot--gazetted {
+    background: #dc3545;
+}
+
+#dashboard-calendar-container .calendar-legend-dot--restricted {
+    background: #ffc107;
+}
+
+#dashboard-calendar-container .calendar-legend-dot--optional {
+    background: #20c997;
+}
+
+#dashboard-calendar-container .calendar-holidays-toggle {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--cal-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    white-space: nowrap;
+    align-self: flex-end;
+}
+
+#dashboard-calendar-container .calendar-holidays-toggle:hover {
+    color: var(--cal-primary-hover);
+}
+
+/* ── Holiday panel ── */
+#dashboard-calendar-container .calendar-holidays-panel {
+    margin-top: 1.25rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid var(--cal-border);
+}
+
+#dashboard-calendar-container .calendar-holidays-panel[hidden] {
+    display: none !important;
+}
+
+#dashboard-calendar-container .calendar-holidays-panel__title {
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: var(--cal-text);
+    margin: 0 0 1rem;
+}
+
+#dashboard-calendar-container .calendar-holiday-filters {
+    display: flex;
+    width: 100%;
+    gap: 0.25rem;
+    padding: 0.25rem;
+    margin-bottom: 1rem;
+    background: #f1f3f5;
+    border-radius: 999px;
+}
+
+#dashboard-calendar-container .calendar-holiday-filter {
+    flex: 1 1 0;
+    border: 0;
+    border-radius: 999px;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    line-height: 1.2;
+    background: transparent;
+    color: #343a40;
+    cursor: pointer;
+    text-align: center;
+    white-space: nowrap;
+}
+
+#dashboard-calendar-container .calendar-holiday-filter.active {
+    background-color: var(--cal-primary);
+    color: #fff;
+}
+
+#dashboard-calendar-container .calendar-holiday-list__item {
+    display: flex;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0.875rem 0;
+    border-bottom: 1px solid #e9ecef;
+}
+
+#dashboard-calendar-container .calendar-holiday-list__item:last-child {
+    border-bottom: 0;
+}
+
+#dashboard-calendar-container .calendar-holiday-list__item.is-hidden {
+    display: none;
+}
+
+#dashboard-calendar-container .calendar-holiday-date {
+    flex-shrink: 0;
+    min-width: 3.625rem;
+    padding: 0.4375rem 0.625rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-align: center;
+    line-height: 1.2;
+}
+
+#dashboard-calendar-container .calendar-holiday-date--gazetted {
+    background-color: var(--cal-gazetted-bg);
+    color: var(--cal-gazetted-text);
+}
+
+#dashboard-calendar-container .calendar-holiday-date--restricted {
+    background-color: var(--cal-restricted-bg);
+    color: var(--cal-restricted-text);
+}
+
+#dashboard-calendar-container .calendar-holiday-date--optional {
+    background-color: var(--cal-optional-bg);
+    color: var(--cal-optional-text);
+}
+
+#dashboard-calendar-container .calendar-holiday-name {
+    font-size: 0.875rem;
+    color: var(--cal-text);
+}
+
+@media (max-width: 575.98px) {
+    #dashboard-calendar-container .calendar-grid {
+        gap: 3px;
+    }
+
+    #dashboard-calendar-container .calendar-holiday-filter {
+        font-size: 0.6875rem;
+        padding: 0.4375rem 0.5rem;
+    }
+
+    #dashboard-calendar-container .calendar-legend-row {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    #dashboard-calendar-container .calendar-holidays-toggle {
+        align-self: flex-start;
+    }
+}
