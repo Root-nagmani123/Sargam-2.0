@@ -564,7 +564,11 @@
                 str_starts_with($path, 'admin/employee-idcard') ||
                 str_starts_with($path, 'admin/duplicate-idcard') ||
                 str_starts_with($path, 'admin/family-idcard') ||
-                str_starts_with($path, 'security/')
+                str_starts_with($path, 'security/') ||
+                request()->routeIs('admin.dashboard.feed') ||
+                request()->routeIs('admin.notice.create') ||
+                request()->routeIs('admin.notice.index') ||
+                request() ->routeIs('admin.notice.edit')
             ) {
                 $activeNavTab = '#home';
             } elseif (

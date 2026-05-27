@@ -8,19 +8,19 @@
 
 @section('content')
 <div class="container-fluid">
-    <x-breadcrum title="Notice notification List"></x-breadcrum>
+    <x-breadcrum title="Notice notification List">
+        <a href="{{ route('admin.notice.create') }}"
+            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 px-3 fw-semibold text-nowrap">
+            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+            <span>Add Notice Notification</span>
+        </a>
+    </x-breadcrum>
 
     <div class="card">
         <div class="card-header bg-white d-flex flex-wrap justify-content-between align-items-center gap-2">
             <div class="d-flex align-items-center gap-2">
                 <span class="badge bg-primary-subtle text-primary fw-semibold text-uppercase">Notices</span>
                 <h4 class="card-title mb-0">Notice notification List</h4>
-            </div>
-            <div class="d-flex align-items-center gap-2">
-                <a href="{{ route('admin.notice.create') }}" class="btn btn-primary">
-                    <span class="material-symbols-rounded align-middle me-1">add</span>
-                    <span class="align-middle">Add Notice Notification</span>
-                </a>
             </div>
         </div>
 
@@ -132,11 +132,9 @@
                             <td>{{ \Carbon\Carbon::parse($n->expiry_date)->format('d-m-Y') }}</td>
 
                             <td class="text-center">
-                                <div class="form-check form-switch d-inline-flex align-items-center justify-content-center">
-                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                        data-table="notices_notification" data-column="active_inactive"
-                                        data-id="{{ $n->pk }}" {{ $n->active_inactive == 1 ? 'checked' : '' }}>
-                                </div>
+                                <span class="badge rounded-1 bg-{{ $n->active_inactive == 1 ? 'success-subtle text-success' : 'danger-subtle text-danger' }}">
+                                    {{ $n->active_inactive == 1 ? 'Active' : 'Inactive' }}
+                                </span>
                             </td>
                             <td class="text-center d-flex justify-content-center">
                                 <div class="d-inline-flex align-items-center gap-1">
@@ -144,7 +142,11 @@
                                         class="btn btn-sm btn-outline-primary btn-transparent border-0 p-0" title="Edit" aria-label="Edit Notice">
                                         <span class="material-symbols-rounded fs-5">edit</span>
                                     </a>
-
+                                    <div class="form-check form-switch d-inline-flex align-items-center justify-content-center">
+                                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                        data-table="notices_notification" data-column="active_inactive"
+                                        data-id="{{ $n->pk }}" {{ $n->active_inactive == 1 ? 'checked' : '' }}>
+                                </div>
                                     @if($n->active_inactive == 0)
                                     <form id="deleteForm{{ $encId }}"
                                         action="{{ route('admin.notice.destroy', $encId) }}" method="POST"

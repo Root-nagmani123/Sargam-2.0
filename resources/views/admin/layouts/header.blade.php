@@ -126,16 +126,14 @@
 
                 <div class="d-flex align-items-center ms-auto flex-shrink-0 gap-2 header-right-actions">
 
-                    <!-- Notifications (desktop) -->
-                    <div class="dropdown position-relative d-none d-lg-block">
-                        <button type="button"
-                            class="btn btn-light border  rounded-circle p-0 position-relative shadow-sm notification-btn d-inline-flex align-items-center justify-content-center"
-                            id="notificationDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside"
-                            aria-expanded="false" aria-label="Notifications">
-
-                            <i class="material-icons material-symbols-rounded fs-5 text-body-secondary" aria-hidden="true">
-                                notifications
-                            </i>
+    <!-- Notifications (visible on both desktop and mobile) -->
+    <div class="dropdown position-relative d-none d-lg-block">
+        <button type="button"
+            class="btn btn-light rounded-1 p-2 position-relative shadow-sm notification-btn "
+            id="notificationDropdown"
+            data-bs-toggle="dropdown"
+            aria-expanded="false"
+            aria-label="Notifications">
 
             @php
                 $unreadCount = (Auth::user() && Auth::user()->user_id)
@@ -145,6 +143,9 @@
                     )
                     : 0;
             @endphp
+
+            <i class="material-icons material-symbols-rounded fs-5 header-notification-bell {{ $unreadCount > 0 ? 'header-notification-bell--ring' : '' }}"
+                aria-hidden="true">notifications</i>
 
             @if($unreadCount > 0)
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
@@ -364,48 +365,49 @@
                     </li>
                     @endif
 
-                        <!-- Notifications (Offcanvas on mobile for reliable display) -->
-                        <li class="nav-item" role="none">
-                            <button type="button"
-                                class="nav-link mobile-tab-link border-0 bg-transparent position-relative w-100"
-                                id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
-                                aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
-                                <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
-                                @php
-                                $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
-                                ? notification()->getUnreadCount(Auth::user()->user_id)
-                                : 0;
-                                @endphp
-                                @if($unreadCountMobile > 0)
-                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
-                                    {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
-                                </span>
-                                @endif
-                                <span>Notifications</span>
-                            </button>
-                        </li>
-                    </ul>
-                </div>
-
-                <!-- Mobile Notifications Offcanvas (slides up from bottom) -->
-                <div class="offcanvas offcanvas-bottom d-lg-none rounded-top-4 border-top  shadow-lg"
-                    tabindex="-1" id="notificationOffcanvasMobile"
-                    aria-labelledby="notificationOffcanvasMobileLabel" style="max-height: 70vh;">
-                    <div class="offcanvas-header border-bottom  bg-body-secondary bg-opacity-10 py-3 gap-2">
-                        <h5 class="offcanvas-title fw-semibold mb-0 flex-grow-1" id="notificationOffcanvasMobileLabel">Notifications</h5>
-                        @if($unreadCountMobile > 0)
-                        <button type="button" class="btn btn-sm btn-link text-primary p-0 text-nowrap notification-mark-all-btn order-2"
-                            onclick="markAllAsRead()">
-                            Mark all as read
-                        </button>
-                        @endif
-                        <button type="button" class="btn-close ms-0" data-bs-dismiss="offcanvas" aria-label="Close"></button>
-                    </div>
-                    <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list bg-body-tertiary"
-                        style="max-height: calc(70vh - 4.5rem);">
-                        <div id="notificationListMobile">
+                    <!-- Notifications (Offcanvas on mobile for reliable display) -->
+                    <li class="nav-item" role="none">
+                        <button type="button"
+                            class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
+                            id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
+                            aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
                             @php
-                            $notificationsMobile = (Auth::user() && Auth::user()->user_id)
+                            $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
+                                ? notification()->getUnreadCount(
+                                    Auth::user()->user_id,
+                                    hasRole('Admin') ? 10 : null
+                                )
+                                : 0;
+                            @endphp
+                            <i class="material-icons material-symbols-rounded header-notification-bell {{ $unreadCountMobile > 0 ? 'header-notification-bell--ring' : '' }}"
+                                aria-hidden="true">notifications_active</i>
+                            @if($unreadCountMobile > 0)
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
+                                {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
+                            </span>
+                            @endif
+                            <span>Notifications</span>
+                        </button>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Mobile Notifications Offcanvas (slides up from bottom) -->
+            <div class="offcanvas offcanvas-bottom d-lg-none" tabindex="-1" id="notificationOffcanvasMobile"
+                aria-labelledby="notificationOffcanvasMobileLabel" style="max-height: 70vh; border-radius: 16px 16px 0 0;">
+                <div class="offcanvas-header border-bottom py-3">
+                    <h5 class="offcanvas-title fw-semibold" id="notificationOffcanvasMobileLabel">Notifications</h5>
+                    @if($unreadCountMobile > 0)
+                    <button type="button" class="btn btn-sm btn-link text-primary p-0 notification-mark-all-btn" onclick="markAllAsRead()">
+                        Mark all as read
+                    </button>
+                    @endif
+                    <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
+                </div>
+                <div class="offcanvas-body p-0 overflow-y-auto notification-mobile-list" style="max-height: calc(70vh - 60px);">
+                    <div id="notificationListMobile">
+                        @php
+                        $notificationsMobile = (Auth::user() && Auth::user()->user_id)
                             ? notification()->getNotifications(
                             Auth::user()->user_id,
                             10,
@@ -767,6 +769,34 @@
 
 .notification-btn .material-icons {
     font-size: 21px !important;
+}
+
+.header-notification-bell {
+    display: inline-block;
+    transform-origin: top center;
+}
+
+.header-notification-bell--ring {
+    animation: header-notification-bell-ring 1.25s ease-in-out infinite;
+}
+
+@keyframes header-notification-bell-ring {
+    0%, 100% { transform: rotate(0); }
+    8% { transform: rotate(16deg); }
+    16% { transform: rotate(-14deg); }
+    24% { transform: rotate(12deg); }
+    32% { transform: rotate(-10deg); }
+    40% { transform: rotate(8deg); }
+    48% { transform: rotate(-6deg); }
+    56% { transform: rotate(4deg); }
+    64% { transform: rotate(-2deg); }
+    72% { transform: rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-notification-bell--ring {
+        animation: none;
+    }
 }
 
 .header-profile-chip:hover {
@@ -1588,151 +1618,134 @@
                             });
                         });
 
-                        // Mobile tab handling - ensure Bootstrap tabs work
-                        const mobileTabs = document.querySelectorAll('.mobile-tab-link[data-bs-toggle="tab"]');
-                        mobileTabs.forEach(tab => {
-                            tab.addEventListener('click', function(e) {
-                                const href = this.getAttribute('href');
-                                if (!href || href === '#') {
-                                    e.preventDefault();
-                                    return;
-                                }
-
-                                // Find corresponding desktop tab and trigger it
-                                const desktopTab = document.querySelector(
-                                    `#mainNavbar .nav-link[href="${href}"]`);
-                                if (desktopTab) {
-                                    e.preventDefault();
-                                    desktopTab.click();
-                                } else {
-                                    // If no desktop tab found, try Bootstrap tab directly
-                                    if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-                                        try {
-                                            const tabElement = new bootstrap.Tab(this);
-                                            tabElement.show();
-                                        } catch (err) {
-                                            console.log('Bootstrap tab error:', err);
-                                        }
-                                    }
-                                }
-                            });
-                        });
-                    });
-
-                    // Notification functions
-                    const notificationMarkReadUrlTemplate =
-                        '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
-                    const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
-                    const notificationPanelsUrl = '{{ route("admin.notifications.panels") }}';
-
-                    function markAsRead(notificationId) {
-                        console.log('[Notification][Step 1] markAsRead called', {
-                            notificationId,
-                            currentUrl: window.location.href
-                        });
-                        const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
-                        console.log('[Notification][Step 2] Calling endpoint', {
-                            endpoint
-                        });
-                        fetch(endpoint, {
-                                method: 'POST',
-                                headers: {
-                                    'Content-Type': 'application/json',
-                                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                                }
-                            })
-                            .then(response => {
-                                console.log('[Notification][Step 3] HTTP response', {
-                                    status: response.status,
-                                    ok: response.ok,
-                                    redirected: response.redirected,
-                                    responseUrl: response.url
-                                });
-                                return response.json().then(data => ({
-                                    ok: response.ok,
-                                    status: response.status,
-                                    data
-                                }));
-                            })
-                            .then(({
-                                ok,
-                                status,
-                                data
-                            }) => {
-                                console.log('[Notification][Step 4] Controller JSON payload', {
-                                    ok,
-                                    status,
-                                    data
-                                });
-                                if (data.success && data.redirect_url) {
-                                    // Redirect to the appropriate module view
-                                    console.log('[Notification][Step 5] Redirecting to redirect_url', {
-                                        redirectUrl: data.redirect_url
-                                    });
-                                    window.location.href = data.redirect_url;
-                                } else if (data.success) {
-                                    // Fallback: reload if no redirect URL
-                                    console.log(
-                                        '[Notification][Step 5] success=true but redirect_url missing, triggering reload'
-                                    );
-                                    // location.reload(); //ye redirect ho rha h 
-                                } else {
-                                    console.log('[Notification][Step 5] Failed to mark notification as read', data);
-                                }
-                            })
-                            .catch(error => {
-                                console.log('[Notification][Step X] Exception in markAsRead', error);
-                                // Fallback to dashboard on error
-                                console.log('[Notification][Fallback] Redirecting to dashboard due to error');
-                                // window.location.href = '{{ route("admin.dashboard") }}';
-                            });
-                    }
-
-                    // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
-                    document.addEventListener('click', function(e) {
-                        const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
-                        if (!target) return;
-
-                        const id = target.getAttribute('data-notification-id');
-                        if (!id) return;
-
-                        console.log('[Notification][Step 0] Notification clicked', {
-                            id,
-                            elementClass: target.className
-                        });
-                        markAsRead(id);
-                    });
-
-                    function updateNotificationBadges(unreadCount) {
-                        document.querySelectorAll('.notification-badge, .notification-badge-mobile').forEach(function(el) {
-                            el.remove();
-                        });
-                        if (!unreadCount || unreadCount <= 0) {
+                // Mobile tab handling - ensure Bootstrap tabs work
+                const mobileTabs = document.querySelectorAll('.mobile-tab-link[data-bs-toggle="tab"]');
+                mobileTabs.forEach(tab => {
+                    tab.addEventListener('click', function(e) {
+                        const href = this.getAttribute('href');
+                        if (!href || href === '#') {
+                            e.preventDefault();
                             return;
                         }
-                        var label = unreadCount > 99 ? '99+' : String(unreadCount);
-                        var desktopBtn = document.getElementById('notificationDropdown');
-                        if (desktopBtn) {
-                            var desktopBadge = document.createElement('span');
-                            desktopBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge';
-                            desktopBadge.textContent = label;
-                            desktopBtn.appendChild(desktopBadge);
+                        
+                        // Find corresponding desktop tab and trigger it
+                        const desktopTab = document.querySelector(`#mainNavbar .nav-link[href="${href}"]`);
+                        if (desktopTab) {
+                            e.preventDefault();
+                            desktopTab.click();
+                        } else {
+                            // If no desktop tab found, try Bootstrap tab directly
+                            if (typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+                                try {
+                                    const tabElement = new bootstrap.Tab(this);
+                                    tabElement.show();
+                                } catch(err) {
+                                    console.log('Bootstrap tab error:', err);
+                                }
+                            }
                         }
-                        var mobileBtn = document.getElementById('notificationBtnMobile');
-                        if (mobileBtn) {
-                            var mobileBadge = document.createElement('span');
-                            mobileBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile';
-                            mobileBadge.style.fontSize = '9px';
-                            mobileBadge.textContent = label;
-                            mobileBtn.appendChild(mobileBadge);
-                        }
-                    }
+                    });
+                });
+            });
 
-                    function toggleMarkAllButtons(unreadCount) {
-                        document.querySelectorAll('.notification-mark-all-btn').forEach(function(btn) {
-                            btn.classList.toggle('d-none', !unreadCount || unreadCount <= 0);
+            // Notification functions
+            const notificationMarkReadUrlTemplate = '{{ route("admin.notifications.mark-read-redirect", ["id" => "__ID__"]) }}';
+            const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
+            const notificationPanelsUrl = '{{ route("admin.notifications.panels") }}';
+            function markAsRead(notificationId) {
+                console.log('[Notification][Step 1] markAsRead called', { notificationId, currentUrl: window.location.href });
+                const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
+                console.log('[Notification][Step 2] Calling endpoint', { endpoint });
+                fetch(endpoint, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                        }
+                    })
+                    .then(response => {
+                        console.log('[Notification][Step 3] HTTP response', {
+                            status: response.status,
+                            ok: response.ok,
+                            redirected: response.redirected,
+                            responseUrl: response.url
                         });
-                    }
+                        return response.json().then(data => ({ ok: response.ok, status: response.status, data }));
+                    })
+                    .then(({ ok, status, data }) => {
+                        console.log('[Notification][Step 4] Controller JSON payload', { ok, status, data });
+                        if (data.success && data.redirect_url) {
+                            // Redirect to the appropriate module view
+                            console.log('[Notification][Step 5] Redirecting to redirect_url', { redirectUrl: data.redirect_url });
+                            window.location.href = data.redirect_url;
+                        } else if (data.success) {
+                            // Fallback: reload if no redirect URL
+                            console.log('[Notification][Step 5] success=true but redirect_url missing, triggering reload');
+                            // location.reload(); //ye redirect ho rha h 
+                        } else {
+                            console.log('[Notification][Step 5] Failed to mark notification as read', data);
+                        }
+                    })
+                    .catch(error => {
+                        console.log('[Notification][Step X] Exception in markAsRead', error);
+                        // Fallback to dashboard on error
+                        console.log('[Notification][Fallback] Redirecting to dashboard due to error');
+                        // window.location.href = '{{ route("admin.dashboard") }}';
+                    });
+            }
+
+            // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
+            document.addEventListener('click', function (e) {
+                const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
+                if (!target) return;
+
+                const id = target.getAttribute('data-notification-id');
+                if (!id) return;
+
+                console.log('[Notification][Step 0] Notification clicked', {
+                    id,
+                    elementClass: target.className
+                });
+                markAsRead(id);
+            });
+
+            function updateHeaderNotificationBellRing(unreadCount) {
+                document.querySelectorAll('.header-notification-bell').forEach(function (el) {
+                    el.classList.toggle('header-notification-bell--ring', unreadCount > 0);
+                });
+            }
+
+            function updateNotificationBadges(unreadCount) {
+                document.querySelectorAll('.notification-badge, .notification-badge-mobile').forEach(function (el) {
+                    el.remove();
+                });
+                updateHeaderNotificationBellRing(unreadCount || 0);
+                if (!unreadCount || unreadCount <= 0) {
+                    return;
+                }
+                var label = unreadCount > 99 ? '99+' : String(unreadCount);
+                var desktopBtn = document.getElementById('notificationDropdown');
+                if (desktopBtn) {
+                    var desktopBadge = document.createElement('span');
+                    desktopBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge';
+                    desktopBadge.textContent = label;
+                    desktopBtn.appendChild(desktopBadge);
+                }
+                var mobileBtn = document.getElementById('notificationBtnMobile');
+                if (mobileBtn) {
+                    var mobileBadge = document.createElement('span');
+                    mobileBadge.className = 'position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile';
+                    mobileBadge.style.fontSize = '9px';
+                    mobileBadge.textContent = label;
+                    mobileBtn.appendChild(mobileBadge);
+                }
+            }
+
+            function toggleMarkAllButtons(unreadCount) {
+                document.querySelectorAll('.notification-mark-all-btn').forEach(function (btn) {
+                    btn.classList.toggle('d-none', !unreadCount || unreadCount <= 0);
+                });
+            }
 
                     function refreshNotificationPanels() {
                         return fetch(notificationPanelsUrl, {
