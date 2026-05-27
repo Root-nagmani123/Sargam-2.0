@@ -29,7 +29,18 @@
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label small mb-1" for="selcourse">Form <span class="text-danger" title="Required">*</span></label>
-                    <select id="selcourse" class="form-select form-select-sm" required aria-required="true"><option value="">Select Form</option></select>
+                    <select id="selcourse" class="form-select form-select-sm" required aria-required="true">
+                        <option value="">Select Form</option>
+                        @foreach($forms ?? [] as $form)
+                            @php
+                                $cCode = trim((string) ($form->courseMaster?->course_name ?? $form->form_name));
+                                $cLabel = $form->form_name.($form->courseMaster?->course_name ? ' — '.$form->courseMaster->course_name : '');
+                            @endphp
+                            <option value="{{ $form->id }}"
+                                data-course-code="{{ e($cCode) }}"
+                                data-course-master-pk="{{ $form->course_master_pk ?? '' }}">{{ $cLabel }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-2">
                     <label class="form-label small mb-1" for="txtotcode">OT code <span class="text-danger" title="Required">*</span></label>
@@ -38,7 +49,8 @@
                 <div class="col-12 col-lg-3">
                     <label class="form-label small mb-1" for="selot">OT name</label>
                     <input type="text" id="selot" class="form-control form-control-sm" readonly>
-                    <small id="prewarning" class="text-danger d-none mt-1">Consultation required</small>
+                    <small id="prewarning" class="text-danger d-none mt-1 d-block">Consultation required</small>
+                    <small id="migratewarning" class="text-warning d-none mt-1 d-block">Trainee not migrated — save is disabled until Admin → Migrate students creates login credentials.</small>
                 </div>
                 <div class="col-6 col-sm-6 col-lg-2">
                     <label class="form-label small mb-1" for="txthouse">House</label>
@@ -73,7 +85,18 @@
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label small mb-1" for="fcGridCourse">Form</label>
-                    <select id="fcGridCourse" class="form-select form-select-sm"><option value="">All forms</option></select>
+                    <select id="fcGridCourse" class="form-select form-select-sm">
+                        <option value="">All forms</option>
+                        @foreach($forms ?? [] as $form)
+                            @php
+                                $cCode = trim((string) ($form->courseMaster?->course_name ?? $form->form_name));
+                                $cLabel = $form->form_name.($form->courseMaster?->course_name ? ' — '.$form->courseMaster->course_name : '');
+                            @endphp
+                            <option value="{{ $form->id }}"
+                                data-course-code="{{ e($cCode) }}"
+                                data-course-master-pk="{{ $form->course_master_pk ?? '' }}">{{ $cLabel }}</option>
+                        @endforeach
+                    </select>
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label small mb-1" for="fcGridOtcode">OT code contains</label>
@@ -166,7 +189,7 @@
 
 @push('scripts')
 <script>
-(function() {
+jQuery(function($) {
     const R = {
         courses: "{{ route('fc-reg.admin.activities.ajax.courses') }}",
         otName: "{{ route('fc-reg.admin.activities.ajax.ot-name') }}",
@@ -176,6 +199,8 @@
         csrf: "{{ csrf_token() }}",
     };
     var fcActEditRow = null;
+    var otLookupXhr = null;
+
     function asArray(data) {
         if (Array.isArray(data)) return data;
         if (data && Array.isArray(data.data)) return data.data;
@@ -187,6 +212,65 @@
         if ($t.length && $.fn.dataTable && $.fn.dataTable.isDataTable($t)) {
             $t.DataTable().ajax.reload(null, false);
         }
+    }
+
+    /** Read data-* from &lt;option&gt; via .attr() — jQuery .data() is unreliable on options. */
+    function selectedOptionAttr($sel, name) {
+        var opt = $sel.find('option:selected');
+        if (!opt.length) return '';
+        return String(opt.attr('data-' + name) || '').trim();
+    }
+
+    function selectedFormCourseCode($sel) {
+        return selectedOptionAttr($sel, 'course-code');
+    }
+
+    function selectedFormCourseMasterPk($sel) {
+        var n = parseInt(selectedOptionAttr($sel, 'course-master-pk'), 10);
+        return isNaN(n) ? 0 : n;
+    }
+
+    function clearOtDetails() {
+        $('#selot, #txthouse, #txthousen').val('');
+        $('#prewarning, #migratewarning').addClass('d-none');
+    }
+
+    function applyOtDetails(d) {
+        d = d || {};
+        $('#selot').val(d.name || '');
+        $('#txthouse').val(d.house || '');
+        $('#txthousen').val(d.housen || '');
+        $('#prewarning').toggleClass('d-none', !d.warning);
+        var needsMigrate = d.found && d.has_credentials === false;
+        $('#migratewarning').toggleClass('d-none', !needsMigrate);
+    }
+
+    function fetchOtDetails() {
+        var otcode = $('#txtotcode').val().trim();
+        if (!otcode) {
+            clearOtDetails();
+            return;
+        }
+        var course = selectedFormCourseCode($('#selcourse'));
+        var courseMasterPk = selectedFormCourseMasterPk($('#selcourse'));
+        if (otLookupXhr && otLookupXhr.abort) {
+            otLookupXhr.abort();
+        }
+        otLookupXhr = $.get(R.otName, {
+            otcode: otcode,
+            course: course,
+            course_master_pk: courseMasterPk > 0 ? courseMasterPk : ''
+        }).done(function(d) {
+            if (d && d.found === false && !d.name) {
+                clearOtDetails();
+                return;
+            }
+            applyOtDetails(d);
+        }).fail(function(xhr) {
+            if (xhr && xhr.statusText === 'abort') return;
+            clearOtDetails();
+            console.error('OT lookup failed', xhr && xhr.responseText);
+        });
     }
 
     function fillActivitySelect($sel, ccode, defaultFirstLabel) {
@@ -210,28 +294,46 @@
         });
     }
 
-    function selectedFormCourseCode($sel) {
-        const opt = $sel.find('option:selected');
-        return opt.data('course-code') || '';
+    function appendFormOptions($select, rows, includePlaceholder) {
+        if (!$select.length) return;
+        if ($select.find('option').length > (includePlaceholder ? 1 : 0)) {
+            return;
+        }
+        rows.forEach(function(c) {
+            const label = c.c_name || String(c.form_id || '');
+            $('<option>')
+                .val(c.form_id)
+                .attr('data-course-code', c.c_code || '')
+                .attr('data-course-master-pk', c.course_master_pk || '')
+                .text(label)
+                .appendTo($select);
+        });
     }
 
-    $.get(R.courses, function(data) {
-        const rows = asArray(data);
+    function loadForms() {
         const selEntry = $('#selcourse');
         const selGrid = $('#fcGridCourse');
-        rows.forEach(function(c){
-            const label = c.c_name || c.form_id;
-            const opt = $('<option>').val(c.form_id).attr('data-course-code', c.c_code || '').text(label);
-            selEntry.append(opt.clone());
-            selGrid.append(opt);
+        if (selEntry.find('option').length > 1) {
+            fillActivitySelect($('#fcGridActivity'), '', 'All activities');
+            return;
+        }
+        $.get(R.courses, function(data) {
+            const rows = asArray(data);
+            appendFormOptions(selEntry, rows, true);
+            appendFormOptions(selGrid, rows, true);
+            fillActivitySelect($('#fcGridActivity'), '', 'All activities');
+        }).fail(function() {
+            if (selEntry.find('option').length <= 1) {
+                alert('Unable to load forms. Please refresh the page.');
+            }
         });
-        fillActivitySelect($('#fcGridActivity'), '', 'All activities');
-    }).fail(function() {
-        alert('Unable to load forms. Please refresh the page.');
-    });
+    }
+
+    loadForms();
 
     $('#selcourse').on('change', function() {
         fillActivitySelect($('#selactivity'), selectedFormCourseCode($(this)), 'Select Activity');
+        if ($('#txtotcode').val().trim()) fetchOtDetails();
     });
     $('#fcGridCourse').on('change', function() {
         fillActivitySelect($('#fcGridActivity'), selectedFormCourseCode($(this)), 'All activities');
@@ -244,23 +346,19 @@
         fillActivitySelect($('#fcGridActivity'), '', 'All activities');
         reloadFcActivitiesGrid();
     });
-    $('#txtotcode').on('blur', function() {
-        const otcode = this.value.trim();
-        if (!otcode) return;
-        const course = selectedFormCourseCode($('#selcourse'));
-        $.get(R.otName, { otcode, course }, function(d) {
-            $('#selot').val(d.name || '');
-            $('#prewarning').toggleClass('d-none', !d.warning);
-        });
-        $.get(R.house, { otcode }, function(d) {
-            $('#txthouse').val(d.house || '');
-            $('#txthousen').val(d.housen || '');
-        });
+
+    $('#txtotcode').on('blur', fetchOtDetails);
+    $('#txtotcode').on('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            fetchOtDetails();
+        }
     });
     $('#btnSaveActivity').on('click', function() {
         const payload = {
             _token: '{{ csrf_token() }}',
             ccode: selectedFormCourseCode($('#selcourse')),
+            course_master_pk: selectedFormCourseMasterPk($('#selcourse')),
             otcode: $('#txtotcode').val().trim(),
             uactivity: $('#selactivity').val(),
             actvalue: $('#txtactvalue').val().trim(),
@@ -269,13 +367,17 @@
             alert('All fields are mandatory.');
             return;
         }
+        if (!$('#migratewarning').hasClass('d-none')) {
+            alert('This trainee is not migrated to user_credentials yet. Use Admin → Migrate students first.');
+            return;
+        }
         $.post(R.store, payload, function(resp) {
             if (resp.status === 'ok') {
                 $('#txtactvalue').val('');
                 return reloadFcActivitiesGrid();
             }
             if (resp.status === 'al') return alert('Already submitted for this OT and activity (unique policy).');
-            alert('Unable to save activity.');
+            alert('Unable to save activity. The trainee must be migrated to user_credentials first (Admin → Migrate students).');
         });
     });
 
@@ -353,6 +455,6 @@
             $('#fcActEditErr').removeClass('d-none').text(msg);
         });
     });
-})();
+});
 </script>
 @endpush

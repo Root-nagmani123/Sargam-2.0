@@ -3,19 +3,23 @@
 namespace App\DataTables\FC;
 
 use App\Models\FC\FcActivityMaster;
+use App\Models\FC\FcForm;
 use App\Models\FC\FcOtActivity;
-use App\Models\FC\FcOtDetail;
+use App\Models\StudentMaster;
+use App\Services\FC\FcActivityStudentResolver;
 use App\Services\FC\FcPostArrivalAccessService;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Facades\DataTables;
 use Yajra\DataTables\Services\DataTable;
 
 class FcActivitiesHomeDataTable extends DataTable
 {
-    public function __construct(private FcPostArrivalAccessService $access)
-    {
+    public function __construct(
+        private FcPostArrivalAccessService $access,
+        private FcActivityStudentResolver $trainees
+    ) {
     }
 
     /**
@@ -26,7 +30,6 @@ class FcActivitiesHomeDataTable extends DataTable
     {
         $tbl = (new FcOtActivity)->getTable();
         $actUserCol = fc_user_col('fc_otactivity_details');
-        $otUserCol = fc_user_col('fc_ot_details');
         $request = $this->request();
 
         return DataTables::eloquent($query)
@@ -41,28 +44,41 @@ class FcActivitiesHomeDataTable extends DataTable
                         ->orWhere($tbl.'.activityval', 'like', $like)
                         ->orWhere($tbl.'.activitydt', 'like', $like)
                         ->orWhere($tbl.'.'.$actUserCol, 'like', $like)
-                        ->orWhereHas('ot', fn (Builder $qq) => $qq->where('otname', 'like', $like)->orWhere('otcode', 'like', $like))
+                        ->orWhereHas('studentViaCredentials', function (Builder $qq) use ($like) {
+                            $qq->where('generated_OT_code', 'like', $like)
+                                ->orWhere('display_name', 'like', $like)
+                                ->orWhere('first_name', 'like', $like)
+                                ->orWhere('last_name', 'like', $like);
+                        })
+                        ->orWhereHas('studentMasterDirect', function (Builder $qq) use ($like) {
+                            $qq->where('generated_OT_code', 'like', $like)
+                                ->orWhere('display_name', 'like', $like)
+                                ->orWhere('first_name', 'like', $like)
+                                ->orWhere('last_name', 'like', $like);
+                        })
                         ->orWhereHas('activityMaster', fn (Builder $qq) => $qq->where('menun', 'like', $like));
                 });
 
                 return false;
             })
-            ->orderColumn('ot_name', function (Builder $q, string $order) use ($tbl, $actUserCol, $otUserCol) {
+            ->orderColumn('ot_name', function (Builder $q, string $order) use ($tbl, $actUserCol) {
                 $dir = strtolower($order) === 'asc' ? 'asc' : 'desc';
                 $q->orderBy(
-                    FcOtDetail::query()
-                        ->select('otname')
-                        ->whereColumn($otUserCol, $tbl.'.'.$actUserCol)
+                    StudentMaster::query()
+                        ->selectRaw('COALESCE(NULLIF(TRIM(display_name), ""), TRIM(CONCAT(COALESCE(first_name,""), " ", COALESCE(middle_name,""), " ", COALESCE(last_name,""))))')
+                        ->join('user_credentials as uc', 'uc.user_id', '=', 'student_master.pk')
+                        ->whereColumn('uc.pk', $tbl.'.'.$actUserCol)
                         ->limit(1),
                     $dir
                 );
             })
-            ->orderColumn('ot_code', function (Builder $q, string $order) use ($tbl, $actUserCol, $otUserCol) {
+            ->orderColumn('ot_code', function (Builder $q, string $order) use ($tbl, $actUserCol) {
                 $dir = strtolower($order) === 'asc' ? 'asc' : 'desc';
                 $q->orderBy(
-                    FcOtDetail::query()
-                        ->select('otcode')
-                        ->whereColumn($otUserCol, $tbl.'.'.$actUserCol)
+                    StudentMaster::query()
+                        ->select('generated_OT_code')
+                        ->join('user_credentials as uc', 'uc.user_id', '=', 'student_master.pk')
+                        ->whereColumn('uc.pk', $tbl.'.'.$actUserCol)
                         ->limit(1),
                     $dir
                 );
@@ -80,23 +96,26 @@ class FcActivitiesHomeDataTable extends DataTable
             ->orderColumn('course', $tbl.'.course $1')
             ->orderColumn('activityval', $tbl.'.activityval $1')
             ->orderColumn('activitydt', $tbl.'.activitydt $1')
-            ->addColumn('ot_name', fn (FcOtActivity $r) => (string) ($r->ot->otname ?? ''))
-            ->addColumn('ot_code', fn (FcOtActivity $r) => (string) ($r->ot->otcode ?? ''))
+            ->addColumn('ot_name', fn (FcOtActivity $r) => ($sm = $this->studentForRow($r))
+                ? $this->trainees->displayName($sm)
+                : '')
+            ->addColumn('ot_code', fn (FcOtActivity $r) => (string) ($this->studentForRow($r)?->generated_OT_code ?? ''))
             ->addColumn('activity_label', fn (FcOtActivity $r) => (string) ($r->activityMaster->menun ?? $r->activity))
             ->editColumn('course', fn (FcOtActivity $r) => (string) ($r->course ?? ''))
             ->editColumn('activityval', fn (FcOtActivity $r) => (string) ($r->activityval ?? ''))
             ->editColumn('activitydt', fn (FcOtActivity $r) => (string) ($r->activitydt ?? ''))
             ->addColumn('action', function (FcOtActivity $r) {
+                $sm = $this->studentForRow($r);
                 $payload = [
                     'updateUrl' => route('fc-reg.admin.activities.update', $r->activityid),
                     'course' => $r->course,
                     'menuid' => $r->activity,
                     'menun' => $r->activityMaster->menun ?? $r->activity,
                     'activityval' => $r->activityval,
-                    'otname' => $r->ot->otname ?? '',
-                    'otcode' => $r->ot->otcode ?? '',
-                    'house' => $r->ot->house ?? '',
-                    'housen' => $r->ot->housen ?? '',
+                    'otname' => $sm ? $this->trainees->displayName($sm) : '',
+                    'otcode' => (string) ($sm->generated_OT_code ?? ''),
+                    'house' => '',
+                    'housen' => (string) ($sm->rank ?? ''),
                 ];
                 $json = e(json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT));
                 $destroy = route('fc-reg.admin.activities.destroy', $r->activityid);
@@ -135,17 +154,36 @@ class FcActivitiesHomeDataTable extends DataTable
         $otcode = trim((string) $request->input('filter_otcode', ''));
         $menuid = trim((string) $request->input('filter_activity', ''));
 
-        $query->when($formId !== '' && Schema::hasColumn('student_masters', 'form_id'), function (Builder $q) use ($formId, $tbl) {
-            $uCol = fc_user_col('fc_otactivity_details');
-            $smCol = fc_user_col('student_masters');
-            $q->whereExists(function ($sub) use ($formId, $tbl, $uCol, $smCol) {
+        $query->when($formId !== '', function (Builder $q) use ($formId, $tbl) {
+            $coursePk = FcForm::query()->whereKey((int) $formId)->value('course_master_pk');
+            if (! $coursePk) {
+                return;
+            }
+            $actCol = fc_user_col('fc_otactivity_details');
+            $q->whereExists(function ($sub) use ($coursePk, $tbl, $actCol) {
                 $sub->selectRaw('1')
-                    ->from('student_masters as sm')
-                    ->whereColumn("sm.{$smCol}", "{$tbl}.{$uCol}")
-                    ->where('sm.form_id', (int) $formId);
+                    ->from('user_credentials as uc')
+                    ->join('student_master as sm', 'sm.pk', '=', 'uc.user_id')
+                    ->whereColumn('uc.pk', "{$tbl}.{$actCol}")
+                    ->where(function ($w) use ($coursePk) {
+                        $w->where('sm.course_master_pk', $coursePk)
+                            ->orWhereExists(function ($m) use ($coursePk) {
+                                $m->select(DB::raw(1))
+                                    ->from('student_master_course__map as smcm')
+                                    ->whereColumn('smcm.student_master_pk', 'sm.pk')
+                                    ->where('smcm.course_master_pk', $coursePk)
+                                    ->where('smcm.active_inactive', 1);
+                            });
+                    });
             });
         })
-            ->when($otcode !== '', fn (Builder $q) => $q->whereHas('ot', fn (Builder $qq) => $qq->where('otcode', 'like', '%'.$otcode.'%')))
+            ->when($otcode !== '', function (Builder $q) use ($otcode) {
+                $like = '%'.$otcode.'%';
+                $q->where(function (Builder $w) use ($like) {
+                    $w->whereHas('studentViaCredentials', fn (Builder $qq) => $qq->where('generated_OT_code', 'like', $like))
+                        ->orWhereHas('studentMasterDirect', fn (Builder $qq) => $qq->where('generated_OT_code', 'like', $like));
+                });
+            })
             ->when($menuid !== '', fn (Builder $q) => $q->where($tbl.'.activity', $menuid));
 
         return $query;
@@ -157,11 +195,21 @@ class FcActivitiesHomeDataTable extends DataTable
     private function activitiesGridBaseQuery(string $submittedBy, ?array $deptIds): Builder
     {
         $tbl = (new FcOtActivity)->getTable();
-        $otUserCol = fc_user_col('fc_ot_details');
+
+        $studentCols = [
+            'student_master.pk',
+            'student_master.generated_OT_code',
+            'student_master.display_name',
+            'student_master.first_name',
+            'student_master.middle_name',
+            'student_master.last_name',
+            'student_master.rank',
+        ];
 
         $query = FcOtActivity::query()
             ->with([
-                'ot' => static fn ($q) => $q->select($otUserCol, 'otname', 'otcode', 'house', 'housen'),
+                'studentViaCredentials' => static fn ($q) => $q->select($studentCols),
+                'studentMasterDirect' => static fn ($q) => $q->select($studentCols),
                 'activityMaster' => static fn ($q) => $q->select('menuid', 'menun', 'department_id'),
             ])
             ->where($tbl.'.submitedby', $submittedBy)
@@ -176,5 +224,10 @@ class FcActivitiesHomeDataTable extends DataTable
         }
 
         return $query->orderByDesc($tbl.'.id');
+    }
+
+    private function studentForRow(FcOtActivity $row): ?StudentMaster
+    {
+        return $row->studentViaCredentials ?? $row->studentMasterDirect;
     }
 }
