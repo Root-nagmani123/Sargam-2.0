@@ -1682,12 +1682,7 @@ public function toggleStatus(Request $request)
     }
 
     $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
-
-    // AJAX toggles use JSON message only; flashing here duplicates the pill alert
-    // from <x-session_message /> on the next paint plus #status-msg from custom.js.
-    if (!$request->ajax()) {
-        session()->flash('success', "Status updated to {$newState}.");
-    }
+    session()->flash('success', "Status updated to {$newState}.");
 
     return response()->json([
         'message' => "Status updated to {$newState}.",

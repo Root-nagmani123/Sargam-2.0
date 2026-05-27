@@ -27,23 +27,15 @@ return [
         ],
     ],
 
-    // Campus notice (bell): reference_pk = notices_notification.pk → public feed + deep link
-    'campus_notice' => [
-        'Notice' => [
-            'route' => 'admin.notice.feed',
-            'params' => ['notice' => 'reference_pk'],
-        ],
-    ],
-
     // Notice Notifications
     'notice' => [
         'Notice' => [
-            'route' => 'admin.notice.feed',
-            'params' => ['notice' => 'reference_pk'],
+            'route' => 'admin.notice.index',
+            'params' => [],
         ],
         'NoticeNotification' => [
-            'route' => 'admin.notice.feed',
-            'params' => ['notice' => 'reference_pk'],
+            'route' => 'admin.notice.index',
+            'params' => [],
         ],
     ],
 

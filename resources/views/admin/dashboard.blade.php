@@ -767,58 +767,6 @@
     }
 }
 
-/* Notice dashboard tabs (category filters) */
-.dashboard-notice-tabs {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-bottom: 14px;
-}
-.dashboard-notice-tab {
-    border: none;
-    border-radius: 10px;
-    padding: 8px 14px;
-    font-size: 0.875rem;
-    font-weight: 600;
-    background: #e9ecef;
-    color: #495057;
-    transition: background 0.2s ease, color 0.2s ease;
-    cursor: pointer;
-}
-.dashboard-notice-tab:hover {
-    background: #dee2e6;
-}
-.dashboard-notice-tab.active {
-    background: #004a93;
-    color: #fff;
-}
-.dashboard-notice-tab-pane { min-height: 1rem; }
-.dashboard-notice-card-lite {
-    border-left: 4px solid #0d6efd;
-    border-radius: 10px;
-    background: #f1f3f5;
-    padding: 14px 16px;
-    margin-bottom: 10px;
-}
-.dashboard-notice-card-title {
-    color: #0d6efd;
-    font-weight: 600;
-    font-size: 0.95rem;
-    line-height: 1.35;
-    margin: 0;
-}
-.dashboard-notice-card-range {
-    font-size: 0.8125rem;
-    color: #6c757d;
-    margin-top: 6px;
-    display: block;
-}
-.dashboard-notice-card-sub {
-    font-size: 0.75rem;
-    color: #868e96;
-    margin-top: 4px;
-}
-
 .dashboard-stat-card:focus-visible {
     outline: 2px solid var(--bs-primary);
     outline-offset: 2px;
@@ -910,29 +858,6 @@ $notificationBadgeCount = ($user && $user->user_id)
 ? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
 : 0;
 $notices = get_notice_notification_by_role();
-$noticeList = collect($notices)->unique('pk');
-$noticeCategoryTabs = $noticeList->isEmpty()
-    ? collect()
-    : $noticeList->groupBy(function ($n) {
-        if (!empty($n->notice_category_master_pk)) {
-            return 'c:' . $n->notice_category_master_pk;
-        }
-
-        return 'leg:' . md5((string) ($n->notice_type ?? 'other'));
-    })->map(function ($items, $tabKey) {
-        $first = $items->first();
-        $label = $first->category_name ?? $first->notice_type ?? 'Other';
-
-        return [
-            'key' => $tabKey,
-            'label' => $label,
-            'sort' => (int) ($first->category_sort_order ?? 99999),
-            'total' => $items->count(),
-            'preview' => $items->sortByDesc(function ($row) {
-                return $row->display_date ?? '';
-            })->take(4)->values(),
-        ];
-    })->sortBy('sort')->values();
 $hour = (int) date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening' ); $userName=$user ? ($user->
     first_name ?? $user->name ?? 'User') : 'User';
@@ -1579,7 +1504,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     {{-- See all --}}
                     @if(count($notices) > 0)
                     <div class="text-end mt-3">
-                        <a href="{{ route('admin.communications.hub', ['section' => 'notices']) }}" class="dashboard-notice-see-all">See all</a>
+                        <a href="{{ route('admin.notice.index') }}" class="dashboard-notice-see-all">See all</a>
                     </div>
                     @endif
                 </div>
@@ -1622,7 +1547,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     {{-- See all --}}
                     @if($notifications->isNotEmpty())
                     <div class="text-end mt-3">
-                        <a href="{{ route('admin.communications.hub', ['section' => 'notifications']) }}" class="dashboard-notice-see-all">See all</a>
+                        <a href="#" class="dashboard-notice-see-all">See all</a>
                     </div>
                     @endif
                 </div>
@@ -1658,7 +1583,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     </div>
 
                     <div class="text-end mt-3">
-                        <a href="{{ route('admin.communications.hub', ['section' => 'notifications']) }}" class="dashboard-notice-see-all">See all</a>
+                        <a href="#" class="dashboard-notice-see-all">See all</a>
                     </div>
                 </div>
             </div>
@@ -1699,6 +1624,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 </div>
             </div>
             @endif
+
 
         </div>
 
@@ -1816,7 +1742,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         @endforeach
                     </div>
                     <div class="text-end pt-3 mt-3 border-top">
-                        <a href="{{ route('admin.communications.hub', ['section' => 'birthdays']) }}"
+                        <a href="{{ route('admin.birthday-wish.index') }}"
                             class="link-primary fw-semibold small text-decoration-none">See all</a>
                     </div>
                     @endif
