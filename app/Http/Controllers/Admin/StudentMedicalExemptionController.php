@@ -175,9 +175,9 @@ class StudentMedicalExemptionController extends Controller
                 )
 
                 ->addColumn('from_to', fn($row) =>
-                    Carbon::parse($row->from_date)->format('d-m-Y') .
-                    ' to ' .
-                    Carbon::parse($row->to_date)->format('d-m-Y')
+                    Carbon::parse($row->from_date)->format('d/m/Y') .
+                    ' - ' .
+                    Carbon::parse($row->to_date)->format('d/m/Y')
                 )
 
                 ->addColumn('opd_type', fn($row) =>
@@ -186,42 +186,47 @@ class StudentMedicalExemptionController extends Controller
 
                 ->addColumn('document', function ($row) {
                     if ($row->Doc_upload) {
-                        return '<a href="' . asset('storage/' . $row->Doc_upload) . '" target="_blank"
-                                class="btn btn-sm btn-info">
-                                <i class="material-icons material-symbols-rounded">description</i>
-                            </a>';
+                        return '<a href="' . e(asset('storage/' . $row->Doc_upload)) . '" target="_blank" rel="noopener noreferrer" class="sme-doc-link">View</a>';
                     }
-                    return '<span class="text-muted">N/A</span>';
-                })
 
-                ->addColumn('action', function ($row) {
-
-                    $editUrl = route('student.medical.exemption.edit', encrypt($row->pk));
-                    $deleteUrl = route('student.medical.exemption.delete', encrypt($row->pk));
-                    $disabled = $row->active_inactive == 1 ? 'disabled' : '';
-
-                    return '
-                        <a href="' . $editUrl . '">
-                            <i class="material-icons material-symbols-rounded">edit</i>
-                        </a>
-
-                        <a href="javascript:void(0)"
-                           class="delete-btn ' . $disabled . '"
-                           data-url="' . $deleteUrl . '">
-                            <i class="material-icons material-symbols-rounded">delete</i>
-                        </a>';
+                    return '<span class="sme-doc-na">NA</span>';
                 })
 
                 ->addColumn('status', function ($row) {
-                    $checked = $row->active_inactive == 1 ? 'checked' : '';
-                    return '
-                        <div class="form-check form-switch">
-                            <input class="form-check-input status-toggle"
-                                type="checkbox"
-                                data-table="student_medical_exemption"
-                                data-column="active_inactive"
-                                data-id="' . $row->pk . '" ' . $checked . '>
-                        </div>';
+                    if ((int) $row->active_inactive === 1) {
+                        return '<span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>';
+                    }
+
+                    return '<span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>';
+                })
+
+                ->addColumn('action', function ($row) {
+                    $deleteUrl = route('student.medical.exemption.delete', encrypt($row->pk));
+                    $isActive = (int) $row->active_inactive === 1;
+                    $checked = $isActive ? 'checked' : '';
+
+                    $editHtml = '<button type="button" class="programme-action-btn sme-action-btn sme-edit-btn"'
+                        . ' data-edit-id="' . e(encrypt($row->pk)) . '" aria-label="Edit medical exemption">'
+                        . '<i class="bi bi-pencil" aria-hidden="true"></i></button>';
+
+                    $toggleHtml = '<label class="programme-action-toggle-icon mb-0" aria-label="Toggle medical exemption status">'
+                        . '<input class="status-toggle sme-status-toggle-input" type="checkbox" role="switch"'
+                        . ' data-table="student_medical_exemption" data-column="active_inactive" data-id="' . e($row->pk) . '" ' . $checked . '>'
+                        . '<i class="bi bi-toggle-off sme-toggle-icon sme-toggle-icon--off" aria-hidden="true"></i>'
+                        . '<i class="bi bi-toggle-on sme-toggle-icon sme-toggle-icon--on" aria-hidden="true"></i>'
+                        . '</label>';
+
+                    $deleteHtml = $isActive
+                        ? '<button type="button" class="programme-action-btn sme-action-btn programme-action-btn--danger delete-btn" disabled aria-disabled="true" title="Cannot delete active record">'
+                            . '<i class="bi bi-trash" aria-hidden="true"></i></button>'
+                        : '<a href="javascript:void(0)" class="programme-action-btn sme-action-btn programme-action-btn--danger delete-btn" data-url="' . e($deleteUrl) . '" aria-label="Delete medical exemption">'
+                            . '<i class="bi bi-trash" aria-hidden="true"></i></a>';
+
+                    return '<div class="d-inline-flex align-items-center justify-content-center programme-action-group sme-action-group" role="group" aria-label="Row actions">'
+                        . $editHtml
+                        . $toggleHtml
+                        . $deleteHtml
+                        . '</div>';
                 })
 
                 ->rawColumns(['document', 'action', 'status'])
@@ -235,11 +240,28 @@ class StudentMedicalExemptionController extends Controller
             ->orderBy('course_name', 'asc')
             ->get();
 
+        $formCoursesQuery = CourseMaster::where('active_inactive', '1');
+        $data_course_id = get_Role_by_course();
+        if (!empty($data_course_id)) {
+            $formCoursesQuery->whereIn('pk', $data_course_id);
+        }
+        $formCourses = $formCoursesQuery
+            ->where('end_date', '>', now())
+            ->orderBy('course_name', 'asc')
+            ->get();
+
+        $categories = ExemptionCategoryMaster::where('active_inactive', '1')
+            ->orderBy('exemp_category_name', 'asc')
+            ->get();
+        $specialities = ExemptionMedicalSpecialityMaster::where('active_inactive', '1')
+            ->orderBy('speciality_name', 'asc')
+            ->get();
+
         $search = $request->get('search', '');
 
         return view(
             'admin.student_medical_exemption.index',
-            compact('courses', 'search')
+            compact('courses', 'search', 'formCourses', 'categories', 'specialities')
         );
     }
 
@@ -350,6 +372,13 @@ class StudentMedicalExemptionController extends Controller
         );
 
         if ($overlapError) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => $overlapError,
+                    'errors' => ['from_date' => [$overlapError]],
+                ], 422);
+            }
+
             return redirect()
                 ->back()
                 ->withInput()
@@ -410,6 +439,13 @@ class StudentMedicalExemptionController extends Controller
             Log::error('Failed to send medical exemption notifications: ' . $e->getMessage());
         }
 
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Record created successfully.',
+            ]);
+        }
+
         return redirect()->route('student.medical.exemption.index')->with('success', 'Record created successfully.');
     }
 
@@ -434,6 +470,37 @@ class StudentMedicalExemptionController extends Controller
 
         return view('admin.student_medical_exemption.edit', compact('record', 'courses', 'students', 'categories', 'specialities'));
     }
+
+    public function editData($id)
+    {
+        $record = StudentMedicalExemption::with(['student'])->findOrFail(decrypt($id));
+
+        return response()->json([
+            'record' => [
+                'id' => encrypt($record->pk),
+                'employee_master_pk' => $record->employee_master_pk,
+                'course_master_pk' => $record->course_master_pk,
+                'student_master_pk' => $record->student_master_pk,
+                'ot_code' => $record->student->generated_OT_code ?? '',
+                'student_name' => $record->student->display_name ?? '',
+                'exemption_category_master_pk' => $record->exemption_category_master_pk,
+                'opd_category' => $record->opd_category,
+                'exemption_medical_speciality_pk' => $record->exemption_medical_speciality_pk,
+                'from_date' => $record->from_date
+                    ? Carbon::parse($record->from_date)->format('Y-m-d\TH:i')
+                    : '',
+                'to_date' => $record->to_date
+                    ? Carbon::parse($record->to_date)->format('Y-m-d\TH:i')
+                    : '',
+                'Description' => $record->Description,
+                'active_inactive' => (int) $record->active_inactive,
+                'doc_url' => $record->Doc_upload
+                    ? asset('storage/' . $record->Doc_upload)
+                    : null,
+            ],
+        ]);
+    }
+
     public function update(Request $request, $id)
     {
         $validated = $request->validate([
@@ -460,6 +527,13 @@ class StudentMedicalExemptionController extends Controller
         );
 
         if ($overlapError) {
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => $overlapError,
+                    'errors' => ['from_date' => [$overlapError]],
+                ], 422);
+            }
+
             return redirect()
                 ->back()
                 ->withInput()
@@ -511,6 +585,13 @@ class StudentMedicalExemptionController extends Controller
         } catch (\Exception $e) {
             // Log error but don't fail the request
             Log::error('Failed to send medical exemption notifications: ' . $e->getMessage());
+        }
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Record updated successfully.',
+            ]);
         }
 
         return redirect()->route('student.medical.exemption.index')->with('success', 'Record updated successfully.');
