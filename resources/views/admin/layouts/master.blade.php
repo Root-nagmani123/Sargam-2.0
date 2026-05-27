@@ -566,7 +566,9 @@
                 request()->routeIs('admin.dashboard.feed') ||
                 request()->routeIs('admin.notice.create') ||
                 request()->routeIs('admin.notice.index') ||
-                request() ->routeIs('admin.notice.edit')
+                request()->routeIs('admin.notice.edit') ||
+                request()->routeIs('member.profile.edit') ||
+                str_starts_with($path, 'member/profile/edit')
             ) {
                 $activeNavTab = '#home';
             } elseif (
