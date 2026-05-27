@@ -19,7 +19,7 @@
                            
                             
                             
-                             @if (hasRole('Security Card') || hasRole('Admin Security'))
+                             @if (canSeeSecurityManagement())
                                 <li class="sidebar-item">
                                     <a class="sidebar-link" href="{{ route('admin.security.family_idcard_approval.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Requested Family ID</span>
@@ -32,7 +32,7 @@
                                     <span class="hide-menu small small-sm-normal text-nowrap">Duplicate Vehicle Pass Request</span>
                                 </a>
                             </li> --}}
-                            @if (hasRole('Security Card') || hasRole('Admin Security'))
+                            @if (canSeeSecurityManagement())
                                 <li class="sidebar-item">
                                     <a class="sidebar-link" href="{{ route('admin.security.vehicle_pass_approval.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Requested Vehicle Pass</span>
@@ -40,7 +40,7 @@
                                 </li>
                             @endif
                             
-                            @if (!hasRole('Security Card') && !hasRole('Admin Security'))
+                            @if (!canSeeSecurityManagement())
                             <li class="sidebar-item">
                                 <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval1') ? 'active' : '' }}"
                                    href="{{ route('admin.security.employee_idcard_approval.approval1') }}">
@@ -48,7 +48,7 @@
                                 </a>
                             </li>
                             @endif
-                            @if (hasRole('Security Card'))
+                            @if (hasRole('Security Card') && !isSecurityAdminUser())
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
                                        href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
@@ -56,7 +56,7 @@
                                     </a>
                                 </li>
                             @endif
-                            @if (hasRole('Admin Security'))
+                            @if (isSecurityAdminUser())
                                 <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval3') ? 'active' : '' }}"
                                        href="{{ route('admin.security.employee_idcard_approval.approval3') }}">

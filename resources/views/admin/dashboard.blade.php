@@ -525,11 +525,11 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
     </div>
 
-@if(hasRole('Security Card') || hasRole('Admin Security'))
+@if(canSeeSecurityManagement())
             <div class="row g-3 mb-3">
                 <div class="col-xl-3 col-md-6">
                     @php
-                        $idCardApprovalRoute = hasRole('Admin Security')
+                        $idCardApprovalRoute = isSecurityAdminUser()
                             ? route('admin.security.employee_idcard_approval.approval3')
                             : route('admin.security.employee_idcard_approval.approval2');
                     @endphp
@@ -630,7 +630,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 </div>
             </div>
             @endif
-    @if(!hasRole('Security Card') && !hasRole('Admin Security'))
+    @if(!canSeeSecurityManagement())
     <div class="row g-2 g-md-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
         <div class="col">
             <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">

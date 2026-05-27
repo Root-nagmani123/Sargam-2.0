@@ -26,7 +26,7 @@ class VehiclePassApprovalController extends Controller
     public function index(Request $request)
     {
         $hasSecurityCard = hasRole('Security Card');
-        $hasAdminSecurity = hasRole('Admin Security');
+        $hasAdminSecurity = isSecurityAdminUser();
         $isLevel1Only = $hasSecurityCard && ! $hasAdminSecurity;
         $isLevel2Only = $hasAdminSecurity && ! $hasSecurityCard;
         $hasBothApprovalRoles = $hasSecurityCard && $hasAdminSecurity;
@@ -317,8 +317,8 @@ class VehiclePassApprovalController extends Controller
         }
 
         $user = Auth::user();
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+        $isLevel1 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isLevel2 = isSecurityAdminUser() || hasRole('Admin');
 
         if ($kind === 'fw') {
             $application = VehiclePassFWApply::with([
@@ -422,8 +422,8 @@ class VehiclePassApprovalController extends Controller
         $user = Auth::user();
         $employeePk = $user->user_id ?? null;
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+        $isLevel1 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isLevel2 = isSecurityAdminUser() || hasRole('Admin');
 
         if (! $isLevel1 && ! $isLevel2) {
             return redirect()->back()->with('error', 'You are not authorized to approve this request.');

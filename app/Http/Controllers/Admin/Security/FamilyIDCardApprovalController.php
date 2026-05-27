@@ -26,7 +26,7 @@ class FamilyIDCardApprovalController extends Controller
         $dateTo = $request->get('date_to');
 
         $hasSecurityCard = hasRole('Security Card');
-        $hasAdminSecurity = hasRole('Admin Security');
+        $hasAdminSecurity = isSecurityAdminUser();
         // Mutual exclusivity: "only L1", "only L2", or BOTH (must still get can_approve for the current stage).
         $isLevel1Only = $hasSecurityCard && ! $hasAdminSecurity;
         $isLevel2Only = $hasAdminSecurity && ! $hasSecurityCard;
@@ -309,8 +309,8 @@ class FamilyIDCardApprovalController extends Controller
         $employeePk = $user->user_id ?? null;
 
         // Determine level based on role
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+        $isLevel1 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isLevel2 = isSecurityAdminUser() || hasRole('Admin');
 
         if (! $isLevel1 && ! $isLevel2) {
             return redirect()->back()->with('error', 'You are not authorized to approve this request.');
@@ -454,8 +454,8 @@ class FamilyIDCardApprovalController extends Controller
         $employeePk = $user->user_id ?? null;
         $remarks = $request->input('approval_remarks', null);
 
-        $isLevel1 = hasRole('Security Card') && !hasRole('Admin Security');
-        $isLevel2 = hasRole('Admin Security') || hasRole('Admin');
+        $isLevel1 = hasRole('Security Card') && ! isSecurityAdminUser();
+        $isLevel2 = isSecurityAdminUser() || hasRole('Admin');
 
         if (! $isLevel1 && ! $isLevel2) {
             return redirect()->route('admin.security.family_idcard_approval.index')
