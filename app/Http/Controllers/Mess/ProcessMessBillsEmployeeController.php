@@ -38,19 +38,9 @@ class ProcessMessBillsEmployeeController extends Controller
     /** Cache grouped bills so DataTables page/sort/search does not re-query the union on every request. */
     private const COMBINED_BILLS_CACHE_TTL_SECONDS = 300;
 
-    /** Redis-backed combined bills cache (.env: PROCESS_MESS_BILLS_COMBINED_CACHE_*; store via {@see RedisBackedCache}). */
-    private const COMBINED_BILLS_CACHE_ENV_KEYS = [
-        'enabled' => 'PROCESS_MESS_BILLS_COMBINED_CACHE_ENABLED',
-        'seconds' => 'PROCESS_MESS_BILLS_COMBINED_CACHE_SECONDS',
-    ];
+    /** Redis-backed combined bills cache TTL; store is resolved via {@see RedisBackedCache}. */
 
     private const COMBINED_BILLS_CACHE_VERSION_KEY = 'process_mess_bills_combined_cache_version';
-
-    /** Modal "Generate Invoice & Process Payment" full dataset (.env: PROCESS_MESS_BILLS_MODAL_CACHE_* or combined keys). */
-    private const MODAL_BILLS_CACHE_ENV_KEYS = [
-        'enabled' => 'PROCESS_MESS_BILLS_MODAL_CACHE_ENABLED',
-        'seconds' => 'PROCESS_MESS_BILLS_MODAL_CACHE_SECONDS',
-    ];
 
     /** Max rows returned for print/export (avoids multi‑MB JSON responses). */
     private const PRINT_MAX_ROWS = 500;
@@ -506,24 +496,12 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * @param  array{enabled: string, seconds: string}  $envKeys
      * @param  callable(): mixed  $callback
      * @return mixed
      */
-    private function rememberProcessMessBillsCombined(string $cacheKey, callable $callback, array $envKeys = self::COMBINED_BILLS_CACHE_ENV_KEYS)
+    private function rememberProcessMessBillsCombined(string $cacheKey, callable $callback)
     {
-        $enabled = ! in_array(
-            strtolower((string) env($envKeys['enabled'], 'true')),
-            ['0', 'false', 'no', 'off'],
-            true
-        );
-        $ttl = max(
-            30,
-            (int) env($envKeys['seconds'], self::COMBINED_BILLS_CACHE_TTL_SECONDS)
-        );
-        if (! $enabled) {
-            return $callback();
-        }
+        $ttl = max(30, self::COMBINED_BILLS_CACHE_TTL_SECONDS);
 
         try {
             return $this->processMessBillsCacheRepository()->remember($cacheKey, $ttl, $callback);
@@ -681,8 +659,7 @@ class ProcessMessBillsEmployeeController extends Controller
                     $dateRangeQuery,
                     $kitchenIssueQuery
                 );
-            },
-            self::MODAL_BILLS_CACHE_ENV_KEYS
+            }
         );
 
         if ($rows instanceof Collection) {
