@@ -4,13 +4,12 @@
 
 @section('setup_content')
 
-    <div class="card ems-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="emsDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="exemptionMedicalSpecialityTable"></div>
-            </div>
-
-            <div class="programme-dt-panel">
+<div class="container-fluid">
+    <x-breadcrum title="Exemption medical speciality" />
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card">
+            <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
                         <div class="col-6">
