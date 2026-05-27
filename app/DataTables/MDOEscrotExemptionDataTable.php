@@ -72,7 +72,6 @@ class MDOEscrotExemptionDataTable extends DataTable
                 }
             }, true)
             ->addColumn('actions', function ($row) {
-                $editUrl = route('mdo-escrot-exemption.edit', $row->pk);
                 $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
                 $csrf = csrf_token();
                 $formId = 'delete-form-' . $row->pk;
@@ -83,8 +82,9 @@ class MDOEscrotExemptionDataTable extends DataTable
      aria-label="Row actions">
 
     <!-- Edit -->
-    <a href="{$editUrl}"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2"
+    <a href="javascript:void(0)"
+       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 mee-edit-btn"
+       data-edit-id="{$row->pk}"
        aria-label="Edit record">
         <span class="material-icons material-symbols-rounded"
               style="font-size:20px;"
