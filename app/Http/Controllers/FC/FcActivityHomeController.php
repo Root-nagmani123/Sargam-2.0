@@ -6,7 +6,7 @@ use App\DataTables\FC\FcActivitiesHomeDataTable;
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcActivityMaster;
 use App\Models\FC\FcForm;
-use App\Models\FC\FcOtDetail;
+use App\Services\FC\FcActivityStudentResolver;
 use App\Services\FC\FcPostArrivalAccessService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -14,13 +14,22 @@ use Illuminate\View\View;
 
 class FcActivityHomeController extends Controller
 {
-    public function __construct(private FcPostArrivalAccessService $access)
-    {
+    public function __construct(
+        private FcPostArrivalAccessService $access,
+        private FcActivityStudentResolver $trainees
+    ) {
     }
 
     public function index(): View
     {
+        $forms = FcForm::query()
+            ->with('courseMaster:pk,course_name')
+            ->where('is_active', true)
+            ->orderBy('form_name')
+            ->get(['id', 'form_name', 'form_slug', 'course_master_pk']);
+
         return view('admin.fc-activities.home.index', [
+            'forms' => $forms,
             'showSetupLinks' => $this->access->canManageActivitySetup(),
             'canAccessMedical' => $this->access->canAccessMedicalModule(),
         ]);
@@ -45,6 +54,7 @@ class FcActivityHomeController extends Controller
 
         $courses = $forms->map(fn (FcForm $form) => [
             'form_id' => $form->id,
+            'course_master_pk' => $form->course_master_pk,
             'c_code' => trim((string) ($form->courseMaster?->course_name ?? $form->form_name)),
             'c_name' => $form->form_name.($form->courseMaster?->course_name ? ' — '.$form->courseMaster->course_name : ''),
         ])->values();
@@ -54,8 +64,13 @@ class FcActivityHomeController extends Controller
 
     public function ajaxOts(Request $request): JsonResponse
     {
-        $course = $request->query('course', '');
-        $ots = FcOtDetail::active()->byCourse($course)->select('user_id', 'otname', 'otcode')->orderBy('otname')->get();
+        $ots = $this->trainees->listForActivityGrids()
+            ->map(fn ($row) => [
+                'user_id' => $row->user_id,
+                'otname' => $row->otname,
+                'otcode' => $row->otcode,
+            ])
+            ->values();
 
         return response()->json($ots);
     }
@@ -64,27 +79,56 @@ class FcActivityHomeController extends Controller
     {
         $otcode = $request->query('otcode', '');
         $course = trim((string) $request->query('course', ''));
-        $ot = FcOtDetail::where('otcode', $otcode)->first();
+        $courseMasterPk = (int) $request->query('course_master_pk', 0);
 
-        if (! $ot) {
-            return response()->json(['name' => '', 'warning' => false]);
+        $trainee = $this->trainees->findByOtCode($otcode, $courseMasterPk > 0 ? $courseMasterPk : null);
+        if (! $trainee && $courseMasterPk > 0) {
+            $trainee = $this->trainees->findByOtCode($otcode, null);
+        }
+
+        if (! $trainee) {
+            return response()->json([
+                'name' => '',
+                'house' => '',
+                'housen' => '',
+                'found' => false,
+                'warning' => false,
+            ]);
+        }
+
+        try {
+            $this->trainees->syncMedicalOtDetail($trainee, $course !== '' ? $course : null);
+        } catch (\Throwable $e) {
+            report($e);
         }
 
         return response()->json([
-            'name' => $ot->otname,
-            'user_id' => $ot->user_id,
-            'warning' => $course !== '' ? $ot->hasPreHistory($course) : $ot->hasPreHistory(),
+            'name' => $trainee->otname,
+            'house' => $trainee->house ?? '',
+            'housen' => $trainee->housen ?? '',
+            'user_id' => $trainee->credentials_pk,
+            'has_credentials' => $trainee->credentials_pk !== null,
+            'found' => true,
+            'warning' => $this->trainees->hasPreHistoryForTrainee(
+                $trainee,
+                $course !== '' ? $course : null
+            ),
         ]);
     }
 
     public function ajaxHouse(Request $request): JsonResponse
     {
         $otcode = $request->query('otcode', '');
-        $ot = FcOtDetail::where('otcode', $otcode)->select('house', 'housen')->first();
+        $courseMasterPk = (int) $request->query('course_master_pk', 0);
+        $trainee = $this->trainees->findByOtCode($otcode, $courseMasterPk > 0 ? $courseMasterPk : null);
+        if (! $trainee && $courseMasterPk > 0) {
+            $trainee = $this->trainees->findByOtCode($otcode, null);
+        }
 
         return response()->json([
-            'house' => $ot?->house ?? '',
-            'housen' => $ot?->housen ?? '',
+            'house' => $trainee->house ?? '',
+            'housen' => $trainee->housen ?? '',
+            'found' => $trainee !== null,
         ]);
     }
 

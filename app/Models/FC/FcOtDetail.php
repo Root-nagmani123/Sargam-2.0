@@ -40,12 +40,18 @@ class FcOtDetail extends Model
 
     public function activities()
     {
-        return $this->hasMany(FcOtActivity::class, 'user_id', 'username', 'user_id');
+        $localKey = fc_user_col($this->getTable());
+        $foreignKey = fc_user_col((new FcOtActivity)->getTable());
+
+        return $this->hasMany(FcOtActivity::class, $foreignKey, $localKey);
     }
 
     public function preHistory()
     {
-        return $this->hasMany(FcPreHistory::class, 'user_id', 'username', 'user_id');
+        $localKey = fc_user_col($this->getTable());
+        $foreignKey = fc_user_col((new FcPreHistory)->getTable());
+
+        return $this->hasMany(FcPreHistory::class, $foreignKey, $localKey);
     }
 
     public function scopeActive($query)
