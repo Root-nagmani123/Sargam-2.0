@@ -382,41 +382,6 @@ class StudentImportController extends Controller
 
                 });
 
-            // Find and delete records with fc_exemption_master_pk != 0 from all three tables
-            $exemptionRecords = DB::table('fc_registration_master')
-                ->where('fc_exemption_master_pk', '!=', 0)
-                ->get();
-
-            if ($exemptionRecords->isNotEmpty()) {
-                $userIds = $exemptionRecords->pluck('user_id')->filter()->toArray();
-
-                if (!empty($userIds)) {
-                    // Find corresponding student records
-                    $studentsToDelete = DB::table('student_master')
-                        ->whereIn('user_id', $userIds)
-                        ->get();
-
-                    if ($studentsToDelete->isNotEmpty()) {
-                        $studentIds = $studentsToDelete->pluck('pk')->toArray();
-
-                        // Delete from student_master_course__map
-                        DB::table('student_master_course__map')
-                            ->whereIn('student_master_pk', $studentIds)
-                            ->delete();
-
-                        // Delete from user_credentials
-                        DB::table('user_credentials')
-                            ->whereIn('user_name', array_map(fn ($id) => $this->normalizeLoginUsername($id), $userIds))
-                            ->delete();
-
-                        // Delete from student_master
-                        DB::table('student_master')
-                            ->whereIn('pk', $studentIds)
-                            ->delete();
-                    }
-                }
-            }
-
             DB::commit();
 
             if ($migratedCount === 0) {
@@ -437,10 +402,6 @@ class StudentImportController extends Controller
     private function eligibleRosterQuery()
     {
         return DB::table('fc_registration_master')
-            ->where(function ($query) {
-                $query->where('fc_exemption_master_pk', 0)
-                    ->orWhereNull('fc_exemption_master_pk');
-            })
             ->where('is_registered', 1)
             ->whereNotNull('user_id')
             ->where('user_id', '!=', '')
