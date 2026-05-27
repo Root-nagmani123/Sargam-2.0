@@ -6,118 +6,125 @@
 </a>
 
     <header class="header-top-bar d-none d-lg-block">
-    <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+    <div class="container-fluid p-1 px-2">
+    <div class="d-flex align-items-center justify-content-between flex-nowrap header-top-inner">
 
     <!-- Left: Government Identity -->
-    <div class="d-flex align-items-center gap-2">
-        <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
-            alt="Emblem of India" class="header-flag-icon">
-        <span class="fw-semibold small text-white">
+    <div class="d-flex align-items-center gap-2 text-nowrap header-govt-wrap">
+        <span class="header-flag-wrap d-inline-flex align-items-center justify-content-center rounded-2 bg-white border border-light-subtle">
+            <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
+                alt="Flag of India" class="header-flag-icon">
+        </span>
+        <span class="small text-white header-govt-text">
             भारत सरकार | Government of India
         </span>
     </div>
 
     <!-- Right: Utilities with vertical separators -->
-    <nav aria-label="Utility Navigation">
-        <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav">
+    <nav aria-label="Utility Navigation" class="ms-auto">
+        <ul class="list-inline mb-0 d-flex align-items-center gap-0 small header-utility-nav text-nowrap">
             <li class="list-inline-item">
-                <a href="#main-content" class="text-white text-decoration-none px-2">Skip to content</a>
+                <a href="#main-content" class="text-white text-decoration-none px-2 header-utility-link">Skip to content</a>
             </li>
             <li class="header-utility-sep" aria-hidden="true"></li>
             <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
-                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
-                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
                 <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
+                <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
             </li>
             <li class="header-utility-sep" aria-hidden="true"></li>
             <li class="list-inline-item">
                 <div class="header-lang-dropdown">
-                    <i class="material-icons material-symbols-rounded header-globe-icon">language</i>
+                    <i class="bi bi-globe2 header-globe-icon" aria-hidden="true"></i>
                     <select class="form-select form-select-sm header-lang-select" aria-label="Select Language">
                         <option selected>English</option>
                         <option>हिन्दी</option>
                     </select>
+                    <i class="bi bi-chevron-down header-lang-caret" aria-hidden="true"></i>
                 </div>
             </li>
         </ul>
     </nav>
     </div>
+    </div>
     </header>
 
     <div class="with-vertical">
-        <nav class="navbar navbar-expand-lg p-0">
-            <ul class="navbar-nav">
-                <li class="nav-item d-flex d-xl-none">
-                    <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
-                        href="javascript:void(0)">
-                        <i class="material-icons material-symbols-rounded fs-6">menu</i>
-                    </a>
-                </li>
-            </ul>
-
-            <div class="header-brand d-flex align-items-center gap-2 py-2">
-                <img src="{{ asset('images/ashoka.webp') }}" alt="ashoka emblem" class="header-logo-emblem">
-                <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo" class="header-logo">
+        <nav class="navbar navbar-expand-lg p-0 header-main-navbar">
+            <div class="d-flex align-items-center flex-shrink-0 header-brand-block">
+                <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler d-lg-none me-1" id="headerCollapse"
+                    href="javascript:void(0)" aria-label="Open menu">
+                    <i class="material-icons material-symbols-rounded fs-6">menu</i>
+                </a>
+                <div class="header-brand d-flex align-items-center gap-2 py-2 px-2">
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="" class="header-logo-emblem" width="44" height="44">
+                    <span class="header-brand-divider" aria-hidden="true"></span>
+                    <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Sargam 2.0" class="header-logo">
+                </div>
             </div>
 
-            <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
+            <button class="navbar-toggler p-0 border-0 d-lg-none ms-auto" type="button" data-bs-toggle="collapse"
                 data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
                 aria-label="Toggle navigation">
                 <i class="material-icons material-symbols-rounded fs-6">more_vert</i>
-            </a>
+            </button>
 
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
-                    <!-- Enhanced Navigation Container (Desktop) -->
-                    <div class="nav-container position-relative d-none d-lg-block">
-                        <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="menubar" aria-label="Main navigation">
-
-                            <!-- Home -->
-                            <li class="nav-item" role="none">
-                                <a href="#home"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#home' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}" aria-controls="home-panel"
-                                    id="home-tab">
-                                    <span>Home</span>
-                                </a>
-                            </li>
-
-                            <!-- Setup -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-setup"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
-                                    id="setup-tab">
-
-                                    @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') || hasRole('IST'))
-                                    <span>Setup</span>
-                                    @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
-                                    hasRole('Student-OT'))
-                                    <span>Academics</span>
-                                    @else
-                                    <span>Setup</span>
-                                    @endif
-
-                                </a>
-                            </li>
-
-                            <!-- Communications -->
-                            <li class="nav-item" role="none">
-                                <a href="#tab-communications"
-                                    class="nav-link header-nav-link px-3 py-2 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
-                                    data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}" aria-controls="tab-communications"
-                                    id="communications-tab">
-                                    <span>Communication</span>
-                                </a>
-                            </li>
-
-                        </ul>
+            <div class="collapse navbar-collapse flex-grow-1" id="navbarNav">
+                <div class="header-nav-center d-none d-lg-flex flex-grow-1 justify-content-center px-2">
+                    <div class="header-nav-scroll-wrap rounded-1">
+                        <div class="header-nav-scroll flex-grow-1" tabindex="0">
+                            <ul class="navbar-nav header-main-nav align-items-center mb-0" id="mainNavbar" role="menubar" aria-label="Main navigation">
+                                <li class="nav-item flex-shrink-0" role="none">
+                                    <a href="#home"
+                                        class="nav-link header-nav-link rounded-1 {{ $activeNavTab === '#home' ? 'active' : '' }}"
+                                        data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#home' ? 'true' : 'false' }}"
+                                        aria-controls="home-panel" id="home-tab">Home</a>
+                                </li>
+                                <li class="nav-item flex-shrink-0" role="none">
+                                    <a href="#tab-setup"
+                                        class="nav-link header-nav-link rounded-1 {{ $activeNavTab === '#tab-setup' ? 'active' : '' }}"
+                                        data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}"
+                                        aria-controls="setup-panel" id="setup-tab">
+                                        @if(hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') || hasRole('IST'))
+                                            Setup
+                                        @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Student-OT'))
+                                            Academics
+                                        @else
+                                            Setup
+                                        @endif
+                                    </a>
+                                </li>
+                                <li class="nav-item flex-shrink-0" role="none">
+                                    <a href="#tab-communications"
+                                        class="nav-link header-nav-link rounded-1 {{ $activeNavTab === '#tab-communications' ? 'active' : '' }}"
+                                        data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}"
+                                        aria-controls="tab-communications" id="communications-tab">Communications</a>
+                                </li>
+                                @if(hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') || hasRole('IST') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                                <li class="nav-item flex-shrink-0" role="none">
+                                    <a href="#tab-academics"
+                                        class="nav-link header-nav-link rounded-1 {{ $activeNavTab === '#tab-academics' ? 'active' : '' }}"
+                                        data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-academics' ? 'true' : 'false' }}"
+                                        aria-controls="academics-panel" id="academics-tab">Academics</a>
+                                </li>
+                                @endif
+                                @if(hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess-Staff'))
+                                <li class="nav-item flex-shrink-0" role="none">
+                                    <a href="#tab-material-management"
+                                        class="nav-link header-nav-link rounded-1 {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
+                                        data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
+                                        aria-controls="material-management-panel" id="material-management-tab">Material Management</a>
+                                </li>
+                                @endif
+                            </ul>
+                        </div>
+                        <button type="button" class="header-nav-scroll-btn" aria-label="Scroll navigation" title="More">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">chevron_right</i>
+                        </button>
                     </div>
-
                 </div>
 
-                <!-- Right Side: Logout + Last Login -->
-                <div class="d-flex align-items-center ms-auto gap-3 header-right-actions">
+                <div class="d-flex align-items-center ms-auto flex-shrink-0 gap-2 header-right-actions">
 
     <!-- Notifications (visible on both desktop and mobile) -->
     <div class="dropdown position-relative d-none d-lg-block">
@@ -149,46 +156,147 @@
         </button>
 
         <!-- Dropdown -->
-        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-0 notification-dropdown"
+        <ul class="dropdown-menu dropdown-menu-end shadow border rounded-3 p-0 bg-white notification-dropdown"
             aria-labelledby="notificationDropdown">
 
-            <!-- Header -->
-            <li class="notification-dropdown-header">
-                <span class="fw-semibold">Notifications</span>
+            <li class="notification-dropdown-header d-flex justify-content-between align-items-center px-3 py-3 border-bottom bg-white">
+                <span class="fw-bold text-dark mb-0">Notifications</span>
                 @if($unreadCount > 0)
                     <button type="button"
-                        class="btn btn-sm btn-link text-primary p-0 text-nowrap notification-mark-all-btn"
+                        class="btn btn-link link-primary p-0 text-decoration-underline small notification-mark-all-btn"
                         onclick="markAllAsRead()">
                         Mark all as read
                     </button>
                 @endif
             </li>
 
-            <div id="notificationList" class="notification-list">
-                @php
-                    $notifications = (Auth::user() && Auth::user()->user_id)
-                        ? notification()->getNotifications(
-                            Auth::user()->user_id,
-                            10,
-                            false,
-                            hasRole('Admin') ? 10 : null
-                        )
-                        : collect();
-                @endphp
+            <li class="list-unstyled mb-0">
+                <div id="notificationList" class="notification-list px-3 py-2">
+                    @php
+                        $notifications = (Auth::user() && Auth::user()->user_id)
+                            ? notification()->getNotifications(
+                                Auth::user()->user_id,
+                                10,
+                                false,
+                                hasRole('Admin') ? 10 : null
+                            )
+                            : collect();
+                    @endphp
 
-                @include('admin.layouts.partials.notification-list-desktop', ['notifications' => $notifications])
-            </div>
+                    @include('admin.layouts.partials.notification-list-desktop', ['notifications' => $notifications])
+                </div>
+            </li>
+
+            <li class="notification-dropdown-footer border-top text-center py-3 bg-white">
+                <a href="javascript:void(0)" class="link-primary text-decoration-underline small notification-view-all-link">
+                    Check all notifications
+                </a>
+            </li>
         </ul>
     </div>
 
-    <!-- Logout -->
-    <form action="{{ route('logout') }}" method="POST" class="m-0">
+    @php
+        $authUser = Auth::user();
+        $displayName = trim(($authUser->first_name ?? '') . ' ' . ($authUser->last_name ?? ''));
+        if ($displayName === '') {
+            $displayName = $authUser->name ?? $authUser->full_name ?? $authUser->user_name ?? 'User';
+        }
+        $profileHref = 'javascript:void(0)';
+        if (\Illuminate\Support\Facades\Route::has('member.profile.edit') && !empty($authUser->user_id)) {
+            $profileHref = route('member.profile.edit', $authUser->user_id);
+        }
+        $avatarInitial = strtoupper(mb_substr(trim($displayName), 0, 1));
+        $profilePic = function_exists('get_profile_pic') ? get_profile_pic() : '';
+        $headerRoles = session('user_roles', []);
+        if (in_array('Student-OT', $headerRoles, true) && function_exists('service_find')) {
+            $headerRoleLabel = 'Student-OT (' . service_find() . ')';
+        } elseif (!in_array('Student-OT', $headerRoles, true) && $authUser && ($authUser->user_category ?? '') === 'E') {
+            $headerRoleLabel = 'Employee (' . implode(', ', $headerRoles) . ')';
+        } else {
+            $headerRoleLabel = !empty($headerRoles) ? implode(', ', $headerRoles) : 'Staff';
+        }
+        $profileDropdownRole = !empty($headerRoles) ? $headerRoles[0] : 'Staff';
+        $showProfileMenuActions = !hasRole('Student-OT') && $authUser && !empty($authUser->user_id);
+    @endphp
+
+    <div class="dropdown d-none d-lg-block header-profile-dropdown-wrap">
+        <button type="button"
+            class="header-profile-chip btn btn-link d-inline-flex align-items-center gap-2 text-decoration-none text-dark border-0 p-0 shadow-none"
+            id="headerProfileDropdown"
+            data-bs-toggle="dropdown"
+            data-bs-auto-close="true"
+            aria-expanded="false"
+            aria-label="Open profile menu">
+            <span class="header-user-avatar flex-shrink-0">
+                <img src="{{ $profilePic ?: asset('images/dummypic.jpeg') }}"
+                    alt="{{ $displayName }}"
+                    class="rounded-circle object-fit-cover header-user-avatar-img"
+                    width="44"
+                    height="44"
+                    onerror="this.classList.add('d-none');this.nextElementSibling.classList.remove('d-none');this.nextElementSibling.classList.add('d-inline-flex');">
+                <span class="header-user-avatar-fallback rounded-circle bg-light text-dark fw-semibold d-none align-items-center justify-content-center">
+                    {{ $avatarInitial }}
+                </span>
+            </span>
+            <span class="d-flex flex-column lh-sm min-w-0 text-start header-profile-meta">
+                <span class="fw-semibold text-dark text-truncate header-profile-name">{{ $displayName }}</span>
+                <small class="text-muted text-truncate header-profile-role">{{ $headerRoleLabel }}</small>
+            </span>
+            <i class="material-icons material-symbols-rounded header-profile-chevron text-secondary flex-shrink-0" aria-hidden="true">expand_more</i>
+        </button>
+
+        <ul class="dropdown-menu dropdown-menu-end border-0 rounded-3 p-2 header-profile-dropdown"
+            aria-labelledby="headerProfileDropdown">
+            <li class="px-1">
+                <div class="rounded-2 p-3 d-flex align-items-center gap-3 header-profile-dropdown-header">
+                    <span class="header-user-avatar flex-shrink-0">
+                        <img src="{{ $profilePic ?: asset('images/dummypic.jpeg') }}"
+                            alt="{{ $displayName }}"
+                            class="rounded-circle object-fit-cover header-user-avatar-img"
+                            width="44"
+                            height="44"
+                            onerror="this.classList.add('d-none');this.nextElementSibling.classList.remove('d-none');this.nextElementSibling.classList.add('d-inline-flex');">
+                        <span class="header-user-avatar-fallback rounded-circle bg-white text-dark fw-semibold d-none align-items-center justify-content-center">
+                            {{ $avatarInitial }}
+                        </span>
+                    </span>
+                    <span class="d-flex flex-column lh-sm min-w-0">
+                        <span class="fw-bold text-dark text-truncate mb-0">{{ $displayName }}</span>
+                        <small class="text-body-secondary">{{ $profileDropdownRole }}</small>
+                    </span>
+                </div>
+            </li>
+            <li class="header-profile-menu-list pt-2 px-1">
+                @if($showProfileMenuActions)
+                <a class="dropdown-item rounded-1 d-flex align-items-center gap-3 py-2 px-2"
+                    href="{{ $profileHref }}">
+                    <i class="material-icons material-symbols-rounded header-profile-menu-icon" aria-hidden="true">edit</i>
+                    <span>Edit Profile</span>
+                </a>
+                <a class="dropdown-item rounded-1 d-flex align-items-center gap-3 py-2 px-2"
+                    href="{{ route('admin.password.change_password') }}">
+                    <i class="material-icons material-symbols-rounded header-profile-menu-icon" aria-hidden="true">lock_reset</i>
+                    <span>Change Password</span>
+                </a>
+                @endif
+                <form action="{{ route('logout') }}" method="POST" class="m-0">
+                    @csrf
+                    <button type="submit"
+                        class="dropdown-item rounded-1 d-flex align-items-center gap-3 py-2 px-2 w-100 border-0 bg-transparent header-profile-logout-item">
+                        <i class="material-icons material-symbols-rounded header-profile-menu-icon" aria-hidden="true">logout</i>
+                        <span>Log out</span>
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
+
+    <form action="{{ route('logout') }}" method="POST" class="m-0 header-logout-form d-lg-none">
         @csrf
         <button type="submit"
-            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
+            class="btn btn-light border btn-sm d-inline-flex align-items-center justify-content-center rounded-3 header-logout-icon-btn"
             aria-label="Sign out">
             <i class="material-icons material-symbols-rounded fs-6">logout</i>
-            <span class="small fw-medium">Logout</span>
         </button>
     </form>
 </div>
@@ -229,11 +337,31 @@
                             data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-communications' ? 'true' : 'false' }}" aria-controls="tab-communications"
                             id="communications-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">forum</i>
-                            <span>Communication</span>
+                            <span>Communications</span>
                         </a>
                     </li>
-                        </ul>
+
+                    @if(hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') || hasRole('IST') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                    <li class="nav-item" role="none">
+                        <a href="#tab-academics" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-academics' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-academics' ? 'true' : 'false' }}"
+                            aria-controls="academics-panel" id="academics-tab-mobile">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">school</i>
+                            <span>Academics</span>
+                        </a>
                     </li>
+                    @endif
+
+                    @if(hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess-Staff'))
+                    <li class="nav-item" role="none">
+                        <a href="#tab-material-management" class="nav-link mobile-tab-link {{ $activeNavTab === '#tab-material-management' ? 'active' : '' }}"
+                            data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-material-management' ? 'true' : 'false' }}"
+                            aria-controls="material-management-panel" id="material-management-tab-mobile">
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">inventory_2</i>
+                            <span>Material</span>
+                        </a>
+                    </li>
+                    @endif
 
                     <!-- Notifications (Offcanvas on mobile for reliable display) -->
                     <li class="nav-item" role="none">
@@ -300,71 +428,58 @@
                     padding: 4px 6px;
                 }
                 .notification-dropdown {
-                    width: 380px;
-                    max-height: 440px;
+                    width: 350px;
+                    max-height: 480px;
                     overflow: hidden;
-                    padding: 0;
                 }
                 .notification-dropdown-header {
-                    display: flex;
-                    justify-content: space-between;
-                    align-items: center;
-                    padding: 14px 18px;
-                    border-bottom: 1px solid var(--bs-border-color-translucent);
-                    background: var(--bs-body-bg);
                     position: sticky;
                     top: 0;
-                    z-index: 1;
+                    z-index: 2;
                 }
                 .notification-list {
-                    max-height: 380px;
+                    max-height: 340px;
                     overflow-y: auto;
-                    padding: 8px 0;
                 }
-                .notification-list-item {
-                    list-style: none;
-                    margin: 0;
+                .notification-list-item:last-child {
+                    margin-bottom: 0 !important;
                 }
                 .notification-item {
-                    display: block;
-                    padding: 14px 18px;
-                    margin: 4px 10px;
-                    border-radius: 10px;
-                    text-decoration: none;
                     color: inherit;
-                    border-left: 3px solid transparent;
-                    transition: background-color 0.2s ease, border-color 0.2s ease;
+                    transition: box-shadow 0.15s ease, border-color 0.15s ease;
                 }
                 .notification-item:hover {
-                    background-color: rgba(0, 0, 0, 0.04);
+                    border-color: var(--bs-primary-border-subtle) !important;
+                    box-shadow: 0 2px 8px rgba(15, 23, 42, 0.06);
                 }
                 .notification-item-unread {
-                    background-color: rgba(var(--bs-primary-rgb), 0.06);
-                    border-left-color: var(--bs-primary);
-                }
-                .notification-item-unread:hover {
-                    background-color: rgba(var(--bs-primary-rgb), 0.1);
+                    border-color: var(--bs-primary-border-subtle) !important;
+                    background-color: rgba(var(--bs-primary-rgb), 0.03);
                 }
                 .notification-item-body {
                     min-width: 0;
                 }
                 .notification-item-title {
-                    font-size: 0.875rem;
-                    font-weight: 600;
-                    color: var(--bs-primary);
+                    font-size: 0.9rem;
                     line-height: 1.3;
                 }
                 .notification-item-message {
-                    font-size: 0.8125rem;
-                    color: var(--bs-primary);
-                    margin: 6px 0 0 0;
-                    line-height: 1.4;
+                    display: -webkit-box;
+                    -webkit-line-clamp: 2;
+                    -webkit-box-orient: vertical;
+                    overflow: hidden;
+                    line-height: 1.45;
                 }
                 .notification-item-time {
-                    font-size: 0.6875rem;
-                    color: var(--bs-primary);
-                    margin-top: 6px;
-                    display: block;
+                    font-size: 0.75rem;
+                }
+                .notification-dropdown-footer {
+                    position: sticky;
+                    bottom: 0;
+                    z-index: 2;
+                }
+                .notification-view-all-link {
+                    font-weight: 500;
                 }
                 /* Blinking "New" tag for unread notifications */
                 .notification-new-tag {
@@ -379,31 +494,12 @@
                     0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.4); }
                     50% { opacity: 0.85; box-shadow: 0 0 0 4px rgba(var(--bs-danger-rgb), 0); }
                 }
-                .notification-empty-state {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    justify-content: center;
-                    padding: 48px 24px;
-                    color: var(--bs-primary);
-                    list-style: none;
-                    margin: 0;
-                }
                 .notification-empty-state .material-icons {
-                    font-size: 2.5rem;
-                    opacity: 0.35;
-                    margin-bottom: 10px;
-                }
-                .notification-empty-state span {
-                    font-size: 0.875rem;
+                    font-size: 2.25rem;
                 }
                 /* Mobile offcanvas notifications */
                 .notification-mobile-list {
-                    padding: 8px 12px 16px;
-                }
-                .notification-mobile-item {
-                    margin: 4px 0;
-                    padding: 14px 16px;
+                    padding: 0.75rem 1rem 1rem;
                 }
 
                 /* Skip link visibility */
@@ -422,48 +518,136 @@
 
 /* Header - Match reference design */
 .header-top-bar {
-    background: #122442;
-    height: 40px;
+    background: #071a3b;
+    min-height: 38px;
     border: none;
 }
-.header-flag-icon { height: 20px; }
+.header-top-inner {
+    min-height: 38px;
+    padding-top: 0.35rem;
+    padding-bottom: 0.35rem;
+}
+.header-govt-wrap {
+    min-width: 0;
+}
+.header-flag-wrap {
+    width: 24px;
+    height: 14px;
+    overflow: hidden;
+    border-radius: 3px !important;
+}
+.header-flag-icon {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+.header-govt-text {
+    font-size: 0.765rem;
+    font-weight: 500;
+    letter-spacing: 0;
+    opacity: 0.92;
+    line-height: 1.1;
+}
 .header-utility-nav .header-utility-sep {
     width: 1px;
-    height: 16px;
-    background: rgba(255,255,255,0.5);
-    margin: 0 8px;
+    height: 13px;
+    background: rgba(255,255,255,0.34);
+    margin: 0 4px;
     display: inline-block;
 }
-.header-font-btn { text-decoration: none !important; }
+.header-utility-link,
+.header-font-btn {
+    text-decoration: none !important;
+    font-size: 0.765rem;
+    font-weight: 500;
+    opacity: 0.92;
+    padding-left: 0.45rem !important;
+    padding-right: 0.45rem !important;
+    transition: color 0.2s ease, opacity 0.2s ease;
+}
+.header-utility-link:hover,
+.header-font-btn:hover {
+    color: #ffffff !important;
+    opacity: 1;
+}
 .header-lang-dropdown {
     display: flex;
     align-items: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 6px;
-    padding: 4px 10px;
+    gap: 3px;
+    padding: 0;
 }
-.header-globe-icon { font-size: 18px !important; color: #fff !important; }
+.header-globe-icon {
+    font-size: 11px !important;
+    color: #fff !important;
+    opacity: 0.9;
+}
 .header-lang-select {
     background: transparent !important;
     border: none !important;
     color: #fff !important;
-    font-size: 0.875rem;
-    padding: 2px 4px;
-    min-width: 80px;
+    font-size: 0.765rem;
+    line-height: 1.1;
+    padding: 0 2px;
+    min-width: 62px;
+    box-shadow: none !important;
+    appearance: none;
+    -webkit-appearance: none;
+    -moz-appearance: none;
 }
 .header-lang-select option { background: #122442; color: #fff; }
+.header-lang-caret {
+    color: #fff;
+    opacity: 0.78;
+    font-size: 9px;
+}
+
+@media (min-width: 992px) and (max-width: 1199.98px) {
+    .header-govt-text,
+    .header-utility-link,
+    .header-font-btn,
+    .header-lang-select {
+        font-size: 0.72rem;
+    }
+
+    .header-utility-nav .header-utility-sep {
+        margin: 0 3px;
+    }
+}
 
 /* Main nav bar - white background */
-.with-vertical .navbar { background: #fff !important }
-.header-brand { gap: 10px !important; }
-.header-logo-emblem { height: 40px; object-fit: contain; }
-.header-logo { height: 32px; object-fit: contain; }
-/* Desktop: larger, more prominent logo */
+.with-vertical .navbar,
+.header-main-navbar {
+    background: #fff !important;
+    min-height: 72px;
+    width: 100%;
+}
+.header-main-navbar {
+    align-items: center;
+    padding: 0 0.75rem;
+}
 @media (min-width: 992px) {
-    .header-brand { gap: 12px !important; }
-    .header-logo-emblem { height: 52px !important; }
-    .header-logo { height: 44px !important; }
+    .header-main-navbar {
+        flex-wrap: nowrap;
+        padding: 0 1.25rem;
+        gap: 0.75rem;
+    }
+}
+.header-brand-block { min-width: 0; }
+.header-brand { gap: 0 !important; padding-right: 0.25rem; }
+.header-brand-divider {
+    width: 1px;
+    height: 38px;
+    background: #d1d5db;
+    margin: 0 0.75rem;
+    flex-shrink: 0;
+}
+.header-logo-emblem { height: 44px; width: auto; object-fit: contain; }
+.header-logo { height: 34px; width: auto; object-fit: contain; }
+@media (min-width: 992px) {
+    .header-logo-emblem { height: 48px !important; }
+    .header-logo { height: 36px !important; margin-left: 10px !important; }
+    .header-brand-divider { height: 42px; margin: 0 0.85rem; }
 }
 .header-app-name {
     font-size: 1.25rem;
@@ -471,25 +655,79 @@
     color: #004a93;
 }
 
-/* Nav container - light grey pill */
+/* Centered scrollable nav pill */
+.header-nav-center {
+    min-width: 0;
+    max-width: 100%;
+}
+.header-nav-scroll-wrap {
+    display: flex;
+    align-items: center;
+    background: #e8eaee;
+    padding: 4px 4px 4px 6px;
+    width: min(100%, 760px);
+    max-width: 100%;
+}
+.header-nav-scroll {
+    overflow-x: auto;
+    overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    min-width: 0;
+}
+.header-nav-scroll::-webkit-scrollbar { display: none; }
 .header-main-nav {
-    background: #f0f0f0 !important;
-    border-radius: 12px;
-    height: 48px;
-    border: 1px solid rgba(0,0,0,0.05);
+    flex-direction: row;
+    flex-wrap: nowrap;
+    gap: 2px;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    min-height: auto;
+    padding: 0;
 }
 .header-nav-link {
-    color: #6c757d !important;
-    border-radius: 8px;
+    color: #4b5563 !important;
     text-decoration: none !important;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-}
-.header-nav-link:hover { color: #495057 !important; }
-.header-nav-link.active {
-    color: #004a93 !important;
-    border-bottom-color: #004a93;
+    font-size: 0.8125rem;
     font-weight: 500;
+    border: none !important;
+    padding: 7px 15px !important;
+    white-space: nowrap;
+    line-height: 1.25;
+    transition: color 0.15s ease, background-color 0.15s ease;
+}
+.header-nav-link:hover {
+    color: #1f2937 !important;
+    background-color: rgba(255, 255, 255, 0.55);
+}
+.header-nav-link.active {
+    color: #fff !important;
+    background: #0a4a8c !important;
+    box-shadow: none;
+}
+.header-nav-scroll-btn {
+    flex-shrink: 0;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    width: 30px;
+    height: 30px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    margin-left: 2px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+}
+.header-nav-scroll-btn .material-icons {
+    font-size: 20px !important;
+}
+.header-nav-scroll-btn:hover {
+    background: rgba(255, 255, 255, 0.65);
+    color: #374151;
 }
 .header-search-btn {
     background: transparent !important;
@@ -501,10 +739,116 @@
 .header-search-btn:hover { color: #004a93 !important; }
 
 /* Right side */
-.header-right-actions { margin-right: 1rem; }
+.header-right-actions { margin-right: 0.4rem; }
 .header-icon-sm { font-size: 24px !important; }
 .header-logout-icon { font-size: 22px !important; }
 .header-last-login { font-size: 0.8125rem; }
+
+.notification-btn {
+    width: 42px;
+    height: 42px;
+    border-radius: 8px !important;
+    border: 1px solid #9cb4cc !important;
+    background: #fff !important;
+    color: #0f3f78 !important;
+    box-shadow: none !important;
+}
+
+.notification-btn .material-icons {
+    font-size: 21px !important;
+}
+
+.header-profile-chip:hover {
+    opacity: 0.9;
+}
+
+.header-user-avatar {
+    width: 44px;
+    height: 44px;
+    line-height: 0;
+}
+
+.header-user-avatar-img {
+    width: 44px;
+    height: 44px;
+}
+
+.header-user-avatar-fallback {
+    width: 44px;
+    height: 44px;
+    font-size: 0.875rem;
+}
+
+.header-profile-name,
+.header-profile-role {
+    max-width: 200px;
+}
+
+.header-profile-chevron {
+    font-size: 22px !important;
+    width: 22px;
+    height: 22px;
+    margin-left: 0.15rem;
+    flex-shrink: 0;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease, transform 0.2s ease;
+}
+
+.header-profile-dropdown-wrap:hover .header-profile-chevron,
+.header-profile-chip[aria-expanded="true"] .header-profile-chevron {
+    opacity: 1;
+    visibility: visible;
+}
+
+.header-profile-chip[aria-expanded="true"] .header-profile-chevron {
+    transform: rotate(180deg);
+}
+
+.header-profile-dropdown {
+    min-width: 280px;
+    margin-top: 0.5rem !important;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.12) !important;
+}
+
+.header-profile-dropdown-header {
+    background-color: #e8f2fc;
+}
+
+.header-profile-menu-list .dropdown-item {
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: #374151;
+}
+
+.header-profile-menu-list .dropdown-item:hover,
+.header-profile-menu-list .dropdown-item:focus {
+    background-color: #f3f4f6;
+    color: #111827;
+}
+
+.header-profile-menu-icon {
+    font-size: 22px !important;
+    color: #6b7280;
+    flex-shrink: 0;
+}
+
+.header-profile-logout-item:hover,
+.header-profile-logout-item:focus {
+    background-color: #FFD5DD !important;
+    color: #F0143E !important;
+}
+
+.header-profile-logout-item:hover .header-profile-menu-icon,
+.header-profile-logout-item:focus .header-profile-menu-icon {
+    color: #F0143E !important;
+}
+
+.header-logout-icon-btn {
+    width: 36px;
+    height: 36px;
+    color: #5b6678 !important;
+}
 
 /* Divider before logout */
 .header-logout-divider {
@@ -557,6 +901,10 @@
                     margin-left: 0 !important;
                     margin-right: 0 !important;
                     padding: 0.5rem 0;
+                }
+
+                .header-profile-chip {
+                    display: none !important;
                 }
 
                 /* Hide sidebar by default on mobile - responsive width */
@@ -1419,6 +1767,15 @@ document.addEventListener('DOMContentLoaded', function() {
 
         el.textContent = `${day}-${month}-${year} ${hours}:${minutes}:${seconds}`;
     });
+
+    document.querySelectorAll('.header-nav-scroll-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            var scrollEl = btn.closest('.header-nav-scroll-wrap')?.querySelector('.header-nav-scroll');
+            if (scrollEl) {
+                scrollEl.scrollBy({ left: 140, behavior: 'smooth' });
+            }
+        });
+    });
 });
 </script>
 
@@ -1471,21 +1828,64 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Include both desktop and mobile tabs
-    const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
+    const headerTabLinks = document.querySelectorAll(
+        '#mainNavbar .nav-link[data-bs-toggle="tab"], .mobile-tabbar .nav-link[data-bs-toggle="tab"]'
+    );
     const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
 
-    function showPane(targetId) {
-        if (!targetId || targetId === '#') return; // Skip empty hrefs
+    const sidebarTabMap = {
+        '#home': '#sidebar-home',
+        '#tab-setup': '#sidebar-setup',
+        '#tab-communications': '#sidebar-communications',
+        '#tab-academics': '#sidebar-academics',
+        '#tab-material-management': '#sidebar-purchase-order'
+    };
 
-        // If the target pane has no server-rendered section on this page,
-        // keep current body content as-is; still switch header/sidebar tab state.
+    function syncSidebarPane(targetId) {
+        const sidebarTabContent = document.getElementById('sidebarTabContent');
+        if (!sidebarTabContent) return;
+
+        sidebarTabContent.querySelectorAll('.tab-pane').forEach(function (pane) {
+            pane.classList.remove('show', 'active');
+        });
+
+        const sidebarSel = sidebarTabMap[targetId];
+        const sidebarPane = sidebarSel
+            ? sidebarTabContent.querySelector(sidebarSel + '.tab-pane')
+            : null;
+
+        if (sidebarPane) {
+            sidebarPane.classList.add('show', 'active');
+        } else {
+            const homeSidebar = sidebarTabContent.querySelector('#sidebar-home.tab-pane');
+            if (homeSidebar) {
+                homeSidebar.classList.add('show', 'active');
+            }
+        }
+    }
+
+    function setHeaderTabActiveState(targetId) {
+        headerTabLinks.forEach(function (link) {
+            const href = link.getAttribute('href');
+            if (href === targetId) {
+                link.classList.add('active');
+                link.setAttribute('aria-selected', 'true');
+            } else {
+                link.classList.remove('active');
+                link.setAttribute('aria-selected', 'false');
+            }
+        });
+    }
+
+    function showPane(targetId) {
+        if (!targetId || targetId === '#') return;
+
         const targetPaneId = getMainContentPaneId(targetId);
         const targetPane = targetPaneId ? document.getElementById(targetPaneId) : null;
         const canSwitchBodyPane = !!(targetPane && targetPane.children.length > 0);
 
         if (canSwitchBodyPane) {
-            panes.forEach(p => {
+            panes.forEach(function (p) {
                 if ('#' + p.id === targetId) {
                     p.classList.add('show', 'active');
                 } else {
@@ -1493,20 +1893,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
-        
-        // Update all tabs (desktop and mobile)
-        tabLinks.forEach(l => {
-            const href = l.getAttribute('href');
-            if (href === targetId) {
-                l.classList.add('active');
-                l.setAttribute('aria-selected', 'true');
-            } else {
-                l.classList.remove('active');
-                l.setAttribute('aria-selected', 'false');
-            }
-        });
-        
-        // Save the active tab to localStorage
+
+        syncSidebarPane(targetId);
+        setHeaderTabActiveState(targetId);
         localStorage.setItem('activeMainTab', targetId);
     }
 
@@ -1580,8 +1969,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
     }
 
-    // Handle clicks on all tabs (desktop and mobile)
-    tabLinks.forEach(link => {
+    // Handle clicks on header tabs only (not sidebar/content sub-tabs)
+    headerTabLinks.forEach(function (link) {
         link.addEventListener('click', function(e) {
             const target = this.getAttribute('href');
             if (!target || target === '#') {
@@ -1668,9 +2057,12 @@ document.addEventListener('DOMContentLoaded', function() {
     const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
     const savedTab = localStorage.getItem('activeMainTab');
     const inferredTab = inferTabFromSidebarByUrl();
-    const hasRouteTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${routeTab}"]`);
-    const hasSavedTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${savedTab}"]`);
-    const hasInferredTab = !!document.querySelector(`[data-bs-toggle="tab"][href="${inferredTab}"]`);
+    const tabExists = function (tabId) {
+        return tabId && !!document.querySelector('#mainNavbar .nav-link[href="' + tabId + '"], .mobile-tabbar .nav-link[href="' + tabId + '"]');
+    };
+    const hasRouteTab = tabExists(routeTab);
+    const hasSavedTab = tabExists(savedTab);
+    const hasInferredTab = tabExists(inferredTab);
     let initial = '#home';
 
     if (hasRouteTab) {
@@ -1687,20 +2079,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     
     showPane(initial);
-    
-    // Sync mobile tabs with initial state
-    const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
-    allTabs.forEach(tab => {
-        const href = tab.getAttribute('href');
-        if (href === initial) {
-            tab.classList.add('active');
-            tab.setAttribute('aria-selected', 'true');
-        } else {
-            tab.classList.remove('active');
-            tab.setAttribute('aria-selected', 'false');
-        }
-    });
-    
+
     // Apply default submenu/content for initial tab (after sidebar init)
     setTimeout(function() { activateDefaultSubmenuForPane(initial); }, 0);
 });
