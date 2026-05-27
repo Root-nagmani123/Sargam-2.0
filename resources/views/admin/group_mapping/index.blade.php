@@ -102,14 +102,14 @@
                         Reset Filters
                     </button>
                 </div>
-                <div id="gmDtSearch" class="programme-dt-search ms-xl-auto"></div>
+                <div id="gmDtSearch" class="programme-dt-search ms-xl-auto" data-dt-search-for="group-mapping-table"></div>
             </div>
 
             <div class="programme-dt-panel gm-dt-panel">
                 <div class="table-responsive gm-dt-scroll">
                     {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
-                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
+                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="group-mapping-table"></div>
             </div>
         </div>
     </div>
@@ -484,106 +484,12 @@ $(document).ready(function() {
             .attr('aria-current', 'true');
     }
 
-    function enhanceGmDtControls() {
-        var $wrapper = $('#group-mapping-table_wrapper');
-        if (!$wrapper.length) {
-            return;
-        }
-
-        var $searchSlot = $('#gmDtSearch');
-        var $footer = $('#gmDtFooter');
-
-        if (!$searchSlot.find('.dataTables_filter').length) {
-            var $filter = $wrapper.find('.dataTables_filter').first();
-            if ($filter.length) {
-                $filter.find('input')
-                    .addClass('form-control shadow-none')
-                    .attr('placeholder', 'Search')
-                    .attr('aria-label', 'Search group mappings');
-                $filter.find('label').contents().filter(function() {
-                    return this.nodeType === 3;
-                }).remove();
-                $searchSlot.append($filter);
-            }
-        }
-
-        if ($footer.data('dtReady')) {
-            updateGmDtCount();
-            return;
-        }
-
-        var $paginate = $wrapper.find('.dataTables_paginate').first();
-        var $length = $wrapper.find('.dataTables_length').first();
-        var $info = $wrapper.find('.dataTables_info').first();
-
-        if (!$footer.length) {
-            return;
-        }
-
-        var $pagCol = $('<div class="programme-dt-pagination"></div>');
-        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
-
-        if ($paginate.length) {
-            $paginate.find('.pagination').addClass('mb-0');
-            $pagCol.append($paginate);
-        }
-
-        if ($length.length) {
-            $length.find('select').addClass('form-select ');
-            $length.find('label')
-                .empty()
-                .append(document.createTextNode('Showing '))
-                .append($length.find('select'))
-                .append(document.createTextNode(' '));
-            $countCol.append($length);
-        }
-
-        if ($info.length) {
-            $info.addClass('mb-0');
-            $countCol.append($info);
-        }
-
-        $footer.append($pagCol).append($countCol);
-        $footer.data('dtReady', true);
-    }
-
-    function updateGmDtCount() {
-        if (!$.fn.DataTable.isDataTable('#group-mapping-table')) {
-            return;
-        }
-        var table = $('#group-mapping-table').DataTable();
-        var info = table.page.info();
-        var $info = $('#gmDtFooter .dataTables_info');
-        if ($info.length && info.recordsDisplay !== undefined) {
-            $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
-        }
-    }
-
-    function bindGmTableUi(table) {
-        enhanceGmDtControls();
-        updateGmDtCount();
-
-        table.on('draw.dt', function() {
-            var $wrapper = $('#group-mapping-table_wrapper');
-            if ($wrapper.find('.dataTables_paginate').length && !$('#gmDtFooter .dataTables_paginate').length) {
-                $('#gmDtFooter').empty().data('dtReady', false);
-            }
-            enhanceGmDtControls();
-            updateGmDtCount();
-        });
-    }
-
-    $('#group-mapping-table').on('init.dt', function() {
-        bindGmTableUi($(this).DataTable());
-    });
-
     setTimeout(function() {
         if (!$.fn.DataTable.isDataTable('#group-mapping-table')) {
             return;
         }
 
         var table = $('#group-mapping-table').DataTable();
-        bindGmTableUi(table);
 
         setActiveFilterButton($('#filterGroupActive'));
 

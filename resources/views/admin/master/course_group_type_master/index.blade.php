@@ -13,7 +13,7 @@
     <div class="card cgt-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="cgtDtSearch" class="programme-dt-search ms-lg-auto"></div>
+                <div id="cgtDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="coursegrouptype"></div>
             </div>
 
             <div class="programme-dt-panel">
@@ -29,7 +29,7 @@
                         </thead>
                     </table>
                 </div>
-                <div id="cgtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
+                <div id="cgtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="coursegrouptype"></div>
             </div>
         </div>
     </div>
@@ -306,80 +306,6 @@ $(function() {
         }
     }
 
-    function enhanceCgtDtControls() {
-        const $wrapper = $('#coursegrouptype_wrapper');
-        if (!$wrapper.length) {
-            return;
-        }
-
-        const $searchSlot = $('#cgtDtSearch');
-        const $footer = $('#cgtDtFooter');
-
-        if (!$searchSlot.find('.dataTables_filter').length) {
-            const $filter = $wrapper.find('.dataTables_filter').first();
-            if ($filter.length) {
-                $filter.find('input')
-                    .addClass('form-control shadow-none')
-                    .attr('placeholder', 'Search')
-                    .attr('aria-label', 'Search course group types');
-                $filter.find('label').contents().filter(function() {
-                    return this.nodeType === 3;
-                }).remove();
-                $searchSlot.append($filter);
-            }
-        }
-
-        if ($footer.data('dtReady')) {
-            updateCgtDtCount();
-            return;
-        }
-
-        const $paginate = $wrapper.find('.dataTables_paginate').first();
-        const $length = $wrapper.find('.dataTables_length').first();
-        const $info = $wrapper.find('.dataTables_info').first();
-
-        if (!$footer.length) {
-            return;
-        }
-
-        const $pagCol = $('<div class="programme-dt-pagination"></div>');
-        const $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
-
-        if ($paginate.length) {
-            $paginate.find('.pagination').addClass('mb-0');
-            $pagCol.append($paginate);
-        }
-
-        if ($length.length) {
-            $length.find('select').addClass('form-select form-select-sm');
-            $length.find('label')
-                .empty()
-                .append(document.createTextNode('Showing '))
-                .append($length.find('select'))
-                .append(document.createTextNode(' '));
-            $countCol.append($length);
-        }
-
-        if ($info.length) {
-            $info.addClass('mb-0');
-            $countCol.append($info);
-        }
-
-        $footer.append($pagCol).append($countCol);
-        $footer.data('dtReady', true);
-    }
-
-    function updateCgtDtCount() {
-        if (!table) {
-            return;
-        }
-        const info = table.page.info();
-        const $info = $('#cgtDtFooter .dataTables_info');
-        if ($info.length && info.recordsDisplay !== undefined) {
-            $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
-        }
-    }
-
     function decorateCgtRows() {
         $(tableSelector + ' tbody tr').each(function() {
             const $row = $(this);
@@ -483,26 +409,15 @@ $(function() {
                 }
             ],
             language: {
-                search: '',
-                searchPlaceholder: 'Search',
                 processing: '<span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>Loading…',
                 emptyTable: 'No course group types found.',
                 zeroRecords: 'No matching course group types found.'
             },
-            dom: 'rt<"row d-none"<"col-sm-12"ilp>>',
             initComplete: function() {
-                enhanceCgtDtControls();
                 decorateCgtRows();
-                updateCgtDtCount();
             },
             drawCallback: function() {
-                const $wrapper = $('#coursegrouptype_wrapper');
-                if ($wrapper.find('.dataTables_paginate').length && !$('#cgtDtFooter .dataTables_paginate').length) {
-                    $('#cgtDtFooter').empty().data('dtReady', false);
-                }
-                enhanceCgtDtControls();
                 decorateCgtRows();
-                updateCgtDtCount();
             }
         });
     }

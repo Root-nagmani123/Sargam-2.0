@@ -69,6 +69,7 @@
   <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+  <script src="{{ asset('js/datatable-global-ui.js') }}?v={{ @filemtime(public_path('js/datatable-global-ui.js')) ?: time() }}"></script>
   <script src="{{asset('js/dropdown-search.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
   <script>
@@ -142,9 +143,18 @@
                 search: 'Search:',
                 searchPlaceholder: 'Type to filter...'
               },
+              dom: (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_DOM) || undefined,
+              pagingType: 'full_numbers',
+              language: $.extend(true, {}, (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_LANGUAGE) || {}, {
+                search: 'Search:',
+                searchPlaceholder: 'Type to filter...'
+              }),
               initComplete: function() {
                 try {
                   $(this.api().table().container()).addClass('dt-length-style-' + lengthStyle);
+                  if (window.SargamDataTableUI) {
+                    window.SargamDataTableUI.enhance(this.api());
+                  }
                 } catch (e) {}
               }
             };
@@ -152,7 +162,8 @@
             if (hasButtons && showExport) {
               tableOptions.dom = "<'row mb-3'<'col-md-8 d-flex align-items-center gap-2 flex-wrap'Bl><'col-md-4'f>>" +
                                  "<'row'<'col-12'tr>>" +
-                                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>";
+                                 "<'row d-none sargam-dt-hidden-controls'<'col-sm-12'ilp>>";
+              tableOptions.sargamDtUi = false;
               tableOptions.buttons = [
                 { extend: 'copyHtml5', className: 'btn btn-outline-primary btn-sm' },
                 { extend: 'csvHtml5', className: 'btn btn-outline-primary btn-sm' },
@@ -161,9 +172,7 @@
                 { extend: 'print', className: 'btn btn-outline-primary btn-sm' }
               ];
             } else {
-              tableOptions.dom = "<'row mb-3'<'col-md-6'l><'col-md-6'f>>" +
-                                 "<'row'<'col-12'tr>>" +
-                                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>";
+              tableOptions.sargamDtUi = true;
             }
 
             $table.DataTable(tableOptions);

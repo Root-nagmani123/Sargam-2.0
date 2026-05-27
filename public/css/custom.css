@@ -239,15 +239,37 @@ body.custom-loaded {
     box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12) !important;
 }
 
-#coursemaster-table_wrapper .dt-buttons,
-#coursemaster-table_wrapper .dataTables_length,
-#coursemaster-table_wrapper .dataTables_filter,
-#coursemaster-table_wrapper .dataTables_info,
-#coursemaster-table_wrapper .dataTables_paginate,
-#coursegrouptype_wrapper .dataTables_length,
-#coursegrouptype_wrapper .dataTables_filter,
-#coursegrouptype_wrapper .dataTables_info,
-#coursegrouptype_wrapper .dataTables_paginate {
+/* Global DataTables UI — hide controls in wrapper (shown in toolbar/footer slots) */
+.dataTables_wrapper.sargam-dt-ui .dataTables_length,
+.dataTables_wrapper.sargam-dt-ui .dataTables_filter,
+.dataTables_wrapper.sargam-dt-ui .dataTables_info,
+.dataTables_wrapper.sargam-dt-ui .dataTables_paginate,
+.dataTables_wrapper.sargam-dt-ui > .row.sargam-dt-hidden-controls,
+.dataTables_wrapper.sargam-dt-ui > .row:first-child.sargam-dt-hidden-controls {
+    display: none !important;
+}
+
+.programme-dt-search .dataTables_filter,
+[data-dt-search-for] .dataTables_filter {
+    display: block !important;
+}
+
+.programme-dt-footer .dataTables_paginate,
+[data-dt-footer-for] .dataTables_paginate {
+    display: flex !important;
+}
+
+.programme-dt-footer .dataTables_length,
+[data-dt-footer-for] .dataTables_length {
+    display: inline-flex !important;
+}
+
+.programme-dt-footer .dataTables_info,
+[data-dt-footer-for] .dataTables_info {
+    display: block !important;
+}
+
+#coursemaster-table_wrapper .dt-buttons {
     display: none !important;
 }
 
@@ -1347,18 +1369,6 @@ body.custom-loaded {
 }
 
 /* ── Group Mapping (Course Group Mapping list) ── */
-#group-mapping-table_wrapper .dataTables_length,
-#group-mapping-table_wrapper .dataTables_filter,
-#group-mapping-table_wrapper .dataTables_info,
-#group-mapping-table_wrapper .dataTables_paginate {
-    display: none !important;
-}
-
-#group-mapping-table_wrapper .row:first-child,
-#group-mapping-table_wrapper > .row {
-    display: none !important;
-}
-
 .gm-master-page .gm-dt-card {
     border: 1px solid #e4e7ec;
     box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
