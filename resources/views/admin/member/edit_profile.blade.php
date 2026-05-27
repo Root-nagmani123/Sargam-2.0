@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Profile')
+@section('title', 'Edit Profile - Sargam | Lal Bahadur')
 
 @section('content')
     @php
@@ -421,8 +421,16 @@
     </style>
 
     <div class="container-fluid profile-page">
-        <x-breadcrum title="Edit Profile" />
+        <x-breadcrum
+            title="Edit Profile"
+            :items="[
+                'Home',
+                ['label' => 'General', 'url' => route('admin.dashboard')],
+                'Edit Profile',
+            ]"
+        />
         <x-session_message />
+
         <div class="profile-cover mb-4">
             <div class="profile-cover-content">
                 <div class="row g-4 align-items-center">

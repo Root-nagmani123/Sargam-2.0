@@ -3,7 +3,7 @@
 @section('title', ($item ? 'Edit' : 'Add') . ' Campus - Sargam')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid px-2 px-sm-3 px-md-4">
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ route('admin.dashboard') }}">Protocol</a></li>

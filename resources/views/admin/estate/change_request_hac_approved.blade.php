@@ -15,7 +15,7 @@
     <div class="card">
         <div class="card-header">
             <div class="d-flex flex-column flex-md-row flex-wrap align-items-start align-items-md-center justify-content-between gap-3">
-                <div class="d-flex align-items-center gap-1 flex-wrap">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
                     <span class="badge bg-primary rounded-pill px-3 py-2 fs-6">
                         <i class="bi bi-check2-circle me-1"></i> HAC Approval
                     </span>
@@ -44,7 +44,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content rounded-4 shadow-lg border-0">
             <div class="modal-header bg-success bg-opacity-10 border-0 py-3 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-1" id="approveChangeRequestModalLabel">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="approveChangeRequestModalLabel">
                     <i class="bi bi-check2-circle text-success"></i> Approved Request House
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -141,7 +141,7 @@
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 shadow-lg border-0">
             <div class="modal-header bg-danger bg-opacity-10 border-0 py-3 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-1" id="disapproveChangeRequestModalLabel">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="disapproveChangeRequestModalLabel">
                     <i class="bi bi-x-circle text-danger"></i> Reason for Disapproval
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -173,7 +173,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
         <div class="modal-content rounded-4 shadow-lg border-0">
             <div class="modal-header bg-primary bg-opacity-10 border-0 py-3 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-1" id="allotNewRequestModalLabel">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="allotNewRequestModalLabel">
                     <i class="bi bi-house-add text-primary"></i> Allot House (Add to Possession Details)
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

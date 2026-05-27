@@ -13,7 +13,7 @@
                 <h4 class="mb-0">Student List</h4>
                 <div class="d-flex align-items-center gap-3 flex-wrap">
                     @if($availableCourses->isNotEmpty())
-                    <div class="d-flex align-items-center gap-1">
+                    <div class="d-flex align-items-center gap-2">
                         <label for="courseFilter" class="form-label mb-0 fw-bold">Filter by Course:</label>
                         <select id="courseFilter" class="form-select" style="width: auto; min-width: 250px;">
                             <option value="">All Courses</option>
@@ -23,7 +23,7 @@
                         </select>
                     </div>
                     @endif
-                    <div class="d-flex align-items-center gap-1">
+                    <div class="d-flex align-items-center gap-2">
                         <label for="roleFilter" class="form-label mb-0 fw-bold">Role Filter:</label>
                         <select id="roleFilter" class="form-select" style="width: auto; min-width: 250px;">
                             <option value="">All</option>
@@ -35,7 +35,7 @@
                             @endif
                         </select>
                     </div>
-                    <div class="d-flex align-items-center gap-1 d-none" id="groupNameFilterContainer">
+                    <div class="d-flex align-items-center gap-2 d-none" id="groupNameFilterContainer">
                         <label for="groupNameFilter" class="form-label mb-0 fw-bold">Cadre/Counsellor List:</label>
                         <select id="groupNameFilter" class="form-select" style="width: auto; min-width: 250px;">
                             <option value="">All</option>

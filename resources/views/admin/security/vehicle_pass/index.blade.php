@@ -24,28 +24,28 @@
                 </button>
             </li>
         </ul>
-        <div class="d-flex align-items-center gap-1 flex-wrap">
+        <div class="d-flex align-items-center gap-2 flex-wrap">
             <div class="dropdown">
-                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-1 px-4 py-2 rounded-1 shadow-sm" type="button" id="vehiclePassExportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                <button class="btn btn-outline-success dropdown-toggle d-flex align-items-center gap-2 px-4 py-2 rounded-1 shadow-sm" type="button" id="vehiclePassExportDropdown" data-bs-toggle="dropdown" aria-expanded="false">
                     <i class="material-icons material-symbols-rounded" style="font-size:20px;">download</i>
                     Export
                 </button>
                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2" aria-labelledby="vehiclePassExportDropdown">
                     <li><h6 class="dropdown-header text-muted small text-uppercase">Active Requests</h6></li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'active', 'format' => 'xlsx']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'active', 'format' => 'xlsx']) }}">
                             <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
                             Export Excel
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'active', 'format' => 'csv']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'active', 'format' => 'csv']) }}">
                             <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
                             Export CSV
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'active', 'format' => 'pdf']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'active', 'format' => 'pdf']) }}">
                             <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i>
                             Export PDF
                         </a>
@@ -53,19 +53,19 @@
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header text-muted small text-uppercase">Archived Requests</h6></li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'archive', 'format' => 'xlsx']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'archive', 'format' => 'xlsx']) }}">
                             <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
                             Export Excel
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'archive', 'format' => 'csv']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'archive', 'format' => 'csv']) }}">
                             <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
                             Export CSV
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'archive', 'format' => 'pdf']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'archive', 'format' => 'pdf']) }}">
                             <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i>
                             Export PDF
                         </a>
@@ -73,19 +73,19 @@
                     <li><hr class="dropdown-divider"></li>
                     <li><h6 class="dropdown-header text-muted small text-uppercase">All Requests</h6></li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'all', 'format' => 'xlsx']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'all', 'format' => 'xlsx']) }}">
                             <i class="material-icons material-symbols-rounded text-success" style="font-size:18px;">table_chart</i>
                             Export Excel
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'all', 'format' => 'csv']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'all', 'format' => 'csv']) }}">
                             <i class="material-icons material-symbols-rounded text-info" style="font-size:18px;">description</i>
                             Export CSV
                         </a>
                     </li>
                     <li>
-                        <a class="dropdown-item d-flex align-items-center gap-1 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'all', 'format' => 'pdf']) }}">
+                        <a class="dropdown-item d-flex align-items-center gap-2 py-2" href="{{ route('admin.security.vehicle_pass.export', ['tab' => 'all', 'format' => 'pdf']) }}">
                             <i class="material-icons material-symbols-rounded text-danger" style="font-size:18px;">picture_as_pdf</i>
                             Export PDF
                         </a>
@@ -152,7 +152,7 @@
                                             <span class="badge bg-warning text-dark">Pending</span>
                                         </td>
                                         <td class="align-middle">
-                                            <div class="d-flex align-items-center gap-1">
+                                            <div class="d-flex align-items-center gap-2">
                                                 <a href="{{ route('admin.security.vehicle_pass.show', encrypt($pass->vehicle_tw_pk)) }}" class="text-primary" title="View" data-bs-toggle="tooltip">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:22px;">visibility</i>
                                                 </a>

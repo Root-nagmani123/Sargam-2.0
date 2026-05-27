@@ -51,7 +51,7 @@
 			</button>
 
             <!-- Actions -->
-            <div class="d-flex align-items-center gap-1">
+            <div class="d-flex align-items-center gap-2">
 
                 <span class="badge bg-primary">{{ $course->events_count }} Events</span>
                 <span class="badge bg-secondary">{{ $course->groups_count }} Groups</span>
@@ -597,7 +597,7 @@
             <strong>${course.course_name}</strong>
         </button>
 
-        <div class="d-flex align-items-center gap-1">
+        <div class="d-flex align-items-center gap-2">
 
             <span class="badge bg-primary">0 Events</span>
             <span class="badge bg-secondary">0 Groups</span>

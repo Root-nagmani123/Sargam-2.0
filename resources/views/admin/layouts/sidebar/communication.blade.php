@@ -7,6 +7,17 @@
         <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
             <div class="flex-fill d-flex flex-column" style="min-height: 0;">
                 <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
+                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
+                        <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)"
+                            data-bs-toggle="tooltip" data-bs-custom-class="custom-tooltip" data-bs-placement="right"
+                            aria-label="Toggle menu">
+
+                            <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
+                                menu
+                            </i>
+
+                        </a>
+                    </div>
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init"
                         style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
@@ -19,7 +30,7 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-                                            <li class="mini-nav-item {{ request()->routeIs('admin.birthday-wish.*', 'admin.word-of-day.*') ? 'selected' : '' }}"
+                                            <li class="mini-nav-item {{ request()->routeIs('admin.birthday-wish.*') ? 'selected' : '' }}"
                                                 id="mini-12">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -64,7 +75,7 @@
 
 <style>
 /* Google-style sidebar — communications tab pane (#sidebar-communications), same language as home */
-body[data-sidebartype="mini-sidebar"] #sidebar-communications .sidebar-google-style.side-mini-panel {
+#sidebar-communications .sidebar-google-style.side-mini-panel {
     width: 90px;
 }
 #sidebar-communications .sidebar-google-style .mini-nav {
@@ -199,20 +210,17 @@ document.addEventListener('DOMContentLoaded', function() {
     const sidebarMenus = sidebarComm.querySelectorAll('.sidebarmenu nav');
 
     function markActiveLinks() {
-        if (typeof window.sargamMarkSidebarActiveLinks === 'function') {
-            window.sargamMarkSidebarActiveLinks(sidebarMenus);
-        } else {
-            const currentUrl = window.location.href;
-            sidebarMenus.forEach(function(nav) {
-                nav.querySelectorAll('.sidebar-link[href]').forEach(function(link) {
-                    const href = link.getAttribute('href');
-                    if (!href || href === '#' || href === 'javascript:void(0)') return;
-                    if (link.href === currentUrl) {
-                        link.classList.add('active');
-                    }
-                });
+        const currentUrl = window.location.href;
+        sidebarMenus.forEach(function(nav) {
+            const links = nav.querySelectorAll('.sidebar-link[href]');
+            links.forEach(function(link) {
+                const href = link.getAttribute('href');
+                if (!href || href === '#' || href === 'javascript:void(0)') return;
+                if (link.href === currentUrl) {
+                    link.classList.add('active');
+                }
             });
-        }
+        });
     }
 
     function keepSidebarVisible(menuId, duration = 3000) {
@@ -234,11 +242,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showSidebarMenu(miniId) {
-        const miniNav = sidebarComm.querySelector('.mini-nav');
+        miniNavItems.forEach(function(navItem) {
+            navItem.classList.remove('selected');
+        });
         const selectedItem = document.getElementById(miniId);
-        if (miniNav && selectedItem && typeof window.sargamActivateMiniNavItem === 'function') {
-            window.sargamActivateMiniNavItem(miniNav, selectedItem, true);
+        if (selectedItem) {
+            selectedItem.classList.add('selected');
         }
+        sidebarMenus.forEach(function(nav) {
+            nav.classList.remove('d-block');
+            nav.style.display = 'none';
+        });
+        const targetMenuId = 'menu-right-' + miniId;
+        const targetMenu = document.getElementById(targetMenuId);
+        if (targetMenu) {
+            targetMenu.classList.add('d-block');
+            targetMenu.style.display = 'block';
+            document.body.setAttribute('data-sidebartype', 'full');
+            keepSidebarVisible(targetMenuId, 3000);
+        }
+        localStorage.setItem('selectedCommunicationMiniNav', miniId);
     }
 
     sidebarMenus.forEach(function(nav) {

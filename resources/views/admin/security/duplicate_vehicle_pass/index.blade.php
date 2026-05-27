@@ -39,8 +39,8 @@
                 </div>
             </div>
             <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mb-3 no-print">
-                <div class="d-flex align-items-center gap-1 flex-wrap">
-                    <form method="GET" class="d-flex align-items-center gap-1">
+                <div class="d-flex align-items-center gap-2 flex-wrap">
+                    <form method="GET" class="d-flex align-items-center gap-2">
                         <label class="text-muted small">Show</label>
                         <select name="per_page" class="form-select form-select-sm" style="width:90px" onchange="this.form.submit()">
                             @foreach([10, 25, 50, 100] as $n)

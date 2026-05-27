@@ -270,7 +270,7 @@
 
             <!-- Modal Header - Blue Gradient -->
             <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-1 mb-0" id="createModalLabel">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="createModalLabel">
                     <span class="header-icon-circle">
                         <span class="material-icons material-symbols-rounded">add_circle</span>
                     </span>
@@ -365,7 +365,7 @@
 
             <!-- Modal Header - Blue Gradient -->
             <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-1 mb-0" id="editModalLabel">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="editModalLabel">
                     <span class="header-icon-circle">
                         <span class="material-icons material-symbols-rounded">edit</span>
                     </span>
@@ -470,7 +470,7 @@
 
             <!-- Header: blue gradient -->
             <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
-                <h5 class="modal-title fw-bold d-flex align-items-center gap-1 mb-0" id="uploadModalLabel">
+                <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="uploadModalLabel">
                     <span class="header-icon-circle">
                         <span class="material-icons material-symbols-rounded">cloud_upload</span>
                     </span>

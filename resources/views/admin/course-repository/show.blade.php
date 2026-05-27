@@ -202,7 +202,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         <!-- Upload Documents (Secondary Action) -->
                         <button type="button"
-                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-4 py-2 rounded-pill fw-medium shadow-sm btn-hover-lift"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow-sm btn-hover-lift"
                             data-bs-toggle="modal" data-bs-target="#uploadModal">
                             <span class="material-icons material-symbols-rounded fs-6">
                                 upload
@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         <!-- Add Category (Primary Action) -->
                         <button type="button"
-                            class="btn btn-primary btn-sm d-flex align-items-center gap-1 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift" data-bs-toggle="modal" data-bs-target="#createModal">
+                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift" data-bs-toggle="modal" data-bs-target="#createModal">
                             <span class="material-icons material-symbols-rounded fs-6">
                                 add
                             </span>

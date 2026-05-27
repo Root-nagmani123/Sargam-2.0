@@ -8,7 +8,7 @@
     $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
-<div class="container-fluid">
+<div class="container-fluid py-4">
     <x-breadcrum :title="($isEdit ?? false) ? 'Edit Possession Details' : 'Add Possession Details'"></x-breadcrum>
     <x-estate-workflow-stepper current="possession-details" />
     <x-session_message />

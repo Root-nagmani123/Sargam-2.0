@@ -9,7 +9,7 @@
   }
 </style>
 <main style="flex: 1;">
-    <div class="container-fluid">
+    <div class="container-fluid mt-5">
         <!-- Page Title -->
         <div class="text-center mb-4">
             <h2 style="color: #004a93; font-size: 42px; font-weight: 700;">105<sup>th</sup> Foundation Course</h2>
@@ -255,7 +255,7 @@
 </style>
 
 <main style="flex: 1;">
-    <div class="container-fluid">
+    <div class="container-fluid mt-5">
         <!-- Page Title -->
         <div class="text-center mb-4">
             <h2 style="color: #004a93; font-size: 42px; font-weight: 700;">105<sup>th</sup> Foundation Course</h2>

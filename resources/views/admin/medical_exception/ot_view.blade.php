@@ -209,7 +209,7 @@
                 @if(isset($studentData['has_exemptions']) && $studentData['has_exemptions'] && count($studentData['exemptions']) > 0)
                     @foreach($studentData['exemptions'] as $exemption)
                         <div class="exemption-item">
-                            <h6 class="fw-semibold text-primary mb-3 d-flex align-items-center gap-1">
+                            <h6 class="fw-semibold text-primary mb-3 d-flex align-items-center gap-2">
                                 <i class="material-icons material-symbols-rounded fs-6">school</i>
                                 {{ $exemption['course_name'] }}
                             </h6>

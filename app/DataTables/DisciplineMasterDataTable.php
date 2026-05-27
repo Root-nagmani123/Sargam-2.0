@@ -18,37 +18,38 @@ class DisciplineMasterDataTable extends DataTable
             ->editColumn('mark_deduction', fn($row) => $row->mark_deduction ?? '0')
 
             ->addColumn('status', function ($row) {
-                return $row->active_inactive == 1
-                    ? '<span class="dis-badge-active">Active</span>'
-                    : '<span class="dis-badge-inactive">Inactive</span>';
+                 return '<div class="form-check form-switch d-inline-block">
+                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                data-table="discipline_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . ($row->active_inactive == 1 ? 'checked' : '') . '>
+                        </div>';
             })
 
             ->addColumn('actions', function ($row) {
-                $deleteUrl = route('master.discipline.delete', encrypt($row->pk));
-                $isActive  = ($row->active_inactive == 1);
+                $edit = route('master.discipline.edit', encrypt($row->pk));
+                $delete = route('master.discipline.delete', encrypt($row->pk));
+if($row->active_inactive == 1){
+    return '
+                <a href="'.$edit.'" title="Edit">
+                    <i class="material-icons">edit</i>
+                </a>
+              
+                    <button style="border:none;background:none " disabled title="Delete">
+                        <i class="material-icons text-danger">delete</i>
+                    </button>';
+}else{
+return '
+                <a href="'.$edit.'" title="Edit">
+                    <i class="material-icons">edit</i>
+                </a>
 
-                $editBtn = '<a href="javascript:void(0);" class="dis-action-btn text-primary dis-edit-btn"'
-                    . ' data-pk="' . encrypt($row->pk) . '"'
-                    . ' data-course="' . $row->course_master_pk . '"'
-                    . ' data-name="' . htmlspecialchars($row->discipline_name, ENT_QUOTES) . '"'
-                    . ' data-deduction="' . $row->mark_deduction . '"'
-                    . ' data-status="' . $row->active_inactive . '"'
-                    . ' title="Edit"><span class="material-symbols-rounded">edit</span></a>';
-
-                $toggleBtn = '<div class="form-check form-switch d-inline-block mb-0" style="min-height:0;">'
-                    . '<input class="form-check-input status-toggle" type="checkbox" role="switch"'
-                    . ' data-table="discipline_master" data-column="active_inactive"'
-                    . ' data-id="' . $row->pk . '" ' . ($isActive ? 'checked' : '') . '>'
-                    . '</div>';
-
-                $deleteBtn = $isActive
-                    ? '<button type="button" class="dis-action-btn text-muted" disabled style="opacity:0.35;cursor:not-allowed;" title="Cannot delete active record"><span class="material-symbols-rounded">delete</span></button>'
-                    : '<button type="button" class="dis-action-btn text-danger dis-delete-btn"'
-                        . ' data-url="' . $deleteUrl . '"'
-                        . ' title="Delete"><span class="material-symbols-rounded">delete</span></button>';
-
-                return '<div class="d-inline-flex align-items-center gap-1">'
-                    . $editBtn . $toggleBtn . $deleteBtn . '</div>';
+                <form action="'.$delete.'" method="POST" style="display:inline">
+                    '.csrf_field().method_field('DELETE').'
+                    <button onclick="return confirm(\'Delete?\')" style="border:none;background:none">
+                        <i class="material-icons text-danger">delete</i>
+                    </button>
+                </form>';
+}
+                
             })
 
             ->rawColumns(['status','actions']);
@@ -87,18 +88,6 @@ class DisciplineMasterDataTable extends DataTable
             ->setTableId('discipline-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
-            ->parameters([
-                'responsive'  => false,
-                'autoWidth'   => false,
-                'pagingType'  => 'full_numbers',
-                'ordering'    => false,
-                'searching'   => true,
-                'dom'         => 'rtp',
-                'info'        => false,
-                'pageLength'  => 10,
-                'language'    => [
-                    'paginate' => ['first' => '«', 'last' => '»', 'next' => '›', 'previous' => '‹']
-                ],
-            ]);
+            ->pageLength(10);
     }
 }

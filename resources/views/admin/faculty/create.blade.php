@@ -806,17 +806,17 @@ input.is-invalid {
                         <hr>
 		<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
 
-			<!--<button onclick="printFacultyForm()" class="btn btn-success d-flex align-items-center gap-1" type="button">
+			<!--<button onclick="printFacultyForm()" class="btn btn-success d-flex align-items-center gap-2" type="button">
 				<i class="material-icons menu-icon">print</i>
 				Print
 			</button>-->
 
-			<!--<button class="btn btn-primary d-flex align-items-center gap-1" type="button" id="saveFacultyForm">
+			<!--<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
 				<i class="material-icons menu-icon">save</i>
 				Save
 			</button>-->
 
-			<button class="btn btn-primary d-flex align-items-center gap-1" type="button" id="saveFacultyForm">
+			<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
 			<i class="material-icons menu-icon">save</i>
 			Save
 		</button>
@@ -824,7 +824,7 @@ input.is-invalid {
 
 
 
-			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-1">
+			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-2">
 				<i class="material-icons menu-icon">arrow_back</i>
 				Back
 			</a>
