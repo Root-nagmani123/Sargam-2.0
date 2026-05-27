@@ -1668,3 +1668,501 @@ body.custom-loaded {
         width: 100%;
     }
 }
+
+/* ── Student Medical Exemption list ── */
+.sme-master-page .sme-dt-card {
+    border: 1px solid #e4e7ec;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);
+}
+
+.sme-master-page .sme-dt-scroll {
+    max-height: 70vh;
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sme-master-page .sme-dt-scroll #medicalExemptionTable thead th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+}
+
+.sme-master-page .programme-dt-toolbar .programme-dt-btn-reset.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.sme-master-page .programme-dt-toolbar .programme-dt-btn-reset.btn:focus-visible {
+    box-shadow: 0 0 0 3px rgba(145, 32, 24, 0.2);
+}
+
+.sme-master-page .programme-dt-filter-select.sme-time-period-filter {
+    width: 220px;
+}
+
+.sme-master-page .sme-time-period-input,
+.sme-master-page .sme-time-period-filter .flatpickr-input.form-control {
+    min-height: 40px;
+    padding: 0.5rem 2.25rem 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #344054;
+    box-shadow: none;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+.sme-master-page .sme-time-period-input:focus,
+.sme-master-page .sme-time-period-filter .flatpickr-input.form-control:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.sme-master-page .sme-time-period-icon {
+    position: absolute;
+    right: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme {
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(16, 24, 40, 0.14);
+    font-family: var(--bs-body-font-family);
+    padding: 0.5rem;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme::before,
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme::after {
+    border-bottom-color: #fff;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-months {
+    padding: 0.25rem 0.5rem 0;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-months .flatpickr-month {
+    color: #101828;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-current-month {
+    font-size: 0.9375rem;
+    font-weight: 600;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-weekdays {
+    margin-top: 0.25rem;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme span.flatpickr-weekday {
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.75rem;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day {
+    border-radius: 8px;
+    color: #344054;
+    font-size: 0.875rem;
+    line-height: 38px;
+    max-width: 38px;
+    height: 38px;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.prevMonthDay,
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.nextMonthDay {
+    color: #d0d5dd;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day:hover {
+    background: #f0f6fc;
+    border-color: #f0f6fc;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.today {
+    border-color: #004a93;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.selected,
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.startRange,
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.endRange {
+    background: #004a93;
+    border-color: #004a93;
+    color: #fff;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.inRange {
+    background: rgba(0, 74, 147, 0.1);
+    border-color: transparent;
+    box-shadow: -5px 0 0 rgba(0, 74, 147, 0.1), 5px 0 0 rgba(0, 74, 147, 0.1);
+    color: #101828;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.startRange.startRange,
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-day.endRange.endRange {
+    border-radius: 8px;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-prev-month,
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-next-month {
+    color: #667085;
+    fill: #667085;
+}
+
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-prev-month:hover,
+.sme-master-page .flatpickr-calendar.sme-flatpickr-theme .flatpickr-next-month:hover {
+    color: #004a93;
+    fill: #004a93;
+}
+
+.sme-master-page #medicalExemptionTable_wrapper .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(16, 24, 40, 0.08);
+}
+
+.sme-master-page .sme-custom-search label::before {
+    content: "\F52A";
+    font-family: "bootstrap-icons";
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.sme-master-page .sme-custom-search input {
+    width: 100%;
+    height: 40px;
+    padding: 0.5rem 0.875rem 0.5rem 2.375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: #344054;
+}
+
+.sme-master-page .sme-custom-search input::placeholder {
+    color: #98a2b3;
+}
+
+.sme-master-page .sme-custom-search input:focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+#medicalExemptionTable tbody td.sme-col-course {
+    font-weight: 500;
+    color: #101828;
+    line-height: 1.45;
+    max-width: 280px;
+    white-space: normal;
+}
+
+#medicalExemptionTable tbody td.sme-col-sno,
+#medicalExemptionTable thead th.sme-col-sno {
+    color: #667085;
+    font-weight: 500;
+    width: 4.5rem;
+}
+
+#medicalExemptionTable.table > :not(caption) > * > * {
+    border-left-width: 0;
+    border-right-width: 0;
+}
+
+#medicalExemptionTable tbody td.sme-col-duration {
+    color: #101828;
+    white-space: nowrap;
+}
+
+#medicalExemptionTable tbody td.sme-col-document,
+#medicalExemptionTable thead th.sme-col-document {
+    color: #344054;
+}
+
+#medicalExemptionTable .sme-doc-na {
+    color: #667085;
+    font-size: 0.875rem;
+}
+
+#medicalExemptionTable .sme-doc-link {
+    color: #004a93;
+    font-size: 0.875rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+
+#medicalExemptionTable .sme-doc-link:hover {
+    color: #003366;
+    text-decoration: underline;
+}
+
+#medicalExemptionTable tbody td.sme-col-status,
+#medicalExemptionTable thead th.sme-col-status,
+#medicalExemptionTable tbody td.sme-col-action,
+#medicalExemptionTable thead th.sme-col-action {
+    text-align: center !important;
+    white-space: nowrap;
+}
+
+#medicalExemptionTable tbody td.sme-col-action,
+#medicalExemptionTable thead th.sme-col-action {
+    background: #fafbfc;
+    border-left: 1px solid #eef2f6 !important;
+}
+
+#medicalExemptionTable thead th.sme-col-action {
+    background: #f2f4f7 !important;
+}
+
+#medicalExemptionTable .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    padding: 0.35rem 0.75rem;
+    min-width: 4.75rem;
+}
+
+#medicalExemptionTable .sme-action-group {
+    gap: 0.75rem;
+}
+
+#medicalExemptionTable .programme-action-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    margin: 0;
+}
+
+#medicalExemptionTable .sme-status-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+#medicalExemptionTable .sme-toggle-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+#medicalExemptionTable .sme-toggle-icon--on {
+    display: none;
+    color: #d4a012;
+}
+
+#medicalExemptionTable .sme-toggle-icon--off {
+    display: inline-flex;
+    color: #98a2b3;
+}
+
+#medicalExemptionTable .sme-status-toggle-input:checked ~ .sme-toggle-icon--on {
+    display: inline-flex;
+}
+
+#medicalExemptionTable .sme-status-toggle-input:checked ~ .sme-toggle-icon--off {
+    display: none;
+}
+
+#medicalExemptionTable .programme-action-toggle-icon:hover .sme-toggle-icon--on {
+    color: #b8860b;
+}
+
+#medicalExemptionTable .programme-action-toggle-icon:hover .sme-toggle-icon--off {
+    color: #667085;
+}
+
+#medicalExemptionTable .sme-action-btn.programme-action-btn--danger[disabled] {
+    opacity: 0.38;
+    cursor: not-allowed;
+}
+
+/* ── Student Medical Exemption — add wizard modal ── */
+.sme-wizard-modal .modal-dialog {
+    max-width: 32rem;
+}
+
+.sme-wizard-modal .sme-wizard-progress {
+    height: 6px;
+    background-color: #eaecf0;
+}
+
+.sme-wizard-modal .sme-wizard-progress .progress-bar {
+    background-color: #004a93;
+    transition: width 0.25s ease;
+}
+
+.sme-wizard-modal .sme-wizard-pct {
+    min-width: 2.5rem;
+    text-align: right;
+}
+
+.sme-wizard-modal .sme-datetime-wrap .form-control {
+    padding-right: 2.5rem;
+}
+
+.sme-wizard-modal .sme-field-icon {
+    position: absolute;
+    right: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    pointer-events: none;
+    font-size: 1rem;
+}
+
+.sme-wizard-modal .sme-file-upload {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid #d0d5dd;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    background: #fff;
+}
+
+.sme-wizard-modal .sme-file-choose {
+    border: 0;
+    border-right: 1px solid #d0d5dd;
+    border-radius: 0;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #344054;
+    white-space: nowrap;
+    padding: 0.625rem 1rem;
+}
+
+.sme-wizard-modal .sme-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    border: 0;
+}
+
+.sme-wizard-modal .sme-file-name {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sme-add-modal .sme-student-field select.js-sme-student-select {
+    width: 100%;
+}
+
+.sme-add-modal .sme-student-field select.js-sme-student-select:not([hidden]) {
+    display: block;
+    min-height: calc(1.5em + 1.25rem + 2px);
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: #101828;
+    border: 1px solid #d0d5dd;
+    border-radius: 0.5rem;
+    background-color: #fff;
+}
+
+.sme-add-modal .sme-student-choices {
+    margin-bottom: 0;
+}
+
+.sme-add-modal .sme-student-choices .choices__inner {
+    min-height: calc(1.5em + 1.25rem + 2px);
+    padding: 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 0.5rem;
+    background-color: #fff;
+    line-height: 1.5;
+}
+
+.sme-add-modal .sme-student-choices.is-focused .choices__inner,
+.sme-add-modal .sme-student-choices.is-open .choices__inner {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.sme-add-modal .sme-student-choices .choices__inner.is-invalid {
+    border-color: #dc3545;
+}
+
+.sme-add-modal .sme-student-choices .choices__list--dropdown {
+    border: 1px solid #d0d5dd;
+    border-radius: 0.5rem;
+    z-index: 1065;
+}
+
+.sme-add-modal .sme-student-choices .choices__placeholder {
+    color: #98a2b3;
+    opacity: 1;
+}
+
+/* Hide stray select2 inside modal student field (global init safety) */
+.sme-add-modal #smeStudentFieldWrap .select2-container {
+    display: none !important;
+}
+
+@media print {
+    .sme-master-page #medicalExemptionTable,
+    .sme-master-page #medicalExemptionTable * {
+        visibility: visible;
+    }
+
+    .sme-master-page #medicalExemptionTable {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+    }
+
+    .sme-master-page #medicalExemptionTable thead {
+        background-color: #af2910 !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    .sme-master-page #medicalExemptionTable th,
+    .sme-master-page #medicalExemptionTable td {
+        border: 1px solid #000 !important;
+        padding: 8px !important;
+    }
+
+    .sme-master-page #medicalExemptionTable th:nth-child(10),
+    .sme-master-page #medicalExemptionTable td:nth-child(10),
+    .sme-master-page #medicalExemptionTable th:nth-child(11),
+    .sme-master-page #medicalExemptionTable td:nth-child(11) {
+        display: none;
+    }
+}
