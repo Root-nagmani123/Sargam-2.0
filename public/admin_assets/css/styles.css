@@ -40073,7 +40073,7 @@ html[data-layout="horizontal"]>.container-xxl {
 }
 
 .table th {
-  background: #F3F3F3 !important;
+background-color: #F3F3F3 !important;
     color: #787878 !important;
 }
 

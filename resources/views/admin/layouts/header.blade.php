@@ -171,10 +171,6 @@
             aria-expanded="false"
             aria-label="Notifications">
 
-            <i class="material-icons material-symbols-rounded fs-5">
-                notifications
-            </i>
-
             @php
                 $unreadCount = (Auth::user() && Auth::user()->user_id)
                     ? notification()->getUnreadCount(
@@ -183,6 +179,9 @@
                     )
                     : 0;
             @endphp
+
+            <i class="material-icons material-symbols-rounded fs-5 header-notification-bell {{ $unreadCount > 0 ? 'header-notification-bell--ring' : '' }}"
+                aria-hidden="true">notifications</i>
 
             @if($unreadCount > 0)
                 <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge">
@@ -405,12 +404,16 @@
                             class="nav-link mobile-tab-link border-0 bg-transparent p-0 position-relative"
                             id="notificationBtnMobile" data-bs-toggle="offcanvas" data-bs-target="#notificationOffcanvasMobile"
                             aria-controls="notificationOffcanvasMobile" aria-label="Notifications" title="Notifications">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">notifications_active</i>
                             @php
                             $unreadCountMobile = (Auth::user() && Auth::user()->user_id)
-                                ? notification()->getUnreadCount(Auth::user()->user_id)
+                                ? notification()->getUnreadCount(
+                                    Auth::user()->user_id,
+                                    hasRole('Admin') ? 10 : null
+                                )
                                 : 0;
                             @endphp
+                            <i class="material-icons material-symbols-rounded header-notification-bell {{ $unreadCountMobile > 0 ? 'header-notification-bell--ring' : '' }}"
+                                aria-hidden="true">notifications_active</i>
                             @if($unreadCountMobile > 0)
                             <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge-mobile" style="font-size: 9px;">
                                 {{ $unreadCountMobile > 99 ? '99+' : $unreadCountMobile }}
@@ -792,6 +795,34 @@
 
 .notification-btn .material-icons {
     font-size: 21px !important;
+}
+
+.header-notification-bell {
+    display: inline-block;
+    transform-origin: top center;
+}
+
+.header-notification-bell--ring {
+    animation: header-notification-bell-ring 1.25s ease-in-out infinite;
+}
+
+@keyframes header-notification-bell-ring {
+    0%, 100% { transform: rotate(0); }
+    8% { transform: rotate(16deg); }
+    16% { transform: rotate(-14deg); }
+    24% { transform: rotate(12deg); }
+    32% { transform: rotate(-10deg); }
+    40% { transform: rotate(8deg); }
+    48% { transform: rotate(-6deg); }
+    56% { transform: rotate(4deg); }
+    64% { transform: rotate(-2deg); }
+    72% { transform: rotate(0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .header-notification-bell--ring {
+        animation: none;
+    }
 }
 
 .header-profile-chip:hover {
@@ -1694,10 +1725,17 @@
                 markAsRead(id);
             });
 
+            function updateHeaderNotificationBellRing(unreadCount) {
+                document.querySelectorAll('.header-notification-bell').forEach(function (el) {
+                    el.classList.toggle('header-notification-bell--ring', unreadCount > 0);
+                });
+            }
+
             function updateNotificationBadges(unreadCount) {
                 document.querySelectorAll('.notification-badge, .notification-badge-mobile').forEach(function (el) {
                     el.remove();
                 });
+                updateHeaderNotificationBellRing(unreadCount || 0);
                 if (!unreadCount || unreadCount <= 0) {
                     return;
                 }
