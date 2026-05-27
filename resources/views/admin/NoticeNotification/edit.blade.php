@@ -2,118 +2,103 @@
 
 @section('title', 'Edit Notice notification')
 
-@push('styles')
-@include('admin.NoticeNotification.partials.module-styles')
-@endpush
+@section('setup_content')
 
-@section('content')
-
-@php
-    $todayMin = now()->format('Y-m-d');
-    $displayDateVal = old('display_date', \Carbon\Carbon::parse($notice->display_date)->format('Y-m-d'));
-    $expiryDateVal = old('expiry_date', \Carbon\Carbon::parse($notice->expiry_date)->format('Y-m-d'));
-@endphp
-
-<div class="container-fluid notice-module-page">
+<div class="container-fluid">
     <x-breadcrum title="Notice notification List" />
     <x-session_message />
 
-    <div class="card notice-card border-0 shadow-sm overflow-hidden border-start border-4 border-primary">
+    <div class="card" style="border-left: 4px solid #004a93;">
         @if ($errors->any())
-        <div class="card-body pb-0">
-            <div class="alert alert-danger alert-dismissible fade show rounded-3 mb-0" role="alert">
-                <i class="bi bi-exclamation-triangle-fill me-2" aria-hidden="true"></i>
-                <strong>Please correct the following:</strong>
-                <ul class="mb-0 mt-2 ps-3">
+            <div class="alert alert-danger">
+                <ul>
                     @foreach ($errors->all() as $error)
-                    <li>{{ $error }}</li>
+                        <li>{{ $error }}</li>
                     @endforeach
                 </ul>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
-        </div>
         @endif
 
-        <div class="card-body p-4 p-lg-5">
-            <div class="notice-form-header mb-4">
-                <h4 class="card-title mb-0 fw-bold">
-                    Edit <span class="notice-title-highlight">Notice notification</span>
-                </h4>
-            </div>
-
+        <div class="card-body">
+        <h4 class="card-title mb-0">Edit Notice notification</h4>
+        <hr>
             <form method="POST" action="{{ route('admin.notice.update', $encId) }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
-                <div class="row g-4">
-                    @include('admin.NoticeNotification.partials.notice-type-fields', ['notice' => $notice])
+                <div class="mb-3">
+                    <label class="form-label">Notice Title <span class="text-danger">*</span></label>
+                    <input type="text" name="notice_title" class="form-control"
+                           value="{{ $notice->notice_title }}">
+                </div>
 
-                    <div class="col-12">
-                        <label class="form-label notice-form-label" for="editor">Description <span class="text-danger">*</span></label>
-                        <textarea id="editor" name="description" class="form-control" placeholder="Write here...">{!! $notice->description !!}</textarea>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Description <span class="text-danger">*</span></label>
+                    <textarea id="editor" name="description" class="form-control">{!! $notice->description !!}</textarea>
+                </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label notice-form-label" for="noticeDisplayDate">Display Date <span class="text-danger">*</span></label>
-                        <input type="date" name="display_date" id="noticeDisplayDate" class="form-control"
-                            value="{{ $displayDateVal }}" min="{{ $todayMin }}" required>
-                        <div class="form-text"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Must be today or a future date.</div>
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label notice-form-label" for="noticeExpiryDate">Expiry Date <span class="text-danger">*</span></label>
-                        <input type="date" name="expiry_date" id="noticeExpiryDate" class="form-control"
-                            value="{{ $expiryDateVal }}" min="{{ $todayMin }}" required>
-                        <div class="form-text"><i class="bi bi-info-circle me-1" aria-hidden="true"></i>Must be on or after the display date.</div>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label">Notice Type <span class="text-danger">*</span></label>
+                    <select name="notice_type" class="form-control">
+                        <option value="">Select Notice Type</option>
+                        @foreach($types as $t)
+                            <option value="{{ $t }}" @if($notice->notice_type == $t) selected @endif>{{ $t }}</option>
+                        @endforeach
+                    </select>
+                </div>
 
-                    <div class="col-md-6">
-                        <label class="form-label notice-form-label" for="noticeDocument">Document <span class="text-muted fw-normal">(optional)</span></label>
-                        <input type="file" name="document" class="form-control" id="noticeDocument"
-                            accept=".pdf,.png,.jpg,.jpeg,image/jpeg,image/png,application/pdf">
-                        <div class="form-text">Types: <strong>PDF, JPG, PNG</strong>. Max <strong>5&nbsp;MB</strong>. Leave empty to keep the current file.</div>
-                        @if($notice->document)
-                        <a href="{{ asset('storage/'.$notice->document) }}" target="_blank" rel="noopener" class="notice-doc-link d-inline-flex align-items-center gap-1 mt-2 text-primary">
-                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>View current document
-                        </a>
-                        @endif
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label notice-form-label" for="targetAudience">Target Audience <span class="text-danger">*</span></label>
-                        <select name="target_audience" id="targetAudience" class="form-select" required>
-                            <option value="">Select the target audience</option>
-                            @foreach($target as $t)
+                <div class="mb-3">
+                    <label class="form-label">Display Date <span class="text-danger">*</span></label>
+                    <input type="date" name="display_date" class="form-control"
+                           value="{{ $notice->display_date }}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
+                    <input type="date" name="expiry_date" class="form-control"
+                           value="{{ $notice->expiry_date }}">
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Document (Optional)</label>
+                    <input type="file" name="document" class="form-control">
+                    @if($notice->document)
+                        <a href="{{ asset('storage/'.$notice->document) }}" target="_blank">View Document</a>
+                    @endif
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Target Audience <span class="text-danger">*</span></label>
+                    <select name="target_audience" id="targetAudience" class="form-control">
+                        <option value="">Select Target Audience</option>
+                        @foreach($target as $t)
                             <option value="{{ $t }}" @if($notice->target_audience == $t) selected @endif>
                                 {{ $t }}
                             </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-md-6">
-                        <div class="mb-0 {{ $notice->target_audience == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
-                            <label class="form-label notice-form-label" for="courseSelect">Select Course</label>
-                            <select name="course_master_pk" id="courseSelect" class="form-select">
-                                <option value="">Select Course</option>
-                            </select>
-                        </div>
-                    </div>
+                        @endforeach
+                    </select>
                 </div>
 
-                <div class="d-flex flex-wrap justify-content-end gap-2 mt-4 pt-4 border-top">
-                    <a href="{{ route('admin.notice.index') }}" class="btn btn-notice-cancel btn-outline-primary rounded-3 px-4">
-                        <i class="bi bi-x-lg me-1" aria-hidden="true"></i>Cancel
-                    </a>
-                    <button type="submit" class="btn btn-notice-save text-white rounded-3 px-4">
-                        <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Update
-                    </button>
+                {{-- COURSE BOX --}}
+                <div class="mb-3 {{ $notice->target_audience == 'Office trainee' ? '' : 'd-none' }}" id="courseBox">
+                    <label class="form-label">Select Course</label>
+                    <select name="course_master_pk" id="courseSelect" class="form-control">
+                        <option value="">Select Course</option>
+                    </select>
                 </div>
+
+                <button class="btn btn-primary">Update</button>
+                <a href="{{ route('admin.notice.index') }}" class="btn btn-secondary">Cancel</a>
+
             </form>
         </div>
     </div>
 </div>
+
 @endsection
 
 @section('scripts')
+
 <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
 
@@ -121,8 +106,7 @@
 $(document).ready(function() {
 
    $('#editor').summernote({
-        height: 220,
-        placeholder: 'Write here...',
+        height: 200,
       toolbar: [
     ['style', ['style']],
     ['font', ['bold', 'italic', 'underline', 'clear']],
@@ -140,6 +124,7 @@ $(document).ready(function() {
             pdfUpload: function (context) {
                 var ui = $.summernote.ui;
 
+                // create button
                 var button = ui.button({
                     contents: '<i class="note-icon-paperclip"></i> PDF',
                     tooltip: 'Upload PDF',
@@ -165,6 +150,8 @@ $(document).ready(function() {
                                 },
                                 success: function (data) {
                                     let url = data.location;
+
+                                    // Insert link inside editor
                                     context.invoke('editor.insertText', url);
                                 },
                                 error: function (xhr) {
@@ -181,9 +168,7 @@ $(document).ready(function() {
         }
     });
 
-    @include('admin.NoticeNotification.partials.notice-type-scripts', ['notice' => $notice])
-
-    let selectedCourse = "{{ $notice->course_master_pk }}";
+    let selectedCourse = "{{ $notice->course_master_pk }}"; // Saved course in DB
 
     function loadCourses(preselect = null) {
       
@@ -203,10 +188,12 @@ $(document).ready(function() {
         });
     }
 
+    // On page load → if Office trainee selected, load courses
     if ("{{ $notice->target_audience }}" === "Office trainee") {
         loadCourses(selectedCourse);
     }
 
+    // When changing target audience
     $('#targetAudience').on('change', function() {
         let val = $(this).val();
 
@@ -219,19 +206,7 @@ $(document).ready(function() {
         }
     });
 
-    var todayMin = @json($todayMin);
-    function syncNoticeExpiryMin() {
-        var disp = $('input[name="display_date"]').val();
-        var $exp = $('input[name="expiry_date"]');
-        var floor = disp && disp >= todayMin ? disp : todayMin;
-        $exp.attr('min', floor);
-        if ($exp.val() && $exp.val() < floor) {
-            $exp.val(floor);
-        }
-    }
-    $('input[name="display_date"]').on('change', syncNoticeExpiryMin);
-    syncNoticeExpiryMin();
-
 });
 </script>
+
 @endsection
