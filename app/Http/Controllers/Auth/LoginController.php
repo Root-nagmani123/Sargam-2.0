@@ -7,6 +7,7 @@ use Illuminate\Foundation\Auth\AuthenticatesUsers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use App\Models\User;
+use App\Models\WordOfDayMaster;
 use Adldap\Laravel\Facades\Adldap;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\DB;
@@ -33,6 +34,57 @@ class LoginController extends Controller
      * @var string
      */
     protected $redirectTo = '/dashboard';
+
+    /**
+     * Render login page with deterministic daily word.
+     */
+    public function showLoginForm()
+    {
+        return view('auth.login', [
+            'wordOfTheDay' => $this->getWordOfTheDay(),
+        ]);
+    }
+
+    private function getWordOfTheDay(): string
+    {
+        $dbWords = WordOfDayMaster::query()
+            ->where('active_inactive', 1)
+            ->where(function ($query) {
+                $query->whereNull('scheduled_date')
+                    ->orWhereDate('scheduled_date', '<=', now()->toDateString());
+            })
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get(['hindi_text', 'english_text']);
+
+        if ($dbWords->isNotEmpty()) {
+            $index = now()->dayOfYear % $dbWords->count();
+            $selected = $dbWords[$index];
+
+            if (!empty($selected->english_text)) {
+                return "{$selected->hindi_text} - {$selected->english_text}";
+            }
+
+            return (string) $selected->hindi_text;
+        }
+
+        $words = [
+            'अर्हक अंक - Qualifying marks',
+            'समय सारणी - Time table',
+            'प्रवेश पत्र - Admit card',
+            'उपस्थिति - Attendance',
+            'छात्रवृत्ति - Scholarship',
+            'परिणाम - Result',
+            'विषय - Subject',
+            'प्रमाण पत्र - Certificate',
+            'पंजीकरण - Registration',
+            'शुल्क - Fee',
+        ];
+
+        $index = now()->dayOfYear % count($words);
+
+        return $words[$index];
+    }
 
     public function username()
     {

@@ -20,6 +20,7 @@ use App\Http\Controllers\Admin\Master\{
     HostelBuildingMasterController,
     HostelFloorMasterController,
     HostelRoomMasterController,
+    WordOfDayMasterController,
 };
 
 Route::prefix('master')->name('master.')->middleware('auth')->group(function () {
@@ -252,6 +253,14 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::get('/create', 'create')->name('create');
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+    });
+
+    // Login Word Of Day Master
+    Route::prefix('word-of-day-master')->name('word.of.day.master.')->controller(WordOfDayMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::post('/store', 'store')->name('store');
+        Route::post('/update/{id}', 'update')->name('update');
+        Route::delete('/delete/{id}', 'destroy')->name('delete');
     });
 
 

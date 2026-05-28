@@ -44,6 +44,11 @@
                                 </a>
                             </li>
                             @endauth
+                            <li class="sidebar-item mb-1"><a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.word.of.day.master.*') ? 'active' : '' }}"
+                                            href="{{ route('master.word.of.day.master.index') }}">
+                                            <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">translate</i>
+                                            <span class="hide-menu small small-sm-normal text-nowrap">Word of the Day</span>
+                                        </a></li>
 
                             @if(hasRole('Admin') || hasRole('Training-Induction'))
                             <li class="sidebar-item mb-1">

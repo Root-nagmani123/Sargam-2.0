@@ -19,6 +19,7 @@
             || request()->routeIs('mdo-escrot-exemption.*')
             || request()->routeIs('mdo-escort-exemption.*')
             || request()->routeIs('master.exemption.*')
+            || request()->routeIs('master.word.of.day.master.*')
             || request()->routeIs('master.mdo_duty_type.*')
             || request()->routeIs('master.memo.*')
             || request()->routeIs('course.memo.*')

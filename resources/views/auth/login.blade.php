@@ -1233,7 +1233,7 @@
                         <i class="bi bi-translate" aria-hidden="true"></i>
                         आज का शब्द / Word of the Day
                     </p>
-                    <p class="wod-text">अर्हक अंक - Qualifying marks</p>
+                    <p class="wod-text">{{ $wordOfTheDay ?? 'अर्हक अंक - Qualifying marks' }}</p>
                 </div>
             </div>
         </main>
