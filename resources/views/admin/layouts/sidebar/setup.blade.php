@@ -20,15 +20,7 @@
         <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
             <div class="flex-fill d-flex flex-column" style="min-height: 0;">
                 <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
-                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
-                        <a class="nav-link sidebartoggler" id="headerCollapse" href="javascript:void(0)" data-bs-toggle="tooltip"
-                            data-bs-custom-class="custom-tooltip" data-bs-placement="right" aria-label="Toggle menu">
-
-                            <i id="sidebarToggleIcon" class="material-icons menu-icon material-symbols-rounded fs-4">
-                                menu
-                            </i>
-                        </a>
-                    </div>
+                    
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
