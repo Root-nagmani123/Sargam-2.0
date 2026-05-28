@@ -4,8 +4,6 @@ namespace App\Providers;
 
 use App\Support\FeedbackReportRouteRegistry;
 use App\Services\NotificationService;
-use App\Services\SidebarMenu\BreadcrumbResolver;
-use App\Services\SidebarMenu\MenuService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
@@ -30,38 +28,9 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot(MenuService $menuService)
+    public function boot()
     {
         Paginator::useBootstrap();
-
-        view()->composer('*', function ($view) use ($menuService) {
-            if (! auth()->check()) {
-                return;
-            }
-
-            if ($view->offsetExists('sidebarMenus')) {
-                return;
-            }
-
-            $view->with('sidebarMenus', $menuService->getMenus());
-        });
-
-        view()->composer(['admin.*', 'components.breadcrum'], function ($view) {
-            if (! auth()->check()) {
-                return;
-            }
-
-            if ($view->offsetExists('breadcrumbTrail')) {
-                return;
-            }
-
-            try {
-                $resolver = app(BreadcrumbResolver::class);
-                $view->with('breadcrumbTrail', $resolver->resolve());
-            } catch (\Throwable) {
-                $view->with('breadcrumbTrail', null);
-            }
-        });
 
         View::composer([
             'admin.feedback.feedback_details',

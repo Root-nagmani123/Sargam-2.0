@@ -138,23 +138,10 @@
         return 'General';
     })();
 
-    $trailFromMenu = null;
-    if (isset($breadcrumbTrail) && is_array($breadcrumbTrail) && count($breadcrumbTrail)) {
-        $trailFromMenu = $breadcrumbTrail;
-        if (filled($title) && $title !== 'Page') {
-            $lastIndex = count($trailFromMenu) - 1;
-            if ($lastIndex >= 0) {
-                $trailFromMenu[$lastIndex]['label'] = $title;
-            } else {
-                $trailFromMenu[] = ['label' => $title, 'url' => null];
-            }
-        }
-    }
-
     $breadcrumbItems = collect(
         is_array($items) && count($items)
             ? array_values(array_filter($items, fn ($item) => filled($item)))
-            : ($trailFromMenu ?: ['Home', $resolvedSection, $title])
+            : ['Home', $resolvedSection, $title]
     )
         ->map(function ($item) {
             if (is_array($item)) {
