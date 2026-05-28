@@ -34,13 +34,25 @@ class CourseMemoDecisionMappController extends Controller
 
             $data_course_id = get_Role_by_course();
 
-            //$query = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])->get();
+            // Active tab = active_inactive 1; Archived = anything else (0 via the
+            // status toggle, 2 via the form) so no row can fall between the tabs.
+            $isArchive = $request->input('status_filter') === 'archive';
 
             $query = CourseMemoDecisionMapp::with(['course', 'memo', 'memoConclusion'])
-    ->orderBy('course_memo_decision_mapp.created_date', 'desc');
+                ->when($isArchive, function ($q) {
+                    $q->where('active_inactive', '!=', 1);
+                }, function ($q) {
+                    $q->where('active_inactive', 1);
+                })
+                ->orderBy('course_memo_decision_mapp.created_date', 'desc');
 
             if (!empty($data_course_id)) {
                 $query->whereIn('course_master_pk', $data_course_id);
+            }
+
+            // Course filter (works within the currently selected tab)
+            if ($request->filled('course_filter')) {
+                $query->where('course_master_pk', $request->input('course_filter'));
             }
 
             return DataTables::of($query)
@@ -113,7 +125,48 @@ class CourseMemoDecisionMappController extends Controller
                 ->make(true);
         }
 
-        return view('admin.course_memo_decision_mapping.index', compact('mappings', 'CourseMaster', 'MemoTypeMaster', 'MemoConclusionMaster'));
+        // Courses present in the default (Active) tab, for the course filter dropdown
+        $filterCourses = $this->coursesForStatus('active');
+
+        return view('admin.course_memo_decision_mapping.index', compact('mappings', 'CourseMaster', 'MemoTypeMaster', 'MemoConclusionMaster', 'filterCourses'));
+    }
+
+    /**
+     * Distinct courses that have mappings of the given status (active|archive),
+     * respecting role-based course scoping. Returns [pk => course_name].
+     */
+    private function coursesForStatus($status)
+    {
+        $isArchive = $status === 'archive';
+
+        $data_course_id = get_Role_by_course();
+
+        $query = CourseMemoDecisionMapp::with('course')
+            ->when($isArchive, function ($q) {
+                $q->where('active_inactive', '!=', 1);
+            }, function ($q) {
+                $q->where('active_inactive', 1);
+            });
+
+        if (!empty($data_course_id)) {
+            $query->whereIn('course_master_pk', $data_course_id);
+        }
+
+        return $query->get()
+            ->pluck('course.course_name', 'course_master_pk')
+            ->filter()
+            ->toArray();
+    }
+
+    /**
+     * AJAX: return the course filter options for the selected tab.
+     */
+    public function getCoursesByStatus(Request $request)
+    {
+        return response()->json([
+            'success' => true,
+            'courses' => $this->coursesForStatus($request->input('status', 'active')),
+        ]);
     }
 
 

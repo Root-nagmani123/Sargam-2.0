@@ -921,6 +921,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         ->controller(CourseMemoDecisionMappController::class)
         ->group(function () {
             Route::get('/', 'index')->name('index');
+            Route::get('/get-courses-by-status', 'getCoursesByStatus')->name('get.courses.by.status');
             Route::get('/create', 'create')->name('create');
             Route::post('/store', 'store')->name('store');
             Route::get('/edit/{id}', 'edit')->name('edit');
