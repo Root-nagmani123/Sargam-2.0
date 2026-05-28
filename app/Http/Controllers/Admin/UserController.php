@@ -1717,132 +1717,112 @@ public function assignRole($id)
     
     $user = User::findOrFail($decryptedId);
    
-    $userRoles = $user->roles()->pluck('id')->toArray();    
-    
+    $userRoles = \DB::table('employee_role_mapping')
+        ->where('user_credentials_pk', $decryptedId)
+        ->pluck('user_role_master_pk')
+        ->toArray();
+
     return view('admin.user_management.users.assign_role',
         compact('user', 'userRoles'));
 }
 public function getAllRoles()
 {
-    $roles = Role::all();
+    $roles = UserRoleMaster::select('pk', 'user_role_name', 'user_role_display_name')
+        ->orderBy('pk', 'DESC')
+        ->get();
+
     return response()->json($roles);
 }
+
+
 
 public function assignRoleSave(Request $request)
 {
     $request->validate([
-        'user_id' => 'required|integer|exists:user_credentials,pk',
+        'user_id' => 'required|integer',
         'roles'   => 'nullable|array',
-        'roles.*' => 'exists:roles,id',
     ]);
 
+    $userId = $request->user_id;
+
+    \DB::beginTransaction();
+
     try {
-        DB::beginTransaction();
 
-        $user = User::findOrFail($request->user_id);
-        $roleNames = Role::whereIn('id', $request->input('roles', []))->pluck('name')->toArray();
-        $user->syncRoles($roleNames);
+        // Remove old roles
+        \DB::table('employee_role_mapping')
+            ->where('user_credentials_pk', $userId)
+            ->delete();
 
-        DB::commit();
+        // Insert new roles
+        $assignedRoleNames = [];
+        $roleIds = $request->input('roles', []);
 
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        if (empty($roleIds)) {
+            // Default RBAC role when roles are submitted empty.
+            $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
+                ->orWhere('user_role_display_name', 'Staff')
+                ->first();
+            if ($staffRole) {
+                $roleIds = [$staffRole->pk];
+            }
+        }
+
+        if (!empty($roleIds)) {
+            foreach ($roleIds as $roleId) {
+                \DB::table('employee_role_mapping')->insert([
+                    'user_credentials_pk'  => $userId,
+                    'user_role_master_pk'  => $roleId,
+                    'active_inactive'      => 1,
+                    'created_date'         => now(),
+                    'updated_date'        => now(),
+                ]);
+                // Get role name for notification
+                $role = UserRoleMaster::find($roleId);
+                if ($role) {
+                    $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
+                }
+            }
+        }
+
+        \DB::commit();
+
         self::bumpAdminUsersIndexCacheEpoch();
+        
+        // Send notification to the user if roles were assigned
+        if (!empty($assignedRoleNames)) {
+            try {
+                // Get user_id from user_credentials table
+                $userCredential = \DB::table('user_credentials')
+                    ->where('pk', $userId)
+                    ->first();
+                
+                if ($userCredential && $userCredential->user_id) {
+                    $notificationService = app(NotificationService::class);
+                    $roleNames = implode(', ', $assignedRoleNames);
+                    $notificationService->create(
+                        (int)$userCredential->user_id,
+                        'role_assignment',
+                        'Role Assignment',
+                        $userId,
+                        'Role Assigned',
+                        "You have been assigned the following role(s): {$roleNames}."
+                    );
+                }
+            } catch (\Exception $e) {
+                // Log error but don't fail the request
+                \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
+            }
+        }
 
         return redirect()->route('admin.users.index')
-            ->with('success', 'Roles assigned successfully.');
-    } catch (\Exception $e) {
-        DB::rollBack();
+                         ->with('success', 'Roles assigned successfully.');
 
-        return back()->with('error', 'Error: ' . $e->getMessage());
+    } catch (\Exception $e) {
+        \DB::rollBack();
+        return back()->with('error', 'Error: '.$e->getMessage());
     }
 }
-
-// public function assignRoleSave(Request $request)
-// {
-//     dd($request->all());
-//     $request->validate([
-//         'user_id' => 'required|integer',
-//         'roles'   => 'nullable|array',
-//     ]);
-
-//     $userId = $request->user_id;
-
-//     \DB::beginTransaction();
-
-//     try {
-
-//         // Remove old roles
-//         \DB::table('employee_role_mapping')
-//             ->where('user_credentials_pk', $userId)
-//             ->delete();
-
-//         // Insert new roles
-//         $assignedRoleNames = [];
-//         $roleIds = $request->input('roles', []);
-
-//         if (empty($roleIds)) {
-//             // Default RBAC role when roles are submitted empty.
-//             $staffRole = UserRoleMaster::where('user_role_name', 'Staff')
-//                 ->orWhere('user_role_display_name', 'Staff')
-//                 ->first();
-//             if ($staffRole) {
-//                 $roleIds = [$staffRole->pk];
-//             }
-//         }
-
-//         if (!empty($roleIds)) {
-//             foreach ($roleIds as $roleId) {
-//                 \DB::table('employee_role_mapping')->insert([
-//                     'user_credentials_pk'  => $userId,
-//                     'user_role_master_pk'  => $roleId,
-//                     'active_inactive'      => 1,
-//                     'created_date'         => now(),
-//                     'updated_date'        => now(),
-//                 ]);
-//                 // Get role name for notification
-//                 $role = UserRoleMaster::find($roleId);
-//                 if ($role) {
-//                     $assignedRoleNames[] = $role->user_role_display_name ?? $role->user_role_name;
-//                 }
-//             }
-//         }
-
-//         \DB::commit();
-        
-//         // Send notification to the user if roles were assigned
-//         if (!empty($assignedRoleNames)) {
-//             try {
-//                 // Get user_id from user_credentials table
-//                 $userCredential = \DB::table('user_credentials')
-//                     ->where('pk', $userId)
-//                     ->first();
-                
-//                 if ($userCredential && $userCredential->user_id) {
-//                     $notificationService = app(NotificationService::class);
-//                     $roleNames = implode(', ', $assignedRoleNames);
-//                     $notificationService->create(
-//                         (int)$userCredential->user_id,
-//                         'role_assignment',
-//                         'Role Assignment',
-//                         $userId,
-//                         'Role Assigned',
-//                         "You have been assigned the following role(s): {$roleNames}."
-//                     );
-//                 }
-//             } catch (\Exception $e) {
-//                 // Log error but don't fail the request
-//                 \Log::error('Failed to send role assignment notification: ' . $e->getMessage());
-//             }
-//         }
-
-//         return redirect()->route('admin.users.index')
-//                          ->with('success', 'Roles assigned successfully.');
-
-//     } catch (\Exception $e) {
-//         \DB::rollBack();
-//         return back()->with('error', 'Error: '.$e->getMessage());
-//     }
-// }
 
 public function uploadPdf(Request $request)
     {

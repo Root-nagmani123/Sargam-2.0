@@ -281,55 +281,25 @@ function safeDecrypt($value, $default = null)
         return $default;
     }
 }
-// function hasRole($role)
-// {
-//     $user = Auth::user();
-//     if (!$user) return false;
-
-//     // Step 1: Check session roles first (Student static role bhi yahi me milega)
-//     $sessionRoles = Session::get('user_roles', []);
-//     if (in_array($role, $sessionRoles)) {
-//         return true;
-//     }
-
-//     // Step 2: Check database roles + cache
-//     $roles = Cache::remember('user_roles_' . $user->pk, 10, function () use ($user) {
-//         return $user->roles()->pluck('user_role_name')->toArray();
-//     });
-
-//     return in_array($role, $roles);
-// }
-
-
 function hasRole($role)
 {
     $user = Auth::user();
     if (!$user) return false;
 
-    // Spatie already has hasRole() method
-    return $user->hasRole($role);
-}
-
-/**
- * Whether the user has at least one Spatie role (user management → assign role).
- */
-function userHasAssignedRoles(): bool
-{
-    $user = Auth::user();
-    if (! $user) {
-        return false;
+    // Step 1: Check session roles first (Student static role bhi yahi me milega)
+    $sessionRoles = Session::get('user_roles', []);
+    if (in_array($role, $sessionRoles)) {
+        return true;
     }
 
-    return $user->roles()->exists();
+    // Step 2: Check database roles + cache
+    $roles = Cache::remember('user_roles_' . $user->pk, 10, function () use ($user) {
+        return $user->roles()->pluck('user_role_name')->toArray();
+    });
+
+    return in_array($role, $roles);
 }
 
-/**
- * Full sidebar / setup category access (all groups without per-menu permission checks).
- */
-function isSidebarPrivilegedUser(): bool
-{
-    return hasRole('Admin') || hasRole('Super Admin');
-}
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
  */

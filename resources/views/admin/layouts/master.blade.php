@@ -1,682 +1,499 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
-@php
-    $sidebarMenus = $sidebarMenus ?? collect();
-    $activeNavMeta = $activeNavMeta ?? null;
-    if (! isset($activeNavTab)) {
-        $nav = app(\App\Services\SidebarMenu\SidebarNavResolver::class)->resolve();
-        $activeNavTab = $nav['nav_tab'];
-        $activeCategoryId = $activeCategoryId ?? $nav['category_id'];
-        $activeGroupId = $activeGroupId ?? $nav['group_id'];
-        $activeNavMeta = $nav;
-    } else {
-        $activeNavTab = $activeNavTab ?? \App\Services\SidebarMenu\SidebarNavResolver::HOME_TAB;
-        $activeNavMeta = $activeNavMeta ?? [
-            'nav_tab' => $activeNavTab,
-            'category_id' => $activeCategoryId ?? null,
-            'category_slug' => null,
-            'group_id' => $activeGroupId ?? null,
-            'menu_id' => null,
-        ];
-    }
-    $activeCategoryId = $activeCategoryId
-        ?? request()->get('category')
-        ?? ($activeNavMeta['category_id'] ?? null)
-        ?? ($sidebarMenus->first()?->id);
-    $activeGroupId = $activeGroupId ?? ($activeNavMeta['group_id'] ?? null);
-    $activeMenuId = $activeNavMeta['menu_id'] ?? null;
-    $isDashboardPage = request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*') || request()->is('dashboard');
-    $activeCategory = $sidebarMenus->firstWhere('id', $activeCategoryId)
-        ?? $sidebarMenus->first();
-    if ($activeCategory) {
-        $activeCategoryId = $activeCategory->id;
-    }
-    $groups = $activeCategory ? $activeCategory->groups : collect([]);
-
-    $routeMatcher = app(\App\Services\SidebarMenu\MenuRouteMatcher::class);
-    $categoryLandingUrls = ['#home' => route('admin.dashboard')];
-    foreach ($sidebarMenus as $cat) {
-        $tabHash = $cat->slug === 'home' ? '#home' : '#tab-' . $cat->slug;
-        if ($tabHash === '#home') {
-            continue;
-        }
-        $firstMenu = \App\Models\SidebarMenu\Menu::query()
-            ->where('is_active', 1)
-            ->where(function ($q) use ($cat) {
-                $q->where('category_id', $cat->id)
-                    ->orWhereIn('group_id', $cat->groups->pluck('id'));
-            })
-            ->whereNotNull('route')
-            ->where('route', '!=', '')
-            ->where('route', '!=', '#')
-            ->orderBy('order')
-            ->first(['id', 'route']);
-        if ($firstMenu) {
-            $href = $routeMatcher->resolveHref($firstMenu->route, $firstMenu->id);
-            if ($href && !str_contains($href, 'navigation-error')) {
-                $categoryLandingUrls[$tabHash] = $href;
-            }
-        }
-    }
-@endphp
-
+<html lang="en" dir="ltr" data-bs-theme="light" data-color-theme="Blue_Theme" data-layout="vertical">
 
 <head>
     <!-- Set initial theme from localStorage before paint (avoids flash) -->
     <script>
-        (function () {
+        (function() {
             'use strict';
             try {
                 var saved = localStorage.getItem('bsTheme');
                 if (saved === 'dark' || saved === 'light') {
                     document.documentElement.setAttribute('data-bs-theme', saved);
                 }
-            } catch (e) { }
+            } catch (e) {}
         })();
     </script>
-
     @include('admin.layouts.pre_header')
-    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of
-        Administration</title>
+    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
     @section('css')
     <style>
-        .nav-item .tab-item .active {
-            background-color: #bbd9f7;
-            border-radius: 10px;
-            color: #ffffff !important;
-            transition: all 0.3s ease-in-out;
-        }
+    .nav-item .tab-item .active {
+        background-color: #bbd9f7;
+        border-radius: 10px;
+        color: #ffffff !important;
+        transition: all 0.3s ease-in-out;
+    }
 
-        .mini-nav {
-            display: flex;
-            flex-direction: column;
-        }
+    .mini-nav {
+        display: flex;
+        flex-direction: column;
+    }
 
-        .mini-nav-ul {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-        }
+    .mini-nav-ul {
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+    }
 
-        .mini-bottom {
-            margin-top: auto !important;
-        }
+    .mini-bottom {
+        margin-top: auto !important;
+    }
 
-        /* Remove default Bootstrap dropdown arrow */
-        .dropdown-toggle-custom::after {
-            display: none !important;
-        }
+    /* Remove default Bootstrap dropdown arrow */
+    .dropdown-toggle-custom::after {
+        display: none !important;
+    }
 
-        /* Custom arrow icon animation */
-        .dropdown-toggle-custom .dropdown-arrow {
-            transition: transform 0.25s ease;
-        }
+    /* Custom arrow icon animation */
+    .dropdown-toggle-custom .dropdown-arrow {
+        transition: transform 0.25s ease;
+    }
 
-        /* Rotate arrow when open */
-        .show>.dropdown-toggle-custom .dropdown-arrow {
-            transform: rotate(180deg);
-        }
+    /* Rotate arrow when open */
+    .show>.dropdown-toggle-custom .dropdown-arrow {
+        transform: rotate(180deg);
+    }
 
-        .my-filled-icon {
-            font-variation-settings: 'FILL' 1;
-            /* Sets the fill to its maximum value (1) */
-            color: blue;
-            /* You can also change the color of the icon */
-        }
+    .my-filled-icon {
+        font-variation-settings: 'FILL'1;
+        /* Sets the fill to its maximum value (1) */
+        color: blue;
+        /* You can also change the color of the icon */
+    }
 
-        .my-unfilled-icon {
-            font-variation-settings: 'FILL' 0;
-            /* Sets the fill to its minimum value (0) */
-        }
+    .my-unfilled-icon {
+        font-variation-settings: 'FILL'0;
+        /* Sets the fill to its minimum value (0) */
+    }
     </style>
     <style>
-        .calendar {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 14px;
-        }
+    .calendar {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+    }
 
-        .calendar th {
-            background: #f8f9fa;
-            padding: 8px;
-            text-align: center;
-            font-weight: 600;
-        }
+    .calendar th {
+        background: #f8f9fa;
+        padding: 8px;
+        text-align: center;
+        font-weight: 600;
+    }
 
-        .calendar td {
-            width: 14.28%;
-            height: 65px;
-            padding: 6px;
-            vertical-align: top;
-            border: 1px solid #e5e5e5;
-            text-align: right;
-            position: relative;
-        }
+    .calendar td {
+        width: 14.28%;
+        height: 65px;
+        padding: 6px;
+        vertical-align: top;
+        border: 1px solid #e5e5e5;
+        text-align: right;
+        position: relative;
+    }
 
-        .holiday {
-            background-color: #ffe5e5 !important;
-            border-left: 4px solid #dc3545 !important;
-            font-weight: 600;
-        }
+    .holiday {
+        background-color: #ffe5e5 !important;
+        border-left: 4px solid #dc3545 !important;
+        font-weight: 600;
+    }
 
-        .holiday span {
-            font-size: 11px;
-            display: block;
-            color: #dc3545;
-            text-align: left;
-            margin-top: 4px;
-        }
+    .holiday span {
+        font-size: 11px;
+        display: block;
+        color: #dc3545;
+        text-align: left;
+        margin-top: 4px;
+    }
 
-        /* Basic container */
+    /* Basic container */
+    .calendar-component {
+        max-width: 100%;
+        background: #fff;
+        border-radius: 12px;
+        padding: 14px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    }
+
+    .calendar-header .form-select {
+        max-width: 120px;
+        border-radius: 8px;
+        border: 1px solid #b30000;
+    }
+
+
+    .calendar-table {
+        border-collapse: separate;
+        border-spacing: 6px;
+        table-layout: fixed;
+    }
+
+    .calendar-table th {
+        font-weight: 600;
+        padding: 8px 6px;
+    }
+
+    .calendar-table td {
+        padding: 8px 6px;
+        vertical-align: middle;
+        border: none;
+        text-align: center;
+    }
+
+
+
+    .calendar-cell {
+        border-radius: 8px;
+        transition: background .12s ease;
+    }
+
+    .calendar-cell:hover {
+        background: #f2f2f2;
+    }
+
+    .calendar-cell:focus {
+        outline: 3px solid #004a93;
+        outline-offset: 2px;
+    }
+
+
+    .calendar-cell .day-number {
+        display: inline-block;
+        min-width: 28px;
+    }
+
+    .calendar-cell.is-selected {
+        border: 2px solid #b30000;
+        font-weight: 700;
+    }
+
+    .calendar-cell.has-event {
+        background: #b30000;
+        color: #fff;
+        border-radius: 8px;
+        font-weight: 700;
+    }
+
+
+    /* Themes */
+    .calendar-component[data-theme="gov-blue"] .calendar-header .form-select {
+        border-color: #004a93;
+    }
+
+    .calendar-component[data-theme="gov-blue"] .calendar-cell.is-selected {
+        border-color: #004a93;
+    }
+
+
+    /* Responsive behavior */
+    @media (max-width: 480px) {
         .calendar-component {
+            padding: 10px;
             max-width: 100%;
-            background: #fff;
-            border-radius: 12px;
-            padding: 14px;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
         }
 
-        .calendar-header .form-select {
-            max-width: 120px;
-            border-radius: 8px;
-            border: 1px solid #b30000;
+        .calendar-header {
+            gap: .5rem;
         }
 
-
-        .calendar-table {
-            border-collapse: separate;
-            border-spacing: 6px;
-            table-layout: fixed;
-        }
-
-        .calendar-table th {
-            font-weight: 600;
-            padding: 8px 6px;
-        }
-
+        .calendar-table th,
         .calendar-table td {
-            padding: 8px 6px;
-            vertical-align: middle;
-            border: none;
-            text-align: center;
+            padding: 6px 4px;
         }
+    }
 
+    /* Wrapper */
+    .modern-bottom-dd {
+        position: relative;
+    }
 
+    /* Label */
+    .dd-label {
+        font-size: 0.95rem;
+        color: #000;
+    }
 
-        .calendar-cell {
-            border-radius: 8px;
-            transition: background .12s ease;
-        }
+    /* Trigger */
+    .dd-trigger {
+        border: none;
+        border-bottom: 1px solid #4c8ec5;
+        /* Soft Blue like screenshot */
+        border-radius: 10px;
+        background: transparent;
+        padding: 8px 0 10px 0;
+        font-weight: 600;
+        font-size: 1rem;
+        min-height: 44px;
+        /* GIGW Minimum touch target */
+        cursor: pointer;
+        transition: all .25s ease;
+    }
 
-        .calendar-cell:hover {
-            background: #f2f2f2;
-        }
+    /* Hover */
+    .dd-trigger:hover {
+        border-bottom-color: #004a93;
+    }
 
-        .calendar-cell:focus {
-            outline: 3px solid #004a93;
-            outline-offset: 2px;
-        }
+    /* Focus visible for accessibility */
+    .dd-trigger:focus-visible {
+        outline: none;
+        border-bottom-color: #004a93 !important;
+        box-shadow: 0 2px 0 0 #004a93;
+    }
 
+    /* Dropdown arrow rotation */
+    .dropdown.show .dd-icon svg {
+        transform: rotate(180deg);
+        transition: .25s;
+    }
 
-        .calendar-cell .day-number {
-            display: inline-block;
-            min-width: 28px;
-        }
+    /* Menu */
+    .dd-menu {
+        border-radius: 10px;
+        padding: 6px 0;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        animation: fadeIn .15s ease-out;
+    }
 
-        .calendar-cell.is-selected {
-            border: 2px solid #b30000;
-            font-weight: 700;
-        }
+    /* Menu Items */
+    .dd-menu-item {
+        padding: 10px 14px;
+        min-height: 40px;
+        font-weight: 500;
+    }
 
-        .calendar-cell.has-event {
-            background: #b30000;
-            color: #fff;
-            border-radius: 8px;
-            font-weight: 700;
-        }
+    /* Hover */
+    .dd-menu-item:hover {
+        background: #e8f3ff;
+        color: #004a93;
+        border-radius: 6px;
+    }
 
-
-        /* Themes */
-        .calendar-component[data-theme="gov-blue"] .calendar-header .form-select {
-            border-color: #004a93;
-        }
-
-        .calendar-component[data-theme="gov-blue"] .calendar-cell.is-selected {
-            border-color: #004a93;
-        }
-
-
-        /* Responsive behavior */
-        @media (max-width: 480px) {
-            .calendar-component {
-                padding: 10px;
-                max-width: 100%;
-            }
-
-            .calendar-header {
-                gap: .5rem;
-            }
-
-            .calendar-table th,
-            .calendar-table td {
-                padding: 6px 4px;
-            }
-        }
-
-        /* Wrapper */
-        .modern-bottom-dd {
-            position: relative;
-        }
-
-        /* Label */
-        .dd-label {
-            font-size: 0.95rem;
-            color: #000;
-        }
-
-        /* Trigger */
-        .dd-trigger {
-            border: none;
-            border-bottom: 1px solid #4c8ec5;
-            /* Soft Blue like screenshot */
-            border-radius: 10px;
-            background: transparent;
-            padding: 8px 0 10px 0;
-            font-weight: 600;
-            font-size: 1rem;
-            min-height: 44px;
-            /* GIGW Minimum touch target */
-            cursor: pointer;
-            transition: all .25s ease;
-        }
-
-        /* Hover */
-        .dd-trigger:hover {
-            border-bottom-color: #004a93;
-        }
-
-        /* Focus visible for accessibility */
-        .dd-trigger:focus-visible {
-            outline: none;
-            border-bottom-color: #004a93 !important;
-            box-shadow: 0 2px 0 0 #004a93;
-        }
-
-        /* Dropdown arrow rotation */
-        .dropdown.show .dd-icon svg {
-            transform: rotate(180deg);
-            transition: .25s;
-        }
-
-        /* Menu */
-        .dd-menu {
-            border-radius: 10px;
-            padding: 6px 0;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            animation: fadeIn .15s ease-out;
-        }
-
-        /* Menu Items */
-        .dd-menu-item {
-            padding: 10px 14px;
-            min-height: 40px;
-            font-weight: 500;
-        }
-
-        /* Hover */
-        .dd-menu-item:hover {
-            background: #e8f3ff;
-            color: #004a93;
-            border-radius: 6px;
-        }
-
-        /* Animation */
-        @keyframes fadeIn {
-            from {
-                opacity: 0;
-                transform: translateY(-4px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
-
-        .pagination .page-item.active .page-link.current-page {
-            border: 2px solid #0d6efd !important;
-            border-radius: 8px !important;
-            color: #0d6efd !important;
-            font-weight: 600;
-            background: transparent !important;
-        }
-
-        .pagination .page-item.disabled .page-link {
-            color: #aaa;
-        }
-
-        .pagination li {
-            margin-right: 4px;
-        }
-
-        .pagination .page-link:hover {
-            color: #0d6efd;
-        }
-
-        .search-expand {
-            position: relative;
-        }
-
-        .search-input {
-            width: 0;
+    /* Animation */
+    @keyframes fadeIn {
+        from {
             opacity: 0;
-            padding: 0;
-            transition: width .35s ease, opacity .25s ease;
-            border-radius: 50rem;
-            border: 1px solid #ced4da;
+            transform: translateY(-4px);
         }
 
-        /* Expanded state */
-        .search-input.active {
-            width: 200px;
-            /* You can increase this */
+        to {
             opacity: 1;
-            padding: .375rem .75rem;
+            transform: translateY(0);
         }
+    }
 
-        /* Advanced Sargam 2.0 Loader - Bootstrap 5 */
-        .sargam-loader {
-            position: fixed;
-            inset: 0;
-            background: radial-gradient(ellipse at center, #ffffff 0%, #f0f7ff 50%, #e8f0fa 100%);
-            z-index: 9999;
-            transition: opacity 0.5s ease, visibility 0.5s ease;
-            overflow: hidden;
-        }
+    .pagination .page-item.active .page-link.current-page {
+        border: 2px solid #0d6efd !important;
+        border-radius: 8px !important;
+        color: #0d6efd !important;
+        font-weight: 600;
+        background: transparent !important;
+    }
 
-        .sargam-loader.hidden {
-            opacity: 0;
-            visibility: hidden;
-            pointer-events: none;
-        }
+    .pagination .page-item.disabled .page-link {
+        color: #aaa;
+    }
 
-        /* Floating particles */
-        .sargam-loader-particles {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-        }
+    .pagination li {
+        margin-right: 4px;
+    }
 
-        .sargam-loader-particle {
-            position: absolute;
-            width: 6px;
-            height: 6px;
-            background: linear-gradient(135deg, #004a93, #0d6efd);
-            border-radius: 50%;
-            opacity: 0.4;
-            animation: sargamFloat 4s ease-in-out infinite;
-        }
+    .pagination .page-link:hover {
+        color: #0d6efd;
+    }
 
-        .sargam-loader-particle:nth-child(1) {
-            left: 15%;
-            top: 20%;
-            animation-delay: 0s;
-        }
+    .search-expand {
+        position: relative;
+    }
 
-        .sargam-loader-particle:nth-child(2) {
-            left: 85%;
-            top: 25%;
-            animation-delay: 0.5s;
-        }
+    .search-input {
+        width: 0;
+        opacity: 0;
+        padding: 0;
+        transition: width .35s ease, opacity .25s ease;
+        border-radius: 50rem;
+        border: 1px solid #ced4da;
+    }
 
-        .sargam-loader-particle:nth-child(3) {
-            left: 75%;
-            top: 75%;
-            animation-delay: 1s;
-        }
+    /* Expanded state */
+    .search-input.active {
+        width: 200px;
+        /* You can increase this */
+        opacity: 1;
+        padding: .375rem .75rem;
+    }
 
-        .sargam-loader-particle:nth-child(4) {
-            left: 20%;
-            top: 80%;
-            animation-delay: 1.5s;
-        }
+    /* Advanced Sargam 2.0 Loader - Bootstrap 5 */
+    .sargam-loader {
+        position: fixed;
+        inset: 0;
+        background: radial-gradient(ellipse at center, #ffffff 0%, #f0f7ff 50%, #e8f0fa 100%);
+        z-index: 9999;
+        transition: opacity 0.5s ease, visibility 0.5s ease;
+        overflow: hidden;
+    }
 
-        .sargam-loader-particle:nth-child(5) {
-            left: 50%;
-            top: 15%;
-            animation-delay: 2s;
-        }
+    .sargam-loader.hidden {
+        opacity: 0;
+        visibility: hidden;
+        pointer-events: none;
+    }
 
-        .sargam-loader-particle:nth-child(6) {
-            left: 10%;
-            top: 50%;
-            animation-delay: 2.5s;
-        }
+    /* Floating particles */
+    .sargam-loader-particles {
+        position: absolute;
+        inset: 0;
+        pointer-events: none;
+    }
 
-        .sargam-loader-particle:nth-child(7) {
-            left: 90%;
-            top: 55%;
-            animation-delay: 3s;
-        }
+    .sargam-loader-particle {
+        position: absolute;
+        width: 6px;
+        height: 6px;
+        background: linear-gradient(135deg, #004a93, #0d6efd);
+        border-radius: 50%;
+        opacity: 0.4;
+        animation: sargamFloat 4s ease-in-out infinite;
+    }
 
-        .sargam-loader-particle:nth-child(8) {
-            left: 45%;
-            top: 85%;
-            animation-delay: 3.5s;
-        }
+    .sargam-loader-particle:nth-child(1) { left: 15%; top: 20%; animation-delay: 0s; }
+    .sargam-loader-particle:nth-child(2) { left: 85%; top: 25%; animation-delay: 0.5s; }
+    .sargam-loader-particle:nth-child(3) { left: 75%; top: 75%; animation-delay: 1s; }
+    .sargam-loader-particle:nth-child(4) { left: 20%; top: 80%; animation-delay: 1.5s; }
+    .sargam-loader-particle:nth-child(5) { left: 50%; top: 15%; animation-delay: 2s; }
+    .sargam-loader-particle:nth-child(6) { left: 10%; top: 50%; animation-delay: 2.5s; }
+    .sargam-loader-particle:nth-child(7) { left: 90%; top: 55%; animation-delay: 3s; }
+    .sargam-loader-particle:nth-child(8) { left: 45%; top: 85%; animation-delay: 3.5s; }
 
-        @keyframes sargamFloat {
+    @keyframes sargamFloat {
+        0%, 100% { transform: translate(0, 0) scale(1); opacity: 0.4; }
+        25% { transform: translate(15px, -20px) scale(1.2); opacity: 0.7; }
+        50% { transform: translate(-10px, 15px) scale(0.9); opacity: 0.5; }
+        75% { transform: translate(-20px, -10px) scale(1.1); opacity: 0.6; }
+    }
 
-            0%,
-            100% {
-                transform: translate(0, 0) scale(1);
-                opacity: 0.4;
-            }
+    /* Rotating rings container */
+    .sargam-loader-rings {
+        position: relative;
+        width: 140px;
+        height: 140px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
 
-            25% {
-                transform: translate(15px, -20px) scale(1.2);
-                opacity: 0.7;
-            }
+    .sargam-loader-ring {
+        position: absolute;
+        border-radius: 50%;
+        border: 3px solid transparent;
+    }
 
-            50% {
-                transform: translate(-10px, 15px) scale(0.9);
-                opacity: 0.5;
-            }
+    .sargam-loader-ring-outer {
+        width: 100%;
+        height: 100%;
+        border-top-color: #004a93;
+        border-right-color: #0d6efd;
+        border-bottom-color: #004a93;
+        border-left-color: transparent;
+        animation: sargamSpin 1.2s linear infinite;
+    }
 
-            75% {
-                transform: translate(-20px, -10px) scale(1.1);
-                opacity: 0.6;
-            }
-        }
+    .sargam-loader-ring-mid {
+        width: 100px;
+        height: 100px;
+        border-top-color: transparent;
+        border-right-color: #0d6efd;
+        border-bottom-color: transparent;
+        border-left-color: #004a93;
+        animation: sargamSpin 1s linear infinite reverse;
+    }
 
-        /* Rotating rings container */
-        .sargam-loader-rings {
-            position: relative;
-            width: 140px;
-            height: 140px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
+    .sargam-loader-ring-inner {
+        width: 60px;
+        height: 60px;
+        border-top-color: #0d6efd;
+        border-right-color: transparent;
+        border-bottom-color: #004a93;
+        border-left-color: transparent;
+        animation: sargamSpin 0.8s linear infinite;
+    }
 
-        .sargam-loader-ring {
-            position: absolute;
-            border-radius: 50%;
-            border: 3px solid transparent;
-        }
+    @keyframes sargamSpin {
+        to { transform: rotate(360deg); }
+    }
 
-        .sargam-loader-ring-outer {
-            width: 100%;
-            height: 100%;
-            border-top-color: #004a93;
-            border-right-color: #0d6efd;
-            border-bottom-color: #004a93;
-            border-left-color: transparent;
-            animation: sargamSpin 1.2s linear infinite;
-        }
+    /* Brand text with letter-by-letter animation */
+    .sargam-loader-brand {
+        display: inline-flex;
+        gap: 2px;
+        font-size: clamp(1.75rem, 5vw, 3rem);
+        font-weight: 800;
+        font-family: 'Montserrat', 'Segoe UI', system-ui, sans-serif;
+        letter-spacing: 0.02em;
+    }
 
-        .sargam-loader-ring-mid {
-            width: 100px;
-            height: 100px;
-            border-top-color: transparent;
-            border-right-color: #0d6efd;
-            border-bottom-color: transparent;
-            border-left-color: #004a93;
-            animation: sargamSpin 1s linear infinite reverse;
-        }
+    .sargam-loader-brand span {
+        display: inline-block;
+        color: #004a93;
+        background: linear-gradient(135deg, #004a93 0%, #0066cc 40%, #0d6efd 70%, #004a93 100%);
+        background-size: 200% auto;
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+        animation: sargamLetterPop 2s ease-in-out infinite;
+        text-shadow: 0 0 30px rgba(0, 74, 147, 0.2);
+    }
 
-        .sargam-loader-ring-inner {
-            width: 60px;
-            height: 60px;
-            border-top-color: #0d6efd;
-            border-right-color: transparent;
-            border-bottom-color: #004a93;
-            border-left-color: transparent;
-            animation: sargamSpin 0.8s linear infinite;
-        }
+    .sargam-loader-brand span:nth-child(1) { animation-delay: 0s; }
+    .sargam-loader-brand span:nth-child(2) { animation-delay: 0.05s; }
+    .sargam-loader-brand span:nth-child(3) { animation-delay: 0.1s; }
+    .sargam-loader-brand span:nth-child(4) { animation-delay: 0.15s; }
+    .sargam-loader-brand span:nth-child(5) { animation-delay: 0.2s; }
+    .sargam-loader-brand span:nth-child(6) { animation-delay: 0.25s; }
+    .sargam-loader-brand span:nth-child(7) { animation-delay: 0.3s; min-width: 0.25em; }
+    .sargam-loader-brand span:nth-child(8) { animation-delay: 0.35s; }
+    .sargam-loader-brand span:nth-child(9) { animation-delay: 0.4s; }
+    .sargam-loader-brand span:nth-child(10) { animation-delay: 0.45s; }
 
-        @keyframes sargamSpin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
+    @keyframes sargamLetterPop {
+        0%, 100% { transform: translateY(0) scale(1); opacity: 1; }
+        50% { transform: translateY(-4px) scale(1.05); opacity: 0.9; }
+    }
 
-        /* Brand text with letter-by-letter animation */
-        .sargam-loader-brand {
-            display: inline-flex;
-            gap: 2px;
-            font-size: clamp(1.75rem, 5vw, 3rem);
-            font-weight: 800;
-            font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
-            letter-spacing: 0.02em;
-        }
+    /* Segmented progress dots */
+    .sargam-loader-dots {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+    }
 
-        .sargam-loader-brand span {
-            display: inline-block;
-            color: #004a93;
-            background: linear-gradient(135deg, #004a93 0%, #0066cc 40%, #0d6efd 70%, #004a93 100%);
-            background-size: 200% auto;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            animation: sargamLetterPop 2s ease-in-out infinite;
-            text-shadow: 0 0 30px rgba(0, 74, 147, 0.2);
-        }
+    .sargam-loader-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: rgba(0, 74, 147, 0.2);
+        animation: sargamDotPulse 1.4s ease-in-out infinite;
+    }
 
-        .sargam-loader-brand span:nth-child(1) {
-            animation-delay: 0s;
-        }
+    .sargam-loader-dot:nth-child(1) { animation-delay: 0s; }
+    .sargam-loader-dot:nth-child(2) { animation-delay: 0.2s; }
+    .sargam-loader-dot:nth-child(3) { animation-delay: 0.4s; }
+    .sargam-loader-dot:nth-child(4) { animation-delay: 0.6s; }
+    .sargam-loader-dot:nth-child(5) { animation-delay: 0.8s; }
 
-        .sargam-loader-brand span:nth-child(2) {
-            animation-delay: 0.05s;
-        }
+    @keyframes sargamDotPulse {
+        0%, 100% { transform: scale(0.8); background: rgba(0, 74, 147, 0.2); }
+        50% { transform: scale(1.2); background: #0d6efd; }
+    }
 
-        .sargam-loader-brand span:nth-child(3) {
-            animation-delay: 0.1s;
-        }
-
-        .sargam-loader-brand span:nth-child(4) {
-            animation-delay: 0.15s;
-        }
-
-        .sargam-loader-brand span:nth-child(5) {
-            animation-delay: 0.2s;
-        }
-
-        .sargam-loader-brand span:nth-child(6) {
-            animation-delay: 0.25s;
-        }
-
-        .sargam-loader-brand span:nth-child(7) {
-            animation-delay: 0.3s;
-            min-width: 0.25em;
-        }
-
-        .sargam-loader-brand span:nth-child(8) {
-            animation-delay: 0.35s;
-        }
-
-        .sargam-loader-brand span:nth-child(9) {
-            animation-delay: 0.4s;
-        }
-
-        .sargam-loader-brand span:nth-child(10) {
-            animation-delay: 0.45s;
-        }
-
-        @keyframes sargamLetterPop {
-
-            0%,
-            100% {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
-
-            50% {
-                transform: translateY(-4px) scale(1.05);
-                opacity: 0.9;
-            }
-        }
-
-        /* Segmented progress dots */
-        .sargam-loader-dots {
-            display: flex;
-            gap: 8px;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .sargam-loader-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            background: rgba(0, 74, 147, 0.2);
-            animation: sargamDotPulse 1.4s ease-in-out infinite;
-        }
-
-        .sargam-loader-dot:nth-child(1) {
-            animation-delay: 0s;
-        }
-
-        .sargam-loader-dot:nth-child(2) {
-            animation-delay: 0.2s;
-        }
-
-        .sargam-loader-dot:nth-child(3) {
-            animation-delay: 0.4s;
-        }
-
-        .sargam-loader-dot:nth-child(4) {
-            animation-delay: 0.6s;
-        }
-
-        .sargam-loader-dot:nth-child(5) {
-            animation-delay: 0.8s;
-        }
-
-        @keyframes sargamDotPulse {
-
-            0%,
-            100% {
-                transform: scale(0.8);
-                background: rgba(0, 74, 147, 0.2);
-            }
-
-            50% {
-                transform: scale(1.2);
-                background: #0d6efd;
-            }
-        }
-
-        /* Sidebar toggle icon rotation */
-        #sidebarToggleIcon {
-            transition: transform 0.3s ease-in-out;
-            display: inline-block;
-        }
-
-        #sidebarToggleIcon.rotated {
-            transform: rotate(180deg);
-        }
+    /* Sidebar toggle icon rotation */
+    #sidebarToggleIcon {
+        transition: transform 0.3s ease-in-out;
+        display: inline-block;
+    }
+    #sidebarToggleIcon.rotated {
+        transform: rotate(180deg);
+    }
     </style>
 
     {{-- Page-specific styles stack --}}
@@ -685,8 +502,7 @@
 
 <body data-sidebartype="full" @class(['admin-mess-module' => request()->routeIs('admin.mess.*')])>
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
-    <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status"
-        aria-live="polite" aria-label="Loading Sargam 2.0">
+    <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status" aria-live="polite" aria-label="Loading Sargam 2.0">
         <div class="sargam-loader-particles">
             <span class="sargam-loader-particle"></span>
             <span class="sargam-loader-particle"></span>
@@ -704,8 +520,7 @@
                 <span class="sargam-loader-ring sargam-loader-ring-inner"></span>
             </div>
             <span class="sargam-loader-brand">
-                <span>S</span><span>A</span><span>R</span><span>G</span><span>A</span><span>M</span><span>
-                </span><span>2</span><span>.</span><span>0</span>
+                <span>S</span><span>A</span><span>R</span><span>G</span><span>A</span><span>M</span><span> </span><span>2</span><span>.</span><span>0</span>
             </span>
             <div class="sargam-loader-dots">
                 <span class="sargam-loader-dot" role="presentation"></span>
@@ -718,13 +533,78 @@
     </div>
 
     <div id="main-wrapper">
-        @include('admin.layouts.header_new')
+        @php
+            // Must run in this view (not in header include) so tab panes below see $activeNavTab.
+            $activeNavTab = '#home';
+            $path = request()->path();
+            if (request()->routeIs('admin.dashboard') || request()->routeIs('admin.dashboard.*')) {
+                $activeNavTab = '#home';
+            } elseif (
+                // Modules moved from Setup to Home
+                request()->routeIs('admin.estate.*') ||
+                request()->routeIs('admin.mess.*') ||
+                request()->routeIs('admin.issue-management*') ||
+                request()->routeIs('admin.issue-categories.*') ||
+                request()->routeIs('admin.issue-sub-categories.*') ||
+                request()->routeIs('admin.issue-priorities.*') ||
+                request()->routeIs('admin.issue-escalation-matrix.*') ||
+                request()->routeIs('admin.employee_idcard.*') ||
+                request()->routeIs('admin.duplicate_idcard.*') ||
+                request()->routeIs('admin.family_idcard.*') ||
+                request()->routeIs('admin.security.*') ||
+                str_starts_with($path, 'admin/estate') ||
+                str_starts_with($path, 'admin/mess') ||
+                str_starts_with($path, 'admin/issue-management') ||
+                str_starts_with($path, 'admin/issue-categories') ||
+                str_starts_with($path, 'admin/issue-sub-categories') ||
+                str_starts_with($path, 'admin/issue-priorities') ||
+                str_starts_with($path, 'admin/issue-escalation-matrix') ||
+                str_starts_with($path, 'admin/employee-idcard') ||
+                str_starts_with($path, 'admin/duplicate-idcard') ||
+                str_starts_with($path, 'admin/family-idcard') ||
+                str_starts_with($path, 'security/')
+            ) {
+                $activeNavTab = '#home';
+            } elseif (
+                request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
+                request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
+                str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
+                str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
+                str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
+                str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') || str_starts_with($path, 'admin/feedback') ||
+                str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
+                str_starts_with($path, 'ot_notice') ||
+                str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
+                str_starts_with($path, 'mdo_escrot') || str_starts_with($path, 'student_medical') ||
+                str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||
+                str_starts_with($path, 'country') || str_starts_with($path, 'state') || str_starts_with($path, 'city') ||
+                str_starts_with($path, 'stream') || str_starts_with($path, 'subject') || str_starts_with($path, 'Venue-Master') ||
+                str_starts_with($path, 'batch') || str_starts_with($path, 'curriculum') || str_starts_with($path, 'mapping') ||
+                str_starts_with($path, 'admin/master') || str_starts_with($path, 'master/') || str_contains($path, 'breadcrumb-showcase') || str_starts_with($path, 'password') ||
+                request()->routeIs('calendar.index') || request()->routeIs('feedback.*') || str_starts_with($path, 'calendar') ||
+                str_starts_with($path, 'expertise') || str_starts_with($path, 'faculty_notice') || str_starts_with($path, 'faculty_mdo')
+            ) {
+                $activeNavTab = '#tab-setup';
+            } elseif (
+                str_starts_with($path, 'communications') ||
+                request()->routeIs('*communications*') ||
+                request()->routeIs('admin.birthday-wish.*')
+            ) {
+                $activeNavTab = '#tab-communications';
+            } elseif (str_starts_with($path, 'academics') || request()->routeIs('*academics*')) {
+                $activeNavTab = '#tab-academics';
+            } elseif (str_starts_with($path, 'material') || request()->routeIs('*material*')) {
+                $activeNavTab = '#tab-material-management';
+            }
+        @endphp
+        @include('admin.layouts.header')
         <div class="page-wrapper">
-            @include('admin.layouts.sidebar_new')
+
+            @include('admin.layouts.sidebar')
             <div class="body-wrapper">
                 <main id="main-content" tabindex="-1" role="main">
                 @if(request()->routeIs('admin.mess.*'))
-                    <div class="container-fluid pt-0">
+                    <div class="container-fluid px-3 px-lg-4 pt-0">
                         <div class="mess-dt-stale-hint alert alert-warning border-0 shadow-sm rounded-3 mb-3 align-items-center justify-content-between flex-wrap gap-2 no-print" role="status">
                             <span class="small mb-0">Table data may be outdated after a long idle period. Click refresh or apply filters again.</span>
                             <button type="button" class="btn btn-sm btn-warning" id="messDtStaleRefreshBtn">Refresh data</button>
@@ -738,40 +618,35 @@
                         @yield('content')
                     </div>
 
-                        <!-- Setup Tab -->
-                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}"
-                            id="tab-setup" role="tabpanel">
-                            @yield('setup_content')
-                        </div>
-
-                        <!-- Communications Tab -->
-                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}"
-                            id="tab-communications" role="tabpanel">
-                            @yield('communications_content')
-                        </div>
-
-                        <!-- Academics Tab -->
-                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}"
-                            id="tab-academics" role="tabpanel">
-                            @yield('academics_content')
-                        </div>
-
-                        <!-- Material Management Tab -->
-                        <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}"
-                            id="tab-material-management" role="tabpanel">
-                            @yield('material_management_content')
-                        </div>
+                    <!-- Setup Tab -->
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}" id="tab-setup" role="tabpanel">
+                        @yield('setup_content')
                     </div>
+
+                    <!-- Communications Tab -->
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}" id="tab-communications" role="tabpanel">
+                        @yield('communications_content')
+                    </div>
+
+                    <!-- Academics Tab -->
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}" id="tab-academics" role="tabpanel">
+                        @yield('academics_content')
+                    </div>
+
+                    <!-- Material Management Tab -->
+                    <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}" id="tab-material-management" role="tabpanel">
+                        @yield('material_management_content')
+                    </div>
+                </div>
                 </main>
             </div>
         </div>
     </div>
 
     @include('admin.layouts.footer')
-    <script src="{{ asset('js/forms.js') }}"></script>
+     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
-    <script src="{{ asset('admin_assets/js/nav-state.js') }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     @if(request()->routeIs('admin.mess.*'))
@@ -779,327 +654,257 @@
         @include('admin.mess.partials.column-manager-auto-init')
     @endif
     @stack('scripts')
+    @yield('scripts')
     <script>
+document.addEventListener('DOMContentLoaded', function () {
+    const toggle = document.getElementById('searchToggle');
+    const input  = document.getElementById('searchInput');
+    if (!toggle || !input) return;
+
+    toggle.addEventListener('click', () => {
+        input.classList.toggle('active');
+        if (input.classList.contains('active')) {
+            input.focus();
+        }
+    });
+
+    // Close on outside click
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-expand')) {
+            input.classList.remove('active');
+        }
+    });
+});
+</script>
+<script>
+    (function () {
+        function hideSargamLoader() {
+            var loader = document.getElementById('sargamLoader');
+            if (!loader || loader.classList.contains('hidden')) return;
+            loader.classList.add('hidden');
+            setTimeout(function () { loader.style.display = 'none'; }, 500);
+        }
+        window.addEventListener('load', hideSargamLoader);
         document.addEventListener('DOMContentLoaded', function () {
-            const toggle = document.getElementById('searchToggle');
-            const input = document.getElementById('searchInput');
-            if (!toggle || !input) return;
-
-            toggle.addEventListener('click', () => {
-                input.classList.toggle('active');
-                if (input.classList.contains('active')) {
-                    input.focus();
-                }
-            });
-
-            // Close on outside click
-            document.addEventListener('click', (e) => {
-                if (!e.target.closest('.search-expand')) {
-                    input.classList.remove('active');
-                }
-            });
+            setTimeout(hideSargamLoader, 300);
         });
-    </script>
-    <script>
-        (function () {
-            function hideSargamLoader() {
-                var loader = document.getElementById('sargamLoader');
-                if (!loader || loader.classList.contains('hidden')) return;
-                loader.classList.add('hidden');
-                setTimeout(function () { loader.style.display = 'none'; }, 500);
-            }
-            window.addEventListener('load', hideSargamLoader);
-            document.addEventListener('DOMContentLoaded', function () {
-                setTimeout(hideSargamLoader, 300);
-            });
-            setTimeout(hideSargamLoader, 12000);
-        })();
-    </script>
-    <script>
-        document.addEventListener("DOMContentLoaded", function () {
-            const sidebar = document.getElementById("main-wrapper");
-            const toggleBtn = document.getElementById("headerCollapse");
-            if (!sidebar || !toggleBtn) return;
-            // Query all icons across all tabs (multiple instances due to tab structure)
-            const icons = document.querySelectorAll("#sidebarToggleIcon");
-            const body = document.body;
-            const sidebarmenus = document.querySelectorAll(".sidebarmenu");
-            const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
+        setTimeout(hideSargamLoader, 12000);
+    })();
+</script>
+<script>
+document.addEventListener("DOMContentLoaded", function () {
+    const sidebar = document.getElementById("main-wrapper");
+    const toggleBtn = document.getElementById("headerCollapse");
+    if (!sidebar || !toggleBtn) return;
+    // Query all icons across all tabs (multiple instances due to tab structure)
+    const icons = document.querySelectorAll("#sidebarToggleIcon");
+    const body = document.body;
+    const sidebarmenus = document.querySelectorAll(".sidebarmenu");
+    const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
 
-            // Helper: Safely adjust all DataTables after layout changes
-            function adjustAllDataTables() {
-                try {
-                    if (window.jQuery && $.fn && $.fn.dataTable) {
-                        // Adjust columns for all visible tables and recalc responsive layout
-                        const api = $.fn.dataTable.tables({ visible: true, api: true });
-                        if (api && api.columns) {
-                            api.columns.adjust();
-                            // Recalculate Responsive extension if available
-                            if (api.responsive && api.responsive.recalc) {
-                                api.responsive.recalc();
-                            }
-                            // Only redraw for client-side tables to avoid extra server calls
-                            if (api.settings) {
-                                const settings = api.settings();
-                                let clientSideExists = false;
-                                for (let i = 0; i < settings.length; i++) {
-                                    if (!settings[i].oFeatures.bServerSide) {
-                                        clientSideExists = true;
-                                        break;
-                                    }
-                                }
-                                if (clientSideExists) api.draw(false);
+    // Helper: Safely adjust all DataTables after layout changes
+    function adjustAllDataTables() {
+        try {
+            if (window.jQuery && $.fn && $.fn.dataTable) {
+                // Adjust columns for all visible tables and recalc responsive layout
+                const api = $.fn.dataTable.tables({ visible: true, api: true });
+                if (api && api.columns) {
+                    api.columns.adjust();
+                    // Recalculate Responsive extension if available
+                    if (api.responsive && api.responsive.recalc) {
+                        api.responsive.recalc();
+                    }
+                    // Only redraw for client-side tables to avoid extra server calls
+                    if (api.settings) {
+                        const settings = api.settings();
+                        let clientSideExists = false;
+                        for (let i = 0; i < settings.length; i++) {
+                            if (!settings[i].oFeatures.bServerSide) {
+                                clientSideExists = true;
+                                break;
                             }
                         }
+                        if (clientSideExists) api.draw(false);
                     }
-                } catch (err) {
-                    console.warn('DataTables adjust failed after sidebar toggle:', err);
                 }
             }
+        } catch (err) {
+            console.warn('DataTables adjust failed after sidebar toggle:', err);
+        }
+    }
 
-            // One-time migration: reset all users to expanded sidebar
-            try {
-                if (!localStorage.getItem('SidebarType_migrated_v2')) {
-                    localStorage.setItem('SidebarType', 'full');
-                    localStorage.setItem('SidebarType_migrated_v2', '1');
-                }
-            } catch (e) { }
+    // Apply saved sidebar type preference; default to collapsed on first login
+    try {
+        const savedType = localStorage.getItem('SidebarType');
+        if (savedType) {
+            body.setAttribute('data-sidebartype', savedType);
+        } else {
+            // Default to collapsed (mini-sidebar) for new users
+            body.setAttribute('data-sidebartype', 'mini-sidebar');
+            localStorage.setItem('SidebarType', 'mini-sidebar');
+        }
+    } catch (e) {}
 
-            function applySidebarVisualState(type) {
-                if (type === 'mini-sidebar') {
-                    sidebar.classList.remove('show-sidebar');
-                    sidebarmenus.forEach(function (el) { el.classList.add('close'); });
-                    icons.forEach(function (icon) {
-                        icon.textContent = 'keyboard_double_arrow_right';
-                        icon.classList.remove('rotated');
-                    });
-                } else {
-                    sidebar.classList.add('show-sidebar');
-                    sidebarmenus.forEach(function (el) { el.classList.remove('close'); });
-                    icons.forEach(function (icon) {
-                        icon.textContent = 'keyboard_double_arrow_right';
-                        icon.classList.add('rotated');
-                    });
-                }
-            }
+    // Initialize collapsed state on page load
+    const sidebarType = body.getAttribute("data-sidebartype");
+    console.log('Initial sidebar type:', sidebarType);
+    console.log('Icon elements found:', icons.length);
 
-            // Apply saved sidebar type; default expanded
-            let sidebarType = 'full';
-            try {
-                const savedType = localStorage.getItem('SidebarType');
-                sidebarType = savedType || 'full';
-                if (!savedType) {
-                    localStorage.setItem('SidebarType', 'full');
-                }
-            } catch (e) { }
+    if (sidebarType === "mini-sidebar") {
+        // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
+        sidebar.classList.remove("show-sidebar");
+        // Add close class to sidebarmenu elements
+        sidebarmenus.forEach(function(el) {
+            el.classList.add("close");
+        });
+        // Set all icon instances to expand (collapsed state)
+        icons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.remove("rotated");
+        });
+        console.log('Set all icons to non-rotated (collapsed state)');
+        // After initial collapse state, adjust DataTables to new layout
+        setTimeout(adjustAllDataTables, 300);
+    } else {
+        // Sidebar should be expanded
+        sidebar.classList.add("show-sidebar");
+        sidebarmenus.forEach(function(el) {
+            el.classList.remove("close");
+        });
+        // Set all icon instances to rotated (expanded state)
+        icons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.add("rotated");
+        });
+        console.log('Set all icons to rotated (expanded state)');
+        // After initial expanded state, adjust DataTables to new layout
+        setTimeout(adjustAllDataTables, 300);
+    }
 
-            // Dashboard/Home always shows expanded sidebar
-            const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-            if (isDashboard || routeTab === '#home') {
-                sidebarType = 'full';
-                body.setAttribute('data-sidebartype', 'full');
-                try { localStorage.setItem('SidebarType', 'full'); } catch (e) { }
+    // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
+    function syncIconWithSidebar(type) {
+        const allIcons = document.querySelectorAll("#sidebarToggleIcon");
+        allIcons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
+            if (type === "full") {
+                icon.classList.add("rotated");
             } else {
-                body.setAttribute('data-sidebartype', sidebarType);
+                icon.classList.remove("rotated");
             }
-
-            // Initialize sidebar state on page load
-            sidebarType = body.getAttribute('data-sidebartype');
-            console.log('Initial sidebar type:', sidebarType);
-            console.log('Icon elements found:', icons.length);
-
-            applySidebarVisualState(sidebarType);
-            setTimeout(adjustAllDataTables, 300);
-
-            // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
-            function syncIconWithSidebar(type) {
-                const allIcons = document.querySelectorAll("#sidebarToggleIcon");
-                allIcons.forEach(function (icon) {
-                    icon.textContent = "keyboard_double_arrow_right";
-                    if (type === "full") {
-                        icon.classList.add("rotated");
-                    } else {
-                        icon.classList.remove("rotated");
-                    }
-                });
-                console.log('Synced', allIcons.length, 'icon(s) to type:', type);
-            }
-
-            const observer = new MutationObserver(function (mutations) {
-                for (const m of mutations) {
-                    if (m.attributeName === 'data-sidebartype') {
-                        const t = body.getAttribute('data-sidebartype');
-                        syncIconWithSidebar(t);
-                        try { localStorage.setItem('SidebarType', t); } catch (e) { }
-                        applySidebarVisualState(t);
-                        setTimeout(adjustAllDataTables, 300);
-                    }
-                }
-            });
-            observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
         });
-    </script>
+        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
+    }
 
-    <!-- Final safeguard: Force light mode on window load -->
-    <script>
-        window.addEventListener('load', function () {
-            // Force light mode one final time after everything loads
-            document.documentElement.setAttribute('data-bs-theme', 'light');
-            document.documentElement.style.colorScheme = 'light';
-            document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
-            document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
-
-            // Remove any dark mode classes
-            document.documentElement.classList.remove('dark');
-            if (document.body) {
-                document.body.classList.remove('dark');
-                document.body.style.colorScheme = 'light';
-            }
-
-            // Force reflow to apply styles
-            document.documentElement.offsetHeight;
-        });
-    </script>
-    
-    <!-- @sidebar  scripts -->
-    <script>
-        function navAjaxContext() {
-            return {
-                current_path: window.location.pathname.replace(/^\//, ''),
-                current_route: window.SARGAM_CURRENT_ROUTE_NAME || ''
-            };
-        }
-
-        function markActiveSidebarMenuLink() {
-            if (window.SargamNavState && window.SargamNavState.markActiveSidebarLinks) {
-                window.SargamNavState.markActiveSidebarLinks();
+    const observer = new MutationObserver(function(mutations) {
+        for (const m of mutations) {
+            if (m.attributeName === 'data-sidebartype') {
+                const t = body.getAttribute('data-sidebartype');
+                syncIconWithSidebar(t);
+                setTimeout(adjustAllDataTables, 300);
             }
         }
-        window.markActiveSidebarMenuLink = markActiveSidebarMenuLink;
+    });
+    observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
+});
+</script>
 
-        function selectSidebarGroupVisual(groupId) {
-            $('.sidebar-group-link').removeClass('selected mx-2 py-1 bg-primary').attr('aria-selected', 'false');
-            $('.sidebar-google-icon-wrap').removeClass('text-light');
-            $('.sidebar-google-label').removeClass('text-light');
-            var $link = $('.sidebar-group-link[data-id="' + groupId + '"]');
-            if (!$link.length) return;
-            $link.addClass('selected').attr('aria-selected', 'true');
-            $link.addClass('mx-2 py-1 bg-primary');
-            $link.find('.sidebar-google-icon-wrap').addClass('text-light');
-            $link.find('.sidebar-google-label').addClass('text-light');
+  <!-- Final safeguard: Force light mode on window load -->
+  <script>
+    window.addEventListener('load', function() {
+      // Force light mode one final time after everything loads
+      document.documentElement.setAttribute('data-bs-theme', 'light');
+      document.documentElement.style.colorScheme = 'light';
+      document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
+      document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
+
+      // Remove any dark mode classes
+      document.documentElement.classList.remove('dark');
+      if (document.body) {
+        document.body.classList.remove('dark');
+        document.body.style.colorScheme = 'light';
+      }
+
+      // Force reflow to apply styles
+      document.documentElement.offsetHeight;
+    });
+  </script>
+
+  <script>
+    // Admin Mess: Tab on dropdown should act like Enter (Select2-friendly)
+    (function () {
+      function isAdminMessPage() {
+        try {
+          const p = (window.location && window.location.pathname || '').toLowerCase();
+          return p.includes('/admin/mess') || (p.includes('/mess') && !p.includes('/message'));
+        } catch (e) {
+          return false;
         }
-        window.selectSidebarGroupVisual = selectSidebarGroupVisual;
+      }
 
-        function clearSidebarGroupSelectedVisual() {
-            $('.sidebar-group-link').removeClass('selected mx-2 py-1 bg-primary').attr('aria-selected', 'false');
-            $('.sidebar-google-icon-wrap').removeClass('text-light');
-            $('.sidebar-google-label').removeClass('text-light');
+      function shouldConvertTabToEnter(e) {
+        if (!e || e.defaultPrevented) return false;
+        if (e.key !== 'Tab' || e.shiftKey || e.ctrlKey || e.altKey || e.metaKey) return false;
+
+        const active = document.activeElement;
+
+        // Select2: when dropdown is open, focus is in .select2-search__field
+        const isSelect2Search = !!(active && active.classList && active.classList.contains('select2-search__field'));
+        const isSelect2Open = !!document.querySelector('.select2-container--open');
+
+        if (isSelect2Search && isSelect2Open) return true;
+
+        // Fallback: if focus is within a select2 container and it's open
+        if (isSelect2Open && active && active.closest && active.closest('.select2-container')) return true;
+
+        // Choices.js: open dropdown has `.choices.is-open`; focus is usually in `.choices__input`
+        const choicesRoot = active && active.closest ? active.closest('.choices') : null;
+        if (choicesRoot && choicesRoot.classList && choicesRoot.classList.contains('is-open')) return true;
+        if (document.querySelector('.choices.is-open') && active && active.classList && active.classList.contains('choices__input')) return true;
+
+        // Tom Select: open dropdown typically sets `.ts-wrapper.dropdown-active`
+        const tomRoot = active && active.closest ? active.closest('.ts-wrapper') : null;
+        if (tomRoot && tomRoot.classList && tomRoot.classList.contains('dropdown-active')) return true;
+        if (document.querySelector('.ts-wrapper.dropdown-active') && active && active.closest && active.closest('.ts-control')) return true;
+
+        return false;
+      }
+
+      function dispatchEnterOnActiveElement() {
+        const el = document.activeElement;
+        if (!el) return;
+
+        // Prefer keyboard event for Select2; it listens on keydown in the search field
+        try {
+          const evt = new KeyboardEvent('keydown', {
+            key: 'Enter',
+            code: 'Enter',
+            keyCode: 13,
+            which: 13,
+            bubbles: true,
+            cancelable: true
+          });
+          el.dispatchEvent(evt);
+        } catch (e) {
+          // Very old browsers fallback
+          if (typeof el.dispatchEvent === 'function') {
+            const legacy = document.createEvent('Event');
+            legacy.initEvent('keydown', true, true);
+            legacy.keyCode = 13;
+            legacy.which = 13;
+            el.dispatchEvent(legacy);
+          }
         }
-        window.clearSidebarGroupSelectedVisual = clearSidebarGroupSelectedVisual;
+      }
 
-        function clearSidebarGroupSelection() {
-            clearSidebarGroupSelectedVisual();
-            $('#sidebar-title').text('').removeClass('border-bottom');
-            $('#sidebarnav').html(
-                '<li class="sidebar-item sidebar-empty-state list-unstyled">'
-                + '<div class="px-3 py-4 text-center">'
-                + '<i class="material-icons material-symbols-rounded sidebar-empty-icon mb-2" aria-hidden="true">info</i>'
-                + '<span class="sidebar-empty-message small fw-medium d-block">No active menu</span>'
-                + '</div></li>'
-            );
-        }
-        window.clearSidebarGroupSelection = clearSidebarGroupSelection;
+      document.addEventListener('keydown', function (e) {
+        if (!isAdminMessPage()) return;
+        if (!shouldConvertTabToEnter(e)) return;
 
-        function loadSidebarMenusForGroup(groupId, groupName) {
-            if (!groupId) return;
-            if (groupName) {
-                $('#sidebar-title').text(groupName).addClass('border-bottom');
-            }
-            if (window.SargamNavState) {
-                var tabHash = window.SargamNavState.getActiveTabHash
-                    ? window.SargamNavState.getActiveTabHash()
-                    : (window.SARGAM_ACTIVE_NAV_TAB || '#home');
-                window.SargamNavState.persistTabState(
-                    tabHash,
-                    window.SARGAM_ACTIVE_CATEGORY_ID,
-                    groupId
-                );
-            }
-            $.ajax({
-                url: '{{ route("sidebar.menu") }}',
-                type: 'GET',
-                data: $.extend({ group_id: groupId }, navAjaxContext()),
-                success: function (response) {
-                    $('#sidebarnav').html(response);
-                    markActiveSidebarMenuLink();
-                },
-                error: function (xhr) {
-                    console.error(xhr.responseText);
-                }
-            });
-        }
-        window.loadSidebarMenusForGroup = loadSidebarMenusForGroup;
-
-        function loadSidebarGroupsForCategory(categoryId, done) {
-            if (!categoryId) {
-                if (typeof done === 'function') done();
-                return;
-            }
-            $.ajax({
-                url: '{{ route("sidebar.groups") }}',
-                type: 'GET',
-                data: { category_id: categoryId },
-                success: function (response) {
-                    $('#sidebar-groups').html(response);
-                    if (typeof done === 'function') done();
-                },
-                error: function (xhr) {
-                    console.error(xhr.responseText);
-                    if (typeof done === 'function') done();
-                }
-            });
-        }
-        window.loadSidebarGroupsForCategory = loadSidebarGroupsForCategory;
-
-        // Header category tabs: nav-state.js (capture handler, no Bootstrap tab toggle)
-
-        $(document).on('click', '.sidebar-group-link', function(e){
-            e.preventDefault();
-            var groupId = $(this).data('id');
-            var groupName = $(this).data('name');
-            selectSidebarGroupVisual(groupId);
-            loadSidebarMenusForGroup(groupId, groupName);
-        });
-
-        $(function () {
-            var categoryId = window.SARGAM_ACTIVE_CATEGORY_ID;
-            var groupId = window.SARGAM_ACTIVE_GROUP_ID;
-            var routeTab = window.SARGAM_ACTIVE_NAV_TAB;
-
-            if (routeTab && typeof window.showMainNavPane === 'function') {
-                window.showMainNavPane(routeTab);
-            }
-
-            if (!categoryId) return;
-
-            $('.sidebar-category-link').removeClass('active').attr('aria-selected', 'false');
-            $('.sidebar-category-link[data-id="' + categoryId + '"]')
-                .addClass('active')
-                .attr('aria-selected', 'true');
-
-            loadSidebarGroupsForCategory(categoryId, function () {
-                if (groupId) {
-                    selectSidebarGroupVisual(groupId);
-                    loadSidebarMenusForGroup(groupId);
-                    return;
-                }
-                clearSidebarGroupSelection();
-            });
-        });
-    </script>
-    <script src="{{ asset('admin_assets/js/sidebar-flyout-hover.js') }}"></script>
-
-  @yield('script')
+        e.preventDefault();
+        dispatchEnterOnActiveElement();
+      }, true);
+    })();
+  </script>
 </body>
 
 </html>

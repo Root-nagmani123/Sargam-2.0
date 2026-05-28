@@ -1,15 +1,11 @@
 var userSettings = {
   Layout: "vertical", // vertical | horizontal
-  // Default expanded; persist user choice in localStorage
+  // Default to collapsed on first use; persist user choice in localStorage
   SidebarType: (function() {
     try {
-      if (!localStorage.getItem('SidebarType_migrated_v2')) {
-        localStorage.setItem('SidebarType', 'full');
-        localStorage.setItem('SidebarType_migrated_v2', '1');
-      }
-      return localStorage.getItem('SidebarType') || "full";
+      return localStorage.getItem('SidebarType') || "mini-sidebar";
     } catch (e) {
-      return "full";
+      return "mini-sidebar";
     }
   })(), // full | mini-sidebar
   BoxedLayout: true, // true | false
