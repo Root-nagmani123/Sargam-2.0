@@ -3,644 +3,506 @@
 @section('title', 'MDO Duty Type')
 
 @section('setup_content')
-<div class="container-fluid">
-    <x-breadcrum title="MDO Duty Type"></x-breadcrum>
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <!-- left column empty or header title above -->
-                            <h4>MDO Duty Type</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-                                <!-- Add Group Mapping -->
-                                <a href="javascript:void(0)" 
-                                    class="btn btn-primary add-btn d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#mdoDutyTypeModal">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 24px;">add</i>
-                                    Add MDO Duty Type
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
+<div class="container-fluid mdt-master-page">
+    <x-breadcrum title="MDO Duty Type">
+        <button type="button"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm add-btn"
+            aria-controls="mdtDutyTypeModal">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add MDO Duty Type</span>
+        </button>
+    </x-breadcrum>
 
-                    {!! $dataTable->table(['class' => 'table']) !!}
-                </div>
+    <div class="card mdt-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
+                <div id="mdtDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="mdodutytypemaster-table"></div>
+            </div>
+
+            <div class="programme-dt-panel mdt-dt-scroll">
+                {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                <div id="mdtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="mdodutytypemaster-table"></div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
+<!-- Add / Edit MDO Duty Type (shared modal) -->
+<div class="modal fade mdt-form-modal" id="mdtDutyTypeModal" tabindex="-1" aria-labelledby="mdtDutyTypeModalLabel" aria-hidden="true"
+    data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content cgt-form-modal border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title mb-0" id="mdtDutyTypeModalLabel">Add MDO Duty Type</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <form id="AddMDODutyTypeForm" class="mdt-modal-form mdt-modal-form--add" novalidate>
+                    <input type="hidden" name="_token" value="{{ csrf_token() }}">
 
+                    <div class="mb-3">
+                        <label for="mdt_add_duty_type_name" class="form-label cgt-field-label mb-2">
+                            Duty Type Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               name="mdo_duty_type_name"
+                               id="mdt_add_duty_type_name"
+                               class="form-control rounded-3"
+                               placeholder="eg. General Medicine"
+                               autocomplete="off">
+                        <small class="text-danger d-none mt-1" id="mdt_add_duty_type_name_error">Duty Type Name is required</small>
+                    </div>
+
+                    <div class="mb-0">
+                        <label for="mdt_add_active_inactive" class="form-label cgt-field-label mb-2">
+                            Status <span class="text-danger">*</span>
+                        </label>
+                        <select name="active_inactive" id="mdt_add_active_inactive" class="form-select rounded-3">
+                            <option value="">Select Status</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        <small class="text-danger d-none mt-1" id="mdt_add_active_inactive_error">Status is required</small>
+                    </div>
+                </form>
+
+                <form id="EditMDODutyTypeForm" class="mdt-modal-form mdt-modal-form--edit d-none" novalidate>
+                    <input type="hidden" name="_token" value="{{ csrf_token() }}">
+                    <input type="hidden" name="id" id="mdt_edit_id" value="">
+
+                    <div class="mb-3">
+                        <label for="mdt_edit_duty_type_name" class="form-label cgt-field-label mb-2">
+                            Duty Type Name <span class="text-danger">*</span>
+                        </label>
+                        <input type="text"
+                               name="mdo_duty_type_name"
+                               id="mdt_edit_duty_type_name"
+                               class="form-control rounded-3"
+                               placeholder="eg. General Medicine"
+                               autocomplete="off">
+                        <small class="text-danger d-none mt-1" id="mdt_edit_duty_type_name_error">Duty Type Name is required</small>
+                    </div>
+
+                    <div class="mb-0">
+                        <label for="mdt_edit_active_inactive" class="form-label cgt-field-label mb-2">
+                            Status <span class="text-danger">*</span>
+                        </label>
+                        <select name="active_inactive" id="mdt_edit_active_inactive" class="form-select rounded-3">
+                            <option value="">Select Status</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        <small class="text-danger d-none mt-1" id="mdt_edit_active_inactive_error">Status is required</small>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 gap-2 justify-content-end">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-3 px-4" id="mdtFormSubmit">Add</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
 
 @push('scripts')
 {!! $dataTable->scripts() !!}
 <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const createBtn = document.getElementById('openCreateDutyType');
-        const editLinks = document.querySelectorAll('.openEditDutyType');
+    $(function() {
+        const tableSelector = '#mdodutytypemaster-table';
+        const storeUrl = "{{ route('master.mdo_duty_type.store') }}";
+        const csrfToken = "{{ csrf_token() }}";
 
-        function openModalWithUrl(url, title) {
-            const modalEl = document.getElementById('dutyTypeModal');
-            const modalTitle = modalEl.querySelector('.modal-title');
-            const modalBody = modalEl.querySelector('.modal-body');
-            modalTitle.textContent = title || 'MDO Duty Type';
-            modalBody.innerHTML = '<div class="text-center p-4">Loading...</div>';
+        const mdtModalEl = document.getElementById('mdtDutyTypeModal');
+        let mdtModalMode = 'add';
 
-            fetch(url, {
-                    headers: {
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(res => res.text())
-                .then(html => {
-                    modalBody.innerHTML = html;
-                })
-                .catch(() => {
-                    modalBody.innerHTML = '<div class="text-danger">Failed to load form.</div>';
-                });
-
-            const bsModal = new bootstrap.Modal(modalEl);
-            bsModal.show();
+        if (mdtModalEl && mdtModalEl.parentElement && mdtModalEl.parentElement !== document.body) {
+            document.body.appendChild(mdtModalEl);
         }
 
-        if (createBtn) {
-            createBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                openModalWithUrl(this.getAttribute('href'), 'Create MDO Duty Type');
-            });
-        }
-
-        editLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
-            });
-
-            // Handle AJAX form submit inside modal
-            document.getElementById('dutyTypeModal')?.addEventListener('submit', function(e) {
-                const form = e.target;
-                if (form && form.tagName === 'FORM') {
-                    e.preventDefault();
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) submitBtn.disabled = true;
-
-                    fetch(form.action, {
-                            method: form.method || 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: new FormData(form)
-                        })
-                        .then(async (res) => {
-                            if (res.ok) {
-                                // Try to parse JSON; fallback to text
-                                const ct = res.headers.get('content-type') || '';
-                                if (ct.includes('application/json')) {
-                                    const data = await res.json();
-                                    if (data.success || data.status === true) {
-                                        // Update table without full reload
-                                        updateTableAfterSave(data);
-                                        bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
-                                        return;
-                                    }
-                                }
-                                // Non-JSON success fallback
-                                updateTableAfterSave(null);
-                                bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
-                            } else if (res.status === 422) {
-                                // Validation errors: re-render returned HTML into modal
-                                const html = await res.text();
-                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                                modalBody.innerHTML = html;
-                            } else {
-                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                                modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Save failed. Please try again.</div>');
-                            }
-                        })
-                        .catch(() => {
-                            const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                            modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Network error. Please try again.</div>');
-                        })
-                        .finally(() => {
-                            if (submitBtn) submitBtn.disabled = false;
-                        });
-                }
-            });
-        });
-    });
-
-    function buildEditUrl(encryptedPk) {
-        return `${window.location.origin}/master/mdo_duty_type/edit/${encodeURIComponent(encryptedPk)}`;
-    }
-
-    function escapeHtml(str) {
-        if (typeof str !== 'string') return '';
-        return str.replace(/[&<>"']/g, function(ch) {
-            return ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                '\'': '&#39;'
-            } [ch]);
-        });
-    }
-
-    function interceptEditLink(e) {
-        e.preventDefault();
-        openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
-    }
-
-    function updateTableAfterSave(payload) {
-        // Reload DataTable after create/update
-        if (typeof $.fn.DataTable !== 'undefined') {
-            const table = $('#mdodutytypemaster-table').DataTable();
-            if (table) {
-                table.ajax.reload(null, false); // false = don't reset pagination
+        function showMdtModal() {
+            if (!mdtModalEl) {
+                return;
+            }
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(mdtModalEl).show();
+            } else if (window.jQuery) {
+                $(mdtModalEl).modal('show');
             }
         }
-    }
 
+        function hideMdtModal() {
+            if (!mdtModalEl) {
+                return;
+            }
+            if (window.bootstrap && bootstrap.Modal) {
+                bootstrap.Modal.getOrCreateInstance(mdtModalEl).hide();
+            } else if (window.jQuery) {
+                $(mdtModalEl).modal('hide');
+            }
+        }
 
-    $(document).on('change', '.plain-status-toggle', function() {
-        let checkbox = $(this);
-        let pk = checkbox.data('id');
-        let active_inactive = checkbox.is(':checked') ? 1 : 0;
-            var actionText = active_inactive ? 'activate' : 'deactivate';
-            var confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
-            var confirmBtnColor = active_inactive ? '#28a745' : '#d33';
+        function resetMdtAddForm() {
+            const $form = $('#AddMDODutyTypeForm');
+            $form.find('#mdt_add_duty_type_name').val('').removeClass('is-invalid');
+            $form.find('#mdt_add_active_inactive').val('');
+            $form.find('small.text-danger').addClass('d-none');
+        }
+
+        function openMdtModal(mode, data) {
+            mdtModalMode = mode;
+            const isAdd = mode === 'add';
+
+            $('#mdtDutyTypeModalLabel').text(isAdd ? 'Add MDO Duty Type' : 'Edit MDO Duty Type');
+            $('#mdtFormSubmit').text(isAdd ? 'Add' : 'Update');
+            $('#AddMDODutyTypeForm').toggleClass('d-none', !isAdd);
+            $('#EditMDODutyTypeForm').toggleClass('d-none', isAdd);
+
+            if (isAdd) {
+                resetMdtAddForm();
+            } else {
+                const $form = $('#EditMDODutyTypeForm');
+                $form.find('#mdt_edit_id').val(data.id || '');
+                $form.find('#mdt_edit_duty_type_name').val(data.name || '').removeClass('is-invalid');
+                $form.find('#mdt_edit_active_inactive').val(
+                    data.status === 0 || data.status === '0' ? '0' :
+                    (data.status === 1 || data.status === '1' ? '1' : '')
+                );
+                $form.find('small.text-danger').addClass('d-none');
+                $form.find('.form-control, .form-select').removeClass('is-invalid');
+            }
+
+            showMdtModal();
+        }
+
+        if (mdtModalEl) {
+            mdtModalEl.addEventListener('shown.bs.modal', function() {
+                if (mdtModalMode === 'add') {
+                    $('#mdt_add_duty_type_name').trigger('focus');
+                } else {
+                    $('#mdt_edit_duty_type_name').trigger('focus');
+                }
+            });
+        }
+
+        function decorateMdtRows() {
+            $(tableSelector + ' tbody tr').each(function() {
+                const $row = $(this);
+                const $cells = $row.find('td');
+                if ($cells.length < 4) {
+                    return;
+                }
+
+                const $statusCell = $cells.eq(2);
+                const $actionCell = $cells.eq(3);
+                const $toggle = $statusCell.find('.plain-status-toggle').add($actionCell.find('.plain-status-toggle')).first();
+
+                if ($toggle.length) {
+                    const isActive = $toggle.is(':checked');
+                    const badgeClass = isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive';
+                    const label = isActive ? 'Active' : 'Inactive';
+
+                    const $switchWrap = $toggle.closest('.form-check');
+                    const $actionGroup = $actionCell.find('.d-inline-flex[role="group"]');
+                    const $editBtn = $actionGroup.find('.edit-btn').first();
+
+                    if ($switchWrap.length && $actionGroup.length) {
+                        $switchWrap.addClass('programme-action-switch m-0 d-inline-flex align-items-center');
+                        if ($editBtn.length) {
+                            $editBtn.after($switchWrap);
+                        } else {
+                            $actionGroup.prepend($switchWrap);
+                        }
+                    }
+
+                    $statusCell.empty().append(
+                        $('<span>', {
+                            class: 'badge rounded-pill programme-status-badge mdt-status-badge ' + badgeClass,
+                            text: label
+                        })
+                    );
+                }
+
+                $actionCell.find('.edit-btn').each(function() {
+                    const $btn = $(this);
+                    if (!$btn.find('.bi').length) {
+                        $btn.find('.material-icons').remove();
+                        $btn.find('span.d-none').remove();
+                        $btn.append('<i class="bi bi-pencil" aria-hidden="true"></i>');
+                    }
+                });
+
+                $actionCell.find('.delete-btn').each(function() {
+                    const $btn = $(this);
+                    if (!$btn.find('.bi').length) {
+                        $btn.find('.material-icons').remove();
+                        $btn.find('span.d-none').remove();
+                        $btn.append('<i class="bi bi-trash3" aria-hidden="true"></i>');
+                    }
+                });
+            });
+        }
+
+        function updateMdtRowBadge($checkbox, isActive) {
+            const $badge = $checkbox.closest('tr').find('.mdt-status-badge');
+            if ($badge.length) {
+                $badge
+                    .removeClass('programme-status-badge--active programme-status-badge--inactive')
+                    .addClass(isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive')
+                    .text(isActive ? 'Active' : 'Inactive');
+            }
+        }
+
+        function reloadMdtTable() {
+            if ($.fn.DataTable.isDataTable(tableSelector)) {
+                $(tableSelector).DataTable().ajax.reload(null, false);
+            }
+        }
+
+        $(tableSelector).on('draw.dt', decorateMdtRows);
+
+        $(tableSelector).on('init.dt', function() {
+            const api = $(tableSelector).DataTable();
+            if (api.settings()[0].oScroll.sX) {
+                api.columns.adjust();
+            }
+        });
+
+        if ($.fn.DataTable.isDataTable(tableSelector)) {
+            decorateMdtRows();
+            $(tableSelector).DataTable().columns.adjust();
+        }
+
+        $(document).on('change', '.plain-status-toggle', function() {
+            const checkbox = $(this);
+            const pk = checkbox.data('id');
+            const active_inactive = checkbox.is(':checked') ? 1 : 0;
+            const actionText = active_inactive ? 'activate' : 'deactivate';
+            const confirmBtnText = active_inactive ? 'Yes, activate' : 'Yes, deactivate';
+            const confirmBtnColor = active_inactive ? '#28a745' : '#d33';
 
             Swal.fire({
                 title: 'Are you sure?',
-                text: `Are you sure you want to ${actionText} this item?`,
+                text: 'Are you sure you want to ' + actionText + ' this item?',
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: confirmBtnColor,
                 cancelButtonColor: '#3085d6',
                 confirmButtonText: confirmBtnText,
                 cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed){
-                $.ajax({
-                    url: "{{ route('master.mdo_duty_type.status') }}", // route
-                    type: "POST",
-                    data: {
-                        pk: pk,
-                        active_inactive: active_inactive,
-                        _token: "{{ csrf_token() }}"
-                    },
-                    success: function(response) {
-
-                        $('#mdodutytypemaster-table').DataTable().ajax.reload(null, false);
-
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Updated!',
-                            text: response.message,
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                    }
-                });
-
-            } else {
-                // revert checkbox
-                checkbox.prop('checked', !active_inactive);
-            }
-        });
-    });
-
-    $(document).on('click', '.delete-btn', function(e) {
-        e.preventDefault();
-        let pk = $(this).data('id');
-        Swal.fire({
-            title: 'Are you sure?',
-            text: "This record will be permanently deleted!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, delete it!',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed){
-                $.ajax({
-                    url: "{{ route('master.mdo_duty_type.delete') }}", // route
-                    type: "POST",
-                    data: {
-                        id: pk,
-                        _token: "{{ csrf_token() }}"
-                    },
-                    success: function(response) {
-                        $('#mdodutytypemaster-table').DataTable().ajax.reload(null, false);
-                        Swal.fire({
-                            icon: 'success',
-                            title: 'Deleted!',
-                            text: response.message,
-                            timer: 1500,
-                            showConfirmButton: false
-                        });
-                    }
-                });
-
-            } else {
-                // revert checkbox
-                checkbox.prop('checked', !active_inactive);
-            }
-        });
-    });
-</script>
-
-<script>
-    
-    $(document).on('click', '.edit-btn', function () {
-    let  pk = $(this).data('id');
-    let  mdo_duty_type_name = $(this).data('mdo_duty_type_name');
-    let  active_inactive = $(this).data('active_inactive');
-    let  url = "{{ route('master.mdo_duty_type.store') }}";
-
-    Swal.fire({
-        title: '<strong><small>Edit MDO Duty Type</small></strong>',
-        html: `
-            <form id="EditMDODutyTypeForm">
-                <input type="hidden" name="_token" value="{{ csrf_token() }}">
-                <input type="hidden" name="id" value="${pk}">
-
-                <div class="row mb-2 align-items-center">
-                    <label class="col-4 col-form-label fw-semibold">
-                        Duty Type Name <span class="text-danger">*</span>
-                    </label>
-                    <div class="col-8">
-                        <input type="text"
-                            name="mdo_duty_type_name"
-                            id="mdo_duty_type_name"
-                            class="form-control"
-                            value="${mdo_duty_type_name}">
-                        <small class="text-danger d-none" id="mdo_duty_type_name_error">
-                            Duty Type Name is required
-                        </small>
-                    </div>
-                </div>
-
-                <div class="row mb-2 align-items-center">
-                    <label class="col-4 col-form-label fw-semibold">
-                        Status <span class="text-danger">*</span>
-                    </label>
-                    <div class="col-8">
-                        <select name="active_inactive"
-                                id="active_inactive"
-                                class="form-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="1" ${active_inactive == 1 ? 'selected' : ''}>Active</option>
-                            <option value="0" ${active_inactive == 0 ? 'selected' : ''}>Inactive</option>
-                        </select>
-
-                        <small class="text-danger d-none" id="active_inactive_error">
-                            Status is required
-                        </small>
-                    </div>
-                </div>
-
-            </form>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Update',
-        focusConfirm: false,
-
-        preConfirm: () => {
-            const typeNameInput = Swal.getPopup().querySelector('#mdo_duty_type_name');
-            const active_inactiveInput = Swal.getPopup().querySelector('#active_inactive');
-            const errorMsg = Swal.getPopup().querySelector('#mdo_duty_type_name_error');
-            const active_inactiveMsg = Swal.getPopup().querySelector('#active_inactive_error');
-
-            typeNameInput.classList.remove('is-invalid');
-            errorMsg.classList.add('d-none');
-
-            active_inactiveInput.classList.remove('is-invalid');
-            active_inactiveMsg.classList.add('d-none');
-            
-
-            if (!typeNameInput.value.trim()) {
-                typeNameInput.classList.add('is-invalid');
-                errorMsg.classList.remove('d-none');
-                return false;
-            }
-
-            if (!active_inactiveInput.value.trim()) {
-                active_inactiveInput.classList.add('is-invalid');
-                active_inactiveMsg.classList.remove('d-none');
-                return false;
-            }
-
-            return {
-                id: pk,
-                mdo_duty_type_name: typeNameInput.value.trim(),
-                active_inactive: active_inactiveInput.value.trim(),
-                _token: "{{ csrf_token() }}"
-            };
-        }
-    }).then((result) => {
-
-        if (result.isConfirmed) {
-
-            $.ajax({
-                url: url,
-                type: "POST",
-                data: result.value,
-                beforeSend: function () {
-                    Swal.showLoading();
-                },
-                success: function (response) {
-
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Updated!',
-                        text: response.message ?? 'Record updated successfully',
-                        timer: 1500,
-                        showConfirmButton: false
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ route('master.mdo_duty_type.status') }}",
+                        type: 'POST',
+                        data: {
+                            pk: pk,
+                            active_inactive: active_inactive,
+                            _token: csrfToken
+                        },
+                        success: function(response) {
+                            reloadMdtTable();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Updated!',
+                                text: response.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        }
                     });
+                } else {
+                    checkbox.prop('checked', !active_inactive);
+                    updateMdtRowBadge(checkbox, !active_inactive);
+                }
+            });
+        });
 
-                    $('.dataTable').DataTable().ajax.reload(null, false);
-                },
-                error: function (xhr) {
+        $(document).on('click', '.delete-btn', function(e) {
+            e.preventDefault();
+            if ($(this).attr('aria-disabled') === 'true' || $(this).hasClass('disabled')) {
+                return;
+            }
 
-                    Swal.fire({
-                        icon: 'error',
-                        title: 'Error',
-                        text: xhr.responseJSON?.message ?? 'Something went wrong'
+            const pk = $(this).data('id');
+            Swal.fire({
+                title: 'Are you sure?',
+                text: 'This record will be permanently deleted!',
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#d33',
+                cancelButtonColor: '#3085d6',
+                confirmButtonText: 'Yes, delete it!',
+                cancelButtonText: 'Cancel'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    $.ajax({
+                        url: "{{ route('master.mdo_duty_type.delete') }}",
+                        type: 'POST',
+                        data: {
+                            id: pk,
+                            _token: csrfToken
+                        },
+                        success: function(response) {
+                            reloadMdtTable();
+                            Swal.fire({
+                                icon: 'success',
+                                title: 'Deleted!',
+                                text: response.message,
+                                timer: 1500,
+                                showConfirmButton: false
+                            });
+                        }
                     });
                 }
             });
-        }
-    });
-});
+        });
 
-// add form//
+        $(document).on('click', '.edit-btn', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
 
-$(document).on('click', '.add-btn', function () {
-
-    const url  = "{{ route('master.mdo_duty_type.store') }}";
-    const csrf = "{{ csrf_token() }}";
-
-    Swal.fire({
-        title: '<strong><small>Add MDO Duty Type</small></strong>',
-        html: `
-            <form id="AddMDODutyTypeForm">
-                <input type="hidden" name="_token" value="${csrf}">
-
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
-                        Duty Type Name <span class="text-danger">*</span>
-                    </label>
-                    <div class="col">
-                        <input type="text"
-                               name="mdo_duty_type_name"
-                               class="form-control">
-                        <small class="text-danger d-none" id="mdo_duty_type_name_error">
-                            Duty Type Name is required
-                        </small>
-                    </div>
-                </div>
-
-                <div class="row mb-2 align-items-center">
-                    <label class="col-auto col-form-label fw-semibold">
-                        Status <span class="text-danger">*</span>
-                    </label>
-                    <div class="col">
-                        <select name="active_inactive" class="form-select">
-                            <option value="">-- Select Status --</option>
-                            <option value="1">Active</option>
-                            <option value="0">Inactive</option>
-                        </select>
-                        <small class="text-danger d-none" id="active_inactive_error">
-                            Status is required
-                        </small>
-                    </div>
-                </div>
-            </form>
-        `,
-        showCancelButton: true,
-        confirmButtonText: 'Save',
-        focusConfirm: false,
-
-        preConfirm: () => {
-
-            const form = $('#AddMDODutyTypeForm');
-            const nameInput   = form.find('[name="mdo_duty_type_name"]');
-            const statusInput = form.find('[name="active_inactive"]');
-
-            let valid = true;
-
-            form.find('.is-invalid').removeClass('is-invalid');
-            $('#mdo_duty_type_name_error, #active_inactive_error').addClass('d-none');
-
-            if (!nameInput.val().trim()) {
-                nameInput.addClass('is-invalid');
-                $('#mdo_duty_type_name_error').removeClass('d-none');
-                valid = false;
-            }
-
-            if (!statusInput.val()) {
-                statusInput.addClass('is-invalid');
-                $('#active_inactive_error').removeClass('d-none');
-                valid = false;
-            }
-
-            if (!valid) return false;
-
-            return {
-                mdo_duty_type_name: nameInput.val().trim(),
-                active_inactive: statusInput.val(),
-                _token: csrf
-            };
-        }
-
-    }).then((result) => {
-
-        if (!result.isConfirmed) return;
-
-        $.ajax({
-            url: url,
-            type: "POST",
-            data: result.value,
-            beforeSend: () => Swal.showLoading(),
-
-            success: (response) => {
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Saved!',
-                    text: response.message ?? 'Record added successfully',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-
-                $('.dataTable').DataTable().ajax.reload(null, false);
-            },
-
-            error: (xhr) => {
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: xhr.responseJSON?.message ?? 'Something went wrong'
-                });
-
-            const bsModal = new bootstrap.Modal(modalEl);
-            bsModal.show();
-        }
-
-        if (createBtn) {
-            createBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                openModalWithUrl(this.getAttribute('href'), 'Create MDO Duty Type');
+            openMdtModal('edit', {
+                id: $(this).data('id'),
+                name: $(this).data('mdo_duty_type_name'),
+                status: $(this).data('active_inactive')
             });
-        }
+        });
 
-        editLinks.forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
-            });
+        $(document).on('click', '.add-btn', function(e) {
+            e.preventDefault();
+            openMdtModal('add');
+        });
 
-            // Handle AJAX form submit inside modal
-            document.getElementById('dutyTypeModal')?.addEventListener('submit', function(e) {
-                const form = e.target;
-                if (form && form.tagName === 'FORM') {
-                    e.preventDefault();
-                    const submitBtn = form.querySelector('button[type="submit"]');
-                    if (submitBtn) submitBtn.disabled = true;
+        $('#mdtFormSubmit').on('click', function() {
+            if (mdtModalMode === 'add') {
+                const $form = $('#AddMDODutyTypeForm');
+                const name = $form.find('#mdt_add_duty_type_name');
+                const status = $form.find('#mdt_add_active_inactive');
 
-                    fetch(form.action, {
-                            method: form.method || 'POST',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
-                            body: new FormData(form)
-                        })
-                        .then(async (res) => {
-                            if (res.ok) {
-                                // Try to parse JSON; fallback to text
-                                const ct = res.headers.get('content-type') || '';
-                                if (ct.includes('application/json')) {
-                                    const data = await res.json();
-                                    if (data.success || data.status === true) {
-                                        // Update table without full reload
-                                        updateTableAfterSave(data);
-                                        bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
-                                        return;
-                                    }
-                                }
-                                // Non-JSON success fallback
-                                updateTableAfterSave(null);
-                                bootstrap.Modal.getInstance(document.getElementById('dutyTypeModal'))?.hide();
-                            } else if (res.status === 422) {
-                                // Validation errors: re-render returned HTML into modal
-                                const html = await res.text();
-                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                                modalBody.innerHTML = html;
-                            } else {
-                                const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                                modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Save failed. Please try again.</div>');
+                let isValid = true;
+                $form.find('small.text-danger').addClass('d-none');
+                name.removeClass('is-invalid');
+                status.removeClass('is-invalid');
+
+                if (!name.val().trim()) {
+                    $form.find('#mdt_add_duty_type_name_error').removeClass('d-none');
+                    name.addClass('is-invalid').focus();
+                    isValid = false;
+                } else if (!status.val()) {
+                    $form.find('#mdt_add_active_inactive_error').removeClass('d-none');
+                    status.addClass('is-invalid').focus();
+                    isValid = false;
+                }
+
+                if (!isValid) {
+                    return;
+                }
+
+                $.ajax({
+                    url: storeUrl,
+                    type: 'POST',
+                    data: {
+                        mdo_duty_type_name: name.val().trim(),
+                        active_inactive: status.val(),
+                        _token: csrfToken
+                    },
+                    success: function(response) {
+                        hideMdtModal();
+                        resetMdtAddForm();
+                        reloadMdtTable();
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Saved!',
+                            text: response.message ?? 'Record added successfully',
+                            timer: 1500,
+                            showConfirmButton: false
+                        });
+                    },
+                    error: function(xhr) {
+                        const message = xhr.responseJSON?.message ?? 'Something went wrong';
+                        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            if (errors.mdo_duty_type_name) {
+                                $form.find('#mdt_add_duty_type_name_error').text(errors.mdo_duty_type_name[0]).removeClass('d-none');
+                                name.addClass('is-invalid');
                             }
-                        })
-                        .catch(() => {
-                            const modalBody = document.querySelector('#dutyTypeModal .modal-body');
-                            modalBody.insertAdjacentHTML('afterbegin', '<div class="alert alert-danger">Network error. Please try again.</div>');
-                        })
-                        .finally(() => {
-                            if (submitBtn) submitBtn.disabled = false;
-                        });
+                            if (errors.active_inactive) {
+                                $form.find('#mdt_add_active_inactive_error').text(errors.active_inactive[0]).removeClass('d-none');
+                                status.addClass('is-invalid');
+                            }
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: message });
+                        }
+                    }
+                });
+            } else {
+                const $form = $('#EditMDODutyTypeForm');
+                const id = $form.find('#mdt_edit_id').val();
+                const name = $form.find('#mdt_edit_duty_type_name');
+                const status = $form.find('#mdt_edit_active_inactive');
+
+                let isValid = true;
+                $form.find('small.text-danger').addClass('d-none');
+                name.removeClass('is-invalid');
+                status.removeClass('is-invalid');
+
+                if (!name.val().trim()) {
+                    $form.find('#mdt_edit_duty_type_name_error').removeClass('d-none');
+                    name.addClass('is-invalid').focus();
+                    isValid = false;
+                } else if (!status.val()) {
+                    $form.find('#mdt_edit_active_inactive_error').removeClass('d-none');
+                    status.addClass('is-invalid').focus();
+                    isValid = false;
                 }
-            });
-        });
-    });
 
-    function buildEditUrl(encryptedPk) {
-        return `${window.location.origin}/master/mdo_duty_type/edit/${encodeURIComponent(encryptedPk)}`;
-    }
+                if (!isValid) {
+                    return;
+                }
 
-    function escapeHtml(str) {
-        if (typeof str !== 'string') return '';
-        return str.replace(/[&<>"']/g, function(ch) {
-            return ({
-                '&': '&amp;',
-                '<': '&lt;',
-                '>': '&gt;',
-                '"': '&quot;',
-                '\'': '&#39;'
-            } [ch]);
-        });
-    }
-
-    function interceptEditLink(e) {
-        e.preventDefault();
-        openModalWithUrl(this.getAttribute('href'), 'Edit MDO Duty Type');
-    }
-
-    function updateTableAfterSave(payload) {
-        // Reload DataTable after create/update
-        if (typeof $.fn.DataTable !== 'undefined') {
-            const table = $('#mdodutytypemaster-table').DataTable();
-            if (table) {
-                table.ajax.reload(null, false); // false = don't reset pagination
-            }
-        }
-    }
-
-
-    $(document).on('change', '.plain-status-toggle', function() {
-        let checkbox = $(this);
-        let pk = checkbox.data('id');
-        let active_inactive = checkbox.is(':checked') ? 1 : 0;
-
-        Swal.fire({
-            title: 'Are you sure?',
-            text: 'Are you sure? You want to deactivate this item?',
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#d33',
-            cancelButtonColor: '#3085d6',
-            confirmButtonText: 'Yes, deactivate',
-            cancelButtonText: 'Cancel'
-        }).then((result) => {
-            if (result.isConfirmed){
                 $.ajax({
-                    url: "{{ route('master.mdo_duty_type.status') }}", // route
-                    type: "POST",
+                    url: storeUrl,
+                    type: 'POST',
                     data: {
-                        pk: pk,
-                        active_inactive: active_inactive,
-                        _token: "{{ csrf_token() }}"
+                        id: id,
+                        mdo_duty_type_name: name.val().trim(),
+                        active_inactive: status.val(),
+                        _token: csrfToken
                     },
                     success: function(response) {
-
-                        $('#mdodutytypemaster-table').DataTable().ajax.reload(null, false);
-
+                        hideMdtModal();
+                        reloadMdtTable();
                         Swal.fire({
                             icon: 'success',
                             title: 'Updated!',
-                            text: response.message,
+                            text: response.message ?? 'Record updated successfully',
                             timer: 1500,
                             showConfirmButton: false
                         });
+                    },
+                    error: function(xhr) {
+                        const message = xhr.responseJSON?.message ?? 'Something went wrong';
+                        if (xhr.status === 422 && xhr.responseJSON?.errors) {
+                            const errors = xhr.responseJSON.errors;
+                            if (errors.mdo_duty_type_name) {
+                                $form.find('#mdt_edit_duty_type_name_error').text(errors.mdo_duty_type_name[0]).removeClass('d-none');
+                                name.addClass('is-invalid');
+                            }
+                            if (errors.active_inactive) {
+                                $form.find('#mdt_edit_active_inactive_error').text(errors.active_inactive[0]).removeClass('d-none');
+                                status.addClass('is-invalid');
+                            }
+                        } else {
+                            Swal.fire({ icon: 'error', title: 'Error', text: message });
+                        }
                     }
                 });
-
-            } else {
-                // revert checkbox
-                checkbox.prop('checked', !active_inactive);
             }
         });
     });
-
 </script>
+
 @if(session('success'))
 <script>
     Swal.fire({
@@ -660,18 +522,4 @@ $(document).on('click', '.add-btn', function () {
     });
 </script>
 @endif
-<!-- Modal -->
-<div class="modal fade" id="dutyTypeModal" tabindex="-1" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title">MDO Duty Type</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                <!-- Form content will be loaded here via fetch -->
-            </div>
-        </div>
-    </div>
-</div>
 @endpush
