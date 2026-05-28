@@ -121,7 +121,7 @@
             return $for.first();
         }
 
-        var $scope = $table.closest('.programme-dt-panel, .card-body, .datatables, .gm-dt-card, .cgt-dt-card, .ems-dt-card, .eccm-dt-card, .mdt-dt-card');
+        var $scope = $table.closest('.programme-dt-panel, .card-body, .datatables, .gm-dt-card, .cgt-dt-card, .ems-dt-card, .eccm-dt-card, .mdt-dt-card, .mmt-dt-card');
         if ($scope.length) {
             var $scoped = $scope.find('.' + slotClass).first();
             if ($scoped.length) {
