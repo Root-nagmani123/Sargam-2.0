@@ -1981,6 +1981,191 @@ body.custom-loaded {
     font-weight: 500;
 }
 
+/* ── Course Memo Decision Mapping (DataTable) ── */
+.cmdm-master-page .cmdm-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.cmdm-master-page #memoDecisionTable_wrapper .dataTables_scrollBody thead,
+.cmdm-master-page #memoDecisionTable_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.cmdm-master-page #memoDecisionTable_wrapper .dataTables_scrollHead thead th,
+.cmdm-master-page #memoDecisionTable thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+    border-top: 0 !important;
+    vertical-align: middle;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td {
+    padding: 1rem !important;
+    font-size: 0.875rem;
+    color: #344054;
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+}
+
+.cmdm-master-page #memoDecisionTable tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03);
+}
+
+.cmdm-master-page #memoDecisionTable tbody td:first-child {
+    color: #667085;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td.cmdm-col-course {
+    font-weight: 500;
+    color: #101828;
+    text-align: left;
+    max-width: 22rem;
+    line-height: 1.45;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td.cmdm-col-memo-decision {
+    color: #344054;
+    text-align: left;
+    text-transform: uppercase;
+    font-size: 0.8125rem;
+    letter-spacing: 0.02em;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td.cmdm-col-memo-conclusion {
+    color: #475467;
+    text-align: left;
+}
+
+.cmdm-master-page #memoDecisionTable tbody td:nth-child(5),
+.cmdm-master-page #memoDecisionTable tbody td:nth-child(6) {
+    text-align: center;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-group {
+    gap: 0.875rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.cmdm-master-page #memoDecisionTable .editConclusion,
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.125rem;
+    min-height: 1.125rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.cmdm-master-page #memoDecisionTable .editConclusion:hover {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger {
+    color: #d92d20;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled) {
+    color: #b42318;
+    opacity: 0.72;
+    transform: translateY(-1px);
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger.is-disabled,
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.cmdm-master-page #memoDecisionTable .editConclusion .bi,
+.cmdm-master-page #memoDecisionTable .programme-action-btn--danger .bi {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    margin: 0;
+    position: relative;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-status-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-toggle-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-toggle-icon--on {
+    display: none;
+    color: #d4a012;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-toggle-icon--off {
+    display: inline-flex;
+    color: #12b76a;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-status-toggle-input:checked ~ .cmdm-toggle-icon--on {
+    display: inline-flex;
+}
+
+.cmdm-master-page #memoDecisionTable .cmdm-status-toggle-input:checked ~ .cmdm-toggle-icon--off {
+    display: none;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-toggle-icon:hover .cmdm-toggle-icon--on {
+    color: #b8860b;
+}
+
+.cmdm-master-page #memoDecisionTable .programme-action-toggle-icon:hover .cmdm-toggle-icon--off {
+    color: #027a48;
+}
+
+.cmdm-modal-dialog {
+    max-width: 28rem;
+}
+
+.cmdm-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
 /* ── Course Group Type — confirmation & form modals ── */
 #cgtConfirmModal .programme-confirm-title {
     color: #101828;
