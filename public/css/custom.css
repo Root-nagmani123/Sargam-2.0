@@ -1501,6 +1501,251 @@ body.custom-loaded {
     font-weight: 500;
 }
 
+/* ── Memo Type Master (DataTable) ── */
+.mmt-master-page .mmt-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.mmt-master-page #memotypemaster-table_wrapper .dataTables_scrollBody thead,
+.mmt-master-page #memotypemaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.mmt-master-page #memotypemaster-table_wrapper .dataTables_scrollHead thead th,
+.mmt-master-page #memotypemaster-table thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+    border-top: 0 !important;
+    vertical-align: middle;
+}
+
+.mmt-master-page #memotypemaster-table tbody td {
+    padding: 1rem !important;
+    font-size: 0.875rem;
+    color: #344054;
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+}
+
+.mmt-master-page #memotypemaster-table tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03);
+}
+
+.mmt-master-page #memotypemaster-table tbody td:first-child {
+    color: #667085;
+    font-weight: 500;
+    text-align: center;
+}
+
+.mmt-master-page #memotypemaster-table tbody td:nth-child(2) {
+    font-weight: 500;
+    color: #101828;
+    text-align: left;
+}
+
+.mmt-master-page #memotypemaster-table tbody td:nth-child(3),
+.mmt-master-page #memotypemaster-table tbody td:nth-child(4),
+.mmt-master-page #memotypemaster-table tbody td:nth-child(5) {
+    text-align: center;
+}
+
+.mmt-doc-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.mmt-doc-text--available {
+    color: #344054;
+}
+
+.mmt-doc-text--na {
+    color: #667085;
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-group {
+    gap: 0.875rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.mmt-master-page #memotypemaster-table .editMemo,
+.mmt-master-page #memotypemaster-table .deleteBtn,
+.mmt-master-page #memotypemaster-table .mmt-view-doc {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.125rem;
+    min-height: 1.125rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.mmt-master-page #memotypemaster-table .editMemo:hover,
+.mmt-master-page #memotypemaster-table .mmt-view-doc:not(.is-disabled):hover {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-view-doc.is-disabled {
+    opacity: 0.35;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.mmt-master-page #memotypemaster-table .deleteBtn,
+.mmt-master-page #memotypemaster-table .programme-action-btn--danger {
+    color: #d92d20;
+}
+
+.mmt-master-page #memotypemaster-table .deleteBtn:hover:not(:disabled):not(.is-disabled),
+.mmt-master-page #memotypemaster-table .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled) {
+    color: #b42318;
+    opacity: 0.72;
+    transform: translateY(-1px);
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-btn--danger.is-disabled,
+.mmt-master-page #memotypemaster-table .deleteBtn:disabled {
+    opacity: 0.35;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.mmt-master-page #memotypemaster-table .editMemo .bi,
+.mmt-master-page #memotypemaster-table .deleteBtn .bi,
+.mmt-master-page #memotypemaster-table .mmt-view-doc .bi {
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    margin: 0;
+    position: relative;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-status-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-toggle-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-toggle-icon--on {
+    display: none;
+    color: #d4a012;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-toggle-icon--off {
+    display: inline-flex;
+    color: #12b76a;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-status-toggle-input:checked ~ .mmt-toggle-icon--on {
+    display: inline-flex;
+}
+
+.mmt-master-page #memotypemaster-table .mmt-status-toggle-input:checked ~ .mmt-toggle-icon--off {
+    display: none;
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-toggle-icon:hover .mmt-toggle-icon--on {
+    color: #b8860b;
+}
+
+.mmt-master-page #memotypemaster-table .programme-action-toggle-icon:hover .mmt-toggle-icon--off {
+    color: #027a48;
+}
+
+.mmt-modal-dialog {
+    max-width: 28rem;
+}
+
+.mmt-file-upload {
+    display: flex;
+    align-items: stretch;
+    border: 1px solid #d0d5dd;
+    background: #fff;
+    overflow: hidden;
+    min-height: 2.75rem;
+}
+
+.mmt-file-upload-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    background: #f2f4f7;
+    color: #344054;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-right: 1px solid #d0d5dd;
+    cursor: pointer;
+    white-space: nowrap;
+    margin: 0;
+}
+
+.mmt-file-upload-name {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0.625rem 1rem;
+    color: #667085;
+    font-size: 0.875rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.mmt-file-upload-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.mmt-master-page .mmt-file-upload {
+    position: relative;
+}
+
+.mmt-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
 /* ── Course Group Type — confirmation & form modals ── */
 #cgtConfirmModal .programme-confirm-title {
     color: #101828;
