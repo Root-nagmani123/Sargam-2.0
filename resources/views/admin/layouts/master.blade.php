@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="light">
+<html lang="en" data-bs-theme="light" data-layout="vertical">
 @php
     $sidebarMenus = $sidebarMenus ?? collect();
     $activeNavMeta = $activeNavMeta ?? null;
@@ -683,7 +683,7 @@
     @stack('styles')
 </head>
 
-<body data-sidebartype="full" @class(['admin-mess-module' => request()->routeIs('admin.mess.*')])>
+<body data-sidebartype="full" @class(['has-dynamic-sidebar', 'admin-mess-module' => request()->routeIs('admin.mess.*')])>
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
     <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status"
         aria-live="polite" aria-label="Loading Sargam 2.0">
@@ -808,22 +808,29 @@
                 loader.classList.add('hidden');
                 setTimeout(function () { loader.style.display = 'none'; }, 500);
             }
+            window.hideSargamLoader = hideSargamLoader;
             window.addEventListener('load', hideSargamLoader);
-            document.addEventListener('DOMContentLoaded', function () {
-                setTimeout(hideSargamLoader, 300);
-            });
-            setTimeout(hideSargamLoader, 12000);
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', function () {
+                    setTimeout(hideSargamLoader, 300);
+                });
+            } else {
+                setTimeout(hideSargamLoader, 0);
+            }
+            setTimeout(hideSargamLoader, 8000);
         })();
     </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
+            try {
             const sidebar = document.getElementById("main-wrapper");
             const toggleBtn = document.getElementById("headerCollapse");
-            if (!sidebar || !toggleBtn) return;
+            if (!sidebar) return;
             // Query all icons across all tabs (multiple instances due to tab structure)
             const icons = document.querySelectorAll("#sidebarToggleIcon");
             const body = document.body;
             const sidebarmenus = document.querySelectorAll(".sidebarmenu");
+            const isDynamicSidebar = body.classList.contains('has-dynamic-sidebar');
             const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
 
             // Helper: Safely adjust all DataTables after layout changes
@@ -866,6 +873,12 @@
             } catch (e) { }
 
             function applySidebarVisualState(type) {
+                if (isDynamicSidebar) {
+                    sidebarmenus.forEach(function (el) {
+                        el.classList.toggle('close', type === 'mini-sidebar');
+                    });
+                    return;
+                }
                 if (type === 'mini-sidebar') {
                     sidebar.classList.remove('show-sidebar');
                     sidebarmenus.forEach(function (el) { el.classList.add('close'); });
@@ -893,9 +906,9 @@
                 }
             } catch (e) { }
 
-            // Dashboard/Home always shows expanded sidebar
+            // Dashboard/Home: expanded by default (legacy sidebars only)
             const routeTab = window.SARGAM_ACTIVE_NAV_TAB || '#home';
-            if (isDashboard || routeTab === '#home') {
+            if (!isDynamicSidebar && (isDashboard || routeTab === '#home')) {
                 sidebarType = 'full';
                 body.setAttribute('data-sidebartype', 'full');
                 try { localStorage.setItem('SidebarType', 'full'); } catch (e) { }
@@ -913,6 +926,9 @@
 
             // Sync all icon instances with data-sidebartype changes and adjust tables after toggle
             function syncIconWithSidebar(type) {
+                if (isDynamicSidebar) {
+                    return;
+                }
                 const allIcons = document.querySelectorAll("#sidebarToggleIcon");
                 allIcons.forEach(function (icon) {
                     icon.textContent = "keyboard_double_arrow_right";
@@ -926,9 +942,18 @@
             }
 
             const observer = new MutationObserver(function (mutations) {
+                if (window.__sargamSuppressSidebarObserver) {
+                    return;
+                }
                 for (const m of mutations) {
                     if (m.attributeName === 'data-sidebartype') {
                         const t = body.getAttribute('data-sidebartype');
+                        if (isDynamicSidebar) {
+                            try { localStorage.setItem('SidebarType', t); } catch (e) { }
+                            applySidebarVisualState(t);
+                            setTimeout(adjustAllDataTables, 300);
+                            continue;
+                        }
                         syncIconWithSidebar(t);
                         try { localStorage.setItem('SidebarType', t); } catch (e) { }
                         applySidebarVisualState(t);
@@ -937,8 +962,28 @@
                 }
             });
             observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', function (e) {
+                    if (!body.classList.contains('has-dynamic-sidebar')) {
+                        return;
+                    }
+                    e.preventDefault();
+                    if (typeof window.toggleDynamicSidebarMenu === 'function') {
+                        window.toggleDynamicSidebarMenu();
+                    }
+                });
+            }
+            } catch (sidebarInitErr) {
+                console.error('Sidebar init failed:', sidebarInitErr);
+            } finally {
+                if (typeof window.hideSargamLoader === 'function') {
+                    window.hideSargamLoader();
+                }
+            }
         });
     </script>
+    <script src="{{ asset('admin_assets/js/sidebar-dynamic-toggle.js') }}"></script>
 
     <!-- Final safeguard: Force light mode on window load -->
     <script>
@@ -978,22 +1023,23 @@
         window.markActiveSidebarMenuLink = markActiveSidebarMenuLink;
 
         function selectSidebarGroupVisual(groupId) {
-            $('.sidebar-group-link').removeClass('selected mx-2 py-1 bg-primary').attr('aria-selected', 'false');
-            $('.sidebar-google-icon-wrap').removeClass('text-light');
-            $('.sidebar-google-label').removeClass('text-light');
+            $('#sidebar-setup .mini-nav-item').removeClass('selected');
+            $('.sidebar-group-link').removeClass('selected').attr('aria-selected', 'false');
+            if (!groupId) {
+                return;
+            }
             var $link = $('.sidebar-group-link[data-id="' + groupId + '"]');
-            if (!$link.length) return;
+            if (!$link.length) {
+                return;
+            }
+            $link.closest('.mini-nav-item').addClass('selected');
             $link.addClass('selected').attr('aria-selected', 'true');
-            $link.addClass('mx-2 py-1 bg-primary');
-            $link.find('.sidebar-google-icon-wrap').addClass('text-light');
-            $link.find('.sidebar-google-label').addClass('text-light');
         }
         window.selectSidebarGroupVisual = selectSidebarGroupVisual;
 
         function clearSidebarGroupSelectedVisual() {
-            $('.sidebar-group-link').removeClass('selected mx-2 py-1 bg-primary').attr('aria-selected', 'false');
-            $('.sidebar-google-icon-wrap').removeClass('text-light');
-            $('.sidebar-google-label').removeClass('text-light');
+            $('#sidebar-setup .mini-nav-item').removeClass('selected');
+            $('.sidebar-group-link').removeClass('selected').attr('aria-selected', 'false');
         }
         window.clearSidebarGroupSelectedVisual = clearSidebarGroupSelectedVisual;
 
@@ -1010,8 +1056,23 @@
         }
         window.clearSidebarGroupSelection = clearSidebarGroupSelection;
 
+        function ensureDynamicSidebarNavVisible() {
+            if (typeof window.setDynamicSidebarMenuExpanded === 'function') {
+                window.setDynamicSidebarMenuExpanded(true, false);
+            }
+            document.querySelectorAll('#sidebar-setup .sidebarmenu .sidebar-nav').forEach(function (nav) {
+                nav.classList.add('d-block', 'left-none');
+                nav.style.display = 'block';
+                nav.style.visibility = 'visible';
+            });
+        }
+        window.ensureDynamicSidebarNavVisible = ensureDynamicSidebarNavVisible;
+
         function loadSidebarMenusForGroup(groupId, groupName) {
             if (!groupId) return;
+            window.SARGAM_ACTIVE_GROUP_ID = groupId;
+            selectSidebarGroupVisual(groupId);
+            ensureDynamicSidebarNavVisible();
             if (groupName) {
                 $('#sidebar-title').text(groupName).addClass('border-bottom');
             }
@@ -1032,6 +1093,8 @@
                 success: function (response) {
                     $('#sidebarnav').html(response);
                     markActiveSidebarMenuLink();
+                    selectSidebarGroupVisual(groupId);
+                    ensureDynamicSidebarNavVisible();
                 },
                 error: function (xhr) {
                     console.error(xhr.responseText);
@@ -1048,9 +1111,15 @@
             $.ajax({
                 url: '{{ route("sidebar.groups") }}',
                 type: 'GET',
-                data: { category_id: categoryId },
+                data: {
+                    category_id: categoryId,
+                    active_group_id: window.SARGAM_ACTIVE_GROUP_ID || null
+                },
                 success: function (response) {
                     $('#sidebar-groups').html(response);
+                    if (window.SARGAM_ACTIVE_GROUP_ID) {
+                        selectSidebarGroupVisual(window.SARGAM_ACTIVE_GROUP_ID);
+                    }
                     if (typeof done === 'function') done();
                 },
                 error: function (xhr) {
@@ -1068,6 +1137,7 @@
             var groupId = $(this).data('id');
             var groupName = $(this).data('name');
             selectSidebarGroupVisual(groupId);
+            window.SARGAM_ACTIVE_GROUP_ID = groupId;
             loadSidebarMenusForGroup(groupId, groupName);
         });
 
@@ -1095,10 +1165,10 @@
                 }
                 clearSidebarGroupSelection();
             });
+
+            ensureDynamicSidebarNavVisible();
         });
     </script>
-    <script src="{{ asset('admin_assets/js/sidebar-flyout-hover.js') }}"></script>
-
   @yield('script')
 </body>
 

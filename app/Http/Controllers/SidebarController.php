@@ -51,11 +51,17 @@ class SidebarController extends Controller
             return '<ul class="sidebar-groups-list"><li>No groups found.</li></ul>';
         }
 
+        $activeGroupId = $request->get('active_group_id');
+
         $html = '<ul class="sidebar-groups-list">';
 
         foreach ($groups as $group) {
-            $html .= '<li class="sidebar-group-item mini-nav-item py-2" id="'.$group->id.'" data-id="'.$group->id.'">';
-            $html .= '<a href="javascript:void(0)" class="sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-1 sidebar-group-link" data-id="'.$group->id.'" data-name="'.e($group->name).'">';
+            $groupSelected = $activeGroupId && (string) $activeGroupId === (string) $group->id;
+            $selectedClass = $groupSelected ? ' selected' : '';
+            $ariaSelected = $groupSelected ? 'true' : 'false';
+
+            $html .= '<li class="sidebar-group-item mini-nav-item py-2'.$selectedClass.'" id="'.$group->id.'" data-id="'.$group->id.'">';
+            $html .= '<a href="javascript:void(0)" class="sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link'.$selectedClass.'" data-id="'.$group->id.'" data-name="'.e($group->name).'" aria-selected="'.$ariaSelected.'">';
             $html .= '<span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">';
             $html .= '<i class="material-icons menu-icon material-symbols-rounded">'.e($group->icon).'</i>';
             $html .= '</span>';

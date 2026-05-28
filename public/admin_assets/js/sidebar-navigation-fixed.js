@@ -89,19 +89,45 @@ document.addEventListener('DOMContentLoaded', function() {
             return 'active-mini-nav-' + paneId;
         }
 
+        function isDynamicGroupSidebarItem(item) {
+            return item.classList.contains('sidebar-group-item')
+                || item.querySelector('.sidebar-group-link');
+        }
+
+        function isDynamicGroupSidebarPane(paneRoot) {
+            return paneRoot.querySelector('.sidebar-group-link')
+                || paneRoot.querySelector('[data-sidebar-layout="dynamic"]');
+        }
+
+        function showDynamicSidebarNav(paneRoot) {
+            if (typeof window.setDynamicSidebarMenuExpanded === 'function') {
+                window.setDynamicSidebarMenuExpanded(true, false);
+                return;
+            }
+            paneRoot.querySelectorAll('.sidebarmenu nav.sidebar-nav').forEach(function(nav) {
+                nav.classList.add('d-block', 'left-none');
+                nav.style.display = 'block';
+            });
+            document.body.setAttribute('data-sidebartype', 'full');
+        }
+
         // Use event delegation on each container to handle all clicks
         miniNavContainers.forEach(function(container) {
             container.addEventListener('click', function(e) {
                 const miniNavItem = e.target.closest('.mini-nav-item');
                 
                 if (!miniNavItem || !container.contains(miniNavItem)) return;
+
+                const paneRoot = getSidebarPaneFromContainer(container);
+                if (isDynamicGroupSidebarItem(miniNavItem) || isDynamicGroupSidebarPane(paneRoot)) {
+                    return;
+                }
                 
                 e.preventDefault();
                 e.stopPropagation();
                 
                 const itemId = miniNavItem.id;
                 console.log('Mini-nav item clicked:', itemId);
-                const paneRoot = getSidebarPaneFromContainer(container);
                 
                 // Remove selected class only within current pane
                 paneRoot.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
@@ -140,6 +166,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Restore active mini-nav per pane
         miniNavContainers.forEach(function(container) {
             const paneRoot = getSidebarPaneFromContainer(container);
+            if (isDynamicGroupSidebarPane(paneRoot)) {
+                showDynamicSidebarNav(paneRoot);
+                return;
+            }
             const activeId = localStorage.getItem(getStorageKeyForPane(paneRoot));
             if (!activeId) return;
 

@@ -1,15 +1,28 @@
 <!-- Tab Content Container -->
 <!-- //admin tabs -->
     <div class="tab-content" id="sidebarTabContent">
-        <div class="" id="sidebar-setup" role="tabpanel" aria-labelledby="setup-tab">
-          <aside class="side-mini-panel with-vertical sidebar-google-style sidebar-hover-flyout">
-    <div class="vh-100 d-flex flex-column overflow-hidden">
+        <div class="tab-pane fade show active" id="sidebar-setup" role="tabpanel" aria-labelledby="setup-tab" data-sidebar-layout="dynamic">
+          <aside class="side-mini-panel with-vertical sidebar-google-style">
+    <div class="vh-100 d-flex flex-column overflow-visible">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
         <!-- ---------------------------------- -->
-        <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
-            <div class="flex-fill d-flex flex-column" style="min-height: 0;">
+        <div class="iconbar flex-fill d-flex flex-column overflow-visible" style="min-height: 0;">
+            <div class="flex-fill d-flex flex-row overflow-visible" style="min-height: 0;">
                 <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
+                    <div class="sidebar-google-hamburger flex-shrink-0 px-1 pt-2 pb-1">
+                        <button type="button"
+                            class="sidebar-menu-toggler w-100 d-flex flex-column align-items-center justify-content-center rounded-3 border-0 bg-transparent p-2"
+                            id="sidebarMenuCollapse"
+                            aria-label="Collapse sidebar menu"
+                            aria-expanded="true"
+                            aria-controls="sidebar-setup-menu">
+                            <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                <i class="material-icons material-symbols-rounded sidebar-menu-toggle-icon" id="sidebarToggleIcon" aria-hidden="true">keyboard_arrow_left</i>
+                            </span>
+                            <span class="sidebar-google-label">Collapse</span>
+                        </button>
+                    </div>
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
@@ -24,15 +37,16 @@
                                                     @php
                                                         $groupSelected = ($activeGroupId ?? null) == $group->id;
                                                     @endphp
-                                                    <li class="sidebar-group-item mini-nav-item py-2" id="{{ $group->id }}" data-id="{{ $group->id }}">
+                                                    <li class="sidebar-group-item mini-nav-item py-2 {{ $groupSelected ? 'selected' : '' }}"
+                                                        id="{{ $group->id }}" data-id="{{ $group->id }}">
                                                         <a href="javascript:void(0)" 
-                                                            class="d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link {{ $groupSelected ? 'selected mx-2 py-1 bg-primary' : '' }}"
+                                                            class="d-flex flex-column align-items-center justify-content-center rounded-3 sidebar-group-link sidebar-google-item {{ $groupSelected ? 'selected' : '' }}"
                                                             data-id="{{ $group->id }}" data-name="{{ $group->name }}"
                                                             aria-selected="{{ $groupSelected ? 'true' : 'false' }}">
-                                                            <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center {{ $groupSelected ? 'text-light' : '' }}">
+                                                            <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
                                                                 <i class="material-icons menu-icon material-symbols-rounded">{{ $group->icon }}</i>
                                                             </span>
-                                                            <span class="sidebar-google-label {{ $groupSelected ? 'text-light' : '' }}">{{ $group->name }}</span>
+                                                            <span class="sidebar-google-label">{{ $group->name }}</span>
                                                         </a>
                                                     </li>
                                                 @endforeach
@@ -53,8 +67,8 @@
                         </div>
                     </ul>
                 </div>
-                <div class="sidebarmenu">
-                    <nav class="sidebar-nav simplebar-scrollable-y" data-simplebar="init">
+                <div class="sidebarmenu" id="sidebar-setup-menu">
+                    <nav class="sidebar-nav d-block left-none simplebar-scrollable-y" data-simplebar="init">
                         <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
                             <div class="simplebar-height-auto-observer-wrapper">
                                 <div class="simplebar-height-auto-observer">
@@ -84,7 +98,15 @@
 <style>
     /* Google-style sidebar - light gray, icon above text, oval selected state */
     #sidebar-setup .sidebar-google-style.side-mini-panel {
-        width: 90px;
+        width: auto;
+        min-width: var(--sargam-sidebar-total-width, 365px);
+        overflow: visible !important;
+        transition: min-width 0.25s ease, width 0.25s ease;
+    }
+
+    body.has-dynamic-sidebar[data-sidebartype="mini-sidebar"] #sidebar-setup .sidebar-google-style.side-mini-panel {
+        min-width: var(--sargam-sidebar-mini-width, 90px) !important;
+        width: var(--sargam-sidebar-mini-width, 90px) !important;
     }
 
     #sidebar-setup .sidebar-google-style .mini-nav {
@@ -95,18 +117,31 @@
     }
 
     #sidebar-setup .sidebar-google-style .sidebar-google-hamburger {
-        padding: 16px 0;
+        padding: 0;
         margin: 0;
     }
 
-    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
+    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebartoggler,
+    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler {
         color: var(--bs-secondary-color) !important;
+        cursor: pointer;
+    }
+
+    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler:hover .material-icons,
+    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler:hover .sidebar-google-label {
+        color: var(--bs-emphasis-color) !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .sidebar-menu-toggle-icon {
+        transition: transform 0.25s ease;
     }
 
     #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item {
         list-style: none;
         display: flex !important;
         justify-content: center !important;
+        min-height: 72px;
+        overflow: visible;
     }
 
     #sidebar-setup .sidebar-google-style .mini-nav ul.mini-nav-ul {
@@ -159,10 +194,17 @@
     }
 
     #sidebar-setup .sidebar-google-style .sidebar-google-label {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
         font-size: 11px;
         font-weight: 400;
         text-align: center;
         line-height: 1.2;
+        max-width: 76px;
+        margin-top: 2px;
+        color: var(--bs-secondary-color) !important;
+        word-break: break-word;
     }
 
     #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:hover .material-icons,
@@ -175,21 +217,31 @@
         outline-offset: 2px;
     }
 
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-icon-wrap {
-        background: var(--bs-primary-bg-subtle) !important;
-        border-radius: 10px;
-        padding: 10px;
-        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
-        transition: all 0.2s ease;
-        transform: scale(1.05);
-        margin: 4px 8px;
-        width: 100%;
-        height: 100%;
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a.sidebar-group-link {
+        background: rgba(var(--bs-primary-rgb), 0.12) !important;
     }
 
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .material-icons,
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-label {
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
+        background: var(--bs-primary-bg-subtle) !important;
+        border-radius: 10px;
+        padding: 8px;
+        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
+        width: 48px;
+        height: 32px;
+        margin-inline: auto;
+        flex-shrink: 0;
+    }
+
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons {
+        color: var(--bs-primary) !important;
+    }
+
+    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
+        display: block !important;
+        visibility: visible !important;
+        opacity: 1 !important;
         color: var(--bs-primary-text-emphasis) !important;
+        font-weight: 600;
     }
 
     #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a:before {
@@ -306,9 +358,31 @@
         }, 200);
     }
 
+    function isDynamicGroupSidebar() {
+        return setupSidebar.hasAttribute('data-sidebar-layout')
+            || setupSidebar.querySelector('.sidebar-group-link');
+    }
+
+    function showDynamicSidebarNavLocal() {
+        if (typeof window.setDynamicSidebarMenuExpanded === 'function') {
+            window.setDynamicSidebarMenuExpanded(true, false);
+            return;
+        }
+        setupSidebar.querySelectorAll('.sidebarmenu .sidebar-nav').forEach(function (nav) {
+            nav.classList.add('d-block', 'left-none');
+            nav.style.display = 'block';
+            nav.style.visibility = 'visible';
+        });
+        document.body.setAttribute('data-sidebartype', 'full');
+    }
+
     // Function to show sidebar menu and save state
     function showSidebarMenu(miniId) {
         console.log('Showing sidebar for miniId:', miniId);
+        if (isDynamicGroupSidebar()) {
+            showDynamicSidebarNavLocal();
+            return;
+        }
         // Remove selected from all mini-nav-items
         miniNavItems.forEach(function(navItem) {
             navItem.classList.remove('selected');
@@ -330,30 +404,27 @@
             targetMenu.style.display = 'block';
             document.body.setAttribute('data-sidebartype', 'full');
             console.log('Displayed menu:', targetMenu.id);
-            // Periodically keep sidebar visible for 3 seconds
             keepSidebarVisible(targetMenuId, 3000);
         } else {
             console.error('Target menu not found:', targetMenuId);
         }
         localStorage.setItem('selectedMiniNav', miniId);
-        // Don't force tab switch - let user's navigation determine the active tab
     }
 
-    // MutationObserver to keep sidebar visible
-    sidebarMenus.forEach(function(nav) {
-        const observer = new MutationObserver(function(mutations) {
-            mutations.forEach(function(mutation) {
-                if (nav.classList.contains('d-block') && nav.style
-                    .display !== 'block') {
+    // Legacy sidebars only: keep menu visible when theme toggles classes
+    if (!isDynamicGroupSidebar()) {
+        sidebarMenus.forEach(function(nav) {
+            const observer = new MutationObserver(function() {
+                if (nav.classList.contains('d-block') && nav.style.display !== 'block') {
                     nav.style.display = 'block';
                 }
             });
+            observer.observe(nav, {
+                attributes: true,
+                attributeFilter: ['style', 'class']
+            });
         });
-        observer.observe(nav, {
-            attributes: true,
-            attributeFilter: ['style', 'class']
-        });
-    });
+    }
 
     // Function to expand collapsed menus containing active links
     function expandActiveMenus() {
@@ -395,6 +466,9 @@
 
         // Function to restore sidebar menu visibility
         function restoreSidebarMenu() {
+            if (isDynamicGroupSidebar()) {
+                return;
+            }
             // Always remove selected from all mini-nav-items first
             miniNavItems.forEach(function(navItem) {
                 navItem.classList.remove('selected');
