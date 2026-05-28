@@ -1519,6 +1519,122 @@ body.custom-loaded {
     font-weight: 500;
 }
 
+/* ── MDO Duty Type Master (DataTable) ── */
+.mdt-master-page .mdt-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+/* Single header — hide duplicate thead from DataTables scrollX clone */
+.mdt-master-page #mdodutytypemaster-table_wrapper .dataTables_scrollBody thead,
+.mdt-master-page #mdodutytypemaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.mdt-master-page #mdodutytypemaster-table_wrapper .dataTables_scrollHead thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+}
+
+.mdt-master-page #mdodutytypemaster-table_wrapper .dt-buttons {
+    display: none !important;
+}
+
+.mdt-master-page #mdodutytypemaster-table tbody td .d-inline-flex[role="group"] {
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.mdt-master-page #mdodutytypemaster-table .edit-btn,
+.mdt-master-page #mdodutytypemaster-table .delete-btn {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.mdt-master-page #mdodutytypemaster-table .edit-btn:hover,
+.mdt-master-page #mdodutytypemaster-table .delete-btn:hover:not([aria-disabled="true"]):not(.disabled) {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.mdt-master-page #mdodutytypemaster-table .delete-btn {
+    color: #d92d20;
+}
+
+.mdt-master-page #mdodutytypemaster-table .delete-btn:hover:not([aria-disabled="true"]):not(.disabled) {
+    color: #b42318;
+}
+
+.mdt-master-page #mdodutytypemaster-table .delete-btn[aria-disabled="true"],
+.mdt-master-page #mdodutytypemaster-table .delete-btn.disabled {
+    opacity: 0.38;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.mdt-master-page #mdodutytypemaster-table .edit-btn .material-icons,
+.mdt-master-page #mdodutytypemaster-table .delete-btn .material-icons {
+    display: none !important;
+}
+
+.mdt-master-page #mdodutytypemaster-table .edit-btn .bi,
+.mdt-master-page #mdodutytypemaster-table .delete-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.mdt-master-page #mdodutytypemaster-table .programme-action-switch .form-check-input {
+    width: 2.25rem;
+    height: 1.125rem;
+    margin: 0;
+    cursor: pointer;
+    box-shadow: none;
+}
+
+.mdt-master-page #mdodutytypemaster-table .programme-action-switch .form-check-input:checked {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.mdt-master-page #mdodutytypemaster-table .programme-action-switch .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+}
+
+.mdt-master-page #mdodutytypemaster-table tbody td:nth-child(1) label,
+.mdt-master-page #mdodutytypemaster-table tbody td:nth-child(2) {
+    font-weight: 500;
+    color: #101828;
+}
+
+.mdt-master-page #mdodutytypemaster-table tbody td:nth-child(3),
+.mdt-master-page #mdodutytypemaster-table tbody td:nth-child(4) {
+    text-align: center;
+}
+
+.mdt-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
 /* ── Course Group Type — confirmation & form modals ── */
 #cgtConfirmModal .programme-confirm-title {
     color: #101828;
