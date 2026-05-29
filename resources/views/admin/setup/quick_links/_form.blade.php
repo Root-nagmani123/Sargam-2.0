@@ -9,10 +9,10 @@
     @csrf
 
     <div class="mb-3">
-        <label class="form-label fw-semibold">
-            Label <span class="text-danger">*</span>
+        <label class="form-label cgt-field-label mb-2">
+            Link Label <span class="text-danger">*</span>
         </label>
-        <input type="text" name="label" class="form-control" placeholder="e.g. E-Office"
+        <input type="text" name="label" class="form-control rounded-2" placeholder="eg. E-Office"
             value="{{ old('label', $quickLink->label ?? '') }}" required maxlength="255">
         @error('label')
             <small class="text-danger">{{ $message }}</small>
@@ -20,21 +20,21 @@
     </div>
 
     <div class="mb-3">
-        <label class="form-label fw-semibold">
-            URL <span class="text-danger">*</span>
+        <label class="form-label cgt-field-label mb-2">
+            Link <span class="text-danger">*</span>
         </label>
-        <input type="url" name="url" class="form-control" placeholder="https://example.com"
+        <input type="url" name="url" class="form-control rounded-2" placeholder="eg. https://eoffice.lbsnaa.gov.in/"
             value="{{ old('url', $quickLink->url ?? '') }}" required maxlength="2048">
         @error('url')
-            <small class="text-danger">{{ $message }}</small>
+            <small class="text-danger d-block">{{ $message }}</small>
         @enderror
     </div>
 
-    <div class="mb-3">
-        <label class="form-label fw-semibold">
-            Open In <span class="text-danger">*</span>
+    <div class="mb-4">
+        <label class="form-label cgt-field-label mb-2">
+            Open in <span class="text-danger">*</span>
         </label>
-        <select name="target_blank" class="form-select" required>
+        <select name="target_blank" class="form-select rounded-2" required>
             @php
                 $defaultTargetBlank = $quickLink->target_blank ?? true;
             @endphp
@@ -50,13 +50,12 @@
         @enderror
     </div>
 
-    <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            Close
+    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+        <button type="button" class="btn btn-outline-primary rounded-2 px-4" data-bs-dismiss="modal">
+            Cancel
         </button>
-        <button type="submit" class="btn btn-primary">
-            {{ $isEdit ? 'Update' : 'Save' }}
+        <button type="submit" class="btn btn-primary rounded-2 px-4">
+            {{ $isEdit ? 'Update Link' : 'Create Link' }}
         </button>
     </div>
 </form>
-

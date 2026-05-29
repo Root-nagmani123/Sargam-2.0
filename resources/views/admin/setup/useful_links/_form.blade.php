@@ -10,10 +10,10 @@
     @csrf
 
     <div class="mb-3">
-        <label class="form-label fw-semibold">
-            Label <span class="text-danger">*</span>
+        <label class="form-label cgt-field-label mb-2">
+            Link Label <span class="text-danger">*</span>
         </label>
-        <input type="text" name="label" class="form-control" placeholder="e.g. Employee Handbook"
+        <input type="text" name="label" class="form-control rounded-2" placeholder="eg. E-Office"
             value="{{ old('label', $usefulLink->label ?? '') }}" required maxlength="255">
         @error('label')
             <small class="text-danger">{{ $message }}</small>
@@ -21,10 +21,10 @@
     </div>
 
     <div class="mb-3">
-        <label class="form-label fw-semibold">
-            URL
+        <label class="form-label cgt-field-label mb-2">
+            Link
         </label>
-        <input type="url" name="url" id="usefulLinkUrl" class="form-control" placeholder="https://example.com"
+        <input type="url" name="url" id="usefulLinkUrl" class="form-control rounded-2" placeholder="eg. https://eoffice.lbsnaa.gov.in/"
             value="{{ old('url', $usefulLink->url ?? '') }}" maxlength="2048">
         @error('url')
             <small class="text-danger d-block">{{ $message }}</small>
@@ -32,8 +32,8 @@
     </div>
 
     <div class="mb-3">
-        <label class="form-label fw-semibold">File Upload</label>
-        <input type="file" name="file" id="usefulLinkFile" class="form-control"
+        <label class="form-label cgt-field-label mb-2">Attachment</label>
+        <input type="file" name="file" id="usefulLinkFile" class="form-control rounded-2"
             accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx,.ppt,.pptx">
         <small class="text-muted">Allowed: PDF, Image, DOC, XLS, PPT (max 10 MB)</small>
         @error('file')
@@ -47,7 +47,7 @@
         @if ($isEdit && !empty($usefulLink->file_path))
             <div class="mt-2">
                 <a href="{{ asset('storage/' . $usefulLink->file_path) }}" target="_blank"
-                    class="btn btn-sm btn-outline-primary">
+                    class="btn btn-sm btn-outline-primary rounded-2">
                     View Current File
                 </a>
             </div>
@@ -60,11 +60,11 @@
         @endif
     </div>
 
-    <div class="mb-3">
-        <label class="form-label fw-semibold">
-            Open In <span class="text-danger">*</span>
+    <div class="mb-4">
+        <label class="form-label cgt-field-label mb-2">
+            URL open in <span class="text-danger">*</span>
         </label>
-        <select name="target_blank" class="form-select" required>
+        <select name="target_blank" class="form-select rounded-2" required>
             @php
                 $defaultTargetBlank = $usefulLink->target_blank ?? true;
             @endphp
@@ -80,12 +80,12 @@
         @enderror
     </div>
 
-    <div class="d-flex justify-content-end gap-2">
-        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-            Close
+    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+        <button type="button" class="btn btn-outline-primary rounded-2 px-4" data-bs-dismiss="modal">
+            Cancel
         </button>
-        <button type="submit" class="btn btn-primary">
-            {{ $isEdit ? 'Update' : 'Save' }}
+        <button type="submit" class="btn btn-primary rounded-2 px-4">
+            {{ $isEdit ? 'Update Link' : 'Create Link' }}
         </button>
     </div>
 </form>
@@ -141,4 +141,3 @@
         });
     })();
 </script>
-

@@ -1,0 +1,268 @@
+/* Quick Links — programme-dt reference layout */
+.ql-page {
+    --ql-primary: #004a93;
+    --ql-primary-dark: #003366;
+    --ql-border: #e4e7ec;
+    --ql-text: #344054;
+    --ql-heading: #101828;
+    --ql-muted: #667085;
+    --ql-danger: #d92d20;
+    --ql-info: #1570ef;
+}
+
+.ql-page .ql-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--ql-border) !important;
+}
+
+.ql-page .ql-toolbar-actions {
+    gap: 0.5rem;
+}
+
+.ql-page .ql-btn-outline {
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ql-primary);
+    border: 1px solid var(--ql-primary);
+    border-radius: 8px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.ql-page .ql-btn-outline:hover:not(:disabled) {
+    background: #f0f6fc;
+    border-color: var(--ql-primary-dark);
+    color: var(--ql-primary-dark);
+}
+
+.ql-page .ql-btn-outline:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.ql-page .ql-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ql-page #quickLinksTable_wrapper .dt-buttons,
+.ql-page #quickLinksTable_wrapper .dataTables_length:not(.programme-dt-footer .dataTables_length) {
+    display: none !important;
+}
+
+.ql-page #quickLinksTable_wrapper .dataTables_filter:not(.programme-dt-search .dataTables_filter) {
+    display: none !important;
+}
+
+.ql-page #quickLinksTable_wrapper .dataTables_info:not(.programme-dt-footer .dataTables_info),
+.ql-page #quickLinksTable_wrapper .dataTables_paginate:not(.programme-dt-footer .dataTables_paginate) {
+    display: none !important;
+}
+
+.ql-page #quickLinksTable {
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.ql-page #quickLinksTable thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--ql-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.ql-page #quickLinksTable tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--ql-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.ql-page #quickLinksTable tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.ql-page #quickLinksTable tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.ql-page #quickLinksTable tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.ql-page #quickLinksTable thead th:first-child,
+.ql-page #quickLinksTable tbody td:first-child {
+    color: var(--ql-muted);
+    font-weight: 500;
+    width: 5rem;
+}
+
+.ql-page #quickLinksTable tbody td:nth-child(2) {
+    font-weight: 600;
+    color: var(--ql-heading);
+}
+
+.ql-page #quickLinksTable tbody td:nth-child(3) {
+    max-width: 360px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ql-page #quickLinksTable tbody td:nth-child(5),
+.ql-page #quickLinksTable thead th:nth-child(5),
+.ql-page #quickLinksTable tbody td:nth-child(6),
+.ql-page #quickLinksTable thead th:nth-child(6) {
+    text-align: center !important;
+}
+
+.ql-page #quickLinksTable .quicklink-drag-handle {
+    user-select: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    border-radius: 8px;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.ql-page #quickLinksTable .quicklink-drag-handle:hover {
+    background: #f2f4f7;
+    color: var(--ql-primary) !important;
+}
+
+.ql-page #quickLinksTable tbody tr.dragging-quicklink-row {
+    opacity: 0.55;
+}
+
+.ql-page #quickLinksTable tbody tr.drag-over-quicklink-row {
+    outline: 2px solid var(--ql-primary);
+    outline-offset: -2px;
+    background: rgba(0, 74, 147, 0.05);
+}
+
+.ql-page .ql-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+}
+
+.ql-page .ql-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.ql-page .ql-action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.ql-page .ql-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.ql-page .ql-action-edit {
+    color: var(--ql-info);
+}
+
+.ql-page .ql-action-edit:hover {
+    background: #eff8ff;
+    color: #175cd3;
+}
+
+.ql-page .ql-action-delete {
+    color: var(--ql-danger);
+}
+
+.ql-page .ql-action-delete:hover {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.ql-page .ql-open-badge {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--ql-text);
+}
+
+.ql-page .ql-dt-panel .programme-dt-footer {
+    border-top: 1px solid var(--ql-border);
+    padding-top: 0.875rem;
+    margin-top: 0;
+}
+
+.ql-page .programme-dt-footer .pagination .page-item.active .page-link {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.ql-page .ql-empty-state {
+    padding: 3rem 1rem;
+}
+
+.ql-quicklinks-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+@media (max-width: 767.98px) {
+    .ql-page .ql-toolbar-actions {
+        width: 100%;
+        justify-content: stretch !important;
+    }
+
+    .ql-page .ql-toolbar-actions .btn,
+    .ql-page .ql-toolbar-actions a {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .ql-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ql-page .ql-action-btn:hover {
+        transform: none;
+    }
+
+    .ql-page #quickLinksTable tbody tr {
+        transition: none;
+    }
+}
