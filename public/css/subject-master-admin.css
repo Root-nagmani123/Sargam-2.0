@@ -1,0 +1,339 @@
+/* Subject Master — programme-dt reference layout */
+.sm-subject-page {
+    --sm-primary: #004a93;
+    --sm-primary-dark: #003366;
+    --sm-border: #e4e7ec;
+    --sm-text: #344054;
+    --sm-heading: #101828;
+    --sm-muted: #667085;
+}
+
+.sm-subject-page .sm-dt-card {
+    border-radius: 12px;
+}
+
+.sm-subject-page .sm-toolbar-top {
+    margin-bottom: 1rem;
+}
+
+.sm-subject-page .sm-search-form {
+    width: 100%;
+    max-width: 280px;
+}
+
+.sm-subject-page .sm-search-group {
+    border: 1px solid var(--sm-border);
+    border-radius: 8px;
+    overflow: hidden;
+    background: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sm-subject-page .sm-search-group:focus-within {
+    border-color: var(--sm-primary);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.sm-subject-page .sm-search-group .input-group-text {
+    border: 0;
+    background: transparent;
+    color: var(--sm-muted);
+    padding-left: 0.875rem;
+    padding-right: 0.25rem;
+}
+
+.sm-subject-page .sm-search-group .form-control {
+    border: 0;
+    box-shadow: none;
+    font-size: 0.9375rem;
+    padding-left: 0.375rem;
+    padding-right: 0.875rem;
+    min-height: 40px;
+}
+
+.sm-subject-page .sm-search-group .form-control::placeholder {
+    color: #98a2b3;
+}
+
+.sm-subject-page .sm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.sm-subject-page #zero_config_wrapper .dataTables_filter,
+.sm-subject-page #zero_config_wrapper .dataTables_length,
+.sm-subject-page #zero_config_wrapper .dataTables_info,
+.sm-subject-page #zero_config_wrapper .dataTables_paginate {
+    display: none !important;
+}
+
+.sm-subject-page .sm-subject-table .sm-col-name {
+    font-weight: 500;
+    color: var(--sm-heading);
+    min-width: 180px;
+}
+
+.sm-subject-page .sm-subject-table .sm-col-short {
+    color: var(--sm-text);
+}
+
+.sm-subject-page .sm-subject-table .sm-col-actions,
+.sm-subject-page .sm-subject-table th.sm-col-actions {
+    min-width: 9rem;
+    white-space: nowrap;
+}
+
+.sm-subject-page .sm-subject-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.sm-subject-page .sm-subject-actions > a,
+.sm-subject-page .sm-subject-actions > form,
+.sm-subject-page .sm-subject-actions > .sm-action-switch-wrap {
+    flex: 0 0 auto;
+}
+
+.sm-subject-page .sm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.sm-subject-page .sm-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.sm-subject-page .sm-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.sm-subject-page .sm-action-edit {
+    color: var(--sm-primary);
+}
+
+.sm-subject-page .sm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--sm-primary-dark);
+}
+
+.sm-subject-page .sm-action-delete {
+    color: #d92d20;
+}
+
+.sm-subject-page .sm-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.sm-subject-page .sm-action-switch-wrap {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    min-height: 2rem;
+}
+
+.sm-subject-page .sm-action-switch {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+    min-height: 2rem;
+    min-width: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sm-subject-page .sm-action-switch .form-check-input {
+    width: 2.5rem !important;
+    height: 1.25rem !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    float: none !important;
+    position: relative;
+    cursor: pointer;
+    border-color: #d0d5dd;
+    flex-shrink: 0;
+}
+
+.sm-subject-page .sm-action-switch .form-check-input:checked {
+    background-color: var(--sm-primary);
+    border-color: var(--sm-primary);
+}
+
+.sm-subject-page .sm-action-switch .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.2);
+}
+
+.sm-subject-page .sm-empty-state {
+    padding: 3rem 1.5rem;
+    text-align: center;
+    color: var(--sm-muted);
+}
+
+.sm-subject-page .sm-empty-state i {
+    font-size: 2.5rem;
+    display: block;
+    margin-bottom: 0.75rem;
+    opacity: 0.65;
+}
+
+.sm-subject-page .programme-dt-footer .pagination .page-item.active .page-link,
+.sm-subject-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.sm-subject-page .programme-dt-count {
+    color: var(--sm-muted);
+    font-size: 0.875rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    flex-wrap: wrap;
+}
+
+.sm-subject-page .sm-per-page-select {
+    width: auto;
+    min-width: 4.25rem;
+    height: 32px;
+    padding: 0.25rem 1.75rem 0.25rem 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--sm-text);
+    border-color: var(--sm-border);
+    border-radius: 8px;
+    background-color: #fff;
+    cursor: default;
+}
+
+@media (max-width: 767.98px) {
+    .sm-subject-page .sm-search-form {
+        max-width: 100%;
+    }
+
+    .sm-subject-page .sm-toolbar-top {
+        justify-content: stretch !important;
+    }
+
+    .sm-subject-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+
+    .sm-subject-page .programme-dt-count {
+        justify-content: center;
+    }
+}
+
+/* Add / Edit Subject modals */
+.sm-subject-form-modal {
+    --sm-primary: #004a93;
+    --sm-border: #e4e7ec;
+    --sm-text: #344054;
+    --sm-heading: #101828;
+}
+
+.sm-subject-form-modal.show,
+.sm-edit-subject-modal.show {
+    z-index: 1110 !important;
+}
+
+body.modal-open:has(.sm-subject-form-modal.show) .modal-backdrop.show,
+body.modal-open:has(.sm-edit-subject-modal.show) .modal-backdrop.show {
+    z-index: 1105 !important;
+}
+
+.sm-subject-form-modal .sm-subject-modal-dialog {
+    max-width: 520px;
+    width: calc(100% - 1.5rem);
+}
+
+.sm-subject-form-modal .sm-subject-modal-content {
+    border-radius: 16px;
+    overflow: hidden;
+}
+
+.sm-subject-form-modal .sm-subject-modal-header {
+    padding: 1.25rem 1.5rem 0;
+}
+
+.sm-subject-form-modal .sm-subject-modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--sm-heading);
+    letter-spacing: -0.01em;
+}
+
+.sm-subject-form-modal .sm-subject-modal-body {
+    padding: 1rem 1.5rem 1.5rem;
+}
+
+.sm-subject-form-modal .sm-subject-modal-fields .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--sm-text);
+    margin-bottom: 0.375rem;
+}
+
+.sm-subject-form-modal .sm-subject-modal-fields .form-control,
+.sm-subject-form-modal .sm-subject-modal-fields .form-select {
+    min-height: 44px;
+    border: 1px solid var(--sm-border);
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: var(--sm-heading);
+    padding: 0.625rem 0.875rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.sm-subject-form-modal .sm-subject-modal-fields .form-control::placeholder {
+    color: #98a2b3;
+}
+
+.sm-subject-form-modal .sm-subject-modal-fields .form-control:focus,
+.sm-subject-form-modal .sm-subject-modal-fields .form-select:focus {
+    border-color: var(--sm-primary);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.sm-subject-form-modal .sm-subject-modal-actions .sm-btn-cancel {
+    color: var(--sm-primary);
+    border: 1px solid var(--sm-primary);
+    background: #fff;
+}
+
+.sm-subject-form-modal .sm-subject-modal-actions .sm-btn-cancel:hover {
+    background: #f0f6fc;
+    color: var(--sm-primary);
+    border-color: var(--sm-primary);
+}
+
+.sm-subject-form-modal .sm-subject-modal-actions .sm-btn-submit {
+    background: var(--sm-primary);
+    border-color: var(--sm-primary);
+}
+
+.sm-subject-form-modal .sm-subject-modal-actions .sm-btn-submit:hover {
+    background: #003366;
+    border-color: #003366;
+}
+

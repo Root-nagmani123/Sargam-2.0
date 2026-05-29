@@ -19,14 +19,33 @@ class SubjectMasterController extends Controller
         ->orderBy('created_date', 'desc')
         ->paginate(10)
         ->appends(['search' => $search]);
-        
-        return view('admin.subject.index', compact('subjects'));
+
+        $smSubjectEditData = [];
+        foreach ($subjects as $subject) {
+            $smSubjectEditData[$subject->pk] = [
+                'major_subject_name' => $subject->subject_name,
+                'short_name' => $subject->sub_short_name,
+                'status' => $subject->active_inactive,
+            ];
+        }
+        if (request()->filled('open_edit_subject')) {
+            $extra = SubjectMaster::find(request('open_edit_subject'));
+            if ($extra) {
+                $smSubjectEditData[$extra->pk] = [
+                    'major_subject_name' => $extra->subject_name,
+                    'short_name' => $extra->sub_short_name,
+                    'status' => $extra->active_inactive,
+                ];
+            }
+        }
+
+        return view('admin.subject.index', compact('subjects', 'smSubjectEditData'));
     }
 
     // Show the form for creating a new subject
     public function create()
     {
-        return view('admin.subject.create');
+        return redirect()->route('subject.index', ['open_add_subject' => 1]);
     }
 
     // Store a newly created subject
@@ -56,12 +75,11 @@ class SubjectMasterController extends Controller
     {
         $subject = SubjectMaster::find($id);
 
-        // Check if record exists
         if (!$subject) {
             return redirect()->route('subject.index')->with('error', 'Subject not found.');
         }
-    
-        return view('admin.subject.edit', compact('subject'));
+
+        return redirect()->route('subject.index', ['open_edit_subject' => $id]);
     }
 
     // Update the subject
