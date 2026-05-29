@@ -1,237 +1,180 @@
 @extends('admin.layouts.master')
+
 @section('title', 'Faculty Details – Blank Form')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{{ asset('css/faculty-detail-admin.css') }}?v={{ @filemtime(public_path('css/faculty-detail-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
 
-<style>
-.page-wrapper {
-    background: #fff;
-    padding: 20px 40px;
-    font-family: "Noto Sans", "Noto Sans Devanagari", Arial, sans-serif;
-}
+<div class="container-fluid faculty-detail-page pb-4">
+    <x-breadcrum title="Print Blank Faculty Form" />
 
-.section-title {
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: #003366;
-    font-size: 18px;
-    border-bottom: 2px solid #003366;
-    padding-bottom: 4px;
-}
-
-.label-sm {
-    font-size: 14px;
-    font-weight: 500;
-    color: #333;
-}
-
-.data-line {
-    border-bottom: 1px solid #bbb;
-    min-height: 26px;
-    padding-bottom: 2px;
-    font-size: 15px;
-}
-
-.profile-photo {
-width: 170px;
-    height: 170px;
-    object-fit: fill;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-    background: #f5f5f5;
-}
-
-.section-block {
-    margin-bottom: 28px;
-}
-
-/* Print */
-@media print {
-    body * { visibility: hidden !important; }
-    .print-area, .print-area * { visibility: visible !important; }
-    .print-area { position: absolute; left: 0; top: 0; width: 100%; padding: 0 30px; }
-    .no-print { display: none !important; }
-}
-</style>
-
-<div class="container-fluid print-area">
- <!-- ===========================================================
-                    HEADER + PHOTO + NAME
-        ============================================================ -->
-        <div class="row mb-4 align-items-center">
-            <div class="col-md-2 text-center">
-                <div class="profile-photo"></div>
-            </div>
-
-            <div class="col-md-10">
-                <div class="label-sm">Full Name:</div>
-                <div class="data-line"></div>
-
-                <div class="label-sm mt-3">Faculty Type:</div>
-                <div class="data-line"></div>
+    <div class="fc-detail-card print-area">
+        <div class="fc-detail-header">
+            <div class="row fc-detail-grid g-3 align-items-center">
+                <div class="col-md-2 text-center">
+                    <div class="fc-detail-photo fc-detail-photo--blank mx-auto"></div>
+                </div>
+                <div class="col-md-10">
+                    <div class="row fc-detail-grid g-3">
+                        <div class="col-md-8">
+                            <div class="fc-field-label">Full Name</div>
+                            <div class="fc-field-value fc-field-value--blank"></div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fc-field-label">Faculty Code</div>
+                            <div class="fc-field-value fc-field-value--blank"></div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="fc-field-label">Faculty Type</div>
+                            <div class="fc-field-value fc-field-value--blank"></div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
-        <!-- ===========================================================
-                           PERSONAL INFORMATION
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">PERSONAL INFORMATION</div>
-
-            <div class="row mb-3">
+        <div class="fc-section">
+            <div class="fc-section-title">Personal Information</div>
+            <div class="row fc-detail-grid g-3">
                 <div class="col-md-4">
-                    <div class="label-sm">Gender</div>
-                    <div class="data-line"></div>
+                    <div class="fc-field-label">Gender</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
                 </div>
-
                 <div class="col-md-4">
-                    <div class="label-sm">Mobile Number</div>
-                    <div class="data-line"></div>
+                    <div class="fc-field-label">Mobile Number</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
                 </div>
-
                 <div class="col-md-4">
-                    <div class="label-sm">Email ID</div>
-                    <div class="data-line"></div>
+                    <div class="fc-field-label">Email ID</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fc-field-label">Current Designation</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fc-field-label">Current Department</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fc-field-label">Address</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
                 </div>
             </div>
-
-            <div class="label-sm mt-2">Address</div>
-            <div class="data-line mb-2"></div>
         </div>
 
-
-        <!-- ===========================================================
-                           QUALIFICATION DETAILS
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">QUALIFICATION DETAILS</div>
-
-            @for($i=1; $i<=3; $i++)
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <div class="label-sm">Degree</div>
-                    <div class="data-line"></div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">University</div>
-                    <div class="data-line"></div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Passing Year</div>
-                    <div class="data-line"></div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Percentage / CGPA</div>
-                    <div class="data-line"></div>
+        <div class="fc-section">
+            <div class="fc-section-title">Qualifications Details</div>
+            @for ($i = 1; $i <= 2; $i++)
+            <div class="fc-panel-block">
+                <div class="row fc-detail-grid g-3">
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Degree</div>
+                        <div class="fc-field-value fc-field-value--blank"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">University / Institution</div>
+                        <div class="fc-field-value fc-field-value--blank"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Year of Passing</div>
+                        <div class="fc-field-value fc-field-value--blank"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Percentage / CGPA</div>
+                        <div class="fc-field-value fc-field-value--blank"></div>
+                    </div>
                 </div>
             </div>
             @endfor
         </div>
 
-
-        <!-- ===========================================================
-                           EXPERIENCE DETAILS
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">EXPERIENCE DETAILS</div>
-
-            @for($i=1; $i<=3; $i++)
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <div class="label-sm">Years of Experience</div>
-                    <div class="data-line"></div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Area of Specialisation</div>
-                    <div class="data-line"></div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Institution</div>
-                    <div class="data-line"></div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Position Held</div>
-                    <div class="data-line"></div>
+        <div class="fc-section">
+            <div class="fc-section-title">Experience Details</div>
+            @for ($i = 1; $i <= 2; $i++)
+            <div class="fc-panel-block">
+                <div class="row fc-detail-grid g-3">
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Years of Experience</div>
+                        <div class="fc-field-value fc-field-value--blank"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Area of Specialisation</div>
+                        <div class="fc-field-value fc-field-value--blank"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Previous Institution</div>
+                        <div class="fc-field-value fc-field-value--blank"></div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Position Held</div>
+                        <div class="fc-field-value fc-field-value--blank"></div>
+                    </div>
                 </div>
             </div>
             @endfor
         </div>
 
-
-        <!-- ===========================================================
-                           BANK DETAILS
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">BANK DETAILS</div>
-
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="label-sm">Bank Name</div>
-                    <div class="data-line"></div>
+        <div class="fc-section">
+            <div class="fc-section-title">Bank Details</div>
+            <div class="row fc-detail-grid g-3">
+                <div class="col-md-6">
+                    <div class="fc-field-label">Bank Name</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
                 </div>
-
-                <div class="col-md-4">
-                    <div class="label-sm">Account Number</div>
-                    <div class="data-line"></div>
+                <div class="col-md-6">
+                    <div class="fc-field-label">Account Number</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
                 </div>
-
-                <div class="col-md-4">
-                    <div class="label-sm">IFSC Code</div>
-                    <div class="data-line"></div>
+                <div class="col-md-6">
+                    <div class="fc-field-label">IFSC Code</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
+                </div>
+                <div class="col-md-6">
+                    <div class="fc-field-label">PAN Number</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
                 </div>
             </div>
         </div>
 
-
-        <!-- ===========================================================
-                           AREA OF EXPERTISE
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">AREA OF EXPERTISE</div>
-
-            <div class="row">
-                @for($i=1; $i<=6; $i++)
-                <div class="col-md-3 mb-2">
-                    <div class="data-line"></div>
-                </div>
+        <div class="fc-section">
+            <div class="fc-section-title">Area of Expertise</div>
+            <div class="fc-expertise-list">
+                @for ($i = 1; $i <= 6; $i++)
+                <span class="fc-expertise-pill fc-expertise-pill--blank"></span>
                 @endfor
             </div>
         </div>
 
-
-        <!-- ===========================================================
-                           OTHER INFORMATION
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">OTHER INFORMATION</div>
-
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="label-sm">Joining Date</div>
-                    <div class="data-line"></div>
+        <div class="fc-section">
+            <div class="fc-section-title">Other Information</div>
+            <div class="row fc-detail-grid g-3">
+                <div class="col-md-6">
+                    <div class="fc-field-label">Joining Date</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
                 </div>
-
-                <div class="col-md-4">
-                    <div class="label-sm">Current Sector</div>
-                    <div class="data-line"></div>
+                <div class="col-md-6">
+                    <div class="fc-field-label">Current Sector</div>
+                    <div class="fc-field-value fc-field-value--blank"></div>
                 </div>
             </div>
         </div>
 
-
-        <!-- ===========================================================
-                           BUTTONS
-        ============================================================ -->
-        <div class="no-print text-end mt-4">
-            <a href="{{ route('faculty.index') }}" class="btn btn-secondary">Back</a>
-            <button class="btn btn-primary" onclick="window.print()">Print</button>
+        <div class="fc-detail-actions no-print">
+            <a href="{{ route('faculty.index') }}" class="fc-btn-outline">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                Back
+            </a>
+            <button type="button" class="fc-btn-primary" onclick="window.print()">
+                <i class="bi bi-printer" aria-hidden="true"></i>
+                Print
+            </button>
         </div>
+    </div>
 </div>
 
 @endsection

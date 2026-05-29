@@ -1,292 +1,197 @@
 @extends('admin.layouts.master')
+
 @section('title', 'View Faculty Details')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{{ asset('css/faculty-detail-admin.css') }}?v={{ @filemtime(public_path('css/faculty-detail-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
 
-<style>
-/* ------------------------------
-   GLOBAL + GIGW COMPLIANT STYLE
---------------------------------*/
-.page-wrapper {
-    background: #fff;
-    padding: 20px 40px;
-    font-family: "Noto Sans", "Noto Sans Devanagari", Arial, sans-serif;
-}
+<div class="container-fluid faculty-detail-page pb-4">
+    <x-breadcrum title="View Faculty Details" />
 
-.section-title {
-    font-weight: 600;
-    margin-bottom: 12px;
-    color: #003366;
-    font-size: 18px;
-    border-bottom: 2px solid #003366;
-    padding-bottom: 4px;
-}
-
-.label-sm {
-    font-size: 14px;
-    font-weight: 500;
-    color: #333;
-}
-
-.data-line {
-    border-bottom: 1px solid #bbb;
-    min-height: 26px;
-    padding-bottom: 2px;
-    font-size: 15px;
-}
-
-.profile-photo {
-width: 170px;
-    height: 170px;
-    object-fit: fill;
-    border-radius: 6px;
-    border: 1px solid #ddd;
-}
-
-.section-block {
-    margin-bottom: 28px;
-}
-
-/* Print Optimisation */
-@media print {
-    body * {
-        visibility: hidden !important;
-    }
-    .print-area, .print-area * {
-        visibility: visible !important;
-    }
-    .print-area {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        padding: 0 30px;
-    }
-    .no-print {
-        display: none !important;
-    }
-}
-</style>
-
-<div class="container-fluid print-area">
- <!-- ===========================================================
-                HEADER + PHOTO + NAME (LIKE ATTACHED SAMPLE)
-        ============================================================ -->
-        <div class="row mb-4 align-items-center">
-            <div class="col-md-2 text-center">
-                <img src="{{ $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : asset('images/dummypic.jpeg') }}"
-                     alt="Faculty Photo" class="profile-photo">
-            </div>
-
-            <div class="col-md-10">
-                <div class="label-sm">Full Name:</div>
-                <div class="data-line">{{ $faculty->full_name }} ( {{ $faculty->faculty_code }} )</div>
-
-                <div class="label-sm mt-3">Faculty Type:</div>
-                <div class="data-line">{{ $faculty->facultyTypeMaster->faculty_type_name }}</div>
-
-                @if($faculty->faculty_type == '1' && $faculty->faculty_pa)
-                <div class="label-sm mt-3">Faculty (PA):</div>
-                <div class="data-line">{{ $faculty->faculty_pa }}</div>
-                @endif
-            </div>
-        </div>
-
-
-        <!-- ===========================================================
-                           PERSONAL INFORMATION
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">PERSONAL INFORMATION</div>
-
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="label-sm">Gender</div>
-                    <div class="data-line">{{ $faculty->gender }}</div>
+    <div class="fc-detail-card print-area">
+        <div class="fc-detail-header">
+            <div class="row fc-detail-grid g-3 align-items-center">
+                <div class="col-md-2 text-center">
+                    <img src="{{ $faculty->photo_uplode_path ? asset('storage/'.$faculty->photo_uplode_path) : asset('images/dummypic.jpeg') }}"
+                        alt="Faculty Photo" class="fc-detail-photo mx-auto">
                 </div>
-
-                <div class="col-md-4">
-                    <div class="label-sm">Mobile Number</div>
-                    <div class="data-line">{{ $faculty->mobile_no }}</div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="label-sm">Email ID</div>
-                    <div class="data-line">{{ $faculty->email_id }}</div>
-                </div>
-            </div>
-
-            <!--<div class="label-sm mt-2">Address</div>
-            <div class="data-line mb-2">
-                {{ $faculty->countryMaster->country_name }},
-                {{ $faculty->stateMaster->state_name }},
-                {{ $faculty->districtMaster->district_name }},
-                {{ $faculty->cityMaster->city_name }}
-            </div>-->
-            <div class="row mb-3">
-    <div class="col-md-4">
-        <div class="label-sm">Current Designation</div>
-        <div class="data-line">
-            {{ $faculty->current_designation ?? '-' }}
-        </div>
-    </div>
-
-    <div class="col-md-4">
-        <div class="label-sm">Current Department</div>
-        <div class="data-line">
-            {{ $faculty->current_department ?? '-' }}
-        </div>
-    </div>
-
-            <div class="col-md-4">
-                <div class="label-sm">Address</div>
-                <div class="data-line">
-                    {{ $faculty->countryMaster->country_name ?? '' }},
-                    {{ $faculty->stateMaster->state_name ?? '' }},
-                    {{ $faculty->districtMaster->district_name ?? '' }},
-                    {{ $faculty->cityMaster->city_name ?? '' }}
-                </div>
-            </div>
-        </div>
-
-
-        </div>
-
-
-        <!-- ===========================================================
-                           QUALIFICATION DETAILS
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">QUALIFICATION DETAILS</div>
-
-            @foreach($faculty->facultyQualificationMap as $q)
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <div class="label-sm">Degree</div>
-                    <div class="data-line">{{ $q->Degree_name }}</div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">University</div>
-                    <div class="data-line">{{ $q->University_Institution_Name }}</div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Passing Year</div>
-                    <div class="data-line">{{ $q->Year_of_passing }}</div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Percentage / CGPA</div>
-                    <div class="data-line">{{ $q->Percentage_CGPA }}</div>
-                </div>
-            </div>
-            @endforeach
-        </div>
-
-
-        <!-- ===========================================================
-                           EXPERIENCE DETAILS
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">EXPERIENCE DETAILS</div>
-
-            @foreach($faculty->facultyExperienceMap as $exp)
-            <div class="row mb-3">
-                <div class="col-md-3">
-                    <div class="label-sm">Years of Experience</div>
-                    <div class="data-line">{{ $exp->Years_Of_Experience }}</div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Area of Specialisation</div>
-                    <div class="data-line">{{ $exp->Specialization }}</div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Institution</div>
-                    <div class="data-line">{{ $exp->pre_Institutions }}</div>
-                </div>
-
-                <div class="col-md-3">
-                    <div class="label-sm">Position Held</div>
-                    <div class="data-line">{{ $exp->Position_hold }}</div>
-                </div>
-            </div>
-            @endforeach
-        </div>
-
-
-        <!-- ===========================================================
-                           BANK DETAILS
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">BANK DETAILS</div>
-
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="label-sm">Bank Name</div>
-                    <div class="data-line">{{ $faculty->bank_name }}</div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="label-sm">Account Number</div>
-                    <div class="data-line">{{ $faculty->Account_No }}</div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="label-sm">IFSC Code</div>
-                    <div class="data-line">{{ $faculty->IFSC_Code }}</div>
-                </div>
-            </div>
-        </div>
-
-
-        <!-- ===========================================================
-                           AREA OF EXPERTISE
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">AREA OF EXPERTISE</div>
-
-            <div class="row">
-                @foreach($faculty->facultyExpertiseMap as $area)
-                <div class="col-md-3 mb-2">
-                    <div class="data-line">{{ $area->facultyExpertise->expertise_name }}</div>
-                </div>
-                @endforeach
-            </div>
-        </div>
-
-
-        <!-- ===========================================================
-                           OTHER INFORMATION
-        ============================================================ -->
-        <div class="section-block">
-            <div class="section-title">OTHER INFORMATION</div>
-
-            <div class="row mb-3">
-                <div class="col-md-4">
-                    <div class="label-sm">Joining Date</div>
-                    <div class="data-line">{{ format_date($faculty->joining_date) }}</div>
-                </div>
-
-                <div class="col-md-4">
-                    <div class="label-sm">Current Sector</div>
-                    <div class="data-line">
-                        {{ $faculty->faculty_sector == 1 ? 'Government Sector' : 'Private Sector' }}
+                <div class="col-md-10">
+                    <div class="row fc-detail-grid g-3">
+                        <div class="col-md-8">
+                            <div class="fc-field-label">Full Name</div>
+                            <div class="fc-field-value">{{ $faculty->full_name }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="fc-field-label">Faculty Code</div>
+                            <div class="fc-field-value">{{ $faculty->faculty_code }}</div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="fc-field-label">Faculty Type</div>
+                            <div class="fc-field-value">{{ $faculty->facultyTypeMaster->faculty_type_name ?? '-' }}</div>
+                        </div>
+                        @if($faculty->faculty_type == '1' && $faculty->faculty_pa)
+                        <div class="col-md-6">
+                            <div class="fc-field-label">Faculty (PA)</div>
+                            <div class="fc-field-value">{{ $faculty->faculty_pa }}</div>
+                        </div>
+                        @endif
                     </div>
                 </div>
             </div>
         </div>
 
-
-        <!-- ===========================================================
-                           BUTTONS
-        ============================================================ -->
-        <div class="no-print text-end mt-4">
-            <a href="{{ route('faculty.index') }}" class="btn btn-secondary">Back</a>
-            <button class="btn btn-primary" onclick="window.print()">Print</button>
+        <div class="fc-section">
+            <div class="fc-section-title">Personal Information</div>
+            <div class="row fc-detail-grid g-3">
+                <div class="col-md-4">
+                    <div class="fc-field-label">Gender</div>
+                    <div class="fc-field-value">{{ $faculty->gender ?? '-' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fc-field-label">Mobile Number</div>
+                    <div class="fc-field-value">{{ $faculty->mobile_no ?? '-' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fc-field-label">Email ID</div>
+                    <div class="fc-field-value">{{ $faculty->email_id ?? '-' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fc-field-label">Current Designation</div>
+                    <div class="fc-field-value">{{ $faculty->current_designation ?? '-' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fc-field-label">Current Department</div>
+                    <div class="fc-field-value">{{ $faculty->current_department ?? '-' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <div class="fc-field-label">Address</div>
+                    <div class="fc-field-value">
+                        {{ $faculty->countryMaster->country_name ?? '' }}{{ ($faculty->stateMaster->state_name ?? '') ? ', '.$faculty->stateMaster->state_name : '' }}{{ ($faculty->districtMaster->district_name ?? '') ? ', '.$faculty->districtMaster->district_name : '' }}{{ ($faculty->cityMaster->city_name ?? '') ? ', '.$faculty->cityMaster->city_name : '' }}
+                    </div>
+                </div>
+            </div>
         </div>
+
+        <div class="fc-section">
+            <div class="fc-section-title">Qualifications Details</div>
+            @forelse($faculty->facultyQualificationMap as $q)
+            <div class="fc-panel-block">
+                <div class="row fc-detail-grid g-3">
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Degree</div>
+                        <div class="fc-field-value">{{ $q->Degree_name ?? '-' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">University / Institution</div>
+                        <div class="fc-field-value">{{ $q->University_Institution_Name ?? '-' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Year of Passing</div>
+                        <div class="fc-field-value">{{ $q->Year_of_passing ?? '-' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Percentage / CGPA</div>
+                        <div class="fc-field-value">{{ $q->Percentage_CGPA ?? '-' }}</div>
+                    </div>
+                </div>
+            </div>
+            @empty
+            <div class="fc-field-value">-</div>
+            @endforelse
+        </div>
+
+        <div class="fc-section">
+            <div class="fc-section-title">Experience Details</div>
+            @forelse($faculty->facultyExperienceMap as $exp)
+            <div class="fc-panel-block">
+                <div class="row fc-detail-grid g-3">
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Years of Experience</div>
+                        <div class="fc-field-value">{{ $exp->Years_Of_Experience ?? '-' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Area of Specialisation</div>
+                        <div class="fc-field-value">{{ $exp->Specialization ?? '-' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Previous Institution</div>
+                        <div class="fc-field-value">{{ $exp->pre_Institutions ?? '-' }}</div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="fc-field-label">Position Held</div>
+                        <div class="fc-field-value">{{ $exp->Position_hold ?? '-' }}</div>
+                    </div>
+                </div>
+            </div>
+            @empty
+            <div class="fc-field-value">-</div>
+            @endforelse
+        </div>
+
+        <div class="fc-section">
+            <div class="fc-section-title">Bank Details</div>
+            <div class="row fc-detail-grid g-3">
+                <div class="col-md-6">
+                    <div class="fc-field-label">Bank Name</div>
+                    <div class="fc-field-value">{{ $faculty->bank_name ?? '-' }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="fc-field-label">Account Number</div>
+                    <div class="fc-field-value">{{ $faculty->Account_No ?? '-' }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="fc-field-label">IFSC Code</div>
+                    <div class="fc-field-value">{{ $faculty->IFSC_Code ?? '-' }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="fc-field-label">PAN Number</div>
+                    <div class="fc-field-value">{{ $faculty->PAN_No ?? '-' }}</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fc-section">
+            <div class="fc-section-title">Area of Expertise</div>
+            <div class="fc-expertise-list">
+                @forelse($faculty->facultyExpertiseMap as $area)
+                <span class="fc-expertise-pill">{{ $area->facultyExpertise->expertise_name ?? '-' }}</span>
+                @empty
+                <span class="fc-field-value">-</span>
+                @endforelse
+            </div>
+        </div>
+
+        <div class="fc-section">
+            <div class="fc-section-title">Other Information</div>
+            <div class="row fc-detail-grid g-3">
+                <div class="col-md-6">
+                    <div class="fc-field-label">Joining Date</div>
+                    <div class="fc-field-value">{{ $faculty->joining_date ? format_date($faculty->joining_date) : '-' }}</div>
+                </div>
+                <div class="col-md-6">
+                    <div class="fc-field-label">Current Sector</div>
+                    <div class="fc-field-value">
+                        {{ $faculty->faculty_sector == 1 ? 'Government Sector' : ($faculty->faculty_sector == 2 ? 'Private Sector' : '-') }}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="fc-detail-actions no-print">
+            <a href="{{ route('faculty.index') }}" class="fc-btn-outline">
+                <i class="bi bi-arrow-left" aria-hidden="true"></i>
+                Back
+            </a>
+            <button type="button" class="fc-btn-primary" onclick="window.print()">
+                <i class="bi bi-printer" aria-hidden="true"></i>
+                Print
+            </button>
+        </div>
+    </div>
 </div>
 
 @endsection

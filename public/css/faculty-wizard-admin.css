@@ -1,0 +1,418 @@
+﻿/* Faculty create/edit — matches reference vertical wizard design */
+
+.faculty-wizard-page {
+    --fw-primary: #004a93;
+    --fw-primary-dark: #003366;
+    --fw-success: #12b76a;
+    --fw-border: #e4e7ec;
+    --fw-text: #344054;
+    --fw-heading: #101828;
+    --fw-muted: #667085;
+    --fw-page-bg: #f0f2f5;
+    --fw-radius-lg: 16px;
+    --fw-radius-md: 8px;
+    --fw-step-size: 36px;
+    --fw-sidebar: 260px;
+    --fw-gap: 2.5rem;
+    background-color: var(--fw-page-bg);
+}
+
+/* Single white card (reference) */
+.faculty-wizard-page .fw-wizard-shell {
+    background: #fff;
+    border: 1px solid var(--fw-border);
+    border-radius: var(--fw-radius-lg);
+    padding: 2rem 2.5rem 2rem;
+    box-shadow: 0 4px 24px rgba(16, 24, 40, 0.06);
+}
+
+/* Stepper | form + actions */
+.faculty-wizard-page .fw-wizard-native {
+    display: grid !important;
+    grid-template-columns: var(--fw-sidebar) minmax(0, 1fr) !important;
+    column-gap: var(--fw-gap) !important;
+    align-items: start;
+    width: 100%;
+}
+
+.faculty-wizard-page .fw-wizard-panel {
+    min-width: 0;
+    width: 100%;
+}
+
+/* ---- Vertical stepper ---- */
+.faculty-wizard-page .fw-step-nav {
+    padding-top: 0.25rem;
+}
+
+.faculty-wizard-page .fw-step-nav-item {
+    position: relative;
+    display: flex !important;
+    align-items: center;
+    gap: 0.875rem;
+    padding: 0 0 1.625rem;
+    cursor: default;
+    list-style: none;
+}
+
+.faculty-wizard-page .fw-step-nav-item:last-child {
+    padding-bottom: 0;
+}
+
+.faculty-wizard-page .fw-step-nav-item:not(:last-child)::after {
+    content: "";
+    position: absolute;
+    left: calc(var(--fw-step-size) / 2 - 1px);
+    top: var(--fw-step-size);
+    bottom: 0;
+    width: 2px;
+    background: #d0d5dd;
+    z-index: 0;
+}
+
+.faculty-wizard-page .fw-step-nav-item.is-done:not(:last-child)::after {
+    background: var(--fw-success);
+}
+
+.faculty-wizard-page .fw-step-nav-marker {
+    position: relative;
+    z-index: 1;
+    width: var(--fw-step-size);
+    height: var(--fw-step-size);
+    min-width: var(--fw-step-size);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1;
+    border: 2px solid #d0d5dd;
+    background: #fff;
+    color: #98a2b3;
+    flex-shrink: 0;
+}
+
+.faculty-wizard-page .fw-step-nav-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #98a2b3;
+    line-height: 1.35;
+}
+
+/* Active step: green ring + number (reference) */
+.faculty-wizard-page .fw-step-nav-item.is-active .fw-step-nav-marker {
+    background: #fff;
+    border-color: var(--fw-success);
+    color: var(--fw-heading);
+}
+
+.faculty-wizard-page .fw-step-nav-item.is-active .fw-step-nav-label {
+    color: var(--fw-heading);
+    font-weight: 600;
+}
+
+/* Completed step: solid green + checkmark */
+.faculty-wizard-page .fw-step-nav-item.is-done {
+    cursor: pointer;
+}
+
+.faculty-wizard-page .fw-step-nav-item.is-done .fw-step-nav-marker {
+    background: var(--fw-success);
+    border-color: var(--fw-success);
+    color: transparent;
+    font-size: 0;
+}
+
+.faculty-wizard-page .fw-step-nav-item.is-done .fw-step-nav-marker::before {
+    content: "\F26B";
+    font-family: "bootstrap-icons";
+    font-size: 0.9375rem;
+    font-weight: 700;
+    color: #fff;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.faculty-wizard-page .fw-step-nav-item.is-done .fw-step-nav-label {
+    color: var(--fw-heading);
+    font-weight: 500;
+}
+
+/* ---- Form panes ---- */
+.faculty-wizard-page .fw-step-pane {
+    min-height: 280px;
+}
+
+.faculty-wizard-page .fw-step-pane.d-none {
+    display: none !important;
+}
+
+.faculty-wizard-page .fw-step-grid {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 1.25rem;
+}
+
+.faculty-wizard-page .fw-step-pane .mb-3 {
+    margin-bottom: 0 !important;
+}
+
+.faculty-wizard-page .fw-step-pane .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--fw-text);
+    margin-bottom: 0.375rem;
+    line-height: 1.4;
+}
+
+.faculty-wizard-page .fw-step-pane .form-label .text-danger {
+    margin-left: 0.125rem;
+}
+
+.faculty-wizard-page .fw-step-pane .form-control,
+.faculty-wizard-page .fw-step-pane .form-select {
+    min-height: 44px;
+    border: 1px solid var(--fw-border);
+    border-radius: var(--fw-radius-md);
+    font-size: 0.9375rem;
+    color: var(--fw-heading);
+    background-color: #fff;
+    padding: 0.625rem 0.875rem;
+    box-shadow: none;
+}
+
+.faculty-wizard-page .fw-step-pane .form-control::placeholder {
+    color: #98a2b3;
+    opacity: 1;
+}
+
+.faculty-wizard-page .fw-step-pane .form-select {
+    padding-right: 2.25rem;
+}
+
+.faculty-wizard-page .fw-step-pane .form-control:focus,
+.faculty-wizard-page .fw-step-pane .form-select:focus {
+    border-color: var(--fw-primary);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.1);
+}
+
+.faculty-wizard-page .fw-step-pane .form-control.is-invalid,
+.faculty-wizard-page .fw-step-pane .form-select.is-invalid {
+    border-color: #fda29b;
+}
+
+.faculty-wizard-page .fw-step-pane input[name="fullname"],
+.faculty-wizard-page .fw-step-pane input[name="faculty_code"],
+.faculty-wizard-page .fw-step-pane input.bg-light {
+    background-color: #f2f4f7 !important;
+}
+
+/* Steps 2 & 3 gray panel */
+.faculty-wizard-page .fw-step-pane .fw-step-panel {
+    background: #f8f9fb;
+    border: 1px solid #eef0f4;
+    border-radius: var(--fw-radius-md);
+}
+
+.faculty-wizard-page .fw-step-panel .degree-row,
+.faculty-wizard-page .fw-step-panel .experience-row {
+    --bs-gutter-x: 1.5rem;
+    --bs-gutter-y: 1.25rem;
+}
+
+.faculty-wizard-page .fw-step-panel .degree-row + .degree-row,
+.faculty-wizard-page .fw-step-panel .experience-row + .experience-row {
+    border-top: 1px solid #eef0f4;
+    padding-top: 1.25rem;
+    margin-top: 0.25rem;
+}
+
+.faculty-wizard-page .fw-step-panel .form-label {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--fw-text);
+    margin-bottom: 0.375rem;
+}
+
+.faculty-wizard-page .fw-step-panel .form-control,
+.faculty-wizard-page .fw-step-panel .form-select {
+    min-height: 44px;
+    border: 1px solid var(--fw-border);
+    border-radius: var(--fw-radius-md);
+    font-size: 0.9375rem;
+    color: var(--fw-heading);
+    background-color: #fff;
+    padding: 0.625rem 0.875rem;
+    box-shadow: none;
+}
+
+.faculty-wizard-page .fw-step-panel .mb-3 {
+    margin-bottom: 0 !important;
+}
+
+.faculty-wizard-page .fw-step-panel small.text-muted {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+}
+
+.faculty-wizard-page .fw-btn-add {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #e8f2fc;
+    border: 1px solid rgba(0, 74, 147, 0.2);
+    color: var(--fw-primary);
+    border-radius: var(--fw-radius-md);
+}
+
+.faculty-wizard-page .fw-btn-add:hover {
+    background: #d6e9f8;
+    border-color: var(--fw-primary);
+}
+
+.faculty-wizard-page .fw-step-pane input[type="file"].form-control {
+    padding: 0.5rem 0.875rem;
+}
+
+.faculty-wizard-page .fw-step-pane input[type="file"].form-control::file-selector-button {
+    margin-right: 0.75rem;
+    padding: 0.35rem 0.875rem;
+    border: 0;
+    border-radius: 6px;
+    background: #f2f4f7;
+    color: var(--fw-text);
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.faculty-wizard-page .fw-expertise-grid fieldset > .row {
+    --bs-gutter-x: 0.75rem;
+    --bs-gutter-y: 0.75rem;
+}
+
+.faculty-wizard-page .fw-expertise-grid .form-check {
+    border: 1px solid var(--fw-border);
+    border-radius: var(--fw-radius-md);
+    padding: 0.625rem 1rem;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin: 0;
+    background: #fff;
+}
+
+.faculty-wizard-page .fw-expertise-grid .form-check:has(.form-check-input:checked) {
+    border-color: rgba(0, 74, 147, 0.35);
+    background: #f0f6fc;
+}
+
+.faculty-wizard-page .fw-step-pane .form-check-input:checked {
+    background-color: var(--fw-primary);
+    border-color: var(--fw-primary);
+}
+
+/* ---- Footer actions ---- */
+.faculty-wizard-page .fw-wizard-actions {
+    border-top: 1px solid #eaecf0;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+}
+
+.faculty-wizard-page .fw-wizard-actions .btn-outline-primary {
+    color: var(--fw-primary);
+    border-color: var(--fw-primary);
+    background: #fff;
+    min-height: 44px;
+    font-weight: 600;
+    border-radius: var(--fw-radius-md);
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+.faculty-wizard-page .fw-wizard-actions .btn-outline-primary:hover {
+    background: #f0f6fc;
+    color: var(--fw-primary-dark);
+    border-color: var(--fw-primary-dark);
+}
+
+.faculty-wizard-page .fw-wizard-actions .btn-primary {
+    background: var(--fw-primary);
+    border-color: var(--fw-primary);
+    min-height: 44px;
+    min-width: 8.5rem;
+    font-weight: 600;
+    border-radius: var(--fw-radius-md);
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+}
+
+.faculty-wizard-page .fw-wizard-actions .btn-primary:hover {
+    background: var(--fw-primary-dark);
+    border-color: var(--fw-primary-dark);
+}
+
+.faculty-wizard-page #suggestionList {
+    border: 1px solid var(--fw-border);
+    border-radius: var(--fw-radius-md);
+    box-shadow: 0 4px 12px rgba(16, 24, 40, 0.08);
+}
+
+/* No nested Bootstrap cards inside wizard */
+.faculty-wizard-page .fw-wizard-shell .card {
+    background: transparent;
+    border: 0;
+    box-shadow: none !important;
+}
+
+.faculty-wizard-page .fw-wizard-shell .card-body {
+    padding: 0;
+}
+
+@media (max-width: 991.98px) {
+    .faculty-wizard-page .fw-wizard-shell {
+        padding: 1.25rem;
+    }
+
+    .faculty-wizard-page .fw-wizard-native {
+        grid-template-columns: 1fr !important;
+        row-gap: 1.25rem;
+    }
+
+    .faculty-wizard-page .fw-step-nav-list {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.5rem 1rem;
+    }
+
+    .faculty-wizard-page .fw-step-nav-item {
+        padding: 0;
+    }
+
+    .faculty-wizard-page .fw-step-nav-item::after {
+        display: none !important;
+    }
+}
+
+@media print {
+    .faculty-wizard-page .fw-step-nav,
+    .faculty-wizard-page .fw-wizard-actions {
+        display: none !important;
+    }
+
+    .faculty-wizard-page .fw-step-pane {
+        display: block !important;
+    }
+
+    .faculty-wizard-page .fw-step-pane.d-none {
+        display: block !important;
+    }
+}

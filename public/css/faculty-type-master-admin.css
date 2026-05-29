@@ -1,0 +1,210 @@
+/* Faculty Type Master — programme-dt reference layout */
+.ftm-master-page {
+    --ftm-primary: #004a93;
+    --ftm-primary-dark: #003366;
+    --ftm-border: #e4e7ec;
+    --ftm-text: #344054;
+    --ftm-heading: #101828;
+    --ftm-muted: #667085;
+    --ftm-danger: #d92d20;
+}
+
+.ftm-master-page .ftm-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--ftm-border) !important;
+}
+
+.ftm-master-page .ftm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.ftm-master-page #faculty-type-master-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--ftm-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.ftm-master-page #faculty-type-master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.ftm-master-page #faculty-type-master-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--ftm-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.ftm-master-page #faculty-type-master-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.ftm-master-page #faculty-type-master-table thead th:first-child,
+.ftm-master-page #faculty-type-master-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--ftm-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.ftm-master-page #faculty-type-master-table thead th:nth-child(2),
+.ftm-master-page #faculty-type-master-table tbody td:nth-child(2) {
+    text-align: left !important;
+    font-weight: 600;
+    color: var(--ftm-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: 0.875rem;
+}
+
+.ftm-master-page #faculty-type-master-table thead th:nth-child(3),
+.ftm-master-page #faculty-type-master-table tbody td:nth-child(3) {
+    text-align: left !important;
+    font-weight: 500;
+    color: var(--ftm-heading);
+}
+
+.ftm-master-page #faculty-type-master-table thead th:nth-child(4),
+.ftm-master-page #faculty-type-master-table thead th:nth-child(5),
+.ftm-master-page #faculty-type-master-table tbody td:nth-child(4),
+.ftm-master-page #faculty-type-master-table tbody td:nth-child(5) {
+    text-align: center !important;
+}
+
+.ftm-master-page #faculty-type-master-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.ftm-master-page .ftm-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.ftm-master-page .ftm-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.ftm-master-page .ftm-type-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.ftm-master-page .ftm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.ftm-master-page .ftm-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.ftm-master-page .ftm-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ftm-master-page .ftm-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.ftm-master-page .ftm-action-edit {
+    color: var(--ftm-primary);
+}
+
+.ftm-master-page .ftm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--ftm-primary-dark);
+}
+
+.ftm-master-page .ftm-action-delete {
+    color: var(--ftm-danger);
+}
+
+.ftm-master-page .ftm-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.ftm-master-page .ftm-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.ftm-master-page .ftm-status-badge {
+    min-width: 4.5rem;
+}
+
+.ftm-master-page .ftm-type-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.ftm-master-page .ftm-dt-footer .pagination .page-item.active .page-link {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.ftm-master-page .ftm-dt-info {
+    font-size: 0.875rem;
+    color: var(--ftm-muted);
+}
+
+.ftm-type-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+@media (max-width: 767.98px) {
+    .ftm-master-page .ftm-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ftm-master-page .ftm-action-btn {
+        transition: none;
+    }
+
+    .ftm-master-page .ftm-action-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}

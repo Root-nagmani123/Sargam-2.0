@@ -37,7 +37,7 @@ class FacultyTypeMasterController extends Controller
 
     public function create()
     {
-        return view('admin.master.faculty_type.create');
+        return redirect()->route('master.faculty.type.master.index', ['open_ftm_modal' => 'add']);
     }
 
     public function store(Request $request)
@@ -60,9 +60,22 @@ class FacultyTypeMasterController extends Controller
 
             self::bumpListCacheEpoch();
 
-            return redirect()->route('master.faculty.type.master.index')->with('success', 'Faculty Type created successfully');
+            $message = $request->pk ? 'Faculty Type updated successfully.' : 'Faculty Type created successfully.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                ]);
+            }
+
+            return redirect()->route('master.faculty.type.master.index')->with('success', $message);
         } catch (\Exception $e) {
             \Log::error($e->getMessage());
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Something went wrong.'], 500);
+            }
 
             return redirect()->back()->with('error', 'Something went wrong');
         }
@@ -72,7 +85,12 @@ class FacultyTypeMasterController extends Controller
     {
         $facultyType = FacultyTypeMaster::findOrFail(decrypt($id));
 
-        return view('admin.master.faculty_type.create', compact('facultyType'));
+        return redirect()->route('master.faculty.type.master.index', [
+            'open_ftm_modal' => 'edit',
+            'ftm_pk' => $id,
+            'ftm_short' => $facultyType->shot_faculty_type_name,
+            'ftm_name' => $facultyType->faculty_type_name,
+        ]);
     }
 
     public function delete($id)

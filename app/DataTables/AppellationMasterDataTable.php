@@ -74,6 +74,12 @@ class AppellationMasterDataTable extends DataTable
             ->setTableId('appellation-master-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
+            ->parameters([
+                'responsive' => true,
+                'scrollX' => false,
+                'autoWidth' => false,
+                'order' => [],
+            ])
             ->pageLength(10);
     }
 
