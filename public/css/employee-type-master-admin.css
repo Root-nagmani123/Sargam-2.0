@@ -1,0 +1,259 @@
+/* Employee Type Master — programme-dt reference layout */
+.etm-master-page {
+    --etm-primary: #004a93;
+    --etm-primary-dark: #003366;
+    --etm-border: #e4e7ec;
+    --etm-text: #344054;
+    --etm-heading: #101828;
+    --etm-muted: #667085;
+}
+
+.etm-master-page .etm-dt-card {
+    border-radius: 12px;
+}
+
+.etm-master-page .etm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dt-buttons,
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_length {
+    display: none !important;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_filter:not(.programme-dt-search .dataTables_filter) {
+    display: none !important;
+}
+
+/* Single header row — hide duplicate thead from DataTables scrollX */
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollBody thead,
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th,
+.etm-master-page #employeetypemaster-table thead th {
+    background-color: #f8f9fa;
+    color: var(--etm-heading);
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--etm-border);
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+}
+
+.etm-master-page #employeetypemaster-table tbody td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    color: var(--etm-text);
+    font-size: 0.9375rem;
+}
+
+.etm-master-page #employeetypemaster-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.etm-master-page #employeetypemaster-table tbody td:first-child {
+    color: var(--etm-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.etm-master-page #employeetypemaster-table tbody td:nth-child(2) {
+    font-weight: 500;
+    color: var(--etm-heading);
+    text-align: left !important;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(2),
+.etm-master-page #employeetypemaster-table thead th:nth-child(2) {
+    text-align: left !important;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(3),
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(4),
+.etm-master-page #employeetypemaster-table thead th:nth-child(3),
+.etm-master-page #employeetypemaster-table thead th:nth-child(4),
+.etm-master-page #employeetypemaster-table tbody td:nth-child(3),
+.etm-master-page #employeetypemaster-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.etm-master-page .etm-type-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.etm-master-page .etm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+}
+
+.etm-master-page .etm-action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.etm-master-page .etm-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.etm-master-page .etm-action-edit {
+    color: var(--etm-primary);
+}
+
+.etm-master-page .etm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--etm-primary-dark);
+}
+
+.etm-master-page .etm-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.etm-master-page .etm-action-switch-wrap .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+
+.etm-master-page .etm-status-badge {
+    min-width: 4.5rem;
+}
+
+.etm-master-page .programme-dt-footer .pagination .page-item.active .page-link,
+.etm-master-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+@media (max-width: 767.98px) {
+    .etm-master-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .etm-master-page .etm-action-btn {
+        transition: none;
+    }
+
+    .etm-master-page .etm-action-btn:hover {
+        transform: none;
+    }
+}
+
+/* Add / Edit modal — matches programme form modal pattern */
+.etm-form-modal {
+    border-radius: 1.25rem;
+    overflow: hidden;
+}
+
+.etm-form-modal .modal-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--etm-border);
+}
+
+.etm-form-modal .modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--etm-heading);
+}
+
+.etm-form-modal .modal-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.etm-form-modal .modal-footer {
+    padding: 1rem 1.5rem 1.25rem;
+    border-top: 1px solid var(--etm-border);
+    gap: 0.75rem;
+}
+
+.etm-form-modal .etm-field-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--etm-heading);
+    margin-bottom: 0.5rem;
+}
+
+.etm-form-modal .form-control {
+    min-height: 44px;
+    border: 1px solid var(--etm-border);
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    padding: 0.625rem 0.875rem;
+}
+
+.etm-form-modal .form-control::placeholder {
+    color: #98a2b3;
+}
+
+.etm-form-modal .form-control:focus {
+    border-color: var(--etm-primary);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.etm-form-modal .form-control.is-invalid {
+    border-color: #fda29b;
+}
+
+.etm-form-modal .btn-outline-primary {
+    color: var(--etm-primary);
+    border-color: var(--etm-primary);
+    font-weight: 600;
+    min-height: 44px;
+    padding-inline: 1.25rem;
+}
+
+.etm-form-modal .btn-outline-primary:hover {
+    background: #f0f6fc;
+    color: var(--etm-primary-dark);
+    border-color: var(--etm-primary-dark);
+}
+
+.etm-form-modal .btn-primary {
+    background: var(--etm-primary);
+    border-color: var(--etm-primary);
+    font-weight: 600;
+    min-height: 44px;
+    padding-inline: 1.25rem;
+}
+
+.etm-form-modal .btn-primary:hover {
+    background: var(--etm-primary-dark);
+    border-color: var(--etm-primary-dark);
+}
+
+@media (max-width: 575.98px) {
+    .etm-form-modal .modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .etm-form-modal .modal-footer .btn {
+        width: 100%;
+    }
+}
