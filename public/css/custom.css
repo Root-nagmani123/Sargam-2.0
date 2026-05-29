@@ -2166,6 +2166,188 @@ body.custom-loaded {
     font-weight: 500;
 }
 
+/* ── Discipline Master (DataTable) ── */
+.dmc-master-page .dmc-dt-card {
+    border: 1px solid #e4e7ec;
+}
+
+.dmc-master-page #discipline-table_wrapper .dataTables_scrollBody thead,
+.dmc-master-page #discipline-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.dmc-master-page #discipline-table_wrapper .dataTables_scrollHead thead th,
+.dmc-master-page #discipline-table thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+    border-top: 0 !important;
+    vertical-align: middle;
+}
+
+.dmc-master-page #discipline-table tbody td {
+    padding: 1rem !important;
+    font-size: 0.875rem;
+    color: #344054;
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+}
+
+.dmc-master-page #discipline-table tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03);
+}
+
+.dmc-master-page #discipline-table tbody td:first-child {
+    color: #667085;
+    font-weight: 500;
+    text-align: center;
+    white-space: nowrap;
+}
+
+.dmc-master-page #discipline-table tbody td.dmc-col-course {
+    font-weight: 600;
+    color: #101828;
+    text-align: left;
+    max-width: 22rem;
+    line-height: 1.45;
+}
+
+.dmc-master-page #discipline-table tbody td.dmc-col-discipline {
+    color: #344054;
+    text-align: left;
+}
+
+.dmc-master-page #discipline-table tbody td.dmc-col-marks {
+    color: #475467;
+    text-align: left;
+    font-variant-numeric: tabular-nums;
+}
+
+.dmc-master-page #discipline-table tbody td:nth-child(5),
+.dmc-master-page #discipline-table tbody td:nth-child(6) {
+    text-align: center;
+}
+
+.dmc-master-page #discipline-table .programme-action-group {
+    gap: 0.875rem;
+    justify-content: center;
+    flex-wrap: nowrap;
+}
+
+.dmc-master-page #discipline-table a.programme-action-btn,
+.dmc-master-page #discipline-table .programme-action-btn--danger {
+    display: inline-flex !important;
+    align-items: center;
+    justify-content: center;
+    min-width: 1.125rem;
+    min-height: 1.125rem;
+    padding: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    color: #004a93;
+    line-height: 1;
+    text-decoration: none;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.dmc-master-page #discipline-table a.programme-action-btn:hover {
+    opacity: 0.72;
+    transform: translateY(-1px);
+    color: #004a93;
+}
+
+.dmc-master-page #discipline-table .programme-action-btn--danger {
+    color: #d92d20;
+}
+
+.dmc-master-page #discipline-table .programme-action-btn--danger:hover:not(:disabled):not(.is-disabled) {
+    color: #b42318;
+    opacity: 0.72;
+    transform: translateY(-1px);
+}
+
+.dmc-master-page #discipline-table .programme-action-btn--danger.is-disabled,
+.dmc-master-page #discipline-table .programme-action-btn--danger:disabled {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: not-allowed;
+}
+
+.dmc-master-page #discipline-table a.programme-action-btn .bi,
+.dmc-master-page #discipline-table .programme-action-btn--danger .bi,
+.dmc-master-page #discipline-table .programme-action-btn--danger.is-disabled .bi {
+    display: inline-flex;
+    font-size: 1.125rem;
+    line-height: 1;
+}
+
+.dmc-master-page #discipline-table .programme-action-toggle-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    line-height: 1;
+    margin: 0;
+    position: relative;
+}
+
+.dmc-master-page #discipline-table .dmc-status-toggle-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.dmc-master-page #discipline-table .dmc-toggle-icon {
+    font-size: 1.35rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.dmc-master-page #discipline-table .dmc-toggle-icon--on {
+    display: none;
+    color: #d4a012;
+}
+
+.dmc-master-page #discipline-table .dmc-toggle-icon--off {
+    display: inline-flex;
+    color: #12b76a;
+}
+
+.dmc-master-page #discipline-table .dmc-status-toggle-input:checked ~ .dmc-toggle-icon--on {
+    display: inline-flex;
+}
+
+.dmc-master-page #discipline-table .dmc-status-toggle-input:checked ~ .dmc-toggle-icon--off {
+    display: none;
+}
+
+.dmc-master-page #discipline-table .programme-action-toggle-icon:hover .dmc-toggle-icon--on {
+    color: #b8860b;
+}
+
+.dmc-master-page #discipline-table .programme-action-toggle-icon:hover .dmc-toggle-icon--off {
+    color: #027a48;
+}
+
+.dmc-master-page .dataTables_processing {
+    border: 0 !important;
+    background: rgba(255, 255, 255, 0.92) !important;
+    box-shadow: none !important;
+    color: #667085 !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
 /* ── Course Group Type — confirmation & form modals ── */
 #cgtConfirmModal .programme-confirm-title {
     color: #101828;
