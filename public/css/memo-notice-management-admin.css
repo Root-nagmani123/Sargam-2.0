@@ -496,6 +496,299 @@
     margin-bottom: 0.5rem;
 }
 
+/* Memo/Notice template index (reference table + actions) */
+.mnm-template-index-page .mnm-btn-download {
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--mnm-primary);
+    border: 1px solid var(--mnm-primary);
+    border-radius: 8px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.mnm-template-index-page .mnm-btn-download:hover {
+    background: #f0f6fc;
+    border-color: var(--mnm-primary-dark);
+    color: var(--mnm-primary-dark);
+}
+
+.mnm-template-index-page .programme-dt-toolbar .programme-dt-btn-reset.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.mnm-template-index-page .mnm-template-table .mnm-col-title {
+    min-width: 160px;
+    max-width: 320px;
+    white-space: normal;
+    line-height: 1.45;
+}
+
+.mnm-template-index-page .mnm-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.mnm-template-index-page .mnm-status-active {
+    background: #ecfdf3 !important;
+    color: #027a48 !important;
+}
+
+.mnm-template-index-page .mnm-status-inactive {
+    background: #fef3f2 !important;
+    color: #b42318 !important;
+}
+
+.mnm-template-index-page .mnm-template-table .mnm-col-actions,
+.mnm-template-index-page .mnm-template-table th.mnm-col-actions {
+    min-width: 9.5rem;
+    white-space: nowrap;
+}
+
+.mnm-template-index-page .mnm-template-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.mnm-template-index-page .mnm-template-actions > a,
+.mnm-template-index-page .mnm-template-actions > form,
+.mnm-template-index-page .mnm-template-actions > .mnm-action-switch-wrap {
+    flex: 0 0 auto;
+}
+
+.mnm-template-index-page .mnm-template-actions .mnm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+}
+
+.mnm-template-index-page .mnm-template-actions .mnm-action-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: none;
+}
+
+.mnm-template-index-page .mnm-action-edit {
+    color: var(--mnm-primary);
+}
+
+.mnm-template-index-page .mnm-action-edit:hover {
+    background: #f0f6fc;
+}
+
+.mnm-template-index-page .mnm-action-delete {
+    color: #d92d20;
+}
+
+.mnm-template-index-page .mnm-action-delete:hover {
+    background: #fef3f2;
+}
+
+.mnm-template-index-page .mnm-action-switch-wrap {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    min-height: 2rem;
+}
+
+.mnm-template-index-page .mnm-action-switch {
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    margin: 0 !important;
+    min-height: 2rem;
+    min-width: 2.75rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mnm-template-index-page .mnm-action-switch .form-check-input {
+    width: 2.5rem !important;
+    height: 1.25rem !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    float: none !important;
+    position: relative;
+    cursor: pointer;
+    border-color: #d0d5dd;
+    flex-shrink: 0;
+}
+
+.mnm-template-index-page .mnm-action-switch .form-check-input:checked {
+    background-color: var(--mnm-primary);
+    border-color: var(--mnm-primary);
+}
+
+.mnm-template-index-page .mnm-action-switch .form-check-input:focus {
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.2);
+}
+
+.mnm-template-index-page .programme-dt-footer .pagination .page-item.active .page-link,
+.mnm-template-index-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+/* Add Template modal */
+.mnm-add-template-modal {
+    --mnm-primary: #004a93;
+    --mnm-border: #e4e7ec;
+    --mnm-text: #344054;
+    --mnm-heading: #101828;
+}
+
+.mnm-add-template-modal.show,
+.mnm-edit-template-modal.show {
+    z-index: 1110 !important;
+}
+
+body.modal-open:has(.mnm-add-template-modal.show) .modal-backdrop.show,
+body.modal-open:has(.mnm-edit-template-modal.show) .modal-backdrop.show {
+    z-index: 1105 !important;
+}
+
+.mnm-add-template-modal .mnm-add-template-dialog {
+    max-width: 720px;
+    width: calc(100% - 1.5rem);
+}
+
+.mnm-add-template-modal .mnm-add-template-content {
+    border-radius: 12px;
+    box-shadow: 0 20px 24px -4px rgba(16, 24, 40, 0.08), 0 8px 8px -4px rgba(16, 24, 40, 0.03);
+}
+
+.mnm-add-template-modal .mnm-summernote-wrap .note-dropdown-menu,
+.mnm-add-template-modal .note-modal {
+    z-index: 1120 !important;
+}
+
+.mnm-add-template-modal .mnm-add-template-header {
+    padding: 1.25rem 1.5rem 0.75rem;
+    border-bottom: 1px solid var(--mnm-border);
+}
+
+.mnm-add-template-modal .mnm-add-template-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.mnm-add-template-modal .mnm-wizard-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--mnm-heading);
+}
+
+.mnm-add-template-modal .form-label {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--mnm-text);
+    margin-bottom: 0.375rem;
+}
+
+.mnm-add-template-modal .mnm-add-template-fields .form-control,
+.mnm-add-template-modal .mnm-add-template-fields .form-select {
+    min-height: 40px;
+    padding: 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: var(--mnm-text);
+    box-shadow: none;
+}
+
+.mnm-add-template-modal .mnm-add-template-fields .form-control::placeholder {
+    color: #98a2b3;
+}
+
+.mnm-add-template-modal .mnm-add-template-fields .form-select {
+    padding-right: 2.25rem;
+}
+
+.mnm-add-template-modal .mnm-summernote-wrap .note-editor.note-frame {
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.mnm-add-template-modal .mnm-summernote-wrap .note-toolbar {
+    background: #f9fafb;
+    border-top: 1px solid #e4e7ec;
+    border-bottom: 0;
+    padding: 0.5rem 0.75rem;
+    order: 1;
+}
+
+.mnm-add-template-modal .mnm-summernote-wrap .note-editing-area {
+    min-height: 180px;
+}
+
+.mnm-add-template-modal .mnm-add-template-actions .mnm-btn-cancel {
+    border: 1px solid var(--mnm-primary);
+    color: var(--mnm-primary);
+    background: #fff;
+    min-height: 40px;
+}
+
+.mnm-add-template-modal .mnm-add-template-actions .mnm-btn-cancel:hover {
+    background: #f0f6fc;
+    border-color: #003d78;
+    color: #003d78;
+}
+
+.mnm-add-template-modal .mnm-add-template-actions .mnm-btn-submit {
+    background-color: var(--mnm-primary);
+    border-color: var(--mnm-primary);
+    min-height: 40px;
+}
+
+.mnm-add-template-modal .mnm-add-template-actions .mnm-btn-submit:hover {
+    background-color: #003d78;
+    border-color: #003d78;
+}
+
+@media (max-width: 768px) {
+    .mnm-template-index-page .mnm-template-toolbar-top {
+        justify-content: stretch !important;
+    }
+
+    .mnm-template-index-page .mnm-btn-download {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .mnm-template-index-page .mnm-template-actions {
+        flex-wrap: wrap;
+        justify-content: flex-end;
+    }
+}
+
 /* Add Notice wizard modal (reference layout) */
 .mnm-add-notice-modal {
     --mnm-primary: #004a93;

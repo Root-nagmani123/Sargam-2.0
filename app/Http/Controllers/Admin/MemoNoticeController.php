@@ -58,10 +58,35 @@ class MemoNoticeController extends Controller
             if(!empty($data_course_id)){
                 $courses->whereIn('pk',$data_course_id);
             }
-            $courses->orderBy('course_name')
+        $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
-        return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
+        $mnmTemplateEditData = [];
+        foreach ($templates as $t) {
+            $mnmTemplateEditData[$t->pk] = [
+                'course_master_pk' => $t->course_master_pk,
+                'title' => $t->title,
+                'director' => $t->director_name,
+                'designation' => $t->director_designation,
+                'memo_notice_type' => $t->memo_notice_type,
+                'content' => $t->content,
+            ];
+        }
+        if ($request->filled('open_edit_template')) {
+            $extra = MemoNoticeTemplate::find($request->open_edit_template);
+            if ($extra) {
+                $mnmTemplateEditData[$extra->pk] = [
+                    'course_master_pk' => $extra->course_master_pk,
+                    'title' => $extra->title,
+                    'director' => $extra->director_name,
+                    'designation' => $extra->director_designation,
+                    'memo_notice_type' => $extra->memo_notice_type,
+                    'content' => $extra->content,
+                ];
+            }
+        }
+
+        return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses', 'mnmTemplateEditData'));
     }
 
     // Show create form
@@ -93,7 +118,7 @@ class MemoNoticeController extends Controller
             ->orderBy('course_name')
             ->get(['pk', 'course_name', 'start_year', 'end_date']);
 
-        return view('admin.courseAttendanceNoticeMap.memo_notice_create', compact('courses'));
+        return redirect()->route('admin.memo-notice.index', ['open_add_template' => 1]);
     }
 
 
@@ -142,37 +167,12 @@ class MemoNoticeController extends Controller
 }
 
 
-    // Show edit form
+    // Show edit form (redirects to index modal)
     public function edit($id)
     {
-        $template = MemoNoticeTemplate::findOrFail($id);
+        MemoNoticeTemplate::findOrFail($id);
 
-        $currentDate = now()->format('Y-m-d');
-
-        // Fetch only active + ongoing + upcoming courses
-        $courses = CourseMaster::where('active_inactive', 1);
-        $data_course_id =  get_Role_by_course();
-        if(!empty($data_course_id)){
-            $courses->whereIn('pk',$data_course_id);
-        }
-        $courses->where(function ($q) use ($currentDate) {
-
-                // **Ongoing courses**: start_year <= today AND (end_date is null OR end_date >= today)
-                $q->where(function ($ongoing) use ($currentDate) {
-                    $ongoing->where('start_year', '<=', $currentDate)
-                        ->where(function ($end) use ($currentDate) {
-                            $end->whereNull('end_date')
-                                ->orWhere('end_date', '>=', $currentDate);
-                        });
-                })
-
-                    // **OR upcoming courses**: start_year > today
-                    ->orWhere('start_year', '>', $currentDate);
-            })
-            ->orderBy('course_name')
-            ->get(['pk', 'course_name']);
-
-        return view('admin.courseAttendanceNoticeMap.memo_notice_edit', compact('template', 'courses'));
+        return redirect()->route('admin.memo-notice.index', ['open_edit_template' => $id]);
     }
 
 
