@@ -2,16 +2,22 @@
 
 @section('title', 'Conversation - Sargam | LBSNAA')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="{{ asset('css/memo-notice-management-admin.css') }}?v={{ @filemtime(public_path('css/memo-notice-management-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
 
-<div class="container-fluid"> 
+<div class="container-fluid mnm-master-page py-3 px-3 px-lg-4">
 <x-breadcrum title="Conversation" />
             <x-session_message />
 
-            <div class="bg-white p-4 rounded shadow-sm mt-3" style="border-left: 4px solid #004a93;">
+            <div class="card mnm-doc-card border-0 shadow-sm rounded-3 mt-3">
+            <div class="card-body p-3 p-md-4">
 
-                <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
-            <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                <h5 class="text-center mnm-doc-heading mb-2">{{ $template_details->course_name ?? 'Course Name' }}</h5>
+            <p class="text-center mnm-doc-subtitle mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
 
             <p class="mb-1">SHOW CAUSE NOTICE</p>
@@ -22,7 +28,7 @@
                 following session(s)...</p>
 
             <div class="table-responsive mb-3">
-                <table class="table">
+                <table class="table align-middle mb-0 programme-dt-table">
                     <thead>
                         <tr>
                             <th>Date</th>
@@ -140,6 +146,7 @@
                 </div>
                 @endif
 
+            </div>
             </div>
 </div>
 

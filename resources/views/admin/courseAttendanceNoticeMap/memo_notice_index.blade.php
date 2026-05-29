@@ -4,141 +4,133 @@
 
 @section('title', 'Memo/Notice Templates - Sargam | LBSNAA')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="{{ asset('css/memo-notice-management-admin.css') }}?v={{ @filemtime(public_path('css/memo-notice-management-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mnm-master-page py-3 px-3 px-lg-4">
     <x-breadcrum title="Memo/Notice Template Management" />
 
     <x-session_message />
 
-    <!-- Filter Card -->
-    <div class="card mb-4">
-        <div class="card-body">
-            <form action="{{ route('admin.memo-notice.index') }}" method="GET" class="row g-3">
-                <div class="col-md-4">
-                    <label class="form-label">Filter by Course</label>
-                    <select name="course_master_pk" class="form-select">
-                        <option value="">All Courses</option>
-                        @foreach ($courses as $course)
-                        <option value="{{ $course->pk }}"
-                            {{ request('course_master_pk') == $course->pk ? 'selected' : '' }}>
-                            {{ $course->course_name }}
-                        </option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-4 d-flex align-items-end">
-                    <button type="submit" class="btn btn-primary me-2">
-                        <i class="fas fa-filter me-1"></i> Filter
+    <div class="card mnm-filter-card border-0 shadow-sm rounded-3 mb-3">
+        <div class="card-body p-3 p-md-4">
+            <form action="{{ route('admin.memo-notice.index') }}" method="GET" id="filterForm">
+                <div class="d-flex flex-column flex-lg-row align-items-lg-center gap-3 programme-dt-toolbar mnm-dt-toolbar w-100">
+                    <span class="programme-dt-filters-label flex-shrink-0">Filters</span>
+                    <div class="programme-dt-filter-select flex-shrink-0">
+                        <label class="visually-hidden">Filter by Course</label>
+                        <select name="course_master_pk" class="form-select" aria-label="Filter by Course">
+                            <option value="">All Courses</option>
+                            @foreach ($courses as $course)
+                            <option value="{{ $course->pk }}"
+                                {{ request('course_master_pk') == $course->pk ? 'selected' : '' }}>
+                                {{ $course->course_name }}
+                            </option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center gap-2 px-3 rounded-2 fw-semibold flex-shrink-0">
+                        <i class="bi bi-funnel" aria-hidden="true"></i>
+                        <span>Filter</span>
                     </button>
-                    <a href="{{ route('admin.memo-notice.index') }}" class="btn btn-secondary">
-                        <i class="fas fa-redo me-1"></i> Reset
+                    <a href="{{ route('admin.memo-notice.index') }}" class="btn programme-dt-btn-reset flex-shrink-0">
+                        Reset Filters
                     </a>
                 </div>
             </form>
         </div>
-
-        <!-- Buttons -->
-
-
-        </form>
-
     </div>
-    <!-- Main Content Card -->
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h5 class="card-title mb-0">Memo/Notice Templates</h5>
-            <a href="{{ route('admin.memo-notice.create') }}" class="btn btn-primary">
-                <i class="fas fa-plus me-1"></i> Create New Template
-            </a>
-        </div>
-        <div class="card-body">
+
+    <div class="card mnm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-3 mnm-template-header">
+                <h2 class="mnm-page-title mb-0">Memo/Notice Templates</h2>
+                <a href="{{ route('admin.memo-notice.create') }}" class="btn btn-primary d-inline-flex align-items-center gap-2 px-3 rounded-2 fw-semibold flex-shrink-0">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    <span>Create New Template</span>
+                </a>
+            </div>
+
             @if ($templates->isEmpty())
-            <div class="alert alert-info">
-                <i class="fas fa-info-circle me-2"></i> No templates found. Create your first template!
+            <div class="alert alert-info border-0 rounded-3 d-flex align-items-center gap-2 mb-0">
+                <i class="bi bi-info-circle flex-shrink-0" aria-hidden="true"></i>
+                <span>No templates found. Create your first template!</span>
             </div>
             @else
-            <div class="table-responsive">
-                <table class="table text-nowrap">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Course</th>
-                            <th>Title</th>
-                            <th>Type</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach ($templates as $template)
-                        <tr>
-                            <td>{{ $loop->iteration + ($templates->currentPage() - 1) * $templates->perPage() }}
-                            </td>
-                            <td>
-                                @if ($template->course)
-                                {{ $template->course->course_name }}
-                                @else
-                                General
-                                @endif
-                            </td>
-                            <td>{{ $template->title }}</td>
-                            <td>{{ $template->memo_notice_type }}</td>
-                            <td>
-                                <div class="form-check form-switch d-inline-block ms-2">
-                                    <input class="form-check-input status-toggle-data"
-                                        type="checkbox"
-                                        role="switch"
-                                        data-id="{{ $template->pk }}"
-                                        data-course="{{ $template->course_master_pk }}"
-                                        data-type="{{ $template->memo_notice_type }}"
-                                        {{ $template->active_inactive == 1 ? 'checked' : '' }}>
+            <div class="programme-dt-panel mnm-dt-panel">
+                <div class="table-responsive mnm-dt-scroll">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table mnm-dt-table">
+                        <thead>
+                            <tr>
+                                <th scope="col" class="text-nowrap">#</th>
+                                <th scope="col">Course</th>
+                                <th scope="col">Title</th>
+                                <th scope="col" class="text-nowrap">Type</th>
+                                <th scope="col" class="text-nowrap">Status</th>
+                                <th scope="col" class="text-nowrap">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($templates as $template)
+                            <tr>
+                                <td>{{ $loop->iteration + ($templates->currentPage() - 1) * $templates->perPage() }}</td>
+                                <td class="fw-medium">
+                                    @if ($template->course)
+                                    {{ $template->course->course_name }}
+                                    @else
+                                    General
+                                    @endif
+                                </td>
+                                <td>{{ $template->title }}</td>
+                                <td class="mnm-user-type">{{ $template->memo_notice_type }}</td>
+                                <td>
+                                    <div class="form-check form-switch d-inline-block mb-0">
+                                        <input class="form-check-input status-toggle-data"
+                                            type="checkbox"
+                                            role="switch"
+                                            data-id="{{ $template->pk }}"
+                                            data-course="{{ $template->course_master_pk }}"
+                                            data-type="{{ $template->memo_notice_type }}"
+                                            {{ $template->active_inactive == 1 ? 'checked' : '' }}
+                                            aria-label="Toggle template status">
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Memo notice template actions">
+                                        <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
+                                            class="btn btn-sm btn-light border d-inline-flex align-items-center text-primary"
+                                            aria-label="Edit memo notice template">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                                        </a>
 
-                                </div>
-                            </td>
-                            <td>
-                                <div class="d-inline-flex align-items-center gap-2"
-                                    role="group"
-                                    aria-label="Memo notice template actions">
+                                        <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
+                                            method="POST"
+                                            class="d-inline"
+                                            onsubmit="return confirm('Are you sure you want to delete this template?')">
+                                            @csrf
+                                            @method('DELETE')
+                                            <button type="submit"
+                                                class="btn btn-sm btn-light border d-inline-flex align-items-center text-danger"
+                                                aria-label="Delete memo notice template">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
 
-                                    <!-- Edit -->
-                                    <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
-                                        class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-                                        aria-label="Edit memo notice template">
-                                        <i class="material-icons material-symbols-rounded"
-                                            style="font-size:18px;"
-                                            aria-hidden="true">edit</i>
-                                    </a>
-
-                                    <!-- Delete -->
-                                    <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
-                                        method="POST"
-                                        class="d-inline"
-                                        onsubmit="return confirm('Are you sure you want to delete this template?')">
-                                        @csrf
-                                        @method('DELETE')
-
-                                        <button type="submit"
-                                            class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-                                            aria-label="Delete memo notice template">
-                                            <i class="material-icons material-symbols-rounded"
-                                                style="font-size:18px;"
-                                                aria-hidden="true">delete</i>
-                                        </button>
-                                    </form>
-
-                                </div>
-
-                            </td>
-
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-
-            <!-- Pagination -->
-            <div class="mt-3">
-                {{ $templates->links() }}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-0">
+                    <div class="mnm-pagination-nav">
+                        {{ $templates->links('vendor.pagination.custom') }}
+                    </div>
+                </div>
             </div>
             @endif
         </div>
@@ -146,24 +138,7 @@
 </div>
 @endsection
 
-@push('styles')
-<style>
-    .table th {
-        background-color: #f8f9fa;
-    }
-
-    .badge {
-        font-size: 0.8em;
-    }
-
-    .btn-group .btn {
-        margin-right: 2px;
-    }
-</style>
-@endpush
-
-
-@section('scripts')
+@push('scripts')
 <script>
     $(document).on('change', '.status-toggle-data', function() {
 
@@ -171,11 +146,9 @@
         let id = checkbox.data('id');
         let newStatus = checkbox.is(':checked') ? 1 : 0;
 
-        // extra data
         let courseId = checkbox.data('course');
-        let type = checkbox.data('type'); // Memo / Notice
+        let type = checkbox.data('type');
 
-        // Old status
         let oldStatus = newStatus === 1 ? 0 : 1;
 
         Swal.fire({
@@ -207,7 +180,6 @@
                     if (res.status === "success") {
 
                         if (newStatus == 1) {
-                            // 🔥 Deactivate only SAME COURSE & SAME TYPE in UI
                             $('.status-toggle-data').each(function() {
                                 let other = $(this);
 
@@ -249,4 +221,4 @@
 
     });
 </script>
-@endsection
+@endpush

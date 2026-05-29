@@ -2,19 +2,24 @@
 
 @section('title', 'Memo Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="{{ asset('css/memo-notice-management-admin.css') }}?v={{ @filemtime(public_path('css/memo-notice-management-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mnm-master-page py-3 px-3 px-lg-4">
 
     <x-breadcrum title="Memo Conversation" />
     <x-session_message />
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-            <div class="gap-2 text-end">
-                    <button type="submit" class="btn btn-primary">Send</button>
-                    <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
+    <div class="card mnm-doc-card border-0 shadow-sm rounded-3">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+                    <button type="submit" class="btn btn-primary rounded-2 px-3 fw-semibold">Send</button>
+                    <a href="{{ route('memo.notice.management.index') }}" class="btn btn-outline-secondary rounded-2 px-3">Back</a>
                 </div>
-            <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
-        <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+            <h5 class="text-center mnm-doc-heading mb-2">88th Foundation Course</h5>
+        <p class="text-center mnm-doc-subtitle mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
         <hr>
 
         <p class="mb-1">Memo</p>
@@ -24,8 +29,8 @@
             following session(s)...</p>
 
         <div class="table-responsive mb-3">
-            <table class="table table-bordered text-center">
-                <thead class="table-light">
+            <table class="table align-middle mb-0 text-center programme-dt-table">
+                <thead>
                     <tr>
                         <th>Date</th>
                         <th>No. of Session(s)</th>

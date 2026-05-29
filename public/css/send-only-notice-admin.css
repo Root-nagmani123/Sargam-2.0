@@ -71,15 +71,13 @@
     position: relative;
 }
 
-.son-master-page .son-time-period-chevron {
-    position: absolute;
-    right: 0.75rem;
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--son-muted);
-    font-size: 0.75rem;
-    pointer-events: none;
-    z-index: 3;
+.son-master-page .son-time-period-mobile {
+    flex: 1 1 100%;
+}
+
+.son-master-page .son-date-mobile-wrap {
+    min-width: 0;
+    flex: 1 1 calc(50% - 0.5rem);
 }
 
 .son-master-page .son-time-period-filter .flatpickr-input {
@@ -317,6 +315,13 @@
     .son-master-page .son-dt-toolbar .programme-dt-filter-select.son-time-period-filter {
         width: 100%;
         max-width: 100%;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .son-master-page .son-time-period-mobile .son-date-mobile-wrap {
+        flex: 1 1 100%;
+        width: 100%;
     }
 }
 

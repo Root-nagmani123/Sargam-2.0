@@ -2,25 +2,30 @@
 
 @section('title', 'Memo / Notice - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css">
+<link rel="stylesheet" href="{{ asset('css/memo-notice-management-admin.css') }}?v={{ @filemtime(public_path('css/memo-notice-management-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid mnm-master-page py-3 px-3 px-lg-4">
     <x-breadcrum title="Notice /Memo Admin Management" />
     <x-session_message />
-    <div class="card" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-            <h4 class="card-title mb-3">Create Memo / Notice</h4>
-            <hr>
+    <div class="card mnm-form-card border-0 shadow-sm rounded-3">
+        <div class="card-body p-3 p-md-4">
+            <h2 class="mnm-page-title mb-4">Create Memo / Notice</h2>
             <form action="" method="POST">
                 @csrf
-                <div class="row">
-                    <div class="col-6">
+                <div class="row g-3">
+                    <div class="col-12 col-md-6">
                         <label for="director" class="form-label">Director's Name</label>
                         <div class="mb-3">
                             <input type="text" class="form-control" id="director" name="director"
                                 placeholder="Enter Director's Name" required>
                         </div>
                     </div>
-                    <div class="col-6">
+                    <div class="col-12 col-md-6">
                         <label for="designation" class="form-label">Director's Designation</label>
                        <div class="mb-3">
                          <input type="text" class="form-control" id="designation" name="designation"
@@ -32,18 +37,14 @@
                         <textarea name="content" class="form-control" id="content" rows="3"></textarea>
                     </div>
                 </div>
-                <hr>
-                <div class="text-end">
-                    <button type="submit" class="btn btn-primary">Submit</button>
-                    <a href="" class="btn btn-secondary">Back</a>
+                <div class="d-flex flex-wrap justify-content-end gap-2 pt-3 mt-2 border-top">
+                    <a href="" class="btn btn-outline-secondary px-4 rounded-2">Back</a>
+                    <button type="submit" class="btn btn-primary px-4 rounded-2 fw-semibold">Submit</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-
-<!-- Summernote CSS -->
-<link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
 @endsection
 
 @section('scripts')

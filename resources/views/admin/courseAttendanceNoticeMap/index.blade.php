@@ -1,470 +1,158 @@
 @extends('admin.layouts.master')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-
 
 @section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dual-listbox.css') }}">
+<link rel="stylesheet" href="{{ asset('css/memo-notice-management-admin.css') }}?v={{ @filemtime(public_path('css/memo-notice-management-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-<style>
-/* GIGW Color Palette */
-:root {
-    --gigw-primary: #004a93;
-    --gigw-primary-dark: #003366;
-    --gigw-secondary: #0066cc;
-    --gigw-light-bg: #f8f9fa;
-    --gigw-border: #dee2e6;
-    --gigw-text-muted: #6c757d;
-    --gigw-success: #198754;
-    --gigw-white: #ffffff;
-}
+@php
+    $mnmFromDate = $fromDateFilter ?: \Carbon\Carbon::today()->toDateString();
+    $mnmToDate = $toDateFilter ?: \Carbon\Carbon::today()->toDateString();
+@endphp
 
-.blink {
-    animation: blinker 1s linear infinite;
-}
+<div class="container-fluid mnm-master-page">
+    <x-breadcrum title="Notice / Memo Management">
+        <button type="button"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm"
+            data-bs-toggle="modal"
+            data-bs-target="#mnmAddNoticeModal"
+            id="mnmOpenAddNoticeBtn">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add Notice</span>
+        </button>
+    </x-breadcrum>
 
-@keyframes blinker {
-    50% { opacity: 0; }
-}
+    <x-session_message />
 
-/* Enhanced Offcanvas */
-.offcanvas {
-    width: 480px !important;
-    max-width: 90vw;
-    box-shadow: -4px 0 20px rgba(0, 74, 147, 0.15);
-}
-
-.offcanvas-header {
-    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
-    color: var(--gigw-white);
-    padding: 1.5rem;
-    border-bottom: 3px solid var(--gigw-primary-dark);
-    min-height: 80px;
-}
-
-.offcanvas-title {
-    font-weight: 600;
-    font-size: 1.25rem;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.25rem;
-    color: var(--gigw-white);
-}
-
-#type_side_menu {
-    font-size: 0.875rem;
-    font-weight: 500;
-    opacity: 0.95;
-    margin: 0;
-    color: var(--gigw-white);
-    background-color: rgba(255, 255, 255, 0.2);
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    display: inline-block;
-}
-
-.offcanvas .btn-close {
-    background-color: rgba(255, 255, 255, 0.3);
-    opacity: 1;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    transition: all 0.2s ease;
-}
-
-.offcanvas .btn-close:hover {
-    background-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.1);
-}
-
-.offcanvas .btn-close:focus {
-    outline: 3px solid var(--gigw-white);
-    outline-offset: 2px;
-    box-shadow: none;
-}
-
-.offcanvas-body {
-    padding: 1.5rem;
-    background-color: #fafbfc;
-}
-
-/* Enhanced Chat Body */
-.chat-body {
-    height: 480px;
-    overflow-y: auto;
-    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
-    padding: 1.25rem;
-    border-radius: 0.75rem;
-    border: 1px solid var(--gigw-border);
-    box-shadow: inset 0 2px 8px rgba(0, 74, 147, 0.05);
-    scroll-behavior: smooth;
-}
-
-.chat-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.chat-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-.chat-body::-webkit-scrollbar-thumb {
-    background: var(--gigw-primary);
-    border-radius: 10px;
-    transition: background 0.3s ease;
-}
-
-.chat-body::-webkit-scrollbar-thumb:hover {
-    background: var(--gigw-primary-dark);
-}
-
-/* Enhanced Chat Messages */
-.chat-message {
-    margin-bottom: 1rem;
-    animation: slideIn 0.3s ease;
-    clear: both;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.chat-message.user {
-    text-align: right;
-}
-
-.chat-message .message {
-    display: inline-block;
-    padding: 0.75rem 1rem;
-    border-radius: 1.25rem;
-    max-width: 80%;
-    word-wrap: break-word;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
-    font-size: 0.95rem;
-    line-height: 1.5;
-}
-
-.chat-message .message:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.chat-message.bot .message {
-    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
-    color: #212529;
-    border: 1px solid #dee2e6;
-    border-left: 4px solid var(--gigw-primary);
-}
-
-.chat-message.user .message {
-    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
-    color: var(--gigw-white);
-    border: none;
-}
-
-/* Loading State */
-.chat-body .text-muted {
-    color: var(--gigw-text-muted) !important;
-    font-style: italic;
-    padding: 2rem;
-    text-align: center;
-}
-
-/* Accessibility Enhancements */
-.offcanvas:focus-visible {
-    outline: 3px solid var(--gigw-primary);
-    outline-offset: 2px;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .offcanvas {
-        width: 100% !important;
-    }
-    
-    .offcanvas-header {
-        padding: 1rem;
-        min-height: 70px;
-    }
-    
-    .offcanvas-title {
-        font-size: 1.1rem;
-    }
-    
-    .chat-body {
-        height: calc(100vh - 250px);
-        padding: 1rem;
-    }
-    
-    .chat-message .message {
-        max-width: 85%;
-        font-size: 0.9rem;
-    }
-}
-
-/* Sticky Table Status */
-.table .sticky-status {
-    position: sticky;
-    right: 0;
-    background: #fff;
-    z-index: 10;
-    box-shadow: -4px 0 6px rgba(0, 0, 0, 0.08);
-}
-
-/* WCAG 2.1 AA Compliance */
-.offcanvas * {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-/* Chat Row Layout */
-.chat-row {
-    display: flex;
-    margin-bottom: 15px;
-}
-
-.chat-row.right {
-    justify-content: flex-end;
-}
-
-.chat-row.left {
-    justify-content: flex-start;
-}
-
-/* Message Bubble */
-.chat-bubble {
-    max-width: 80%;
-    background: #f4f5f7;
-    padding: 12px 15px;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e2e2e2;
-}
-
-.chat-row.right .chat-bubble {
-    background: #e7f1ff;
-    border-color: #c9ddff;
-}
-
-/* Header */
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-}
-
-.chat-sender {
-    color: #003e7e;
-    font-weight: 600;
-}
-
-.chat-time {
-    font-size: 11px;
-    color: #6c757d;
-}
-
-/* Message Text */
-.chat-text {
-    margin: 0;
-    font-size: 14px;
-    color: #222;
-    line-height: 1.4;
-}
-
-/* Attachments */
-.chat-attachment {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 8px;
-    font-size: 14px;
-    color: #004a93;
-    text-decoration: none;
-}
-
-.chat-attachment:hover {
-    text-decoration: underline;
-}
-
-/* Footer Input */
-.chat-footer {
-    background: #fff;
-}
-
-.chat-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.attachment-btn {
-    cursor: pointer;
-    color: #004a93;
-    font-size: 22px;
-}
-
-.chat-textarea {
-    resize: none;
-    height: 40px;
-    font-size: 14px;
-}
-
-.chat-send-btn {
-    height: 40px;
-    padding: 0 20px;
-}
-
-/* Scrollable message area */
-#chatBody {
-    padding-bottom: 20px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #b3b3b3 #efefef;
-}
-
-#chatBody::-webkit-scrollbar {
-    width: 8px;
-}
-
-#chatBody::-webkit-scrollbar-thumb {
-    background: #b3b3b3;
-    border-radius: 4px;
-}
-
-/* Accessibility: Focus outline */
-*:focus-visible {
-    outline: 3px solid #004a93 !important;
-    border-radius: 4px;
-}
-
-/* Choices.js + Bootstrap: avoid double dropdown arrow */
-.choices__inner.form-select {
-    background-image: none !important;
-    padding-right: 2.25rem !important;
-}
-</style>
-<div class="container-fluid py-2 py-md-3">
-       <x-breadcrum title="Notice /Memo Management" />
-            <x-session_message />
-
-    <!-- start Zero Configuration -->
-    <div class="card shadow-sm border-0 overflow-hidden">
+    <div class="card mnm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
-            <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-6">
-                    <h4 class="card-title mb-0 fw-semibold">Notice /Memo Management</h4>
-                </div>
-                <div class="col-12 col-lg-6">
-                    <div class="d-flex justify-content-lg-end align-items-center gap-2 flex-wrap">
+            <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar mnm-dt-toolbar w-100">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="programme-dt-filters-label flex-shrink-0">Filters</span>
 
-                        <!-- Export PDF Button -->
-                        <a href="{{ route('memo.notice.management.export_pdf', request()->query()) }}"
-                            class="btn btn-outline-danger d-inline-flex align-items-center px-3" target="_blank">
-                            <i class="bi bi-file-earmark-pdf me-1" style="font-size: 18px;"></i>
-                            Export PDF
-                        </a>
+                        <div class="programme-dt-filter-select flex-shrink-0">
+                            <label for="program_name" class="visually-hidden">Course Name</label>
+                            <select class="form-select" id="program_name" name="program_name" aria-label="Program Name">
+                                <option value="">Program Name</option>
+                                @foreach($courses as $course)
+                                <option value="{{ $course->pk }}" {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
 
-                        <!-- Add Group Mapping -->
-                        <a href="{{ route('memo.notice.management.create') }}"
-                            class="btn btn-primary d-inline-flex align-items-center px-3 shadow-sm">
-                            <i class="material-icons menu-icon material-symbols-rounded"
-                                style="font-size: 24px;">add</i>
-                            Add Notice
-                        </a>
+                        <div class="programme-dt-filter-select flex-shrink-0">
+                            <label for="type" class="visually-hidden">Type</label>
+                            <select class="form-select" id="type" name="type" aria-label="Type">
+                                <option value="">Type</option>
+                                <option value="1" {{ $typeFilter == '1' ? 'selected' : '' }}>Notice</option>
+                                <option value="0" {{ $typeFilter == '0' ? 'selected' : '' }}>Memo</option>
+                            </select>
+                        </div>
 
+                        <div class="programme-dt-filter-select flex-shrink-0">
+                            <label for="status" class="visually-hidden">Status</label>
+                            <select class="form-select" id="status" name="status" aria-label="Status">
+                                <option value="">Status</option>
+                                <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
+                                <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
+                            </select>
+                        </div>
 
-                    </div>
-                </div>
-            </div>
-            <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm" class="bg-light border rounded-3 p-3 mt-3">
-            <div class="row g-3">
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="program_name" class="form-label">Program Name</label>
-                        <select class="form-select" id="program_name" name="program_name">
-                            <option value="">Select Program</option>
-                            @foreach($courses as $course)
-                            <option value="{{ $course->pk }}" {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="type" class="form-label">Type (Notice / Memo)</label>
-                        <select class="form-select" id="type" name="type">
-                            <option value="">Select type</option>
-                            <option value="1" {{ $typeFilter == '1' ? 'selected' : '' }}>Notice</option>
-                            <option value="0" {{ $typeFilter == '0' ? 'selected' : '' }}>Memo</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="status" class="form-label">Status</label>
-                        <select class="form-select" id="status" name="status">
-                            <option value="">Select status</option>
-                            <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
-                            <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="search" class="form-label">Search</label>
-                       <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
-                    </div>
-                </div>
-            </div>
-            <div class="row g-3 align-items-end">
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="from_date" class="form-label">From Date</label>
-                        <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="to_date" class="form-label">To Date</label>
-                        <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
-                    </div>
-                </div>
-                <div class="col-12 col-xl-6">
-                    <div class="mb-3 d-flex align-items-center gap-2 flex-wrap justify-content-xl-end">
-                        <a href="{{ route('memo.notice.management.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-1"></i> Clear Filters
+                        <input type="hidden" id="from_date" name="from_date" value="{{ $mnmFromDate }}">
+                        <input type="hidden" id="to_date" name="to_date" value="{{ $mnmToDate }}">
+
+                        <div class="programme-dt-filter-select mnm-time-period-filter mnm-time-period-range d-none d-lg-block position-relative flex-shrink-0">
+                            <label for="mnm_time_period_picker" class="visually-hidden">Time Period</label>
+                            <input type="text"
+                                id="mnm_time_period_picker"
+                                class="form-control mnm-time-period-input"
+                                placeholder="Time Period"
+                                value=""
+                                readonly
+                                autocomplete="off"
+                                aria-label="Time period">
+                        </div>
+
+                        <div class="mnm-time-period-mobile d-flex d-lg-none flex-wrap gap-2 w-100">
+                            <div class="programme-dt-filter-select mnm-date-mobile-wrap flex-fill">
+                                <label for="mnm_from_date_mobile" class="visually-hidden">From Date</label>
+                                <input type="date"
+                                    id="mnm_from_date_mobile"
+                                    class="form-control mnm-date-mobile"
+                                    value="{{ $mnmFromDate }}"
+                                    aria-label="From date">
+                            </div>
+                            <div class="programme-dt-filter-select mnm-date-mobile-wrap flex-fill">
+                                <label for="mnm_to_date_mobile" class="visually-hidden">To Date</label>
+                                <input type="date"
+                                    id="mnm_to_date_mobile"
+                                    class="form-control mnm-date-mobile"
+                                    value="{{ $mnmToDate }}"
+                                    aria-label="To date">
+                            </div>
+                        </div>
+
+                        <a href="{{ route('memo.notice.management.index') }}" class="btn programme-dt-btn-reset flex-shrink-0">
+                            Reset Filters
                         </a>
                     </div>
+
+                    <div class="mnm-table-search-slot ms-xl-auto flex-shrink-0">
+                        <div class="dropdown">
+                            <button type="button"
+                                class="btn mnm-search-trigger"
+                                id="mnmSearchTrigger"
+                                data-bs-toggle="dropdown"
+                                data-bs-auto-close="outside"
+                                aria-expanded="false"
+                                aria-label="Search records">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 p-3 mnm-search-menu">
+                                <label for="search" class="form-label small text-secondary mb-2">Search</label>
+                                <div class="input-group">
+                                    <input type="search"
+                                        class="form-control mnm-search-input shadow-none"
+                                        id="search"
+                                        name="search"
+                                        placeholder="Search..."
+                                        value="{{ $searchFilter }}"
+                                        autocomplete="off"
+                                        aria-label="Search notices and memos">
+                                    <button type="submit" class="btn btn-primary" id="mnmSearchSubmit" aria-label="Apply search">
+                                        <i class="bi bi-search" aria-hidden="true"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
             </form>
-            <hr class="my-4">
-            <div class="table-responsive">
-                <table class="table align-middle mb-0 {{ $memos->isNotEmpty() ? 'datatable' : '' }}">
+
+            <div class="programme-dt-panel mnm-dt-panel">
+                <div class="table-responsive mnm-dt-scroll">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table mnm-dt-table">
                     <thead>
-                        <!-- start row -->
-                        <tr class="align-middle">
-                            <th class="col">S.No.</th>
-                            <th class="col">Program Name</th>
-                            <th class="col">Participant Name</th>
-                            <th class="col">Type</th>
-                            <th class="col">Session Date</th>
-                            <th class="col">Topic</th>
-                            <th class="col">Conversation</th>
-                            <th class="col">Response</th>
-                            <th class="col">Conclusion Type</th>
-                            <th class="col">Discussion Name</th>
-                            <th class="col">Conclusion Remark</th>
-                            <th class="col">Status</th>
-                        </tr> <!-- end row -->
+                        <tr>
+                            <th scope="col" class="text-nowrap">S. No.</th>
+                            <th scope="col" class="mnm-col-program">Program Name</th>
+                            <th scope="col">Participant Name</th>
+                            <th scope="col" class="text-nowrap">Type</th>
+                            <th scope="col" class="text-nowrap">Session Date</th>
+                            <th scope="col" class="mnm-col-topic">Topic</th>
+                            <th scope="col" class="mnm-col-conversation">Conversation</th>
+                            <th scope="col">Response</th>
+                            <th scope="col">Conclusion Type</th>
+                            <th scope="col">Discussion Name</th>
+                            <th scope="col">Conclusion Remark</th>
+                            <th scope="col" class="text-nowrap">Status</th>
+                        </tr>
                     </thead>
                     <tbody>
                         @if ($memos->isEmpty())
@@ -481,7 +169,7 @@
                             <td class="sno">{{ $memos->firstItem() + $index }}</td>
 
                             <!-- Program Name -->
-                            <td class="fw-medium">{{ $memo->course_name ?? 'N/A' }}</td>
+                            <td class="fw-medium mnm-col-program">{{ $memo->course_name ?? 'N/A' }}</td>
 
                             <!-- Student -->
                             <td class="s_name fw-medium">{{ $memo->student_name }}</td>
@@ -489,17 +177,11 @@
                             <!-- Type -->
                             <td class="type">
                                 @if ($memo->notice_memo == '1')
-                                <span class="badge bg-primary-subtle text-primary">
-                                    <i class="bi bi-file-earmark-text me-1"></i> Notice
-                                </span>
+                                    Notice
                                 @elseif ($memo->notice_memo == '2')
-                                <span class="badge bg-secondary-subtle text-secondary">
-                                    <i class="bi bi-file-earmark me-1"></i> Memo
-                                </span>
+                                    Memo
                                 @else
-                                <span class="badge bg-info-subtle text-info">
-                                    <i class="bi bi-question-circle me-1"></i> Other
-                                </span>
+                                    Other
                                 @endif
                             </td>
 
@@ -513,12 +195,12 @@
                             </td>
 
                             <!-- Topic -->
-                            <td>{{ $memo->topic_name }}</td>
+                            <td class="mnm-col-topic">{{ $memo->topic_name }}</td>
 @php
 $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 @endphp
                             <!-- Conversations -->
-                            <td class="conversation">
+                            <td class="conversation mnm-col-conversation">
                                 <div class="d-flex align-items-center gap-2 flex-wrap">
                                     @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
                                     @if($memo->notice_id)
@@ -647,26 +329,21 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                     </tbody>
 
                 </table>
+                </div>
 
-                <!-- Pagination -->
-                <div class="d-flex justify-content-between align-items-center mt-3 gap-2 flex-wrap">
-
-                    <div class="text-muted small mb-0">
-                        Showing {{ $memos->firstItem() ?? 0 }}
-                        to {{ $memos->lastItem() }}
-                        of {{ $memos->total() }} items
-                    </div>
-
-                    <div class="ms-auto">
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="mnm-pagination-nav">
                         {{ $memos->links('vendor.pagination.custom') }}
                     </div>
-
+                    <div class="programme-dt-count mnm-dt-count mb-0">
+                        Showing {{ $memos->firstItem() ?? 0 }}
+                        to {{ $memos->lastItem() ?? 0 }}
+                        of {{ $memos->total() }} items
+                    </div>
                 </div>
             </div>
-
         </div>
     </div>
-    <!-- end Zero Configuration -->
    
     <!-- Enhanced Offcanvas with GIGW Guidelines -->
     <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic" role="dialog">
@@ -704,12 +381,12 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
      <!-- memo generation modal -->
     <div class="modal fade" id="memo_generate" tabindex="-1" aria-labelledby="memo_generateLabel" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header bg-light">
-                    <h5 class="modal-title fw-semibold" id="memo_generateLabel">Generate Memo</h5>
+            <div class="modal-content border-0 shadow-sm rounded-3">
+                <div class="modal-header border-0 pb-0 px-4 pt-4">
+                    <h5 class="modal-title fw-semibold text-dark" id="memo_generateLabel">Generate Memo</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body px-4">
                     <form action="{{ route('memo.notice.management.store_memo_status') }}" method="POST">
                         @csrf
                         <div class="row g-3">
@@ -842,9 +519,9 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                         </div>
 
                 </div>
-                <div class="modal-footer bg-light">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="submit" class="btn btn-primary px-4">Save</button>
+                <div class="modal-footer border-0 bg-transparent px-4 pb-4 pt-2 gap-2">
+                    <button type="button" class="btn btn-outline-secondary rounded-2 px-4" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary rounded-2 px-4 fw-semibold">Save</button>
                 </div>
                 </form>
             </div>
@@ -852,46 +529,107 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 
     </div>
     <!-- Memo generation end -->
+
+    @include('admin.courseAttendanceNoticeMap.partials.add_notice_modal')
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+@push('scripts')
+@include('admin.courseAttendanceNoticeMap.partials.add_notice_scripts')
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-$(document).ready(function() {
-    $('.view-conversation').on('click', function() {
-        let memoId = $(this).data('id');
-        let topic = $(this).data('topic');
-        let type = $(this).data('type');
-        $('#userType').val(type);
-        let user_type = 'admin';
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof jQuery === 'undefined') {
+        return;
+    }
+    var $ = jQuery;
 
-        $('#conversationTopic').text("Topic: " + topic);
-        $('#type_side_menu').text(type);
-        $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
+$(function() {
+    function formatYmd(date) {
+        var y = date.getFullYear();
+        var m = String(date.getMonth() + 1).padStart(2, '0');
+        var d = String(date.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+    }
 
-        $.ajax({
-            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type + '/' + user_type,
-            type: 'GET',
-            success: function(res) {
-                $('#chatBody').html(res);
-            },
-            error: function() {
-                $('#chatBody').html(
-                    '<p class="text-danger text-center">Failed to load conversation.</p>'
-                );
+    function initMnmDesktopTimePeriod() {
+        if (window.mnmTimePeriodPicker || typeof flatpickr === 'undefined') {
+            return;
+        }
+        if (!document.getElementById('mnm_time_period_picker')) {
+            return;
+        }
+        var mnmFromVal = $('#from_date').val();
+        var mnmToVal = $('#to_date').val();
+        window.mnmTimePeriodPicker = flatpickr('#mnm_time_period_picker', {
+            mode: 'range',
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd.m.Y',
+            defaultDate: [mnmFromVal, mnmToVal],
+            showMonths: window.innerWidth >= 1200 ? 2 : 1,
+            locale: { rangeSeparator: ' to ' },
+            onChange: function (selectedDates) {
+                if (selectedDates[0]) {
+                    $('#from_date').val(formatYmd(selectedDates[0]));
+                }
+                if (selectedDates.length > 1 && selectedDates[1]) {
+                    $('#to_date').val(formatYmd(selectedDates[1])).trigger('change');
+                } else if (selectedDates[0]) {
+                    $('#to_date').val(formatYmd(selectedDates[0]));
+                }
             }
         });
+    }
 
-        // Show offcanvas
-        let chatOffcanvas = new bootstrap.Offcanvas(document.getElementById('chatOffcanvas'));
-        chatOffcanvas.show();
+    function destroyMnmDesktopTimePeriod() {
+        if (window.mnmTimePeriodPicker) {
+            window.mnmTimePeriodPicker.destroy();
+            window.mnmTimePeriodPicker = null;
+        }
+    }
+
+    function syncMnmMobileDatesFromHidden() {
+        $('#mnm_from_date_mobile').val($('#from_date').val());
+        $('#mnm_to_date_mobile').val($('#to_date').val());
+    }
+
+    function applyMnmTimePeriodMode() {
+        if (window.matchMedia('(min-width: 992px)').matches) {
+            initMnmDesktopTimePeriod();
+            if (window.mnmTimePeriodPicker) {
+                window.mnmTimePeriodPicker.setDate([$('#from_date').val(), $('#to_date').val()], false);
+            }
+        } else {
+            destroyMnmDesktopTimePeriod();
+            syncMnmMobileDatesFromHidden();
+        }
+    }
+
+    $('#mnm_from_date_mobile, #mnm_to_date_mobile').on('change', function () {
+        $('#from_date').val($('#mnm_from_date_mobile').val());
+        $('#to_date').val($('#mnm_to_date_mobile').val());
+        $('#from_date').trigger('change');
     });
-});
-</script>
-@push('scripts')
-<script>
-$(document).ready(function() {
-    const memoChoicesIds = ['program_name', 'type', 'status', 'memo_type_master_pk', 'venue'];
+
+    applyMnmTimePeriodMode();
+    var mnmDesktopMq = window.matchMedia('(min-width: 992px)');
+    if (typeof mnmDesktopMq.addEventListener === 'function') {
+        mnmDesktopMq.addEventListener('change', applyMnmTimePeriodMode);
+    } else if (typeof mnmDesktopMq.addListener === 'function') {
+        mnmDesktopMq.addListener(applyMnmTimePeriodMode);
+    }
+
+    $('#search').on('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            $('#filterForm').submit();
+        }
+    });
+
+    const filterChoicesIds = ['program_name', 'type', 'status'];
+    const modalChoicesIds = ['memo_type_master_pk', 'venue'];
     const memoChoicesMap = new Map();
+    let modalChoicesReady = false;
 
     function createChoicesInstance(el) {
         if (!el || typeof window.Choices === 'undefined') return;
@@ -921,10 +659,20 @@ $(document).ready(function() {
         memoChoicesMap.set(el.id, instance);
     }
 
-    function initMemoChoices() {
-        memoChoicesIds.forEach(function(id) {
+    function initFilterChoices() {
+        filterChoicesIds.forEach(function(id) {
             createChoicesInstance(document.getElementById(id));
         });
+    }
+
+    function initModalChoices() {
+        if (modalChoicesReady) {
+            return;
+        }
+        modalChoicesIds.forEach(function(id) {
+            createChoicesInstance(document.getElementById(id));
+        });
+        modalChoicesReady = true;
     }
 
     function syncMemoChoicesById(id) {
@@ -943,7 +691,36 @@ $(document).ready(function() {
         }
     }
 
-    initMemoChoices();
+    initFilterChoices();
+
+    $('#memo_generate').on('show.bs.modal', function() {
+        initModalChoices();
+    });
+
+    $('.view-conversation').on('click', function() {
+        var memoId = $(this).data('id');
+        var topic = $(this).data('topic');
+        var type = $(this).data('type');
+        $('#userType').val(type);
+        var user_type = 'admin';
+
+        $('#conversationTopic').text('Topic: ' + topic);
+        $('#type_side_menu').text(type);
+        $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
+
+        $.ajax({
+            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type + '/' + user_type,
+            type: 'GET',
+            success: function(res) {
+                $('#chatBody').html(res);
+            },
+            error: function() {
+                $('#chatBody').html('<p class="text-danger text-center">Failed to load conversation.</p>');
+            }
+        });
+
+        bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('chatOffcanvas')).show();
+    });
 
     // Filter form submission on change
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
@@ -1089,8 +866,9 @@ $(document).ready(function() {
     // Reset modal when closed
     $('#memo_generate').on('hidden.bs.modal', function() {
         $(this).find('form')[0].reset();
-        setModalMode('generate'); // Reset to default mode
+        setModalMode('generate');
     });
+});
 });
 </script>
 @endpush

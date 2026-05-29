@@ -29,9 +29,10 @@
                         </select>
                     </div>
 
-                    <div class="programme-dt-filter-select son-time-period-filter position-relative flex-shrink-0">
-                        <input type="hidden" id="from_date" name="from_date" value="{{ date('Y-m-d') }}">
-                        <input type="hidden" id="to_date" name="to_date" value="{{ date('Y-m-d') }}">
+                    <input type="hidden" id="from_date" name="from_date" value="{{ date('Y-m-d') }}">
+                    <input type="hidden" id="to_date" name="to_date" value="{{ date('Y-m-d') }}">
+
+                    <div class="programme-dt-filter-select son-time-period-filter son-time-period-range d-none d-lg-block position-relative flex-shrink-0">
                         <label for="son_time_period_picker" class="visually-hidden">Time Period</label>
                         <input type="text"
                             id="son_time_period_picker"
@@ -41,7 +42,17 @@
                             readonly
                             autocomplete="off"
                             aria-label="Time period">
-                        <i class="bi bi-chevron-down son-time-period-chevron" aria-hidden="true"></i>
+                    </div>
+
+                    <div class="son-time-period-mobile d-flex d-lg-none flex-wrap gap-2 w-100">
+                        <div class="programme-dt-filter-select son-date-mobile-wrap flex-fill">
+                            <label for="son_from_date_mobile" class="visually-hidden">From Date</label>
+                            <input type="date" id="son_from_date_mobile" class="form-control son-filter-select" value="{{ date('Y-m-d') }}" aria-label="From date">
+                        </div>
+                        <div class="programme-dt-filter-select son-date-mobile-wrap flex-fill">
+                            <label for="son_to_date_mobile" class="visually-hidden">To Date</label>
+                            <input type="date" id="son_to_date_mobile" class="form-control son-filter-select" value="{{ date('Y-m-d') }}" aria-label="To date">
+                        </div>
                     </div>
 
                     <div class="programme-dt-filter-select flex-shrink-0">
@@ -275,14 +286,16 @@
         if (!$('#from_date').val()) $('#from_date').val(todayStr);
         if (!$('#to_date').val()) $('#to_date').val(todayStr);
 
-        if (typeof flatpickr !== 'undefined') {
+        function initSonDesktopTimePeriod() {
+            if (window.sonTimePeriodPicker || typeof flatpickr === 'undefined') return;
+            if (!document.getElementById('son_time_period_picker')) return;
             window.sonTimePeriodPicker = flatpickr('#son_time_period_picker', {
                 mode: 'range',
                 dateFormat: 'Y-m-d',
                 altInput: true,
                 altFormat: 'd/m/Y',
-                defaultDate: [today, today],
-                showMonths: 2,
+                defaultDate: [$('#from_date').val(), $('#to_date').val()],
+                showMonths: window.innerWidth >= 1200 ? 2 : 1,
                 locale: { rangeSeparator: ' to ' },
                 onChange: function (selectedDates) {
                     if (selectedDates[0]) {
@@ -295,6 +308,39 @@
                     }
                 }
             });
+        }
+
+        function destroySonDesktopTimePeriod() {
+            if (window.sonTimePeriodPicker) {
+                window.sonTimePeriodPicker.destroy();
+                window.sonTimePeriodPicker = null;
+            }
+        }
+
+        function applySonTimePeriodMode() {
+            if (window.matchMedia('(min-width: 992px)').matches) {
+                initSonDesktopTimePeriod();
+                if (window.sonTimePeriodPicker) {
+                    window.sonTimePeriodPicker.setDate([$('#from_date').val(), $('#to_date').val()], false);
+                }
+            } else {
+                destroySonDesktopTimePeriod();
+                $('#son_from_date_mobile').val($('#from_date').val());
+                $('#son_to_date_mobile').val($('#to_date').val());
+            }
+        }
+
+        $('#son_from_date_mobile, #son_to_date_mobile').on('change', function () {
+            $('#from_date').val($('#son_from_date_mobile').val()).trigger('change');
+            $('#to_date').val($('#son_to_date_mobile').val());
+        });
+
+        applySonTimePeriodMode();
+        var sonDesktopMq = window.matchMedia('(min-width: 992px)');
+        if (typeof sonDesktopMq.addEventListener === 'function') {
+            sonDesktopMq.addEventListener('change', applySonTimePeriodMode);
+        } else if (typeof sonDesktopMq.addListener === 'function') {
+            sonDesktopMq.addListener(applySonTimePeriodMode);
         }
 
         syncAttendanceTypeUi();
@@ -320,6 +366,8 @@
                 var ts = formatYmd(t);
                 $('#from_date').val(ts);
                 $('#to_date').val(ts);
+                $('#son_from_date_mobile').val(ts);
+                $('#son_to_date_mobile').val(ts);
                 if (window.sonTimePeriodPicker) {
                     window.sonTimePeriodPicker.setDate([t, t], true);
                 }
