@@ -258,7 +258,7 @@
     width: auto;
     min-width: 1.75rem;
     padding: 0 0.35rem;
-    border-radius: 999px;
+    border-radius: 10px;
 }
 
 .dashboard-birthdays-divider {
@@ -1447,4 +1447,4 @@
 
 table>thead {
     background-color: transparent !important;
-}
+}

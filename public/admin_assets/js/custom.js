@@ -1810,8 +1810,8 @@ $(document).on('click', '#resetAttendance', function () {
 
     attendanceChoicesClear($('#programme'));
 
-    // Reset attendance type to 'full_day'
-    $('#full_day').prop('checked', true);
+    // Reset attendance type to 'manual' (the default with active session data)
+    $('#manual').prop('checked', true);
     $('input[name="attendance_type"]').trigger('change');
 
     attendanceChoicesClear($('#session'));
@@ -1861,10 +1861,19 @@ function drawAttendanceTable() {
                 d.to_date = $('#to_date').val();
                 d.view_type = $('#view_type').val();
                 d.page_context = (typeof window.attendancePageContext !== 'undefined') ? window.attendancePageContext : '';
+                d.attendance_type = $('input[name="attendance_type"]:checked').val();
+                if (d.attendance_type === 'normal') {
+                    d.session_value = $('#session').val();
+                } else if (d.attendance_type === 'manual') {
+                    d.session_value = $('#manual_session').val();
+                }
             }
         },
         drawCallback: function () {
             $('#attendanceTableCard').removeClass('d-none');
+            if (typeof window.enhanceAttendanceFingerprintActions === 'function') {
+                window.enhanceAttendanceFingerprintActions();
+            }
         },
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },

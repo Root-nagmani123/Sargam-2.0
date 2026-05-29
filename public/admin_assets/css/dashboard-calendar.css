@@ -349,13 +349,13 @@
     padding: 0.25rem;
     margin-bottom: 1rem;
     background: #f1f3f5;
-    border-radius: 999px;
+    border-radius: 10px;
 }
 
 #dashboard-calendar-container .calendar-holiday-filter {
     flex: 1 1 0;
     border: 0;
-    border-radius: 999px;
+    border-radius: 10px;
     padding: 0.5rem 0.75rem;
     font-size: 0.75rem;
     font-weight: 500;

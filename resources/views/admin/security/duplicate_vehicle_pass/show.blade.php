@@ -232,7 +232,7 @@
         .badge {
             display: inline-block;
             padding: 3px 10px;
-            border-radius: 999px;
+            border-radius: 10px;
             font-size: 0.75rem;
             border: 1px solid #333;
         }

@@ -249,7 +249,7 @@
         .action-bar button {
             padding: 0.4rem 1.1rem;
             font-weight: 600;
-            border-radius: 999px;
+            border-radius: 10px;
             border: none;
             font-size: 0.85rem;
             cursor: pointer;

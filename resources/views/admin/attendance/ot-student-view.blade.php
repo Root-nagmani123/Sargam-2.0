@@ -108,7 +108,7 @@
 .attendance-details #attendanceTable.table-hover tbody tr:hover { background: #f9fafb; }
 .attendance-details #attendanceTable .sub { font-size: 12.5px; color: #98a2b3; font-weight: 400; }
 .attendance-details .dash { color: #c3c9d2; }
-.attendance-details .status-badge { border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 13px; }
+.attendance-details .status-badge { border-radius: 10px; padding: 6px 14px; font-weight: 600; font-size: 13px; }
 
 /* Pagination footer */
 .attendance-details .pagination .page-link {

@@ -481,7 +481,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     align-items: center;
     font-size: 0.72rem;
     padding: 0.3rem 0.75rem;
-    border-radius: 999px;
+    border-radius: 10px;
     background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
     color: #fff;
     font-weight: 700;
@@ -876,7 +876,7 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     font-size: 0.72rem;
     font-weight: 700;
     padding: 0.3rem 0.75rem;
-    border-radius: 999px;
+    border-radius: 10px;
     color: white;
     background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
     margin-bottom: 0.5rem;

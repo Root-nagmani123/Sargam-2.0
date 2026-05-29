@@ -423,7 +423,7 @@
     .badge {
       display: inline-block;
       padding: 3px 8px;
-      border-radius: 999px;
+      border-radius: 10px;
       font-size: 9px;
       font-weight: 600;
       line-height: 1.2;

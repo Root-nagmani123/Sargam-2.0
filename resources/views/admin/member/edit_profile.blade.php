@@ -62,7 +62,7 @@
         .profile-cover-chip {
             display: inline-flex;
             align-items: center;
-            border-radius: 999px;
+            border-radius: 10px;
             border: 1px solid rgba(255, 255, 255, 0.18);
             color: #fff;
             background: rgba(255, 255, 255, 0.12);

@@ -32,7 +32,7 @@
         font-weight: 600;
         line-height: 1;
         padding: 0.4rem 0.75rem;
-        border-radius: 999px;
+        border-radius: 10px;
         color: #b54708;
         background: #fffaeb;
     }
@@ -311,7 +311,7 @@
                         .fmx-faculty-name { color: #004a93; font-size: 16px; margin: 0; }
                         .fmx-course { padding: 16px; border-top: 1px solid #e5e7eb; page-break-inside: avoid; }
                         .fmx-course-title { font-weight: 600; color: #1f2937; font-size: 15px; display: inline-flex; align-items: center; gap: 6px; }
-                        .fmx-badge { background: #fffaeb; color: #b54708; border: 1px solid #fde3c3; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+                        .fmx-badge { background: #fffaeb; color: #b54708; border: 1px solid #fde3c3; padding: 4px 10px; border-radius: 10px; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
 
                         .ds-table-wrap { border: 1px solid #d1d5db; border-radius: 8px; overflow: hidden; margin-top: 8px; }
                         .fmx-table { width: 100%; border-collapse: collapse; font-size: 13px; }

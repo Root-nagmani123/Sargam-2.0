@@ -43,7 +43,7 @@
     color: #212529;
     font-weight: 600;
     padding: .5rem 1rem;
-    border-radius: 999px;
+    border-radius: 10px;
     font-size: .9rem;
 }
 

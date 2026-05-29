@@ -180,7 +180,7 @@
         font-weight: 600;
         font-size: .75rem;
         padding: .35rem .75rem;
-        border-radius: 999px;
+        border-radius: 10px;
         line-height: 1.1;
     }
 
