@@ -1,0 +1,545 @@
+/* Topic-wise mark attendance — matches attendance index / programme-dt reference */
+
+.mark-att-master-page {
+    --ma-primary: #004a93;
+    --ma-border: #e4e7ec;
+    --ma-muted: #667085;
+    --ma-text: #344054;
+    --ma-heading: #101828;
+}
+
+.mark-att-master-page .modern-breadcrumb-wrapper .modern-breadcrumb-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+}
+
+.mark-att-master-page .modern-breadcrumb-wrapper .modern-breadcrumb-action {
+    align-self: stretch;
+}
+
+@media (min-width: 576px) {
+    .mark-att-master-page .modern-breadcrumb-wrapper .modern-breadcrumb-action {
+        align-self: flex-end;
+    }
+}
+
+.mark-att-master-page .mark-att-header-actions {
+    width: 100%;
+}
+
+@media (min-width: 576px) {
+    .mark-att-master-page .mark-att-header-actions {
+        width: auto;
+        min-width: 10.5rem;
+    }
+}
+
+.mark-att-master-page .mark-att-header-actions .btn {
+    min-height: 2.5rem;
+}
+
+.mark-att-master-page .mark-att-header-actions .btn .bi {
+    font-size: 1.05rem;
+    line-height: 1;
+}
+
+.mark-att-master-page .mark-att-btn-mark {
+    background-color: var(--ma-primary);
+    border-color: var(--ma-primary);
+}
+
+.mark-att-master-page .mark-att-btn-mark:not(:disabled):hover,
+.mark-att-master-page .mark-att-btn-mark:not(:disabled):focus-visible {
+    background-color: #003d78;
+    border-color: #003d78;
+}
+
+.mark-att-master-page .mark-att-btn-mark:disabled {
+    opacity: 1;
+    cursor: not-allowed;
+}
+
+.mark-att-master-page .mark-att-btn-download {
+    border-color: var(--ma-primary);
+    color: var(--ma-primary);
+    background: #fff;
+}
+
+.mark-att-master-page .mark-att-btn-download:hover,
+.mark-att-master-page .mark-att-btn-download:focus-visible {
+    background: #f0f6ff;
+    color: #003366;
+    border-color: #003366;
+}
+
+.mark-att-master-page .mark-att-dt-card {
+    border: 1px solid var(--ma-border);
+}
+
+.mark-att-master-page .mark-att-dt-toolbar {
+    min-height: 40px;
+}
+
+.mark-att-master-page .mark-att-dt-toolbar .programme-dt-filter-select {
+    width: 180px;
+    flex-shrink: 0;
+}
+
+.mark-att-master-page .mark-att-course-filter {
+    width: min(100%, 280px);
+}
+
+.mark-att-master-page .mark-att-period-filter {
+    width: min(100%, 160px);
+}
+
+.mark-att-master-page .mark-att-dt-toolbar .form-select:disabled {
+    background-color: #fff;
+    color: var(--ma-text);
+    opacity: 1;
+    cursor: default;
+}
+
+.mark-att-master-page .mark-att-search-trigger {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ma-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+}
+
+.mark-att-master-page .mark-att-search-trigger:hover,
+.mark-att-master-page .mark-att-search-trigger.show {
+    border-color: var(--ma-primary);
+    color: var(--ma-primary);
+    background: #fff;
+}
+
+.mark-att-master-page .mark-att-search-menu {
+    min-width: 300px;
+}
+
+.mark-att-master-page .mark-att-dt-search-host .dataTables_filter {
+    float: none !important;
+    margin: 0 !important;
+    text-align: left !important;
+    width: 100%;
+}
+
+.mark-att-master-page .mark-att-dt-search-host .dataTables_filter label {
+    display: block;
+    width: 100%;
+    margin: 0;
+    position: relative;
+}
+
+.mark-att-master-page .mark-att-dt-search-host .dataTables_filter label::before {
+    content: "\F52A";
+    font-family: "bootstrap-icons";
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.mark-att-master-page .mark-att-dt-search-host .dataTables_filter input {
+    width: 100% !important;
+    height: 40px;
+    margin: 0 !important;
+    padding: 0.5rem 0.875rem 0.5rem 2.375rem !important;
+    border: 1px solid #d0d5dd !important;
+    border-radius: 8px !important;
+    font-size: 0.9375rem;
+    color: var(--ma-text);
+    box-shadow: none !important;
+}
+
+.mark-att-master-page .mark-att-dt-search-host .dataTables_filter input:focus {
+    border-color: var(--ma-primary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12) !important;
+}
+
+.mark-att-master-page .mark-att-dt-panel {
+    border: 1px solid var(--ma-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.mark-att-master-page .mark-att-dt-scroll {
+    overflow-x: auto;
+}
+
+.mark-att-master-page #studentAttendanceTable_wrapper {
+    padding: 0;
+}
+
+.mark-att-master-page #studentAttendanceTable_wrapper .dataTables_scrollHead,
+.mark-att-master-page #studentAttendanceTable_wrapper .dataTables_scrollBody thead,
+.mark-att-master-page #studentAttendanceTable_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.mark-att-master-page #studentAttendanceTable {
+    margin-bottom: 0 !important;
+}
+
+.mark-att-master-page .mark-attendance-dt-table thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid var(--ma-border) !important;
+    border-top: 0 !important;
+    white-space: nowrap;
+    vertical-align: middle;
+    text-align: center;
+}
+
+.mark-att-master-page .mark-attendance-dt-table tbody td {
+    padding: 0.875rem 1rem !important;
+    font-size: 0.875rem;
+    color: var(--ma-text);
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle !important;
+    background: #fff;
+}
+
+.mark-att-master-page .mark-attendance-dt-table tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03);
+}
+
+.mark-att-master-page .mark-attendance-dt-table tbody tr:last-child td {
+    border-bottom: 0 !important;
+}
+
+.mark-att-master-page .mark-attendance-dt-table tbody td:first-child {
+    color: var(--ma-muted);
+    font-weight: 500;
+    text-align: center;
+    width: 4rem;
+}
+
+.mark-att-master-page .mark-attendance-dt-table tbody td:nth-child(2),
+.mark-att-master-page .mark-attendance-dt-table tbody td:nth-child(3) {
+    font-weight: 500;
+    color: var(--ma-heading);
+    text-align: left;
+}
+
+.mark-att-master-page .mark-att-current-col {
+    text-align: center !important;
+}
+
+.mark-att-master-page .mark-att-update-col {
+    text-align: center !important;
+    min-width: 10rem;
+}
+
+.mark-att-master-page .mark-att-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.mark-att-master-page .mark-att-status-badge--present {
+    background: #ecfdf3;
+    color: #027a48;
+}
+
+.mark-att-master-page .mark-att-status-badge--late {
+    background: #fffaeb;
+    color: #b54708;
+}
+
+.mark-att-master-page .mark-att-status-badge--absent {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.mark-att-master-page .mark-att-status-badge--neutral {
+    background: #fef0c7;
+    color: #b54708;
+}
+
+.mark-att-master-page .mark-att-radio-grid {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.3rem;
+    text-align: left;
+}
+
+.mark-att-master-page .mark-att-radio-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.35rem 1rem;
+}
+
+.mark-att-master-page .mark-att-radio-grid .form-check {
+    margin: 0 !important;
+    padding-left: 1.5em;
+    min-height: 1.15rem;
+}
+
+.mark-att-master-page .mark-att-radio-grid .form-check-input {
+    width: 0.95rem;
+    height: 0.95rem;
+    margin-top: 0.12em;
+    border-color: #d0d5dd;
+    cursor: pointer;
+}
+
+.mark-att-master-page .mark-att-radio-grid .form-check-input:checked {
+    background-color: var(--ma-primary);
+    border-color: var(--ma-primary);
+}
+
+.mark-att-master-page .mark-att-radio-grid .form-check-label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.mark-att-master-page .mark-att-mdo-col,
+.mark-att-master-page .mark-att-escort-col {
+    min-width: 7.5rem;
+}
+
+.mark-att-master-page .mark-attendance-dt-table thead th.mark-att-mdo-col,
+.mark-att-master-page .mark-attendance-dt-table thead th.mark-att-escort-col {
+    text-align: center !important;
+}
+
+.mark-att-master-page .mark-attendance-dt-table tbody td.mark-att-mdo-col,
+.mark-att-master-page .mark-attendance-dt-table tbody td.mark-att-escort-col {
+    text-align: center !important;
+}
+
+.mark-att-master-page .mark-att-mdo-text {
+    font-weight: 600;
+    color: var(--ma-heading);
+    font-size: 0.875rem;
+}
+
+.mark-att-master-page .mark-att-escort-text {
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.mark-att-master-page .mark-att-escort-text--active {
+    color: #026aa2;
+}
+
+.mark-att-master-page .mark-att-escort-text--na {
+    color: var(--ma-muted);
+}
+
+.mark-att-master-page .mark-att-duty-hidden {
+    position: absolute !important;
+    width: 1px !important;
+    height: 1px !important;
+    padding: 0 !important;
+    margin: -1px !important;
+    overflow: hidden !important;
+    clip: rect(0, 0, 0, 0) !important;
+    white-space: nowrap !important;
+    border: 0 !important;
+}
+
+.mark-att-master-page .mark-att-fingerprint-action,
+.mark-att-master-page .mark-att-fingerprint-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 0;
+    border-radius: 50%;
+    background: #004a93;
+    color: #fff;
+    font-size: 1.05rem;
+    line-height: 1;
+    cursor: pointer;
+    text-decoration: none;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.mark-att-master-page .mark-att-fingerprint-btn:hover {
+    background: #003d78;
+    color: #fff;
+}
+
+.mark-att-master-page .mark-att-fingerprint-btn:focus-visible {
+    outline: 0;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.35);
+}
+
+.mark-att-master-page .mark-attendance-dt-table thead th.mark-att-action-col {
+    background: #f8f9fa !important;
+}
+
+.mark-att-master-page .mark-att-action-col {
+    width: 4.5rem;
+}
+
+.mark-att-master-page .programme-dt-footer {
+    border-top: 1px solid var(--ma-border);
+    padding: 0.875rem 1rem;
+    margin-top: 0;
+    background: #fff;
+}
+
+@media (max-width: 767.98px) {
+    .mark-att-master-page .mark-att-course-filter,
+    .mark-att-master-page .mark-att-period-filter {
+        width: 100%;
+    }
+}
+
+/* —— Mark Attendance row modal (design reference) —— */
+.mark-att-row-modal-dialog {
+    max-width: 440px;
+}
+
+.mark-att-row-modal-content {
+    border-radius: 16px;
+    overflow: hidden;
+    box-shadow: 0 20px 48px rgba(16, 24, 40, 0.18) !important;
+}
+
+.mark-att-row-modal-header {
+    border-bottom: 1px solid #eaecf0;
+}
+
+.mark-att-row-modal-header .modal-title {
+    font-size: 1.125rem;
+    letter-spacing: -0.01em;
+}
+
+.mark-att-row-modal-body {
+    color: #344054;
+}
+
+.mark-att-modal-label {
+    font-size: 0.9375rem;
+    color: #101828;
+    margin-bottom: 0;
+}
+
+.mark-att-modal-label .text-danger {
+    font-weight: 600;
+}
+
+.mark-att-row-modal-body .form-check-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #344054;
+    cursor: pointer;
+}
+
+.mark-att-row-modal-body .form-check-input[type="radio"] {
+    width: 1.05rem;
+    height: 1.05rem;
+    margin-top: 0.15em;
+    border-color: #d0d5dd;
+    cursor: pointer;
+}
+
+.mark-att-row-modal-body .form-check-input[type="radio"]:checked {
+    background-color: #004085;
+    border-color: #004085;
+}
+
+.mark-att-modal-row-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #344054;
+}
+
+.mark-att-modal-section-title {
+    font-size: 0.9375rem;
+    color: #101828;
+}
+
+.mark-att-modal-divider {
+    border-color: #eaecf0;
+    opacity: 1;
+}
+
+.mark-att-modal-switch .form-check-input {
+    width: 2.75rem;
+    height: 1.5rem;
+    margin: 0;
+    cursor: pointer;
+    background-color: #e4e7ec;
+    border-color: #e4e7ec;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23fff'/%3e%3c/svg%3e");
+}
+
+.mark-att-modal-switch .form-check-input:focus {
+    border-color: #d0d5dd;
+    box-shadow: 0 0 0 3px rgba(0, 64, 133, 0.15);
+}
+
+.mark-att-modal-switch--mdo .form-check-input:checked,
+.mark-att-modal-switch--medical .form-check-input:checked {
+    background-color: #004085;
+    border-color: #004085;
+}
+
+.mark-att-modal-switch--other .form-check-input:checked {
+    background-color: #6941c6;
+    border-color: #6941c6;
+}
+
+.mark-att-modal-btn-cancel {
+    min-width: 6.5rem;
+    color: #004085;
+    border: 1px solid #004085;
+    background: #fff;
+}
+
+.mark-att-modal-btn-cancel:hover,
+.mark-att-modal-btn-cancel:focus-visible {
+    color: #003366;
+    border-color: #003366;
+    background: #f0f6ff;
+}
+
+.mark-att-modal-btn-apply {
+    min-width: 9.5rem;
+    color: #fff;
+    background-color: #004085;
+    border: 1px solid #004085;
+}
+
+.mark-att-modal-btn-apply:hover,
+.mark-att-modal-btn-apply:focus-visible {
+    color: #fff;
+    background-color: #003366;
+    border-color: #003366;
+}
+
+.mark-att-modal-btn-apply:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
