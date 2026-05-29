@@ -11,12 +11,30 @@ class SubjectModuleController extends Controller
     public function index()
     {
         $modules = SubjectModuleMaster::orderBy('created_date', 'desc')->paginate(10);
-        return view('admin.subject_module.index', compact('modules'));
+
+        $smModuleEditData = [];
+        foreach ($modules as $module) {
+            $smModuleEditData[$module->pk] = [
+                'module_name' => $module->module_name,
+                'active_inactive' => $module->active_inactive,
+            ];
+        }
+        if (request()->filled('open_edit_module')) {
+            $extra = SubjectModuleMaster::find(request('open_edit_module'));
+            if ($extra) {
+                $smModuleEditData[$extra->pk] = [
+                    'module_name' => $extra->module_name,
+                    'active_inactive' => $extra->active_inactive,
+                ];
+            }
+        }
+
+        return view('admin.subject_module.index', compact('modules', 'smModuleEditData'));
     }
 
     public function create()
     {
-        return view('admin.subject_module.create');
+        return redirect()->route('subject-module.index', ['open_add_module' => 1]);
     }
 
     public function store(Request $request)
@@ -40,8 +58,9 @@ class SubjectModuleController extends Controller
 
     public function edit($id)
     {
-        $module = SubjectModuleMaster::findOrFail($id);
-        return view('admin.subject_module.edit', compact('module'));
+        SubjectModuleMaster::findOrFail($id);
+
+        return redirect()->route('subject-module.index', ['open_edit_module' => $id]);
     }
 
     public function update(Request $request, $id)
