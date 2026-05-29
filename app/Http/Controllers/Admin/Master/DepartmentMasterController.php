@@ -19,7 +19,7 @@ class DepartmentMasterController extends Controller
     }
     function create()
     {
-        return view('admin.master.department.create');
+        return redirect()->route('master.department.master.index', ['open_dpm_modal' => 'add']);
     }
     function store(Request $request)
     {
@@ -41,6 +41,10 @@ class DepartmentMasterController extends Controller
         $department = $id ? DepartmentMaster::find($id) : new DepartmentMaster();
 
         if ($id && !$department) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Department not found.'], 404);
+            }
+
             return redirect()->back()->with('error', 'Department not found.');
         }
 
@@ -49,16 +53,29 @@ class DepartmentMasterController extends Controller
 
         $message = $id ? 'Department updated successfully.' : 'Department created successfully.';
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
         return redirect()->route('master.department.master.index')->with('success', $message);
 
     }
     function edit($id)
     {
         try {
-            $departmentMaster = DepartmentMaster::find(decrypt($id));
-            return view('admin.master.department.create', compact('departmentMaster'));
+            $departmentMaster = DepartmentMaster::findOrFail(decrypt($id));
+
+            return redirect()->route('master.department.master.index', [
+                'open_dpm_modal' => 'edit',
+                'dpm_pk' => $id,
+                'dpm_name' => $departmentMaster->department_name,
+            ]);
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to edit department: ' . $e->getMessage());
+            return redirect()->route('master.department.master.index')
+                ->with('error', 'Failed to edit department: ' . $e->getMessage());
         }
     }
     function delete($id)

@@ -1,0 +1,260 @@
+/* Department Master — programme-dt reference layout */
+.dpm-master-page {
+    --dpm-primary: #004a93;
+    --dpm-primary-dark: #003366;
+    --dpm-border: #e4e7ec;
+    --dpm-text: #344054;
+    --dpm-heading: #101828;
+    --dpm-muted: #667085;
+}
+
+.dpm-master-page .dpm-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--dpm-border) !important;
+}
+
+.dpm-master-page .dpm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dpm-master-page #departmentmaster-table_wrapper .dt-buttons,
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_length {
+    display: none !important;
+}
+
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_filter:not(.programme-dt-search .dataTables_filter) {
+    display: none !important;
+}
+
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_scrollBody thead,
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_scrollHead thead th,
+.dpm-master-page #departmentmaster-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--dpm-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.dpm-master-page #departmentmaster-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.dpm-master-page #departmentmaster-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--dpm-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.dpm-master-page #departmentmaster-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_scrollHead thead th:first-child,
+.dpm-master-page #departmentmaster-table thead th:first-child,
+.dpm-master-page #departmentmaster-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--dpm-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(2),
+.dpm-master-page #departmentmaster-table thead th:nth-child(2),
+.dpm-master-page #departmentmaster-table tbody td:nth-child(2) {
+    text-align: left !important;
+    font-weight: 500;
+    color: var(--dpm-heading);
+}
+
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(3),
+.dpm-master-page #departmentmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(4),
+.dpm-master-page #departmentmaster-table thead th:nth-child(3),
+.dpm-master-page #departmentmaster-table thead th:nth-child(4),
+.dpm-master-page #departmentmaster-table tbody td:nth-child(3),
+.dpm-master-page #departmentmaster-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.dpm-master-page #departmentmaster-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.dpm-master-page .dpm-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.dpm-master-page .dpm-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.dpm-master-page .dpm-action-switch-wrap .form-check-input:focus {
+    box-shadow: none;
+}
+
+.dpm-master-page .dpm-dept-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.dpm-master-page .dpm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+}
+
+.dpm-master-page .dpm-action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.dpm-master-page .dpm-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.dpm-master-page .dpm-action-edit {
+    color: var(--dpm-primary);
+}
+
+.dpm-master-page .dpm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--dpm-primary-dark);
+}
+
+.dpm-master-page .dpm-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.dpm-master-page .dpm-status-badge {
+    min-width: 4.5rem;
+}
+
+.dpm-master-page .programme-dt-footer .pagination .page-item.active .page-link,
+.dpm-master-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.dpm-dept-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+.dpm-dept-modal-content {
+    border-radius: 1rem !important;
+    overflow: hidden;
+}
+
+.dpm-dept-modal-content .modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--dpm-border);
+}
+
+.dpm-dept-modal-content .modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #101828;
+    letter-spacing: -0.01em;
+}
+
+.dpm-dept-modal-content .modal-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.dpm-dept-modal-content .modal-footer {
+    padding: 1rem 1.5rem 1.25rem;
+    border-top: 1px solid var(--dpm-border);
+    background: #fff;
+}
+
+.dpm-dept-modal-content .cgt-field-label {
+    font-weight: 600;
+    color: #101828;
+}
+
+.dpm-dept-modal-content .form-control {
+    min-height: 44px;
+    border: 1px solid #d0d5dd;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: #101828;
+}
+
+.dpm-dept-modal-content .form-control.is-invalid {
+    border-color: #fda29b;
+}
+
+.dpm-dept-modal-content .btn-outline-primary,
+.dpm-dept-modal-content .btn-primary {
+    min-height: 44px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+}
+
+@media (max-width: 767.98px) {
+    .dpm-master-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .dpm-dept-modal-content .modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .dpm-dept-modal-content .modal-footer .btn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dpm-master-page .dpm-action-btn {
+        transition: none;
+    }
+
+    .dpm-master-page .dpm-action-btn:hover {
+        transform: none;
+    }
+}
