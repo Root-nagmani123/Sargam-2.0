@@ -72,7 +72,7 @@ class DesignationMasterDataTable extends DataTable
             ->responsive(true)
             ->parameters([
                 'responsive' => true,
-                'scrollX' => true,
+                'scrollX' => false,
                 'autoWidth' => false,
                 'order' => [],
             ])
