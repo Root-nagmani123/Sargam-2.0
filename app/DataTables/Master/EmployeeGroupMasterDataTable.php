@@ -71,6 +71,7 @@ class EmployeeGroupMasterDataTable extends DataTable
             ->selectStyleSingle()
             ->parameters([
                 'responsive' => true,
+                'scrollX' => false,
                 'autoWidth' => false,
                 'order' => [],
                 'paging' => true,
@@ -87,10 +88,10 @@ class EmployeeGroupMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('emp_group_name')->title('Employee Group Name')->orderable(false)->addClass('text-center'),
-            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
+            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false),
+            Column::make('emp_group_name')->title('Employee Group Name')->orderable(false),
+            Column::make('action')->title('Action')->searchable(false)->orderable(false),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)
         ];
     }
 

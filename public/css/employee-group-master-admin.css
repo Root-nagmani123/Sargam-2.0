@@ -1,0 +1,270 @@
+/* Employee Group Master — programme-dt reference layout */
+.egm-master-page {
+    --egm-primary: #004a93;
+    --egm-primary-dark: #003366;
+    --egm-border: #e4e7ec;
+    --egm-text: #344054;
+    --egm-heading: #101828;
+    --egm-muted: #667085;
+}
+
+.egm-master-page .egm-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--egm-border) !important;
+}
+
+.egm-master-page .egm-dt-panel {
+    border-radius: 8px;
+}
+
+.egm-master-page .egm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.egm-master-page #employeegroupmaster-table_wrapper .dt-buttons,
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_length {
+    display: none !important;
+}
+
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_filter:not(.programme-dt-search .dataTables_filter) {
+    display: none !important;
+}
+
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollBody thead,
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th,
+.egm-master-page #employeegroupmaster-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--egm-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.egm-master-page #employeegroupmaster-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.egm-master-page #employeegroupmaster-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--egm-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.egm-master-page #employeegroupmaster-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th:first-child,
+.egm-master-page #employeegroupmaster-table thead th:first-child,
+.egm-master-page #employeegroupmaster-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--egm-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(2),
+.egm-master-page #employeegroupmaster-table thead th:nth-child(2),
+.egm-master-page #employeegroupmaster-table tbody td:nth-child(2) {
+    text-align: center !important;
+    font-weight: 500;
+    color: var(--egm-heading);
+}
+
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(3),
+.egm-master-page #employeegroupmaster-table_wrapper .dataTables_scrollHead thead th:nth-child(4),
+.egm-master-page #employeegroupmaster-table thead th:nth-child(3),
+.egm-master-page #employeegroupmaster-table thead th:nth-child(4),
+.egm-master-page #employeegroupmaster-table tbody td:nth-child(3),
+.egm-master-page #employeegroupmaster-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.egm-master-page #employeegroupmaster-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.egm-master-page .egm-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.egm-master-page .egm-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.egm-master-page .egm-action-switch-wrap .form-check-input:focus {
+    box-shadow: none;
+}
+
+.egm-master-page .egm-group-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.egm-master-page .egm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+}
+
+.egm-master-page .egm-action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.egm-master-page .egm-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.egm-master-page .egm-action-edit {
+    color: var(--egm-primary);
+}
+
+.egm-master-page .egm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--egm-primary-dark);
+}
+
+.egm-master-page .egm-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.egm-master-page .egm-action-switch-wrap .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+
+.egm-master-page .egm-status-badge {
+    min-width: 4.5rem;
+}
+
+.egm-master-page .programme-dt-footer .pagination .page-item.active .page-link,
+.egm-master-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+/* Add / Edit modal — pixel match to master form reference */
+.egm-group-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+.egm-group-modal-content {
+    border-radius: 1.5rem !important;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(16, 24, 40, 0.12) !important;
+}
+
+.egm-group-modal-content .modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--egm-border);
+}
+
+.egm-group-modal-content .modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #101828;
+    letter-spacing: -0.01em;
+}
+
+.egm-group-modal-content .modal-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.egm-group-modal-content .modal-footer {
+    padding: 1rem 1.5rem 1.25rem;
+    border-top: 1px solid var(--egm-border);
+    background: #fff;
+}
+
+.egm-group-modal-content .cgt-field-label {
+    font-weight: 600;
+    color: #101828;
+}
+
+.egm-group-modal-content .form-control {
+    min-height: 44px;
+    border: 1px solid #d0d5dd;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: #101828;
+}
+
+.egm-group-modal-content .form-control.is-invalid {
+    border-color: #fda29b;
+}
+
+.egm-group-modal-content .btn-outline-primary,
+.egm-group-modal-content .btn-primary {
+    min-height: 44px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+}
+
+@media (max-width: 767.98px) {
+    .egm-master-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .egm-group-modal-content .modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .egm-group-modal-content .modal-footer .btn {
+        width: 100%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .egm-master-page .egm-action-btn {
+        transition: none;
+    }
+
+    .egm-master-page .egm-action-btn:hover {
+        transform: none;
+    }
+}

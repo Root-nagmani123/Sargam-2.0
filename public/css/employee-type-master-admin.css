@@ -1,0 +1,237 @@
+/* Employee Type Master — programme-dt reference layout */
+.etm-master-page {
+    --etm-primary: #004a93;
+    --etm-primary-dark: #003366;
+    --etm-border: #e4e7ec;
+    --etm-text: #344054;
+    --etm-heading: #101828;
+    --etm-muted: #667085;
+}
+
+.etm-master-page .etm-dt-card {
+    border-radius: 12px;
+}
+
+.etm-master-page .etm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dt-buttons,
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_length {
+    display: none !important;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_filter:not(.programme-dt-search .dataTables_filter) {
+    display: none !important;
+}
+
+/* Single header row — hide duplicate thead from DataTables scrollX */
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollBody thead,
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th,
+.etm-master-page #employeetypemaster-table thead th {
+    background-color: #f8f9fa;
+    color: var(--etm-heading);
+    font-weight: 600;
+    font-size: 0.875rem;
+    border-bottom: 1px solid var(--etm-border);
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+}
+
+.etm-master-page #employeetypemaster-table tbody td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    color: var(--etm-text);
+    font-size: 0.9375rem;
+}
+
+.etm-master-page #employeetypemaster-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.etm-master-page #employeetypemaster-table tbody td:first-child {
+    color: var(--etm-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.etm-master-page #employeetypemaster-table tbody td:nth-child(2) {
+    font-weight: 500;
+    color: var(--etm-heading);
+    text-align: left !important;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(2),
+.etm-master-page #employeetypemaster-table thead th:nth-child(2) {
+    text-align: left !important;
+}
+
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(3),
+.etm-master-page #employeetypemaster-table_wrapper .dataTables_scrollHead thead th:nth-child(4),
+.etm-master-page #employeetypemaster-table thead th:nth-child(3),
+.etm-master-page #employeetypemaster-table thead th:nth-child(4),
+.etm-master-page #employeetypemaster-table tbody td:nth-child(3),
+.etm-master-page #employeetypemaster-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.etm-master-page .etm-type-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.etm-master-page .etm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+}
+
+.etm-master-page .etm-action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.etm-master-page .etm-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.etm-master-page .etm-action-edit {
+    color: var(--etm-primary);
+}
+
+.etm-master-page .etm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--etm-primary-dark);
+}
+
+.etm-master-page .etm-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.etm-master-page .etm-action-switch-wrap .form-check-input:focus {
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+}
+
+.etm-master-page .etm-status-badge {
+    min-width: 4.5rem;
+}
+
+.etm-master-page .programme-dt-footer .pagination .page-item.active .page-link,
+.etm-master-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+@media (max-width: 767.98px) {
+    .etm-master-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .etm-master-page .etm-action-btn {
+        transition: none;
+    }
+
+    .etm-master-page .etm-action-btn:hover {
+        transform: none;
+    }
+}
+
+/* Add / Edit modal — pixel match to master form reference */
+.etm-type-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+.etm-type-modal-content {
+    border-radius: 1.5rem !important;
+    overflow: hidden;
+    box-shadow: 0 12px 40px rgba(16, 24, 40, 0.12) !important;
+}
+
+.etm-type-modal-content .modal-header {
+    padding: 1.25rem 1.5rem;
+    border-bottom: 1px solid var(--etm-border);
+}
+
+.etm-type-modal-content .modal-title {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #101828;
+    letter-spacing: -0.01em;
+}
+
+.etm-type-modal-content .modal-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+}
+
+.etm-type-modal-content .modal-footer {
+    padding: 1rem 1.5rem 1.25rem;
+    border-top: 1px solid var(--etm-border);
+    background: #fff;
+}
+
+.etm-type-modal-content .cgt-field-label {
+    font-weight: 600;
+    color: #101828;
+}
+
+.etm-type-modal-content .form-control {
+    min-height: 44px;
+    border: 1px solid #d0d5dd;
+    padding: 0.625rem 0.875rem;
+    font-size: 0.9375rem;
+    color: #101828;
+}
+
+.etm-type-modal-content .form-control.is-invalid {
+    border-color: #fda29b;
+}
+
+.etm-type-modal-content .btn-outline-primary,
+.etm-type-modal-content .btn-primary {
+    min-height: 44px;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    padding: 0.625rem 1.5rem;
+}
+
+@media (max-width: 575.98px) {
+    .etm-type-modal-content .modal-footer {
+        flex-direction: column-reverse;
+        align-items: stretch;
+    }
+
+    .etm-type-modal-content .modal-footer .btn {
+        width: 100%;
+    }
+}
