@@ -37,26 +37,26 @@
     </div>
 </div>
 
-<div class="modal fade" id="etmTypeModal" tabindex="-1" aria-labelledby="etmTypeModalLabel" aria-hidden="true"
+<div class="modal fade etm-type-modal" id="etmTypeModal" tabindex="-1" aria-labelledby="etmTypeModalLabel" aria-hidden="true"
     data-bs-backdrop="static" data-bs-keyboard="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content etm-form-modal border-0 shadow-lg">
+    <div class="modal-dialog modal-dialog-centered etm-type-modal-dialog">
+        <div class="modal-content cgt-form-modal etm-type-modal-content border-0 shadow-lg">
             <div class="modal-header">
                 <h5 class="modal-title mb-0" id="etmTypeModalLabel">Add Employee Type</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <form id="etmTypeForm" novalidate>
+                <form id="etmTypeForm" class="etm-type-modal-form" novalidate>
                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="pk" id="etm_pk" value="">
 
-                    <label for="etm_employee_type_name" class="form-label etm-field-label">
+                    <label for="etm_employee_type_name" class="form-label cgt-field-label mb-2">
                         Employee Type Name <span class="text-danger">*</span>
                     </label>
                     <input type="text"
                         name="employee_type_name"
                         id="etm_employee_type_name"
-                        class="form-control"
+                        class="form-control rounded-3"
                         placeholder="eg. General Medicine"
                         autocomplete="off">
                     <small class="text-danger d-none mt-1" id="etm_employee_type_name_error">
@@ -64,7 +64,7 @@
                     </small>
                 </form>
             </div>
-            <div class="modal-footer border-0 gap-2 justify-content-end">
+            <div class="modal-footer gap-2 justify-content-end">
                 <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
                 <button type="button" class="btn btn-primary rounded-3 px-4" id="etmFormSubmit">Create Employee Type</button>
             </div>

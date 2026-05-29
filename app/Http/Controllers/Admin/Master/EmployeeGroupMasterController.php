@@ -16,7 +16,7 @@ class EmployeeGroupMasterController extends Controller
     }
     public function create()
     {
-        return view('admin.master.employee_group.create');
+        return redirect()->route('master.employee.group.index', ['open_egm_modal' => 'add']);
     }
 
     public function store(Request $request)
@@ -37,6 +37,10 @@ class EmployeeGroupMasterController extends Controller
         $employeeGroup = $id ? EmployeeGroupMaster::find($id) : new EmployeeGroupMaster();
 
         if ($id && !$employeeGroup) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Employee Group not found.'], 404);
+            }
+
             return redirect()->back()->with('error', 'Employee Group not found.');
         }
 
@@ -45,13 +49,29 @@ class EmployeeGroupMasterController extends Controller
 
         $message = $id ? 'Employee Group updated successfully.' : 'Employee Group created successfully.';
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
         return redirect()->route('master.employee.group.index')->with('success', $message);
     }
     public function edit($id)
     {
-        $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
-        // dd($employeeGroupMaster);
-        return view('admin.master.employee_group.create', compact('employeeGroupMaster'));
+        try {
+            $employeeGroupMaster = EmployeeGroupMaster::findOrFail(decrypt($id));
+
+            return redirect()->route('master.employee.group.index', [
+                'open_egm_modal' => 'edit',
+                'egm_pk' => $id,
+                'egm_name' => $employeeGroupMaster->emp_group_name ?? $employeeGroupMaster->group_name ?? '',
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->route('master.employee.group.index')
+                ->with('error', 'Failed to edit employee group: ' . $e->getMessage());
+        }
     }
 
     public function update(Request $request, $id)
