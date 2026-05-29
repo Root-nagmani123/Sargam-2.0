@@ -3,407 +3,214 @@
 @endphp
 @extends('admin.layouts.master')
 
-@section('title', 'Feedback Database - Sargam | Lal Bahadur')
+@section('title', 'Feedback Database')
 
 @section('setup_content')
-    <style>
-        /* ── Variables ── */
-        :root {
-            --fb-primary: #0b4f8a;
-            --fb-primary-light: #eef4fb;
-            --fb-border: #d0d7de;
-        }
+    @php
+        $courseType = $courseType ?? 'current';
+    @endphp
 
-        /* ── Filter Card ── */
-        .filter-card {
-            border: 0;
-            border-radius: var(--bs-border-radius-lg);
-            box-shadow: 0 1px 4px rgba(0,0,0,.06);
-            overflow: hidden;
-        }
-
-        .filter-card .card-header {
-            background: var(--fb-primary);
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.875rem;
-            padding: 0.7rem 1rem;
-            border: 0;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-        }
-
-        .filter-card .card-body {
-            padding: 1.1rem 1rem;
-        }
-
-        .filter-card .form-label {
-            font-size: 0.78rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-            color: var(--bs-secondary-color);
-            margin-bottom: 0.25rem;
-        }
-
-        .filter-card .form-select,
-        .filter-card .form-control {
-            font-size: 0.85rem;
-            border-color: var(--fb-border);
-            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
-        }
-
-        .filter-card .form-select:focus,
-        .filter-card .form-control:focus {
-            border-color: var(--fb-primary);
-            box-shadow: 0 0 0 0.2rem rgba(11,79,138,.12);
-        }
-
-        /* ── Content Card ── */
-        .content-card {
-            border: 0;
-            border-radius: var(--bs-border-radius-lg);
-            box-shadow: 0 1px 4px rgba(0,0,0,.06);
-            overflow: hidden;
-        }
-
-        .content-card .card-header {
-            background: var(--fb-primary-light);
-            font-weight: 600;
-            font-size: 0.95rem;
-            padding: 0.7rem 1rem;
-            border-bottom: 1px solid rgba(11,79,138,.1);
-        }
-
-        /* ── Data Table ── */
-        #feedbackTable {
-            font-size: 0.85rem;
-            margin-bottom: 0;
-        }
-
-        #feedbackTable thead th {
-            font-weight: 600;
-            font-size: 0.78rem;
-            text-transform: uppercase;
-            letter-spacing: 0.04em;
-            color: var(--bs-secondary-color);
-            border-bottom: 2px solid rgba(11,79,138,.15);
-            padding: 0.65rem 0.75rem;
-            white-space: nowrap;
-            vertical-align: middle;
-        }
-
-        #feedbackTable tbody td {
-            padding: 0.65rem 0.75rem;
-            vertical-align: middle;
-            border-color: var(--bs-border-color-translucent);
-        }
-
-        #feedbackTable tbody tr {
-            transition: background-color 0.15s ease;
-        }
-
-        #feedbackTable tbody tr:hover {
-            background-color: rgba(11,79,138,.03) !important;
-        }
-
-        /* ── Loading Overlay ── */
-        .loading-overlay {
-            display: none;
-            position: absolute;
-            inset: 0;
-            background: rgba(255,255,255,.75);
-            z-index: 10;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .loading-overlay.active {
-            display: flex;
-        }
-
-        .loading-spinner {
-            width: 44px;
-            height: 44px;
-            border: 4px solid var(--fb-primary-light);
-            border-top: 4px solid var(--fb-primary);
-            border-radius: 50%;
-            animation: spin 0.8s linear infinite;
-        }
-
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
-
-        /* ── Percentage Badges ── */
-        .percentage-badge {
-            display: inline-block;
-            min-width: 3.6rem;
-            padding: 0.25em 0.55em;
-            border-radius: var(--bs-border-radius-pill);
-            font-size: 0.8rem;
-            font-weight: 700;
-            text-align: center;
-        }
-
-        .percentage-excellent { background: rgba(25,135,84,.1); color: #146c43; }
-        .percentage-good      { background: rgba(180,83,9,.1);  color: #92400e; }
-        .percentage-average   { background: rgba(220,53,69,.1);  color: #b02a37; }
-
-        .filter-card .card-footer .disabled {
-            pointer-events: none;
-            opacity: 0.55;
-        }
-
-        /* ── Dynamic Filter Transition ── */
-        .dynamic-filter-container {
-            transition: all 0.3s ease;
-        }
-
-        /* ── Pagination ── */
-        .pagination .page-link {
-            font-size: 0.82rem;
-            color: var(--fb-primary);
-            border-color: var(--fb-border);
-        }
-
-        .pagination .page-item.active .page-link {
-            background-color: var(--fb-primary);
-            border-color: var(--fb-primary);
-            color: #fff;
-        }
-
-        .pagination .page-link:hover {
-            background-color: var(--fb-primary-light);
-        }
-
-        /* ── Table Controls ── */
-        .table-controls .form-select,
-        .table-controls .form-control {
-            font-size: 0.82rem;
-            border-color: var(--fb-border);
-        }
-
-        .table-controls .form-select:focus,
-        .table-controls .form-control:focus {
-            border-color: var(--fb-primary);
-            box-shadow: 0 0 0 0.2rem rgba(11,79,138,.12);
-        }
-
-        /* ── Button Overrides ── */
-        .btn-primary { background: var(--fb-primary); border-color: var(--fb-primary); }
-        .btn-primary:hover { background: #083e6c; border-color: #083e6c; }
-
-        .record-count {
-            font-size: 0.8rem;
-            color: var(--bs-secondary-color);
-        }
-    </style>
-
-    <div class="container-fluid py-3 feedback-database-page">
+    <div class="container-fluid fdb-master-page py-3 px-3 px-lg-4">
         <x-breadcrum title="Feedback Database"></x-breadcrum>
 
         @if (session('error'))
-            <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+            <div class="alert alert-danger alert-dismissible fade show mb-3 rounded-3" role="alert">
                 {{ session('error') }}
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         @endif
 
-        {{-- ── TOP FILTER BAR ── --}}
-        <div class="card filter-card mb-3">
-            <div class="card-header">
-                <i class="fas fa-sliders-h"></i> Filters
-            </div>
-            <div class="card-body">
-                <div class="row g-3 align-items-end">
-                    @php
-                        $courseType = $courseType ?? 'current';
-                    @endphp
-                    {{-- Active / Archived (same logic as Faculty Feedback Average) --}}
-                    <div class="col-12">
-                        <label class="form-label">Course list</label>
-                        <div class="d-flex flex-wrap gap-4">
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" name="course_type" value="current"
-                                       id="fdbCourseCurrent" {{ $courseType === 'current' ? 'checked' : '' }}>
-                                <label class="form-check-label" for="fdbCourseCurrent">Active (current) courses</label>
-                            </div>
-                            <div class="form-check mb-0">
-                                <input class="form-check-input" type="radio" name="course_type" value="archived"
-                                       id="fdbCourseArchived" {{ $courseType === 'archived' ? 'checked' : '' }}>
-                                <label class="form-check-label" for="fdbCourseArchived">Archived courses</label>
-                            </div>
-                        </div>
-                    </div>
+        <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3 mb-4">
+            <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white shadow-sm mb-0 fdb-status-tabs" role="group" aria-label="Course status">
+                <li class="nav-item" role="presentation">
+                    <input class="btn-check" type="radio" name="course_type" value="current" id="fdbCourseCurrent"
+                        {{ $courseType === 'current' ? 'checked' : '' }}>
+                    <label class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill mb-0" for="fdbCourseCurrent">Active</label>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <input class="btn-check" type="radio" name="course_type" value="archived" id="fdbCourseArchived"
+                        {{ $courseType === 'archived' ? 'checked' : '' }}>
+                    <label class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill mb-0" for="fdbCourseArchived">Archived</label>
+                </li>
+            </ul>
 
-                    {{-- Program Name --}}
-                    <div class="col-lg-3 col-md-4">
-                        <label class="form-label">Program Name <span class="text-danger">*</span></label>
-                        <select class="form-select" id="courseSelect" name="course_id">
-                            <option value="">Select Program</option>
-                            @if (isset($courses) && $courses->count() > 0)
-                                @foreach ($courses as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                                @endforeach
-                            @else
-                                <option value="" disabled>No courses available</option>
-                            @endif
-                        </select>
-                    </div>
-
-                    {{-- Filter By --}}
-                    <div class="col-lg-2 col-md-3">
-                        <label class="form-label">Filter By</label>
-                        <select class="form-select" id="searchParam" name="search_param">
-                            <option value="all">All Records</option>
-                            <option value="faculty">Faculty</option>
-                            <option value="topic">Topic</option>
-                        </select>
-                    </div>
-
-                    {{-- Faculty Filter (Hidden by default) --}}
-                    <div class="col-lg-3 col-md-3 dynamic-filter-container d-none" id="facultyFilterContainer">
-                        <label class="form-label">Select Faculty</label>
-                        <select class="form-select" id="facultyFilter" name="faculty_id">
-                            <option value="">All Faculties</option>
-                            @if (isset($faculties) && $faculties->count() > 0)
-                                @foreach ($faculties as $faculty)
-                                    <option value="{{ $faculty->pk }}">{{ $faculty->full_name }}</option>
-                                @endforeach
-                            @endif
-                        </select>
-                    </div>
-
-                    {{-- Topic Filter (Hidden by default) --}}
-                    <div class="col-lg-3 col-md-3 dynamic-filter-container d-none" id="topicFilterContainer">
-                        <label class="form-label">Enter Topic</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="topicFilter" name="topic_value"
-                                placeholder="Type topic name...">
-                            <button class="btn btn-outline-secondary btn-sm" type="button" id="clearTopicBtn">
-                                <i class="material-icons menu-icon material-symbols-rounded">close</i>
-                            </button>
-                        </div>
-                    </div>
-
-                    {{-- Clear Filters --}}
-                    <div class="col-lg-2 col-md-2">
-                        <button type="button" class="btn btn-outline-secondary w-100" id="clearFiltersBtn">
-                            <i class="bi bi-x-circle me-1"></i> Clear Filters
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div class="card-footer bg-body-tertiary bg-opacity-50 border-top py-3 px-3 d-flex flex-wrap gap-2 align-items-center justify-content-end">
+            <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
                 <button type="button" id="feedbackDbPrintBtn"
-                        class="btn btn-outline-primary rounded-1 px-3 d-inline-flex align-items-center gap-1"
-                        title="Print report (LBSNAA layout)">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">print</span>
-                    <span>Print</span>
+                    class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm"
+                    title="Print report (LBSNAA layout)">
+                    <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
                 </button>
                 <a href="#" id="feedbackDbPdfLink" target="_blank" rel="noopener"
-                   class="btn btn-outline-danger rounded-1 px-3 d-inline-flex align-items-center gap-1"
-                   title="Download PDF">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</span>
-                    <span>PDF</span>
+                    class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm"
+                    title="Download PDF">
+                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
                 </a>
-                <a href="#" id="feedbackDbExcelLink"
-                   class="btn btn-success rounded-1 px-3 d-inline-flex align-items-center gap-1 shadow-sm"
-                   title="Export to Excel">
-                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</span>
-                    <span>Export Excel</span>
-                </a>
+                <div class="dropdown">
+                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-1 px-2 py-2" data-bs-toggle="dropdown" aria-label="More export options">
+                        <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2">
+                        <li>
+                            <a href="#" id="feedbackDbExcelLink"
+                                class="dropdown-item rounded-1 mx-2 py-2 d-inline-flex align-items-center"
+                                title="Export to Excel">
+                                <i class="bi bi-file-earmark-spreadsheet me-2 text-primary" aria-hidden="true"></i>Export Excel
+                            </a>
+                        </li>
+                    </ul>
+                </div>
             </div>
         </div>
 
-        {{-- ── CONTENT TABLE CARD ── --}}
-        <div class="card content-card">
-            <div class="card-header d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2">
-                <span class="d-flex align-items-center gap-2">
-                    <i class="fas fa-database text-primary"></i>
-                    Faculty Feedback Database
-                </span>
-            </div>
-            <div class="card-body p-0">
-                {{-- TABLE CONTROLS --}}
-                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 px-3 py-2 table-controls border-bottom"
-                     style="background: #fafbfc;">
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="text-muted mb-0" style="font-size: 0.82rem;">Show</label>
-                        <select class="form-select form-select-sm d-inline-block w-auto" id="perPageSelect">
+        <div class="card fdb-dt-card border-0 shadow-sm rounded-3">
+            <div class="card-body p-3 p-md-4">
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar fdb-filters-row w-100">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="programme-dt-filters-label">Filters</span>
+
+                        <div class="programme-dt-filter-select">
+                            <label for="courseSelect" class="visually-hidden">Program Name</label>
+                            <select class="form-select fdb-filter-select" id="courseSelect" name="course_id" aria-label="Program name">
+                                <option value="">Program Name</option>
+                                @if (isset($courses) && $courses->count() > 0)
+                                    @foreach ($courses as $course)
+                                        <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                    @endforeach
+                                @else
+                                    <option value="" disabled>No courses available</option>
+                                @endif
+                            </select>
+                        </div>
+
+                        <div class="programme-dt-filter-select">
+                            <label for="searchParam" class="visually-hidden">Filter By</label>
+                            <select class="form-select fdb-filter-select" id="searchParam" name="search_param" aria-label="Filter by">
+                                <option value="all">Filter By</option>
+                                <option value="faculty">Faculty</option>
+                                <option value="topic">Topic</option>
+                            </select>
+                        </div>
+
+                        <div class="programme-dt-filter-select dynamic-filter-container d-none" id="facultyFilterContainer">
+                            <label for="facultyFilter" class="visually-hidden">Select Faculty</label>
+                            <select class="form-select fdb-filter-select" id="facultyFilter" name="faculty_id" aria-label="Select faculty">
+                                <option value="">All Faculties</option>
+                                @if (isset($faculties) && $faculties->count() > 0)
+                                    @foreach ($faculties as $faculty)
+                                        <option value="{{ $faculty->pk }}">{{ $faculty->full_name }}</option>
+                                    @endforeach
+                                @endif
+                            </select>
+                        </div>
+
+                        <div class="programme-dt-filter-select fdb-topic-filter dynamic-filter-container d-none" id="topicFilterContainer">
+                            <label for="topicFilter" class="visually-hidden">Enter Topic</label>
+                            <div class="input-group fdb-topic-input-group">
+                                <input type="text" class="form-control fdb-filter-input" id="topicFilter" name="topic_value"
+                                    placeholder="Topic name..." aria-label="Enter topic">
+                                <button class="btn btn-outline-secondary fdb-topic-clear" type="button" id="clearTopicBtn" aria-label="Clear topic">
+                                    <i class="bi bi-x-lg" aria-hidden="true"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <button type="button" class="btn programme-dt-btn-reset flex-shrink-0" id="clearFiltersBtn">Reset Filters</button>
+                    </div>
+
+                    <div class="fdb-table-search ms-xl-auto flex-shrink-0">
+                        <div class="dropdown fdb-search-slot">
+                            <button type="button"
+                                class="btn fdb-search-trigger"
+                                id="fdbSearchTrigger"
+                                data-bs-toggle="dropdown"
+                                data-bs-auto-close="outside"
+                                aria-expanded="false"
+                                aria-label="Search table">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 p-3 fdb-table-search-menu">
+                                <label for="tableSearch" class="form-label small text-secondary mb-2">Search</label>
+                                <input type="search"
+                                    class="form-control shadow-none"
+                                    id="tableSearch"
+                                    placeholder="Search table..."
+                                    autocomplete="off"
+                                    aria-label="Search within table">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="programme-dt-panel fdb-table-panel position-relative">
+                    <div class="loading-overlay" id="loadingOverlay" aria-hidden="true">
+                        <div class="spinner-border text-primary" role="status" style="width: 2.5rem; height: 2.5rem;">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive" id="tableContainer">
+                        <table class="table align-middle mb-0 w-100 programme-dt-table fdb-feedback-table" id="feedbackTable">
+                            <thead>
+                                <tr>
+                                    <th scope="col" class="fdb-col-sno">S. No.</th>
+                                    <th scope="col">Faculty Name</th>
+                                    <th scope="col">Course</th>
+                                    <th scope="col">Faculty Address</th>
+                                    <th scope="col">Topic</th>
+                                    <th scope="col" class="text-center">Content %</th>
+                                    <th scope="col" class="text-center">Presentation %</th>
+                                    <th scope="col" class="text-center d-none d-lg-table-cell">Participants</th>
+                                    <th scope="col" class="text-center d-none d-xl-table-cell">Session Date</th>
+                                    <th scope="col" class="text-center">Comments</th>
+                                </tr>
+                            </thead>
+                            <tbody id="feedbackTableBody">
+                                <tr>
+                                    <td colspan="10" class="text-center text-muted py-5">
+                                        <div class="py-3 fdb-empty-state">
+                                            <i class="bi bi-database d-block mb-3 fdb-empty-icon" aria-hidden="true"></i>
+                                            <p class="mb-0 fw-medium text-secondary">Select a program to load feedback data</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="fdb-table-footer programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 pt-3 border-top"
+                    id="paginationSection" style="display: none;">
+                    <nav aria-label="Feedback pagination" class="fdb-pagination-wrap">
+                        <ul class="pagination fdb-pagination mb-0" id="paginationLinks"></ul>
+                    </nav>
+                    <div class="fdb-records-info programme-dt-count text-secondary small d-flex align-items-center gap-2 flex-wrap justify-content-end">
+                        <span>Showing</span>
+                        <select class="form-select form-select-sm fdb-page-size-select shadow-none" id="perPageSelect" aria-label="Items per page">
                             <option value="10">10</option>
                             <option value="25">25</option>
                             <option value="50">50</option>
                             <option value="100">100</option>
+                            <option value="200">200</option>
                         </select>
-                        <label class="text-muted mb-0" style="font-size: 0.82rem;">entries</label>
-                    </div>
-                    <div class="d-flex align-items-center gap-2">
-                        <label class="text-muted mb-0" style="font-size: 0.82rem;"><i class="fas fa-search"></i></label>
-                        <input type="text" class="form-control form-control-sm" id="tableSearch"
-                            placeholder="Search within table..." style="min-width: 180px;">
+                        <span>of <strong class="text-body" id="paginationInfo">0</strong> items</span>
                     </div>
                 </div>
-
-                {{-- TABLE --}}
-                <div class="table-responsive position-relative" id="tableContainer">
-                    {{-- Loading Overlay --}}
-                    <div class="loading-overlay" id="loadingOverlay">
-                        <div class="loading-spinner"></div>
-                    </div>
-                    <table class="table table-hover align-middle mb-0" id="feedbackTable">
-                        <thead class="table-light">
-                            <tr>
-                                <th class="text-center" style="width:50px">S.No.</th>
-                                <th>Faculty Name</th>
-                                <th>Course Name</th>
-                                <th>Faculty Address</th>
-                                <th>Topic</th>
-                                <th class="text-center">Content (%)</th>
-                                <th class="text-center">Presentation (%)</th>
-                                <th class="text-center">Participants</th>
-                                <th class="text-center">Session Date</th>
-                                <th class="text-center">Comments</th>
-                            </tr>
-                        </thead>
-                        <tbody id="feedbackTableBody">
-                                    <tr>
-                                        <td colspan="10" class="text-center text-muted py-5">
-                                            <div class="py-3">
-                                                <i class="fas fa-database fa-2x mb-2 opacity-25 d-block"></i>
-                                                Select a program to load feedback data
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {{-- PAGINATION --}}
-                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center px-3 py-2 border-top"
-                             id="paginationSection" style="display: none; background: #fafbfc;">
-                            <small class="text-muted record-count" id="paginationInfo">Showing 0 to 0 of 0 entries</small>
-                            <nav aria-label="Feedback pagination">
-                                <ul class="pagination pagination-sm mb-0 mt-2 mt-sm-0" id="paginationLinks">
-                                </ul>
-                            </nav>
-                        </div>
-                    </div>
-                </div>
+            </div>
+        </div>
     </div>
 
-    {{-- Comments Modal --}}
     <div class="modal fade" id="commentsModal" tabindex="-1" aria-labelledby="commentsModalLabel" aria-hidden="true">
-        <div class="modal-dialog modal-lg modal-dialog-scrollable">
-            <div class="modal-content border-0 shadow">
-                <div class="modal-header" style="background: var(--fb-primary); color: #fff;">
-                    <h6 class="modal-title mb-0" id="commentsModalLabel"><i class="fas fa-comments me-2"></i>Feedback Comments</h6>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content border-0 shadow-lg rounded-3 fdb-comments-modal">
+                <div class="modal-header border-bottom px-4 py-3">
+                    <h5 class="modal-title fw-semibold mb-0" id="commentsModalLabel">Feedback Comments</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
-                    <div id="commentsContent"></div>
+                <div class="modal-body px-4 py-4">
+                    <div id="commentsContent" class="fdb-comments-content"></div>
+                </div>
+                <div class="modal-footer border-0 px-4 pb-4 pt-0 justify-content-end">
+                    <button type="button" class="btn btn-primary px-4 rounded-2 fdb-modal-close-btn" data-bs-dismiss="modal">Close</button>
                 </div>
             </div>
         </div>
@@ -449,6 +256,7 @@
 
             // Initialize
             initializeEventListeners();
+            fdbUpdateFilterSelectStyles();
             autoSelectFirstCourse();
             syncFeedbackDbExportLinks();
             syncFeedbackDbCourseTypeUrl();
@@ -506,6 +314,7 @@
                 safeBind('#courseSelect', 'change', function(e) {
                     e.preventDefault();
                     const courseId = $(this).val();
+                    fdbUpdateFilterSelectStyles();
                     if (courseId) {
                         currentFilters.course_id = courseId;
                         currentPage = 1;
@@ -613,6 +422,19 @@
                 $('input[name="course_type"]').on('change', function() {
                     reloadCourseListForType();
                 });
+
+                const searchTrigger = document.getElementById('fdbSearchTrigger');
+                if (searchTrigger) {
+                    const searchDropdown = searchTrigger.closest('.dropdown');
+                    if (searchDropdown) {
+                        searchDropdown.addEventListener('shown.bs.dropdown', function() {
+                            const tableSearch = document.getElementById('tableSearch');
+                            if (tableSearch) {
+                                tableSearch.focus();
+                            }
+                        });
+                    }
+                }
             }
 
             function reloadCourseListForType() {
@@ -639,7 +461,7 @@
                             return;
                         }
                         const sel = $('#courseSelect');
-                        sel.empty().append('<option value="">Select Program</option>');
+                        sel.empty().append('<option value="">Program Name</option>');
                         if (data.courses && data.courses.length > 0) {
                             data.courses.forEach(function(c) {
                                 const label = $('<div/>').text(c.course_name || '').html();
@@ -657,6 +479,7 @@
                         $('#topicFilter').val('');
                         $('.dynamic-filter-container').addClass('d-none').removeClass('d-block');
                         currentPage = 1;
+                        fdbUpdateFilterSelectStyles();
                         autoSelectFirstCourse();
                         syncFeedbackDbExportLinks();
                         syncFeedbackDbCourseTypeUrl();
@@ -729,6 +552,7 @@
                 $('#searchParam').val('all');
                 $('#facultyFilter').val('');
                 $('#topicFilter').val('');
+                $('#tableSearch').val('');
 
                 $('.dynamic-filter-container').addClass('d-none').removeClass('d-block');
 
@@ -740,8 +564,15 @@
                 };
                 currentPage = 1;
 
+                fdbUpdateFilterSelectStyles();
                 showInitialMessage();
                 syncFeedbackDbExportLinks();
+            }
+
+            function fdbUpdateFilterSelectStyles() {
+                $('#courseSelect, #searchParam, #facultyFilter').each(function() {
+                    $(this).toggleClass('fdb-filter-empty', !$(this).val());
+                });
             }
 
             function showInitialMessage() {
@@ -752,8 +583,8 @@
                 <tr>
                     <td colspan="10" class="text-center text-muted py-5">
                         <div class="py-3">
-                            <i class="fas fa-database fa-2x mb-2 opacity-25 d-block"></i>
-                            Select a program to view feedback data
+                            <i class="bi bi-database d-block mb-3 fdb-empty-icon opacity-50"></i>
+                            <p class="mb-0 fw-medium text-secondary">Select a program to view feedback data</p>
                         </div>
                     </td>
                 </tr>
@@ -763,8 +594,8 @@
                 <tr>
                     <td colspan="10" class="text-center text-muted py-5">
                         <div class="py-3">
-                            <i class="fas fa-exclamation-circle fa-2x mb-2 opacity-25 d-block"></i>
-                            No programs available. Please add courses first.
+                            <i class="bi bi-exclamation-circle d-block mb-3 fdb-empty-icon opacity-50"></i>
+                            <p class="mb-0 fw-medium text-secondary">No programs available. Please add courses first.</p>
                         </div>
                     </td>
                 </tr>
@@ -825,51 +656,51 @@
                 data.forEach((item, index) => {
                     const row = `
                 <tr>
-                    <td class="text-center">${((currentPage - 1) * perPage) + index + 1}</td>
+                    <td class="text-secondary fdb-col-sno">${((currentPage - 1) * perPage) + index + 1}</td>
                     <td>
-                        <a href="javascript:void(0)" class="link-primary fw-semibold faculty-link" 
+                        <a href="javascript:void(0)" class="fdb-faculty-name faculty-link"
                            data-faculty-id="${item.faculty_enc_id || ''}"
-                           title="View faculty details" style="color: var(--fb-primary);">
+                           title="View faculty details">
                             ${item.faculty_name}
                         </a>
                     </td>
-                    <td>${item.course_name}</td>
-                    <td>
-                        <small class="text-body-secondary">
+                    <td class="fdb-col-course">${item.course_name}</td>
+                    <td class="fdb-col-address">
+                        <span class="text-body-secondary small">
                             ${item.faculty_address || 'N/A'}
-                            ${item.faculty_email ? `<br><a href="mailto:${item.faculty_email}" class="text-muted">${item.faculty_email}</a>` : ''}
-                        </small>
+                            ${item.faculty_email ? `<br><a href="mailto:${item.faculty_email}" class="text-muted text-decoration-none">${item.faculty_email}</a>` : ''}
+                        </span>
                     </td>
-                    <td>
-                        <small class="text-truncate d-block" style="max-width: 200px;" 
-                               title="${item.subject_topic}">
-                            ${item.subject_topic}
-                        </small>
+                    <td class="fdb-col-topic">
+                        <span class="d-inline-block text-truncate fdb-topic-text" title="${escapeHtml(item.subject_topic || '')}">
+                            ${escapeHtml(item.subject_topic || '')}
+                        </span>
                     </td>
                     <td class="text-center">
-                        <span class="percentage-badge ${getPercentageClass(item.avg_content_percent)}">
+                        <span class="fdb-pct ${getPercentageClass(item.avg_content_percent)}">
                             ${formatPercentage(item.avg_content_percent)}
                         </span>
                     </td>
                     <td class="text-center">
-                        <span class="percentage-badge ${getPercentageClass(item.avg_presentation_percent)}">
+                        <span class="fdb-pct ${getPercentageClass(item.avg_presentation_percent)}">
                             ${formatPercentage(item.avg_presentation_percent)}
                         </span>
                     </td>
-                    <td class="text-center">
-                        <span class="badge bg-primary bg-opacity-10 text-primary fw-semibold">${item.participant_count}</span>
+                    <td class="text-center d-none d-lg-table-cell">
+                        <span class="badge rounded-pill fdb-participants-badge">${item.participant_count}</span>
                     </td>
-                    <td class="text-center">
+                    <td class="text-center text-secondary text-nowrap d-none d-xl-table-cell">
                         <small>${formatDate(item.session_date)}</small>
                     </td>
                     <td class="text-center">
-                        ${item.all_comments ? 
-                            `<button class="btn btn-sm btn-outline-primary view-comments-btn" 
+                        ${item.all_comments ?
+                            `<button type="button" class="btn btn-link btn-sm p-0 fdb-view-comments view-comments-btn"
                                      data-comments="${escapeHtml(item.all_comments)}"
-                                     style="border-radius: 20px; font-size: 0.75rem;">
-                                <i class="fas fa-comment-dots"></i> View
-                            </button>` : 
-                            '<span class="text-muted" style="font-size: 0.8rem;">—</span>'
+                                     title="View comments"
+                                     aria-label="View comments">
+                                <i class="bi bi-eye" aria-hidden="true"></i>
+                            </button>` :
+                            '<span class="text-muted">—</span>'
                         }
                     </td>
                 </tr>
@@ -883,16 +714,16 @@
                     const comments = $(this).data('comments');
                     const modalElement = document.getElementById('commentsModal');
                     if (modalElement) {
-                        $('#commentsContent').html(`
-                    <div style="max-height: 400px; overflow-y: auto;">
-                        ${comments.split(' | ').map((comment, i) => `
-                            <div class="d-flex gap-2 align-items-start border-bottom pb-2 mb-2">
-                                <span class="badge bg-primary bg-opacity-10 text-primary mt-1" style="min-width: 22px;">${i + 1}</span>
-                                <p class="mb-0 text-body-secondary" style="font-size: 0.88rem;">${comment}</p>
-                            </div>
-                        `).join('')}
-                    </div>
-                `);
+                        const parts = comments.split(' | ').filter(Boolean);
+                        $('#commentsContent').html(
+                            parts.length === 1
+                                ? `<p class="mb-0 text-body">${parts[0]}</p>`
+                                : `<div class="fdb-comments-list">${parts.map((comment, i) => `
+                                    <div class="fdb-comment-item ${i < parts.length - 1 ? 'border-bottom pb-3 mb-3' : ''}">
+                                        <p class="mb-0 text-body">${comment}</p>
+                                    </div>
+                                `).join('')}</div>`
+                        );
                         new bootstrap.Modal(modalElement).show();
                     }
                 });
@@ -914,9 +745,8 @@
                 totalRecords = data.total;
                 const totalPages = Math.ceil(totalRecords / perPage);
 
-                $('#paginationInfo').text(
-                    `Showing ${((currentPage - 1) * perPage) + 1} to ${Math.min(currentPage * perPage, totalRecords)} of ${totalRecords} entries`
-                );
+                $('#paginationInfo').text(totalRecords.toLocaleString());
+                $('#perPageSelect').val(String(perPage));
 
                 const paginationLinks = $('#paginationLinks');
                 if (!paginationLinks.length) return;
@@ -985,8 +815,8 @@
             <tr>
                 <td colspan="10" class="text-center text-muted py-5">
                     <div class="py-3">
-                        <i class="fas fa-search fa-2x mb-2 opacity-25 d-block"></i>
-                        No feedback data found for the selected criteria
+                        <i class="bi bi-search d-block mb-3 fdb-empty-icon opacity-50"></i>
+                        <p class="mb-0 fw-medium text-secondary">No feedback data found for the selected criteria</p>
                     </div>
                 </td>
             </tr>
@@ -998,8 +828,8 @@
             <tr>
                 <td colspan="10" class="text-center text-danger py-5">
                     <div class="py-3">
-                        <i class="fas fa-exclamation-triangle fa-2x mb-2 opacity-50 d-block"></i>
-                        ${message}
+                        <i class="bi bi-exclamation-triangle d-block mb-3 fdb-empty-icon opacity-50"></i>
+                        <p class="mb-0 fw-medium text-danger">${message}</p>
                     </div>
                 </td>
             </tr>
@@ -1008,14 +838,14 @@
 
             function formatPercentage(value) {
                 const num = parseFloat(value) || 0;
-                return num.toFixed(2) + '%';
+                return num.toFixed(2);
             }
 
             function getPercentageClass(value) {
                 const num = parseFloat(value) || 0;
-                if (num >= 90) return 'percentage-excellent';
-                if (num >= 80) return 'percentage-good';
-                return 'percentage-average';
+                if (num >= 70) return 'fdb-pct-good';
+                if (num >= 25) return 'fdb-pct-average';
+                return 'fdb-pct-low';
             }
 
             function formatDate(dateString) {
