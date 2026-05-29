@@ -1,0 +1,263 @@
+/* Faculty listing — programme-dt reference layout */
+.fc-index-page {
+    --fc-primary: #004a93;
+    --fc-primary-dark: #003366;
+    --fc-border: #e4e7ec;
+    --fc-text: #344054;
+    --fc-heading: #101828;
+    --fc-muted: #667085;
+    --fc-danger: #d92d20;
+    --fc-info: #1570ef;
+}
+
+.fc-index-page .fc-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--fc-border) !important;
+}
+
+.fc-index-page .fc-toolbar-actions {
+    margin-bottom: 0.25rem;
+}
+
+.fc-index-page .fc-btn-outline {
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--fc-primary);
+    border: 1px solid var(--fc-primary);
+    border-radius: 8px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.fc-index-page .fc-btn-outline:hover {
+    background: #f0f6fc;
+    border-color: var(--fc-primary-dark);
+    color: var(--fc-primary-dark);
+}
+
+.fc-index-page .fc-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.fc-index-page #faculty-table_wrapper .dt-buttons,
+.fc-index-page #faculty-table_wrapper .dataTables_length {
+    display: none !important;
+}
+
+.fc-index-page #faculty-table_wrapper .dataTables_filter:not(.programme-dt-search .dataTables_filter) {
+    display: none !important;
+}
+
+.fc-index-page #faculty-table_wrapper .dataTables_scrollBody thead,
+.fc-index-page #faculty-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.fc-index-page #faculty-table_wrapper .dataTables_scrollHead thead th,
+.fc-index-page #faculty-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--fc-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.fc-index-page #faculty-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.fc-index-page #faculty-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--fc-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.fc-index-page #faculty-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.fc-index-page #faculty-table thead th:first-child,
+.fc-index-page #faculty-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--fc-muted);
+    font-weight: 500;
+    width: 4.5rem;
+}
+
+.fc-index-page #faculty-table thead th:nth-child(2),
+.fc-index-page #faculty-table thead th:nth-child(3),
+.fc-index-page #faculty-table tbody td:nth-child(2),
+.fc-index-page #faculty-table tbody td:nth-child(3) {
+    text-align: left !important;
+}
+
+.fc-index-page #faculty-table tbody td:nth-child(3) {
+    font-weight: 500;
+    color: var(--fc-heading);
+}
+
+.fc-index-page #faculty-table thead th:nth-child(4),
+.fc-index-page #faculty-table thead th:nth-child(5),
+.fc-index-page #faculty-table thead th:nth-child(6),
+.fc-index-page #faculty-table thead th:nth-child(7),
+.fc-index-page #faculty-table tbody td:nth-child(4),
+.fc-index-page #faculty-table tbody td:nth-child(5),
+.fc-index-page #faculty-table tbody td:nth-child(6),
+.fc-index-page #faculty-table tbody td:nth-child(7) {
+    text-align: left !important;
+}
+
+.fc-index-page #faculty-table thead th:nth-child(8),
+.fc-index-page #faculty-table thead th:nth-child(9),
+.fc-index-page #faculty-table tbody td:nth-child(8),
+.fc-index-page #faculty-table tbody td:nth-child(9) {
+    text-align: center !important;
+}
+
+.fc-index-page #faculty-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.fc-index-page .fc-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.fc-index-page .fc-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.fc-index-page .fc-faculty-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.fc-index-page .fc-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.fc-index-page .fc-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.fc-index-page .fc-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.fc-index-page .fc-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.fc-index-page .fc-action-view {
+    color: var(--fc-info);
+}
+
+.fc-index-page .fc-action-view:hover {
+    background: #eff8ff;
+    color: #175cd3;
+}
+
+.fc-index-page .fc-action-edit {
+    color: var(--fc-primary);
+}
+
+.fc-index-page .fc-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--fc-primary-dark);
+}
+
+.fc-index-page .fc-action-delete {
+    color: var(--fc-danger);
+}
+
+.fc-index-page .fc-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.fc-index-page .fc-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.fc-index-page .fc-status-badge {
+    min-width: 4.5rem;
+}
+
+.fc-index-page .programme-dt-footer .pagination .page-item.active .page-link,
+.fc-index-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+@media (max-width: 767.98px) {
+    .fc-index-page .fc-toolbar-actions {
+        width: 100%;
+        justify-content: stretch !important;
+    }
+
+    .fc-index-page .fc-toolbar-actions .fc-btn-outline {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .fc-index-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fc-index-page .fc-action-btn {
+        transition: none;
+    }
+
+    .fc-index-page .fc-action-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}

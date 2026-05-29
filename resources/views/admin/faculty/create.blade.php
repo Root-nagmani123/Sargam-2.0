@@ -2,6 +2,11 @@
 
 @section('title', 'Faculty')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{{ asset('css/faculty-wizard-admin.css') }}?v={{ @filemtime(public_path('css/faculty-wizard-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
 <style>
 input.is-invalid {
@@ -17,7 +22,7 @@ input.is-invalid {
     cursor: pointer;
 }
 
-@media print {
+@@media print {
     body, html {
         margin: 0 !important;
         padding: 0 !important;
@@ -56,21 +61,45 @@ input.is-invalid {
 }
 
 </style>
-<div class="container-fluid" id="printFacultyFormData">
+<div class="container-fluid faculty-wizard-page pb-4" id="printFacultyFormData">
     <x-breadcrum title="Faculty" />
     <x-session_message />
-    <!-- start Vertical Steps Example -->
-    {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
-        <div class="card-body"> --}}
 
-            <form class="facultyForm">
-			  @csrf
-			  <input type="hidden" name="faculty_id" id="faculty_id" value="">
-                <div class="card">
-                    <div class="card-body">
-                        <h4 class="card-title">Personal Information</h4>
-                        <hr>
-                        <div class="row">
+    <div class="fw-wizard-shell">
+        <form class="facultyForm">
+            @csrf
+            <input type="hidden" name="faculty_id" id="faculty_id" value="">
+            <button type="button" id="saveFacultyForm" class="visually-hidden" tabindex="-1" aria-hidden="true">Save</button>
+
+            <div class="fw-wizard-native" id="facultyWizard">
+                <aside class="fw-step-nav" aria-label="Faculty form progress">
+                    <ul class="fw-step-nav-list list-unstyled mb-0">
+                        <li class="fw-step-nav-item is-active" data-goto-step="0">
+                            <span class="fw-step-nav-marker" aria-hidden="true">1</span>
+                            <span class="fw-step-nav-label">Personal Information</span>
+                        </li>
+                        <li class="fw-step-nav-item is-pending" data-goto-step="1">
+                            <span class="fw-step-nav-marker" aria-hidden="true">2</span>
+                            <span class="fw-step-nav-label">Qualifications Details</span>
+                        </li>
+                        <li class="fw-step-nav-item is-pending" data-goto-step="2">
+                            <span class="fw-step-nav-marker" aria-hidden="true">3</span>
+                            <span class="fw-step-nav-label">Experience Details</span>
+                        </li>
+                        <li class="fw-step-nav-item is-pending" data-goto-step="3">
+                            <span class="fw-step-nav-marker" aria-hidden="true">4</span>
+                            <span class="fw-step-nav-label">Bank Details</span>
+                        </li>
+                        <li class="fw-step-nav-item is-pending" data-goto-step="4">
+                            <span class="fw-step-nav-marker" aria-hidden="true">5</span>
+                            <span class="fw-step-nav-label">Other information</span>
+                        </li>
+                    </ul>
+                </aside>
+
+                <div class="fw-wizard-panel">
+                <div class="fw-step-pane is-active" id="fw-step-1" data-step="0">
+                        <div class="row fw-step-grid g-3">
                             <div class="col-md-6">
                                 <div class="mb-3">
 
@@ -173,30 +202,34 @@ input.is-invalid {
 
                                 </div>
                             </div>
-                            <div class="col-md-3">
-                                <div class="mb-3">
-
-                                    <x-input
-                                        name="fullname"
-                                        label="Full Name :"
-                                        placeholder="Full Name"
-                                        formLabelClass="form-label"
-                                        required="true"
-                                        labelRequired="true"
-                                        />
-
-                                </div>
-                            </div>
-                           <div class="col-md-3">
-                                <div class="mb-3">
-                                    <x-input
-                                        name="faculty_code"
-                                        label="Faculty Code :"
-                                        placeholder="Faculty Code"
-                                        formLabelClass="form-label"
-                                        class="bg-light"
-                                        readonly
-                                    />
+                            <div class="col-md-6">
+                                <div class="row g-3">
+                                    <div class="col-md-8">
+                                        <div class="mb-3">
+                                            <x-input
+                                                name="fullname"
+                                                label="Full Name :"
+                                                placeholder="Full Name"
+                                                formLabelClass="form-label"
+                                                required="true"
+                                                labelRequired="true"
+                                                formInputClass="bg-light"
+                                                readonly
+                                                />
+                                        </div>
+                                    </div>
+                                    <div class="col-md-4">
+                                        <div class="mb-3">
+                                            <x-input
+                                                name="faculty_code"
+                                                label="Faculty Code :"
+                                                placeholder="Faculty Code"
+                                                formLabelClass="form-label"
+                                                formInputClass="bg-light"
+                                                readonly
+                                                />
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -450,7 +483,7 @@ input.is-invalid {
 								 <div class="existing-photo"></div>
                             </div>
 
-                            <div class="col-md-6 mt-3">
+                            <div class="col-12 mt-1">
 
                                 <x-input
                                     type="file"
@@ -470,76 +503,51 @@ input.is-invalid {
                     <!-- Existing Document Link -->
                             <div class="existing-document mt-2"></div>
                         </div>
-
-
-                            </div>
                         </div>
-                    </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-body">
-                        <div>
-                            <h4 class="card-title">Qualification Details</h4>
-                            <hr>
-                            <div id="education_fields" class="my-4"></div>
-
-                            <div class="row degree-row" id="education_fields">
-                                <div class="col-12 col-sm-6 col-md-3">
-
+                <div class="fw-step-pane d-none" id="fw-step-2" data-step="1">
+                    <div class="fw-step-panel rounded-3 p-3 p-md-4">
+                            <div class="row degree-row g-3 align-items-end" id="education_fields">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         name="degree[]"
                                         label="Degree :"
-                                        placeholder="Degree Name"
+                                        placeholder="eg. B.Tech"
                                         formLabelClass="form-label"
                                         helperSmallText="Bachelors, Masters, PhD"
                                         />
-
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         name="university_institution_name[]"
                                         label="University/Institution Name :"
-                                        placeholder="University/Institution Name"
+                                        placeholder="eg. Delhi University"
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3">
-                                    {{-- <x-input
-                                        type="number"
-                                        name="year_of_passing[]"
-                                        label="Year of Passing :"
-                                        placeholder="Year of Passing"
-                                        formLabelClass="form-label"
-                                        min="1900"
-                                        max="{{ date('Y') }}"
-                                        step="1"
-                                        required="true"
-                                        /> --}}
-
+                                <div class="col-12 col-md-6">
                                     <x-select
                                         name="year_of_passing[]"
                                         label="Year of Passing :"
-                                        placeholder="Year of Passing"
+                                        placeholder="Select Year"
                                         formLabelClass="form-label"
                                         :options="$years"
                                         helperSmallText="Select the year of passing"
                                     />
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         type="number"
                                         min="0"
                                         max="100"
                                         name="percentage_CGPA[]"
                                         label="Percentage/CGPA"
-                                        placeholder="Percentage/CGPA"
+                                        placeholder="eg. 6.6"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3 mt-3">
-
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         type="file"
                                         name="certificate[]"
@@ -548,29 +556,25 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         helperSmallText="Please upload your certificates/documents, if any"
                                         />
-                                  </div>
-								  <div class="existing-certificate"></div>
-                                <div class="col-9">
-                                    <label for="Schoolname" class="form-label"></label>
-                                    <div class="mb-3 float-end">
-                                        <button onclick="education_fields();" class="btn btn-success fw-medium" type="button">
-                                            <i class="material-icons menu-icon">add</i>
+                                    <div class="existing-certificate"></div>
+                                </div>
+                                <div class="col-auto ms-md-auto">
+                                    <label class="form-label d-none d-md-block">&nbsp;</label>
+                                    <div class="mb-3">
+                                        <button onclick="education_fields();" class="btn fw-btn-add" type="button" title="Add qualification">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>
                             </div>
-
-
-                        </div>
                     </div>
                 </div>
-                <div class="card">
-                    <div class="card-body">
-                        <h4 class="card-title">Experience Details</h4>
-                            <hr>
+
+                <div class="fw-step-pane d-none" id="fw-step-3" data-step="2">
+                    <div class="fw-step-panel rounded-3 p-3 p-md-4">
                             <div id="experience_fields_wrapper" class="my-4"></div>
-                            <div class="row experience-row" id="experience_fields">
-                                <div class="col-12 col-sm-6 col-md-3">
+                            <div class="row experience-row g-3 align-items-end" id="experience_fields">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         name="experience[]"
                                         label="Years of Experience :"
@@ -578,17 +582,15 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3">
-
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         name="specialization[]"
                                         label="Area of Specialization :"
-                                        placeholder="Area of Specialization blade file"
+                                        placeholder="Area of Specialization"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         name="institution[]"
                                         label="Previous Institutions :"
@@ -596,16 +598,15 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         name="position[]"
                                         label="Position Held :"
                                         placeholder="Position Held"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3 mt-3">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         type="number"
                                         name="duration[]"
@@ -615,7 +616,7 @@ input.is-invalid {
                                         min="0"
                                         />
                                 </div>
-                                <div class="col-12 col-sm-6 col-md-3 mt-3">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         name="work[]"
                                         label="Nature of Work :"
@@ -623,12 +624,11 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-6">
-
-                                    <label for="Schoolname" class="form-label"></label>
-                                    <div class="mb-3 float-end">
-                                        <button onclick="experience_fields();" class="btn btn-success btn-sm" type="button">
-                                            <i class="material-icons menu-icon">add</i>
+                                <div class="col-auto ms-md-auto">
+                                    <label class="form-label d-none d-md-block">&nbsp;</label>
+                                    <div class="mb-3">
+                                        <button onclick="experience_fields();" class="btn fw-btn-add" type="button" title="Add experience">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -636,14 +636,9 @@ input.is-invalid {
                     </div>
                 </div>
 
-                <div class="card">
-                    <div class="card-body">
-
-                        <div>
-                            <h4 class="card-title">Bank Details</h4>
-                            <hr>
-                            <div class="row">
-                                <div class="col-6">
+                <div class="fw-step-pane d-none" id="fw-step-4" data-step="3">
+                            <div class="row fw-step-grid g-3">
+                                <div class="col-12 col-md-6">
                                     <x-input
                                         name="bankname"
                                         label="Bank Name :"
@@ -652,7 +647,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-6">
+                                <div class="col-12 col-md-6">
 
                                     <x-input
                                         type="text"
@@ -664,7 +659,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-6 mt-3">
+                                <div class="col-12 col-md-6">
 
                                     <x-input
                                         name="ifsccode"
@@ -674,7 +669,7 @@ input.is-invalid {
                                         />
 
                                 </div>
-                                <div class="col-6 mt-3">
+                                <div class="col-12 col-md-6">
 
                                     <x-input
                                         type="text"
@@ -685,15 +680,10 @@ input.is-invalid {
                                         />
                                 </div>
                             </div>
-                        </div>
-                    </div>
                 </div>
-                <div class="card">
-                    <div class="card-body">
-                        <div>
-                            <h4 class="card-title">Other information</h4>
-                            <hr>
-                            <div class="row">
+
+                <div class="fw-step-pane d-none" id="fw-step-5" data-step="4">
+                            <div class="row fw-step-grid g-3">
                                 <div class="col-12 col-md-6">
 
                                     <x-input
@@ -759,91 +749,118 @@ input.is-invalid {
                                         />
 
                                 </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
+                                <div class="col-12">
+                                    <label for="sector" class="form-label">Current Sector : <span class="text-danger">*</span></label>
+                                    <div class="mb-3">
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input success" type="radio" name="current_sector"
+                                                id="success-radio" value="1">
+                                            <label class="form-check-label" for="success-radio">Government Sector</label>
+                                        </div>
+                                        <div class="form-check form-check-inline">
+                                            <input class="form-check-input success" type="radio" name="current_sector"
+                                                id="success2-radio" value="2">
+                                            <label class="form-check-label" for="success2-radio">Private Sector</label>
+                                        </div>
+                                        <div id="current-sector-error-placeholder"></div>
+                                    </div>
+                                </div>
 
-<div class="card">
-     <div class="card-body">
-          <div class="row">
-               <div class="col-12">
-                    <label for="sector" class="form-label">Current Sector : <span class="text-danger">*</span></label>
-                    <div class="mb-3">
-                         <div class="form-check form-check-inline">
-						 <input class="form-check-input success"
-						 type="radio" name="current_sector"
-                         id="success-radio" value="1">
-
-                     <label class="form-check-label"
-					 for="success-radio">Government Sector</label>
-                      </div>
-                    <div class="form-check form-check-inline">
-                      <input class="form-check-input success"
-					  type="radio" name="current_sector"
-                       id="success2-radio" value="2" >
-                     <label class="form-check-label" for="success2-radio">Private Sector</label>
-                     </div>
-                     <div id="current-sector-error-placeholder"></div>
-                       </div>
-                </div>
-
-                 <div class="col-12">
-
-                                <label for="expertise" class="form-label">Area of Expertise :</label>
-                                <div class="mb-3 expertise-row">
-                                    {{-- faculties --}}
-                                    <x-checkbox
-                                        name="faculties[]"
-                                        label="Area of Expertise :"
-                                        formLabelClass="form-label"
-                                        :options="$faculties"
-                                        />
+                                <div class="col-12">
+                                    <label for="expertise" class="form-label">Area of Expertise :</label>
+                                    <div class="mb-3 expertise-row fw-expertise-grid">
+                                        <x-checkbox
+                                            name="faculties[]"
+                                            label="Area of Expertise :"
+                                            formLabelClass="form-label"
+                                            :options="$faculties"
+                                            />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                        <hr>
-		<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
-
-			<!--<button onclick="printFacultyForm()" class="btn btn-success d-flex align-items-center gap-2" type="button">
-				<i class="material-icons menu-icon">print</i>
-				Print
-			</button>-->
-
-			<!--<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
-				<i class="material-icons menu-icon">save</i>
-				Save
-			</button>-->
-
-			<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
-			<i class="material-icons menu-icon">save</i>
-			Save
-		</button>
-
-
-
-
-			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-2">
-				<i class="material-icons menu-icon">arrow_back</i>
-				Back
-			</a>
-
-		</div>
-
-
-
-                    </div>
                 </div>
 
-            </form>
-        {{-- </div>
-    </div> --}}
-    <!-- end Vertical Steps Example -->
+                <div class="fw-wizard-actions d-flex flex-wrap justify-content-end align-items-center gap-2">
+                    <a href="{{ route('faculty.index') }}" class="btn btn-outline-primary px-4">Cancel</a>
+                    <button type="button" class="btn btn-primary px-4" id="fwWizardPrimaryBtn">Save &amp; Next</button>
+                </div>
+                </div>
+            </div>
+        </form>
+    </div>
 </div>
 
-
 @endsection
+
+@push('scripts')
+<script>
+$(document).ready(function () {
+    var totalSteps = 5;
+    var currentStep = 0;
+
+    function updateStepNav() {
+        $('.fw-step-nav-item').each(function () {
+            var index = parseInt($(this).attr('data-goto-step'), 10);
+            $(this).removeClass('is-active is-done is-pending');
+            if (index < currentStep) {
+                $(this).addClass('is-done');
+            } else if (index === currentStep) {
+                $(this).addClass('is-active');
+            } else {
+                $(this).addClass('is-pending');
+            }
+        });
+    }
+
+    function showStep(stepIndex) {
+        if (stepIndex < 0 || stepIndex >= totalSteps) {
+            return;
+        }
+        currentStep = stepIndex;
+        $('.fw-step-pane').addClass('d-none').removeClass('is-active');
+        $('.fw-step-pane[data-step="' + stepIndex + '"]').removeClass('d-none').addClass('is-active');
+        updateStepNav();
+        $('#fwWizardPrimaryBtn').text(stepIndex === totalSteps - 1 ? 'Add Faculty' : 'Save & Next');
+        var $shell = $('.fw-wizard-shell');
+        if ($shell.length) {
+            $('html, body').animate({ scrollTop: $shell.offset().top - 72 }, 200);
+        }
+    }
+
+    $('#fwWizardPrimaryBtn').on('click', function () {
+        if (currentStep < totalSteps - 1) {
+            showStep(currentStep + 1);
+            return;
+        }
+        $('#saveFacultyForm').trigger('click');
+    });
+
+    $('.fw-step-nav-list').on('click', '.fw-step-nav-item.is-done', function () {
+        var target = parseInt($(this).attr('data-goto-step'), 10);
+        if (!isNaN(target)) {
+            showStep(target);
+        }
+    });
+
+    showStep(0);
+
+    $('#saveFacultyForm').on('click', function () {
+        setTimeout(function () {
+            var $paneWithError = $('.fw-step-pane').filter(function () {
+                return $(this).find('.is-invalid').length > 0;
+            }).first();
+            if ($paneWithError.length) {
+                var step = parseInt($paneWithError.attr('data-step'), 10);
+                if (!isNaN(step)) {
+                    showStep(step);
+                }
+            }
+        }, 100);
+    });
+});
+</script>
+@endpush
 
 @section('scripts')
 <script>

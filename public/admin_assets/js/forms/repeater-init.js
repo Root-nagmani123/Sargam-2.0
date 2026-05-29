@@ -5,9 +5,7 @@ var room = 1;
 function education_fields() {
     room++;
     var objTo = document.getElementById("education_fields");
-    objTo.setAttribute("class", "degree_container");
 
-    // Get current year
     const currentYear = new Date().getFullYear();
     let yearOptions = '<option value="">Select Year</option>';
     for (let y = currentYear; y >= 1950; y--) {
@@ -15,55 +13,51 @@ function education_fields() {
     }
 
     var divtest = document.createElement("div");
-    divtest.setAttribute("class", "row degree-row mb-3 removeclass" + room);
-    var rdiv = "removeclass" + room;
+    divtest.setAttribute("class", "row degree-row g-3 align-items-end mb-3 removeclass" + room);
 
     divtest.innerHTML =
-        '<form class="row">' +
-        '<div class="col-3">' +
-        '<label for="degree[]" class="form-label">Degree :</label>' +
+        '<div class="col-12 col-md-6">' +
+        '<label class="form-label">Degree :</label>' +
         '<div class="mb-3">' +
-        '<input type="text" class="form-control" name="degree[]" placeholder="Degree Name">' +
-        '<small>Bachelors, Masters, PhD</small>' +
+        '<input type="text" class="form-control" name="degree[]" placeholder="eg. B.Tech">' +
+        '<small class="text-muted">Bachelors, Masters, PhD</small>' +
         '</div></div>' +
 
-        '<div class="col-3">' +
-        '<label for="university_institution_name[]" class="form-label">University/Institution Name :</label>' +
+        '<div class="col-12 col-md-6">' +
+        '<label class="form-label">University/Institution Name :</label>' +
         '<div class="mb-3">' +
-        '<input type="text" class="form-control" name="university_institution_name[]" placeholder="University/Institution Name">' +
+        '<input type="text" class="form-control" name="university_institution_name[]" placeholder="eg. Delhi University">' +
         '</div></div>' +
 
-        '<div class="col-3">' +
+        '<div class="col-12 col-md-6">' +
         '<label class="form-label">Year of Passing :</label>' +
         '<div class="mb-3">' +
-        '<select name="year_of_passing[]" class="form-control" required>' +
+        '<select name="year_of_passing[]" class="form-select">' +
         yearOptions +
         '</select>' +
         '</div></div>' +
 
-        '<div class="col-3">' +
+        '<div class="col-12 col-md-6">' +
         '<label class="form-label">Percentage/CGPA :</label>' +
         '<div class="mb-3">' +
-        '<input type="number" name="percentage_CGPA[]" placeholder="Percentage/CGPA" class="form-control" min="0" max="100">' +
+        '<input type="number" name="percentage_CGPA[]" placeholder="eg. 6.6" class="form-control" min="0" max="100">' +
         '</div></div>' +
 
-        '<div class="col-3">' +
-        '<label for="certificate[]" class="form-label">Certificates/Documents Upload :</label>' +
+        '<div class="col-12 col-md-6">' +
+        '<label class="form-label">Certificates/Documents Upload :</label>' +
         '<div class="mb-3">' +
-        '<input type="file" name="certificate[]" placeholder="Certificates/Documents Upload" class="form-control">' +
+        '<input type="file" name="certificate[]" class="form-control">' +
         '<div class="existing-certificate"></div>' +
         '</div></div>' +
 
-        '<div class="col-sm-2">' +
-        '<div class="form-group">' +
-        '<button class="btn btn-danger" type="button" onclick="remove_education_fields(' + room + ');">' +
-        '<i class="material-icons menu-icon">remove</i>' +
-        '</button>' +
-        '</div></div>' +
+        '<div class="col-auto ms-md-auto">' +
+        '<label class="form-label d-none d-md-block">&nbsp;</label>' +
+        '<div class="mb-3">' +
+        '<button class="btn btn-outline-danger" type="button" onclick="remove_education_fields(' + room + ');" title="Remove qualification">' +
+        '<i class="bi bi-trash" aria-hidden="true"></i>' +
+        '</button></div></div>';
 
-        '</form>';
-
-    objTo.appendChild(divtest);
+    objTo.parentNode.insertBefore(divtest, objTo.nextSibling);
 }
 
 
@@ -84,14 +78,17 @@ function experience_fields() {
     room++;
     var objTo = document.getElementById("experience_fields");
     var divtest = document.createElement("div");
-    divtest.setAttribute("class", "row experience-row mb-3 removeclass" + room);
-    var rdiv = "removeclass" + room;
+    divtest.setAttribute("class", "row experience-row g-3 align-items-end mb-3 removeclass" + room);
     divtest.innerHTML =
-        '<form class="row"><div class="col-3"><label for="experience" class="form-label">Years of Experience :</label><div class="mb-3"><input type="text" class="form-control" name="experience[]" placeholder="Years of Experience"></div></div><div class="col-3"><label for="specialization" class="form-label">Area of Specialization :</label><div class="mb-3"><input type="text" class="form-control" name="specialization[]" placeholder="Area of Specialization js file"></div></div><div class="col-3"><label for="institution" class="form-label">Previous Institutions :</label><div class="mb-3"><input type="text" class="form-control"  name="institution[]" placeholder="Previous Institutions"></div></div><div class="col-3"><label for="position" class="form-label">Position Held :</label><div class="mb-3"><input type="text" name="position[]" placeholder="Position Held" id="position[]" class="form-control"></div></div><div class="col-3"><label for="duration" class="form-label">Duration :</label><div class="mb-3"><input type="text" name="duration[]" placeholder="Duration" class="form-control"></div></div><div class="col-3"><label for="work" class="form-label">Nature of Work :</label><div class="mb-3"><input type="text" name="work[]" placeholder="Nature of Work" class="form-control"></div></div><div class="col-6"> <div class="form-group float-end"> <button class="btn btn-danger" type="button" onclick="remove_experience_fields(' +
-        room +
-        ');"> <i class="material-icons menu-icon">remove</i> </button> </div></div></form>';
+        '<div class="col-12 col-md-6"><label class="form-label">Years of Experience :</label><div class="mb-3"><input type="text" class="form-control" name="experience[]" placeholder="Years of Experience"></div></div>' +
+        '<div class="col-12 col-md-6"><label class="form-label">Area of Specialization :</label><div class="mb-3"><input type="text" class="form-control" name="specialization[]" placeholder="Area of Specialization"></div></div>' +
+        '<div class="col-12 col-md-6"><label class="form-label">Previous Institutions :</label><div class="mb-3"><input type="text" class="form-control" name="institution[]" placeholder="Previous Institutions"></div></div>' +
+        '<div class="col-12 col-md-6"><label class="form-label">Position Held :</label><div class="mb-3"><input type="text" name="position[]" placeholder="Position Held" class="form-control"></div></div>' +
+        '<div class="col-12 col-md-6"><label class="form-label">Duration :</label><div class="mb-3"><input type="number" name="duration[]" placeholder="Duration" class="form-control" min="0"></div></div>' +
+        '<div class="col-12 col-md-6"><label class="form-label">Nature of Work :</label><div class="mb-3"><input type="text" name="work[]" placeholder="Nature of Work" class="form-control"></div></div>' +
+        '<div class="col-auto ms-md-auto"><label class="form-label d-none d-md-block">&nbsp;</label><div class="mb-3"><button class="btn btn-outline-danger" type="button" onclick="remove_experience_fields(' + room + ');" title="Remove experience"><i class="bi bi-trash" aria-hidden="true"></i></button></div></div>';
 
-    objTo.appendChild(divtest);
+    objTo.parentNode.insertBefore(divtest, objTo.nextSibling);
 }
 
 function remove_experience_fields(rid) {

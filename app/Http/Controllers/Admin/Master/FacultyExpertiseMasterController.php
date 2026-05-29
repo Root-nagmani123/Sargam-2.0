@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FacultyExpertiseMaster;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class FacultyExpertiseMasterController extends Controller
 {
@@ -39,18 +40,23 @@ class FacultyExpertiseMasterController extends Controller
     }
 
     public function create() {
-        return view("admin.master.faculty_expertise_master.create");
+        return redirect()->route('master.faculty.expertise.index', ['open_fem_modal' => 'add']);
     }
 
     public function store(Request $request) {
+        $pk = $request->id ? decrypt($request->id) : null;
+
         $request->validate([
-            'expertise_name' => 'required|string|max:255|unique:faculty_expertise_master,expertise_name',
+            'expertise_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('faculty_expertise_master', 'expertise_name')->ignore($pk, 'pk'),
+            ],
         ]);
 
-        if( $request->id ) {
-
-            // Update existing record
-            $id = decrypt($request->id);
+        if ($pk) {
+            $id = $pk;
             $expertise = FacultyExpertiseMaster::find($id);
         }
         else {
@@ -64,7 +70,16 @@ class FacultyExpertiseMasterController extends Controller
 
         self::bumpListCacheEpoch();
 
-        return redirect()->route('master.faculty.expertise.index')->with('success', 'Expertise saved successfully.');
+        $message = 'Expertise saved successfully.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
+        return redirect()->route('master.faculty.expertise.index')->with('success', $message);
     }
 
     public function edit(string $id) {
@@ -76,7 +91,11 @@ class FacultyExpertiseMasterController extends Controller
             return redirect()->route('master.faculty.expertise.index')->with('error', 'Expertise not found.');
         }
 
-        return view("admin.master.faculty_expertise_master.create", compact('expertise'));
+        return redirect()->route('master.faculty.expertise.index', [
+            'open_fem_modal' => 'edit',
+            'fem_id' => $id,
+            'fem_name' => $expertise->expertise_name,
+        ]);
     }
 
     public function delete(string $id) {

@@ -167,6 +167,9 @@ class FacultyDataTable extends DataTable
                     ->orderBy(1)
                     ->selectStyleSingle()
                     ->parameters([
+                        'responsive' => true,
+                        'scrollX' => false,
+                        'autoWidth' => false,
                         'order' => [],
                         'ordering' => false,
                         'searching' => true,
