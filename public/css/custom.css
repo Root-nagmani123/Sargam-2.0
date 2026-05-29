@@ -142,6 +142,38 @@ body.custom-loaded {
 
 .programme-dt-filter-select {
     width: 180px;
+    flex-shrink: 0;
+}
+
+/* Native Bootstrap filter dropdowns (MDO, Faculty Average, Feedback Details program, etc.) */
+.programme-dt-filter-select > select.form-select,
+.programme-dt-filter-select select.form-select:not(.choices__input) {
+    height: 40px;
+    min-height: 40px;
+    width: 100%;
+    max-width: 100%;
+    padding: 0.375rem 2rem 0.375rem 0.875rem;
+    font-size: 0.9375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #344054;
+    box-shadow: none;
+    background-color: #fff;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.programme-dt-filter-select > select.form-select:focus,
+.programme-dt-filter-select select.form-select:not(.choices__input):focus {
+    border-color: #004a93;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.programme-dt-filter-select > select.form-select.faa-filter-empty,
+.programme-dt-filter-select > select.form-select.fdt-filter-empty,
+.programme-dt-filter-select > select.form-select.filter-placeholder {
+    color: #667085;
 }
 
 .programme-dt-filter-select .choices__inner,
@@ -167,6 +199,26 @@ body.custom-loaded {
 .programme-dt-filter-select .choices.is-open .choices__inner {
     border-color: #004a93 !important;
     box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12) !important;
+}
+
+.programme-dt-filter-select .choices.programme-dt-filter-select {
+    width: 100%;
+    max-width: 100%;
+}
+
+.programme-dt-filter-select .choices__placeholder {
+    color: #667085;
+    opacity: 1;
+}
+
+.programme-dt-filter-select .choices.is-open .choices__list--dropdown {
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    z-index: 50;
+}
+
+.programme-dt-filter-select .choices__list--single .choices__item[data-value=""] {
+    color: #667085;
 }
 
 .programme-dt-btn-reset {
@@ -4196,6 +4248,314 @@ body.custom-loaded {
     }
 
     .fdt-master-page .fdt-pagination-wrap {
+        flex-direction: column;
+        align-items: center !important;
+    }
+}
+
+/* ── Faculty Feedback Average ── */
+.faa-master-page {
+    --faa-primary: #004a93;
+    --faa-primary-rgb: 0, 74, 147;
+}
+
+.faa-master-page .faa-dt-card {
+    border: 1px solid #e4e7ec;
+    overflow: visible;
+}
+
+.faa-master-page .programme-dt-toolbar {
+    overflow: visible;
+    position: relative;
+    z-index: 20;
+}
+
+.faa-master-page .programme-dt-filter-select:focus-within,
+.faa-master-page .programme-dt-filter-select .choices.is-open {
+    z-index: 40;
+}
+
+.faa-master-page .programme-dt-toolbar .programme-dt-btn-reset.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.faa-master-page .programme-dt-filter-select .faa-filter-select.form-select {
+    height: 40px;
+    min-height: 40px;
+}
+
+.faa-master-page .programme-dt-filter-select .faa-filter-select.form-select.faa-filter-empty {
+    color: #667085;
+}
+
+.faa-master-page .faa-period-filter {
+    width: 220px;
+}
+
+.faa-master-page .faa-period-filter .flatpickr-wrapper,
+.faa-master-page .faa-period-filter .flatpickr-input.form-control {
+    width: 100%;
+}
+
+.faa-master-page .faa-time-period-input,
+.faa-master-page .faa-period-filter .flatpickr-input.form-control {
+    min-height: 40px;
+    padding: 0.5rem 2.25rem 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #344054;
+    box-shadow: none;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+.faa-master-page .faa-time-period-input::placeholder,
+.faa-master-page .faa-period-filter .flatpickr-input.form-control::placeholder {
+    color: #667085;
+}
+
+.faa-master-page .faa-time-period-input:focus,
+.faa-master-page .faa-period-filter .flatpickr-input.form-control:focus {
+    border-color: var(--faa-primary);
+    box-shadow: 0 0 0 3px rgba(var(--faa-primary-rgb), 0.12);
+}
+
+.faa-master-page .faa-filter-chevron {
+    position: absolute;
+    right: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    font-size: 0.75rem;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.faa-master-page .faa-status-tabs .btn-check:checked + .programme-status-pill {
+    background: var(--faa-primary);
+    color: #fff;
+}
+
+.faa-master-page .faa-status-tabs .programme-status-pill {
+    cursor: pointer;
+}
+
+.faa-master-page .faa-table-search {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.faa-master-page .faa-table-search-bar {
+    width: min(100%, 360px);
+}
+
+.faa-master-page .faa-table-search-bar label {
+    display: block;
+    margin: 0;
+    width: 100%;
+    position: relative;
+}
+
+.faa-master-page .faa-table-search-bar label::before {
+    content: "\F52A";
+    font-family: "bootstrap-icons";
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.faa-master-page .faa-table-search-bar input.form-control {
+    width: 100%;
+    height: 40px;
+    margin: 0;
+    padding: 0.5rem 0.875rem 0.5rem 2.375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: #344054;
+    box-shadow: none;
+    background-color: #fff;
+}
+
+.faa-master-page .faa-table-search-bar input.form-control:focus {
+    border-color: var(--faa-primary);
+    box-shadow: 0 0 0 3px rgba(var(--faa-primary-rgb), 0.12);
+}
+
+.faa-master-page .faa-search-slot {
+    width: 40px;
+}
+
+.faa-master-page .faa-search-slot.dropdown .dropdown-toggle::after {
+    display: none;
+}
+
+.faa-master-page .faa-search-trigger {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #667085;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+}
+
+.faa-master-page .faa-search-trigger:hover,
+.faa-master-page .faa-search-trigger.show {
+    border-color: var(--faa-primary);
+    color: var(--faa-primary);
+    background: #fff;
+}
+
+.faa-master-page .faa-table-search-menu {
+    min-width: 280px;
+}
+
+.faa-master-page .faa-table-panel {
+    padding: 0;
+    overflow: hidden;
+}
+
+.faa-master-page .faa-feedback-table thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid #e4e7ec !important;
+    border-top: 0 !important;
+    white-space: nowrap;
+}
+
+.faa-master-page .faa-feedback-table tbody td {
+    padding: 1rem !important;
+    font-size: 0.875rem;
+    color: #344054;
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+}
+
+.faa-master-page .faa-feedback-table tbody tr:hover td {
+    background: rgba(var(--faa-primary-rgb), 0.03);
+}
+
+.faa-master-page .faa-faculty-name {
+    font-weight: 600;
+    color: #101828;
+}
+
+.faa-master-page .faa-col-program {
+    max-width: 220px;
+    line-height: 1.45;
+}
+
+.faa-master-page .faa-pct {
+    font-weight: 600;
+    font-size: 0.875rem;
+}
+
+.faa-master-page .percentage-good {
+    color: #027a48;
+}
+
+.faa-master-page .percentage-average {
+    color: #b54708;
+}
+
+.faa-master-page .percentage-low {
+    color: #b42318;
+}
+
+.faa-master-page .faa-pagination .page-link {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0.25rem 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #667085;
+    font-size: 0.875rem;
+    box-shadow: none;
+}
+
+.faa-master-page .faa-pagination .page-item.active .page-link {
+    border-color: var(--faa-primary);
+    color: var(--faa-primary);
+    background: #fff;
+    font-weight: 600;
+}
+
+.faa-master-page .faa-page-size-select {
+    width: auto;
+    min-width: 4.25rem;
+    height: 32px;
+    padding: 0.25rem 1.75rem 0.25rem 0.625rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: #344054;
+    background-color: #fff;
+}
+
+.faa-master-page .faa-records-info strong {
+    font-weight: 600;
+}
+
+.faa-master-page .faa-empty-icon {
+    font-size: 2.75rem;
+    opacity: 0.35;
+}
+
+.faa-master-page .loading-spinner {
+    display: none;
+}
+
+.faa-master-page .flatpickr-calendar.faa-flatpickr-theme {
+    border: 1px solid #e4e7ec;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(16, 24, 40, 0.14);
+    font-family: var(--bs-body-font-family);
+    padding: 0.5rem;
+}
+
+.faa-master-page .flatpickr-calendar.faa-flatpickr-theme .flatpickr-day.selected,
+.faa-master-page .flatpickr-calendar.faa-flatpickr-theme .flatpickr-day.startRange,
+.faa-master-page .flatpickr-calendar.faa-flatpickr-theme .flatpickr-day.endRange {
+    background: var(--faa-primary);
+    border-color: var(--faa-primary);
+    color: #fff;
+}
+
+@media (max-width: 991.98px) {
+    .faa-master-page .programme-dt-filter-select,
+    .faa-master-page .faa-table-search {
+        width: 100%;
+        max-width: none;
+    }
+
+    .faa-master-page .faa-table-search {
+        justify-content: flex-end;
+    }
+
+    .faa-master-page .faa-pagination-wrap {
         flex-direction: column;
         align-items: center !important;
     }
