@@ -412,13 +412,15 @@ class CalendarController extends Controller
         // Array of some sample colors
         $colors = ['#ffffff'];
 
-        // Assign random color to each event
-        $events = $events->map(function ($event) use ($colors) {
-            // Parse start and end times from class_session if it contains time range
-            $startDateTime = $event->START_DATE;
-            $endDateTime = $event->END_DATE;
-            $allDay = false;
+        $sessionMastersByShiftTime = ClassSessionMaster::query()
+            ->select('pk', 'shift_time', 'start_time', 'end_time')
+            ->get()
+            ->keyBy(function ($row) {
+                return trim((string) $row->shift_time);
+            });
 
+        // Assign random color to each event
+        $events = $events->map(function ($event) use ($colors, $sessionMastersByShiftTime) {
             // Get faculty names from JSON (handle both old integer and new JSON array format)
             $facultyIds = json_decode($event->faculty_master, true);
             $facultyNames = '';
@@ -428,75 +430,27 @@ class CalendarController extends Controller
                     ->pluck('full_name')
                     ->implode(', ');
             } elseif (!is_array($facultyIds) && !empty($event->faculty_master)) {
-                // Old format: integer value
                 $facultyNames = DB::table('faculty_master')
                     ->where('pk', $event->faculty_master)
                     ->value('full_name') ?? '';
             }
 
-            // Check if class_session exists and contains a time range with dash
-            if (!empty($event->class_session) && strpos($event->class_session, '-') !== false) {
-                $timeRange = trim($event->class_session);
-                $parts = explode('-', $timeRange);
-
-                if (count($parts) === 2) {
-                    $startTime = trim($parts[0]);
-                    $endTime = trim($parts[1]);
-
-                    // Try to parse times
-                    $startTimestamp = strtotime($startTime);
-                    $endTimestamp = strtotime($endTime);
-
-                    if ($startTimestamp !== false && $endTimestamp !== false) {
-                        $startTime24 = date('H:i', $startTimestamp);
-                        $endTime24 = date('H:i', $endTimestamp);
-
-                        // Append time to date (ISO 8601 format)
-                        $startDateTime = $event->START_DATE . 'T' . $startTime24 . ':00';
-                        $endDateTime = $event->END_DATE . 'T' . $endTime24 . ':00';
-                        $allDay = false;
-                    } else {
-                        // If time parsing failed, treat as all-day
-                        $allDay = true;
-                    }
-                } else {
-                    $allDay = true;
-                }
-            } else {
-                // No time information, treat as all-day
-                $allDay = true;
-            }
-
-            // For all-day events, FullCalendar expects an exclusive end date.
-            // If start and end are the same, advance end by +1 day so it renders.
-            if ($allDay) {
-                try {
-                    $startDateTime = Carbon::parse($event->START_DATE)->format('Y-m-d');
-                    $endDateTime = Carbon::parse($event->END_DATE ?: $event->START_DATE)
-                        ->addDay()
-                        ->format('Y-m-d');
-                } catch (\Exception $e) {
-                    // Fallback: ensure at least a one-day span
-                    $startDateTime = $event->START_DATE;
-                    $endDateTime = Carbon::parse($event->START_DATE)->addDay()->format('Y-m-d');
-                }
-            }
+            $timing = $this->resolveFullCalendarEventTiming($event, $sessionMastersByShiftTime);
 
             return [
                 'id' => $event->pk,
                 'title' => $event->subject_topic,
-                'start' => $startDateTime,
-                'end'   => $endDateTime,
+                'start' => $timing['start'],
+                'end'   => $timing['end'],
                 'vanue'   => $event->venue_name,
                 'faculty_name'   => $facultyNames,
-                'backgroundColor' => $colors[array_rand($colors)],  // background color for event
-                'borderColor' => $colors[array_rand($colors)],  // border color for event
-                // Use dark text for better contrast with light backgrounds
+                'backgroundColor' => $colors[array_rand($colors)],
+                'borderColor' => $colors[array_rand($colors)],
                 'textColor' => '#111827',
-                'allDay' => $allDay,
+                'allDay' => $timing['allDay'],
                 'display' => 'block',
-                // Debug info - class_session value stored in database
                 'class_session_debug' => $event->class_session,
+                'session_type' => $event->session_type ?? null,
             ];
         });
 
@@ -2318,5 +2272,94 @@ class CalendarController extends Controller
         }
 
         return back()->with('success', 'Feedback submitted successfully.');
+    }
+
+    /**
+     * Build ISO start/end for FullCalendar (timed slots in week view).
+     */
+    private function resolveFullCalendarEventTiming($event, $sessionMastersByShiftTime): array
+    {
+        $dateStart = Carbon::parse($event->START_DATE)->toDateString();
+        $dateEnd = Carbon::parse($event->END_DATE ?: $event->START_DATE)->toDateString();
+
+        if (!empty($event->full_day) && (int) $event->full_day === 1) {
+            return $this->allDayFullCalendarRange($dateStart, $dateEnd);
+        }
+
+        $timeRangeStr = trim((string) ($event->class_session ?? ''));
+
+        if ((int) ($event->session_type ?? 0) === 1 && $timeRangeStr !== '') {
+            $master = $sessionMastersByShiftTime->get($timeRangeStr)
+                ?? $sessionMastersByShiftTime->firstWhere('pk', $timeRangeStr);
+            if ($master) {
+                if (!empty($master->start_time) && !empty($master->end_time)) {
+                    $timeRangeStr = trim($master->start_time) . ' - ' . trim($master->end_time);
+                } elseif (!empty($master->shift_time)) {
+                    $timeRangeStr = trim($master->shift_time);
+                }
+            }
+        }
+
+        $times = $this->parseClassSessionTimeRange($timeRangeStr);
+        if ($times) {
+            $startDateTime = $dateStart . 'T' . $times['start'];
+            $endDateTime = $dateEnd . 'T' . $times['end'];
+
+            if ($times['end'] <= $times['start'] && $dateStart === $dateEnd) {
+                $endDateTime = Carbon::parse($dateEnd)->addDay()->format('Y-m-d') . 'T' . $times['end'];
+            }
+
+            return [
+                'start' => $startDateTime,
+                'end' => $endDateTime,
+                'allDay' => false,
+            ];
+        }
+
+        return $this->allDayFullCalendarRange($dateStart, $dateEnd);
+    }
+
+    private function allDayFullCalendarRange(string $dateStart, string $dateEnd): array
+    {
+        $end = Carbon::parse($dateEnd)->addDay()->format('Y-m-d');
+
+        return [
+            'start' => $dateStart,
+            'end' => $end,
+            'allDay' => true,
+        ];
+    }
+
+    /**
+     * @return array{start: string, end: string}|null 24h times as H:i:s
+     */
+    private function parseClassSessionTimeRange(string $timeRangeStr): ?array
+    {
+        if ($timeRangeStr === '' || !preg_match('/[-–—]/u', $timeRangeStr)) {
+            return null;
+        }
+
+        $parts = preg_split('/\s*[-–—]\s*/u', $timeRangeStr, 2);
+        if (count($parts) !== 2) {
+            return null;
+        }
+
+        $start = $this->parseTimeTo24Hour(trim($parts[0]));
+        $end = $this->parseTimeTo24Hour(trim($parts[1]));
+
+        if (!$start || !$end) {
+            return null;
+        }
+
+        return ['start' => $start, 'end' => $end];
+    }
+
+    private function parseTimeTo24Hour(string $timeStr): ?string
+    {
+        try {
+            return Carbon::parse($timeStr)->format('H:i:s');
+        } catch (\Exception $e) {
+            return null;
+        }
     }
 }

@@ -13,2158 +13,15 @@
 
 <link rel="stylesheet" href="{{ asset('admin_assets/css/styles.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-<style>
-        :root {
-        --primary: #004a93;
-        --primary-color: #004a93;
-        --primary-dark: #003366;
-        --accent: #eef5ff;
-        --bg-light: #f4f6f9;
-        --text-main: #1f2937;
-        --text-muted: #6b7280;
-        --border: #e5e7eb;
-    }
-        .course-header {
-        background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-        color: #fff;
-        padding: 2.75rem 1.5rem;
-        border-radius: 1rem 1rem 1rem 1rem;
-        text-align: center;
-    }
-
-    .course-header h1 {
-        font-size: 1.85rem;
-        font-weight: 600;
-        color: #fff;
-    }
-
-    .course-header .badge {
-        background: #ffffff;
-        color: #000;
-    }
-
-    /* Responsive Design for Smaller Screens */
-    @media (max-width: 768px) {
-        .course-header {
-            padding: 1.5rem 1rem;
-        }
-
-        .course-header h1 {
-            font-size: 1.25rem;
-        }
-
-        .course-header p {
-            font-size: 0.9rem;
-        }
-    }
-    /* Accessibility improvements */
-.visually-hidden {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
-}
-
-/* Calendar styling */
-.fc {
-    font-size: 0.95rem;
-}
-
-.fc-daygrid-day {
-    transition: background-color 0.2s ease;
-    position: relative;
-    overflow: visible !important;
-    min-height: auto;
-}
-
-.fc-daygrid-day:hover {
-    background-color: rgba(0, 74, 147, 0.03);
-}
-
-.fc-daygrid-day.fc-day-today {
-    background-color: #CCDBE9 !important;
-}
-
-.fc-col-header-cell {
-    background: var(--primary-color);
-    color: #fff;
-    font-weight: 600;
-    padding: 1rem 0.5rem;
-}
-
-/* Ensure FullCalendar header text is white */
-.fc .fc-col-header-cell-cushion,
-.fc .fc-scrollgrid-section-header .fc-col-header-cell a,
-.fc .fc-col-header-cell a {
-    color: #ffffff !important;
-}
-
-.fc-event-card {
-    padding: 1rem 1.1rem;
-    border-radius: 0.875rem;
-    margin: 0.4rem 0;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    border-left: 6px solid var(--primary-color);
-    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.06);
-    white-space: normal;
-    word-break: break-word;
-    overflow: visible;
-    position: relative;
-    cursor: pointer;
-    border-top-right-radius: 0.875rem;
-    border-bottom-right-radius: 0.875rem;
-    min-height: fit-content;
-}
-
-/* Choices.js + Bootstrap look for course filter */
-.calendar-choices-bootstrap .choices__inner.form-select {
-    background-color: var(--bs-body-bg);
-    border: var(--bs-border-width) solid var(--bs-border-color);
-    min-height: calc(1.5em + 0.75rem + var(--bs-border-width) * 2);
-    padding-top: 0.375rem;
-    padding-bottom: 0.375rem;
-    background-image: none !important;
-    padding-inline-end: 2.25rem;
-}
-
-.calendar-choices-bootstrap .choices.is-focused .choices__inner.form-select,
-.calendar-choices-bootstrap .choices.is-open .choices__inner.form-select {
-    border-color: var(--bs-focus-border-color);
-    box-shadow: 0 0 0 0.25rem rgba(var(--bs-focus-ring-rgb), 0.25);
-}
-
-.calendar-choices-bootstrap .choices__list--dropdown.dropdown-menu,
-.calendar-choices-bootstrap .choices__list[aria-expanded].dropdown-menu {
-    border: var(--bs-border-width) solid var(--bs-border-color);
-}
-
-.calendar-choices-bootstrap .choices {
-    position: relative;
-    z-index: 1200;
-}
-
-.calendar-choices-bootstrap .choices.is-open .choices__list--dropdown,
-.calendar-choices-bootstrap .choices.is-open .choices__list[aria-expanded] {
-    z-index: 1250;
-}
-
-/*
- * Dropdowns clipped / behind chrome: theme .page-wrapper { overflow-x: hidden }
- * forces overflow-y to behave like auto and clips portaled-out content. Lift the
- * control strip when open; relax page-wrapper only on this page (:has).
- */
-#main-wrapper .page-wrapper:has(.calendar-admin-page) {
-    overflow-x: clip;
-    overflow-y: visible;
-}
-
-@supports not (overflow: clip) {
-    #main-wrapper .page-wrapper:has(.calendar-admin-page) {
-        overflow: visible;
-    }
-}
-
-.control-panel:has(.choices.is-open) {
-    position: relative;
-    z-index: 10800;
-}
-
-.calendar-choices-bootstrap .choices.is-open {
-    z-index: 10850;
-}
-
-.calendar-choices-bootstrap .choices.is-open .choices__list--dropdown,
-.calendar-choices-bootstrap .choices.is-open .choices__list[aria-expanded] {
-    z-index: 10860;
-}
-
-/* While Add/Edit Event modal is open, never show the course filter list above it */
-body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choices__list--dropdown,
-body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choices__list[aria-expanded] {
-    display: none !important;
-    visibility: hidden !important;
-    opacity: 0 !important;
-    pointer-events: none !important;
-    z-index: 0 !important;
-}
-
-body.calendar-suppress-course-filter-dropdown .control-panel {
-    z-index: auto !important;
-}
-
-body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choices,
-body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choices.is-open {
-    z-index: auto !important;
-}
-
-.fc-event-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-color) 0%, rgba(78, 115, 223, 0.5) 70%, transparent 100%);
-    border-radius: 0.875rem 0.875rem 0 0;
-    opacity: 0;
-    transition: opacity 0.35s ease;
-}
-
-.fc-event-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 40px;
-    height: 40px;
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.08) 0%, transparent 70%);
-    border-radius: 0 0.875rem 0 0;
-    pointer-events: none;
-}
-
-.fc-event-card:hover {
-    transform: translateY(-4px) scale(1.02);
-    box-shadow: 0 10px 32px rgba(0, 74, 147, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
-    background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%) !important;
-    border-left-width: 7px;
-}
-
-.fc-event-card:hover::before {
-    opacity: 1;
-}
-
-.fc-event-card:hover::after {
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.15) 0%, transparent 70%);
-}
-
-/* Event card content improvements */
-.fc-event-card .event-title {
-    font-weight: 700;
-    font-size: 1.05rem;
-    line-height: 1.5;
-    margin-bottom: 0.6rem;
-    color: #1f2937;
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: visible;
-    word-wrap: break-word;
-    letter-spacing: -0.015em;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-    min-height: fit-content;
-}
-
-.fc-event-card .event-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.65rem 1.1rem;
-    margin-top: 0.65rem;
-    padding-top: 0.65rem;
-    border-top: 1.5px solid rgba(78, 115, 223, 0.12);
-    min-height: fit-content;
-}
-
-.fc-event-card .meta-item {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    font-size: 0.875rem;
-    color: #4b5563;
-    font-weight: 500;
-    transition: all 0.2s ease;
-    padding: 0.25rem 0.5rem;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 6px;
-    white-space: nowrap;
-}
-
-.fc-event-card .meta-item i {
-    font-size: 1rem;
-    opacity: 0.9;
-}
-
-.fc-event-card .meta-item--time i {
-    color: #4e73df;
-}
-
-.fc-event-card .meta-item--venue i {
-    color: #1cc88a;
-}
-
-.fc-event-card .meta-item--faculty i {
-    color: #f6c23e;
-}
-
-.fc-event-card:hover .meta-item {
-    color: #1f2937;
-    background: rgba(255, 255, 255, 0.95);
-    transform: translateY(-1px);
-}
-
-.fc-event-card:hover .meta-item i {
-    opacity: 1;
-}
-
-/* Dense mode for days with many events */
-.fc-daygrid-day.dense-day .fc-event-card {
-    padding: 0.5rem 0.65rem;
-    border-radius: 0.625rem;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.09);
-    margin: 0.25rem 0;
-    min-height: fit-content;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-title {
-    font-size: 0.9rem;
-    font-weight: 700;
-    -webkit-line-clamp: 2;
-    line-height: 1.4;
-    margin-bottom: 0.4rem;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-meta { 
-    margin-top: 0.35rem;
-    padding-top: 0.35rem;
-    gap: 0.4rem 0.6rem;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item { 
-    font-size: 0.75rem;
-    padding: 0.2rem 0.4rem;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--time { 
-    display: inline-flex;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--venue { 
-    display: inline-flex;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-meta .meta-item--faculty { 
-    display: none;
-}
-
-.fc-daygrid-day.dense-day .fc-event-card .event-badge {
-    font-size: 0.65rem;
-    padding: 0.2rem 0.5rem;
-}
-
-/* Popover styling for "+ more" */
-.fc-popover {
-    border-radius: 18px !important;
-    box-shadow: 0 16px 64px rgba(0, 0, 0, 0.18), 0 6px 20px rgba(0, 0, 0, 0.12) !important;
-    border: 2px solid #4e73df !important;
-    overflow: hidden;
-    max-height: 650px;
-    display: flex;
-    flex-direction: column;
-    backdrop-filter: blur(12px);
-}
-
-.fc-popover .fc-popover-title {
-    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
-    color: white;
-    font-weight: 700;
-    flex-shrink: 0;
-    position: sticky;
-    top: 0;
-    z-index: 10;
-    padding: 1.1rem 1.4rem;
-    font-size: 1rem;
-    letter-spacing: 0.4px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.15);
-    text-transform: uppercase;
-}
-
-/* Make popover body scrollable for many events */
-.fc-popover .fc-popover-body {
-    max-height: 450px;
-    overflow-y: auto;
-    overflow-x: hidden;
-    padding: 1rem;
-    scrollbar-width: thin;
-    scrollbar-color: #4e73df #f3f4f6;
-    background: linear-gradient(to bottom, #ffffff 0%, #f8fbff 100%);
-}
-
-/* Custom scrollbar for popover body */
-.fc-popover .fc-popover-body::-webkit-scrollbar {
-    width: 12px;
-}
-
-.fc-popover .fc-popover-body::-webkit-scrollbar-track {
-    background: #f3f4f6;
-    border-radius: 12px;
-    margin: 0.5rem 0;
-}
-
-.fc-popover .fc-popover-body::-webkit-scrollbar-thumb {
-    background: linear-gradient(180deg, #4e73df 0%, #3a5bc7 100%);
-    border-radius: 12px;
-    border: 3px solid #f3f4f6;
-    transition: background 0.2s ease;
-}
-
-.fc-popover .fc-popover-body::-webkit-scrollbar-thumb:hover {
-    background: linear-gradient(180deg, #3a5bc7 0%, #2d4aa7 100%);
-    border-width: 2px;
-}
-
-.fc-popover .fc-popover-body .fc-event-card {
-    margin: 0.6rem 0;
-    padding: 1rem 1.1rem;
-    border-left: 6px solid var(--primary-color);
-    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09);
-    border-radius: 0.875rem;
-}
-
-/* Ensure default popover events look like cards */
-.fc-popover .fc-popover-body .fc-event {
-    padding: 0.9rem;
-    margin: 0.6rem 0;
-    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-    border-radius: 14px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09);
-    border-left: 5px solid var(--primary-color);
-    transition: all 0.25s ease;
-}
-
-.fc-popover .fc-popover-body .fc-event:hover {
-    transform: translateX(6px);
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.14);
-}
-
-/* Mobile popover adjustments */
-@media (max-width: 575.98px) {
-    .fc-popover {
-        max-width: 95vw !important;
-        left: 2.5vw !important;
-        max-height: 70vh !important;
-    }
-
-    .fc-popover .fc-popover-body {
-        max-height: 60vh !important;
-    }
-
-    .fc-popover .fc-popover-body .fc-event-card {
-        padding: 0.5rem 0.4rem;
-        font-size: 0.8rem;
-    }
-
-    .fc-popover .fc-popover-body .fc-event-card .event-title {
-        font-size: 0.75rem !important;
-    }
-}
-
-@media (max-width: 767.98px) {
-    .fc-popover {
-        max-width: 90vw !important;
-    }
-
-    .fc-popover .fc-popover-body {
-        max-height: 65vh !important;
-    }
-}
-
-/* Event badges within cards */
-.fc-event-card .event-badge {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.72rem;
-    padding: 0.3rem 0.75rem;
-    border-radius: 999px;
-    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
-    color: #fff;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    box-shadow: 0 2px 6px rgba(78, 115, 223, 0.25), 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: all 0.25s ease;
-    white-space: nowrap;
-    position: relative;
-    overflow: hidden;
-}
-
-.fc-event-card .event-badge::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-    transition: left 0.5s ease;
-}
-
-.fc-event-card:hover .event-badge {
-    transform: scale(1.08) translateY(-1px);
-    box-shadow: 0 4px 10px rgba(78, 115, 223, 0.35), 0 2px 5px rgba(0, 0, 0, 0.15);
-}
-
-.fc-event-card:hover .event-badge::before {
-    left: 100%;
-}
-
-/* Optional type-based accents */
-.fc-event-card[data-event-type="lecture"] {
-    border-left-color: #4e73df;
-    background: linear-gradient(135deg, #ffffff 0%, #f0f5ff 100%) !important;
-}
-
-.fc-event-card[data-event-type="lecture"]::after {
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.12) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="exam"] {
-    border-left-color: #e74a3b;
-    background: linear-gradient(135deg, #ffffff 0%, #fff6f5 100%) !important;
-}
-
-.fc-event-card[data-event-type="exam"]::after {
-    background: radial-gradient(circle at top right, rgba(231, 74, 59, 0.12) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="meeting"] {
-    border-left-color: #1cc88a;
-    background: linear-gradient(135deg, #ffffff 0%, #f0fdf8 100%) !important;
-}
-
-.fc-event-card[data-event-type="meeting"]::after {
-    background: radial-gradient(circle at top right, rgba(28, 200, 138, 0.12) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="workshop"] {
-    border-left-color: #f6c23e;
-    background: linear-gradient(135deg, #ffffff 0%, #fffcf2 100%) !important;
-}
-
-.fc-event-card[data-event-type="workshop"]::after {
-    background: radial-gradient(circle at top right, rgba(246, 194, 62, 0.12) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="lecture"]:hover {
-    background: linear-gradient(135deg, #fafcff 0%, #e3edff 100%) !important;
-}
-
-.fc-event-card[data-event-type="lecture"]:hover::after {
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.2) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="exam"]:hover {
-    background: linear-gradient(135deg, #fffafa 0%, #ffe8e8 100%) !important;
-}
-
-.fc-event-card[data-event-type="exam"]:hover::after {
-    background: radial-gradient(circle at top right, rgba(231, 74, 59, 0.2) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="meeting"]:hover {
-    background: linear-gradient(135deg, #fafffe 0%, #e0f9ef 100%) !important;
-}
-
-.fc-event-card[data-event-type="meeting"]:hover::after {
-    background: radial-gradient(circle at top right, rgba(28, 200, 138, 0.2) 0%, transparent 70%);
-}
-
-.fc-event-card[data-event-type="workshop"]:hover {
-    background: linear-gradient(135deg, #fffef9 0%, #fff2d0 100%) !important;
-}
-
-.fc-event-card[data-event-type="workshop"]:hover::after {
-    background: radial-gradient(circle at top right, rgba(246, 194, 62, 0.2) 0%, transparent 70%);
-}
-
-/* Improved stacking for multiple events in same day */
-.fc-daygrid-day-frame {
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-
-.fc-daygrid-day-frame .fc-event-card {
-    margin: 0.25rem 0;
-    background: #fff !important;
-    box-shadow: var(--shadow-sm);
-    flex-shrink: 0;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.fc-daygrid-day-frame .fc-event-card .event-title { 
-    font-size: 0.9rem;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.fc-daygrid-day-frame .fc-event-card .meta-item { 
-    font-size: 0.8rem;
-    display: none;
-}
-
-/* TimeGrid overlapping events */
-.fc-timegrid-event .fc-event-main {
-    border-left: 3px solid var(--primary-color);
-    border-radius: 8px;
-    background: #fff !important;
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-}
-
-.fc-timegrid-event:hover .fc-event-main {
-    box-shadow: var(--shadow);
-}
-
-/* Focus visibility on events (GIGW) */
-.fc-event-card:focus-visible,
-.fc-timegrid-event:focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(0, 74, 147, 0.2);
-}
-
-/* Timetable styling */
-.timetable-grid {
-    border-collapse: separate;
-    border-spacing: 0;
-}
-
-.timetable-grid th {
-    font-weight: 600;
-    color: #ffffff;
-    background: var(--primary-color);
-    padding: 1rem 0.75rem;
-    border-bottom: 2px solid var(--primary-color);
-}
-
-.timetable-grid td {
-    padding: 0.75rem;
-    border: 1px solid var(--border-color);
-    vertical-align: top;
-    transition: background-color 0.2s ease;
-    max-height: 300px;
-    overflow-y: auto;
-    position: relative;
-}
-
-/* Scrollbar styling for timetable cells */
-.timetable-grid td::-webkit-scrollbar {
-    width: 8px;
-}
-
-.timetable-grid td::-webkit-scrollbar-track {
-    background: rgba(0, 74, 147, 0.05);
-    border-radius: 4px;
-}
-
-.timetable-grid td::-webkit-scrollbar-thumb {
-    background: var(--primary-color);
-    border-radius: 4px;
-    transition: background 0.2s ease;
-}
-
-.timetable-grid td::-webkit-scrollbar-thumb:hover {
-    background: var(--primary-dark);
-}
-
-/* Firefox scrollbar styling */
-.timetable-grid td {
-    scrollbar-width: thin;
-    scrollbar-color: var(--primary-color) rgba(0, 74, 147, 0.05);
-}
-
-.timetable-grid td:hover {
-    background-color: rgba(0, 74, 147, 0.02);
-}
-
-/* Visual indicator for scrollable content */
-.timetable-grid td.has-scroll::after {
-    content: '';
-    position: sticky;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    height: 30px;
-    background: linear-gradient(to top, rgba(255, 255, 255, 0.95), transparent);
-    pointer-events: none;
-    opacity: 0;
-    transition: opacity 0.3s ease;
-}
-
-.timetable-grid td.has-scroll:not(.scrolled-bottom)::after {
-    opacity: 1;
-}
-
-/* Scroll indicator icon */
-.timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
-    content: '⌄';
-    position: sticky;
-    bottom: 5px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: block;
-    width: 24px;
-    height: 24px;
-    line-height: 24px;
-    text-align: center;
-    color: var(--primary-color);
-    font-size: 1.2rem;
-    font-weight: bold;
-    background: white;
-    border-radius: 50%;
-    box-shadow: 0 2px 8px rgba(0, 74, 147, 0.3);
-    z-index: 10;
-    animation: bounce 2s infinite;
-    pointer-events: none;
-}
-
-@keyframes bounce {
-    0%, 20%, 50%, 80%, 100% {
-        transform: translateX(-50%) translateY(0);
-    }
-    40% {
-        transform: translateX(-50%) translateY(-5px);
-    }
-    60% {
-        transform: translateX(-50%) translateY(-3px);
-    }
-}
-
-.timetable-grid .time-column {
-    min-width: 120px;
-    font-weight: 600;
-    color: var(--secondary-color);
-    background-color: rgba(175, 41, 16, 0.05);
-}
-
-/* List Event Cards */
-.list-event-card {
-    background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%);
-    border: 1.5px solid #e5e7eb;
-    border-radius: 16px;
-    transition: all 0.35s cubic-bezier(0.4, 0, 0.2, 1);
-    border-left: 6px solid var(--primary-color) !important;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.09), 0 2px 6px rgba(0, 0, 0, 0.06);
-    position: relative;
-    cursor: pointer;
-    overflow: visible;
-    min-height: fit-content;
-    padding: 1rem 1.25rem;
-}
-
-.list-event-card::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    height: 4px;
-    background: linear-gradient(90deg, var(--primary-color) 0%, rgba(78, 115, 223, 0.5) 70%, transparent 100%);
-    opacity: 0;
-    transition: opacity 0.35s ease;
-    border-radius: 16px 16px 0 0;
-}
-
-.list-event-card::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 50px;
-    height: 50px;
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.08) 0%, transparent 70%);
-    border-radius: 0 16px 0 0;
-    pointer-events: none;
-}
-
-.list-event-card:hover {
-    transform: translateX(8px) translateY(-3px);
-    box-shadow: 0 10px 32px rgba(0, 74, 147, 0.18), 0 6px 12px rgba(0, 0, 0, 0.12);
-    z-index: 10;
-    background: linear-gradient(135deg, #ffffff 0%, #eef5ff 100%);
-    border-left-width: 7px;
-}
-
-.list-event-card:hover::before {
-    opacity: 1;
-}
-
-.list-event-card:hover::after {
-    background: radial-gradient(circle at top right, rgba(78, 115, 223, 0.15) 0%, transparent 70%);
-}
-
-.list-event-card:focus-visible {
-    outline: 3px solid var(--primary-color);
-    outline-offset: 4px;
-    box-shadow: 0 0 0 6px rgba(0, 74, 147, 0.15);
-}
-
-/* Hover tooltip for full details */
-.list-event-card .event-tooltip {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    min-width: 320px;
-    background: white;
-    border: 2px solid #4e73df;
-    border-radius: 14px;
-    box-shadow: 0 12px 48px rgba(0, 0, 0, 0.15), 0 4px 16px rgba(0, 0, 0, 0.1);
-    padding: 1.25rem;
-    margin-top: 0.75rem;
-    opacity: 0;
-    visibility: hidden;
-    transform: translateY(-15px);
-    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    z-index: 1000;
-    pointer-events: none;
-    backdrop-filter: blur(10px);
-}
-
-.list-event-card:hover .event-tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-/* Show tooltip on keyboard focus for accessibility */
-.list-event-card:focus-within .event-tooltip,
-.list-event-card:focus .event-tooltip {
-    opacity: 1;
-    visibility: visible;
-    transform: translateY(0);
-}
-
-.event-tooltip .tooltip-title {
-    font-weight: 700;
-    font-size: 1.1rem;
-    color: #1f2937;
-    margin-bottom: 1rem;
-    padding-bottom: 0.75rem;
-    border-bottom: 3px solid #4e73df;
-    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-}
-
-.event-tooltip .tooltip-row {
-    display: flex;
-    align-items: flex-start;
-    gap: 0.75rem;
-    margin-bottom: 0.75rem;
-    font-size: 0.9rem;
-}
-
-.event-tooltip .tooltip-row i {
-    color: #4e73df;
-    margin-top: 0.15rem;
-    flex-shrink: 0;
-    font-size: 1.1rem;
-}
-
-.event-tooltip .tooltip-label {
-    font-weight: 600;
-    color: #374151;
-    min-width: 70px;
-}
-
-.event-tooltip .tooltip-value {
-    color: #6b7280;
-    flex: 1;
-    line-height: 1.5;
-}
-
-.list-event-card .group-badge {
-    display: inline-flex;
-    align-items: center;
-    font-size: 0.72rem;
-    font-weight: 700;
-    padding: 0.3rem 0.75rem;
-    border-radius: 999px;
-    color: white;
-    background: linear-gradient(135deg, #4e73df 0%, #3a5bc7 100%);
-    margin-bottom: 0.5rem;
-    box-shadow: 0 2px 6px rgba(78, 115, 223, 0.25);
-    text-transform: uppercase;
-    letter-spacing: 0.6px;
-    white-space: nowrap;
-}
-
-.list-event-card .title {
-    font-weight: 700;
-    font-size: 1.1rem;
-    line-height: 1.6;
-    color: #1f2937;
-    margin-bottom: 0.65rem;
-    word-wrap: break-word;
-    overflow: visible;
-    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
-}
-
-.list-event-card .meta {
-    color: #4b5563;
-    font-size: 0.9rem;
-    display: flex;
-    align-items: center;
-    gap: 0.6rem;
-    font-weight: 500;
-    margin-top: 0.4rem;
-    padding: 0.3rem 0.6rem;
-    background: rgba(255, 255, 255, 0.7);
-    border-radius: 8px;
-    width: fit-content;
-}
-
-.list-event-card .meta i {
-    color: #4e73df;
-    font-size: 1rem;
-}
-
-.list-event-card:hover .meta {
-    background: rgba(255, 255, 255, 0.95);
-    color: #1f2937;
-}
-
-/* Group-specific backgrounds */
-.list-event-card[data-group="Group A"],
-.list-event-card[data-group*="Group A"] {
-    background: #e8e4f3;
-    border-left-color: #8b7ab8 !important;
-}
-
-.list-event-card[data-group="Group B"],
-.list-event-card[data-group*="Group B"] {
-    background: #d4edda;
-    border-left-color: #5cb85c !important;
-}
-
-.list-event-card[data-group*="Group A"] .group-badge {
-    background: #b8a9d6;
-    color: #5a4a7d;
-}
-
-.list-event-card[data-group*="Group B"] .group-badge {
-    background: #8fd19e;
-    color: #2d5f37;
-}
-
-/* Break / Lunch rows */
-.timetable-grid tr.break-row th,
-.timetable-grid tr.break-row td {
-    background: #fff7ec;
-}
-
-.timetable-grid tr.lunch-row th,
-.timetable-grid tr.lunch-row td {
-    background: #fff2f0;
-}
-
-/* Institution name styling */
-.institution-name.hindi-text {
-    font-family: 'Noto Sans Devanagari', 'Arial', sans-serif;
-    font-weight: 600;
-    font-size: 1.25rem;
-}
-
-.institution-name.english-text {
-    font-family: 'Montserrat', 'Noto Sans', 'Noto Sans Devanagari', system-ui, sans-serif;
-    font-weight: 600;
-    font-size: 1.1rem;
-}
-
-/* Form styling */
-.form-label {
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-}
-
-.form-label.required::after {
-    content: " *";
-    color: var(--danger-color);
-}
-
-.form-control,
-.form-select {
-    border: 2px solid var(--border-color);
-    border-radius: 8px;
-    padding: 0.625rem 0.875rem;
-    transition: var(--transition);
-    font-size: 0.95rem;
-}
-
-.form-control:focus,
-.form-select:focus {
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.15);
-    outline: none;
-}
-
-.form-control:hover:not(:focus):not(:disabled),
-.form-select:hover:not(:focus):not(:disabled) {
-    border-color: var(--primary-color);
-}
-
-.readonly-checkbox {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Custom Checkbox/Radio - GIGW Compliant */
-.form-check-input {
-    width: 1.25rem;
-    height: 1.25rem;
-    border: 2px solid var(--primary-color);
-    cursor: pointer;
-}
-
-.form-check-input:checked {
-    background-color: var(--primary-color);
-    border-color: var(--primary-color);
-}
-
-.form-check-input:focus {
-    box-shadow: 0 0 0 0.25rem rgba(0, 74, 147, 0.25);
-    border-color: var(--primary-color);
-}
-
-/* Modal improvements */
-.modal-header {
-    padding: 1.5rem;
-    background: linear-gradient(135deg, rgba(0, 74, 147, 0.05), rgba(175, 41, 16, 0.05));
-    border-bottom: 2px solid var(--primary-color);
-}
-
-.modal-header .modal-title {
-    font-weight: 600;
-    color: white;
-}
-
-.modal-body {
-    padding: 1.5rem;
-}
-
-.modal-footer {
-    padding: 1rem 1.5rem;
-    background-color: var(--light-bg);
-}
-
-.control-panel {
-    /* backdrop-filter creates a stacking context; dropdown then stays under fixed chrome */
-    border: 1px solid rgba(0, 74, 147, 0.1) !important;
-    overflow: visible !important;
-    position: relative;
-}
-
-.bg-gradient {
-    background: linear-gradient(135deg, rgba(0, 74, 147, 0.03), rgba(175, 41, 16, 0.03));
-}
-
-.logo-wrapper {
-    transition: var(--transition);
-}
-
-.logo-wrapper:hover {
-    transform: scale(1.05);
-}
-
-.week-controls {
-    transition: var(--transition);
-}
-
-.week-badge {
-    margin-top: 0.5rem;
-}
-
-.badge {
-    font-weight: 600;
-    letter-spacing: 0.5px;
-}
-
-/* Responsive adjustments */
-@media (max-width: 768px) {
-    .timetable-header .institution-name {
-        font-size: 1rem;
-    }
-
-    .modal-dialog {
-        margin: 0.5rem;
-    }
-
-    .btn-group {
-        width: 100%;
-        justify-content: center;
-    }
-
-    .control-panel {
-        flex-direction: column;
-        align-items: stretch !important;
-    }
-
-    .control-panel .btn-group {
-        width: 100%;
-    }
-
-    .control-panel .btn {
-        flex: 1;
-    }
-}
-
-/* Empty State Styling */
-.empty-state {
-    padding: 3rem 2rem;
-    text-align: center;
-}
-
-.empty-state i {
-    opacity: 0.3;
-}
-
-.empty-state p {
-    font-size: 1.1rem;
-}
-
-/* Loading State */
-.loading-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(255, 255, 255, 0.9);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 9999;
-}
-
-.loading-spinner {
-    width: 3rem;
-    height: 3rem;
-    border: 4px solid var(--border-color);
-    border-top-color: var(--primary-color);
-    border-radius: 50%;
-    animation: spin 0.8s linear infinite;
-}
-
-/* Auto-hide the calendar loading overlay after 2 seconds */
-#calendarLoadingOverlay {
-    animation: fadeOut 0.5s ease-in-out 2s forwards;
-}
-
-@keyframes fadeOut {
-    to {
-        opacity: 0;
-        visibility: hidden;
-        pointer-events: none;
-    }
-}
-
-@keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
-}
-
-/* Focus indicators for accessibility */
-:focus-visible {
-    outline: 2px solid var(--primary-color);
-    outline-offset: 2px;
-}
-
-/* High contrast mode support */
-@media (prefers-contrast: high) {
-    .btn-outline-primary {
-        border-width: 2px;
-    }
-
-    .fc-event-card {
-        border-width: 2px;
-    }
-    .list-event-card { border-width: 2px; }
-}
-
-/* Reduced motion */
-@media (prefers-reduced-motion: reduce) {
-
-    .fc-event-card,
-    .btn {
-        transition: none;
-    }
-}
-
-/* Compact density mode */
-body.compact-mode .fc { font-size: 0.85rem; }
-body.compact-mode .fc-event-card {
-    padding: 0.35rem 0.5rem;
-    border-left-width: 3px;
-    border-radius: 0.375rem;
-}
-body.compact-mode .fc-event-card .event-title { font-size: 0.85rem; }
-body.compact-mode .fc-event-card .event-meta .meta-item { display: none; }
-body.compact-mode .fc-event-card .event-meta .meta-item--time { display: inline-flex; }
-body.compact-mode .fc-timegrid-event .fc-event-main { border-left-width: 3px; }
-body.compact-mode .fc-popover .fc-popover-body .fc-event-card { padding: 0.5rem 0.625rem; }
-
-body.compact-mode .list-event-card { padding: 0.5rem 0.625rem !important; border-radius: 10px; }
-body.compact-mode .list-event-card .title { font-size: 0.95rem; }
-body.compact-mode .list-event-card .meta:not(:first-of-type) { display: none; }
-body.compact-mode .list-event-card .event-tooltip { display: none; }
-
-/* Compact mode - reduce cell height for better fit */
-body.compact-mode .timetable-grid td {
-    max-height: 200px;
-}
-
-body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
-    width: 20px;
-    height: 20px;
-    line-height: 20px;
-    font-size: 1rem;
-}
-
-/* FullCalendar "+ more" text styling */
-.fc-daygrid-day-more-link {
-    font-size: 1.25rem !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
-    background-color: var(--primary-color) !important;
-    padding: 0.5rem 0.75rem !important;
-    border-radius: 0.375rem !important;
-    display: inline-block !important;
-    transition: all 0.2s ease !important;
-    text-decoration: none !important;
-    background: linear-gradient(135deg, var(--primary-color), #0066cc) !important;
-}
-
-.fc-daygrid-day-more-link:hover {
-    background: linear-gradient(135deg, var(--primary-dark), #004a93) !important;
-    transform: scale(1.08);
-    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.4) !important;
-    color: #ffffff !important;
-}
-
-/* Fallback for other FullCalendar versions */
-.fc-more-link {
-    font-size: 1.25rem !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
-    background-color: var(--primary-color) !important;
-    padding: 0.5rem 0.75rem !important;
-    border-radius: 0.375rem !important;
-    display: inline-block !important;
-    transition: all 0.2s ease !important;
-}
-
-.fc-more-link:hover {
-    background-color: var(--primary-dark) !important;
-    transform: scale(1.08);
-    color: #ffffff !important;
-}
-
-/* TimeGrid "+ more" links for week and day views */
-.fc-timegrid-more-link,
-.fc-timegrid .fc-more-link {
-    font-size: 1rem !important;
-    font-weight: 700 !important;
-    color: #ffffff !important;
-    background: linear-gradient(135deg, var(--primary-color), #0066cc) !important;
-    padding: 0.4rem 0.6rem !important;
-    border-radius: 0.375rem !important;
-    display: inline-block !important;
-    transition: all 0.2s ease !important;
-    text-decoration: none !important;
-    box-shadow: 0 2px 4px rgba(0, 74, 147, 0.2) !important;
-}
-
-.fc-timegrid-more-link:hover,
-.fc-timegrid .fc-more-link:hover {
-    background: linear-gradient(135deg, var(--primary-dark), #004a93) !important;
-    transform: scale(1.05) !important;
-    box-shadow: 0 4px 8px rgba(0, 74, 147, 0.4) !important;
-    color: #ffffff !important;
-}
-
-/* Timeline View - Modern Design */
-.timeline-container {
-    display: flex;
-    gap: 2rem;
-    padding: 2rem;
-    background: white;
-    border-radius: 12px;
-    box-shadow: var(--shadow);
-}
-
-.timeline-times {
-    width: 120px;
-    flex-shrink: 0;
-    padding-right: 1rem;
-    border-right: 2px solid var(--border-color);
-}
-
-.timeline-time-label {
-    height: 80px;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end;
-    font-weight: 600;
-    color: var(--primary-color);
-    font-size: 0.95rem;
-    position: relative;
-}
-
-.timeline-time-label::after {
-    content: '';
-    position: absolute;
-    right: -1rem;
-    top: 50%;
-    width: 8px;
-    height: 8px;
-    background: var(--primary-color);
-    border-radius: 50%;
-    transform: translateY(-50%);
-}
-
-.timeline-slots {
-    flex: 1;
-    position: relative;
-    min-height: 600px;
-}
-
-.timeline-slot {
-    position: relative;
-    height: 80px;
-    border-bottom: 1px solid var(--border-color);
-    transition: background-color 0.2s ease;
-}
-
-.timeline-slot:hover {
-    background-color: rgba(0, 74, 147, 0.02);
-}
-
-.timeline-slot:last-child {
-    border-bottom: none;
-}
-
-.timeline-event-card {
-    position: absolute;
-    left: 0;
-    right: 0;
-    background: white;
-    border-radius: 8px;
-    padding: 1rem;
-    border-left: 4px solid var(--primary-color);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: var(--transition);
-    cursor: pointer;
-    overflow: hidden;
-}
-
-.timeline-event-card:hover {
-    transform: translateX(4px);
-    box-shadow: 0 4px 16px rgba(0, 74, 147, 0.2);
-    border-left-width: 6px;
-}
-
-.timeline-event-card .event-title {
-    font-weight: 600;
-    color: var(--text-dark);
-    margin-bottom: 0.5rem;
-    font-size: 1rem;
-    line-height: 1.4;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.timeline-event-card .event-time {
-    font-size: 0.875rem;
-    color: var(--text-muted);
-    font-weight: 500;
-    display: flex;
-    align-items: center;
-    gap: 0.25rem;
-}
-
-.timeline-event-card .event-time i {
-    font-size: 1rem;
-}
-
-.timeline-event-card .event-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-    margin-top: 0.75rem;
-}
-
-.timeline-event-card .event-badge {
-    font-size: 0.75rem;
-    padding: 0.25rem 0.625rem;
-    border-radius: 12px;
-    background-color: #4e73df;
-    color: var(--primary-color);
-    font-weight: 600;
-    letter-spacing: 0.3px;
-}
-
-/* Event Type Colors */
-.timeline-event-card[data-event-type="lecture"] {
-    border-left-color: #4e73df;
-}
-
-.timeline-event-card[data-event-type="exam"] {
-    border-left-color: #e74a3b;
-}
-
-.timeline-event-card[data-event-type="meeting"] {
-    border-left-color: #1cc88a;
-}
-
-.timeline-event-card[data-event-type="workshop"] {
-    border-left-color: #f6c23e;
-}
-
-/* Timeline Responsive Design */
-@media (max-width: 768px) {
-    .timeline-container {
-        padding: 1rem;
-        gap: 1rem;
-    }
-
-    .timeline-times {
-        width: 80px;
-    }
-
-    .timeline-time-label {
-        font-size: 0.85rem;
-    }
-
-    .timeline-event-card {
-        padding: 0.75rem;
-    }
-
-    .timeline-event-card .event-title {
-        font-size: 0.9rem;
-    }
-}
-
-/* ========== COMPREHENSIVE RESPONSIVE DESIGN ========== */
-
-/* Extra Small Devices (< 576px) */
-@media (max-width: 575.98px) {
-    /* General Layout */
-    .container-fluid {
-        padding: 0.5rem;
-    }
-
-    /* Course Header */
-    .course-header {
-        padding: 1rem 0.75rem;
-        margin-bottom: 1rem !important;
-    }
-
-    .course-header h1 {
-        font-size: 1.15rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .course-header p {
-        font-size: 0.8rem;
-    }
-
-    .course-header .badge {
-        font-size: 0.75rem;
-        padding: 0.25rem 0.5rem;
-    }
-
-    /* Control Panel */
-    .control-panel {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        padding: 1rem 0.75rem !important;
-        gap: 0.75rem !important;
-    }
-
-    .view-toggle-section {
-        flex-direction: column !important;
-        width: 100%;
-        gap: 0.75rem !important;
-    }
-
-    .view-toggle-section .text-muted {
-        display: none !important;
-    }
-
-    .btn-group {
-        display: flex;
-        width: 100%;
-        gap: 0.5rem;
-    }
-
-    .btn-group .btn {
-        flex: 1;
-        font-size: 0.8rem;
-        padding: 0.4rem 0.5rem;
-    }
-
-    .btn-group .btn i {
-        margin-right: 0.25rem;
-    }
-
-    .density-toggle {
-        width: 100%;
-    }
-
-    .density-toggle .btn {
-        width: 100%;
-        font-size: 0.8rem;
-    }
-
-    #courseFilter {
-        width: 100% !important;
-        min-width: unset !important;
-        font-size: 0.9rem;
-        padding: 0.5rem;
-    }
-
-    #createEventButton {
-        width: 100%;
-        font-size: 0.85rem;
-        padding: 0.6rem !important;
-    }
-
-    /* Calendar Container */
-    .card {
-        border-left-width: 3px !important;
-    }
-
-    .card-body {
-        padding: 1rem !important;
-    }
-
-    .calendar-container {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
-    }
-
-    #calendar .fc-view-harness {
-        min-height: 320px;
-    }
-
-    /* FullCalendar Adjustments */
-    .fc {
-        font-size: 0.8rem;
-    }
-
-    .fc-col-header-cell {
-        padding: 0.5rem 0.25rem !important;
-        font-size: 0.75rem;
-        font-weight: 600;
-    }
-
-    .fc-daygrid-day-number {
-        font-size: 0.75rem;
-        padding: 0.35rem;
-    }
-
-    .fc-event-card {
-        padding: 0.35rem 0.4rem !important;
-        border-radius: 0.3rem;
-        margin: 0.15rem 0 !important;
-        font-size: 0.7rem;
-        background: #fff !important;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .fc-event-card .event-title {
-        font-size: 0.75rem !important;
-        line-height: 1.2 !important;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-        max-width: 100%;
-    }
-
-    .fc-event-card .event-meta {
-        gap: 0.3rem 0.5rem !important;
-        margin-top: 0.15rem;
-        flex-wrap: wrap;
-    }
-
-    .fc-event-card .meta-item {
-        font-size: 0.7rem !important;
-        display: none !important;
-        white-space: nowrap;
-    }
-
-    .fc-event-card .event-badge {
-        font-size: 0.65rem !important;
-        padding: 0.1rem 0.35rem !important;
-        white-space: nowrap;
-    }
-
-    .fc-daygrid-day-more-link {
-        font-size: 0.8rem !important;
-        padding: 0.3rem 0.5rem !important;
-    }
-
-    /* List View / Timetable */
-    .timetable-header {
-        padding: 1rem !important;
-        border-radius: 0.75rem !important;
-    }
-
-    .timetable-header .row {
-        gap: 1rem !important;
-    }
-
-    .timetable-header .col-md-2,
-    .timetable-header .col-md-6,
-    .timetable-header .col-md-4 {
-        text-align: center !important;
-    }
-
-    .logo-wrapper {
-        padding: 0.5rem !important;
-    }
-
-    .logo-wrapper img {
-        width: 50px !important;
-        height: 50px !important;
-    }
-
-    .timetable-header h1 {
-        font-size: 1rem !important;
-        margin-bottom: 0.5rem !important;
-    }
-
-    .timetable-header p {
-        font-size: 0.75rem;
-    }
-
-    .week-controls {
-        padding: 0.75rem !important;
-    }
-
-    .week-controls .btn-group {
-        margin-bottom: 0.75rem;
-        gap: 0.25rem;
-    }
-
-    .week-controls .btn {
-        font-size: 0.75rem;
-        padding: 0.4rem 0.5rem;
-    }
-
-    .week-badge .badge {
-        font-size: 0.75rem !important;
-        padding: 0.35rem 0.75rem !important;
-    }
-
-    /* Week Cards */
-    .week-cards .row {
-        gap: 0.75rem !important;
-    }
-
-    .week-cards .row > * {
-        flex: 0 0 100%;
-        max-width: 100%;
-    }
-
-    .week-card {
-        padding: 0.75rem !important;
-    }
-
-    .week-card-date {
-        font-size: 0.8rem;
-    }
-
-    .week-card-day {
-        font-size: 0.7rem;
-    }
-
-    /* Timetable Grid */
-    .timetable-container {
-        border-radius: 0.5rem;
-        overflow: hidden;
-    }
-
-    .timetable-container .table-responsive {
-        -webkit-overflow-scrolling: touch;
-        overflow-x: auto;
-        overscroll-behavior-x: contain;
-    }
-
-    .table-responsive {
-        font-size: 0.8rem;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 0.5rem 0.35rem !important;
-        font-size: 0.75rem;
-    }
-
-    .timetable-grid .time-column {
-        min-width: 70px;
-        font-size: 0.7rem;
-    }
-
-    .timetable-grid td {
-        max-height: 200px;
-    }
-
-    /* List Event Cards */
-    .list-event-card {
-        padding: 0.65rem !important;
-        border-radius: 0.5rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .list-event-card .title {
-        font-size: 0.85rem;
-    }
-
-    .list-event-card .meta {
-        font-size: 0.75rem;
-    }
-
-    .list-event-card .event-tooltip {
-        min-width: 200px;
-        font-size: 0.75rem;
-        padding: 0.65rem;
-    }
-
-    .list-event-card .group-badge {
-        font-size: 0.65rem;
-        padding: 0.1rem 0.35rem;
-    }
-
-    /* Form Elements */
-    .form-label {
-        font-size: 0.85rem;
-    }
-
-    .form-control,
-    .form-select {
-        font-size: 0.85rem;
-        padding: 0.5rem 0.65rem;
-    }
-
-    .form-check-input {
-        width: 1.1rem;
-        height: 1.1rem;
-    }
-
-    /* Modal */
-    .modal-dialog {
-        margin: 0.5rem !important;
-    }
-
-    .modal-content {
-        border-radius: 0.75rem;
-    }
-
-    .modal-header {
-        padding: 1rem !important;
-    }
-
-    .modal-header .modal-title {
-        font-size: 1rem;
-    }
-
-    .modal-body {
-        padding: 1rem !important;
-        font-size: 0.85rem;
-    }
-
-    .modal-footer {
-        padding: 0.75rem 1rem !important;
-    }
-
-    .modal-footer .btn {
-        font-size: 0.8rem;
-        padding: 0.5rem 0.75rem;
-    }
-
-    /* Buttons */
-    .btn {
-        font-size: 0.85rem;
-        padding: 0.5rem 0.75rem;
-    }
-
-    .btn-lg {
-        padding: 0.6rem 0.9rem;
-        font-size: 0.9rem;
-    }
-
-    /* Badges */
-    .badge {
-        font-size: 0.65rem;
-    }
-
-    /* Utility Classes */
-    .p-3 {
-        padding: 0.75rem !important;
-    }
-
-    .p-4 {
-        padding: 1rem !important;
-    }
-
-    .p-md-4 {
-        padding: 1rem !important;
-    }
-
-    .mb-3 {
-        margin-bottom: 0.75rem !important;
-    }
-
-    .mb-4 {
-        margin-bottom: 1rem !important;
-    }
-
-    .gap-3 {
-        gap: 0.75rem !important;
-    }
-
-    .gap-4 {
-        gap: 1rem !important;
-    }
-}
-
-/* Small Devices (576px to 767px) */
-@media (max-width: 767.98px) {
-    .course-header {
-        padding: 1.5rem 1rem;
-    }
-
-    .course-header h1 {
-        font-size: 1.35rem;
-    }
-
-    .control-panel {
-        flex-direction: column;
-        align-items: stretch !important;
-    }
-
-    .view-toggle-section {
-        flex-direction: column;
-        width: 100%;
-    }
-
-    .btn-group {
-        width: 100%;
-    }
-
-    .btn-group .btn {
-        flex: 1;
-        font-size: 0.85rem;
-    }
-
-    #courseFilter {
-        width: 100% !important;
-        min-width: unset !important;
-    }
-
-    #createEventButton {
-        width: 100%;
-    }
-
-    .fc {
-        font-size: 0.85rem;
-    }
-
-    .fc-col-header-cell {
-        padding: 0.75rem 0.4rem !important;
-        font-size: 0.8rem;
-    }
-
-    .fc-daygrid-day-number {
-        font-size: 0.8rem;
-        padding: 0.4rem;
-    }
-
-    .fc-event-card {
-        padding: 0.65rem 0.75rem !important;
-        border-radius: 0.625rem;
-        margin: 0.3rem 0 !important;
-        font-size: 0.8rem;
-        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-        overflow: visible;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.09);
-        min-height: fit-content;
-    }
-
-    .fc-event-card .event-title {
-        font-size: 0.9rem !important;
-        line-height: 1.4 !important;
-        overflow: visible;
-        -webkit-line-clamp: 3;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        margin-bottom: 0.45rem !important;
-        word-break: break-word;
-    }
-
-    .fc-event-card .event-meta {
-        gap: 0.4rem 0.6rem !important;
-        margin-top: 0.35rem;
-        padding-top: 0.4rem;
-        flex-wrap: wrap;
-        border-top-width: 1px;
-    }
-
-    .fc-event-card .meta-item {
-        font-size: 0.75rem !important;
-        padding: 0.2rem 0.4rem !important;
-        gap: 0.3rem;
-    }
-    
-    .fc-event-card .meta-item--time {
-        display: inline-flex !important;
-    }
-    
-    .fc-event-card .meta-item--venue {
-        display: inline-flex !important;
-    }
-    
-    .fc-event-card .meta-item--faculty {
-        display: none !important;
-    }
-
-    .fc-event-card .event-badge {
-        font-size: 0.65rem !important;
-        padding: 0.25rem 0.5rem !important;
-        white-space: nowrap;
-    }
-
-    .timetable-header .row {
-        flex-direction: column;
-        text-align: center;
-    }
-
-    .timetable-header .col-md-2,
-    .timetable-header .col-md-6,
-    .timetable-header .col-md-4 {
-        flex: 0 0 100%;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 0.65rem 0.4rem;
-        font-size: 0.8rem;
-    }
-
-    .timetable-grid .time-column {
-        min-width: 90px;
-    }
-
-    .timetable-container .table-responsive {
-        -webkit-overflow-scrolling: touch;
-        overflow-x: auto;
-        overscroll-behavior-x: contain;
-    }
-
-    .calendar-container {
-        -webkit-overflow-scrolling: touch;
-        overscroll-behavior-x: contain;
-    }
-
-    .list-event-card {
-        padding: 0.75rem;
-    }
-
-    .list-event-card .title {
-        font-size: 0.9rem;
-    }
-
-    .list-event-card .event-tooltip {
-        min-width: 220px;
-    }
-}
-
-/* Medium Devices (768px to 991px) */
-@media (min-width: 768px) and (max-width: 991.98px) {
-    .course-header {
-        padding: 2rem 1.25rem;
-    }
-
-    .course-header h1 {
-        font-size: 1.5rem;
-    }
-
-    .fc {
-        font-size: 0.9rem;
-    }
-
-    .fc-event-card {
-        padding: 0.75rem 0.875rem;
-        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-        overflow: visible;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.09);
-        min-height: fit-content;
-    }
-
-    .fc-event-card .event-title {
-        overflow: visible;
-        -webkit-line-clamp: 3;
-        display: -webkit-box;
-        -webkit-box-orient: vertical;
-        font-size: 0.98rem;
-        line-height: 1.45;
-        word-break: break-word;
-    }
-
-    .fc-event-card .event-meta {
-        flex-wrap: wrap;
-        gap: 0.5rem 0.8rem;
-    }
-    
-    .fc-event-card .meta-item {
-        font-size: 0.82rem;
-        padding: 0.25rem 0.45rem;
-    }
-    
-    .fc-event-card .meta-item--time,
-    .fc-event-card .meta-item--venue {
-        display: inline-flex !important;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 0.75rem;
-        font-size: 0.85rem;
-    }
-
-    .timetable-grid .time-column {
-        min-width: 100px;
-    }
-
-    .list-event-card {
-        padding: 0.75rem;
-    }
-}
-
-/* Desktop Devices (992px and up) - Keep Original Styling */
-@media (min-width: 992px) {
-    .course-header {
-        padding: 2.75rem 1.5rem;
-    }
-
-    .course-header h1 {
-        font-size: 1.85rem;
-    }
-
-    .control-panel {
-        flex-direction: row;
-        align-items: center;
-    }
-
-    .view-toggle-section {
-        flex-direction: row;
-    }
-
-    #courseFilter {
-        min-width: 200px;
-    }
-
-    .fc {
-        font-size: 0.95rem;
-    }
-
-    .fc-event-card {
-        padding: 1rem 1.1rem;
-        background: linear-gradient(135deg, #ffffff 0%, #f8fbff 100%) !important;
-        min-height: fit-content;
-    }
-
-    .fc-event-card .event-title {
-        white-space: normal;
-        font-size: 1.05rem;
-        overflow: visible;
-        word-break: break-word;
-        -webkit-line-clamp: 3;
-        line-height: 1.5;
-    }
-
-    .fc-event-card .event-meta {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.65rem 1.1rem;
-    }
-    
-    .fc-event-card .meta-item {
-        font-size: 0.875rem;
-        display: inline-flex !important;
-    }
-
-    .timetable-grid th,
-    .timetable-grid td {
-        padding: 0.75rem;
-    }
-
-    .timetable-grid .time-column {
-        min-width: 120px;
-    }
-
-    .list-event-card {
-        padding: 0.75rem 1rem;
-    }
-}
-
-/* Print Styles */
-@media print {
-    .control-panel,
-    #createEventButton,
-    .btn,
-    button {
-        display: none !important;
-    }
-
-    .calendar-container {
-        box-shadow: none;
-    }
-
-    .fc {
-        font-size: 0.95rem;
-    }
-}
-.control-panel:focus-within {
-    outline: 2px solid #004a93;
-    outline-offset: 2px;
-}
-
-.btn:focus-visible,
-.form-select:focus-visible {
-    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.25);
-}
-
-</style>
-
-<!-- Debug: Page is loading -->
-<script>console.log('Calendar view is rendering...', {
-    courseMasterExists: {{ isset($courseMaster) ? 'true' : 'false' }},
-    courseMasterCount: {{ isset($courseMaster) ? $courseMaster->count() : 0 }}
-});</script>
-
-<div class="container-fluid calendar-admin-page">
+<link rel="stylesheet" href="{{ asset('css/calendar-admin.css') }}?v={{ @filemtime(public_path('css/calendar-admin.css')) ?: time() }}">
+<link rel="stylesheet" href="{{ asset('css/cal-event-pill.css') }}">
+<link rel="stylesheet" href="{{ asset('css/cal-portal-master.css') }}">
+
+<div class="container-fluid calendar-admin-page cal-master-page">
     @if(!isset($courseMaster) || $courseMaster->isEmpty())
-        <div class="alert alert-warning m-4">
-            <h4><i class="bi bi-exclamation-triangle me-2"></i>No Courses Available</h4>
-            <p>No active courses found. Please contact the administrator.</p>
+        <div class="alert alert-warning mb-3 mt-3">
+            <h4 class="h6 mb-1"><i class="bi bi-exclamation-triangle me-2"></i>No Courses Available</h4>
+            <p class="mb-0 small">No active courses found. Please contact the administrator.</p>
         </div>
     @endif
     <x-breadcrum title="Calendar Creation">
@@ -2188,7 +45,6 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         </p>
     </div>
 
-    <!-- Main Content Area -->
     <main id="main-content" role="main">
         <section class="calendar-container" aria-label="Academic calendar">
             <div class="card cal-portal-card border-0 shadow-sm rounded-3">
@@ -2259,7 +115,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                     </div>
                     
                     <!-- Loading overlay -->
-                    <div id="calendarLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white" style="min-height: 400px; z-index: 100;">
+                    <div id="calendarLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-90 rounded-2" style="min-height: 400px; z-index: 50;">
                         <div class="text-center">
                             <div class="spinner-border text-primary" role="status" style="width: 3rem; height: 3rem;">
                                 <span class="visually-hidden">Loading calendar...</span>
@@ -2394,6 +250,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
 @include('admin.calendar.partials.add_edit_events')
 @include('admin.calendar.partials.events_details')
+@include('admin.calendar.partials.event_hover_card')
 @include('admin.calendar.partials.confirmation')
 @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
 @include('admin.calendar.partials.weekly_info_editor')
@@ -2443,91 +300,38 @@ const CalendarConfig = {
     },
     minDate: new Date().toISOString().split('T')[0],
     // Expand visible timetable window to cover typical sessions
-    minTime: '08:00',
-    maxTime: '20:00'
+    minTime: '09:00',
+    maxTime: '17:30'
 };
 
-function initCourseFilterChoices() {
+function syncCalCourseFilterState() {
     const select = document.getElementById('courseFilter');
-    if (!select || typeof window.Choices === 'undefined') return;
-    if (select.dataset.choicesInitialized === 'true') return;
-
-    const courseChoicesOptions = {
-        shouldSort: false,
-        searchEnabled: true,
-        searchPlaceholderValue: 'Search courses...',
-        searchResultLimit: 50,
-        searchFloor: 1,
-        itemSelectText: '',
-        allowHTML: false,
-        classNames: {
-            containerInner: ['choices__inner', 'form-select', 'shadow-sm'],
-            input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
-            inputCloned: ['choices__input--cloned'],
-            listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
-            item: ['choices__item', 'dropdown-item', 'rounded-0'],
-            itemSelectable: ['choices__item--selectable'],
-            itemDisabled: ['choices__item--disabled', 'disabled'],
-            itemChoice: ['choices__item--choice'],
-            placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
-            highlightedState: ['is-highlighted', 'active'],
-            notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
-        }
-    };
-
-    select._courseChoices = new Choices(select, courseChoicesOptions);
-    select.dataset.choicesInitialized = 'true';
+    if (!select) return;
+    const empty = !select.value;
+    select.classList.toggle('cal-filter-empty', empty);
+    select.classList.toggle('filter-placeholder', empty);
 }
 
-/**
- * Close "Filter by Course" Choices and keep it hidden while #eventModal is open.
- * (High z-index + stacking could leave the list painted on top of the modal even if API close fails.)
- */
+function initCourseFilter() {
+    const select = document.getElementById('courseFilter');
+    if (!select) return;
+    syncCalCourseFilterState();
+    select.addEventListener('change', syncCalCourseFilterState);
+}
+
+/** Blur course filter while Add/Edit Event modal is open */
 function closeCourseFilterDropdown() {
     const select = document.getElementById('courseFilter');
-    const inst = select && select._courseChoices;
-    if (inst) {
-        try {
-            if (typeof inst.hideDropdown === 'function') {
-                inst.hideDropdown();
-            }
-        } catch (e) { /* ignore */ }
+    if (select && typeof select.blur === 'function') {
+        select.blur();
     }
-    const wrap = document.querySelector('.calendar-choices-bootstrap .choices');
-    if (wrap) {
-        wrap.classList.remove('is-open', 'is-flipped');
-        wrap.querySelectorAll('.choices__list--dropdown, .choices__list[aria-expanded]').forEach((el) => {
-            try {
-                el.setAttribute('aria-hidden', 'true');
-            } catch (e2) { /* ignore */ }
-        });
+    if (document.activeElement && document.activeElement.closest('#courseFilterWrap')) {
+        document.activeElement.blur();
     }
-    try {
-        const filterRoot = document.querySelector('.calendar-choices-bootstrap');
-        if (filterRoot && document.activeElement && filterRoot.contains(document.activeElement)) {
-            document.activeElement.blur();
-        }
-    } catch (e3) { /* ignore */ }
-    document.body.classList.add('calendar-suppress-course-filter-dropdown');
 }
 
 function releaseCourseFilterDropdownSuppression() {
-    document.body.classList.remove('calendar-suppress-course-filter-dropdown');
-    const wrap = document.querySelector('.calendar-choices-bootstrap .choices');
-    if (wrap) {
-        wrap.querySelectorAll('.choices__list--dropdown, .choices__list[aria-expanded]').forEach((el) => {
-            try {
-                el.removeAttribute('aria-hidden');
-            } catch (e) { /* ignore */ }
-        });
-    }
-    const select = document.getElementById('courseFilter');
-    const inst = select && select._courseChoices;
-    if (inst && typeof inst.hideDropdown === 'function') {
-        try {
-            inst.hideDropdown();
-        } catch (e2) { /* ignore */ }
-    }
+    /* native select — no suppression state */
 }
 
 // Calendar Manager Class
@@ -2541,6 +345,10 @@ class CalendarManager {
         this.courses = @json($courseMaster);
         this.calendarRequiresCourses = @json($calendarRequiresCourses);
         this.eventsLoaded = false; // Track if events have been loaded initially
+        this.eventDetailsCache = new Map();
+        this.hoverShowTimer = null;
+        this.hoverHideTimer = null;
+        this.hoverAnchorEl = null;
         this.init();
     }
 
@@ -2565,6 +373,7 @@ class CalendarManager {
             try { this.updateCurrentWeek(); } catch (e) { console.error('updateCurrentWeek error:', e); }
             try { this.observeMoreLinksChanges(); } catch (e) { console.error('observeMoreLinksChanges error:', e); }
             try { this.initDensity(); } catch (e) { console.error('initDensity error:', e); }
+            try { this.initEventHoverCard(); } catch (e) { console.error('initEventHoverCard error:', e); }
             
             console.log('Calendar manager initialized successfully');
         } catch (error) {
@@ -2610,7 +419,7 @@ class CalendarManager {
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            hiddenDays: [], // Show all days Mon–Sun
+            hiddenDays: [0, 6], // Initially hide Sunday (0) and Saturday (6)
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -2627,7 +436,14 @@ class CalendarManager {
             slotMaxTime: CalendarConfig.maxTime,
             slotDuration: '00:30:00',
             snapDuration: '00:30:00',
-            slotLabelInterval: '00:30:00',
+            slotLabelInterval: '01:00:00',
+            slotLabelFormat: {
+                hour: 'numeric',
+                minute: '2-digit',
+                omitZeroMinute: true,
+                meridiem: 'short',
+                hour12: true
+            },
             height: 'auto',
             contentHeight: 'auto',
             editable: true,
@@ -2648,7 +464,10 @@ class CalendarManager {
                 },
                 timeGridWeek: {
                     dayMaxEvents: false,
-                    eventMaxStack: 8
+                    eventMaxStack: 8,
+                    allDaySlot: true,
+                    slotEventOverlap: false,
+                    dayHeaderFormat: { weekday: 'short', day: '2-digit', omitCommas: true }
                 },
                 timeGridDay: {
                     dayMaxEvents: false,
@@ -2682,14 +501,29 @@ class CalendarManager {
             },
             eventContent: this.renderEventContent.bind(this),
             eventClick: this.handleEventClick.bind(this),
+            eventMouseEnter: this.handleEventMouseEnter.bind(this),
+            eventMouseLeave: this.handleEventMouseLeave.bind(this),
             select: this.handleDateSelect.bind(this),
-            eventDidMount: this.setEventAccessibility.bind(this),
-            dayCellDidMount: this.setDayCellAccessibility.bind(this)
+            eventDidMount: this.onEventMount.bind(this),
+            dayCellDidMount: this.setDayCellAccessibility.bind(this),
+            datesSet: () => {
+                this.updatePortalToolbarTitle();
+                this.syncPortalViewButtons();
+                this.styleMoreLinks();
+                try {
+                    this.updateWeekendVisibility();
+                } catch (error) {
+                    console.error('Error updating weekend visibility:', error);
+                }
+            }
         });
 
         this.calendar.render();
         console.log('Calendar rendered');
-        
+
+        this.initPortalToolbar();
+        this.updatePortalToolbarTitle();
+        this.syncPortalViewButtons();
         this.styleMoreLinks();
         this.applyDenseMode();
         
@@ -2701,6 +535,104 @@ class CalendarManager {
                 loadingOverlay.style.display = 'none';
             }
         }, 2000); // Give calendar 2 seconds to load
+    }
+
+    /**
+     * Ensure week/time-grid views receive timed events (not all-day row).
+     */
+    normalizeEventForTimeGrid(event) {
+        if (event.allDay === true || event.full_day == 1) {
+            return event;
+        }
+
+        const fixedStart = this.fixCalendarDateTimeString(event.start);
+        const fixedEnd = event.end ? this.fixCalendarDateTimeString(event.end) : event.end;
+
+        if (fixedStart && fixedStart.includes('T') && event.allDay === false) {
+            return { ...event, start: fixedStart, end: fixedEnd || fixedStart, allDay: false };
+        }
+
+        const session = event.class_session_debug || event.class_session || '';
+        const dateStr = this.extractEventDateYmd(event.start);
+        const times = this.parseClassSessionTimeRange(session);
+
+        if (!times || !dateStr) {
+            return event;
+        }
+
+        let endDateStr = this.extractEventDateYmd(event.end) || dateStr;
+        let endIso = `${endDateStr}T${times.end}`;
+
+        if (times.end <= times.start && endDateStr === dateStr) {
+            const next = new Date(`${dateStr}T12:00:00`);
+            next.setDate(next.getDate() + 1);
+            endDateStr = next.toISOString().slice(0, 10);
+            endIso = `${endDateStr}T${times.end}`;
+        }
+
+        return {
+            ...event,
+            start: `${dateStr}T${times.start}`,
+            end: endIso,
+            allDay: false,
+        };
+    }
+
+    fixCalendarDateTimeString(value) {
+        if (!value) return value;
+        const raw = String(value).trim();
+        const broken = raw.match(/^(\d{4}-\d{2}-\d{2})\s+[\d:]+\s*T(\d{2}:\d{2}(?::\d{2})?)/);
+        if (broken) {
+            return `${broken[1]}T${broken[2].length === 5 ? broken[2] + ':00' : broken[2]}`;
+        }
+        const dateOnly = raw.match(/^(\d{4}-\d{2}-\d{2})$/);
+        if (dateOnly) {
+            return dateOnly[1];
+        }
+        const iso = raw.match(/^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2}(?::\d{2})?)/);
+        if (iso) {
+            return `${iso[1]}T${iso[2].length === 5 ? iso[2] + ':00' : iso[2]}`;
+        }
+        return raw;
+    }
+
+    extractEventDateYmd(start) {
+        if (!start) return null;
+        const fixed = this.fixCalendarDateTimeString(start);
+        const match = String(fixed).match(/^(\d{4}-\d{2}-\d{2})/);
+        return match ? match[1] : null;
+    }
+
+    parseClassSessionTimeRange(session) {
+        if (!session || !/[-–—]/.test(String(session))) {
+            return null;
+        }
+        const parts = String(session).trim().split(/\s*[-–—]\s*/);
+        if (parts.length < 2) {
+            return null;
+        }
+        const start = this.parseTimePartTo24(parts[0]);
+        const end = this.parseTimePartTo24(parts[1]);
+        if (!start || !end) {
+            return null;
+        }
+        return {
+            start: start.length === 5 ? `${start}:00` : start,
+            end: end.length === 5 ? `${end}:00` : end,
+        };
+    }
+
+    parseTimePartTo24(timeStr) {
+        const trimmed = String(timeStr).trim();
+        if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
+            const [h, m] = trimmed.split(':');
+            return `${String(parseInt(h, 10)).padStart(2, '0')}:${m}`;
+        }
+        if (/^\d{1,2}:\d{2}:\d{2}$/.test(trimmed)) {
+            return trimmed;
+        }
+        const converted = this.convertTo24Hour(trimmed);
+        return converted || null;
     }
 
     fetchEvents(info, successCallback, failureCallback) {
@@ -2748,8 +680,9 @@ class CalendarManager {
                 const type = (event.type || event.event_type || event.session_type || '').toString().toLowerCase();
                 return type !== 'holiday' && type !== 'restricted holiday' && type !== 'restricted' && !type.includes('holiday');
             });
-            console.log('Events after filtering:', filteredData.length);
-            successCallback(filteredData);
+            const normalized = filteredData.map(event => this.normalizeEventForTimeGrid(event));
+            console.log('Events after filtering:', normalized.length);
+            successCallback(normalized);
         })
         .catch(error => {
             console.error('Error fetching events:', error);
@@ -2816,38 +749,68 @@ class CalendarManager {
     }
 
     styleMoreLinks() {
-        // Style all "+ more" links including timeGrid views
         const moreLinks = document.querySelectorAll(
-            '.fc-daygrid-day-more-link, .fc-more-link, .fc-timegrid-more-link, .fc-daygrid-day-frame a[data-date], .fc-timegrid a[aria-label*="more"]');
+            '.fc-daygrid-day-more-link, .fc-more-link, .fc-timegrid-more-link');
         moreLinks.forEach(link => {
             if (link.textContent.includes('+') || link.textContent.toLowerCase().includes('more')) {
-                // Check if it's a timeGrid link (smaller styling)
-                const isTimeGrid = link.closest('.fc-timegrid') !== null;
-                
-                link.style.fontSize = isTimeGrid ? '1rem' : '1.25rem';
-                link.style.fontWeight = '700';
-                link.style.color = '#ffffff';
-                link.style.backgroundColor = '#004a93';
-                link.style.padding = isTimeGrid ? '0.4rem 0.6rem' : '0.5rem 0.75rem';
-                link.style.borderRadius = '0.375rem';
-                link.style.display = 'inline-block';
-                link.style.textDecoration = 'none';
-                link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
-                link.style.transition = 'all 0.2s ease';
-                link.style.boxShadow = '0 2px 4px rgba(0, 74, 147, 0.2)';
-
-                link.addEventListener('mouseenter', () => {
-                    link.style.background = 'linear-gradient(135deg, #003366, #004a93)';
-                    link.style.transform = isTimeGrid ? 'scale(1.05)' : 'scale(1.08)';
-                    link.style.boxShadow = '0 4px 12px rgba(0, 74, 147, 0.4)';
-                });
-
-                link.addEventListener('mouseleave', () => {
-                    link.style.background = 'linear-gradient(135deg, #004a93, #0066cc)';
-                    link.style.transform = 'scale(1)';
-                    link.style.boxShadow = '0 2px 4px rgba(0, 74, 147, 0.2)';
-                });
+                link.classList.add('cal-portal-more-link');
             }
+        });
+    }
+
+    initPortalToolbar() {
+        const prevBtn = document.getElementById('calPortalPrev');
+        const nextBtn = document.getElementById('calPortalNext');
+
+        prevBtn?.addEventListener('click', () => {
+            const listViewEl = document.getElementById('eventListView');
+            if (listViewEl && !listViewEl.classList.contains('d-none')) {
+                this.navigateWeek(-1);
+                return;
+            }
+            this.calendar?.prev();
+        });
+
+        nextBtn?.addEventListener('click', () => {
+            const listViewEl = document.getElementById('eventListView');
+            if (listViewEl && !listViewEl.classList.contains('d-none')) {
+                this.navigateWeek(1);
+                return;
+            }
+            this.calendar?.next();
+        });
+    }
+
+    updatePortalToolbarTitle() {
+        const titleEl = document.getElementById('calPortalTitle');
+        if (!titleEl) {
+            return;
+        }
+        const listViewEl = document.getElementById('eventListView');
+        if (listViewEl && !listViewEl.classList.contains('d-none')) {
+            const weekText = document.getElementById('weekRangeText');
+            titleEl.textContent = weekText ? weekText.textContent.replace(/^\s*[\u{1F4C5}\s]*/u, '').trim() : 'Weekly Timetable';
+            return;
+        }
+        if (this.calendar) {
+            titleEl.textContent = this.calendar.view.title;
+        }
+    }
+
+    syncPortalViewButtons() {
+        if (!this.calendar) {
+            return;
+        }
+        const listViewEl = document.getElementById('eventListView');
+        if (listViewEl && !listViewEl.classList.contains('d-none')) {
+            return;
+        }
+        const viewType = this.calendar.view.type;
+        document.querySelectorAll('.cal-view-switch [data-view]').forEach(btn => {
+            const match = (viewType === 'dayGridMonth' && btn.dataset.view === 'month')
+                || (viewType === 'timeGridWeek' && btn.dataset.view === 'week');
+            btn.classList.toggle('active', match);
+            btn.setAttribute('aria-pressed', match ? 'true' : 'false');
         });
     }
 
@@ -2892,47 +855,71 @@ class CalendarManager {
         });
     }
 
+    formatCalEventTimeRange(arg) {
+        const event = arg.event;
+        const session = event.extendedProps?.class_session_debug
+            || event.extendedProps?.class_session
+            || '';
+        if (session && String(session).includes('-')) {
+            return String(session).trim();
+        }
+        if (event.start && event.end && !event.allDay) {
+            const opts = { hour: '2-digit', minute: '2-digit', hour12: false };
+            const start = event.start.toLocaleTimeString('en-GB', opts);
+            const end = event.end.toLocaleTimeString('en-GB', opts);
+            return `${start} - ${end}`;
+        }
+        return arg.timeText || '';
+    }
+
     renderEventContent(arg) {
-        // Normalize type and derive color
         const type = (arg.event.extendedProps.type || arg.event.extendedProps.event_type || arg.event.extendedProps
             .session_type || '').toString();
         const typeAttr = type.toLowerCase();
-        const fallbackIdx = arg.event.id ?
-            parseInt(arg.event.id) % CalendarConfig.colors.length :
-            arg.event._index % CalendarConfig.colors.length;
-        const cardColor = CalendarConfig.eventTypeColors[typeAttr] || CalendarConfig.colors[fallbackIdx];
 
         const topic = arg.event.title || '';
         const venue = arg.event.extendedProps.vanue || '';
         const faculty = arg.event.extendedProps.faculty_name || '';
+        const timeRange = this.formatCalEventTimeRange(arg);
         const idStr = (arg.event.id || arg.event._def?.publicId || Math.random().toString(36).slice(2));
         const titleId = `fc-evt-${idStr}-title`;
         const descId = `fc-evt-${idStr}-desc`;
 
         return {
             html: `
-                <div class="fc-event-card" 
-                     style="border-left-color: ${cardColor};"
+                <div class="cal-event-pill"
                      tabindex="0"
                      role="button"
                      aria-labelledby="${titleId}"
                      aria-describedby="${descId}"
                      ${type ? `data-event-type="${typeAttr}"` : ''}>
-                    <div class="d-flex align-items-start justify-content-between gap-2" style="margin-bottom: 0.65rem;">
-                        <div class="event-title flex-grow-1" id="${titleId}" style="color: ${cardColor}; flex: 1; min-width: 0;">
-                            ${topic}
-                        </div>
-                        ${type ? `<span class="event-badge flex-shrink-0" style="margin-left: 0.5rem;">${type}</span>` : ''}
-                    </div>
-                    <div class="event-meta" style="width: 100%;">
-                        ${arg.timeText ? `<span class=\"meta-item meta-item--time\"><i class=\"bi bi-clock-fill\" aria-hidden=\"true\"></i><span>${arg.timeText}</span></span>` : ''}
-                        ${venue ? `<span class=\"meta-item meta-item--venue\"><i class=\"bi bi-geo-alt-fill\" aria-hidden=\"true\"></i><span>${venue}</span></span>` : ''}
-                        ${faculty ? `<span class=\"meta-item meta-item--faculty\"><i class=\"bi bi-person-fill\" aria-hidden=\"true\"></i><span>${faculty}</span></span>` : ''}
-                    </div>
-                    <span class="visually-hidden" id="${descId}">${type ? `${type} ` : ''}${arg.timeText ? `${arg.timeText} ` : ''}${venue ? `at ${venue} ` : ''}${faculty ? `with ${faculty}` : ''}</span>
+                    <span class="cal-event-pill__accent" aria-hidden="true"></span>
+                    <span class="cal-event-pill__content">
+                        <span class="cal-event-pill__title" id="${titleId}">${topic}</span>
+                        ${timeRange ? `<span class="cal-event-pill__time">${timeRange}</span>` : ''}
+                    </span>
+                    ${venue ? `<span class="visually-hidden">${venue}</span>` : ''}
+                    ${faculty ? `<span class="visually-hidden">${faculty}</span>` : ''}
+                    <span class="visually-hidden" id="${descId}">${type ? `${type} ` : ''}${timeRange ? `${timeRange} ` : ''}${venue ? `at ${venue} ` : ''}${faculty ? `with ${faculty}` : ''}</span>
                 </div>
             `
         };
+    }
+
+    onEventMount(arg) {
+        this.setEventAccessibility(arg);
+        arg.el.style.setProperty('background-color', 'transparent', 'important');
+        arg.el.style.setProperty('border-color', 'transparent', 'important');
+        arg.el.style.setProperty('box-shadow', 'none', 'important');
+        arg.el.style.setProperty('color', 'inherit', 'important');
+        const main = arg.el.querySelector('.fc-event-main');
+        if (main) {
+            main.style.setProperty('background-color', 'transparent', 'important');
+            main.style.setProperty('border-color', 'transparent', 'important');
+            main.style.setProperty('box-shadow', 'none', 'important');
+            main.style.setProperty('padding', '0', 'important');
+            main.style.setProperty('color', 'inherit', 'important');
+        }
     }
 
     setEventAccessibility(arg) {
@@ -2966,7 +953,7 @@ class CalendarManager {
                     case ' ': {
                         // Open "+ more" or focus first event
                         const more = cell.querySelector('.fc-daygrid-day-more-link, .fc-more-link');
-                        const evt = cell.querySelector('.fc-event, .fc-event-card');
+                        const evt = cell.querySelector('.fc-event, .cal-event-pill');
                         if (more) { more.click(); e.preventDefault(); }
                         else if (evt) { evt.dispatchEvent(new MouseEvent('click')); e.preventDefault(); }
                         return;
@@ -2981,9 +968,8 @@ class CalendarManager {
     }
 
     handleEventClick(info) {
-        // Close any open popover when an event is clicked
+        info.jsEvent?.preventDefault();
         this.closePopover();
-        
         this.currentEventId = info.event.id;
         this.showEventHoverCard(info.event, info.el, true);
     }
@@ -3199,18 +1185,22 @@ class CalendarManager {
     }
 
     showEventDetails(data) {
-        // Update modal content
-        document.getElementById('eventTitle').textContent = 'Event Details';
-        document.getElementById('eventTopic').textContent = data.topic || '';
-        document.getElementById('eventDate').textContent =
-            new Date(data.start).toLocaleDateString('en-IN', {
-                weekday: 'long',
-                year: 'numeric',
+        const topic = data.topic || '';
+        const dateLabel = data.start
+            ? new Date(data.start).toLocaleDateString('en-GB', {
+                day: 'numeric',
                 month: 'long',
-                day: 'numeric'
-            });
+                year: 'numeric',
+                weekday: 'long'
+            })
+            : '';
+        const timeLabel = data.class_session || '';
+        const dateTimeLine = [dateLabel, timeLabel].filter(Boolean).join(' ');
+
+        document.getElementById('eventTitle').textContent = topic || data.group_name || 'Event';
+        document.getElementById('eventTopic').textContent = topic || '';
+        document.getElementById('eventDate').textContent = dateTimeLine;
         document.getElementById('eventfaculty').textContent = data.faculty_name || '';
-        document.getElementById('eventVanue').textContent = data.venue_name || '';
         document.getElementById('eventVanue').textContent = data.venue_name || '';
         document.getElementById('eventclasssession').textContent = data.class_session || '';
         document.getElementById('eventgroupname').textContent = data.group_name || '';
@@ -3279,9 +1269,12 @@ class CalendarManager {
         }
 
         // Update button text
-        document.getElementById('eventModalTitle').textContent = 'Add Calendar Event';
+        document.getElementById('eventModalTitle').textContent = 'Add Event';
         document.querySelector('.btn-text').textContent = 'Add Event';
         document.getElementById('submitEventBtn').dataset.action = 'create';
+        if (window.calendarEventModalWizard) {
+            window.calendarEventModalWizard.reset();
+        }
 
         // Reset date field
         document.getElementById('start_datetime').removeAttribute('readonly');
@@ -3301,7 +1294,12 @@ class CalendarManager {
     bindEvents() {
         // View toggle buttons
         document.querySelectorAll('[data-view]').forEach(btn => {
-            btn.addEventListener('click', (e) => this.toggleView(e.target));
+            btn.addEventListener('click', (e) => {
+                const viewBtn = e.target.closest('[data-view]');
+                if (viewBtn) {
+                    this.toggleView(viewBtn);
+                }
+            });
         });
 
         // Week navigation buttons (List View)
@@ -3378,6 +1376,14 @@ class CalendarManager {
         document.getElementById('courseFilter')?.addEventListener('change', (e) => {
             this.handleCourseFilterChange(e.target.value);
         });
+
+        document.getElementById('btnResetCalendarFilters')?.addEventListener('click', () => {
+            const courseFilter = document.getElementById('courseFilter');
+            if (!courseFilter) return;
+            courseFilter.value = '';
+            syncCalCourseFilterState();
+            courseFilter.dispatchEvent(new Event('change', { bubbles: true }));
+        });
     }
 
     handleCourseFilterChange(courseId) {
@@ -3431,7 +1437,7 @@ class CalendarManager {
 
     toggleView(button) {
         // Update button states
-        document.querySelectorAll('[data-view]').forEach(btn => {
+        document.querySelectorAll('.cal-view-switch [data-view], #btnTimetableListView').forEach(btn => {
             btn.classList.remove('active');
             btn.setAttribute('aria-pressed', 'false');
         });
@@ -3443,15 +1449,21 @@ class CalendarManager {
         const calendarEl = document.getElementById('calendar');
         const listViewEl = document.getElementById('eventListView');
 
+        const portalToolbar = document.getElementById('calPortalToolbar');
+
         if (view === 'list') {
             calendarEl.style.display = 'none';
             listViewEl.classList.remove('d-none');
+            portalToolbar?.classList.remove('d-none');
             this.loadListView();
+            this.updatePortalToolbarTitle();
         } else {
             calendarEl.style.display = '';
             listViewEl.classList.add('d-none');
+            portalToolbar?.classList.remove('d-none');
             this.calendar.changeView(this.getCalendarView(view));
-            // Style "+ more" links after view change
+            this.updatePortalToolbarTitle();
+            this.syncPortalViewButtons();
             setTimeout(() => this.styleMoreLinks(), 100);
         }
     }
@@ -3687,8 +1699,8 @@ class CalendarManager {
 
         if (isFullDay) {
             dateTimeFields.classList.add('d-none');
-            document.getElementById('start_time').value = '08:00';
-            document.getElementById('end_time').value = '20:00';
+            document.getElementById('start_time').value = '09:00';
+            document.getElementById('end_time').value = '17:30';
         } else {
             dateTimeFields.classList.remove('d-none');
             document.getElementById('start_time').value = '';
@@ -3857,7 +1869,9 @@ class CalendarManager {
     }
 
     async loadEventForEdit() {
-        const eventId = document.getElementById('editEventBtn').dataset.id;
+        const eventId = document.getElementById('calHoverEditBtn')?.dataset.id
+            || document.getElementById('editEventBtn')?.dataset.id
+            || this.currentEventId;
 
         try {
             const response = await fetch(`/calendar/event-edit/${eventId}`);
@@ -3872,8 +1886,8 @@ class CalendarManager {
             document.getElementById('start_datetime').removeAttribute('readonly');
 
             // Show modal
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
-            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventModal'));
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
+            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
             modal.show();
 
         } catch (error) {
@@ -4119,7 +2133,9 @@ async setInternalFaculty(internalFacultyIds) {
     }
 
     confirmDelete() {
-        const eventId = document.getElementById('deleteEventBtn').dataset.id;
+        const eventId = document.getElementById('calHoverDeleteBtn')?.dataset.id
+            || document.getElementById('deleteEventBtn')?.dataset.id
+            || this.currentEventId;
 
         // Show confirmation modal
         const confirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
@@ -4141,8 +2157,8 @@ async setInternalFaculty(internalFacultyIds) {
             this.showNotification('Event deleted successfully', 'success');
 
             // Close modals and refresh
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
-            bootstrap.Modal.getInstance(document.getElementById('confirmModal'))?.hide();
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
             this.calendar.refetchEvents();
 
         } catch (error) {
@@ -4388,6 +2404,7 @@ async setInternalFaculty(internalFacultyIds) {
             this.renderListView(filteredEvents);
             this.renderWeekCards(events, weekStart);
             this.updateWeekRangeText(weekStart);
+            this.updatePortalToolbarTitle();
         } catch (error) {
             console.error('Error loading list view:', error);
         }
@@ -4667,10 +2684,18 @@ async setInternalFaculty(internalFacultyIds) {
     convertTo24Hour(timeStr) {
         if (!timeStr) return '';
 
-        const [time, modifier] = timeStr.split(' ');
+        const trimmed = String(timeStr).trim();
+        if (/^\d{1,2}:\d{2}$/.test(trimmed)) {
+            const [h, m] = trimmed.split(':');
+            return `${String(parseInt(h, 10)).padStart(2, '0')}:${m}`;
+        }
+
+        const parts = trimmed.split(/\s+/);
+        const time = parts[0];
+        const modifier = (parts[1] || '').toUpperCase();
         let [hours, minutes] = time.split(':');
 
-        hours = parseInt(hours);
+        hours = parseInt(hours, 10);
         if (modifier === 'PM' && hours !== 12) {
             hours += 12;
         } else if (modifier === 'AM' && hours === 12) {
@@ -4780,7 +2805,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('DOM Content Loaded - Initializing calendar...');
     console.log('Calendar element exists:', !!document.getElementById('calendar'));
     console.log('Loading overlay exists:', !!document.getElementById('calendarLoadingOverlay'));
-    initCourseFilterChoices();
+    initCourseFilter();
 
     const eventModalEl = document.getElementById('eventModal');
     if (eventModalEl) {
