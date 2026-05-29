@@ -18,7 +18,7 @@ class EmployeeTypeMasterController extends Controller
     }
     function create()
     {
-        return view('admin.master.employee_type.create');
+        return redirect()->route('master.employee.type.index', ['open_etm_modal' => 'add']);
     }
     function store(Request $request)
     {
@@ -39,6 +39,10 @@ class EmployeeTypeMasterController extends Controller
         $employeeType = $id ? EmployeeTypeMaster::find($id) : new EmployeeTypeMaster();
 
         if ($id && !$employeeType) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Employee Type not found.'], 404);
+            }
+
             return redirect()->back()->with('error', 'Employee Type not found.');
         }
         
@@ -49,17 +53,29 @@ class EmployeeTypeMasterController extends Controller
 
         EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
         return redirect()->route('master.employee.type.index')->with('success', $message);
 
     }
     function edit($id)
     {
         try {
-            $employeeTypeMaster = EmployeeTypeMaster::find(decrypt($id));
-            
-            return view('admin.master.employee_type.create', compact('employeeTypeMaster'));
+            $employeeTypeMaster = EmployeeTypeMaster::findOrFail(decrypt($id));
+
+            return redirect()->route('master.employee.type.index', [
+                'open_etm_modal' => 'edit',
+                'etm_pk' => $id,
+                'etm_name' => $employeeTypeMaster->category_type_name,
+            ]);
         } catch (\Exception $e) {
-            return redirect()->back()->with('error', 'Failed to edit employee type: ' . $e->getMessage());
+            return redirect()->route('master.employee.type.index')
+                ->with('error', 'Failed to edit employee type: ' . $e->getMessage());
         }
     }
     // function delete($id)
