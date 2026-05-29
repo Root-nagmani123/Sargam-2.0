@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Illuminate\Contracts\View\View;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use App\Models\User;
 use App\Models\UserRoleMaster;
@@ -87,10 +88,10 @@ class RoleController extends Controller
     // }
      public function create()
     {
-        return view('admin.user_management.roles.create'); // No permissions needed
+        return redirect()->route('admin.roles.index', ['open_roles_modal' => 'add']);
     }
 
-    public function store(Request $request): RedirectResponse
+    public function store(Request $request): RedirectResponse|JsonResponse
     {
         $validated = $request->validate([
             'name' => [
@@ -114,6 +115,13 @@ class RoleController extends Controller
 
         RoleDataTable::bumpListingCacheEpoch();
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Role created successfully',
+            ]);
+        }
+
         return redirect()
             ->route('admin.roles.index')
             ->with('success', 'Role created successfully');
@@ -123,9 +131,24 @@ class RoleController extends Controller
 {
        $pk = decrypt($id);
        $role = UserRoleMaster::findOrFail($pk);
-    // print_r($role->toArray()); // Debug line to check the contents of $role
-    // die(); // Stop execution to see the output
-    return view('admin.user_management.roles.edit', compact('role'));
+
+    if (request()->expectsJson()) {
+        return response()->json([
+            'success' => true,
+            'role' => [
+                'id' => $id,
+                'name' => $role->user_role_name,
+                'display_name' => $role->user_role_display_name,
+            ],
+        ]);
+    }
+
+    return redirect()->route('admin.roles.index', [
+        'open_roles_modal' => 'edit',
+        'roles_id' => $id,
+        'roles_name' => $role->user_role_name,
+        'roles_display_name' => $role->user_role_display_name,
+    ]);
 }
 
 
@@ -156,6 +179,13 @@ class RoleController extends Controller
         ]);
 
         RoleDataTable::bumpListingCacheEpoch();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Role updated successfully',
+            ]);
+        }
 
         return redirect()
             ->route('admin.roles.index')
