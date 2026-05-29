@@ -1,0 +1,234 @@
+/* Assign Role — user management theme */
+.users-assign-page {
+    --uar-primary: #004a93;
+    --uar-primary-dark: #003366;
+    --uar-border: #e4e7ec;
+    --uar-text: #344054;
+    --uar-heading: #101828;
+    --uar-muted: #667085;
+    --uar-selected-bg: #f0f6fc;
+}
+
+.users-assign-page .users-assign-card {
+    border-radius: 12px;
+    border: 1px solid var(--uar-border) !important;
+}
+
+.users-assign-page .users-assign-user-strip {
+    background: #f9fafb;
+    border-bottom: 1px solid var(--uar-border);
+    padding: 1rem 1.25rem;
+}
+
+.users-assign-page .users-assign-user-name {
+    font-size: 1.0625rem;
+    font-weight: 700;
+    color: var(--uar-heading);
+    margin-bottom: 0.125rem;
+}
+
+.users-assign-page .users-assign-user-meta {
+    font-size: 0.875rem;
+    color: var(--uar-muted);
+}
+
+.users-assign-page .users-assign-count-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.4rem 0.875rem;
+    background: var(--uar-selected-bg) !important;
+    color: var(--uar-primary) !important;
+    border: 1px solid rgba(0, 74, 147, 0.15);
+}
+
+.users-assign-page .users-assign-section-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--uar-heading);
+}
+
+.users-assign-page .users-assign-section-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    background: #ecfdf3 !important;
+    color: #027a48 !important;
+    border: 0;
+}
+
+.users-assign-page .users-assign-search-wrap {
+    position: relative;
+    max-width: 420px;
+}
+
+.users-assign-page .users-assign-search-wrap .bi-search {
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.users-assign-page .users-assign-search-input {
+    height: 40px;
+    padding-left: 2.375rem;
+    border-color: var(--uar-border);
+    border-radius: 8px;
+    font-size: 0.9375rem;
+    color: var(--uar-text);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.users-assign-page .users-assign-search-input::placeholder {
+    color: #98a2b3;
+}
+
+.users-assign-page .users-assign-search-input:focus {
+    border-color: var(--uar-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.12);
+}
+
+.users-assign-page .users-assign-clear-btn {
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-color: var(--uar-border);
+    border-radius: 8px;
+    color: var(--uar-muted);
+    background: #fff;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+}
+
+.users-assign-page .users-assign-clear-btn:hover {
+    background: #f9fafb;
+    border-color: #d0d5dd;
+    color: var(--uar-primary);
+}
+
+.users-assign-page .users-assign-tip {
+    font-size: 0.8125rem;
+    color: var(--uar-muted);
+}
+
+.users-assign-page .users-assign-visible-count {
+    font-size: 0.8125rem;
+    color: var(--uar-muted);
+    font-weight: 500;
+}
+
+.users-assign-page .role-option {
+    display: block;
+    border: 1px solid var(--uar-border);
+    border-radius: 10px;
+    padding: 0.875rem 1rem;
+    height: 100%;
+    background: #fff;
+    cursor: pointer;
+    transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+    margin-bottom: 0;
+}
+
+.users-assign-page .role-option:hover {
+    border-color: #d0d5dd;
+    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
+}
+
+.users-assign-page .role-option.border-primary,
+.users-assign-page .role-option.is-selected {
+    border-color: var(--uar-primary) !important;
+    background: var(--uar-selected-bg) !important;
+    box-shadow: 0 0 0 1px rgba(0, 74, 147, 0.08);
+}
+
+.users-assign-page .role-option .form-check-input {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin-top: 0.125rem;
+    cursor: pointer;
+}
+
+.users-assign-page .role-option .form-check-input:checked {
+    background-color: var(--uar-primary);
+    border-color: var(--uar-primary);
+}
+
+.users-assign-page .role-option .form-check-label {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--uar-heading);
+    cursor: pointer;
+}
+
+.users-assign-page .role-option small {
+    font-size: 0.8125rem;
+    color: var(--uar-muted);
+    line-height: 1.4;
+}
+
+.users-assign-page .users-assign-loading {
+    padding: 2.5rem 1rem;
+    text-align: center;
+    color: var(--uar-muted);
+}
+
+.users-assign-page .users-assign-footer {
+    border-top: 1px solid var(--uar-border);
+    padding-top: 1.25rem;
+    margin-top: 0.5rem;
+}
+
+.users-assign-page .users-assign-cancel-btn {
+    height: 42px;
+    padding: 0 1.25rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    border-radius: 8px;
+    border-color: var(--uar-primary);
+    color: var(--uar-primary);
+    background: #fff;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.users-assign-page .users-assign-cancel-btn:hover {
+    background: var(--uar-selected-bg);
+    color: var(--uar-primary-dark);
+    border-color: var(--uar-primary-dark);
+}
+
+.users-assign-page .users-assign-save-btn {
+    height: 42px;
+    padding: 0 1.5rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    border-radius: 8px;
+}
+
+@media (max-width: 767.98px) {
+    .users-assign-page .users-assign-search-wrap {
+        max-width: 100%;
+    }
+
+    .users-assign-page .users-assign-footer {
+        flex-direction: column-reverse;
+        align-items: stretch !important;
+    }
+
+    .users-assign-page .users-assign-footer .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .users-assign-page .role-option {
+        transition: none;
+    }
+
+    .users-assign-page .role-option:hover {
+        transform: none;
+    }
+}
