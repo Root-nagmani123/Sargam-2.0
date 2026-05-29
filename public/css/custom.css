@@ -4875,6 +4875,338 @@ body.custom-loaded {
     }
 }
 
+/* ── Pending Feedback (Students) ── */
+.psf-master-page {
+    --psf-primary: #004a93;
+    --psf-primary-rgb: 0, 74, 147;
+}
+
+.psf-master-page .psf-dt-card {
+    border: 1px solid #e4e7ec;
+    overflow: visible;
+}
+
+.psf-master-page .programme-dt-toolbar {
+    overflow: visible;
+    position: relative;
+    z-index: 20;
+}
+
+.psf-master-page .programme-dt-filter-select:focus-within,
+.psf-master-page .select2-container--open {
+    z-index: 40;
+}
+
+.psf-master-page .programme-dt-toolbar .programme-dt-btn-reset.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.psf-master-page .psf-course-filter {
+    width: 200px;
+}
+
+.psf-master-page .programme-dt-filter-select .select2-container--default .select2-selection--single {
+    height: 40px !important;
+    min-height: 40px;
+    border: 1px solid #d0d5dd !important;
+    border-radius: 8px !important;
+    padding: 0.375rem 2rem 0.375rem 0.875rem !important;
+    font-size: 0.9375rem;
+    box-shadow: none !important;
+    background-color: #fff !important;
+}
+
+.psf-master-page .programme-dt-filter-select .select2-container--default.select2-container--focus .select2-selection--single,
+.psf-master-page .programme-dt-filter-select .select2-container--default.select2-container--open .select2-selection--single {
+    border-color: var(--psf-primary) !important;
+    box-shadow: 0 0 0 3px rgba(var(--psf-primary-rgb), 0.12) !important;
+}
+
+.psf-master-page .programme-dt-filter-select .select2-container--default .select2-selection--single .select2-selection__rendered {
+    line-height: 38px !important;
+    padding-left: 0 !important;
+    color: #344054;
+}
+
+.psf-master-page .programme-dt-filter-select .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 38px !important;
+    right: 0.75rem !important;
+}
+
+.psf-master-page .programme-dt-filter-select .psf-filter-select.form-select.psf-filter-empty {
+    color: #667085;
+}
+
+.psf-master-page .psf-period-filter {
+    width: 220px;
+}
+
+.psf-master-page .psf-period-filter .flatpickr-wrapper,
+.psf-master-page .psf-period-filter .flatpickr-input.form-control {
+    width: 100%;
+}
+
+.psf-master-page .psf-time-period-input,
+.psf-master-page .psf-period-filter .flatpickr-input.form-control {
+    min-height: 40px;
+    padding: 0.5rem 2.25rem 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #344054;
+    box-shadow: none;
+    cursor: pointer;
+    background-color: #fff;
+}
+
+.psf-master-page .psf-time-period-input:focus,
+.psf-master-page .psf-period-filter .flatpickr-input.form-control:focus {
+    border-color: var(--psf-primary);
+    box-shadow: 0 0 0 3px rgba(var(--psf-primary-rgb), 0.12);
+}
+
+.psf-master-page .psf-filter-chevron {
+    position: absolute;
+    right: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #667085;
+    font-size: 0.75rem;
+    pointer-events: none;
+    z-index: 3;
+}
+
+.psf-master-page .psf-status-tabs .btn-check:checked + .programme-status-pill {
+    background: var(--psf-primary);
+    color: #fff;
+}
+
+.psf-master-page .psf-status-tabs .programme-status-pill {
+    cursor: pointer;
+}
+
+.psf-master-page .psf-search-trigger {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #667085;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+}
+
+.psf-master-page .psf-search-trigger:hover,
+.psf-master-page .psf-search-trigger.show {
+    border-color: var(--psf-primary);
+    color: var(--psf-primary);
+}
+
+.psf-master-page .psf-table-search-menu {
+    min-width: 280px;
+}
+
+.psf-master-page .psf-table-panel {
+    padding: 0;
+    border: 0;
+    overflow: visible;
+}
+
+.psf-master-page .student-table thead th {
+    background: #f9fafb;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475467;
+    border: 0 !important;
+    border-bottom: 1px solid #e4e7ec !important;
+    padding: 0.75rem 1rem;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.psf-master-page .student-table tbody td {
+    padding: 0.875rem 1rem;
+    font-size: 0.9375rem;
+    color: #344054;
+    border: 0 !important;
+    border-bottom: 1px solid #f2f4f7 !important;
+    vertical-align: middle;
+}
+
+.psf-master-page .student-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.psf-master-page .student-table tbody tr:hover td {
+    background-color: #f9fafb;
+}
+
+.psf-master-page .psf-col-sno {
+    width: 4rem;
+    color: #667085 !important;
+}
+
+.psf-master-page .psf-student-link {
+    color: #004a93;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+}
+
+.psf-master-page .psf-student-link:hover,
+.psf-master-page .psf-student-link:focus {
+    color: #003366;
+}
+
+.psf-master-page .psf-student-row td {
+    vertical-align: middle;
+}
+
+.psf-master-page .psf-back-btn {
+    line-height: 1;
+}
+
+.psf-master-page .psf-detail-table thead th {
+    background: #f9fafb;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #475467;
+    border-bottom: 1px solid #e4e7ec;
+    padding: 0.75rem 1rem;
+}
+
+.psf-master-page .psf-detail-table tbody td {
+    padding: 0.875rem 1rem;
+    border-bottom: 1px solid #e4e7ec;
+    font-size: 0.875rem;
+    color: #344054;
+    vertical-align: middle;
+}
+
+.psf-master-page .psf-detail-table-panel {
+    padding: 0;
+    border: 0;
+}
+
+.psf-master-page .psf-col-course {
+    max-width: 280px;
+    line-height: 1.45;
+}
+
+.psf-master-page .psf-count {
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+}
+
+.psf-master-page .psf-count-given {
+    color: #027a48;
+}
+
+.psf-master-page .psf-count-pending {
+    color: #b42318;
+}
+
+.psf-master-page .psf-row-action {
+    color: #5925dc;
+    font-size: 1.125rem;
+}
+
+.psf-master-page .psf-student-row:hover td {
+    background-color: #f9fafb !important;
+}
+
+.psf-master-page .badge-status {
+    font-size: 0.75rem;
+    padding: 0.35em 0.75em;
+    font-weight: 600;
+}
+
+.psf-master-page .sortable-header {
+    cursor: pointer;
+    user-select: none;
+}
+
+.psf-master-page .sortable-header .sort-icon {
+    font-size: 0.75rem;
+    opacity: 0.35;
+    margin-left: 0.15rem;
+}
+
+.psf-master-page .sortable-header.sort-active .sort-icon,
+.psf-master-page .sortable-header:hover .sort-icon {
+    opacity: 1;
+    color: var(--psf-primary);
+}
+
+.psf-master-page .psf-pagination .page-link {
+    min-width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    margin: 0 0.125rem;
+    box-shadow: none;
+    background: #fff;
+}
+
+.psf-master-page .psf-pagination .page-item.active .page-link {
+    background: #fff;
+    border-color: var(--psf-primary);
+    color: var(--psf-primary);
+    font-weight: 600;
+}
+
+.psf-master-page .psf-page-size-select {
+    width: auto;
+    min-width: 4.5rem;
+    height: 2rem;
+    padding: 0 1.75rem 0 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+}
+
+.psf-master-page .state-empty-icon {
+    font-size: 2.5rem;
+    color: #98a2b3;
+}
+
+.psf-master-page .select2-container {
+    width: 100% !important;
+}
+
+.psf-master-page .select2-dropdown {
+    z-index: 9999 !important;
+}
+
+@media (max-width: 1199.98px) {
+    .psf-master-page .programme-dt-filter-select,
+    .psf-master-page .psf-course-filter,
+    .psf-master-page .psf-period-filter {
+        width: 100%;
+        max-width: 280px;
+    }
+
+    .psf-master-page .psf-table-search {
+        width: 100%;
+        justify-content: flex-end;
+    }
+}
+
 @media print {
     .no-print {
         display: none !important;
