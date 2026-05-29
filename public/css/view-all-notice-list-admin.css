@@ -1,0 +1,265 @@
+/* Attendance Notice List — programme-dt reference */
+
+.vanl-master-page {
+    --vanl-primary: #004a93;
+    --vanl-border: #e4e7ec;
+    --vanl-muted: #667085;
+    --vanl-text: #344054;
+    --vanl-heading: #101828;
+}
+
+.vanl-master-page .vanl-summary-card {
+    border: 1px solid var(--vanl-border);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06) !important;
+}
+
+.vanl-master-page .vanl-intro {
+    font-size: 0.9375rem;
+    margin-bottom: 1rem;
+}
+
+.vanl-master-page .vanl-meta-item {
+    min-height: 100%;
+}
+
+.vanl-master-page .vanl-meta-label {
+    display: block;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--vanl-muted);
+    margin-bottom: 0.25rem;
+}
+
+.vanl-master-page .vanl-meta-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--vanl-primary);
+    line-height: 1.45;
+    word-break: break-word;
+}
+
+.vanl-master-page .vanl-success-banner {
+    margin-top: 1.25rem;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    background: #ecfdf3;
+    border: 1px solid #abefc6;
+    color: #027a48;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    text-align: center;
+}
+
+.vanl-master-page .vanl-dt-card {
+    border: 1px solid var(--vanl-border);
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.06) !important;
+}
+
+.vanl-master-page .vanl-dt-toolbar .vanl-section-title {
+    font-size: 1.0625rem;
+    font-weight: 600;
+    color: var(--vanl-heading);
+}
+
+.vanl-master-page .vanl-btn-back {
+    min-height: 40px;
+    padding: 0 1.25rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    border-color: #d0d5dd;
+    color: var(--vanl-text);
+    background: #fff;
+}
+
+.vanl-master-page .vanl-btn-back:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+    color: var(--vanl-heading);
+}
+
+.vanl-master-page .vanl-btn-send.send_notice {
+    min-height: 40px;
+    padding: 0 1.35rem;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    background: var(--vanl-primary);
+    border-color: var(--vanl-primary);
+}
+
+.vanl-master-page .vanl-btn-send.send_notice:hover:not(:disabled) {
+    background: #003d78;
+    border-color: #003d78;
+}
+
+.vanl-master-page .vanl-btn-send.send_notice:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.vanl-master-page .vanl-search-trigger {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--vanl-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+}
+
+.vanl-master-page .vanl-search-trigger:hover,
+.vanl-master-page .vanl-search-trigger.show {
+    border-color: var(--vanl-primary);
+    color: var(--vanl-primary);
+}
+
+.vanl-master-page .vanl-search-menu {
+    min-width: 280px;
+}
+
+.vanl-master-page .vanl-search-input {
+    height: 40px;
+    border-radius: 8px;
+    border-color: #d0d5dd;
+    font-size: 0.9375rem;
+    box-shadow: none;
+}
+
+.vanl-master-page .vanl-search-input:focus {
+    border-color: var(--vanl-primary);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.vanl-master-page .vanl-dt-panel {
+    border-radius: 0;
+    overflow: hidden;
+    background: #fff;
+}
+
+.vanl-master-page #simpleAttendanceTable.vanl-dt-table {
+    margin-bottom: 0 !important;
+    --bs-table-hover-bg: rgba(0, 74, 147, 0.03);
+}
+
+.vanl-master-page #simpleAttendanceTable.vanl-dt-table thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    padding: 0.75rem 1rem !important;
+    border-bottom: 1px solid var(--vanl-border) !important;
+    border-top: 0 !important;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.vanl-master-page #simpleAttendanceTable.vanl-dt-table tbody td {
+    padding: 0.875rem 1rem !important;
+    font-size: 0.875rem;
+    color: var(--vanl-text);
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+    background: #fff;
+}
+
+.vanl-master-page #simpleAttendanceTable.vanl-dt-table tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03) !important;
+}
+
+.vanl-master-page #simpleAttendanceTable .vanl-col-check {
+    width: 3rem;
+    text-align: center;
+}
+
+.vanl-master-page #simpleAttendanceTable .vanl-col-sno {
+    width: 4rem;
+    text-align: center;
+    color: var(--vanl-muted);
+    font-weight: 500;
+}
+
+.vanl-master-page #simpleAttendanceTable .form-check-input {
+    width: 1.125rem;
+    height: 1.125rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.vanl-master-page .vanl-status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.35rem 0.75rem;
+    border-radius: 999px;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.vanl-master-page .vanl-status-badge--late {
+    background: #fffaeb;
+    color: #b54708;
+    border: 1px solid #fedf89;
+}
+
+.vanl-master-page .vanl-status-badge--absent {
+    background: #fef3f2;
+    color: #b42318;
+    border: 1px solid #fecdca;
+}
+
+.vanl-master-page .vanl-dt-empty td {
+    padding: 3rem 1.5rem !important;
+    color: var(--vanl-muted);
+    background: #fff !important;
+}
+
+.vanl-master-page .vanl-dt-footer {
+    border-top: 1px solid var(--vanl-border);
+    padding-top: 1rem;
+    margin-top: 0;
+}
+
+.vanl-master-page .vanl-dt-footer .pagination {
+    gap: 0.25rem;
+    margin: 0;
+}
+
+.vanl-master-page .vanl-dt-footer .page-link {
+    min-width: 2rem;
+    height: 2rem;
+    padding: 0 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border-color: #d0d5dd;
+    color: var(--vanl-text);
+    font-size: 0.875rem;
+    box-shadow: none;
+}
+
+.vanl-master-page .vanl-dt-footer .page-item.active .page-link {
+    background: #fff;
+    border-color: #7367f0;
+    color: var(--vanl-text);
+    font-weight: 600;
+}
+
+.vanl-master-page #sendMemoAllBtn {
+    display: none !important;
+}
+
+@media (max-width: 767.98px) {
+    .vanl-master-page .vanl-dt-toolbar-actions {
+        width: 100%;
+    }
+
+    .vanl-master-page .vanl-dt-toolbar-actions .btn {
+        flex: 1 1 auto;
+    }
+}

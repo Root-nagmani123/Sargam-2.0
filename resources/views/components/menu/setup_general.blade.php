@@ -1,3 +1,9 @@
+@php
+    $sendDirectNoticeMenuActive = request()->routeIs('send.notice.management.*')
+        || request()->routeIs('attendance.send_notice')
+        || request()->routeIs('notice.direct.save');
+    $attendanceMenuActive = request()->routeIs('attendance.*') && ! request()->routeIs('attendance.send_notice');
+@endphp
 @include('components.menu.partials.panel-shell-open', [
     'panelMenuId' => 'menu-right-setup-mini-5',
     'panelMenuTitle' => 'TIME TABLE',
@@ -12,7 +18,7 @@
                                 </a>
                             </li>
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ request()->routeIs('attendance.*') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ $attendanceMenuActive ? 'active' : '' }}"
                                     href="{{ route('attendance.index') }}">
                                     <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">event_available</i>
                                     <span class="hide-menu small small-sm-normal text-nowrap">Attendance</span>
@@ -37,7 +43,7 @@
 
                             @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
                             <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ request()->routeIs('send.notice.management.*') ? 'active' : '' }}"
+                                <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ $sendDirectNoticeMenuActive ? 'active' : '' }}"
                                     href="{{ route('send.notice.management.index') }}">
                                     <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">campaign</i>
                                     <span class="hide-menu small small-sm-normal text-nowrap">Send Direct Notice</span>
