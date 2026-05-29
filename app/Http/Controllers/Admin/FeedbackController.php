@@ -3795,6 +3795,7 @@ class FeedbackController extends Controller
         $studentsByPk = [];
         foreach ($aggRows as $r) {
             $studentsByPk[$r->student_pk] = [
+                'student_pk' => (int) $r->student_pk,
                 'student_name' => $r->student_name,
                 'email' => $r->email,
                 'ot_code' => $r->generated_OT_code,
@@ -3838,6 +3839,10 @@ class FeedbackController extends Controller
             $aggSub = $this->buildPendingStudentsAggregateSubquery($request);
 
             $outer = DB::query()->fromSub($aggSub, 'agg_students');
+
+            if ($request->filled('student_pk')) {
+                $outer->where('agg_students.student_pk', (int) $request->student_pk);
+            }
 
             if ($request->filled('search')) {
                 $raw = '%' . addcslashes(mb_strtolower(trim($request->search)), '%_\\') . '%';
