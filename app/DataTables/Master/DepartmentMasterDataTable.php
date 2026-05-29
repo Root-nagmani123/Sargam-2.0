@@ -42,6 +42,7 @@ class DepartmentMasterDataTable extends DataTable
             ->filterColumn('department_name', function ($query, $keyword) {
                 $query->where('department_name', 'like', "%{$keyword}%");
             })
+            ->orderColumn('department_name', 'department_name $1')
             ->rawColumns(['department_name', 'action', 'status']);
     }
 
@@ -73,8 +74,13 @@ class DepartmentMasterDataTable extends DataTable
             ->responsive(true)
             ->parameters([
                 'responsive' => true,
-                'scrollX' => true,
+                'scrollX' => false,
                 'autoWidth' => false,
+                'ordering' => true,
+                // Keep DataTables' native (server-side) ordering so a header click
+                // re-queries and sorts the WHOLE dataset. Without this opt-in the
+                // global enhancer forces ordering off on server-side tables.
+                'sargamServerOrder' => true,
                 'order' => [],
             ])
             ->buttons([
@@ -96,7 +102,7 @@ class DepartmentMasterDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('department_name')->title('Department Name')->orderable(false)->addClass('text-center'),
+            Column::make('department_name')->title('Department Name')->orderable(true)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];
