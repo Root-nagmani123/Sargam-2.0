@@ -16,7 +16,7 @@ class CasteCategoryMasterController extends Controller
     }
     public function create()
     {
-        return view('admin.master.caste_category.create');
+        return redirect()->route('master.caste.category.index', ['open_ccm_modal' => 'add']);
     }
 
     public function store(Request $request)
@@ -43,6 +43,10 @@ class CasteCategoryMasterController extends Controller
         $casteCategory = $id ? CasteCategoryMaster::find($id) : new CasteCategoryMaster();
 
         if ($id && !$casteCategory) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Caste Category not found.'], 404);
+            }
+
             return redirect()->back()->with('error', 'Caste Category not found.');
         }
 
@@ -52,12 +56,30 @@ class CasteCategoryMasterController extends Controller
 
         $message = $id ? 'Caste Category updated successfully.' : 'Caste Category created successfully.';
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
         return redirect()->route('master.caste.category.index')->with('success', $message);
     }
     public function edit($id)
     {
-        $casteCategory = CasteCategoryMaster::findOrFail(decrypt($id));
-        return view('admin.master.caste_category.create', compact('casteCategory'));
+        try {
+            $casteCategory = CasteCategoryMaster::findOrFail(decrypt($id));
+
+            return redirect()->route('master.caste.category.index', [
+                'open_ccm_modal' => 'edit',
+                'ccm_pk' => $id,
+                'ccm_seat_name' => $casteCategory->Seat_name,
+                'ccm_seat_name_hindi' => $casteCategory->Seat_name_hindi,
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->route('master.caste.category.index')
+                ->with('error', 'Failed to edit caste category: ' . $e->getMessage());
+        }
     }
 
     public function update(Request $request, $id)
