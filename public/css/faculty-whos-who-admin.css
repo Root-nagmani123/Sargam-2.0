@@ -1,0 +1,535 @@
+/* Who's Who — government-portal listing & card views */
+.whos-who-page {
+    --ww-primary: #004a93;
+    --ww-primary-dark: #003366;
+    --ww-border: #e4e7ec;
+    --ww-text: #344054;
+    --ww-heading: #101828;
+    --ww-muted: #667085;
+    --ww-danger: #d92d20;
+    --ww-success-bg: #ecfdf3;
+    --ww-success-text: #027a48;
+    --ww-table-head: #f2f4f7;
+}
+
+.whos-who-page .whos-who-card {
+    border: 1px solid var(--ww-border);
+    border-radius: 12px;
+}
+
+.whos-who-page .whos-who-btn-outline {
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ww-primary);
+    border: 1px solid var(--ww-primary);
+    border-radius: 8px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.whos-who-page .whos-who-btn-outline:hover {
+    background: #f0f6fc;
+    border-color: var(--ww-primary-dark);
+    color: var(--ww-primary-dark);
+}
+
+.whos-who-page .whos-who-view-toggle .btn {
+    height: 40px;
+    width: 44px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-color: var(--ww-border);
+    color: var(--ww-muted);
+    background: #fff;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.whos-who-page .whos-who-view-toggle .btn:hover {
+    background: #f9fafb;
+    border-color: #d0d5dd;
+    color: var(--ww-primary);
+}
+
+.whos-who-page .whos-who-view-toggle .btn.active {
+    border-color: var(--ww-primary);
+    color: var(--ww-primary);
+    background: #fff;
+    box-shadow: inset 0 0 0 1px var(--ww-primary);
+}
+
+.whos-who-page .whos-who-filters-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--ww-muted);
+    white-space: nowrap;
+}
+
+.whos-who-page .whos-who-filter-select {
+    min-width: 140px;
+    max-width: 200px;
+    height: 40px;
+    border-color: var(--ww-border);
+    border-radius: 8px;
+    font-size: 0.875rem;
+    color: var(--ww-text);
+    background-color: #fff;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.whos-who-page .whos-who-filter-select:focus {
+    border-color: var(--ww-primary);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.12);
+}
+
+.whos-who-page .whos-who-reset-btn {
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ww-danger);
+    border: 1px solid var(--ww-danger);
+    border-radius: 8px;
+    background: #fff;
+    transition: background 0.2s ease, color 0.2s ease;
+}
+
+.whos-who-page .whos-who-reset-btn:hover {
+    background: #fef3f2;
+    color: #b42318;
+    border-color: #b42318;
+}
+
+.whos-who-page .whos-who-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 0;
+}
+
+.whos-who-page .whos-who-search-input {
+    width: 0;
+    opacity: 0;
+    padding: 0;
+    border: 0;
+    height: 40px;
+    transition: width 0.25s ease, opacity 0.2s ease, padding 0.25s ease, border 0.2s ease;
+}
+
+.whos-who-page .whos-who-search-wrap.is-open .whos-who-search-input {
+    width: 220px;
+    opacity: 1;
+    padding: 0.375rem 0.75rem;
+    border: 1px solid var(--ww-border);
+    border-radius: 8px 0 0 8px;
+    border-right: 0;
+}
+
+.whos-who-page .whos-who-search-btn {
+    height: 40px;
+    width: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--ww-border);
+    border-radius: 8px;
+    background: #fff;
+    color: var(--ww-muted);
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    flex-shrink: 0;
+}
+
+.whos-who-page .whos-who-search-wrap.is-open .whos-who-search-btn {
+    border-radius: 0 8px 8px 0;
+}
+
+.whos-who-page .whos-who-search-btn:hover {
+    background: #f9fafb;
+    border-color: #d0d5dd;
+    color: var(--ww-primary);
+}
+
+.whos-who-page .whos-who-info-strip {
+    background: #f9fafb;
+    border: 1px solid var(--ww-border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+}
+
+.whos-who-page .whos-who-info-label {
+    font-size: 0.6875rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--ww-muted);
+    margin-bottom: 0.25rem;
+}
+
+.whos-who-page .whos-who-info-value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ww-heading);
+}
+
+.whos-who-page .whos-who-card {
+    overflow: visible;
+}
+
+.whos-who-page .whos-who-card .card-body {
+    overflow: visible;
+}
+
+.whos-who-page #studentsContainer {
+    min-width: 0;
+    overflow: visible;
+}
+
+/* Table view */
+.whos-who-page .whos-who-table-outer {
+    border: 1px solid var(--ww-border);
+    border-radius: 10px;
+    overflow: hidden;
+    max-width: 100%;
+}
+
+.whos-who-page .whos-who-table-scroll {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+    overflow-y: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: #c5cad3 #f2f4f7;
+}
+
+.whos-who-page .whos-who-table-scroll::-webkit-scrollbar {
+    height: 8px;
+}
+
+.whos-who-page .whos-who-table-scroll::-webkit-scrollbar-track {
+    background: #f2f4f7;
+    border-radius: 4px;
+}
+
+.whos-who-page .whos-who-table-scroll::-webkit-scrollbar-thumb {
+    background: #c5cad3;
+    border-radius: 4px;
+}
+
+.whos-who-page .whos-who-table-scroll::-webkit-scrollbar-thumb:hover {
+    background: #98a2b3;
+}
+
+.whos-who-page .whos-who-table {
+    margin-bottom: 0;
+    border-collapse: separate;
+    border-spacing: 0;
+    width: max-content;
+    min-width: 100%;
+}
+
+.whos-who-page .whos-who-table thead th {
+    background-color: var(--ww-table-head) !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--ww-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+    min-width: 110px;
+}
+
+.whos-who-page .whos-who-table thead th:first-child {
+    min-width: 4.5rem;
+}
+
+.whos-who-page .whos-who-table thead th:nth-child(2) {
+    min-width: 200px;
+}
+
+.whos-who-page .whos-who-table tbody td {
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--ww-text);
+    font-size: 0.9375rem;
+    background: #fff;
+    white-space: nowrap;
+}
+
+.whos-who-page .whos-who-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+
+.whos-who-page .whos-who-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
+.whos-who-page .whos-who-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.whos-who-page .whos-who-table-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--ww-border);
+    flex-shrink: 0;
+}
+
+.whos-who-page .whos-who-avatar-slot {
+    position: relative;
+    display: inline-flex;
+    flex-shrink: 0;
+}
+
+.whos-who-page .whos-who-avatar-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    font-weight: 700;
+    color: #fff;
+    background: var(--ww-primary);
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--ww-border);
+    text-transform: uppercase;
+    user-select: none;
+    line-height: 1;
+}
+
+.whos-who-page .whos-who-avatar-fallback--sm {
+    width: 36px;
+    height: 36px;
+    font-size: 0.875rem;
+}
+
+.whos-who-page .whos-who-avatar-fallback--md {
+    width: 48px;
+    height: 48px;
+    font-size: 1.125rem;
+}
+
+.whos-who-page .whos-who-table-name {
+    font-weight: 600;
+    color: var(--ww-heading);
+}
+
+.whos-who-page .whos-who-table-sn {
+    color: var(--ww-muted);
+    font-weight: 500;
+    width: 4rem;
+}
+
+.whos-who-page .whos-who-table-name-col {
+    min-width: 180px;
+}
+
+.whos-who-page .whos-who-table-wrap-text {
+    min-width: 160px;
+    max-width: 280px;
+    white-space: normal !important;
+    word-break: break-word;
+}
+
+/* Profile cards */
+.whos-who-page .whos-who-profile-card {
+    border: 1px solid var(--ww-border);
+    border-radius: 12px;
+    transition: box-shadow 0.2s ease, transform 0.2s ease;
+    height: 100%;
+}
+
+.whos-who-page .whos-who-profile-card:hover {
+    box-shadow: 0 4px 16px rgba(16, 24, 40, 0.08) !important;
+}
+
+.whos-who-page .whos-who-avatar {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px var(--ww-border);
+    flex-shrink: 0;
+}
+
+.whos-who-page .whos-who-profile-name {
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--ww-heading);
+    margin-bottom: 0.125rem;
+    line-height: 1.3;
+}
+
+.whos-who-page .whos-who-profile-id {
+    font-size: 0.8125rem;
+    color: var(--ww-muted);
+    font-weight: 500;
+}
+
+.whos-who-page .whos-who-service-badge {
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    background: var(--ww-success-bg);
+    color: var(--ww-success-text);
+    border-radius: 999px;
+    max-width: 55%;
+    text-align: right;
+    line-height: 1.35;
+}
+
+.whos-who-page .whos-who-section-title {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ww-muted);
+    padding-bottom: 0.5rem;
+    margin-bottom: 0.75rem;
+    border-bottom: 1px solid var(--ww-border);
+}
+
+.whos-who-page .whos-who-field-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: #98a2b3;
+    margin-bottom: 0.125rem;
+}
+
+.whos-who-page .whos-who-field-value {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--ww-heading);
+    margin-bottom: 0.625rem;
+    word-break: break-word;
+}
+
+.whos-who-page .whos-who-field-value:last-child {
+    margin-bottom: 0;
+}
+
+.whos-who-page .whos-who-hobby-item {
+    font-size: 0.875rem;
+    color: var(--ww-text);
+    padding: 0.375rem 0;
+}
+
+.whos-who-page .whos-who-edu-item {
+    padding: 0.75rem 0;
+    border-bottom: 1px solid #f2f4f7;
+}
+
+.whos-who-page .whos-who-edu-item:last-child {
+    border-bottom: 0;
+    padding-bottom: 0;
+}
+
+/* Pagination */
+.whos-who-page .whos-who-pagination .pagination {
+    gap: 0.25rem;
+}
+
+.whos-who-page .whos-who-pagination .page-link {
+    border-radius: 8px !important;
+    min-width: 36px;
+    height: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--ww-text);
+    border-color: var(--ww-border);
+    padding: 0 0.5rem;
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.whos-who-page .whos-who-pagination .page-link:hover {
+    background: #f9fafb;
+    border-color: #d0d5dd;
+    color: var(--ww-primary);
+}
+
+.whos-who-page .whos-who-pagination .page-item.active .page-link {
+    background: #fff !important;
+    border-color: var(--ww-primary) !important;
+    color: var(--ww-primary) !important;
+    font-weight: 600;
+    box-shadow: inset 0 0 0 1px var(--ww-primary);
+}
+
+.whos-who-page .whos-who-per-page-select {
+    width: auto;
+    min-width: 4.5rem;
+    height: 32px;
+    padding: 0 1.75rem 0 0.625rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-color: var(--ww-border);
+    border-radius: 8px;
+    color: var(--ww-heading);
+}
+
+.whos-who-page .whos-who-sort-select {
+    min-width: 160px;
+}
+
+@media (max-width: 991.98px) {
+    .whos-who-page .whos-who-filter-select {
+        min-width: 100%;
+        max-width: 100%;
+    }
+
+    .whos-who-page .whos-who-search-wrap.is-open .whos-who-search-input {
+        width: 160px;
+    }
+
+    .whos-who-page .whos-who-service-badge {
+        max-width: 100%;
+        margin-top: 0.5rem;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .whos-who-page .whos-who-toolbar {
+        width: 100%;
+        justify-content: stretch !important;
+    }
+
+    .whos-who-page .whos-who-toolbar .whos-who-btn-outline {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .whos-who-page .whos-who-search-wrap.is-open .whos-who-search-input {
+        width: 120px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .whos-who-page .whos-who-profile-card,
+    .whos-who-page .whos-who-table tbody tr,
+    .whos-who-page .whos-who-search-input {
+        transition: none;
+    }
+
+    .whos-who-page .whos-who-profile-card:hover {
+        transform: none;
+    }
+}

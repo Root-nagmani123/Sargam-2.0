@@ -1,149 +1,119 @@
 @extends('admin.layouts.master')
 
-@section('title', "Who's Who - Sargam | Lal Bahadur Shastri National Academy of Administration")
+@section('title', "Who's Who")
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/faculty-whos-who-admin.css') }}?v={{ @filemtime(public_path('css/faculty-whos-who-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
 
-<div class="container-fluid py-4">
+<div class="container-fluid whos-who-page py-4">
     <x-breadcrum title="Who's Who"></x-breadcrum>
-
-    <!-- Filter Section -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body p-4">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-3">
-                    <label for="nameFilter" class="form-label fw-semibold">Name</label>
-                    <input type="text" class="form-control" id="nameFilter" placeholder="Enter name to search">
-                </div>
-                <div class="col-md-3">
-                    <label for="courseFilter" class="form-label fw-semibold">Course Name</label>
-                    <select class="form-select" id="courseFilter">
-                        <option value="">All Courses</option>
-                        @foreach($courses as $course)
-                            <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="categoryFilter" class="form-label fw-semibold">Category</label>
-                    <select class="form-select" id="categoryFilter">
-                        <option value="">All Categories</option>
-                        <option value="ABCD">ABCD</option>
-                        <option value="EFGH">EFGH</option>
-                        <option value="IJKL">IJKL</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <label for="statusFilter" class="form-label fw-semibold">Status</label>
-                    <select class="form-select" id="statusFilter">
-                        <option value="">All Status</option>
-                        <option value="ABCD">ABCD</option>
-                        <option value="Active">Active</option>
-                        <option value="Inactive">Inactive</option>
-                    </select>
-                </div>
-                <div class="col-md-2">
-                    <button type="button" class="btn btn-outline-secondary w-100" id="resetFilters">
-                        <i class="bi bi-arrow-clockwise me-1"></i> Reset
+    {{-- Toolbar: Download + View Toggle --}}
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-3 mb-md-4 whos-who-toolbar">
+                <button type="button" class="whos-who-btn-outline" id="downloadBtn" aria-label="Download student data">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                    <span>Download</span>
+                </button>
+                <div class="btn-group whos-who-view-toggle" role="group" aria-label="View mode">
+                    <button type="button" class="btn active" id="viewListBtn" data-view="list" title="List view" aria-label="List view" aria-pressed="true">
+                        <i class="bi bi-list-ul" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="btn" id="viewCardBtn" data-view="card" title="Card view" aria-label="Card view" aria-pressed="false">
+                        <i class="bi bi-grid-3x3-gap" aria-hidden="true"></i>
                     </button>
                 </div>
             </div>
-            
-            <!-- Sorting and Per Page Controls -->
-            <div class="row g-3 align-items-end mt-3 pt-3 border-top">
-                <div class="col-md-4">
-                    <label for="sortBy" class="form-label fw-semibold">Sort By</label>
-                    <select class="form-select" id="sortBy">
-                        <option value="name_asc">Name (A-Z)</option>
-                        <option value="name_desc">Name (Z-A)</option>
-                        <option value="roll_asc">Roll Number (Low to High)</option>
-                        <option value="roll_desc">Roll Number (High to Low)</option>
-                        <option value="service_asc">Service (A-Z)</option>
-                        <option value="service_desc">Service (Z-A)</option>
-                        <option value="course_asc">Course (A-Z)</option>
-                        <option value="course_desc">Course (Z-A)</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label for="perPage" class="form-label fw-semibold">Items Per Page</label>
-                    <select class="form-select" id="perPage">
-                        <option value="5">5</option>
-                        <option value="10" selected>10</option>
-                        <option value="25">25</option>
-                        <option value="50">50</option>
-                        <option value="100">100</option>
-                    </select>
-                </div>
-                <div class="col-md-5">
-                    <div class="d-flex align-items-end h-100">
-                        <div class="text-muted small">
-                            <i class="bi bi-info-circle me-1"></i>
-                            Use filters above and sorting options to find students
-                        </div>
-                    </div>
+    <div class="card whos-who-card shadow-sm border-0">
+        <div class="card-body p-3 p-md-4">
+
+            {{-- Filter Section --}}
+            <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3 mb-3 mb-md-4">
+                <span class="whos-who-filters-label me-1">Filters</span>
+
+                <label for="courseFilter" class="visually-hidden">Course Name</label>
+                <select class="form-select whos-who-filter-select" id="courseFilter" aria-label="Filter by course">
+                    <option value="">Course</option>
+                    @foreach($courses as $course)
+                        <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                    @endforeach
+                </select>
+
+                <label for="categoryFilter" class="visually-hidden">Category</label>
+                <select class="form-select whos-who-filter-select" id="categoryFilter" aria-label="Filter by category">
+                    <option value="">Category</option>
+                    <option value="ABCD">ABCD</option>
+                    <option value="EFGH">EFGH</option>
+                    <option value="IJKL">IJKL</option>
+                </select>
+
+                <label for="statusFilter" class="visually-hidden">Status</label>
+                <select class="form-select whos-who-filter-select" id="statusFilter" aria-label="Filter by status">
+                    <option value="">Status</option>
+                    <option value="ABCD">ABCD</option>
+                    <option value="Active">Active</option>
+                    <option value="Inactive">Inactive</option>
+                </select>
+
+                <label for="sortBy" class="visually-hidden">Sort By</label>
+                <select class="form-select whos-who-filter-select whos-who-sort-select" id="sortBy" aria-label="Sort by">
+                    <option value="name_asc">Name (A-Z)</option>
+                    <option value="name_desc">Name (Z-A)</option>
+                    <option value="roll_asc">Roll Number (Low to High)</option>
+                    <option value="roll_desc">Roll Number (High to Low)</option>
+                    <option value="service_asc">Service (A-Z)</option>
+                    <option value="service_desc">Service (Z-A)</option>
+                    <option value="course_asc">Course (A-Z)</option>
+                    <option value="course_desc">Course (Z-A)</option>
+                </select>
+
+                <button type="button" class="btn whos-who-reset-btn" id="resetFilters">
+                    Reset Filters
+                </button>
+
+                <div class="whos-who-search-wrap ms-md-auto" id="searchWrap">
+                    <label for="nameFilter" class="visually-hidden">Search by name</label>
+                    <input type="text" class="form-control whos-who-search-input" id="nameFilter" placeholder="Search name..." autocomplete="off">
+                    <button type="button" class="btn whos-who-search-btn" id="searchBtn" aria-label="Search by name">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </button>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Static Information Row -->
-    <div class="card shadow-sm mb-4">
-        <div class="card-body p-4">
-            <div class="row g-4">
-                <div class="col-md-3">
-                    <div class="d-flex flex-column">
-                        <span class="small text-uppercase fw-bold text-secondary mb-1">TUTOR GROUP</span>
-                        <span class="fs-6 fw-bold text-dark" id="tutorGroup">0</span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="d-flex flex-column">
-                        <span class="small text-uppercase fw-bold text-secondary mb-1">TUTOR NAME</span>
-                        <span class="fs-6 fw-bold text-dark" id="tutorName">Prem Kumar V R & Sachiv Kumar</span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="d-flex flex-column">
-                        <span class="small text-uppercase fw-bold text-secondary mb-1">HOUSE NAME</span>
-                        <span class="fs-6 fw-bold text-dark" id="houseName">Stok Kangri</span>
-                    </div>
-                </div>
-                <div class="col-md-3">
-                    <div class="d-flex flex-column">
-                        <span class="small text-uppercase fw-bold text-secondary mb-1">HOUSE TUTORS</span>
-                        <span class="fs-6 fw-bold text-dark" id="houseTutors">Shelesh Nawal</span>
-                    </div>
+            {{-- Per Page (hidden in filters, shown in pagination footer) --}}
+            <label for="perPage" class="visually-hidden">Items per page</label>
+            <select class="d-none" id="perPage" aria-hidden="true">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="25">25</option>
+                <option value="50">50</option>
+                <option value="100">100</option>
+                <option value="200">200</option>
+            </select>
+
+            {{-- Loading Spinner --}}
+            <div class="d-flex justify-content-center align-items-center py-5 d-none" id="loadingSpinner">
+                <div class="spinner-border text-primary" role="status">
+                    <span class="visually-hidden">Loading...</span>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <!-- Students List Container -->
-    <div id="studentsContainer">
-        <!-- Students will be dynamically loaded here -->
-        <div class="d-flex justify-content-center align-items-center py-5" id="loadingSpinner">
-            <div class="spinner-border text-primary" role="status">
-                <span class="visually-hidden">Loading...</span>
+            {{-- Students List Container --}}
+            <div id="studentsContainer">
+                <!-- Students will be dynamically loaded here -->
             </div>
-        </div>
-    </div>
 
-    <!-- Pagination Container -->
-    <div id="paginationContainer" class="d-none mt-4 mb-4">
-        <div class="card shadow-sm border-0">
-            <div class="card-body py-3">
-                <div class="row align-items-center g-3">
-                    <div class="col-md-6 col-lg-5">
-                        <div id="paginationInfo" class="d-flex align-items-center">
-                            <!-- Pagination info will be added here -->
-                        </div>
-                    </div>
-                    <div class="col-md-6 col-lg-7">
-                        <nav aria-label="Students pagination" class="d-flex justify-content-end">
-                            <ul class="pagination mb-0" id="paginationList">
-                                <!-- Pagination will be dynamically generated here -->
-                            </ul>
-                        </nav>
+            {{-- Pagination Container --}}
+            <div id="paginationContainer" class="d-none mt-4 whos-who-pagination">
+                <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-3 pt-3 border-top">
+                    <nav aria-label="Students pagination">
+                        <ul class="pagination mb-0" id="paginationList">
+                            <!-- Pagination will be dynamically generated here -->
+                        </ul>
+                    </nav>
+                    <div id="paginationInfo" class="d-flex align-items-center gap-2 text-muted small">
+                        <!-- Pagination info will be added here -->
                     </div>
                 </div>
             </div>
@@ -153,147 +123,94 @@
 
 <!-- Profile Template (Hidden) -->
 <template id="profileTemplate">
-    <div class="card shadow-lg mb-4">
-        <!-- Profile Header -->
-        <div class="card-header bg-primary text-white p-4">
-            <div class="row align-items-center g-3">
-                <div class="col-md-4">
-                    <h3 class="h4 mb-0 fw-bold" id="profileName">Aakash Garg</h3>
-                </div>
-                <div class="col-md-4 text-center">
-                    <div class="fs-5 fw-semibold" id="profileRoll">Roll 5</div>
-                </div>
-                <div class="col-md-4 text-md-end">
-                    <div class="small fw-medium opacity-90" id="profileService">INDIAN ADMINISTRATIVE SERVICE</div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Profile Body -->
-        <div class="card-body p-4">
-            <div class="row g-4">
-                <!-- Profile Image Section -->
-                <div class="col-md-3 col-lg-2">
-                    <div class="d-flex flex-column align-items-center gap-3">
-                        <div class="ratio ratio-1x1 w-75 mx-auto">
-                            <img src="" alt="Profile Image" class="img-fluid rounded border border-3 border-light shadow-sm object-fit-cover" id="profileImage">
-                        </div>
-                        <div class="badge bg-danger fs-6 px-3 py-2" id="profileIdBadge">O30</div>
-                    </div>
-                </div>
-                
-                <!-- Profile Content -->
-                <div class="col-md-9 col-lg-10">
-                    <div class="row g-4">
-                        <!-- Left Column -->
-                        <div class="col-lg-6">
-                            <!-- Course Information -->
-                            <div class="mb-4">
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Course Information</h4>
-                                <div class="d-flex flex-column gap-3">
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Course Name</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileCourseName">FC-100</span>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Course Code</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileCourseCode">FC-100</span>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Batch</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileBatch">2024-2025</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Basic Information -->
-                            <div class="mb-4">
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Basic Information</h4>
-                                <div class="d-flex flex-column gap-3">
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Date of Birth</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileDob">9/22/2000</span>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Domicile State</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileDomicile">DELHI</span>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">No. of Attempts</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileAttempts">2</span>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Highest Stream</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileStream">Engineering</span>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">Room No.</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileRoom">SW-309</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Hobbies & Interests -->
-                            <div>
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Hobbies & Interests</h4>
-                                <ul class="list-unstyled d-flex flex-column gap-2" id="profileHobbies">
-                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
-                                        <span class="small text-dark">Formula 1 Racing</span>
-                                    </li>
-                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
-                                        <span class="small text-dark">Science Fiction</span>
-                                    </li>
-                                    <li class="p-2 bg-light rounded border-start border-primary border-3">
-                                        <span class="small text-dark">Movies</span>
-                                    </li>
-                                </ul>
-                            </div>
-                        </div>
-                        
-                        <!-- Right Column -->
-                        <div class="col-lg-6">
-                            <!-- Contact Information -->
-                            <div class="mb-4">
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Contact Information</h4>
-                                <div class="d-flex flex-column gap-3">
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">EMAIL ADDRESS</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileEmail">aakashgarg01@gmail.com</span>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">CONTACT NUMBER</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileContact">8800372932</span>
-                                    </div>
-                                    <div class="d-flex flex-column">
-                                        <span class="small text-uppercase fw-bold text-secondary">LAST SERVICE</span>
-                                        <span class="fs-6 fw-medium text-dark" id="profileLastService">N/A</span>
-                                    </div>
-                                </div>
-                            </div>
-                            
-                            <!-- Educational Qualifications -->
-                            <div>
-                                <h4 class="h5 fw-bold text-primary text-uppercase border-bottom border-primary border-2 pb-2 mb-3">Educational Qualifications</h4>
-                                <ul class="list-unstyled d-flex flex-column gap-3" id="profileEducation">
-                                    <li class="p-3 bg-light rounded border-start border-success border-3">
-                                        <div class="fw-bold text-dark mb-1">Bachelors of Technology(B.Tech)</div>
-                                        <div class="small text-secondary">Maharaja Agrasen Institute of Technology</div>
-                                        <div class="small text-secondary fst-italic mt-1">To year 2022</div>
-                                    </li>
-                                    <li class="p-3 bg-light rounded border-start border-success border-3">
-                                        <div class="fw-bold text-dark mb-1">Senior Secondary(12th)</div>
-                                        <div class="small text-secondary">CRPF Public School, Rohini</div>
-                                        <div class="small text-secondary fst-italic mt-1">To year 2018</div>
-                                    </li>
-                                    <li class="p-3 bg-light rounded border-start border-success border-3">
-                                        <div class="fw-bold text-dark mb-1">Higher Secondary(10th)</div>
-                                        <div class="small text-secondary">Gitarattan Jindal Public School, Rohini</div>
-                                        <div class="small text-secondary fst-italic mt-1">To year 2016</div>
-                                    </li>
-                                </ul>
+    <div class="col-12 col-lg-6 mb-3 mb-lg-4">
+        <div class="card whos-who-profile-card shadow-sm border-0 h-100">
+            <div class="card-body p-3 p-md-4">
+                {{-- Card Header --}}
+                <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start gap-2 mb-3 pb-3 border-bottom">
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="whos-who-avatar-slot">
+                            <img src="" alt="Profile Image" class="whos-who-avatar" id="profileImage">
+                            <span class="whos-who-avatar-fallback whos-who-avatar-fallback--md d-none" id="profileImageFallback" aria-hidden="true"></span>
+                        </span>
+                        <div>
+                            <div class="whos-who-profile-name" id="profileName">Aakash Garg</div>
+                            <div class="whos-who-profile-id">
+                                <span id="profileIdBadge">O30</span>
+                                <span class="d-none" id="profileRoll">Roll 5</span>
                             </div>
                         </div>
                     </div>
+                    <span class="whos-who-service-badge" id="profileService">INDIAN ADMINISTRATIVE SERVICE</span>
+                </div>
+
+                {{-- Card Body: 4 Quadrants --}}
+                <div class="row g-3 g-md-4">
+                    <div class="col-sm-6">
+                        <div class="whos-who-section-title">Course Information</div>
+                        <div class="whos-who-field-label">Course Name</div>
+                        <div class="whos-who-field-value" id="profileCourseName">FC-100</div>
+                        <div class="whos-who-field-label">Course Code</div>
+                        <div class="whos-who-field-value" id="profileCourseCode">FC-100</div>
+                        <div class="whos-who-field-label">Batch</div>
+                        <div class="whos-who-field-value mb-0" id="profileBatch">2024-2025</div>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <div class="whos-who-section-title">Contact Information</div>
+                        <div class="whos-who-field-label">Email Address</div>
+                        <div class="whos-who-field-value" id="profileEmail">aakashgarg01@gmail.com</div>
+                        <div class="whos-who-field-label">Contact Number</div>
+                        <div class="whos-who-field-value" id="profileContact">8800372932</div>
+                        <div class="whos-who-field-label">Last Service</div>
+                        <div class="whos-who-field-value mb-0" id="profileLastService">N/A</div>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <div class="whos-who-section-title">Basic Information</div>
+                        <div class="row g-0">
+                            <div class="col-6 pe-2">
+                                <div class="whos-who-field-label">Date of Birth</div>
+                                <div class="whos-who-field-value" id="profileDob">9/22/2000</div>
+                            </div>
+                            <div class="col-6 ps-2">
+                                <div class="whos-who-field-label">Domicile State</div>
+                                <div class="whos-who-field-value" id="profileDomicile">DELHI</div>
+                            </div>
+                            <div class="col-6 pe-2">
+                                <div class="whos-who-field-label">No. of Attempts</div>
+                                <div class="whos-who-field-value" id="profileAttempts">2</div>
+                            </div>
+                            <div class="col-6 ps-2">
+                                <div class="whos-who-field-label">Highest Stream</div>
+                                <div class="whos-who-field-value" id="profileStream">Engineering</div>
+                            </div>
+                            <div class="col-12">
+                                <div class="whos-who-field-label">Room No.</div>
+                                <div class="whos-who-field-value mb-0" id="profileRoom">SW-309</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-6">
+                        <div class="whos-who-section-title">Hobbies and Interests</div>
+                        <div class="whos-who-field-label">Hobbies</div>
+                        <ul class="list-unstyled mb-0" id="profileHobbies">
+                            <li class="whos-who-hobby-item">Formula 1 Racing</li>
+                        </ul>
+                    </div>
+                </div>
+
+                {{-- Educational Qualifications (preserved) --}}
+                <div class="mt-3 pt-3 border-top">
+                    <div class="whos-who-section-title">Educational Qualifications</div>
+                    <ul class="list-unstyled mb-0" id="profileEducation">
+                        <li class="whos-who-edu-item">
+                            <div class="fw-semibold text-dark mb-1">Bachelors of Technology(B.Tech)</div>
+                            <div class="small text-secondary">Maharaja Agrasen Institute of Technology</div>
+                            <div class="small text-secondary fst-italic mt-1">To year 2022</div>
+                        </li>
+                    </ul>
                 </div>
             </div>
         </div>
@@ -317,6 +234,11 @@ document.addEventListener('DOMContentLoaded', function() {
     const sortBy = document.getElementById('sortBy');
     const perPageSelect = document.getElementById('perPage');
     const resetFilters = document.getElementById('resetFilters');
+    const viewListBtn = document.getElementById('viewListBtn');
+    const viewCardBtn = document.getElementById('viewCardBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const searchBtn = document.getElementById('searchBtn');
+    const searchWrap = document.getElementById('searchWrap');
 
     let currentPage = 1;
     let perPage = 10;
@@ -324,42 +246,242 @@ document.addEventListener('DOMContentLoaded', function() {
     let totalStudents = 0;
     let allProfiles = [];
     let currentSort = 'name_asc';
+    let currentView = 'list';
+    let lastPagination = null;
 
-    // Function to render all students
-    function renderStudents(students, pagination, customMessage = null) {
-        if (!students || students.length === 0) {
-            const message = customMessage || 'Please adjust your filters to find students.';
-            studentsContainer.innerHTML = `
-                <div class="text-center py-5">
-                    <i class="bi bi-person-x display-1 text-secondary opacity-50"></i>
-                    <h4 class="mt-3">No Students Found</h4>
-                    <p class="text-secondary">${message}</p>
-                </div>
-            `;
-            paginationContainer.classList.add('d-none');
+    // View toggle
+    function setViewMode(mode) {
+        currentView = mode;
+        const isList = mode === 'list';
+        viewListBtn.classList.toggle('active', isList);
+        viewCardBtn.classList.toggle('active', !isList);
+        viewListBtn.setAttribute('aria-pressed', isList ? 'true' : 'false');
+        viewCardBtn.setAttribute('aria-pressed', !isList ? 'true' : 'false');
+
+        if (allProfiles.length > 0) {
+            renderStudents(allProfiles, lastPagination);
+        }
+    }
+
+    viewListBtn.addEventListener('click', () => setViewMode('list'));
+    viewCardBtn.addEventListener('click', () => setViewMode('card'));
+
+    // Search toggle
+    searchBtn.addEventListener('click', function() {
+        searchWrap.classList.toggle('is-open');
+        if (searchWrap.classList.contains('is-open')) {
+            nameFilter.focus();
+        } else if (nameFilter.value.trim()) {
+            filterProfiles(1);
+        }
+    });
+
+    // Download CSV (client-side, no backend change)
+    downloadBtn.addEventListener('click', function() {
+        if (!allProfiles.length) {
+            return;
+        }
+        const headers = ['S.No.', 'Name', 'ID', 'Roll Number', 'Category', 'Course Code', 'Course Name', 'Batch', 'Email', 'Contact Number', 'Last Service', 'Date of Birth', 'Domicile State', 'No. of Attempts', 'Highest Stream', 'Room No.', 'Hobbies'];
+        const rows = allProfiles.map((p, i) => [
+            i + 1,
+            p.name,
+            p.id,
+            p.roll,
+            p.service,
+            p.courseCode,
+            p.courseName,
+            p.batch,
+            p.email,
+            p.contact,
+            p.lastService,
+            p.dob,
+            p.domicile,
+            p.attempts,
+            p.stream,
+            p.room,
+            formatHobbiesDisplay(p.hobbies)
+        ]);
+        const csv = [headers, ...rows]
+            .map(row => row.map(cell => `"${String(cell ?? '').replace(/"/g, '""')}"`).join(','))
+            .join('\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'whos-who-students.csv';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    });
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text ?? '';
+        return div.innerHTML;
+    }
+
+    function getRollDisplay(roll) {
+        if (!roll) return 'N/A';
+        return String(roll).replace(/^Roll\s+/i, '');
+    }
+
+    function getFirstNameInitial(name) {
+        if (!name || !String(name).trim()) return '?';
+        const firstName = String(name).trim().split(/\s+/)[0];
+        return (firstName.charAt(0) || '?').toUpperCase();
+    }
+
+    function isMissingOrInvalidImage(url) {
+        if (!url || !String(url).trim()) return true;
+        const normalized = String(url).toLowerCase();
+        return normalized.includes('via.placeholder.com')
+            || normalized.includes('placeholder.com')
+            || normalized.includes('placehold.it');
+    }
+
+    function bindAvatarFallback(imgEl, fallbackEl, name, imageUrl) {
+        if (!imgEl || !fallbackEl) return;
+
+        const initial = getFirstNameInitial(name);
+        fallbackEl.textContent = initial;
+
+        const showFallback = () => {
+            imgEl.classList.add('d-none');
+            fallbackEl.classList.remove('d-none');
+        };
+
+        imgEl.addEventListener('error', showFallback, { once: true });
+
+        if (isMissingOrInvalidImage(imageUrl)) {
+            showFallback();
             return;
         }
 
-        // Update pagination info
-        if (pagination) {
-            currentPage = pagination.current_page;
-            totalPages = pagination.total_pages;
-            totalStudents = pagination.total;
+        imgEl.classList.remove('d-none');
+        fallbackEl.classList.add('d-none');
+        imgEl.src = imageUrl;
+    }
+
+    function buildTableAvatarHtml(profile) {
+        const initial = escapeHtml(getFirstNameInitial(profile.name));
+        const name = escapeHtml(profile.name);
+        const imageUrl = profile.image || '';
+
+        if (isMissingOrInvalidImage(imageUrl)) {
+            return `<span class="whos-who-avatar-fallback whos-who-avatar-fallback--sm" aria-hidden="true">${initial}</span>`;
         }
 
-        // Clear container
-        studentsContainer.innerHTML = '';
+        return `
+            <span class="whos-who-avatar-slot">
+                <img src="${escapeHtml(imageUrl)}" alt="${name}" class="whos-who-table-avatar" loading="lazy">
+                <span class="whos-who-avatar-fallback whos-who-avatar-fallback--sm d-none" aria-hidden="true">${initial}</span>
+            </span>
+        `;
+    }
 
-        // Render each student
+    function bindTableAvatars() {
+        studentsContainer.querySelectorAll('.whos-who-avatar-slot').forEach(slot => {
+            const imgEl = slot.querySelector('img');
+            const fallbackEl = slot.querySelector('.whos-who-avatar-fallback');
+            if (!imgEl || !fallbackEl) return;
+
+            imgEl.addEventListener('error', () => {
+                imgEl.classList.add('d-none');
+                fallbackEl.classList.remove('d-none');
+            }, { once: true });
+        });
+    }
+
+    function formatHobbiesDisplay(hobbies) {
+        if (!hobbies || !hobbies.length) return 'N/A';
+        return hobbies.join(', ');
+    }
+
+    function formatCellValue(value) {
+        if (value === null || value === undefined || String(value).trim() === '') return 'N/A';
+        return String(value);
+    }
+
+    function renderTableView(students, pagination) {
+        const startIndex = pagination ? pagination.from : 1;
+        let rows = '';
+
         students.forEach((profile, index) => {
+            rows += `
+                <tr>
+                    <td class="whos-who-table-sn">${startIndex + index}</td>
+                    <td class="whos-who-table-name-col">
+                        <div class="d-flex align-items-center gap-2">
+                            ${buildTableAvatarHtml(profile)}
+                            <span class="whos-who-table-name">${escapeHtml(profile.name)}</span>
+                        </div>
+                    </td>
+                    <td>${escapeHtml(getRollDisplay(profile.roll))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.service))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.courseCode))}</td>
+                    <td class="whos-who-table-wrap-text">${escapeHtml(formatCellValue(profile.courseName))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.batch))}</td>
+                    <td class="whos-who-table-wrap-text">${escapeHtml(formatCellValue(profile.email))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.contact))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.lastService))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.dob))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.domicile))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.attempts))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.stream))}</td>
+                    <td>${escapeHtml(formatCellValue(profile.room))}</td>
+                    <td class="whos-who-table-wrap-text">${escapeHtml(formatHobbiesDisplay(profile.hobbies))}</td>
+                </tr>
+            `;
+        });
+
+        studentsContainer.innerHTML = `
+            <div class="whos-who-table-outer">
+                <div class="whos-who-table-scroll">
+                    <table class="table whos-who-table align-middle mb-0">
+                        <thead>
+                            <tr>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Roll Number</th>
+                                <th scope="col">Category</th>
+                                <th scope="col">Course Code</th>
+                                <th scope="col">Course Name</th>
+                                <th scope="col">Batch</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Contact Number</th>
+                                <th scope="col">Last Service</th>
+                                <th scope="col">Date of Birth</th>
+                                <th scope="col">Domicile State</th>
+                                <th scope="col">No. of Attempts</th>
+                                <th scope="col">Highest Stream</th>
+                                <th scope="col">Room No.</th>
+                                <th scope="col">Hobbies</th>
+                            </tr>
+                        </thead>
+                        <tbody>${rows}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        bindTableAvatars();
+    }
+
+    function renderCardView(students) {
+        const row = document.createElement('div');
+        row.className = 'row';
+
+        students.forEach((profile) => {
             const template = document.getElementById('profileTemplate');
             const clone = template.content.cloneNode(true);
 
-            // Set profile data
             clone.getElementById('profileName').textContent = profile.name;
             clone.getElementById('profileRoll').textContent = profile.roll;
             clone.getElementById('profileService').textContent = profile.service;
-            clone.getElementById('profileImage').src = profile.image;
+            bindAvatarFallback(
+                clone.getElementById('profileImage'),
+                clone.getElementById('profileImageFallback'),
+                profile.name,
+                profile.image
+            );
             clone.getElementById('profileImage').alt = profile.name;
             clone.getElementById('profileIdBadge').textContent = profile.id;
             clone.getElementById('profileCourseName').textContent = profile.courseName || 'N/A';
@@ -374,48 +496,77 @@ document.addEventListener('DOMContentLoaded', function() {
             clone.getElementById('profileContact').textContent = profile.contact;
             clone.getElementById('profileLastService').textContent = profile.lastService;
 
-            // Render hobbies
             const hobbiesList = clone.getElementById('profileHobbies');
             hobbiesList.innerHTML = '';
             if (profile.hobbies && profile.hobbies.length > 0) {
                 profile.hobbies.forEach(hobby => {
                     const li = document.createElement('li');
-                    li.className = 'p-2 bg-light rounded border-start border-primary border-3';
-                    li.innerHTML = `<span class="small text-dark">${hobby}</span>`;
+                    li.className = 'whos-who-hobby-item';
+                    li.textContent = hobby;
                     hobbiesList.appendChild(li);
                 });
             } else {
-                hobbiesList.innerHTML = '<li class="p-2 text-muted small">No hobbies listed</li>';
+                hobbiesList.innerHTML = '<li class="whos-who-hobby-item text-muted">No hobbies listed</li>';
             }
 
-            // Render education
             const educationList = clone.getElementById('profileEducation');
             educationList.innerHTML = '';
             if (profile.education && profile.education.length > 0) {
                 profile.education.forEach(edu => {
                     const li = document.createElement('li');
-                    li.className = 'p-3 bg-light rounded border-start border-success border-3';
+                    li.className = 'whos-who-edu-item';
                     li.innerHTML = `
-                        <div class="fw-bold text-dark mb-1">${edu.degree}</div>
-                        <div class="small text-secondary">${edu.institution}</div>
-                        <div class="small text-secondary fst-italic mt-1">${edu.year}</div>
+                        <div class="fw-semibold text-dark mb-1">${escapeHtml(edu.degree)}</div>
+                        <div class="small text-secondary">${escapeHtml(edu.institution)}</div>
+                        <div class="small text-secondary fst-italic mt-1">${escapeHtml(edu.year)}</div>
                     `;
                     educationList.appendChild(li);
                 });
             } else {
-                educationList.innerHTML = '<li class="p-3 text-muted small">No education details available</li>';
+                educationList.innerHTML = '<li class="whos-who-edu-item text-muted small">No education details available</li>';
             }
 
-            studentsContainer.appendChild(clone);
+            row.appendChild(clone);
         });
 
-        // Render pagination
+        studentsContainer.innerHTML = '';
+        studentsContainer.appendChild(row);
+    }
+
+    // Function to render all students
+    function renderStudents(students, pagination, customMessage = null) {
+        if (!students || students.length === 0) {
+            const message = customMessage || 'Please adjust your filters to find students.';
+            studentsContainer.innerHTML = `
+                <div class="text-center py-5">
+                    <i class="bi bi-person-x display-1 text-secondary opacity-50"></i>
+                    <h4 class="mt-3 fw-semibold">No Students Found</h4>
+                    <p class="text-secondary mb-0">${escapeHtml(message)}</p>
+                </div>
+            `;
+            paginationContainer.classList.add('d-none');
+            return;
+        }
+
+        if (pagination) {
+            currentPage = pagination.current_page;
+            totalPages = pagination.total_pages;
+            totalStudents = pagination.total;
+            lastPagination = pagination;
+        }
+
+        if (currentView === 'list') {
+            renderTableView(students, pagination);
+        } else {
+            renderCardView(students);
+        }
+
         renderPagination(pagination);
     }
 
-    // Function to render pagination using Bootstrap 5.3+ components
+    // Function to render pagination
     function renderPagination(pagination) {
-        if (!pagination || pagination.total_pages <= 1) {
+        if (!pagination) {
             paginationContainer.classList.add('d-none');
             return;
         }
@@ -424,101 +575,108 @@ document.addEventListener('DOMContentLoaded', function() {
         paginationList.innerHTML = '';
         paginationInfo.innerHTML = '';
 
-        const currentPage = pagination.current_page;
-        const totalPages = pagination.total_pages;
+        const page = pagination.current_page;
+        const pages = pagination.total_pages;
 
-        // Pagination Info with Bootstrap 5 styling
-        paginationInfo.innerHTML = `
-            <div class="d-flex align-items-center gap-2">
-                <i class="bi bi-info-circle text-primary"></i>
-                <span class="text-muted">Showing <strong class="text-dark">${pagination.from}</strong> to <strong class="text-dark">${pagination.to}</strong> of <strong class="text-dark">${pagination.total}</strong> students</span>
-            </div>
-        `;
+        if (pages <= 1) {
+            paginationList.innerHTML = '';
+        } else {
+            const prevLi = document.createElement('li');
+            prevLi.className = `page-item ${page === 1 ? 'disabled' : ''}`;
+            prevLi.innerHTML = `
+                <a class="page-link" href="#" data-page="${page - 1}" ${page === 1 ? 'tabindex="-1" aria-disabled="true"' : ''} aria-label="Previous page">
+                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                </a>
+            `;
+            paginationList.appendChild(prevLi);
 
-        // Previous button with Bootstrap 5.3+ styling
-        const prevLi = document.createElement('li');
-        prevLi.className = `page-item ${currentPage === 1 ? 'disabled' : ''}`;
-        prevLi.innerHTML = `
-            <a class="page-link" href="#" data-page="${currentPage - 1}" ${currentPage === 1 ? 'tabindex="-1" aria-disabled="true"' : ''} aria-label="Previous page">
-                <i class="bi bi-chevron-left" aria-hidden="true"></i>
-            </a>
-        `;
-        paginationList.appendChild(prevLi);
+            const maxVisible = 7;
+            let startPage = Math.max(1, page - Math.floor(maxVisible / 2));
+            let endPage = Math.min(pages, startPage + maxVisible - 1);
 
-        // Page numbers with Bootstrap 5 styling
-        const maxVisible = 7;
-        let startPage = Math.max(1, currentPage - Math.floor(maxVisible / 2));
-        let endPage = Math.min(totalPages, startPage + maxVisible - 1);
-
-        if (endPage - startPage < maxVisible - 1) {
-            startPage = Math.max(1, endPage - maxVisible + 1);
-        }
-
-        // First page
-        if (startPage > 1) {
-            const firstLi = document.createElement('li');
-            firstLi.className = 'page-item';
-            firstLi.innerHTML = `<a class="page-link" href="#" data-page="1">1</a>`;
-            paginationList.appendChild(firstLi);
-            if (startPage > 2) {
-                const ellipsisLi = document.createElement('li');
-                ellipsisLi.className = 'page-item disabled';
-                ellipsisLi.setAttribute('aria-disabled', 'true');
-                ellipsisLi.innerHTML = `<span class="page-link">…</span>`;
-                paginationList.appendChild(ellipsisLi);
+            if (endPage - startPage < maxVisible - 1) {
+                startPage = Math.max(1, endPage - maxVisible + 1);
             }
-        }
 
-        // Page range with Bootstrap 5.3+ active state
-        for (let i = startPage; i <= endPage; i++) {
-            const pageLi = document.createElement('li');
-            pageLi.className = `page-item ${i === currentPage ? 'active' : ''}`;
-            if (i === currentPage) {
-                pageLi.setAttribute('aria-current', 'page');
-                pageLi.innerHTML = `<span class="page-link">${i}</span>`;
-            } else {
-                pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
-            }
-            paginationList.appendChild(pageLi);
-        }
-
-        // Last page
-        if (endPage < totalPages) {
-            if (endPage < totalPages - 1) {
-                const ellipsisLi = document.createElement('li');
-                ellipsisLi.className = 'page-item disabled';
-                ellipsisLi.setAttribute('aria-disabled', 'true');
-                ellipsisLi.innerHTML = `<span class="page-link">…</span>`;
-                paginationList.appendChild(ellipsisLi);
-            }
-            const lastLi = document.createElement('li');
-            lastLi.className = 'page-item';
-            lastLi.innerHTML = `<a class="page-link" href="#" data-page="${totalPages}">${totalPages}</a>`;
-            paginationList.appendChild(lastLi);
-        }
-
-        // Next button with Bootstrap 5.3+ styling
-        const nextLi = document.createElement('li');
-        nextLi.className = `page-item ${currentPage === totalPages ? 'disabled' : ''}`;
-        nextLi.innerHTML = `
-            <a class="page-link" href="#" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'tabindex="-1" aria-disabled="true"' : ''} aria-label="Next page">
-                <i class="bi bi-chevron-right" aria-hidden="true"></i>
-            </a>
-        `;
-        paginationList.appendChild(nextLi);
-
-        // Add click handlers
-        paginationList.querySelectorAll('a[data-page]').forEach(link => {
-            link.addEventListener('click', function(e) {
-                e.preventDefault();
-                const page = parseInt(this.getAttribute('data-page'));
-                if (page >= 1 && page <= totalPages && page !== currentPage) {
-                    filterProfiles(page);
+            if (startPage > 1) {
+                const firstLi = document.createElement('li');
+                firstLi.className = 'page-item';
+                firstLi.innerHTML = `<a class="page-link" href="#" data-page="1">1</a>`;
+                paginationList.appendChild(firstLi);
+                if (startPage > 2) {
+                    const ellipsisLi = document.createElement('li');
+                    ellipsisLi.className = 'page-item disabled';
+                    ellipsisLi.innerHTML = `<span class="page-link">…</span>`;
+                    paginationList.appendChild(ellipsisLi);
                 }
+            }
+
+            for (let i = startPage; i <= endPage; i++) {
+                const pageLi = document.createElement('li');
+                pageLi.className = `page-item ${i === page ? 'active' : ''}`;
+                if (i === page) {
+                    pageLi.setAttribute('aria-current', 'page');
+                    pageLi.innerHTML = `<span class="page-link">${i}</span>`;
+                } else {
+                    pageLi.innerHTML = `<a class="page-link" href="#" data-page="${i}">${i}</a>`;
+                }
+                paginationList.appendChild(pageLi);
+            }
+
+            if (endPage < pages) {
+                if (endPage < pages - 1) {
+                    const ellipsisLi = document.createElement('li');
+                    ellipsisLi.className = 'page-item disabled';
+                    ellipsisLi.innerHTML = `<span class="page-link">…</span>`;
+                    paginationList.appendChild(ellipsisLi);
+                }
+                const lastLi = document.createElement('li');
+                lastLi.className = 'page-item';
+                lastLi.innerHTML = `<a class="page-link" href="#" data-page="${pages}">${pages}</a>`;
+                paginationList.appendChild(lastLi);
+            }
+
+            const nextLi = document.createElement('li');
+            nextLi.className = `page-item ${page === pages ? 'disabled' : ''}`;
+            nextLi.innerHTML = `
+                <a class="page-link" href="#" data-page="${page + 1}" ${page === pages ? 'tabindex="-1" aria-disabled="true"' : ''} aria-label="Next page">
+                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                </a>
+            `;
+            paginationList.appendChild(nextLi);
+
+            paginationList.querySelectorAll('a[data-page]').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const targetPage = parseInt(this.getAttribute('data-page'));
+                    if (targetPage >= 1 && targetPage <= pages && targetPage !== page) {
+                        filterProfiles(targetPage);
+                    }
+                });
             });
+        }
+
+        const perPageOptions = [5, 10, 25, 50, 100, 200];
+        let perPageOptionsHtml = '';
+        perPageOptions.forEach(val => {
+            perPageOptionsHtml += `<option value="${val}" ${parseInt(perPageSelect.value) === val ? 'selected' : ''}>${val}</option>`;
         });
 
-        // Pagination info is now shown in the card header, not here
+        paginationInfo.innerHTML = `
+            <span>Showing</span>
+            <select class="form-select form-select-sm whos-who-per-page-select" id="perPageFooter" aria-label="Items per page">
+                ${perPageOptionsHtml}
+            </select>
+            <span>of <strong class="text-dark">${pagination.total}</strong> items</span>
+        `;
+
+        const perPageFooter = document.getElementById('perPageFooter');
+        if (perPageFooter) {
+            perPageFooter.addEventListener('change', function() {
+                perPageSelect.value = this.value;
+                handlePerPageChange();
+            });
+        }
     }
 
     // Function to fetch students from API
@@ -529,7 +687,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const status = statusFilter.value;
         const sortValue = sortBy.value || 'name_asc';
 
-        // Show loading state
         loadingSpinner.classList.remove('d-none');
         loadingSpinner.classList.add('d-flex');
         studentsContainer.innerHTML = '';
@@ -552,10 +709,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
             const apiUrl = '{{ route("admin.faculty.whos-who.students") }}?' + params.toString();
             console.log('Fetching students from:', apiUrl);
-            
+
             const response = await fetch(apiUrl);
             const data = await response.json();
-            
+
             console.log('API Response:', data);
 
             if (data.success) {
@@ -580,9 +737,9 @@ document.addEventListener('DOMContentLoaded', function() {
             studentsContainer.innerHTML = `
                 <div class="text-center py-5">
                     <i class="bi bi-exclamation-triangle display-1 text-danger opacity-50"></i>
-                    <h4 class="mt-3">Error Loading Data</h4>
-                    <p class="text-secondary">Please try again later.</p>
-                    <p class="text-danger small mt-2">${error.message}</p>
+                    <h4 class="mt-3 fw-semibold">Error Loading Data</h4>
+                    <p class="text-secondary mb-0">Please try again later.</p>
+                    <p class="text-danger small mt-2">${escapeHtml(error.message)}</p>
                 </div>
             `;
         } finally {
@@ -591,27 +748,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Function to filter profiles (now uses API)
     function filterProfiles(page = 1) {
         currentPage = page;
         fetchStudents(page);
     }
 
-    // Function to handle per page change
     function handlePerPageChange() {
         perPage = parseInt(perPageSelect.value);
-        currentPage = 1; // Reset to first page
+        currentPage = 1;
         filterProfiles(1);
     }
 
-    // Function to handle sort change
     function handleSortChange() {
         currentSort = sortBy.value;
-        currentPage = 1; // Reset to first page when sorting changes
+        currentPage = 1;
         filterProfiles(1);
     }
 
-    // Function to reset filters
     function resetAllFilters() {
         nameFilter.value = '';
         courseFilter.value = '';
@@ -622,51 +775,43 @@ document.addEventListener('DOMContentLoaded', function() {
         perPage = 10;
         currentPage = 1;
         currentSort = 'name_asc';
+        searchWrap.classList.remove('is-open');
         filterProfiles(1);
     }
 
-    // Function to load courses dynamically (can be replaced with API call)
-    // Function to load courses dynamically from API (only if not already loaded)
     async function loadCourses() {
         try {
             const courseSelect = document.getElementById('courseFilter');
-            
-            // Check if courses are already loaded (more than just "All Courses")
+
             if (courseSelect.options.length > 1) {
                 console.log('Courses already loaded, skipping reload');
                 return Promise.resolve();
             }
-            
+
             const response = await fetch('{{ route("admin.faculty.whos-who.courses") }}');
             const data = await response.json();
-            
+
             if (data.success && data.courses) {
-                // Keep "All Courses" option
-                const allCoursesOption = courseSelect.querySelector('option[value=""]');
-                const currentValue = courseSelect.value; // Save current selection
-                
-                // Clear and rebuild options
+                const currentValue = courseSelect.value;
+
                 courseSelect.innerHTML = '';
-                
-                // Add "All Courses" option
+
                 const allOption = document.createElement('option');
                 allOption.value = '';
-                allOption.textContent = 'All Courses';
+                allOption.textContent = 'Course';
                 courseSelect.appendChild(allOption);
-                
-                // Add course options
+
                 data.courses.forEach(course => {
                     const option = document.createElement('option');
                     option.value = course.pk;
                     option.textContent = course.course_name;
                     courseSelect.appendChild(option);
                 });
-                
-                // Restore previous selection if it exists
+
                 if (currentValue) {
                     courseSelect.value = currentValue;
                 }
-                
+
                 console.log('Courses loaded:', data.courses.length);
             }
             return Promise.resolve();
@@ -676,14 +821,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Function to load static info
     async function loadStaticInfo() {
         try {
             const courseId = courseFilter.value;
             const params = courseId ? '?course_id=' + courseId : '';
             const response = await fetch('{{ route("admin.faculty.whos-who.static-info") }}' + params);
             const data = await response.json();
-            
+
             if (data.success && data.data) {
                 if (data.data.tutorGroup !== undefined) document.getElementById('tutorGroup').textContent = data.data.tutorGroup;
                 if (data.data.tutorName !== undefined) document.getElementById('tutorName').textContent = data.data.tutorName;
@@ -695,65 +839,56 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Debounce function for name input
     let nameInputTimeout;
     function debounceNameInput() {
         clearTimeout(nameInputTimeout);
         nameInputTimeout = setTimeout(() => {
             filterProfiles();
-        }, 500); // Wait 500ms after user stops typing
+        }, 500);
     }
 
-    // Event listeners
     nameFilter.addEventListener('input', debounceNameInput);
-    
-    // Course filter - immediately fetch students when course changes
+
+    nameFilter.addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            filterProfiles(1);
+        }
+    });
+
     courseFilter.addEventListener('change', function() {
         const selectedCourseId = courseFilter.value;
         const selectedCourseName = courseFilter.options[courseFilter.selectedIndex]?.text || '';
         console.log('Course changed:', selectedCourseId, selectedCourseName);
-        
-        // Reset to first page when course changes
         currentPage = 1;
-        
-        // Clear name filter when course changes to show all students in that course
-        // nameFilter.value = ''; // Uncomment if you want to clear name filter on course change
-        
-        // Immediately fetch students for the selected course
         filterProfiles(1);
         loadStaticInfo();
     });
-    
+
     categoryFilter.addEventListener('change', function() {
         currentPage = 1;
         filterProfiles(1);
     });
-    
+
     statusFilter.addEventListener('change', function() {
         currentPage = 1;
         filterProfiles(1);
     });
-    
-    // Sorting and pagination controls
+
     sortBy.addEventListener('change', handleSortChange);
     perPageSelect.addEventListener('change', handlePerPageChange);
-    
+
     resetFilters.addEventListener('click', resetAllFilters);
 
-    // Initial load - courses are already loaded from backend, just fetch students
-    // Only reload courses if dropdown is empty
     if (courseFilter.options.length <= 1) {
         loadCourses().then(() => {
-            // Fetch students after courses are loaded
             filterProfiles(1);
             loadStaticInfo();
         }).catch(() => {
-            // Even if courses fail to load, try to fetch students
             filterProfiles(1);
             loadStaticInfo();
         });
     } else {
-        // Courses already loaded, just fetch students
         filterProfiles(1);
         loadStaticInfo();
     }
