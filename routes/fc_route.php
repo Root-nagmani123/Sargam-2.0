@@ -230,6 +230,7 @@ Route::redirect('/foundation-course/status', '/fc/status', 301)->name('foundatio
 
 //admin migration route
 Route::get('/admin/migrate-students', [StudentImportController::class, 'index'])->name('students.index'); // index page
+Route::get('/admin/migrate-students/imported', [StudentImportController::class, 'importedIndex'])->name('students.imported.index');
 Route::post('/admin/migrate-fc-registration', [StudentImportController::class, 'migrate'])->name('admin.migrate.fc');
 
 // course enrollment route
