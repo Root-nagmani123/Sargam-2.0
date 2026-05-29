@@ -28,12 +28,11 @@ class QuickLinksSetupController extends Controller
     {
         $this->authorizeAdmin();
 
-        // Load only the form markup inside the modal (keeps master layout out of the modal).
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->expectsJson()) {
             return view('admin.setup.quick_links._form');
         }
 
-        return view('admin.setup.quick_links.create');
+        return redirect()->route('admin.setup.quick_links.index', ['open_quick_link_modal' => 'add']);
     }
 
     public function store(Request $request)
@@ -56,6 +55,13 @@ class QuickLinksSetupController extends Controller
             'active_inactive' => 1,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Quick link created successfully.',
+            ]);
+        }
+
         return redirect()
             ->route('admin.setup.quick_links.index')
             ->with('success', 'Quick link created successfully.');
@@ -73,11 +79,14 @@ class QuickLinksSetupController extends Controller
 
         $quickLink = QuickLink::query()->findOrFail($pk);
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->expectsJson()) {
             return view('admin.setup.quick_links._form', compact('quickLink'));
         }
 
-        return view('admin.setup.quick_links.edit', compact('quickLink'));
+        return redirect()->route('admin.setup.quick_links.index', [
+            'open_quick_link_modal' => 'edit',
+            'quick_link_id' => $id,
+        ]);
     }
 
     public function update(Request $request, $id)
@@ -103,6 +112,13 @@ class QuickLinksSetupController extends Controller
         $quickLink->target_blank = (bool) $validated['target_blank'];
         $quickLink->active_inactive = 1;
         $quickLink->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Quick link updated successfully.',
+            ]);
+        }
 
         return redirect()
             ->route('admin.setup.quick_links.index')

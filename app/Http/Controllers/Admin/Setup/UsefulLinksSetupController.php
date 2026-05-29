@@ -27,11 +27,11 @@ class UsefulLinksSetupController extends Controller
     {
         $this->authorizeAdmin();
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->expectsJson()) {
             return view('admin.setup.useful_links._form');
         }
 
-        return view('admin.setup.useful_links.create');
+        return redirect()->route('admin.setup.useful_links.index', ['open_useful_link_modal' => 'add']);
     }
 
     public function store(Request $request)
@@ -51,6 +51,13 @@ class UsefulLinksSetupController extends Controller
         }
 
         if (!$storeUrl && !$request->hasFile('file')) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Please provide either URL or file.',
+                    'errors' => ['url_or_file' => ['Please provide either URL or file.']],
+                ], 422);
+            }
+
             return back()
                 ->withErrors(['url_or_file' => 'Please provide either URL or file.'])
                 ->withInput();
@@ -72,6 +79,13 @@ class UsefulLinksSetupController extends Controller
             'active_inactive' => 1,
         ]);
 
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Useful link created successfully.',
+            ]);
+        }
+
         return redirect()
             ->route('admin.setup.useful_links.index')
             ->with('success', 'Useful link created successfully.');
@@ -89,11 +103,14 @@ class UsefulLinksSetupController extends Controller
 
         $usefulLink = UsefulLink::query()->findOrFail($pk);
 
-        if ($request->ajax()) {
+        if ($request->ajax() || $request->expectsJson()) {
             return view('admin.setup.useful_links._form', compact('usefulLink'));
         }
 
-        return view('admin.setup.useful_links.edit', compact('usefulLink'));
+        return redirect()->route('admin.setup.useful_links.index', [
+            'open_useful_link_modal' => 'edit',
+            'useful_link_id' => $id,
+        ]);
     }
 
     public function update(Request $request, $id)
@@ -139,6 +156,13 @@ class UsefulLinksSetupController extends Controller
             $finalUrl = null;
         }
         if (!$finalUrl && !$newFilePath) {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'message' => 'Please provide either URL or file.',
+                    'errors' => ['url_or_file' => ['Please provide either URL or file.']],
+                ], 422);
+            }
+
             return back()
                 ->withErrors(['url_or_file' => 'Please provide either URL or file.'])
                 ->withInput();
@@ -150,6 +174,13 @@ class UsefulLinksSetupController extends Controller
         $usefulLink->target_blank = (bool) $validated['target_blank'];
         $usefulLink->active_inactive = 1;
         $usefulLink->save();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Useful link updated successfully.',
+            ]);
+        }
 
         return redirect()
             ->route('admin.setup.useful_links.index')
