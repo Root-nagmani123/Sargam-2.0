@@ -279,7 +279,7 @@ class MemberController extends Controller
     {
         $requestRules = (new StoreMemberStep5Request())->rules();
         $requestMessages = (new StoreMemberStep5Request())->messages();
-        
+
         $validator = Validator::make($request->all(), $requestRules, $requestMessages);
 
         if ($validator->fails()) {
@@ -332,9 +332,9 @@ class MemberController extends Controller
 
         $requestRules = (new StoreMemberStep5Request())->rules();
         $requestMessages = (new StoreMemberStep5Request())->messages();
-        
+
         $validator = Validator::make($request->all(), $requestRules, $requestMessages);
-        
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
@@ -348,7 +348,7 @@ class MemberController extends Controller
         if ($request->hasFile('additionaldocument')) {
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
-        
+
         EmployeeMaster::find($request->emp_id)->update([
             'residence_no' => $request->residencenumber,
             'home_town_details' => $request->homeaddress,
@@ -480,11 +480,64 @@ class MemberController extends Controller
         return Excel::download(new MemberExport, $fileName);
     }
 
+    public function toggleStatus(Request $request, $id)
+    {
+        try {
+            // Find the member
+            $member = EmployeeMaster::findOrFail($id);
+
+            // Toggle status: 1 (active) ↔ 2 (inactive)
+            $newStatus = $member->status == 1 ? 2 : 1;
+
+            // Update the status
+            $member->update(['status' => $newStatus]);
+
+            // Bump cache epoch to refresh datatable
+            MemberDataTable::bumpListingCacheEpoch();
+
+            // Prepare response message
+            $statusLabel = $newStatus == 1 ? 'Active' : 'Inactive';
+
+            // Return JSON response for AJAX
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => "Status updated to {$statusLabel}.",
+                    'status' => $newStatus,
+                    'statusLabel' => $statusLabel
+                ], 200);
+            }
+
+            // Redirect with success message for non-AJAX requests
+            return redirect()->route('member.index')->with('success', "Status updated to {$statusLabel}.");
+        } catch (\Exception $e) {
+            $errorMessage = 'Error toggling status: ' . $e->getMessage();
+
+            if ($request->ajax()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage
+                ], 500);
+            }
+
+            return redirect()->route('member.index')->with('error', $errorMessage);
+        }
+    }
+
     public function destroy($id)
     {
         try {
             $memberId = decrypt($id);
             $member = EmployeeMaster::findOrFail($memberId);
+
+            // Check if member is active
+            if ($member->status == 1) {
+                $message = 'Cannot delete active record. Please set status to inactive first.';
+                if (request()->ajax()) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+                return redirect()->route('member.index')->with('error', $message);
+            }
 
             // Delete related UserCredential and EmployeeRoleMapping
             $userCredential = UserCredential::where('user_id', $memberId)->first();
@@ -500,9 +553,17 @@ class MemberController extends Controller
 
             MemberDataTable::bumpListingCacheEpoch();
 
-            return redirect()->route('member.index')->with('success', 'Member deleted successfully.');
+            $message = 'Member deleted successfully.';
+            if (request()->ajax()) {
+                return response()->json(['success' => true, 'message' => $message]);
+            }
+            return redirect()->route('member.index')->with('success', $message);
         } catch (\Exception $e) {
-            return redirect()->route('member.index')->with('error', 'Error deleting member: ' . $e->getMessage());
+            $message = 'Error deleting member: ' . $e->getMessage();
+            if (request()->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 500);
+            }
+            return redirect()->route('member.index')->with('error', $message);
         }
     }
 }
