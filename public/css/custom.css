@@ -5207,6 +5207,31 @@ body.custom-loaded {
     }
 }
 
+/* ── Calendar Creation (filter toolbar — native selects) ── */
+.calendar-admin-page.cal-master-page .cal-portal-toolbar-row.programme-dt-toolbar {
+    overflow: visible;
+    position: relative;
+    z-index: 20;
+}
+
+.calendar-admin-page.cal-master-page .cal-filters-group .programme-dt-filter-select:focus-within {
+    z-index: 40;
+}
+
+.calendar-admin-page.cal-master-page .cal-filters-group select.form-select.cal-filter-select.cal-filter-empty,
+.calendar-admin-page.cal-master-page .cal-filters-group select.form-select.cal-filter-select.filter-placeholder {
+    color: #667085;
+}
+
+.calendar-admin-page.cal-master-page .programme-dt-toolbar .programme-dt-btn-reset.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
 @media print {
     .no-print {
         display: none !important;
