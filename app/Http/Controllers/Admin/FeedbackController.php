@@ -2706,6 +2706,30 @@ class FeedbackController extends Controller
                 $query->whereDate('tt.END_DATE', '<=', $toDate);
             }
 
+            $tableSearch = trim((string) $request->input('table_search', ''));
+            if ($tableSearch !== '') {
+                $like = '%' . addcslashes($tableSearch, '%_\\') . '%';
+                $query->where(function ($q) use ($like) {
+                    $q->where('sm.generated_OT_code', 'LIKE', $like)
+                        ->orWhere(DB::raw("CONCAT(
+                            COALESCE(sm.first_name, ''),
+                            CASE
+                                WHEN sm.middle_name IS NOT NULL AND sm.middle_name != ''
+                                THEN CONCAT(' ', sm.middle_name)
+                                ELSE ''
+                            END,
+                            CASE
+                                WHEN sm.last_name IS NOT NULL AND sm.last_name != ''
+                                THEN CONCAT(' ', sm.last_name)
+                                ELSE ''
+                            END
+                        )"), 'LIKE', $like)
+                        ->orWhere('cm.course_name', 'LIKE', $like)
+                        ->orWhere('tf.remark', 'LIKE', $like)
+                        ->orWhere('fm.full_name', 'LIKE', $like);
+                });
+            }
+
             // Course type filter
             if ($courseType === 'archived') {
                 $query->where(function ($q) {
@@ -2733,22 +2757,31 @@ class FeedbackController extends Controller
             // Get total count for pagination
             $totalRecords = $query->count();
 
-            // Apply pagination - 10 records per page
-            $perPage = 10;
-            $currentPage = $page;
-            $totalPages = ceil($totalRecords / $perPage);
+            $forPrint = $request->boolean('for_print');
 
-            // Ensure current page is valid
-            if ($currentPage < 1) {
+            if ($forPrint) {
+                $perPage = max(1, $totalRecords);
                 $currentPage = 1;
-            } elseif ($currentPage > $totalPages && $totalPages > 0) {
-                $currentPage = $totalPages;
-            }
+                $totalPages = 1;
+                $feedbackData = $query->get();
+            } else {
+                // Apply pagination
+                $perPage = max(1, min((int) $request->input('per_page', 10), 100));
+                $currentPage = $page;
+                $totalPages = (int) ceil($totalRecords / $perPage);
 
-            // Get paginated data
-            $feedbackData = $query->offset(($currentPage - 1) * $perPage)
-                ->limit($perPage)
-                ->get();
+                // Ensure current page is valid
+                if ($currentPage < 1) {
+                    $currentPage = 1;
+                } elseif ($currentPage > $totalPages && $totalPages > 0) {
+                    $currentPage = $totalPages;
+                }
+
+                // Get paginated data
+                $feedbackData = $query->offset(($currentPage - 1) * $perPage)
+                    ->limit($perPage)
+                    ->get();
+            }
 
             // Process data for display
             $processedData = $feedbackData->map(function ($item) {
@@ -2798,6 +2831,7 @@ class FeedbackController extends Controller
                     'currentPage' => $currentPage,
                     'totalPages' => $totalPages,
                     'totalRecords' => $totalRecords,
+                    'perPage' => $perPage,
                     'programs' => $programs,
                     'facultyTypes' => $facultyTypes,
                     'facultySuggestions' => $facultySuggestions,
@@ -2816,6 +2850,7 @@ class FeedbackController extends Controller
                 'currentPage' => $currentPage,
                 'totalPages' => $totalPages,
                 'totalRecords' => $totalRecords,
+                'perPage' => $perPage,
                 'programs' => $programs,
                 'facultyTypes' => $facultyTypes,
                 'facultySuggestions' => $facultySuggestions,
