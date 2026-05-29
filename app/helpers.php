@@ -135,14 +135,134 @@ function mess_cw_slip_section_display_rows(\Illuminate\Support\Collection $secti
     }
 
     return $rows->sort(function ($a, $b) {
-        $tsA = $a->sortDate ? \Carbon\Carbon::parse($a->sortDate)->startOfDay()->timestamp : 0;
-        $tsB = $b->sortDate ? \Carbon\Carbon::parse($b->sortDate)->startOfDay()->timestamp : 0;
+        $dateA = mess_cw_slip_row_display_date($a);
+        $dateB = mess_cw_slip_row_display_date($b);
+        $tsA = mess_cw_slip_display_date_timestamp($dateA);
+        $tsB = mess_cw_slip_display_date_timestamp($dateB);
         if ($tsA !== $tsB) {
             return $tsB <=> $tsA;
         }
 
         return $b->sortId <=> $a->sortId;
     })->values();
+}
+
+/**
+ * Request-date label shown in the Sale Voucher Report table for one display row.
+ */
+function mess_cw_slip_row_display_date(object $row): string
+{
+    $voucher = $row->voucher;
+    if ($row->kind === 'empty') {
+        return $voucher->issue_date
+            ? ($voucher->issue_date instanceof \Carbon\Carbon
+                ? $voucher->issue_date->format('d-m-Y')
+                : \Carbon\Carbon::parse($voucher->issue_date)->format('d-m-Y'))
+            : 'N/A';
+    }
+
+    $item = $row->item;
+    $requestDate = $voucher->issue_date
+        ? ($voucher->issue_date instanceof \Carbon\Carbon
+            ? $voucher->issue_date->format('d-m-Y')
+            : \Carbon\Carbon::parse($voucher->issue_date)->format('d-m-Y'))
+        : 'N/A';
+    $itemIssueDate = $item->issue_date ?? null;
+    if ($itemIssueDate) {
+        return $itemIssueDate instanceof \Carbon\Carbon
+            ? $itemIssueDate->format('d-m-Y')
+            : \Carbon\Carbon::parse($itemIssueDate)->format('d-m-Y');
+    }
+
+    return $requestDate;
+}
+
+function mess_cw_slip_display_date_timestamp(string $displayDate): int
+{
+    if ($displayDate === '' || $displayDate === 'N/A') {
+        return 0;
+    }
+
+    try {
+        return \Carbon\Carbon::createFromFormat('d-m-Y', $displayDate)->startOfDay()->timestamp;
+    } catch (\Throwable $e) {
+        return 0;
+    }
+}
+
+/**
+ * Remark label for a date group (unique voucher remarks merged when same date).
+ *
+ * @param  string[]  $remarks
+ */
+function mess_cw_slip_remark_for_date_group(string $displayDate, array $remarks): string
+{
+    $unique = array_values(array_unique(array_filter(array_map(
+        static fn ($r) => trim((string) $r),
+        $remarks
+    ))));
+
+    if ($unique === []) {
+        return '—';
+    }
+
+    $text = count($unique) === 1 ? $unique[0] : implode('; ', $unique);
+
+    if ($displayDate !== '' && $displayDate !== 'N/A') {
+        return $displayDate . ' → ' . $text;
+    }
+
+    return $text;
+}
+
+/**
+ * Per-row remark layout: rowspan when consecutive rows share the same display date.
+ *
+ * @param  \Illuminate\Support\Collection<int, object>  $displayRows
+ * @return array<int, array{show: bool, rowspan: int, remark: string}>
+ */
+function mess_cw_slip_section_remark_layout(\Illuminate\Support\Collection $displayRows): array
+{
+    $layout = [];
+    $count = $displayRows->count();
+    $i = 0;
+
+    while ($i < $count) {
+        $displayDate = mess_cw_slip_row_display_date($displayRows[$i]);
+        $remarks = [];
+        $j = $i;
+
+        while ($j < $count && mess_cw_slip_row_display_date($displayRows[$j]) === $displayDate) {
+            $remarks[] = (string) ($displayRows[$j]->voucher->remarks ?? '');
+            $j++;
+        }
+
+        $span = $j - $i;
+        $label = mess_cw_slip_remark_for_date_group($displayDate, $remarks);
+
+        for ($k = $i; $k < $j; $k++) {
+            $layout[$k] = [
+                'show' => $k === $i,
+                'rowspan' => $span,
+                'remark' => $label,
+            ];
+        }
+
+        $i = $j;
+    }
+
+    return $layout;
+}
+
+/**
+ * @deprecated Use mess_cw_slip_remark_for_date_group() via mess_cw_slip_section_remark_layout().
+ */
+function mess_cw_slip_voucher_remark_display($voucher, ?string $rowDateFormatted = null): string
+{
+    return mess_cw_slip_remark_for_date_group(
+        $rowDateFormatted ?? 'N/A',
+        [(string) ($voucher->remarks ?? '')]
+    );
 }
 
 function createDirectory($path)
@@ -178,6 +298,212 @@ function hasRole($role)
     });
 
     return in_array($role, $roles);
+}
+
+/**
+ * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
+ */
+function is_faculty_portal_user(): bool
+{
+    $user = Auth::user();
+    if (! $user) {
+        return false;
+    }
+
+    if (($user->user_category ?? '') === 'F') {
+        return true;
+    }
+
+    return hasRole('Internal Faculty') || hasRole('Guest Faculty');
+}
+
+/**
+ * Resolve faculty_master.pk for the authenticated user.
+ *
+ * Mapping used across the app:
+ * - user_category E: user_id → employee_master.pk → faculty_master.employee_master_pk
+ * - user_category F / notice memo: user_id → faculty_master.pk (coordinator & notices)
+ * - CalendarController::index: employee_master_pk lookup, then filter timetable by faculty pk
+ * - CalendarController::feedbackList (legacy): user_id used directly on timetable.faculty_master
+ */
+function get_auth_faculty_master_pk(): ?int
+{
+    $user = Auth::user();
+    if (! $user) {
+        return null;
+    }
+
+    $userId = (int) $user->user_id;
+    if ($userId <= 0) {
+        return null;
+    }
+
+    // 1) Standard employee-linked faculty (Dashboard, UserController, MedicalException faculty view)
+    $pk = \App\Models\FacultyMaster::where('employee_master_pk', $userId)->value('pk');
+    if ($pk) {
+        return (int) $pk;
+    }
+
+    // 2) user_id stores faculty_master.pk (Notice/Memo, some faculty credentials)
+    if (\App\Models\FacultyMaster::where('pk', $userId)->exists()) {
+        return $userId;
+    }
+
+    // 3) employee_master.pk / pk_old alias then faculty link
+    if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'pk_old')) {
+        $employeePk = \Illuminate\Support\Facades\DB::table('employee_master')
+            ->where(function ($q) use ($userId) {
+                $q->where('pk', $userId)->orWhere('pk_old', $userId);
+            })
+            ->value('pk');
+
+        if ($employeePk) {
+            $pk = \App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->value('pk');
+            if ($pk) {
+                return (int) $pk;
+            }
+        }
+    }
+
+    // 4) Match faculty by login mobile / email (guest faculty without employee link)
+    if (! empty($user->mobile_no)) {
+        $pk = \App\Models\FacultyMaster::where('mobile_no', $user->mobile_no)->value('pk');
+        if ($pk) {
+            return (int) $pk;
+        }
+    }
+
+    if (! empty($user->user_name)) {
+        $pk = \App\Models\FacultyMaster::where('email_id', $user->user_name)
+            ->orWhere('alternate_email_id', $user->user_name)
+            ->value('pk');
+        if ($pk) {
+            return (int) $pk;
+        }
+    }
+
+    // 5) Legacy alignment with CalendarController::feedbackList & coordinator rows using user_id as faculty pk
+    if (is_faculty_portal_user()) {
+        if (\Illuminate\Support\Facades\DB::table('topic_feedback')
+            ->where('faculty_pk', $userId)
+            ->where('is_submitted', 1)
+            ->exists()) {
+            return $userId;
+        }
+
+        if (\Illuminate\Support\Facades\DB::table('timetable')
+            ->where('faculty_master', $userId)
+            ->exists()) {
+            return $userId;
+        }
+
+        if (\App\Models\CourseCordinatorMaster::where('Coordinator_name', $userId)
+            ->orWhere('Assistant_Coordinator_name', $userId)
+            ->exists()) {
+            return $userId;
+        }
+    }
+
+    return provision_faculty_profile_from_employee_user();
+}
+
+/**
+ * For employee logins (user_category E) with Internal/Guest Faculty role but no faculty_master row:
+ * link an existing faculty by mobile/email, or create a minimal faculty_master linked to employee_master.
+ */
+function provision_faculty_profile_from_employee_user(): ?int
+{
+    $user = Auth::user();
+    if (! $user || ($user->user_category ?? '') !== 'E' || ! is_faculty_portal_user()) {
+        return null;
+    }
+
+    $employeePk = (int) $user->user_id;
+    if ($employeePk <= 0) {
+        return null;
+    }
+
+    $employee = \Illuminate\Support\Facades\DB::table('employee_master')
+        ->where('pk', $employeePk)
+        ->first();
+
+    if (! $employee) {
+        return null;
+    }
+
+    $mobile = trim((string) ($user->mobile_no ?: $employee->mobile ?? ''));
+    $email = trim((string) ($employee->email ?? ''));
+
+    // Link existing faculty that was never tied to this employee
+    $existingQuery = \App\Models\FacultyMaster::query()->whereNull('employee_master_pk');
+
+    if ($mobile !== '') {
+        $linked = (clone $existingQuery)->where('mobile_no', $mobile)->first();
+        if ($linked) {
+            $linked->update(['employee_master_pk' => $employeePk]);
+
+            return (int) $linked->pk;
+        }
+    }
+
+    if ($email !== '') {
+        $linked = (clone $existingQuery)->where('email_id', $email)
+            ->orWhere('alternate_email_id', $email)
+            ->first();
+        if ($linked && empty($linked->employee_master_pk)) {
+            $linked->update(['employee_master_pk' => $employeePk]);
+
+            return (int) $linked->pk;
+        }
+    }
+
+    // Already linked elsewhere
+    if (\App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->exists()) {
+        return (int) \App\Models\FacultyMaster::where('employee_master_pk', $employeePk)->value('pk');
+    }
+
+    $facultyType = hasRole('Guest Faculty') ? 2 : 1;
+    $firstName = trim((string) ($employee->first_name ?? 'Faculty'));
+    $lastName = trim((string) ($employee->last_name ?? ''));
+    $fullName = trim($firstName.' '.$lastName) ?: $firstName;
+
+    $prefix = \Illuminate\Support\Facades\DB::table('faculty_type_master')
+        ->where('pk', $facultyType)
+        ->value('shot_faculty_type_name') ?: ($facultyType === 2 ? 'GST' : 'INT');
+
+    $latestCode = \App\Models\FacultyMaster::where('faculty_code', 'like', $prefix.'-%')
+        ->orderByRaw("CAST(SUBSTRING_INDEX(faculty_code, '-', -1) AS UNSIGNED) DESC")
+        ->value('faculty_code');
+
+    $nextNumber = 1;
+    if ($latestCode && preg_match('/-0*(\d+)$/', $latestCode, $matches)) {
+        $nextNumber = (int) $matches[1] + 1;
+    }
+
+    $template = \App\Models\FacultyMaster::where('faculty_type', $facultyType)
+        ->whereNotNull('country_master_pk')
+        ->first();
+
+    $faculty = \App\Models\FacultyMaster::create([
+        'faculty_type' => $facultyType,
+        'first_name' => $firstName,
+        'last_name' => $lastName,
+        'full_name' => $fullName,
+        'email_id' => $email ?: null,
+        'mobile_no' => $mobile ?: null,
+        'employee_master_pk' => $employeePk,
+        'faculty_code' => $prefix.'-'.str_pad((string) $nextNumber, 5, '0', STR_PAD_LEFT),
+        'active_inactive' => 1,
+        'faculty_sector' => $template->faculty_sector ?? 1,
+        'country_master_pk' => $template->country_master_pk ?? 1,
+        'state_master_pk' => $template->state_master_pk ?? 35,
+        'state_district_mapping_pk' => $template->state_district_mapping_pk ?? 212,
+        'city_master_pk' => $template->city_master_pk ?? 1622,
+        'created_by' => $employeePk,
+        'created_date' => now(),
+    ]);
+
+    return (int) $faculty->pk;
 }
 
 /**

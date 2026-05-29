@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
 use Illuminate\Http\Request;
 use App\Models\Mess\PurchaseOrder;
 use App\Models\Mess\PurchaseOrderItem;
@@ -42,70 +43,107 @@ class PurchaseOrderController extends Controller
             $draw = (int) $request->input('draw', 0);
             $start = max((int) $request->input('start', 0), 0);
             $length = (int) $request->input('length', 10);
-            $search = trim((string) $request->input('search.value', ''));
+            $searchTokens = DataTableSearchHelper::tokens((string) $request->input('search.value', ''));
 
             $recordsTotal = (clone $query)->count();
 
-            if ($search !== '') {
-                $query->where(function ($q) use ($search) {
-                    $q->where('po_number', 'like', '%' . $search . '%')
-                        ->orWhere('status', 'like', '%' . $search . '%')
-                        ->orWhereHas('vendor', function ($v) use ($search) {
-                            $v->where('name', 'like', '%' . $search . '%');
-                        })
-                        ->orWhereHas('store', function ($s) use ($search) {
-                            $s->where('store_name', 'like', '%' . $search . '%');
+            if ($searchTokens !== []) {
+                $query->where(function ($q) use ($searchTokens) {
+                    foreach ($searchTokens as $token) {
+                        $like = DataTableSearchHelper::likePattern($token);
+                        $q->where(function ($inner) use ($like) {
+                            $inner->where('po_number', 'like', $like)
+                                ->orWhere('status', 'like', $like)
+                                ->orWhereHas('vendor', function ($v) use ($like) {
+                                    $v->where('name', 'like', $like);
+                                })
+                                ->orWhereHas('store', function ($s) use ($like) {
+                                    $s->where('store_name', 'like', $like);
+                                });
                         });
+                    }
                 });
             }
 
             $recordsFiltered = (clone $query)->count();
 
-            $paged = (clone $query)
-                ->with(['vendor', 'store'])
-                ->latest('po_date');
+            $paged = (clone $query)->with(['vendor', 'store']);
+            $table = (new PurchaseOrder())->getTable();
+            $orderCol = DataTableSearchHelper::orderColumnIndex($request, 1);
+            $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
+
+            switch ($orderCol) {
+                case 0:
+                    $paged->orderBy($table . '.po_date', $orderDir);
+                    break;
+                case 1:
+                    $paged->orderBy($table . '.po_number', $orderDir);
+                    break;
+                case 2:
+                    $paged->leftJoin('mess_vendors as po_sort_v', $table . '.vendor_id', '=', 'po_sort_v.id')
+                        ->orderBy('po_sort_v.name', $orderDir)
+                        ->select($table . '.*');
+                    break;
+                case 3:
+                    $paged->leftJoin('mess_stores as po_sort_s', $table . '.store_id', '=', 'po_sort_s.id')
+                        ->orderBy('po_sort_s.store_name', $orderDir)
+                        ->select($table . '.*');
+                    break;
+                case 4:
+                    $paged->orderBy($table . '.status', $orderDir);
+                    break;
+                default:
+                    $paged->orderByDesc($table . '.po_date');
+            }
+            $paged->orderByDesc($table . '.id');
 
             if ($length !== -1) {
                 $paged->skip($start)->take(max($length, 0));
             }
 
             $purchaseOrders = $paged->get();
+            $forPrint = $request->boolean('for_print');
             $canDeletePurchaseOrder = function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin'));
             $rowStart = $start + 1;
 
-            $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart) {
+            $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart, $forPrint) {
                 $statusBadgeClass = $po->status === 'approved'
                     ? 'text-bg-success'
                     : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
 
-                $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
-                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
-                    . '</button>';
-                $editBtn = '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="Edit">'
-                    . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
-                    . '</button>';
-                $deleteForm = '';
-
-                if ($canDeletePurchaseOrder) {
-                    $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
-                    $csrf = csrf_token();
-                    $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
-                        . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
-                        . '<input type="hidden" name="_method" value="DELETE">'
-                        . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
-                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
-                        . '</button>'
-                        . '</form>';
-                }
-
-                return [
+                $row = [
                     '<span class="ps-4 d-inline-block text-body-secondary fw-medium">' . ($rowStart + $index) . '</span>',
                     '<span class="fw-semibold text-body">' . e($po->po_number) . '</span>',
                     '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
                     '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
                     '<span class="badge rounded-pill ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',
-                    '<div class="d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $deleteForm . '</div>',
                 ];
+
+                if (! $forPrint) {
+                    $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
+                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
+                        . '</button>';
+                    $editBtn = '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="Edit">'
+                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
+                        . '</button>';
+                    $deleteForm = '';
+
+                    if ($canDeletePurchaseOrder) {
+                        $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
+                        $csrf = csrf_token();
+                        $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
+                            . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
+                            . '<input type="hidden" name="_method" value="DELETE">'
+                            . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
+                            . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
+                            . '</button>'
+                            . '</form>';
+                    }
+
+                    $row[] = '<div class="po-actions-cell d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+                }
+
+                return $row;
             })->values()->all();
 
             return response()->json([

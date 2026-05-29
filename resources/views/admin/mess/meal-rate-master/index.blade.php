@@ -26,7 +26,8 @@
                     </div>
                 </div>
                 <hr>
-                <table class="table w-100 text-nowrap">
+                <div class="table-responsive">
+                <table id="mealRatesTable" class="table w-100 text-nowrap" data-mess-column-manager data-mess-column-skip="5" data-mess-column-title="Meal Rate columns">
                     <thead>
                         <tr>
                             <th>S.No.</th>
@@ -65,6 +66,7 @@
                         @endforelse
                     </tbody>
                 </table>
+                </div>
                 <div class="d-flex justify-content-center mt-3">{{ $rates->links() }}</div>
             </div>
         </div>

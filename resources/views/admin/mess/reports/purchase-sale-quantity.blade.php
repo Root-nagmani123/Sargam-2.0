@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Item Report')
 @section('content')
+@include('admin.mess.reports.partials.report-styles')
 @php
     /** @var array<int> $storeIds */
     $storeIds = isset($storeIds) ? $storeIds : [];
@@ -102,6 +103,7 @@
         </div>
         <div class="card-body pt-2 pb-3 px-4">
             <form id="purchaseSaleQuantityFilterForm" method="GET" action="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
+                <input type="hidden" name="refresh" value="1">
                 <div class="row g-3">
                     <div class="col-12 col-sm-6 col-md-6 col-lg-2">
                         <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1">From Date</label>
@@ -248,8 +250,8 @@
                             <table class="table align-middle mb-0 psq-table">
                                 <thead>
                                     <tr>
-                                        <th class="border-0 py-3 text-center" style="width:60px;">S. No.</th>
-                                        <th class="border-0 py-3">Item Name</th>
+                                        @include('admin.mess.reports.partials.report-sno-th', ['class' => 'border-0 py-3 text-center'])
+                                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'class' => 'border-0 py-3'])
                                         <th class="border-0 py-3" style="width:80px;">Unit</th>
                                         <th class="text-end border-0 py-3">Total Purchase Qty</th>
                                         <th class="text-end border-0 py-3">Avg Purchase Price</th>
@@ -261,7 +263,7 @@
                                     @php $psqItemPaginator = $section['paginator'] ?? null; @endphp
                                     @forelse($section['reportData'] as $index => $row)
                                         <tr class="psq-data-row">
-                                            <td class="text-center text-body-secondary small fw-medium">{{ $psqItemPaginator && $psqItemPaginator->firstItem() !== null ? $psqItemPaginator->firstItem() + $index : $index + 1 }}</td>
+                                            <td class="text-center text-body-secondary small fw-medium mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $psqItemPaginator ?? ($section['paginator'] ?? null), 'index' => $index])</td>
                                             <td class="fw-medium">{{ $row['item_name'] }}</td>
                                             <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                             <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
@@ -299,7 +301,13 @@
                             </table>
                         </div>
                     @else
-                        @php $groupedData = $section['groupedData'] ?? []; @endphp
+                        @php
+                            $groupedData = $section['groupedData'] ?? [];
+                            $psqGroupedSerial = 0;
+                            if (($section['viewType'] ?? '') === 'category_wise' && ! empty($section['paginator']) && $section['paginator']->firstItem() !== null) {
+                                $psqGroupedSerial = (int) $section['paginator']->firstItem() - 1;
+                            }
+                        @endphp
                         @forelse($groupedData as $group)
                             <div class="purchase-sale-group-block mb-0 border-bottom border-secondary border-opacity-25">
                                 <div class="px-4 pt-3 pb-2">
@@ -312,7 +320,7 @@
                                     <table class="table table-hover align-middle mb-0 psq-table">
                                         <thead>
                                             <tr>
-                                                <th class="border-0 py-3 text-center" style="width: 60px;">S. No.</th>
+                                                @include('admin.mess.reports.partials.report-sno-th', ['class' => 'border-0 py-3 text-center'])
                                                 <th class="border-0 py-3">Item Name</th>
                                                 <th class="border-0 py-3" style="width:80px;">Unit</th>
                                                 <th class="text-end border-0 py-3">Total Purchase Qty</th>
@@ -323,14 +331,9 @@
                                         </thead>
                                         <tbody>
                                             @foreach($group['items'] as $idx => $row)
+                                                @php $psqGroupedSerial++; @endphp
                                                 <tr class="psq-data-row">
-                                                    <td class="text-center text-body-secondary small fw-medium">
-                                                        @if(($section['viewType'] ?? '') === 'category_wise' && ! empty($section['paginator']))
-                                                            {{ $section['paginator']->firstItem() !== null ? $section['paginator']->firstItem() + $idx : $idx + 1 }}
-                                                        @else
-                                                            {{ $idx + 1 }}
-                                                        @endif
-                                                    </td>
+                                                    <td class="text-center text-body-secondary small fw-medium mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['start' => $psqGroupedSerial, 'index' => 0])</td>
                                                     <td class="fw-medium">{{ $row['item_name'] }}</td>
                                                     <td><span class="badge bg-body-secondary text-body-emphasis rounded-1 px-2">{{ $row['unit'] }}</span></td>
                                                     <td class="text-end">{{ number_format($row['purchase_qty'], 2) }}</td>
@@ -377,7 +380,7 @@
                     @endif
                     @if(! empty($section['paginator']) && $section['paginator']->hasPages())
                         <div class="d-flex justify-content-center py-3 px-2 border-top bg-body-tertiary bg-opacity-25 no-print">
-                            {{ $section['paginator']->withQueryString()->links() }}
+                            {{ $section['paginator']->withQueryString()->links('pagination::bootstrap-5') }}
                         </div>
                     @endif
                 </div>
@@ -423,12 +426,10 @@
 
     /* ── Scrollable table body with sticky header ── */
     @media screen {
-        .page-wrapper:has(.purchase-sale-quantity-report) {
-            overflow-x: clip !important;
-        }
         .purchase-sale-quantity-report .psq-scroll-wrapper {
-            max-height: min(72vh, 760px);
-            overflow: auto !important;
+            overflow-x: auto;
+            overflow-y: auto;
+            max-height: min(72vh, calc(100dvh - 12rem));
             display: block !important;
             position: relative;
         }

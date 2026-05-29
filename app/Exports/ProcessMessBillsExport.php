@@ -14,15 +14,68 @@ use PhpOffice\PhpSpreadsheet\Style\Border;
 
 class ProcessMessBillsExport implements FromCollection, WithHeadings, WithCustomStartCell, WithEvents
 {
+    public const EXPORT_COLUMNS = [
+        0 => 'S.No.',
+        1 => 'Buyer Name',
+        2 => 'Slip No.',
+        3 => 'Invoice Date',
+        4 => 'Client Type',
+        5 => 'Total',
+        6 => 'Payment Type',
+        7 => 'Status',
+    ];
+
     protected array $reportRows;
     protected string $dateFrom;
     protected string $dateTo;
+    protected array $headings;
+    protected string $lastCol;
 
-    public function __construct(array $reportRows, string $dateFrom, string $dateTo)
+    public function __construct(array $reportRows, string $dateFrom, string $dateTo, ?array $headings = null)
     {
         $this->reportRows = $reportRows;
         $this->dateFrom = $dateFrom;
         $this->dateTo = $dateTo;
+        $this->headings = $headings ?? array_values(self::EXPORT_COLUMNS);
+        $colCount = max(1, count($this->headings));
+        $this->lastCol = self::columnLetterFromCount($colCount);
+    }
+
+    public static function parseVisibleColumnIndexes(?string $param): array
+    {
+        $all = array_keys(self::EXPORT_COLUMNS);
+        if ($param === null || trim($param) === '') {
+            return $all;
+        }
+        $indexes = array_values(array_unique(array_map('intval', array_filter(
+            explode(',', $param),
+            static fn ($v) => $v !== '' && is_numeric(trim($v))
+        ))));
+        $indexes = array_values(array_intersect($indexes, $all));
+
+        return $indexes ?: $all;
+    }
+
+    public static function headingsForIndexes(array $indexes): array
+    {
+        return array_map(static fn ($i) => self::EXPORT_COLUMNS[$i] ?? '', $indexes);
+    }
+
+    public static function filterRowByIndexes(array $row, array $indexes): array
+    {
+        return array_map(static fn ($i) => $row[$i] ?? '', $indexes);
+    }
+
+    public static function columnLetterFromCount(int $count): string
+    {
+        $index = max(0, $count - 1);
+        $letter = '';
+        while ($index >= 0) {
+            $letter = chr(65 + ($index % 26)) . $letter;
+            $index = intdiv($index, 26) - 1;
+        }
+
+        return $letter ?: 'A';
     }
 
     public function collection(): Collection
@@ -39,6 +92,7 @@ class ProcessMessBillsExport implements FromCollection, WithHeadings, WithCustom
             'Invoice Date',
             'Client Type',
             'Total',
+            'Total Due Amount',
             'Payment Type',
             'Status',
         ];
@@ -51,29 +105,29 @@ class ProcessMessBillsExport implements FromCollection, WithHeadings, WithCustom
 
     public function registerEvents(): array
     {
+        $lastCol = $this->lastCol;
+
         return [
-            AfterSheet::class => function (AfterSheet $event) {
+            AfterSheet::class => function (AfterSheet $event) use ($lastCol) {
                 $sheet = $event->sheet->getDelegate();
 
-                // Report header (rows 1-4)
                 $sheet->setCellValue('A1', 'Process Mess Bills');
-                $sheet->mergeCells('A1:H1');
+                $sheet->mergeCells('A1:I1');
                 $sheet->getStyle('A1')->getFont()->setBold(true)->setSize(16);
                 $sheet->getStyle('A1')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A2', 'Period: ' . $this->dateFrom . ' to ' . $this->dateTo);
-                $sheet->mergeCells('A2:H2');
+                $sheet->mergeCells('A2:I2');
                 $sheet->getStyle('A2')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
                 $sheet->setCellValue('A3', 'Generated on: ' . now()->format('d-m-Y H:i:s'));
-                $sheet->mergeCells('A3:H3');
+                $sheet->mergeCells('A3:I3');
                 $sheet->getStyle('A3')->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
 
-                // Blank row
                 $sheet->setCellValue('A4', '');
 
                 // Column headers styling (row 5)
-                $lastCol = 'H';
+                $lastCol = 'I';
                 $sheet->getStyle('A5:' . $lastCol . '5')
                     ->applyFromArray([
                         'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],

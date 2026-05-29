@@ -21,7 +21,7 @@
         @endif
 
         <div class="table-responsive">
-            <table class="table table-hover table-sm">
+            <table id="financeBookingsTable" class="table table-hover table-sm" data-mess-column-manager data-mess-column-skip="7">
                 <thead class="table-light">
                     <tr>
                         <th>Booking Number</th>

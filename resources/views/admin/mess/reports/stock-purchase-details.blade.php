@@ -148,6 +148,7 @@
                         <table class="table table-bordered align-middle mb-0 stock-purchase-table" style="width:100%;">
                             <thead class="stock-purchase-thead">
                                 <tr>
+                                    @include('admin.mess.reports.partials.report-sno-th', ['class' => 'spr-th'])
                                     <th class="spr-th">Item</th>
                                     <th class="spr-th">Item Code</th>
                                     <th class="spr-th text-end">Unit</th>
@@ -159,10 +160,10 @@
                                 </tr>
                             </thead>
                             <tbody>
-                                @php $grandTotalAmount = 0; @endphp
+                                @php $grandTotalAmount = 0; $sprReportLineNo = 0; @endphp
                                 @forelse($purchaseOrdersByVendor as $vendorGroup)
                                     <tr class="vendor-section-header-row">
-                                        <td colspan="8" class="vendor-section-header small fw-semibold">
+                                        <td colspan="9" class="vendor-section-header small fw-semibold">
                                             <span class="d-inline-flex align-items-center gap-1">
                                                 <span class="material-symbols-rounded" style="font-size:1rem;opacity:0.7;" aria-hidden="true">person</span>
                                                 VENDOR : {{ $vendorGroup['vendor_name'] }}
@@ -176,7 +177,7 @@
                                             $billTaxTotal = 0;
                                         @endphp
                                         <tr class="bill-header-row">
-                                            <td colspan="8" class="bill-header small fw-semibold text-white">
+                                            <td colspan="9" class="bill-header small fw-semibold text-white">
                                                 <span class="d-inline-flex align-items-center gap-1">
                                                     <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">receipt</span>
                                                     {{ $order->stockPurchaseReportBillLabel() }}
@@ -185,6 +186,7 @@
                                         </tr>
                                         @foreach($order->items as $item)
                                             @php
+                                                $sprReportLineNo++;
                                                 $qty = $item->quantity ?? 0;
                                                 $rate = $item->unit_price ?? 0;
                                                 $taxPercent = $item->tax_percent ?? 0;
@@ -196,6 +198,7 @@
                                                 $grandTotalAmount += $total;
                                             @endphp
                                             <tr class="spr-item-row">
+                                                <td class="text-center text-body-secondary small mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['start' => $sprReportLineNo, 'index' => 0])</td>
                                                 <td class="fw-medium">{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
                                                 <td class="text-body-secondary">{{ $item->itemSubcategory->item_code ?? '—' }}</td>
                                                 <td class="text-end text-body-secondary">{{ $item->unit ?? '—' }}</td>
@@ -211,12 +214,12 @@
                                             $vendorSectionTotal += $billTotal;
                                         @endphp
                                         <tr class="bill-total-row fw-semibold">
-                                            <td colspan="7" class="text-end fw-bold small">Bill Total:</td>
+                                            <td colspan="8" class="text-end fw-bold small">Bill Total:</td>
                                             <td class="text-end fw-bold spr-num">₹{{ number_format($billTotal, 2) }}</td>
                                         </tr>
                                     @endforeach
                                     <tr class="vendor-total-row fw-semibold">
-                                        <td colspan="7" class="text-end small">
+                                        <td colspan="8" class="text-end small">
                                             <span class="d-inline-flex align-items-center gap-1">
                                                 <span class="material-symbols-rounded" style="font-size:0.875rem;" aria-hidden="true">functions</span>
                                                 Vendor Total ({{ $vendorGroup['vendor_name'] }}):
@@ -226,7 +229,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="8" class="p-0 border-0">
+                                        <td colspan="9" class="p-0 border-0">
                                             <div class="spr-empty-state text-center py-5 px-3">
                                                 <span class="material-symbols-rounded d-block mx-auto mb-2" style="font-size:2.25rem;color:#94a3b8;" aria-hidden="true">shopping_cart_off</span>
                                                 <h6 class="fw-semibold text-body-secondary mb-2">No purchase details found</h6>
@@ -241,7 +244,7 @@
                                 @endforelse
                                 @if($grandTotalAmount > 0)
                                     <tr class="grand-total-row fw-bold">
-                                        <td colspan="7" class="text-end">
+                                        <td colspan="8" class="text-end">
                                             <span class="d-inline-flex align-items-center gap-1">
                                                 <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">payments</span>
                                                 Grand Total:
@@ -583,8 +586,9 @@ function printStockPurchaseTable() {
 }
 @media screen {
     .stock-purchase-report .stock-purchase-table-wrapper {
-        max-height: min(72vh, 760px);
-        overflow: auto !important;
+        overflow-x: auto !important;
+        overflow-y: auto !important;
+        max-height: min(72vh, calc(100dvh - 12rem));
         position: relative;
     }
     /* border-collapse: separate is required for position:sticky to work */

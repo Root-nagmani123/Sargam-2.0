@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 @section('title', 'Stock Summary Report')
 @section('content')
+@include('admin.mess.reports.partials.report-styles')
 @php
     /** @var array<int> $storeIds */
     $storeIds = $storeIds ?? [];
@@ -21,8 +22,8 @@
     </div>
 
     <!-- Filters Section (Hide on Print) -->
-    <div class="card mb-4 border-0 shadow-sm rounded-3 overflow-hidden no-print">
-        <div style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
+    <div class="card mb-4 border-0 shadow-sm rounded-3 no-print stock-summary-filter-card">
+        <div class="rounded-top-3" style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
         <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
             <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
                 <div class="d-flex align-items-start gap-3">
@@ -37,7 +38,8 @@
             </div>
         </div>
         <div class="card-body p-3 p-lg-4">
-            <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}">
+            <form method="GET" action="{{ route('admin.mess.reports.stock-summary') }}" id="stockSummaryFilterForm">
+                <input type="hidden" name="refresh" value="1">
                 <div class="row g-3">
                     <div class="col-12 col-sm-6 col-xl-3">
                         <label for="stock_summary_from_date" class="form-label small fw-semibold text-uppercase text-body-secondary mb-1">From Date</label>
@@ -474,6 +476,25 @@ document.addEventListener('DOMContentLoaded', function () {
         font-size: 1.125rem;
     }
 
+    /* Filter card: allow Tom Select dropdowns to extend outside the card */
+    .stock-summary-report .stock-summary-filter-card,
+    .stock-summary-report .stock-summary-filter-card .card-header,
+    .stock-summary-report .stock-summary-filter-card .card-body,
+    .stock-summary-report .stock-summary-filter-card .row,
+    .stock-summary-report .stock-summary-filter-card [class*="col-"] {
+        overflow: visible;
+    }
+    .stock-summary-report .stock-summary-filter-card .ts-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+    .stock-summary-report .stock-summary-filter-card .ts-wrapper.dropdown-active {
+        z-index: 2;
+    }
+    body > .ts-dropdown {
+        z-index: 1065 !important;
+    }
+
     /* —— Stock summary card + table (redesigned) —— */
     .stock-summary-report .ssr-card {
         border-radius: 0.75rem;
@@ -572,11 +593,12 @@ document.addEventListener('DOMContentLoaded', function () {
         max-width: 100%;
         height: auto;
         min-height: 0;
-        max-height: min(70vh, calc(100dvh - 13rem));
+        max-height: min(72vh, calc(100dvh - 12rem));
         margin: 0 0.75rem 0.75rem;
         border-radius: 0.5rem;
         -webkit-overflow-scrolling: touch;
         overscroll-behavior-x: contain;
+        overscroll-behavior-y: auto;
         border: 1px solid #e2e8f0;
         outline: none;
         scrollbar-gutter: stable;
@@ -591,15 +613,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
     @media (max-width: 767.98px) {
         .stock-summary-report .ssr-table-scroller {
-            max-height: min(62vh, calc(100dvh - 17rem));
             margin-left: 0.5rem;
             margin-right: 0.5rem;
-        }
-    }
-
-    @media (min-width: 1400px) {
-        .stock-summary-report .ssr-table-scroller {
-            max-height: min(74vh, calc(100dvh - 11rem));
         }
     }
 
@@ -937,7 +952,7 @@ document.addEventListener('DOMContentLoaded', function () {
         font-size: 0.8125rem;
     }
 
-    .stock-summary-report .ssr-pagination-links .pagination {
+    .stock-summary-report .ssr-pagination-bar .pagination {
         margin-bottom: 0;
         --bs-pagination-font-size: 0.8125rem;
     }
@@ -1151,11 +1166,11 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     /* Pagination hover effects */
-    .stock-summary-report .ssr-pagination-links .page-link {
+    .stock-summary-report .ssr-pagination-bar .page-link {
         transition: all 0.15s ease;
     }
 
-    .stock-summary-report .ssr-pagination-links .page-link:hover {
+    .stock-summary-report .ssr-pagination-bar .page-link:hover {
         transform: translateY(-1px);
         box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
     }
@@ -1265,6 +1280,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.TomSelect === 'undefined') return;
 
+        var tsDropdownToBody = { dropdownParent: 'body' };
         var storeTypeSelect = document.getElementById('store_type');
         var mainStoreDiv = document.getElementById('main_store_div');
         var subStoreDiv = document.getElementById('sub_store_div');
@@ -1272,13 +1288,13 @@ document.addEventListener('DOMContentLoaded', function () {
         function initStoreMultiselect(el) {
             if (!el || el.tomselect) return;
             var placeholder = el.getAttribute('data-placeholder') || 'Select';
-            new TomSelect(el, {
+            new TomSelect(el, Object.assign({
                 create: false,
                 maxItems: null,
                 placeholder: placeholder,
                 plugins: ['remove_button', 'dropdown_input'],
                 sortField: { field: 'text', direction: 'asc' }
-            });
+            }, tsDropdownToBody));
         }
 
         function syncStoreMultiselects() {
@@ -1322,14 +1338,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var typeEl = document.getElementById('store_type');
         if (typeEl && !typeEl.tomselect) {
-            new TomSelect(typeEl, {
+            new TomSelect(typeEl, Object.assign({
                 create: false,
                 maxItems: 1,
                 allowEmptyOption: false,
                 placeholder: typeEl.getAttribute('data-placeholder') || 'Select',
                 plugins: ['dropdown_input'],
                 sortField: { field: 'text', direction: 'asc' }
-            });
+            }, tsDropdownToBody));
         }
 
         syncStoreMultiselects();

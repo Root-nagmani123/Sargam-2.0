@@ -1,6 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
+@include('admin.mess.reports.partials.report-styles')
 <div class="card" style="border-left: 4px solid #004a93;">
     <div class="card-header">
         <h5 class="mb-0">
@@ -23,8 +24,8 @@
                     </select>
                 </div>
                 <div class="col-md-6">
-                    <input type="text" name="search" class="form-control " 
-                           placeholder="Search by item name or code..." 
+                    <input type="text" name="search" id="mess_items_search" class="form-control" data-mess-filter-field="search"
+                           placeholder="Search by item name or code..."
                            value="{{ request('search') }}">
                 </div>
                 <div class="col-md-2">
@@ -36,11 +37,12 @@
         </form>
 
         <div class="table-responsive mess-items-report-scroll">
-            <table class="table table-hover">
+            <table id="messItemsListTable" class="table table-hover" data-mess-column-manager data-mess-column-title="Items list columns">
                 <thead class="table-light">
                     <tr>
-                        <th>Item Code</th>
-                        <th>Item Name</th>
+                        @include('admin.mess.reports.partials.report-sno-th')
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_code', 'label' => 'Item Code', 'defaultDir' => 'asc'])
+                        @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'messFilterField' => 'search'])
                         <th>Category</th>
                         <th>Sub-Category</th>
                         <th>Unit</th>
@@ -52,8 +54,9 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($items as $item)
+                    @forelse($items as $index => $item)
                         <tr class="{{ $item->current_stock < $item->minimum_stock ? 'table-warning' : '' }}">
+                            <td class="text-center text-muted mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $items, 'index' => $index])</td>
                             <td>{{ $item->item_code ?? 'N/A' }}</td>
                             <td>{{ $item->item_name }}</td>
                             <td>{{ $item->category->category_name ?? 'N/A' }}</td>
@@ -77,7 +80,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="10" class="text-center text-muted py-4">
+                            <td colspan="11" class="text-center text-muted py-4">
                                 <iconify-icon icon="solar:clipboard-list-bold" style="font-size: 48px;"></iconify-icon>
                                 <p class="mt-2">No items found</p>
                             </td>
@@ -87,7 +90,7 @@
                 @if($items->count() > 0)
                     <tfoot class="table-light">
                         <tr>
-                            <th colspan="8" class="text-end">Total Stock Value:</th>
+                            <th colspan="9" class="text-end">Total Stock Value:</th>
                             <th colspan="2">₹{{ number_format($items->sum(function($item) { return ($item->current_stock ?? 0) * ($item->unit_price ?? 0); }), 2) }}</th>
                         </tr>
                     </tfoot>
@@ -132,8 +135,8 @@
         </div>
 
         <!-- Pagination -->
-        <div class="d-flex justify-content-center mt-3">
-            {{ $items->withQueryString()->links() }}
+        <div class="mt-3">
+            {{ $items->withQueryString()->links('pagination::bootstrap-5') }}
         </div>
 
         <!-- Export Button -->
@@ -149,8 +152,9 @@
 <style>
 @media screen {
     .mess-items-report-scroll {
-        max-height: min(70vh, 720px);
-        overflow: auto;
+        overflow-x: auto;
+        overflow-y: auto;
+        max-height: min(72vh, calc(100dvh - 12rem));
     }
     .mess-items-report-scroll thead th {
         position: sticky;

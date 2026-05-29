@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableSearchHelper;
 use App\Models\KitchenIssueMaster;
 use App\Services\Mess\AvailableQuantityService;
 use App\Models\KitchenIssueItem;
@@ -29,6 +30,18 @@ use Carbon\Carbon;
 
 class KitchenIssueController extends Controller
 {
+    /**
+     * Historical mess_client_types.id values still stored on kitchen_issue_master rows
+     * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
+     *
+     * @var array<string, list<int>>
+     */
+    private const LEGACY_EMPLOYEE_CLIENT_TYPE_PK = [
+        'academy staff' => [2, 12],
+        'faculty' => [1],
+        'mess staff' => [],
+    ];
+
     /**
      * Display a listing of selling vouchers (kitchen issues)
      */
@@ -338,15 +351,15 @@ class KitchenIssueController extends Controller
         $this->applySellingVoucherItemSearch($filtered, $searchRaw);
 
         // When the DataTables global search is empty, the filtered query matches `$base`; avoid a second COUNT.
-        $searchTrimmed = trim($searchRaw);
+        $searchTrimmed = DataTableSearchHelper::normalizeRaw($searchRaw);
         $recordsFiltered = $searchTrimmed === ''
             ? $recordsTotal
             : (clone $filtered)->count('kii.pk');
 
-        $rows = (clone $filtered)
-            ->orderByDesc('kim.issue_date')
-            ->orderByDesc('kim.pk')
-            ->orderByDesc('kii.pk')
+        $ordered = clone $filtered;
+        $this->applySellingVoucherDatatableOrder($ordered, $request);
+
+        $rows = $ordered
             ->offset($start)
             ->limit($length)
             ->get();
@@ -368,6 +381,44 @@ class KitchenIssueController extends Controller
             'recordsFiltered' => $recordsFiltered,
             'data' => $data,
         ]);
+    }
+
+  /**
+     * Apply DataTables column sort to selling voucher item query (action column excluded on frontend).
+     */
+    private function applySellingVoucherDatatableOrder(Builder $query, Request $request): void
+    {
+        $orderCol = DataTableSearchHelper::orderColumnIndex($request, 9);
+        $orderDir = DataTableSearchHelper::orderDirection($request, 'desc');
+        $misLabelSql = $this->messSubcategoryDisplayCoalesceSql();
+
+        $sortMap = [
+            0 => 'kim.issue_date',
+            1 => DB::raw("COALESCE(NULLIF(TRIM(kii.item_name), ''), {$misLabelSql})"),
+            2 => 'kii.quantity',
+            3 => 'kii.return_quantity',
+            4 => DB::raw("(CASE
+                WHEN kim.store_type = 'sub_store' AND mss.sub_store_name IS NOT NULL THEN mss.sub_store_name
+                WHEN kim.store_type = 'store' AND ms.store_name IS NOT NULL THEN ms.store_name
+                ELSE 'N/A' END)"),
+            5 => 'kim.client_type',
+            6 => DB::raw("(CASE
+                WHEN kim.client_type IN (2, 3) AND cm.course_name IS NOT NULL THEN cm.course_name
+                ELSE COALESCE(mct.client_name, '') END)"),
+            7 => 'kim.client_name',
+            8 => 'kim.payment_type',
+            9 => 'kim.issue_date',
+            10 => 'kim.status',
+            11 => 'kii.return_quantity',
+        ];
+
+        if (isset($sortMap[$orderCol])) {
+            $query->orderBy($sortMap[$orderCol], $orderDir);
+        } else {
+            $query->orderByDesc('kim.issue_date');
+        }
+
+        $query->orderByDesc('kim.pk')->orderByDesc('kii.pk');
     }
 
     /**
@@ -492,13 +543,21 @@ class KitchenIssueController extends Controller
             $q->where('kim.client_type', $request->client_type);
         }
         if ($request->filled('client_type_pk')) {
-            $q->where('kim.client_type_pk', (int) $request->input('client_type_pk'));
+            $clientTypePk = (int) $request->input('client_type_pk');
+            $clientType = (int) $request->input('client_type', 0);
+            if ($clientType === KitchenIssueMaster::CLIENT_EMPLOYEE) {
+                $q->whereIn('kim.client_type_pk', $this->employeeClientTypePkFilterValues($clientTypePk));
+            } else {
+                $q->where('kim.client_type_pk', $clientTypePk);
+            }
         }
         $this->applySellingVoucherBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
 
-        // Date filter: same branching as Selling Voucher (Date Range); default last 30 days when blank.
+        // Date filter: default last 30 days when blank; skip default when user searches or targets a buyer/category.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
-            $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
+            if (! $this->sellingVoucherShouldSkipDefaultDateWindow($request)) {
+                $q->whereDate('kim.issue_date', '>=', now()->subDays(30)->toDateString());
+            }
         } elseif ($request->filled('start_date') && $request->filled('end_date')) {
             $q->whereBetween('kim.issue_date', [$request->start_date, $request->end_date]);
         } elseif ($request->filled('start_date')) {
@@ -520,6 +579,48 @@ class KitchenIssueController extends Controller
     }
 
     /**
+     * Skip the default 30-day issue_date window when the user is clearly looking for specific records.
+     */
+    private function sellingVoucherShouldSkipDefaultDateWindow(Request $request): bool
+    {
+        if ($request->filled('client_type_pk') || trim((string) $request->input('buyer_name', '')) !== '') {
+            return true;
+        }
+
+        $searchPayload = $request->input('search');
+        if (is_array($searchPayload) && trim((string) ($searchPayload['value'] ?? '')) !== '') {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Employee category filter must match current mess_client_types.id and legacy ids still on old vouchers.
+     *
+     * @return list<int>
+     */
+    private function employeeClientTypePkFilterValues(int $selectedPk): array
+    {
+        if ($selectedPk <= 0) {
+            return [];
+        }
+
+        $pks = [$selectedPk];
+        $category = ClientType::query()
+            ->where('id', $selectedPk)
+            ->where('client_type', ClientType::TYPE_EMPLOYEE)
+            ->value('client_name');
+
+        if ($category !== null) {
+            $legacy = self::LEGACY_EMPLOYEE_CLIENT_TYPE_PK[strtolower(trim((string) $category))] ?? [];
+            $pks = array_merge($pks, $legacy);
+        }
+
+        return array_values(array_unique(array_map('intval', $pks)));
+    }
+
+    /**
      * Match buyer names saved with optional department suffix, e.g. "Name (Dept)".
      */
     private function applySellingVoucherBuyerNameFilter(Builder $q, string $buyerName): void
@@ -537,63 +638,68 @@ class KitchenIssueController extends Controller
 
     private function applySellingVoucherItemSearch(Builder $q, string $search): void
     {
-        $search = trim($search);
-        if ($search === '') {
+        $tokens = DataTableSearchHelper::tokens($search);
+        if ($tokens === []) {
             return;
         }
 
-        $term = '%' . addcslashes($search, '%_\\') . '%';
-        $needle = strtolower($search);
         $misCols = $this->messSubcategorySearchColumns();
 
-        $q->where(function ($w) use ($term, $needle, $search, $misCols) {
-            $w->where('kii.item_name', 'like', $term);
-            foreach ($misCols as $col) {
-                $w->orWhere($col, 'like', $term);
-            }
-            $w->orWhere('kim.client_name', 'like', $term)
-                ->orWhere('ms.store_name', 'like', $term)
-                ->orWhere('mss.sub_store_name', 'like', $term)
-                ->orWhere('cm.course_name', 'like', $term)
-                ->orWhere('mct.client_name', 'like', $term)
-                ->orWhereRaw(
-                    '(CASE kim.client_type
-                        WHEN ? THEN \'employee\' WHEN ? THEN \'ot\' WHEN ? THEN \'course\'
-                        WHEN ? THEN \'section\' WHEN ? THEN \'other\' ELSE \'\' END) LIKE ?',
-                    [
-                        KitchenIssueMaster::CLIENT_EMPLOYEE,
-                        KitchenIssueMaster::CLIENT_OT,
-                        KitchenIssueMaster::CLIENT_COURSE,
-                        KitchenIssueMaster::CLIENT_SECTION,
-                        KitchenIssueMaster::CLIENT_OTHER,
-                        $term,
-                    ]
-                );
+        $q->where(function ($outer) use ($tokens, $misCols) {
+            foreach ($tokens as $token) {
+                $term = DataTableSearchHelper::likePattern($token);
+                $tokenLower = strtolower($token);
 
-            if (is_numeric($search)) {
-                $w->orWhere('kii.quantity', 'like', $term)->orWhere('kii.return_quantity', 'like', $term);
-            }
+                $outer->where(function ($w) use ($term, $token, $tokenLower, $misCols) {
+                    $w->where('kii.item_name', 'like', $term);
+                    foreach ($misCols as $col) {
+                        $w->orWhere($col, 'like', $term);
+                    }
+                    $w->orWhere('kim.client_name', 'like', $term)
+                        ->orWhere('ms.store_name', 'like', $term)
+                        ->orWhere('mss.sub_store_name', 'like', $term)
+                        ->orWhere('cm.course_name', 'like', $term)
+                        ->orWhere('mct.client_name', 'like', $term)
+                        ->orWhereRaw(
+                            '(CASE kim.client_type
+                                WHEN ? THEN \'employee\' WHEN ? THEN \'ot\' WHEN ? THEN \'course\'
+                                WHEN ? THEN \'section\' WHEN ? THEN \'other\' ELSE \'\' END) LIKE ?',
+                            [
+                                KitchenIssueMaster::CLIENT_EMPLOYEE,
+                                KitchenIssueMaster::CLIENT_OT,
+                                KitchenIssueMaster::CLIENT_COURSE,
+                                KitchenIssueMaster::CLIENT_SECTION,
+                                KitchenIssueMaster::CLIENT_OTHER,
+                                $term,
+                            ]
+                        );
 
-            if (str_contains($needle, 'credit')) {
-                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CREDIT);
-            }
-            if (str_contains($needle, 'cash')) {
-                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CASH);
-            }
-            if (str_contains($needle, 'upi') || str_contains($needle, 'online')) {
-                $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_ONLINE);
-            }
-            if (str_contains($needle, 'pending')) {
-                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_PENDING);
-            }
-            if (str_contains($needle, 'approv')) {
-                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_APPROVED);
-            }
-            if (str_contains($needle, 'complet')) {
-                $w->orWhere('kim.status', KitchenIssueMaster::STATUS_COMPLETED);
-            }
-            if (str_contains($needle, 'return')) {
-                $w->orWhere(DB::raw('COALESCE(kii.return_quantity, 0)'), '>', 0);
+                    if (is_numeric($token)) {
+                        $w->orWhere('kii.quantity', 'like', $term)->orWhere('kii.return_quantity', 'like', $term);
+                    }
+
+                    if (str_contains($tokenLower, 'credit')) {
+                        $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CREDIT);
+                    }
+                    if (str_contains($tokenLower, 'cash')) {
+                        $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_CASH);
+                    }
+                    if (str_contains($tokenLower, 'upi') || str_contains($tokenLower, 'online')) {
+                        $w->orWhere('kim.payment_type', KitchenIssueMaster::PAYMENT_ONLINE);
+                    }
+                    if (str_contains($tokenLower, 'pending')) {
+                        $w->orWhere('kim.status', KitchenIssueMaster::STATUS_PENDING);
+                    }
+                    if (str_contains($tokenLower, 'approv')) {
+                        $w->orWhere('kim.status', KitchenIssueMaster::STATUS_APPROVED);
+                    }
+                    if (str_contains($tokenLower, 'complet')) {
+                        $w->orWhere('kim.status', KitchenIssueMaster::STATUS_COMPLETED);
+                    }
+                    if (str_contains($tokenLower, 'return')) {
+                        $w->orWhere(DB::raw('COALESCE(kii.return_quantity, 0)'), '>', 0);
+                    }
+                });
             }
         });
     }
@@ -1420,6 +1526,7 @@ class KitchenIssueController extends Controller
         $kitchenIssue = KitchenIssueMaster::findOrFail($id);
 
         try {
+            $kitchenIssue->items()->delete();
             $kitchenIssue->delete();
 
             return redirect()->route('admin.mess.material-management.index')

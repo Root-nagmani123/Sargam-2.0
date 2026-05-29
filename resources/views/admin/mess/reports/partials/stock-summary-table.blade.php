@@ -52,8 +52,8 @@
             </colgroup>
             <thead class="ssr-thead">
                 <tr>
-                    <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">SR.<br>No.</th>
-                    <th rowspan="2" class="sss-th-fixed text-start align-middle">Item Name</th>
+                    @include('admin.mess.reports.partials.report-sno-th', ['rowspan' => 2, 'class' => 'sss-th-fixed align-middle'])
+                    @include('admin.mess.reports.partials.report-sort-th', ['sortKey' => 'item_name', 'label' => 'Item Name', 'defaultDir' => 'asc', 'defaultSort' => 'item_name', 'rowspan' => 2, 'class' => 'sss-th-fixed text-start align-middle'])
                     <th rowspan="2" class="sss-th-fixed text-center align-middle text-nowrap">Unit</th>
                     <th colspan="3" class="sss-grp ssr-grp-opening text-center align-middle">Opening</th>
                     <th colspan="3" class="sss-grp ssr-grp-purchase text-center align-middle">Purchase</th>
@@ -78,14 +78,11 @@
             <tbody>
                 @php
                     $paginator = $reportPage ?? null;
-                    $serialStart = $paginator && method_exists($paginator, 'firstItem') && !is_null($paginator->firstItem())
-                        ? $paginator->firstItem()
-                        : 1;
                     $rows = $reportPage ?? collect($reportData ?? []);
                 @endphp
                 @forelse($rows as $index => $item)
                     <tr class="sss-body-row">
-                        <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $serialStart + $index }}</td>
+                        <td class="text-center text-nowrap ssr-num ssr-cell-fixed mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $paginator, 'index' => $index])</td>
                         <td class="text-start fw-medium ssr-item-name ssr-cell-fixed">{{ $item['item_name'] }}</td>
                         <td class="text-center text-nowrap ssr-num ssr-cell-fixed">{{ $item['unit'] ?? '—' }}</td>
                         <td class="text-end text-nowrap ssr-num ssr-grp-opening {{ $item['opening_qty'] < 0 ? 'ssr-negative' : '' }}">{{ number_format($item['opening_qty'], 2) }}</td>
@@ -142,14 +139,8 @@
         </table>
     </div>
     @if(isset($reportPage) && $reportPage->hasPages())
-        <div class="ssr-pagination-bar px-3 px-lg-4 py-3 d-flex justify-content-between align-items-center flex-wrap gap-2">
-            <div class="text-body-secondary small d-flex align-items-center gap-1">
-                <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">format_list_numbered</span>
-                Showing <span class="fw-semibold text-body">{{ $reportPage->firstItem() }}–{{ $reportPage->lastItem() }}</span> of <span class="fw-semibold text-body">{{ $reportPage->total() }}</span>
-            </div>
-            <div class="ssr-pagination-links">
-                {{ $reportPage->appends(request()->query())->links() }}
-            </div>
+        <div class="ssr-pagination-bar px-3 px-lg-4 py-3 border-top">
+            {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}
         </div>
     @endif
 </div>
