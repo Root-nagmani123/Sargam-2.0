@@ -116,6 +116,10 @@ class FacultyDataTable extends DataTable
             ->filterColumn('mobile_number', function ($query, $keyword) {
                 $query->where('mobile_no', 'like', "%{$keyword}%");
             })
+            ->orderColumn('faculty_code', 'faculty_code $1')
+            ->orderColumn('full_name', 'full_name $1')
+            ->orderColumn('faculty_email', 'email_id $1')
+            ->orderColumn('mobile_number', 'mobile_no $1')
 
         ->addColumn('last_update', function($row) {
                 return $row->last_update ? \Carbon\Carbon::parse($row->last_update)->format('d-m-Y H:i') : 'N/A';
@@ -148,8 +152,15 @@ class FacultyDataTable extends DataTable
     public function query(FacultyMaster $model): QueryBuilder
     {
         // return $model->newQuery();
-        return $model->orderBy('pk', 'desc')->newQuery();
+        $query = $model->newQuery();
 
+        // Default sort only when no explicit order is requested, so a header
+        // click (server-side ordering) isn't overridden by pk desc.
+        if (empty(request('order'))) {
+            $query->orderBy('pk', 'desc');
+        }
+
+        return $query;
     }
 
     /**
@@ -167,8 +178,14 @@ class FacultyDataTable extends DataTable
                     ->orderBy(1)
                     ->selectStyleSingle()
                     ->parameters([
+                        'responsive' => true,
+                        'scrollX' => false,
+                        'autoWidth' => false,
                         'order' => [],
                         'ordering' => true,
+                        // Keep native server-side ordering (header click sorts the
+                        // whole dataset) instead of the client-side page sorter.
+                        'sargamServerOrder' => true,
                         'searching' => true,
                         'lengthChange' => true,
                         'pageLength' => 10,
@@ -205,19 +222,19 @@ class FacultyDataTable extends DataTable
             Column::make('faculty_code')
                 ->title('Faculty Code')
                 ->searchable(true)
-                ->orderable(false),
+                ->orderable(true),
             Column::make('full_name')
                 ->title('Faculty Name')
                 ->searchable(true)
-                ->orderable(false),
+                ->orderable(true),
             Column::make('faculty_email')
                 ->title('Faculty Email')
                 ->searchable(true)
-                ->orderable(false),
+                ->orderable(true),
             Column::make('mobile_number')
                 ->title('Mobile Number')
                 ->searchable(true)
-                ->orderable(false),
+                ->orderable(true),
 
             Column::make('last_update')
                 ->title('Modified Date')

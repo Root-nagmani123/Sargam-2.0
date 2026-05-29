@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\FacultyExpertiseMaster;
 use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
 
 class FacultyExpertiseMasterController extends Controller
 {
@@ -22,8 +23,9 @@ class FacultyExpertiseMasterController extends Controller
     public function index(Request $request)
     {
         $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $page = max(1, (int) $request->query('page', 1));
-        $cacheKey = 'master_fac_exp_list:v1:' . md5(json_encode(['epoch' => $epoch, 'page' => $page]));
+        // Full dataset: the listing is a client-side DataTable, which owns
+        // search / pagination / "Showing N of M" in the browser.
+        $cacheKey = 'master_fac_exp_list:v2:' . md5(json_encode(['epoch' => $epoch]));
 
         $faculties = DataTableRedisCache::remember(
             $cacheKey,
@@ -32,25 +34,30 @@ class FacultyExpertiseMasterController extends Controller
                 'seconds' => 'FACULTY_EXPERTISE_MASTER_LIST_CACHE_SECONDS',
             ],
             'FacultyExpertiseMasterController@index',
-            fn () => FacultyExpertiseMaster::latest('pk')->paginate(10)
+            fn () => FacultyExpertiseMaster::latest('pk')->get()
         );
 
         return view('admin.master.faculty_expertise_master.index', compact('faculties'));
     }
 
     public function create() {
-        return view("admin.master.faculty_expertise_master.create");
+        return redirect()->route('master.faculty.expertise.index', ['open_fem_modal' => 'add']);
     }
 
     public function store(Request $request) {
+        $pk = $request->id ? decrypt($request->id) : null;
+
         $request->validate([
-            'expertise_name' => 'required|string|max:255|unique:faculty_expertise_master,expertise_name',
+            'expertise_name' => [
+                'required',
+                'string',
+                'max:255',
+                Rule::unique('faculty_expertise_master', 'expertise_name')->ignore($pk, 'pk'),
+            ],
         ]);
 
-        if( $request->id ) {
-
-            // Update existing record
-            $id = decrypt($request->id);
+        if ($pk) {
+            $id = $pk;
             $expertise = FacultyExpertiseMaster::find($id);
         }
         else {
@@ -64,7 +71,16 @@ class FacultyExpertiseMasterController extends Controller
 
         self::bumpListCacheEpoch();
 
-        return redirect()->route('master.faculty.expertise.index')->with('success', 'Expertise saved successfully.');
+        $message = 'Expertise saved successfully.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
+        return redirect()->route('master.faculty.expertise.index')->with('success', $message);
     }
 
     public function edit(string $id) {
@@ -76,7 +92,11 @@ class FacultyExpertiseMasterController extends Controller
             return redirect()->route('master.faculty.expertise.index')->with('error', 'Expertise not found.');
         }
 
-        return view("admin.master.faculty_expertise_master.create", compact('expertise'));
+        return redirect()->route('master.faculty.expertise.index', [
+            'open_fem_modal' => 'edit',
+            'fem_id' => $id,
+            'fem_name' => $expertise->expertise_name,
+        ]);
     }
 
     public function delete(string $id) {

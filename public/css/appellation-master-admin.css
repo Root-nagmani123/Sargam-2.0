@@ -1,0 +1,214 @@
+/* Appellation Master — programme-dt reference layout */
+.apm-master-page {
+    --apm-primary: #004a93;
+    --apm-primary-dark: #003366;
+    --apm-border: #e4e7ec;
+    --apm-text: #344054;
+    --apm-heading: #101828;
+    --apm-muted: #667085;
+    --apm-danger: #d92d20;
+}
+
+.apm-master-page .apm-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--apm-border) !important;
+}
+
+.apm-master-page .apm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.apm-master-page #appellation-master-table_wrapper .dt-buttons,
+.apm-master-page #appellation-master-table_wrapper .dataTables_length {
+    display: none !important;
+}
+
+.apm-master-page #appellation-master-table_wrapper .dataTables_filter:not(.programme-dt-search .dataTables_filter) {
+    display: none !important;
+}
+
+.apm-master-page #appellation-master-table_wrapper .dataTables_scrollBody thead,
+.apm-master-page #appellation-master-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.apm-master-page #appellation-master-table_wrapper .dataTables_scrollHead thead th,
+.apm-master-page #appellation-master-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--apm-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.apm-master-page #appellation-master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.apm-master-page #appellation-master-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--apm-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.apm-master-page #appellation-master-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.apm-master-page #appellation-master-table_wrapper .dataTables_scrollHead thead th:first-child,
+.apm-master-page #appellation-master-table thead th:first-child,
+.apm-master-page #appellation-master-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--apm-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.apm-master-page #appellation-master-table_wrapper .dataTables_scrollHead thead th:nth-child(2),
+.apm-master-page #appellation-master-table thead th:nth-child(2),
+.apm-master-page #appellation-master-table tbody td:nth-child(2) {
+    text-align: left !important;
+    font-weight: 600;
+    color: var(--apm-heading);
+}
+
+.apm-master-page #appellation-master-table_wrapper .dataTables_scrollHead thead th:nth-child(3),
+.apm-master-page #appellation-master-table_wrapper .dataTables_scrollHead thead th:nth-child(4),
+.apm-master-page #appellation-master-table thead th:nth-child(3),
+.apm-master-page #appellation-master-table thead th:nth-child(4),
+.apm-master-page #appellation-master-table tbody td:nth-child(3),
+.apm-master-page #appellation-master-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.apm-master-page #appellation-master-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.apm-master-page .apm-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.apm-master-page .apm-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.apm-master-page .apm-appellation-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.apm-master-page .apm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.apm-master-page .apm-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.apm-master-page .apm-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.apm-master-page .apm-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.apm-master-page .apm-action-edit {
+    color: var(--apm-primary);
+}
+
+.apm-master-page .apm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--apm-primary-dark);
+}
+
+.apm-master-page .apm-action-delete {
+    color: var(--apm-danger);
+}
+
+.apm-master-page .apm-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.apm-master-page .apm-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.apm-master-page .apm-status-badge {
+    min-width: 4.5rem;
+}
+
+.apm-master-page .apm-appellation-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.apm-master-page .programme-dt-footer .pagination .page-item.active .page-link,
+.apm-master-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.apm-appellation-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+@media (max-width: 767.98px) {
+    .apm-master-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .apm-master-page .apm-action-btn {
+        transition: none;
+    }
+
+    .apm-master-page .apm-action-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}

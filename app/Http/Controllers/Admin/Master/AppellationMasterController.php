@@ -16,13 +16,24 @@ class AppellationMasterController extends Controller
 
     public function create()
     {
-        return view('admin.master.appellation.create_edit');
+        return redirect()->route('master.appellation.index', ['open_apm_modal' => 'add']);
     }
 
     public function edit($id)
     {
-        $appellation = AppellationMaster::findOrFail(decrypt($id));
-        return view('admin.master.appellation.create_edit', compact('appellation'));
+        try {
+            $appellation = AppellationMaster::findOrFail(decrypt($id));
+
+            return redirect()->route('master.appellation.index', [
+                'open_apm_modal' => 'edit',
+                'apm_id' => $id,
+                'apm_name' => $appellation->appettation_name,
+                'apm_status' => $appellation->active_inactive,
+            ]);
+        } catch (\Exception $e) {
+            return redirect()->route('master.appellation.index')
+                ->with('error', 'Failed to edit appellation.');
+        }
     }
 
     public function store(Request $request)
@@ -55,8 +66,17 @@ class AppellationMasterController extends Controller
             ]
         );
 
+        $message = 'Appellation saved successfully.';
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+            ]);
+        }
+
         return redirect()->route('master.appellation.index')
-            ->with('success', 'Appellation saved successfully.');
+            ->with('success', $message);
     }
 
     public function destroy($id)

@@ -1,0 +1,205 @@
+/* Faculty Expertise Master — programme-dt reference layout */
+.fem-master-page {
+    --fem-primary: #004a93;
+    --fem-primary-dark: #003366;
+    --fem-border: #e4e7ec;
+    --fem-text: #344054;
+    --fem-heading: #101828;
+    --fem-muted: #667085;
+    --fem-danger: #d92d20;
+}
+
+.fem-master-page .fem-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--fem-border) !important;
+}
+
+.fem-master-page .fem-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.fem-master-page #faculty-expertise-master-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--fem-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.fem-master-page #faculty-expertise-master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.fem-master-page #faculty-expertise-master-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--fem-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.fem-master-page #faculty-expertise-master-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.fem-master-page #faculty-expertise-master-table thead th:first-child,
+.fem-master-page #faculty-expertise-master-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--fem-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.fem-master-page #faculty-expertise-master-table thead th:nth-child(2),
+.fem-master-page #faculty-expertise-master-table tbody td:nth-child(2) {
+    text-align: left !important;
+    font-weight: 500;
+    color: var(--fem-heading);
+}
+
+.fem-master-page #faculty-expertise-master-table thead th:nth-child(3),
+.fem-master-page #faculty-expertise-master-table thead th:nth-child(4),
+.fem-master-page #faculty-expertise-master-table tbody td:nth-child(3),
+.fem-master-page #faculty-expertise-master-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.fem-master-page #faculty-expertise-master-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.fem-master-page .fem-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.fem-master-page .fem-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.fem-master-page .fem-expertise-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.fem-master-page .fem-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.fem-master-page .fem-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.fem-master-page .fem-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.fem-master-page .fem-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.fem-master-page .fem-action-edit {
+    color: var(--fem-primary);
+}
+
+.fem-master-page .fem-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--fem-primary-dark);
+}
+
+.fem-master-page .fem-action-delete {
+    color: var(--fem-danger);
+}
+
+.fem-master-page .fem-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.fem-master-page .fem-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.fem-master-page .fem-status-badge {
+    min-width: 4.5rem;
+}
+
+.fem-master-page .fem-expertise-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.fem-master-page .fem-dt-footer .pagination .page-item.active .page-link {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.fem-master-page .fem-dt-footer .pagination .page-link {
+    border-radius: 0.375rem;
+    color: #344054;
+}
+
+.fem-master-page .fem-dt-info {
+    font-size: 0.875rem;
+    color: var(--fem-muted);
+}
+
+.fem-expertise-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+@media (max-width: 767.98px) {
+    .fem-master-page .fem-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .fem-master-page .fem-action-btn {
+        transition: none;
+    }
+
+    .fem-master-page .fem-action-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}

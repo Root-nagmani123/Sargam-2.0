@@ -50,21 +50,30 @@ class AppellationMasterDataTable extends DataTable
                     </form>';
             })
 
+            ->orderColumn('appettation_name', 'appettation_name $1')
             ->rawColumns(['status', 'actions']);
     }
 
     public function query(AppellationMaster $model): Builder
     {
-        return $model->newQuery()->orderBy('pk', 'desc');
+        $query = $model->newQuery();
+
+        // Default sort only when the request has no explicit order, so a header
+        // click (server-side ordering) isn't overridden by pk desc.
+        if (empty(request('order'))) {
+            $query->orderBy('pk', 'desc');
+        }
+
+        return $query;
     }
 
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No'),
-            Column::make('appettation_name')->title('Appellation Name'),
-            Column::computed('status')->title('Status'),
-            Column::computed('actions')->title('Actions'),
+            Column::computed('DT_RowIndex')->title('S.No')->orderable(false)->searchable(false),
+            Column::make('appettation_name')->title('Appellation Name')->orderable(true),
+            Column::computed('status')->title('Status')->orderable(false)->searchable(false),
+            Column::computed('actions')->title('Actions')->orderable(false)->searchable(false),
         ];
     }
 
@@ -74,6 +83,17 @@ class AppellationMasterDataTable extends DataTable
             ->setTableId('appellation-master-table')
             ->columns($this->getColumns())
             ->minifiedAjax()
+            ->parameters([
+                'responsive' => true,
+                'scrollX' => false,
+                'autoWidth' => false,
+                'ordering' => true,
+                // Keep native (server-side) ordering so a header click re-queries
+                // and sorts the WHOLE dataset (the global enhancer otherwise forces
+                // ordering off on server-side tables).
+                'sargamServerOrder' => true,
+                'order' => [],
+            ])
             ->pageLength(10);
     }
 

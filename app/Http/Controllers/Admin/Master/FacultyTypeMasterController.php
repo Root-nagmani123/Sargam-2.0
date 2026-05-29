@@ -19,8 +19,9 @@ class FacultyTypeMasterController extends Controller
     public function index(Request $request)
     {
         $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
-        $page = max(1, (int) $request->query('page', 1));
-        $cacheKey = 'master_fac_type_list:v1:' . md5(json_encode(['epoch' => $epoch, 'page' => $page]));
+        // Full dataset: the listing is a client-side DataTable, which owns
+        // search / pagination / "Showing N of M" in the browser.
+        $cacheKey = 'master_fac_type_list:v2:' . md5(json_encode(['epoch' => $epoch]));
 
         $facultyTypes = DataTableRedisCache::remember(
             $cacheKey,
@@ -29,7 +30,7 @@ class FacultyTypeMasterController extends Controller
                 'seconds' => 'FACULTY_TYPE_MASTER_LIST_CACHE_SECONDS',
             ],
             'FacultyTypeMasterController@index',
-            fn () => FacultyTypeMaster::paginate(10)
+            fn () => FacultyTypeMaster::latest('pk')->get()
         );
 
         return view('admin.master.faculty_type.index', compact('facultyTypes'));
@@ -37,7 +38,7 @@ class FacultyTypeMasterController extends Controller
 
     public function create()
     {
-        return view('admin.master.faculty_type.create');
+        return redirect()->route('master.faculty.type.master.index', ['open_ftm_modal' => 'add']);
     }
 
     public function store(Request $request)
@@ -60,9 +61,22 @@ class FacultyTypeMasterController extends Controller
 
             self::bumpListCacheEpoch();
 
-            return redirect()->route('master.faculty.type.master.index')->with('success', 'Faculty Type created successfully');
+            $message = $request->pk ? 'Faculty Type updated successfully.' : 'Faculty Type created successfully.';
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                ]);
+            }
+
+            return redirect()->route('master.faculty.type.master.index')->with('success', $message);
         } catch (\Exception $e) {
             \Log::error($e->getMessage());
+
+            if ($request->expectsJson()) {
+                return response()->json(['message' => 'Something went wrong.'], 500);
+            }
 
             return redirect()->back()->with('error', 'Something went wrong');
         }
@@ -72,7 +86,12 @@ class FacultyTypeMasterController extends Controller
     {
         $facultyType = FacultyTypeMaster::findOrFail(decrypt($id));
 
-        return view('admin.master.faculty_type.create', compact('facultyType'));
+        return redirect()->route('master.faculty.type.master.index', [
+            'open_ftm_modal' => 'edit',
+            'ftm_pk' => $id,
+            'ftm_short' => $facultyType->shot_faculty_type_name,
+            'ftm_name' => $facultyType->faculty_type_name,
+        ]);
     }
 
     public function delete($id)
