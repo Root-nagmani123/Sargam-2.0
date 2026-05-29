@@ -98,6 +98,7 @@ class EmployeeTypeMasterDataTable extends DataTable
             ->selectStyleSingle()
             ->parameters([
                 'responsive' => true,
+                'scrollX' => false,
                 'autoWidth' => false,
                 'order' => [],
                 'paging' => true,
