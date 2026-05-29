@@ -119,10 +119,10 @@
             <div class="card-header">
                 <div class="row align-items-center">
                     <div class="col-md-8">
-                        <h4 class="mb-1">Migrate Students</h4>
+                        <h4 class="mb-1">Migrate FC Students</h4>
                         <p class="mb-0 text-muted small">
-                            Lists roster rows with <strong>is_registered = 1</strong> (form steps complete), staged credentials,
-                            and not yet in <strong>user_credentials</strong>. Use filters to find records, then migrate checked rows only.
+                            View all Excel-imported roster rows, or switch to <strong>Ready to migrate</strong> to promote eligible trainees
+                            into <strong>student_master</strong> and <strong>user_credentials</strong>.
                         </p>
                     </div>
                 </div>
@@ -169,9 +169,12 @@
                             <button type="button" id="resetFilterBtn" class="btn btn-outline-secondary btn-sm">
                                 Reset
                             </button>
-                            <span class="text-muted small ms-2">
-                                Total matching: <strong id="migrateRecordCount">0</strong>
+                            <span class="text-muted small ms-2" id="migrateTabCounts">
+                                Eligible: <strong id="migrateRecordCount">0</strong>
                                 · Selected: <strong id="migrateSelectedCount">0</strong>
+                            </span>
+                            <span class="text-muted small ms-2 d-none" id="importedTabCounts">
+                                Imported: <strong id="importedRecordCount">0</strong>
                             </span>
                         </div>
                     </div>
@@ -179,29 +182,67 @@
             </div>
 
             <div class="card-body">
-                <form method="POST" action="{{ route('admin.migrate.fc') }}" id="migrateForm">
-                    @csrf
-                    <input type="hidden" name="selected_pks" id="selectedPksInput" value="">
-
-                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-                        <h5 class="mb-0">
-                            Eligible records (<span id="migrateRecordCountHeader">0</span>)
-                        </h5>
-                        <button type="submit" class="btn btn-primary btn-sm" id="migrateSubmitBtn">
-                            <i class="bi bi-database-up"></i> Migrate selected
+                <ul class="nav nav-tabs mb-3" id="fcMigrateTabs" role="tablist">
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link active" id="tab-imported" data-bs-toggle="tab"
+                            data-bs-target="#pane-imported" type="button" role="tab"
+                            aria-controls="pane-imported" aria-selected="true">
+                            All imported records
                         </button>
+                    </li>
+                    <li class="nav-item" role="presentation">
+                        <button class="nav-link" id="tab-migrate" data-bs-toggle="tab"
+                            data-bs-target="#pane-migrate" type="button" role="tab"
+                            aria-controls="pane-migrate" aria-selected="false">
+                            Ready to migrate
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content" id="fcMigrateTabContent">
+                    <div class="tab-pane fade show active" id="pane-imported" role="tabpanel"
+                        aria-labelledby="tab-imported" tabindex="0">
+                        <p class="text-muted small mb-3">
+                            Every row in <strong>fc_registration_master</strong> from Excel import.
+                            Status shows progress: imported → credentials → forms complete → ready to migrate → migrated.
+                        </p>
+                        <div class="table-responsive enrollment-dt-wrap">
+                            {!! $importedDataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100']) !!}
+                        </div>
                     </div>
 
-                    <div class="table-responsive enrollment-dt-wrap">
-                        {!! $dataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100']) !!}
+                    <div class="tab-pane fade" id="pane-migrate" role="tabpanel"
+                        aria-labelledby="tab-migrate" tabindex="0">
+                        <form method="POST" action="{{ route('admin.migrate.fc') }}" id="migrateForm">
+                            @csrf
+                            <input type="hidden" name="selected_pks" id="selectedPksInput" value="">
+
+                            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                                <h5 class="mb-0">
+                                    Eligible records (<span id="migrateRecordCountHeader">0</span>)
+                                </h5>
+                                <button type="submit" class="btn btn-primary btn-sm" id="migrateSubmitBtn">
+                                    <i class="bi bi-database-up"></i> Migrate selected
+                                </button>
+                            </div>
+
+                            <p class="text-muted small mb-3">
+                                <strong>is_registered = 1</strong>, credentials staged, not yet in <strong>user_credentials</strong>.
+                            </p>
+
+                            <div class="table-responsive enrollment-dt-wrap">
+                                {!! $dataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100']) !!}
+                            </div>
+                        </form>
                     </div>
-                </form>
+                </div>
             </div>
         </div>
     </div>
 @endsection
 
 @push('scripts')
+    {!! $importedDataTable->scripts() !!}
     {!! $dataTable->scripts() !!}
     <script>
         $(function() {
@@ -210,8 +251,9 @@
                 window.initChoicesBootstrap5In(migrateRoot);
             }
 
-            var table = window.LaravelDataTables && window.LaravelDataTables['fcMigrateStudentsTable'];
-            if (!table) {
+            var migrateTable = window.LaravelDataTables && window.LaravelDataTables['fcMigrateStudentsTable'];
+            var importedTable = window.LaravelDataTables && window.LaravelDataTables['fcImportedRosterTable'];
+            if (!migrateTable) {
                 return;
             }
 
@@ -227,8 +269,16 @@
                 return $migrateWrapper().find('thead .js-migrate-select-all');
             }
 
+            function syncImportedRecordCount() {
+                if (!importedTable) {
+                    return;
+                }
+                var info = importedTable.page.info();
+                $('#importedRecordCount').text(info.recordsTotal || 0);
+            }
+
             function syncMigrateCheckboxState() {
-                var info = table.page.info();
+                var info = migrateTable.page.info();
                 $('#migrateRecordCount, #migrateRecordCountHeader').text(info.recordsTotal || 0);
 
                 var $rows = $migrateRowChecks();
@@ -248,12 +298,15 @@
                 syncMigrateCheckboxState();
             }
 
-            function reloadTable() {
-                table.ajax.reload(null, false);
+            function reloadTables() {
+                if (importedTable) {
+                    importedTable.ajax.reload(null, false);
+                }
+                migrateTable.ajax.reload(null, false);
             }
 
             $('#filterBtn').on('click', function() {
-                reloadTable();
+                reloadTables();
             });
 
             $('#resetFilterBtn').on('click', function() {
@@ -272,17 +325,36 @@
                 if (courseEl && typeof window.reinitChoicesBootstrap5 === 'function') {
                     window.reinitChoicesBootstrap5(courseEl);
                 }
-                reloadTable();
+                reloadTables();
             });
 
             $('#filter_search').on('keypress', function(e) {
                 if (e.which === 13) {
                     e.preventDefault();
-                    reloadTable();
+                    reloadTables();
                 }
             });
 
-            table.on('init.dt draw.dt', function() {
+            document.querySelectorAll('#fcMigrateTabs button[data-bs-toggle="tab"]').forEach(function(btn) {
+                btn.addEventListener('shown.bs.tab', function(e) {
+                    var isMigrate = e.target && e.target.id === 'tab-migrate';
+                    $('#migrateTabCounts').toggleClass('d-none', !isMigrate);
+                    $('#importedTabCounts').toggleClass('d-none', isMigrate);
+                    if (!isMigrate && importedTable) {
+                        importedTable.columns.adjust();
+                    } else if (isMigrate) {
+                        migrateTable.columns.adjust();
+                    }
+                });
+            });
+
+            if (importedTable) {
+                importedTable.on('init.dt draw.dt', function() {
+                    requestAnimationFrame(syncImportedRecordCount);
+                });
+            }
+
+            migrateTable.on('init.dt draw.dt', function() {
                 requestAnimationFrame(syncMigrateCheckboxState);
             });
 
@@ -314,7 +386,10 @@
                 $('#selectedPksInput').val(pks.join(','));
             });
 
-            requestAnimationFrame(syncMigrateCheckboxState);
+            requestAnimationFrame(function() {
+                syncImportedRecordCount();
+                syncMigrateCheckboxState();
+            });
         });
     </script>
 @endpush
