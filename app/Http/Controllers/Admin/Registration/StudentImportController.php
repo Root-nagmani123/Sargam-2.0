@@ -2,17 +2,21 @@
 
 namespace App\Http\Controllers\Admin\Registration;
 
+use App\DataTables\FC\FcImportedRosterDataTable;
 use App\DataTables\FC\FcMigrateStudentsDataTable;
 use App\Http\Controllers\Controller;
 use Carbon\Carbon;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 class StudentImportController extends Controller
 {
-    public function index(FcMigrateStudentsDataTable $dataTable)
-    {
+    public function index(
+        FcMigrateStudentsDataTable $migrateDataTable,
+        FcImportedRosterDataTable $importedDataTable
+    ) {
         $courses = DB::table('course_master')
             ->where('active_inactive', 1)
             ->orderBy('course_name')
@@ -22,7 +26,17 @@ class StudentImportController extends Controller
             ->orderBy('service_name')
             ->get(['pk', 'service_name', 'service_short_name']);
 
-        return $dataTable->render('admin.registration.import_students', compact('courses', 'services'));
+        return $migrateDataTable->render('admin.registration.import_students', [
+            'courses' => $courses,
+            'services' => $services,
+            // Yajra views call table()/scripts() on Html\Builder, not the service class.
+            'importedDataTable' => $importedDataTable->html(),
+        ]);
+    }
+
+    public function importedIndex(FcImportedRosterDataTable $dataTable): JsonResponse
+    {
+        return $dataTable->ajax();
     }
 
     public function migrate(Request $request)
