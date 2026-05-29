@@ -1,389 +1,49 @@
 @extends('admin.layouts.master')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
 @section('title', 'Discipline Memo - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="{{ asset('css/memo-discipline-admin.css') }}?v={{ @filemtime(public_path('css/memo-discipline-admin.css')) ?: time() }}">
+@endpush
+
 @section('setup_content')
-<style>
-/* GIGW Color Palette */
-:root {
-    --gigw-primary: #004a93;
-    --gigw-primary-dark: #003366;
-    --gigw-secondary: #0066cc;
-    --gigw-light-bg: #f8f9fa;
-    --gigw-border: #dee2e6;
-    --gigw-text-muted: #6c757d;
-    --gigw-success: #198754;
-    --gigw-white: #ffffff;
-}
+@php
+    $mdFromDate = $fromDateFilter ?: \Carbon\Carbon::today()->toDateString();
+    $mdToDate = $toDateFilter ?: \Carbon\Carbon::today()->toDateString();
+@endphp
+<div class="container-fluid md-discipline-page">
 
-/* Enhanced Offcanvas */
-.offcanvas {
-    width: 480px !important;
-    max-width: 90vw;
-    box-shadow: -4px 0 20px rgba(0, 74, 147, 0.15);
-}
+    <x-breadcrum title="Discipline Memo">
+        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction'))
+        <a href="{{ route('memo.discipline.create') }}"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add Discipline Memo</span>
+        </a>
+        @endif
+    </x-breadcrum>
 
-.offcanvas-header {
-    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
-    color: var(--gigw-white);
-    padding: 1.5rem;
-    border-bottom: 3px solid var(--gigw-primary-dark);
-    min-height: 80px;
-}
-
-.offcanvas-title {
-    font-weight: 600;
-    font-size: 1.25rem;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.25rem;
-    color: var(--gigw-white);
-}
-
-#type_side_menu {
-    font-size: 0.875rem;
-    font-weight: 500;
-    opacity: 0.95;
-    margin: 0;
-    color: var(--gigw-white);
-    background-color: rgba(255, 255, 255, 0.2);
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    display: inline-block;
-}
-
-.offcanvas .btn-close {
-    background-color: rgba(255, 255, 255, 0.3);
-    opacity: 1;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    transition: all 0.2s ease;
-}
-
-.offcanvas .btn-close:hover {
-    background-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.1);
-}
-
-.offcanvas .btn-close:focus {
-    outline: 3px solid var(--gigw-white);
-    outline-offset: 2px;
-    box-shadow: none;
-}
-
-.offcanvas-body {
-    padding: 1.5rem;
-    background-color: #fafbfc;
-}
-
-/* Enhanced Chat Body */
-.chat-body {
-    height: 480px;
-    overflow-y: auto;
-    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
-    padding: 1.25rem;
-    border-radius: 0.75rem;
-    border: 1px solid var(--gigw-border);
-    box-shadow: inset 0 2px 8px rgba(0, 74, 147, 0.05);
-    scroll-behavior: smooth;
-}
-
-.chat-body::-webkit-scrollbar {
-    width: 8px;
-}
-
-.chat-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-.chat-body::-webkit-scrollbar-thumb {
-    background: var(--gigw-primary);
-    border-radius: 10px;
-    transition: background 0.3s ease;
-}
-
-.chat-body::-webkit-scrollbar-thumb:hover {
-    background: var(--gigw-primary-dark);
-}
-
-/* Enhanced Chat Messages */
-.chat-message {
-    margin-bottom: 1rem;
-    animation: slideIn 0.3s ease;
-    clear: both;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.chat-message.user {
-    text-align: right;
-}
-
-.chat-message .message {
-    display: inline-block;
-    padding: 0.75rem 1rem;
-    border-radius: 1.25rem;
-    max-width: 80%;
-    word-wrap: break-word;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
-    font-size: 0.95rem;
-    line-height: 1.5;
-}
-
-.chat-message .message:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.chat-message.bot .message {
-    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
-    color: #212529;
-    border: 1px solid #dee2e6;
-    border-left: 4px solid var(--gigw-primary);
-}
-
-.chat-message.user .message {
-    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
-    color: var(--gigw-white);
-    border: none;
-}
-
-/* Loading State */
-.chat-body .text-muted {
-    color: var(--gigw-text-muted) !important;
-    font-style: italic;
-    padding: 2rem;
-    text-align: center;
-}
-
-/* Accessibility Enhancements */
-.offcanvas:focus-visible {
-    outline: 3px solid var(--gigw-primary);
-    outline-offset: 2px;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .offcanvas {
-        width: 100% !important;
-    }
-
-    .offcanvas-header {
-        padding: 1rem;
-        min-height: 70px;
-    }
-
-    .offcanvas-title {
-        font-size: 1.1rem;
-    }
-
-    .chat-body {
-        height: calc(100vh - 250px);
-        padding: 1rem;
-    }
-
-    .chat-message .message {
-        max-width: 85%;
-        font-size: 0.9rem;
-    }
-}
-
-/* Sticky Table Status */
-.table .sticky-status {
-    position: sticky;
-    right: 0;
-    background: #fff;
-    z-index: 10;
-    box-shadow: -4px 0 6px rgba(0, 0, 0, 0.08);
-}
-
-/* WCAG 2.1 AA Compliance */
-.offcanvas * {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-
-/* Chat Row Layout */
-.chat-row {
-    display: flex;
-    margin-bottom: 15px;
-}
-
-.chat-row.right {
-    justify-content: flex-end;
-}
-
-.chat-row.left {
-    justify-content: flex-start;
-}
-
-/* Message Bubble */
-.chat-bubble {
-    max-width: 80%;
-    background: #f4f5f7;
-    padding: 12px 15px;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e2e2e2;
-}
-
-.chat-row.right .chat-bubble {
-    background: #e7f1ff;
-    border-color: #c9ddff;
-}
-
-/* Header */
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-}
-
-.chat-sender {
-    color: #003e7e;
-    font-weight: 600;
-}
-
-.chat-time {
-    font-size: 11px;
-    color: #6c757d;
-}
-
-/* Message Text */
-.chat-text {
-    margin: 0;
-    font-size: 14px;
-    color: #222;
-    line-height: 1.4;
-}
-
-/* Attachments */
-.chat-attachment {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 8px;
-    font-size: 14px;
-    color: #004a93;
-    text-decoration: none;
-}
-
-.chat-attachment:hover {
-    text-decoration: underline;
-}
-
-/* Footer Input */
-.chat-footer {
-    background: #fff;
-}
-
-.chat-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.attachment-btn {
-    cursor: pointer;
-    color: #004a93;
-    font-size: 22px;
-}
-
-.chat-textarea {
-    resize: none;
-    height: 40px;
-    font-size: 14px;
-}
-
-.chat-send-btn {
-    height: 40px;
-    padding: 0 20px;
-}
-
-/* Scrollable message area */
-#chatBody {
-    padding-bottom: 20px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #b3b3b3 #efefef;
-}
-
-#chatBody::-webkit-scrollbar {
-    width: 8px;
-}
-
-#chatBody::-webkit-scrollbar-thumb {
-    background: #b3b3b3;
-    border-radius: 4px;
-}
-
-/* Accessibility: Focus outline */
-*:focus-visible {
-    outline: 3px solid #004a93 !important;
-    border-radius: 4px;
-}
-
-/* Choices.js + Bootstrap: avoid double dropdown arrow */
-.choices__inner.form-select {
-    background-image: none !important;
-    padding-right: 2.25rem !important;
-}
-</style>
-<div class="container-fluid">
-    <x-breadcrum title="Discipline Memo" />
     <x-session_message />
-
-    <!-- start Zero Configuration -->
-    <div class="card" style="border-left:4px solid #004a93;">
-        <div class="card-body">
-            <div class="row">
-                <div class="col-6">
-                    <h4 class="card-title">Discipline Memo</h4>
-                </div>
-                <div class="col-6">
-                    <div class="d-flex justify-content-end align-items-center gap-2">
-
-                        <!-- Add Group Mapping -->
-                        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') ||
-                        hasRole('Training-Induction'))
-                        <a href="{{ route('memo.discipline.create') }}"
-                            class="btn btn-primary d-flex align-items-center">
-                            <i class="material-icons menu-icon material-symbols-rounded"
-                                style="font-size: 24px;">add</i>
-                            Discipline Memo
-                        </a>
-                        @endif
-
-
-                    </div>
-                </div>
+    <div class="d-flex justify-content-end mb-3 md-toolbar-top">
+                <button type="button" class="btn md-btn-download" id="mdExportCsvBtn" aria-label="Download table data">
+                    <i class="bi bi-download" aria-hidden="true"></i>
+                    <span>Download</span>
+                </button>
             </div>
-            <hr class="my-2">
-            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4">
-                <div class="row g-3">
-                    <!-- Program Filter -->
-                    <div class="col-md-6 col-lg-3">
-                        <div class="form-group">
-                            <label for="program_name" class="form-label fw-semibold">
-                                <i class="bi bi-book me-1"></i>Program Name
-                            </label>
-                            <select class="form-select form-select-md" id="program_name" name="program_name"
-                                aria-label="Select program">
-                                <option value="">All Programs</option>
+    <div class="card md-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+
+            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm">
+                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-3 programme-dt-toolbar md-dt-toolbar w-100">
+                    <div class="d-flex flex-wrap align-items-center gap-3">
+                        <span class="programme-dt-filters-label flex-shrink-0">Filters</span>
+
+                        <div class="programme-dt-filter-select flex-shrink-0">
+                            <label for="program_name" class="visually-hidden">Program Name</label>
+                            <select class="form-select" id="program_name" name="program_name" aria-label="Program Name">
+                                <option value="">Program Name</option>
                                 @foreach($courses as $course)
                                 <option value="{{ $course->pk }}"
                                     {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}
@@ -395,345 +55,107 @@
                                 </option>
                                 @endforeach
                             </select>
-                            <div class="form-text">Filter by academic program</div>
                         </div>
-                    </div>
 
-                    <!-- Status Filter -->
-                    <div class="col-md-6 col-lg-2">
-                        <div class="form-group">
-                            <label for="status" class="form-label fw-semibold">
-                                <i class="bi bi-flag me-1"></i>Status
-                            </label>
-                            <select class="form-select form-select-md" id="status" name="status"
-                                aria-label="Select status">
-                                <option value="">All Status</option>
+                        <div class="programme-dt-filter-select flex-shrink-0">
+                            <label for="status" class="visually-hidden">Status</label>
+                            <select class="form-select" id="status" name="status" aria-label="Status">
+                                <option value="">Status</option>
                                 <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Recorded</option>
                                 <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>
                                 <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Pending</option>
                             </select>
-                            <div class="form-text">Filter by memo status</div>
                         </div>
-                    </div>
 
-                    <!-- Search Filter -->
-                    <div class="col-md-6 col-lg-3">
-                        <div class="form-group">
-                            <label for="search" class="form-label fw-semibold">
-                                <i class="bi bi-search me-1"></i>Search
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text bg-light border-end-0">
-                                    <i class="bi bi-search text-muted"></i>
-                                </span>
-                                <input type="text" class="form-control border-start-0" id="search" name="search"
-                                    placeholder="Student name, ID, or memo details..." value="{{ $searchFilter }}"
-                                    aria-label="Search memos">
+                        <input type="hidden" id="from_date" name="from_date" value="{{ $mdFromDate }}">
+                        <input type="hidden" id="to_date" name="to_date" value="{{ $mdToDate }}">
+
+                        <div class="programme-dt-filter-select md-time-period-filter md-time-period-range d-none d-lg-block position-relative flex-shrink-0">
+                            <label for="md_time_period_picker" class="visually-hidden">Time Period</label>
+                            <input type="text"
+                                id="md_time_period_picker"
+                                class="form-control md-time-period-input"
+                                placeholder="Time Period"
+                                value=""
+                                readonly
+                                autocomplete="off"
+                                aria-label="Time period">
+                        </div>
+
+                        <div class="md-time-period-mobile d-flex d-lg-none flex-wrap gap-2 w-100">
+                            <div class="programme-dt-filter-select md-date-mobile-wrap flex-fill">
+                                <label for="md_from_date_mobile" class="visually-hidden">From Date</label>
+                                <input type="date"
+                                    id="md_from_date_mobile"
+                                    class="form-control md-date-mobile"
+                                    value="{{ $mdFromDate }}"
+                                    max="{{ \Carbon\Carbon::today()->toDateString() }}"
+                                    aria-label="From date">
                             </div>
-                            <div class="form-text">Search across multiple fields</div>
+                            <div class="programme-dt-filter-select md-date-mobile-wrap flex-fill">
+                                <label for="md_to_date_mobile" class="visually-hidden">To Date</label>
+                                <input type="date"
+                                    id="md_to_date_mobile"
+                                    class="form-control md-date-mobile"
+                                    value="{{ $mdToDate }}"
+                                    max="{{ \Carbon\Carbon::today()->toDateString() }}"
+                                    aria-label="To date">
+                            </div>
                         </div>
+
+                        <a href="{{ route('memo.discipline.index') }}" class="btn programme-dt-btn-reset flex-shrink-0">
+                            Reset Filters
+                        </a>
                     </div>
 
-                    <!-- Date Range Filters -->
-                    <div class="col-md-6 col-lg-4">
-                        <div class="row g-2">
-                            <div class="col-6">
-                                <div class="form-group">
-                                    <label for="from_date" class="form-label fw-semibold">
-                                        <i class="bi bi-calendar-event me-1"></i>From Date
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light border-end-0">
-                                            <i class="bi bi-calendar-minus text-muted"></i>
-                                        </span>
-                                        <input type="date" class="form-control" id="from_date" name="from_date"
-                                            value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}"
-                                            max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="Start date">
-                                    </div>
+                    <div class="md-table-search-slot ms-xl-auto flex-shrink-0">
+                        <div class="dropdown">
+                            <button type="button"
+                                class="btn md-search-trigger"
+                                id="mdSearchTrigger"
+                                data-bs-toggle="dropdown"
+                                data-bs-auto-close="outside"
+                                aria-expanded="false"
+                                aria-label="Search records">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 p-3 md-search-menu">
+                                <label for="search" class="form-label small text-secondary mb-2">Search</label>
+                                <div class="input-group">
+                                    <input type="search"
+                                        class="form-control md-search-input shadow-none"
+                                        id="search"
+                                        name="search"
+                                        placeholder="Student name, discipline, remarks..."
+                                        value="{{ $searchFilter }}"
+                                        autocomplete="off"
+                                        aria-label="Search memos">
+                                    <button type="submit" class="btn btn-primary" id="mdSearchSubmit" aria-label="Apply search">
+                                        <i class="bi bi-search" aria-hidden="true"></i>
+                                    </button>
                                 </div>
                             </div>
-                            <div class="col-6">
-                                <div class="form-group">
-                                    <label for="to_date" class="form-label fw-semibold">
-                                        <i class="bi bi-calendar-event me-1"></i>To Date
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text bg-light border-end-0">
-                                            <i class="bi bi-calendar-plus text-muted"></i>
-                                        </span>
-                                        <input type="date" class="form-control" id="to_date" name="to_date"
-                                            value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}"
-                                            max="{{ \Carbon\Carbon::today()->toDateString() }}" aria-label="End date">
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-12">
-                                <div class="form-text">Select date range for memos</div>
-                            </div>
                         </div>
                     </div>
-
-                    <!-- Action Buttons -->
-                    <div class="col-12 mt-3">
-                        <div
-                            class="d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3 p-3 bg-light rounded border">
-                            <div class="d-flex align-items-center">
-                                <span class="me-2 text-muted">
-                                    <i class="bi bi-filter-circle me-1"></i>
-                                </span>
-                                <small class="text-muted">
-                                    <span id="activeFilterCount" class="badge bg-primary me-2">0</span>
-                                    Active filters
-                                </small>
-                            </div>
-
-                            <div class="d-flex gap-2">
-                                <button type="button" class="btn btn-outline-secondary d-flex align-items-center"
-                                    onclick="clearFilters()" aria-label="Clear all filters">
-                                    <i class="bi bi-arrow-clockwise me-2"></i>
-                                    Reset All
-                                </button>
-
-                                <a href="{{ route('memo.discipline.index') }}"
-                                    class="btn btn-outline-danger d-flex align-items-center"
-                                    aria-label="Remove filters and show all">
-                                    <i class="bi bi-x-circle me-2"></i>
-                                    Clear Filters
-                                </a>
-
-                                <button type="submit" class="btn btn-primary d-flex align-items-center"
-                                    aria-label="Apply selected filters">
-                                    <i class="bi bi-funnel me-2"></i>
-                                    Apply Filters
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Filter Summary (Optional, shows when filters are active) -->
-                    @if($programNameFilter || $statusFilter || $searchFilter || ($fromDateFilter && $toDateFilter))
-                    <div class="col-12">
-                        <div class="alert alert-info alert-dismissible fade show mt-2" role="alert">
-                            <div class="d-flex align-items-center">
-                                <i class="bi bi-info-circle me-2 fs-5"></i>
-                                <div>
-                                    <strong>Active Filters:</strong>
-                                    <div class="d-flex flex-wrap gap-2 mt-1">
-                                        @if($programNameFilter)
-                                        @php
-                                        $selectedCourse = $courses->where('pk', $programNameFilter)->first();
-                                        @endphp
-                                        <span class="badge bg-primary d-flex align-items-center">
-                                            Program: {{ $selectedCourse->course_name ?? 'Selected' }}
-                                            <a href="#" class="text-white ms-2" onclick="removeFilter('program_name')">
-                                                <i class="bi bi-x"></i>
-                                            </a>
-                                        </span>
-                                        @endif
-
-                                        @if($statusFilter)
-                                        @php
-                                        $statusLabels = ['1' => 'Pending', '2' => 'Recorded', '3' => 'Closed'];
-                                        @endphp
-                                        <span class="badge bg-success d-flex align-items-center">
-                                            Status: {{ $statusLabels[$statusFilter] ?? 'Selected' }}
-                                            <a href="#" class="text-white ms-2" onclick="removeFilter('status')">
-                                                <i class="bi bi-x"></i>
-                                            </a>
-                                        </span>
-                                        @endif
-
-                                        @if($searchFilter)
-                                        <span class="badge bg-warning text-dark d-flex align-items-center">
-                                            Search:
-                                            "{{ substr($searchFilter, 0, 20) }}{{ strlen($searchFilter) > 20 ? '...' : '' }}"
-                                            <a href="#" class="text-dark ms-2" onclick="removeFilter('search')">
-                                                <i class="bi bi-x"></i>
-                                            </a>
-                                        </span>
-                                        @endif
-
-                                        @if($fromDateFilter && $toDateFilter)
-                                        <span class="badge bg-info d-flex align-items-center">
-                                            Date: {{ \Carbon\Carbon::parse($fromDateFilter)->format('M d') }} -
-                                            {{ \Carbon\Carbon::parse($toDateFilter)->format('M d, Y') }}
-                                            <a href="#" class="text-white ms-2" onclick="removeDateFilters()">
-                                                <i class="bi bi-x"></i>
-                                            </a>
-                                        </span>
-                                        @endif
-                                    </div>
-                                </div>
-                            </div>
-                            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                        </div>
-                    </div>
-                    @endif
                 </div>
             </form>
 
-            <!-- Add this JavaScript for enhanced UX -->
-            <script>
-            document.addEventListener('DOMContentLoaded', function() {
-                // Update active filter count
-                function updateFilterCount() {
-                    const form = document.getElementById('filterForm');
-                    const inputs = form.querySelectorAll('select, input[type="text"], input[type="date"]');
-                    let activeCount = 0;
-
-                    inputs.forEach(input => {
-                        if ((input.tagName === 'SELECT' && input.value !== '') ||
-                            (input.type === 'text' && input.value.trim() !== '') ||
-                            (input.type === 'date' && input.value !== '')) {
-                            activeCount++;
-                        }
-                    });
-
-                    document.getElementById('activeFilterCount').textContent = activeCount;
-                }
-
-                // Initialize filter count
-                updateFilterCount();
-
-                // Update count on input change
-                document.querySelectorAll('#filterForm select, #filterForm input').forEach(input => {
-                    input.addEventListener('change', updateFilterCount);
-                    input.addEventListener('input', updateFilterCount);
-                });
-
-                // Date validation
-                const fromDate = document.getElementById('from_date');
-                const toDate = document.getElementById('to_date');
-
-                if (fromDate && toDate) {
-                    fromDate.addEventListener('change', function() {
-                        toDate.min = this.value;
-                    });
-
-                    toDate.addEventListener('change', function() {
-                        fromDate.max = this.value;
-                    });
-                }
-            });
-
-            // Clear all filters
-            function clearFilters() {
-                const form = document.getElementById('filterForm');
-                form.querySelectorAll('select').forEach(select => select.value = '');
-                form.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
-
-                // Reset dates to today
-                const today = new Date().toISOString().split('T')[0];
-                form.querySelectorAll('input[type="date"]').forEach(input => input.value = today);
-
-                form.submit();
-            }
-
-            // Remove specific filter
-            function removeFilter(filterName) {
-                const input = document.querySelector(`[name="${filterName}"]`);
-                if (input) {
-                    if (input.tagName === 'SELECT') {
-                        input.value = '';
-                    } else {
-                        input.value = '';
-                    }
-                }
-                document.getElementById('filterForm').submit();
-            }
-
-            // Remove date filters
-            function removeDateFilters() {
-                document.getElementById('from_date').value = '';
-                document.getElementById('to_date').value = '';
-                document.getElementById('filterForm').submit();
-            }
-            </script>
-
-            <style>
-            .form-select:focus,
-            .form-control:focus {
-                border-color: #86b7fe;
-                box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-            }
-
-            .input-group-text {
-                transition: all 0.2s ease;
-            }
-
-            .badge a {
-                text-decoration: none;
-                opacity: 0.8;
-                transition: opacity 0.2s;
-            }
-
-            .badge a:hover {
-                opacity: 1;
-            }
-
-            .alert {
-                border-left: 4px solid #0d6efd;
-            }
-
-            .btn {
-                transition: all 0.2s ease;
-            }
-
-            .btn-primary {
-                background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-                border: none;
-            }
-
-            .btn-primary:hover {
-                background: linear-gradient(135deg, #0b5ed7 0%, #0a58ca 100%);
-                transform: translateY(-1px);
-                box-shadow: 0 4px 8px rgba(13, 110, 253, 0.2);
-            }
-
-            .form-label {
-                color: #495057;
-                font-size: 0.875rem;
-                margin-bottom: 0.5rem;
-            }
-
-            .form-text {
-                font-size: 0.75rem;
-                color: #6c757d;
-                margin-top: 0.25rem;
-            }
-
-            .bg-light {
-                background-color: #f8f9fa !important;
-            }
-
-            @media (max-width: 768px) {
-                .btn {
-                    width: 100%;
-                    justify-content: center;
-                }
-
-                .d-flex.gap-2 {
-                    width: 100%;
-                    flex-direction: column;
-                }
-            }
-            </style>
-            <hr>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 text-nowrap">
-                    <thead class="sticky-top">
+            <div class="programme-dt-panel md-dt-panel">
+                <div class="table-responsive md-dt-scroll">
+                    <table id="mdDisciplineTable" class="table table-hover align-middle mb-0 programme-dt-table md-dt-table">
+                    <thead>
                         <tr>
-                            <th width="60">#</th>
-                            <th>Program</th>
-                            <th>Participant</th>
-                            <th>Date</th>
-                            <th>Discipline</th>
-                            <th class="text-center">Submitted</th>
-                            <th class="text-center">Final</th>
-                            <th>Remarks</th>
-                            <th>Status</th>
+                            <th scope="col" class="text-nowrap">#</th>
+                            <th scope="col">Program Name</th>
+                            <th scope="col">Participant Name</th>
+                            <th scope="col" class="text-nowrap">Date</th>
+                            <th scope="col">Discipline</th>
+                            <th scope="col" class="text-center text-nowrap">Submitted</th>
+                            <th scope="col" class="text-center text-nowrap">Final</th>
+                            <th scope="col">Remarks</th>
+                            <th scope="col" class="text-nowrap">Status</th>
                             @if(! hasRole('Student-OT'))
-                            <th class="text-end">Action</th>
+                            <th scope="col" class="text-end text-nowrap">Action</th>
                             @endif
                         </tr>
                     </thead>
@@ -741,7 +163,7 @@
                     <tbody>
                         @if ($memos->isEmpty())
                         <tr>
-                            <td colspan="10" class="text-center py-5 text-muted">
+                            <td colspan="{{ !hasRole('Student-OT') ? 10 : 9 }}" class="text-center py-5 text-muted">
                                 <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                 <span class="fw-medium">No memo records available</span>
                             </td>
@@ -755,18 +177,10 @@
                             </td>
 
                             <!-- Program -->
-                            <td>
-                                <div class="fw-semibold">
-                                    {{ $memo->course->course_name ?? 'N/A' }}
-                                </div>
-                            </td>
+                            <td class="fw-medium">{{ $memo->course->course_name ?? 'N/A' }}</td>
 
                             <!-- Participant -->
-                            <td>
-                                <div class="fw-semibold">
-                                    {{ $memo->student->display_name ?? 'N/A' }}
-                                </div>
-                            </td>
+                            <td class="md-col-participant">{{ $memo->student->display_name ?? 'N/A' }}</td>
 
                             <!-- Date -->
                             <td class="text-muted">
@@ -775,9 +189,7 @@
 
                             <!-- Discipline -->
                             <td>
-                                <span class="badge bg-info-subtle text-info">
-                                    {{ $memo->discipline->discipline_name ?? 'N/A' }}
-                                </span>
+                                {{ $memo->discipline->discipline_name ?? 'N/A' }}
                             </td>
 
                             <!-- Marks -->
@@ -790,12 +202,12 @@
                             </td>
 
                             <!-- Remarks -->
-                            <td class="text-muted small">
+                            <td class="text-muted small md-col-remarks">
                                 {{ $memo->remarks ?? '-' }}
                             </td>
 
                             <!-- Status -->
-                            <td>
+                            <td class="sticky-status">
                                 @if ($memo->status == 1)
                                 <span class="badge bg-success-subtle text-success">
                                     <i class="bi bi-check-circle me-1"></i> Recorded
@@ -822,8 +234,8 @@
                                     data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
                                     <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                 </a>
-                                <span class="badge bg-secondary-subtle text-secondary">
-                                    <i class="bi bi-lock me-1"></i> Closed
+                                <span class="badge bg-danger-subtle text-danger">
+                                    <i class="bi bi-x-circle me-1"></i> Closed
                                 </span>
                                 @endif
                             </td>
@@ -856,21 +268,21 @@
                         @endif
                     </tbody>
                 </table>
-            </div>
-            <!-- Pagination -->
-            <div class="card-footer bg-white d-flex justify-content-between align-items-center flex-wrap gap-2">
-                <div class="text-muted small">
-                    Showing {{ $memos->firstItem() ?? 0 }} to {{ $memos->lastItem() ?? 0 }}
-                    of {{ $memos->total() }} records
                 </div>
 
-                <div>
-                    {{ $memos->links('vendor.pagination.custom') }}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="md-pagination-nav">
+                        {{ $memos->links('vendor.pagination.custom') }}
+                    </div>
+                    <div class="programme-dt-count md-dt-count mb-0">
+                        Showing {{ $memos->firstItem() ?? 0 }}
+                        to {{ $memos->lastItem() ?? 0 }}
+                        of {{ $memos->total() }} items
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-    <!-- end Zero Configuration -->
 
     <!-- Enhanced Offcanvas with GIGW Guidelines -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic"
@@ -906,18 +318,157 @@
     </div>
 
 </div>
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
-$(document).ready(function() {
-    const disciplineChoicesIds = ['program_name', 'status'];
+document.addEventListener('DOMContentLoaded', function() {
+    if (typeof jQuery === 'undefined') {
+        return;
+    }
+    var $ = jQuery;
+
+    function formatYmd(date) {
+        var y = date.getFullYear();
+        var m = String(date.getMonth() + 1).padStart(2, '0');
+        var d = String(date.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + d;
+    }
+
+    function initMdDesktopTimePeriod() {
+        if (window.mdTimePeriodPicker || typeof flatpickr === 'undefined') {
+            return;
+        }
+        if (!document.getElementById('md_time_period_picker')) {
+            return;
+        }
+        var fromVal = $('#from_date').val();
+        var toVal = $('#to_date').val();
+        window.mdTimePeriodPicker = flatpickr('#md_time_period_picker', {
+            mode: 'range',
+            dateFormat: 'Y-m-d',
+            altInput: true,
+            altFormat: 'd.m.Y',
+            defaultDate: [fromVal, toVal],
+            maxDate: 'today',
+            showMonths: window.innerWidth >= 1200 ? 2 : 1,
+            locale: { rangeSeparator: ' to ' },
+            onChange: function (selectedDates) {
+                if (selectedDates[0]) {
+                    $('#from_date').val(formatYmd(selectedDates[0]));
+                }
+                if (selectedDates.length > 1 && selectedDates[1]) {
+                    $('#to_date').val(formatYmd(selectedDates[1]));
+                } else if (selectedDates[0]) {
+                    $('#to_date').val(formatYmd(selectedDates[0]));
+                }
+                updateFilterCount();
+            },
+            onClose: function () {
+                if ($('#from_date').val() && $('#to_date').val()) {
+                    $('#filterForm').submit();
+                }
+            }
+        });
+    }
+
+    function destroyMdDesktopTimePeriod() {
+        if (window.mdTimePeriodPicker) {
+            window.mdTimePeriodPicker.destroy();
+            window.mdTimePeriodPicker = null;
+        }
+    }
+
+    function syncMdMobileDatesFromHidden() {
+        $('#md_from_date_mobile').val($('#from_date').val());
+        $('#md_to_date_mobile').val($('#to_date').val());
+    }
+
+    function applyMdTimePeriodMode() {
+        if (window.matchMedia('(min-width: 992px)').matches) {
+            initMdDesktopTimePeriod();
+            if (window.mdTimePeriodPicker) {
+                window.mdTimePeriodPicker.setDate([$('#from_date').val(), $('#to_date').val()], false);
+            }
+        } else {
+            destroyMdDesktopTimePeriod();
+            syncMdMobileDatesFromHidden();
+        }
+    }
+
+    $('#md_from_date_mobile, #md_to_date_mobile').on('change', function () {
+        $('#from_date').val($('#md_from_date_mobile').val());
+        $('#to_date').val($('#md_to_date_mobile').val());
+        $('#filterForm').submit();
+    });
+
+    applyMdTimePeriodMode();
+    var mdDesktopMq = window.matchMedia('(min-width: 992px)');
+    if (typeof mdDesktopMq.addEventListener === 'function') {
+        mdDesktopMq.addEventListener('change', applyMdTimePeriodMode);
+    } else if (typeof mdDesktopMq.addListener === 'function') {
+        mdDesktopMq.addListener(applyMdTimePeriodMode);
+    }
+
+    function updateFilterCount() {
+        var form = document.getElementById('filterForm');
+        if (!form) return;
+        var activeCount = 0;
+        if ($('#program_name').val()) activeCount++;
+        if ($('#status').val()) activeCount++;
+        if ($('#search').val() && $('#search').val().trim() !== '') activeCount++;
+        if ($('#from_date').val() || $('#to_date').val()) activeCount++;
+        var el = document.getElementById('activeFilterCount');
+        if (el) el.textContent = activeCount;
+    }
+
+    window.clearFilters = function () {
+        var form = document.getElementById('filterForm');
+        if (!form) return;
+        form.querySelectorAll('select').forEach(function (select) { select.value = ''; });
+        var search = document.getElementById('search');
+        if (search) search.value = '';
+        var today = formatYmd(new Date());
+        $('#from_date').val(today);
+        $('#to_date').val(today);
+        syncMdMobileDatesFromHidden();
+        if (window.mdTimePeriodPicker) {
+            window.mdTimePeriodPicker.setDate([today, today], true);
+        }
+        form.submit();
+    };
+
+    window.removeFilter = function (filterName) {
+        var input = document.querySelector('[name="' + filterName + '"]');
+        if (input) input.value = '';
+        document.getElementById('filterForm').submit();
+    };
+
+    window.removeDateFilters = function () {
+        var today = formatYmd(new Date());
+        $('#from_date').val(today);
+        $('#to_date').val(today);
+        syncMdMobileDatesFromHidden();
+        document.getElementById('filterForm').submit();
+    };
+
+    updateFilterCount();
+    $('#filterForm select, #search').on('change input', updateFilterCount);
+
+    $('#search').on('keydown', function (e) {
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            $('#filterForm').submit();
+        }
+    });
+
+    var disciplineChoicesIds = ['program_name', 'status'];
 
     function initDisciplineChoices() {
         if (typeof window.Choices === 'undefined') return;
-        disciplineChoicesIds.forEach(function(id) {
-            const el = document.getElementById(id);
+        disciplineChoicesIds.forEach(function (id) {
+            var el = document.getElementById(id);
             if (!el || el.dataset.choicesInitialized === 'true') return;
 
             new Choices(el, {
@@ -947,83 +498,88 @@ $(document).ready(function() {
 
     initDisciplineChoices();
 
-    /* ===============================
-       FILTER AUTO SUBMIT
-    =============================== */
-    $('#program_name, #status').on('change', function() {
+    $('#program_name, #status').on('change', function () {
         $('#filterForm').submit();
     });
 
-    /* ===============================
-       SEND MEMO
-    =============================== */
-    $(document).on('click', '#sendMemoBtn', function() {
+    $('#mdExportCsvBtn').on('click', function () {
+        var table = document.getElementById('mdDisciplineTable');
+        if (!table) return;
+        var rows = table.querySelectorAll('tr');
+        var csv = [];
+        rows.forEach(function (row) {
+            var cols = row.querySelectorAll('th, td');
+            var rowData = [];
+            cols.forEach(function (col) {
+                var text = (col.innerText || '').replace(/\s+/g, ' ').trim().replace(/"/g, '""');
+                rowData.push('"' + text + '"');
+            });
+            if (rowData.length) csv.push(rowData.join(','));
+        });
+        var blob = new Blob([csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+        var link = document.createElement('a');
+        link.href = URL.createObjectURL(blob);
+        link.download = 'discipline-memo.csv';
+        link.click();
+        URL.revokeObjectURL(link.href);
+    });
 
-        let discipline = $(this).data('discipline');
+    $(document).on('click', '#sendMemoBtn', function () {
+        var discipline = $(this).data('discipline');
 
         Swal.fire({
             title: 'Are you sure?',
-            text: "Do you want to send the memo?",
+            text: 'Do you want to send the memo?',
             icon: 'warning',
             showCancelButton: true,
-            confirmButtonColor: '#3085d6',
+            confirmButtonColor: '#004a93',
             cancelButtonColor: '#d33',
             confirmButtonText: 'Yes, send it!'
-        }).then((result) => {
+        }).then(function (result) {
             if (result.isConfirmed) {
-
                 $.ajax({
                     url: "{{ route('memo.discipline.sendMemo') }}",
-                    type: "POST",
+                    type: 'POST',
                     data: {
                         _token: "{{ csrf_token() }}",
                         discipline_pk: discipline
                     },
-                    success: function(response) {
-                        Swal.fire(
-                            'Sent!',
-                            'The memo has been sent.',
-                            'success'
-                        ).then(() => {
-                            location.reload(); // refresh list
+                    success: function () {
+                        Swal.fire('Sent!', 'The memo has been sent.', 'success').then(function () {
+                            location.reload();
                         });
                     },
-                    error: function() {
+                    error: function () {
                         Swal.fire('Error!', 'Something went wrong.', 'error');
                     }
                 });
-
             }
         });
     });
-    $('.view-conversation').on('click', function() {
-        let memoId = $(this).data('id');
-        let type = $(this).data('type');
 
-        $('#conversationTopic').text("Topic: Discipline Conversation");
+    $(document).on('click', '.view-conversation', function () {
+        var memoId = $(this).data('id');
+        var type = $(this).data('type');
+
+        $('#conversationTopic').text('Topic: Discipline Conversation');
         $('#type_side_menu').text(type);
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
             url: '/memo/discipline/get_conversation_model/' + memoId + '/' + type,
             type: 'GET',
-            success: function(res) {
+            success: function (res) {
                 $('#chatBody').html(res);
             },
-            error: function() {
-                $('#chatBody').html(
-                    '<p class="text-danger text-center">Failed to load conversation.</p>'
-                );
+            error: function () {
+                $('#chatBody').html('<p class="text-danger text-center">Failed to load conversation.</p>');
             }
         });
 
-        // Show offcanvas
-        let chatOffcanvas = new bootstrap.Offcanvas(document.getElementById('chatOffcanvas'));
-        chatOffcanvas.show();
+        bootstrap.Offcanvas.getOrCreateInstance(document.getElementById('chatOffcanvas')).show();
     });
 });
 </script>
-
 @endpush
 
 @endsection
