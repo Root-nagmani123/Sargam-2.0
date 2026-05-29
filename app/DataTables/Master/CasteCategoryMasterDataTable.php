@@ -75,6 +75,9 @@ class CasteCategoryMasterDataTable extends DataTable
             // ->orderBy(1)
             ->selectStyleSingle()
             ->parameters([
+                'responsive' => true,
+                'scrollX' => false,
+                'autoWidth' => false,
                 'order' => [],
             ])
             ->buttons([
