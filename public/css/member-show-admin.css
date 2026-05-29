@@ -1,0 +1,190 @@
+/* Employee (Member) show / details page */
+.em-member-show-page {
+    --ems-primary: #004a93;
+    --ems-primary-dark: #003366;
+    --ems-border: #e4e7ec;
+    --ems-text: #344054;
+    --ems-heading: #101828;
+    --ems-muted: #667085;
+    --ems-shell: #eef1f6;
+}
+
+.em-member-show-page .ems-hero-card {
+    border-left: 4px solid var(--ems-primary);
+}
+
+.em-member-show-page .ems-hero-avatar {
+    width: 5.5rem;
+    height: 5.5rem;
+    border-radius: 0.875rem;
+    overflow: hidden;
+    flex-shrink: 0;
+    border: 1px solid var(--ems-border);
+    background: #f0f6fc;
+}
+
+.em-member-show-page .ems-hero-avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    display: block;
+}
+
+.em-member-show-page .ems-hero-avatar__fallback {
+    width: 100%;
+    height: 100%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.375rem;
+    font-weight: 700;
+    color: var(--ems-primary);
+    background: #e8f0fe;
+}
+
+.em-member-show-page .ems-stat-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.em-member-show-page .ems-stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 0.5rem 1.25rem rgba(16, 24, 40, 0.08) !important;
+}
+
+.em-member-show-page .ems-stat-icon {
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.65rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    font-size: 1.125rem;
+}
+
+.em-member-show-page .ems-section-card {
+    border-radius: 12px;
+}
+
+.em-member-show-page .ems-section-divider {
+    border-color: var(--ems-border);
+    opacity: 1;
+    margin: 0;
+}
+
+.em-member-show-page .ems-field__label {
+    font-size: 0.8125rem;
+    color: var(--ems-muted);
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.em-member-show-page .ems-field__value {
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ems-heading);
+    word-break: break-word;
+}
+
+.em-member-show-page .ems-field__value .btn {
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 0.375rem 0.875rem;
+}
+
+.em-member-show-page .ems-role-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.5rem 0.875rem;
+    border-radius: 999px;
+    background: #f0f6fc;
+    color: var(--ems-primary);
+    border: 1px solid rgba(0, 74, 147, 0.15);
+}
+
+.em-member-show-page .ems-empty-text {
+    color: var(--ems-muted);
+    font-size: 0.9375rem;
+    margin: 0;
+}
+
+.em-member-show-page .ems-toolbar-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.em-member-show-page .ems-btn-outline {
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: var(--ems-primary);
+    border: 1px solid var(--ems-primary);
+    border-radius: 8px;
+    background: #fff;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease;
+    text-decoration: none;
+}
+
+.em-member-show-page .ems-btn-outline:hover {
+    background: #f0f6fc;
+    border-color: var(--ems-primary-dark);
+    color: var(--ems-primary-dark);
+}
+
+.em-member-show-page .ems-btn-primary {
+    height: 40px;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 600;
+    color: #fff;
+    border: 1px solid var(--ems-primary);
+    border-radius: 8px;
+    background: var(--ems-primary);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: background 0.2s ease, border-color 0.2s ease;
+    text-decoration: none;
+}
+
+.em-member-show-page .ems-btn-primary:hover {
+    background: var(--ems-primary-dark);
+    border-color: var(--ems-primary-dark);
+    color: #fff;
+}
+
+@media (max-width: 767.98px) {
+    .em-member-show-page .ems-toolbar-actions {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .em-member-show-page .ems-toolbar-actions .ems-btn-outline,
+    .em-member-show-page .ems-toolbar-actions .ems-btn-primary {
+        flex: 1 1 auto;
+        justify-content: center;
+    }
+
+    .em-member-show-page .ems-hero-avatar {
+        width: 4.5rem;
+        height: 4.5rem;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .em-member-show-page .ems-stat-card {
+        transition: none;
+    }
+
+    .em-member-show-page .ems-stat-card:hover {
+        transform: none;
+    }
+}

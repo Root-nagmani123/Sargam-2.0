@@ -1,79 +1,74 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Member - Sargam | Lal Bahadur')
+@section('title', 'Add Member - Sargam | Lal Bahadur')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{{ asset('css/member-wizard-admin.css') }}?v={{ @filemtime(public_path('css/member-wizard-admin.css')) ?: time() }}">
+@endpush
 
 @section('setup_content')
+<div class="container-fluid member-wizard-page pb-4">
+    <x-breadcrum title="Create Employee Master" />
 
-<div class="container-fluid">
-
-    <x-breadcrum title="Member" />
     <x-session_message />
 
-    <!-- start Vertical Steps Example -->
-    <div class="card">
-        <div class="card-body">
-            <h4 class="card-title mb-0">Add Member</h4>
-            <h6 class="card-subtitle mb-3"></h6>
-            <hr>
-
-            <form id="member-form" enctype="multipart/form-data">
-                @csrf
-                <div id="wizard" class="wizard clearfix vertical">
-                    <h3>Member Information</h3>
-                    <section id="step-1" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                        <div class="text-center py-5">
-                            <div class="spinner-border" role="status">
-                                <span class="visually-hidden">Loading...</span>
-                            </div>
+    <div class="mw-wizard-shell wizard-content">
+        <form id="member-form" enctype="multipart/form-data">
+            @csrf
+            <div id="wizard" class="wizard clearfix vertical">
+                <h3>Member Information</h3>
+                <section id="step-1" class="step-section">
+                    <div class="text-center mw-step-loading">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
                         </div>
-                    </section>
+                    </div>
+                </section>
 
-                    <h3>Employment Details</h3>
-                    <section id="step-2" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
+                <h3>Employment Details</h3>
+                <section id="step-2" class="step-section"></section>
 
-                    <h3>Role Assignment</h3>
-                    <section id="step-3" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
+                <h3>Role Assignment</h3>
+                <section id="step-3" class="step-section"></section>
 
-                    <h3>Contact Information</h3>
-                    <section id="step-4" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
+                <h3>Contact Information</h3>
+                <section id="step-4" class="step-section"></section>
 
-                    <h3>Additional Details</h3>
-                    <section id="step-5" class="step-section">
-                        <!-- Content will be loaded via AJAX -->
-                    </section>
-                </div>
-            </form>
-
-        </div>
+                <h3>Additional Details</h3>
+                <section id="step-5" class="step-section"></section>
+            </div>
+        </form>
     </div>
-    <!-- end Vertical Steps Example -->
 </div>
+@endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 let employeePK = null;
 
-$(document).ready(function() {
+$(document).ready(function () {
     const form = $("#member-form");
     const loadedSteps = {};
 
-    const wizard = $("#wizard").steps({
+    $("#wizard").steps({
         headerTag: "h3",
         bodyTag: "section",
         transitionEffect: "slideLeft",
         stepsOrientation: "vertical",
         autoFocus: true,
         enablePagination: true,
+        labels: {
+            finish: "Add Employee",
+            next: "Next",
+            previous: "Previous",
+            loading: "Loading..."
+        },
 
-        onStepChanging: function(event, currentIndex, newIndex) {
-            if (newIndex < currentIndex) return true;
+        onStepChanging: function (event, currentIndex, newIndex) {
+            if (newIndex < currentIndex) {
+                return true;
+            }
             event.preventDefault();
 
             const currentStep = $(`#wizard-p-${currentIndex}`);
@@ -90,18 +85,17 @@ $(document).ready(function() {
                 method: "POST",
                 data: stepData + '&_token={{ csrf_token() }}',
                 async: false,
-                success: function(response) {
+                success: function (response) {
                     if (response.pk) {
                         employeePK = response.pk;
 
-                        // Add hidden employeePK to all sections
-                        $(".wizard section").each(function() {
+                        $(".wizard section").each(function () {
                             const section = $(this);
                             const existingInput = section.find('#employeePK');
                             if (!existingInput.length) {
                                 section.append(
                                     `<input type="hidden" id="employeePK" name="emp_id" value="${employeePK}">`
-                                    );
+                                );
                             } else {
                                 existingInput.val(employeePK);
                             }
@@ -111,7 +105,7 @@ $(document).ready(function() {
                     clearErrors(currentStep);
                     canProceed = true;
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     const status = xhr.status;
                     const errors = xhr.responseJSON?.errors || {};
 
@@ -129,16 +123,16 @@ $(document).ready(function() {
             return canProceed;
         },
 
-        onStepChanged: function(event, currentIndex, priorIndex) {
-            const stepNumber = currentIndex + 1;
-            loadStepContent(stepNumber);
+        onStepChanged: function (event, currentIndex, priorIndex) {
+            loadStepContent(currentIndex + 1);
+            styleWizardActions();
         },
 
-        onFinishing: function() {
+        onFinishing: function () {
             return true;
         },
 
-        onFinished: function() {
+        onFinished: function () {
             const formData = new FormData(form[0]);
             if (employeePK) {
                 formData.append('emp_id', employeePK);
@@ -150,11 +144,11 @@ $(document).ready(function() {
                 data: formData,
                 contentType: false,
                 processData: false,
-                success: function() {
+                success: function () {
                     toastr.success("Member created successfully!");
                     window.location.href = "/member";
                 },
-                error: function(xhr) {
+                error: function (xhr) {
                     const status = xhr.status;
                     const errors = xhr.responseJSON?.errors || {};
                     const lastStep = $(".wizard .step-section").last();
@@ -170,41 +164,73 @@ $(document).ready(function() {
         }
     });
 
+    $('#wizard').on('click', '.steps ul li.done a', function (e) {
+        e.preventDefault();
+        const targetIndex = $(this).parent().index();
+        $('#wizard').steps('setCurrentStep', targetIndex);
+    });
+
+    function styleWizardActions() {
+        const $actionsList = $('#wizard .actions ul');
+        if (!$actionsList.find('.mw-wizard-cancel-li').length) {
+            $actionsList.prepend(
+                '<li class="mw-wizard-cancel-li"><a href="#" class="mw-wizard-cancel" role="button">Cancel</a></li>'
+            );
+            $actionsList.find('.mw-wizard-cancel').on('click', function (e) {
+                e.preventDefault();
+                window.location.href = "{{ route('member.index') }}";
+            });
+        }
+
+        const $cancel = $actionsList.find('.mw-wizard-cancel-li');
+        const $nextLi = $actionsList.find('li').filter(function () {
+            return $(this).find('a[href="#next"], a[href="#finish"]').length;
+        }).first();
+        if ($cancel.length && $nextLi.length) {
+            $cancel.insertBefore($nextLi);
+        }
+    }
+
     function loadStepContent(stepNumber) {
-        if (loadedSteps[stepNumber]) return;
+        if (loadedSteps[stepNumber]) {
+            return;
+        }
 
         const stepSection = $(`#wizard-p-${stepNumber - 1}`);
 
         $.ajax({
             url: `/member/step/${stepNumber}`,
             method: "GET",
-            success: function(html) {
+            success: function (html) {
                 stepSection.html(html);
 
-                // Append employeePK if needed
                 if (employeePK && !stepSection.find('#employeePK').length) {
                     stepSection.append(
                         `<input type="hidden" id="employeePK" name="emp_id" value="${employeePK}">`
-                        );
+                    );
                 }
 
                 loadedSteps[stepNumber] = true;
             },
-            error: function(xhr) {
+            error: function (xhr) {
                 toastr.error(`Failed to load step ${stepNumber} (HTTP ${xhr.status})`);
                 stepSection.html(
-                    `<div class="alert alert-danger">Failed to load step ${stepNumber}</div>`);
+                    `<div class="alert alert-danger mb-0">Failed to load step ${stepNumber}</div>`
+                );
             }
         });
     }
 
     function showErrors(stepElement, errors) {
         clearErrors(stepElement);
-        $.each(errors, function(field, messages) {
-            const input = stepElement.find(`[name="${field}"]`);
+        $.each(errors, function (field, messages) {
+            const $input = stepElement.find(`[name="${field}"], [name="${field}[]"]`).first();
+            if (!$input.length) {
+                return;
+            }
             const message = messages[0];
-            const errorDiv = $('<div class="text-danger mt-1"></div>').text(message);
-            input.addClass("is-invalid").after(errorDiv);
+            $('<div class="text-danger mt-1"></div>').text(message).insertAfter($input);
+            $input.addClass("is-invalid");
         });
     }
 
@@ -214,11 +240,8 @@ $(document).ready(function() {
         stepElement.find(".is-invalid").removeClass("is-invalid");
     }
 
-    // Initial load
+    styleWizardActions();
     loadStepContent(1);
 });
 </script>
-
-
-@endsection
-@endsection
+@endpush
