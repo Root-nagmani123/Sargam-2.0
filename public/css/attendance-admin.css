@@ -1,0 +1,352 @@
+/* Attendance — government-portal datatable UI (matches programme-dt / reference design) */
+
+.attendance-master-page {
+    --att-primary: #004a93;
+    --att-border: #e4e7ec;
+    --att-muted: #667085;
+    --att-text: #344054;
+    --att-heading: #101828;
+}
+
+.attendance-master-page .attendance-dt-card {
+    border: 1px solid var(--att-border);
+}
+
+.attendance-master-page .attendance-dt-toolbar {
+    min-height: 40px;
+}
+
+/* Uniform filter dropdowns (reference: Course Name, Attendance Type, Time Period) */
+.attendance-master-page .attendance-dt-toolbar .programme-dt-filter-select {
+    width: 180px;
+    flex-shrink: 0;
+}
+
+.attendance-master-page .att-filter-select,
+.attendance-master-page .att-time-period-input,
+.attendance-master-page .att-time-period-filter .flatpickr-input.form-control {
+    min-height: 40px;
+    height: 40px;
+    padding: 0.5rem 2rem 0.5rem 0.875rem;
+    font-size: 0.9375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: var(--att-text);
+    box-shadow: none;
+    background-color: #fff;
+}
+
+.attendance-master-page .att-filter-select:focus,
+.attendance-master-page .att-time-period-input:focus,
+.attendance-master-page .att-time-period-filter .flatpickr-input.form-control:focus {
+    border-color: var(--att-primary);
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+}
+
+.attendance-master-page .att-filter-select option[value=""] {
+    color: var(--att-muted);
+}
+
+.attendance-master-page .programme-dt-filter-select.att-time-period-filter {
+    width: 200px;
+}
+
+.attendance-master-page .att-time-period-icon {
+    position: absolute;
+    right: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--att-muted);
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+/* Search icon button (reference: square magnifying glass, right side) */
+.attendance-master-page .att-search-trigger {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: var(--att-muted);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: none;
+}
+
+.attendance-master-page .att-search-trigger:hover,
+.attendance-master-page .att-search-trigger.show {
+    border-color: var(--att-primary);
+    color: var(--att-primary);
+    background: #fff;
+}
+
+.attendance-master-page .att-search-menu {
+    min-width: 300px;
+}
+
+.attendance-master-page .att-dt-search-host .dataTables_filter {
+    float: none !important;
+    margin: 0 !important;
+    text-align: left !important;
+    width: 100%;
+}
+
+.attendance-master-page .att-dt-search-host .dataTables_filter label {
+    display: block;
+    width: 100%;
+    margin: 0;
+    position: relative;
+}
+
+.attendance-master-page .att-dt-search-host .dataTables_filter label::before {
+    content: "\F52A";
+    font-family: "bootstrap-icons";
+    position: absolute;
+    left: 0.875rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #98a2b3;
+    font-size: 1rem;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.attendance-master-page .att-dt-search-host .dataTables_filter input {
+    width: 100% !important;
+    height: 40px;
+    margin: 0 !important;
+    padding: 0.5rem 0.875rem 0.5rem 2.375rem !important;
+    border: 1px solid #d0d5dd !important;
+    border-radius: 8px !important;
+    font-size: 0.9375rem;
+    color: var(--att-text);
+    box-shadow: none !important;
+}
+
+.attendance-master-page .att-dt-search-host .dataTables_filter input:focus {
+    border-color: var(--att-primary) !important;
+    box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12) !important;
+}
+
+/* Table panel */
+.attendance-master-page .attendance-dt-panel {
+    border: 1px solid var(--att-border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: #fff;
+}
+
+.attendance-master-page .attendance-dt-scroll {
+    overflow-x: auto;
+}
+
+.attendance-master-page .attendance-dt-table thead th {
+    background: #f2f4f7 !important;
+    color: #475467 !important;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.875rem 1rem !important;
+    border-bottom: 1px solid var(--att-border) !important;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+
+.attendance-master-page .attendance-dt-table tbody td {
+    padding: 1rem !important;
+    font-size: 0.875rem;
+    color: var(--att-text);
+    border-bottom: 1px solid #eef2f6 !important;
+    vertical-align: middle;
+    background: #fff;
+}
+
+.attendance-master-page .attendance-dt-table tbody tr:hover td {
+    background: rgba(0, 74, 147, 0.03);
+}
+
+.attendance-master-page .attendance-dt-table tbody tr:last-child td {
+    border-bottom: 0 !important;
+}
+
+.attendance-master-page .att-col-sno {
+    width: 4.5rem;
+    color: var(--att-muted) !important;
+    font-weight: 500;
+}
+
+.attendance-master-page .att-col-topic {
+    min-width: 220px;
+    max-width: 360px;
+    font-weight: 500;
+    color: var(--att-heading);
+    line-height: 1.45;
+    white-space: normal;
+}
+
+.attendance-master-page .att-col-action {
+    width: 5rem;
+}
+
+.attendance-master-page #attendanceTable .attendance-course-cell {
+    color: var(--att-primary) !important;
+    font-weight: 600;
+    cursor: help;
+    text-decoration: none;
+    border-bottom: 1px dashed rgba(0, 74, 147, 0.35);
+}
+
+.attendance-master-page #attendanceTable .attendance-course-cell:hover {
+    color: #003366 !important;
+    border-bottom-color: var(--att-primary);
+}
+
+/* Action: circular fingerprint impression (design reference) */
+#attendanceTable a.att-fingerprint-btn,
+#attendanceTable_wrapper a.att-fingerprint-btn,
+.attendance-master-page #attendanceTable a.att-fingerprint-btn {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+    min-width: 2.25rem !important;
+    min-height: 2.25rem !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    border: 0 !important;
+    text-decoration: none !important;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.1);
+    transition: transform 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    color: #fff !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    vertical-align: middle;
+}
+
+#attendanceTable a.att-fingerprint-btn--default,
+#attendanceTable_wrapper a.att-fingerprint-btn--default {
+    background: linear-gradient(145deg, #0059b3 0%, #004a93 100%) !important;
+}
+
+#attendanceTable a.att-fingerprint-btn--marked,
+#attendanceTable_wrapper a.att-fingerprint-btn--marked {
+    background: linear-gradient(145deg, #12b76a 0%, #039855 100%) !important;
+}
+
+#attendanceTable a.att-fingerprint-btn:hover,
+#attendanceTable_wrapper a.att-fingerprint-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0, 74, 147, 0.22);
+    color: #fff !important;
+}
+
+#attendanceTable a.att-fingerprint-btn:focus-visible,
+#attendanceTable_wrapper a.att-fingerprint-btn:focus-visible {
+    outline: 2px solid #004a93;
+    outline-offset: 2px;
+}
+
+#attendanceTable .att-fingerprint-svg,
+#attendanceTable_wrapper .att-fingerprint-svg {
+    display: block;
+    width: 1.2rem;
+    height: 1.2rem;
+    flex-shrink: 0;
+    color: #fff;
+}
+
+#attendanceTable .att-fingerprint-bi,
+#attendanceTable_wrapper .att-fingerprint-bi {
+    display: block !important;
+    font-size: 1.2rem !important;
+    line-height: 1 !important;
+    color: #fff !important;
+}
+
+#attendanceTable .att-fingerprint-svg,
+#attendanceTable_wrapper .att-fingerprint-svg {
+    display: none !important;
+}
+
+/* Legacy text buttons from cache — hide label, show fingerprint */
+#attendanceTable tbody td:last-child a.btn:not(.att-fingerprint-btn),
+#attendanceTable_wrapper tbody td:last-child a.btn:not(.att-fingerprint-btn) {
+    width: 2.25rem !important;
+    height: 2.25rem !important;
+    min-width: 2.25rem !important;
+    padding: 0 !important;
+    border-radius: 50% !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    font-size: 0 !important;
+    line-height: 0 !important;
+    overflow: hidden;
+    position: relative;
+    border: 0 !important;
+}
+
+#attendanceTable tbody td:last-child a.btn:not(.att-fingerprint-btn)::after,
+#attendanceTable_wrapper tbody td:last-child a.btn:not(.att-fingerprint-btn)::after {
+    font-family: "bootstrap-icons" !important;
+    content: "\f4de" !important;
+    font-size: 1.15rem !important;
+    color: #fff !important;
+    font-style: normal;
+    font-weight: 400 !important;
+    line-height: 1 !important;
+}
+
+.attendance-master-page .attendance-dt-empty td {
+    padding: 3.5rem 1.5rem !important;
+    background: #fff;
+}
+
+.attendance-master-page .att-empty-icon {
+    font-size: 2rem;
+    color: #d0d5dd;
+}
+
+.attendance-master-page .programme-dt-footer {
+    margin-top: 0;
+    border-top: 1px solid var(--att-border);
+}
+
+#attendanceCustomTooltip {
+    position: fixed;
+    z-index: 9999;
+    display: none;
+    pointer-events: none;
+    max-width: 360px;
+    background: rgba(16, 24, 40, 0.92);
+    color: #fff;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-size: 0.8125rem;
+    line-height: 1.35;
+    box-shadow: 0 12px 28px rgba(16, 24, 40, 0.2);
+    word-break: break-word;
+}
+
+@media (max-width: 1199.98px) {
+    .attendance-master-page .attendance-dt-toolbar .programme-dt-filter-select {
+        width: min(100%, 180px);
+    }
+}
+
+@media (max-width: 767.98px) {
+    .attendance-master-page .attendance-dt-scroll {
+        max-height: min(70vh, 32rem);
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .attendance-master-page .attendance-dt-scroll thead th {
+        position: sticky;
+        top: 0;
+        z-index: 2;
+    }
+}
