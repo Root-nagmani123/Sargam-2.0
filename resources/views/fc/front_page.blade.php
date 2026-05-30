@@ -39,9 +39,9 @@
                         <div>
                             <h6 class="mb-1 fw-semibold">Course Duration</h6>
                             <div class="text-muted">
-                                {{ isset($data->course_start_date) ? \Carbon\Carbon::parse($data->course_start_date)->format('F jS, Y') : '' }}
+                                {{ $pathPage?->course_start_date?->format('F jS, Y') ?? '—' }}
                                 –
-                                {{ isset($data->course_end_date) ? \Carbon\Carbon::parse($data->course_end_date)->format('F jS, Y') : '' }}
+                                {{ $pathPage?->course_end_date?->format('F jS, Y') ?? '—' }}
                             </div>
                         </div>
                     </div>
@@ -54,9 +54,9 @@
                         <div>
                             <h6 class="mb-1 fw-semibold">Online Registration</h6>
                             <div class="text-muted">
-                                {{ isset($data->registration_start_date) ? \Carbon\Carbon::parse($data->registration_start_date)->format('F jS, Y') : '' }}
+                                {{ $pathPage?->registration_start_date?->format('F jS, Y') ?? '—' }}
                                 –
-                                {{ isset($data->registration_end_date) ? \Carbon\Carbon::parse($data->registration_end_date)->format('F jS, Y') : '' }}
+                                {{ $pathPage?->registration_end_date?->format('F jS, Y') ?? '—' }}
                             </div>
                         </div>
                     </div>

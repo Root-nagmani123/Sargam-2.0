@@ -84,6 +84,26 @@ class FcRegistrationIntentService
     }
 
     /**
+     * True when this request carries a non-empty ?form= or ?formid= programme token.
+     */
+    public function requestHasFormToken(Request $request): bool
+    {
+        if ($request->query->has('form')) {
+            $token = $request->query('form');
+
+            return is_string($token) && $token !== '';
+        }
+
+        if ($request->query->has('formid')) {
+            $token = $request->query('formid');
+
+            return is_string($token) && $token !== '';
+        }
+
+        return false;
+    }
+
+    /**
      * After successful Auth::login from FC web credentials form.
      * Callers should read session into local variables before login if session may migrate.
      *

@@ -30,7 +30,8 @@
             </li>
             <ul class="collapse list-unstyled ps-3" id="collapseGeneral">
                 <li class="sidebar-item">
-                    <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank">
+                    <a class="sidebar-link" href="{{ route('frontpage.index') }}" target="_blank"
+                        title="Generic landing page (no programme in URL). For a named programme, copy Landing Page URL from Form Management → Edit form.">
 
                         <span class="hide-menu small small-sm-normal text-nowrap">User Landing Page (User)</span>
                     </a>

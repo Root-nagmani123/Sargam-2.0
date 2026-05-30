@@ -28,6 +28,9 @@ use Carbon\Carbon;
 
 class FrontPageController extends Controller
 {
+    /** Matches validation rule max:5120 (kilobytes) for medical_doc uploads. */
+    private const MEDICAL_DOC_MAX_KB = 5120;
+
     public function __construct(
         private FcRegistrationIntentService $fcRegistrationIntent,
         private FcRegistrationStatusService $fcRegistrationStatus,
@@ -88,11 +91,15 @@ class FrontPageController extends Controller
     public function foundationIndex(Request $request)
     {
         $this->fcRegistrationIntent->ingestFormQuery($request);
-        $data = FrontPage::first(); // Fetch the first row from front_pages table
+        $data = FrontPage::first();
+        $pathPage = PathPage::first();
         $intentQuery = $this->intentQueryForFcFormLinks();
-        $programmeIntentLabel = $this->resolvedIntendedProgrammeName();
+        // Only show programme name when this visit used a form-specific landing URL (?form= token).
+        $programmeIntentLabel = $this->fcRegistrationIntent->requestHasFormToken($request)
+            ? $this->resolvedIntendedProgrammeName()
+            : null;
 
-        return view('fc.front_page', compact('data', 'intentQuery', 'programmeIntentLabel'));
+        return view('fc.front_page', compact('data', 'pathPage', 'intentQuery', 'programmeIntentLabel'));
     }
 
     /**
@@ -849,7 +856,11 @@ class FrontPageController extends Controller
             abort(404, 'Exemption category not found.');
         }
 
-        return view('fc.exemption_application', compact('exemption'));
+        return view('fc.exemption_application', [
+            'exemption' => $exemption,
+            'medicalDocMaxKb' => self::MEDICAL_DOC_MAX_KB,
+            'medicalDocMaxBytes' => self::MEDICAL_DOC_MAX_KB * 1024,
+        ]);
     }
 
     // apply exemption store
@@ -908,8 +919,10 @@ class FrontPageController extends Controller
         }
 
         if ($exemption && strtolower($exemption->Exemption_name) === 'medical') {
-            $rules['medical_doc'] = 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:5120';
+            $rules['medical_doc'] = 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:'.self::MEDICAL_DOC_MAX_KB;
             $messages['medical_doc.required'] = 'Medical exemption document is required for medical exemptions.';
+            $messages['medical_doc.max'] = 'Medical document must not be larger than '.(self::MEDICAL_DOC_MAX_KB / 1024).' MB.';
+            $messages['medical_doc.mimes'] = 'Medical document must be PDF, Word (.doc, .docx), JPG, JPEG, or PNG.';
         }
 
         $validator = Validator::make($request->all(), $rules);

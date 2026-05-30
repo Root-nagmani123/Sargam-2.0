@@ -343,18 +343,11 @@ class RegistrationImportController extends Controller
         $applicationTypeOptions = $guard->adminApplicationTypeOptions();
         $currentApplicationTypeLabel = $guard->applicationTypeLabel($registration->application_type);
 
-        $exemptionCategories = \DB::table('fc_exemption_master')
-            ->where('is_notice', false)
-            ->where('visible', true)
-            ->orderBy('Exemption_name')
-            ->pluck('Exemption_name', 'Pk');
-
         return view('admin.registration.fcregistrationmaster_edit', compact(
             'registration',
             'serviceMasters',
             'cadres',
             'applicationTypeOptions',
-            'exemptionCategories',
             'currentApplicationTypeLabel',
         ));
     }
@@ -380,24 +373,16 @@ class RegistrationImportController extends Controller
                     FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
                 ]),
             ],
-            'fc_exemption_master_pk' => [
-                'nullable',
-                'integer',
-                Rule::requiredIf(fn () => (int) $request->input('application_type') === FcRosterApplicationGuardService::APPLICATION_EXEMPTION),
-                Rule::exists('fc_exemption_master', 'Pk'),
-            ],
         ]);
 
         $record = FcRegistrationMaster::findOrFail($id);
 
         $guard = app(FcRosterApplicationGuardService::class);
         $applicationType = (int) $request->input('application_type');
-        $statusPayload = $guard->adminApplicationTypePayload(
-            $applicationType,
-            $applicationType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION
-                ? (int) $request->input('fc_exemption_master_pk')
-                : null
-        );
+        $exemptionPk = $applicationType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION
+            ? (int) ($record->fc_exemption_master_pk ?? 0)
+            : null;
+        $statusPayload = $guard->adminApplicationTypePayload($applicationType, $exemptionPk ?: null);
 
         $record->update(array_merge(
             $request->only([
