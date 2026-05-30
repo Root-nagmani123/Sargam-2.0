@@ -80,7 +80,7 @@
         <table id="fcMasterSetupTable" class="table table-sm table-hover mb-0 w-100" data-export-title="FC Activity master">
             <thead class="table-light">
                 <tr>
-                    <th>Dept</th><th>Code</th><th>Label</th><th>Course</th><th>Order</th><th>Status</th><th>Policy</th><th></th>
+                    <th>Dept</th><th>Code</th><th>Label</th><th>Course</th><th>Order</th><th>Status</th><th>Policy</th><th class="text-end text-nowrap">Action</th>
                 </tr>
             </thead>
             <tbody></tbody>
@@ -128,7 +128,7 @@
                             @error('menun')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Course / session</label>
+                            <label class="form-label small">Course</label>
                             <select name="ccode" class="form-select form-select-sm @error('ccode') is-invalid @enderror">
                                 <option value="">All courses</option>
                                 @php $createCcode = old('_form') === 'master_create' ? (string) old('ccode', '') : ''; @endphp
@@ -213,7 +213,7 @@
                             @error('menun')<div class="invalid-feedback d-block">{{ $message }}</div>@enderror
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label small">Course / session</label>
+                            <label class="form-label small">Course</label>
                             <select name="ccode" id="masterEditCcode" class="form-select form-select-sm @error('ccode') is-invalid @enderror">
                                 <option value="">All courses</option>
                                 @foreach($courseFilterOptions as $sn)
@@ -398,16 +398,18 @@ $(function () {
         scrollX: true,
         autoWidth: false,
         dom: '<"row align-items-center mb-2"<"col-md-6"l><"col-md-6"f>>rt<"row align-items-center mt-2"<"col-md-5"i><"col-md-7"p>>',
-        columnDefs: [{ targets: -1, className: 'text-end' }],
+        columnDefs: [
+            { targets: -1, className: 'text-end text-nowrap fc-master-action-col', width: '5.25rem' }
+        ],
         columns: [
-            { data: 'dept_name', name: 'dept_name', orderable: false },
-            { data: 'menuid', name: 'menuid' },
-            { data: 'menun', name: 'menun' },
-            { data: 'ccode', name: 'ccode' },
-            { data: 'sort_order', name: 'sort_order' },
-            { data: 'status_display', name: 'status_display', orderable: false, searchable: false },
-            { data: 'entry_policy', name: 'entry_policy' },
-            { data: 'action', name: 'action', orderable: false, searchable: false }
+            { data: 'dept_name', name: 'dept_name', title: 'Dept', orderable: false },
+            { data: 'menuid', name: 'menuid', title: 'Code' },
+            { data: 'menun', name: 'menun', title: 'Label' },
+            { data: 'ccode', name: 'ccode', title: 'Course' },
+            { data: 'sort_order', name: 'sort_order', title: 'Order' },
+            { data: 'status_display', name: 'status_display', title: 'Status', orderable: false, searchable: false },
+            { data: 'entry_policy', name: 'entry_policy', title: 'Policy' },
+            { data: 'action', name: 'action', title: 'Action', orderable: false, searchable: false }
         ]
     });
     $filter.on('change', function () {

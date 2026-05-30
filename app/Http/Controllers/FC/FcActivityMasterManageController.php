@@ -5,7 +5,8 @@ namespace App\Http\Controllers\FC;
 use App\Http\Controllers\Controller;
 use App\Models\FC\FcActivityDepartment;
 use App\Models\FC\FcActivityMaster;
-use App\Models\FC\SessionMaster;
+use App\Models\FC\FcForm;
+use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -25,17 +26,29 @@ class FcActivityMasterManageController extends Controller
     }
 
     /**
-     * Values for activity master "course filter" (matches FC post-arrival course / session).
-     * Merges active sessions with any ccode already stored so edits stay valid.
+     * Active Course Master programmes linked on FC forms (ccode = course_name for OT activity matching).
+     * Merges any legacy ccode already on activity masters so edits stay valid.
      *
      * @return Collection<int, string>
      */
     private function courseFilterOptionList(): Collection
     {
-        $fromSessions = SessionMaster::query()
-            ->where('is_active', 1)
-            ->orderBy('session_name')
-            ->pluck('session_name');
+        $currentDate = Carbon::now()->format('Y-m-d');
+
+        $fromForms = FcForm::query()
+            ->whereNotNull('course_master_pk')
+            ->whereHas('courseMaster', function ($q) use ($currentDate) {
+                $q->where('active_inactive', 1)
+                    ->where(function ($e) use ($currentDate) {
+                        $e->whereNull('end_date')
+                            ->orWhere('end_date', '>=', $currentDate);
+                    });
+            })
+            ->with('courseMaster:pk,course_name,active_inactive,end_date')
+            ->orderBy('form_name')
+            ->get()
+            ->map(fn (FcForm $form) => trim((string) ($form->courseMaster?->course_name ?? '')))
+            ->filter();
 
         $fromMaster = FcActivityMaster::query()
             ->whereNotNull('ccode')
@@ -45,7 +58,7 @@ class FcActivityMasterManageController extends Controller
             ->map(fn ($c) => trim((string) $c))
             ->filter();
 
-        return $fromSessions->merge($fromMaster)->unique()->sort()->values();
+        return $fromForms->merge($fromMaster)->unique()->sort()->values();
     }
 
     public function dataTable(Request $request): JsonResponse
@@ -83,11 +96,14 @@ class FcActivityMasterManageController extends Controller
                 $json = e(json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT));
                 $destroy = route('fc-reg.admin.activity-setup.masters.destroy', $m);
 
-                return '<button type="button" class="btn btn-link btn-sm p-0 js-master-edit" data-bs-toggle="modal" data-bs-target="#modalMasterEdit" data-master-edit="'.$json.'">Edit</button>'
-                    .'<form action="'.e($destroy).'" method="POST" class="d-inline" onsubmit="return confirm(\'Delete activity master? Existing OT rows may orphan.\')">'
+                return '<span class="d-inline-flex align-items-center gap-1 flex-shrink-0">'
+                    .'<button type="button" class="btn btn-link btn-sm p-0 js-master-edit" data-bs-toggle="modal" data-bs-target="#modalMasterEdit" data-master-edit="'.$json.'" aria-label="Edit activity">'
+                    .'<i class="bi bi-pencil" aria-hidden="true"></i></button>'
+                    .'<form action="'.e($destroy).'" method="POST" class="d-inline m-0" onsubmit="return confirm(\'Delete activity master? Existing OT rows may orphan.\')">'
                     .csrf_field().method_field('DELETE')
                     .'<input type="hidden" name="return_department_id" value="'.e($returnDept).'">'
-                    .'<button type="submit" class="btn btn-link btn-sm text-danger p-0">Delete</button></form>';
+                    .'<button type="submit" class="btn btn-link btn-sm text-danger p-0" aria-label="Delete activity">'
+                    .'<i class="bi bi-trash" aria-hidden="true"></i></button></form></span>';
             })
             ->rawColumns(['menuid', 'action'])
             ->toJson();

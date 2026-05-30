@@ -202,22 +202,6 @@
                             @enderror
                         </div>
 
-                        <div class="col-md-6" id="exemptionCategoryWrap">
-                            <label for="fc_exemption_master_pk" class="form-label">Exemption Category</label>
-                            <select id="fc_exemption_master_pk" name="fc_exemption_master_pk"
-                                class="form-select @error('fc_exemption_master_pk') is-invalid @enderror">
-                                <option value="">-- Select exemption category --</option>
-                                @foreach ($exemptionCategories as $pk => $name)
-                                    <option value="{{ $pk }}"
-                                        {{ (string) old('fc_exemption_master_pk', $registration->fc_exemption_master_pk ?? '') === (string) $pk ? 'selected' : '' }}>
-                                        {{ $name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                            @error('fc_exemption_master_pk')
-                                <div class="invalid-feedback">{{ $message }}</div>
-                            @enderror
-                        </div>
                     </div>
 
                     <hr class="mt-4">
@@ -231,28 +215,3 @@
         </div>
     </div>
 @endsection
-
-@push('scripts')
-    <script>
-        (function () {
-            var typeSelect = document.getElementById('application_type');
-            var exemptionWrap = document.getElementById('exemptionCategoryWrap');
-            var exemptionSelect = document.getElementById('fc_exemption_master_pk');
-            if (!typeSelect || !exemptionWrap) return;
-
-            function syncExemptionField() {
-                var isExemption = typeSelect.value === '2';
-                exemptionWrap.style.display = isExemption ? '' : 'none';
-                if (exemptionSelect) {
-                    exemptionSelect.required = isExemption;
-                    if (!isExemption) {
-                        exemptionSelect.value = '';
-                    }
-                }
-            }
-
-            typeSelect.addEventListener('change', syncExemptionField);
-            syncExemptionField();
-        })();
-    </script>
-@endpush

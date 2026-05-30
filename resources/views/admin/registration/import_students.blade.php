@@ -4,14 +4,6 @@
 
 @push('styles')
     <style>
-        #fc-migrate-page .enrollment-dt-wrap .dataTables_filter {
-            text-align: right;
-        }
-
-        #fc-migrate-page .enrollment-dt-wrap .dataTables_filter label {
-            font-weight: 600;
-        }
-
         #fc-migrate-page thead th {
             white-space: nowrap;
             vertical-align: middle;
@@ -95,6 +87,79 @@
             padding: 0.125rem 0.5rem;
             font-size: 0.875rem;
         }
+
+        /* Export toolbar — same placement as FC status grid (datatable-tools) */
+        #fc-migrate-page .fc-dt-toolbar-wrap,
+        #fc-migrate-page .fc-migrate-export-toolbar {
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        #fc-migrate-page .dataTables_wrapper .dataTables_filter {
+            text-align: right;
+        }
+
+        #fc-migrate-page .dataTables_wrapper .dataTables_filter label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 0;
+            font-weight: 600;
+        }
+
+        #fc-migrate-page .dataTables_wrapper .dataTables_filter {
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            flex-wrap: wrap;
+            gap: 8px;
+        }
+
+        #fc-migrate-page .dataTables_wrapper .dataTables_filter .fc-dt-toolbar-wrap {
+            display: inline-flex;
+        }
+
+        #fc-migrate-page .dataTables_wrapper .dataTables_filter input {
+            height: 32px;
+            margin-left: 0 !important;
+        }
+
+        #fc-migrate-page .fc-dt-toolbar-wrap .btn {
+            border-radius: 6px !important;
+            font-size: 12px;
+            padding: 6px 10px;
+            line-height: 1.2;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            white-space: nowrap;
+        }
+
+        #fc-migrate-page .fc-dt-toolbar-wrap .btn .material-icons {
+            font-size: 16px;
+        }
+
+        #fc-migrate-page .fc-dt-toolbar-wrap .btn-group .btn {
+            border-radius: 0 !important;
+        }
+
+        #fc-migrate-page .fc-dt-toolbar-wrap .btn-group .btn:first-child {
+            border-top-left-radius: 6px !important;
+            border-bottom-left-radius: 6px !important;
+        }
+
+        #fc-migrate-page .fc-dt-toolbar-wrap .btn-group .btn:last-child {
+            border-top-right-radius: 6px !important;
+            border-bottom-right-radius: 6px !important;
+        }
+
+        /* Keep inactive tab hidden if DataTables redraw disturbs Bootstrap .show */
+        #fc-migrate-page #fcMigrateTabContent > .tab-pane:not(.show) {
+            display: none !important;
+        }
     </style>
 @endpush
 
@@ -118,11 +183,12 @@
         <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-header">
                 <div class="row align-items-center">
-                    <div class="col-md-8">
+                    <div class="col-md-12">
                         <h4 class="mb-1">Migrate FC Students</h4>
                         <p class="mb-0 text-muted small">
-                            View all Excel-imported roster rows, or switch to <strong>Ready to migrate</strong> to promote eligible trainees
-                            into <strong>student_master</strong> and <strong>user_credentials</strong>.
+                            <strong>Migrated</strong> lists roster rows already in <strong>user_credentials</strong>.
+                            <strong>Ready to migrate</strong> promotes eligible trainees into <strong>student_master</strong> and <strong>user_credentials</strong>.
+                            <strong>Print</strong>, <strong>PDF</strong>, and <strong>Excel</strong> are next to the table search (same as activity status grid).
                         </p>
                     </div>
                 </div>
@@ -169,12 +235,12 @@
                             <button type="button" id="resetFilterBtn" class="btn btn-outline-secondary btn-sm">
                                 Reset
                             </button>
-                            <span class="text-muted small ms-2" id="migrateTabCounts">
+                            <span class="text-muted small ms-2 d-none" id="migrateTabCounts">
                                 Eligible: <strong id="migrateRecordCount">0</strong>
                                 · Selected: <strong id="migrateSelectedCount">0</strong>
                             </span>
-                            <span class="text-muted small ms-2 d-none" id="importedTabCounts">
-                                Imported: <strong id="importedRecordCount">0</strong>
+                            <span class="text-muted small ms-2" id="migratedTabCounts">
+                                Migrated: <strong id="migratedRecordCount">0</strong>
                             </span>
                         </div>
                     </div>
@@ -184,10 +250,10 @@
             <div class="card-body">
                 <ul class="nav nav-tabs mb-3" id="fcMigrateTabs" role="tablist">
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="tab-imported" data-bs-toggle="tab"
-                            data-bs-target="#pane-imported" type="button" role="tab"
-                            aria-controls="pane-imported" aria-selected="true">
-                            All imported records
+                        <button class="nav-link active" id="tab-migrated" data-bs-toggle="tab"
+                            data-bs-target="#pane-migrated" type="button" role="tab"
+                            aria-controls="pane-migrated" aria-selected="true">
+                            Migrated
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
@@ -200,14 +266,17 @@
                 </ul>
 
                 <div class="tab-content" id="fcMigrateTabContent">
-                    <div class="tab-pane fade show active" id="pane-imported" role="tabpanel"
-                        aria-labelledby="tab-imported" tabindex="0">
+                    <div class="tab-pane fade show active" id="pane-migrated" role="tabpanel"
+                        aria-labelledby="tab-migrated" tabindex="0">
                         <p class="text-muted small mb-3">
-                            Every row in <strong>fc_registration_master</strong> from Excel import.
-                            Status shows progress: imported → credentials → forms complete → ready to migrate → migrated.
+                            Roster rows already linked to <strong>user_credentials</strong>
+                            (match on username, mobile, or email). These trainees have been migrated.
                         </p>
+                        <div class="d-none fc-export-toolbar-source" id="fcExportBarMigrated" aria-hidden="true">
+                            @include('admin.registration.partials.migrate-export-toolbar')
+                        </div>
                         <div class="table-responsive enrollment-dt-wrap">
-                            {!! $importedDataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100']) !!}
+                            {!! $migratedDataTable->table(['class' => 'table table-striped table-hover table-sm align-middle w-100']) !!}
                         </div>
                     </div>
 
@@ -221,13 +290,19 @@
                                 <h5 class="mb-0">
                                     Eligible records (<span id="migrateRecordCountHeader">0</span>)
                                 </h5>
-                                <button type="submit" class="btn btn-primary btn-sm" id="migrateSubmitBtn">
-                                    <i class="bi bi-database-up"></i> Migrate selected
-                                </button>
+                                <div class="d-flex flex-wrap gap-2 align-items-center">
+                                    <div class="d-none fc-export-toolbar-source" id="fcExportBarEligible" aria-hidden="true">
+                                        @include('admin.registration.partials.migrate-export-toolbar')
+                                    </div>
+                                    <button type="submit" class="btn btn-primary btn-sm" id="migrateSubmitBtn">
+                                        <i class="bi bi-database-up"></i> Migrate selected
+                                    </button>
+                                </div>
                             </div>
 
                             <p class="text-muted small mb-3">
-                                <strong>is_registered = 1</strong>, credentials staged, not yet in <strong>user_credentials</strong>.
+                                <strong>is_registered = 1</strong>, credentials staged, and no row in <strong>user_credentials</strong>
+                                with the same <strong>username</strong>, <strong>mobile</strong>, or <strong>email</strong> as this roster row.
                             </p>
 
                             <div class="table-responsive enrollment-dt-wrap">
@@ -242,17 +317,145 @@
 @endsection
 
 @push('scripts')
-    {!! $importedDataTable->scripts() !!}
+    {!! $migratedDataTable->scripts() !!}
     {!! $dataTable->scripts() !!}
     <script>
         $(function() {
+            var tabCountsUrl = @json(route('students.tab.counts'));
+            var eligibleTableBootstrapped = false;
+
+            var exportBases = {
+                migrated: {
+                    print: @json(route('students.export.print', ['list' => 'migrated'])),
+                    pdf: @json(route('students.export.pdf', ['list' => 'migrated'])),
+                    excel: @json(route('students.export.excel', ['list' => 'migrated']))
+                },
+                eligible: {
+                    print: @json(route('students.export.print', ['list' => 'eligible'])),
+                    pdf: @json(route('students.export.pdf', ['list' => 'eligible'])),
+                    excel: @json(route('students.export.excel', ['list' => 'eligible']))
+                }
+            };
+
+            function activeExportList() {
+                return document.getElementById('tab-migrate')?.classList.contains('active') ? 'eligible' : 'migrated';
+            }
+
+            function filterCourseValue() {
+                var el = document.getElementById('filter_course');
+                if (!el) {
+                    return '';
+                }
+                if (el._choicesBs && typeof el._choicesBs.getValue === 'function') {
+                    // getValue(true) returns the raw value string for single-select (not {value, label})
+                    var picked = el._choicesBs.getValue(true);
+                    if (picked !== null && picked !== undefined && picked !== '') {
+                        return String(picked);
+                    }
+                }
+                return String($(el).val() || '');
+            }
+
+            function migrateExportQueryString() {
+                var p = new URLSearchParams();
+                var c = filterCourseValue();
+                var s = $('#filter_services').val();
+                var q = ($('#filter_search').val() || '').trim();
+                if (c) {
+                    p.set('course_filter', c);
+                }
+                if (s && s.length) {
+                    if (Array.isArray(s)) {
+                        s.forEach(function (id) { p.append('filter_services[]', id); });
+                    } else {
+                        p.set('filter_services', s);
+                    }
+                }
+                if (q) {
+                    p.set('filter_search', q);
+                }
+                return p.toString();
+            }
+
+            function refreshMigrateExportLinks() {
+                var list = activeExportList();
+                var bases = exportBases[list];
+                var suffix = migrateExportQueryString();
+                suffix = suffix ? ('?' + suffix) : '';
+                $('.js-migrate-export-print').attr('href', bases.print + suffix);
+                $('.js-migrate-export-pdf').attr('href', bases.pdf + suffix);
+                $('.js-migrate-export-excel').attr('href', bases.excel + suffix);
+            }
+
+            function activeTableId() {
+                return activeExportList() === 'eligible' ? 'fcMigrateStudentsTable' : 'fcMigratedRosterTable';
+            }
+
+            function isMigrateTabActive() {
+                return document.getElementById('tab-migrate')?.classList.contains('active') === true;
+            }
+
+            function enforceFcMigrateTabs() {
+                var migrateOn = isMigrateTabActive();
+                var $paneMigrated = $('#pane-migrated');
+                var $paneMigrate = $('#pane-migrate');
+                if (migrateOn) {
+                    $paneMigrated.removeClass('show active');
+                    $paneMigrate.addClass('show active');
+                } else {
+                    $paneMigrate.removeClass('show active');
+                    $paneMigrated.addClass('show active');
+                }
+            }
+
+            function ensureDataTableInPane(tableId, paneId) {
+                var $pane = document.getElementById(paneId);
+                if (!$pane) {
+                    return;
+                }
+                var $wrap = $($pane).find('.enrollment-dt-wrap').first();
+                var $table = $('#' + tableId);
+                if (!$wrap.length || !$table.length) {
+                    return;
+                }
+                var $wrapper = $table.closest('.dataTables_wrapper');
+                if ($wrapper.length && $wrapper.closest($pane).length === 0) {
+                    $wrap.append($wrapper);
+                }
+            }
+
+            function mountMigrateExportToolbar(retries) {
+                retries = retries || 0;
+                var tableId = activeTableId();
+                var isMigrate = activeExportList() === 'eligible';
+                var $source = isMigrate ? $('#fcExportBarEligible .fc-migrate-export-toolbar').first() : $('#fcExportBarMigrated .fc-migrate-export-toolbar').first();
+                var $filter = $('#' + tableId).closest('.dataTables_wrapper').find('.dataTables_filter');
+                if (!$filter.length) {
+                    if (retries < 15) {
+                        setTimeout(function () { mountMigrateExportToolbar(retries + 1); }, 120);
+                    }
+                    return;
+                }
+                $filter.find('.fc-dt-toolbar-clone').remove();
+                if ($source.length) {
+                    var $clone = $source.clone();
+                    $clone.addClass('fc-dt-toolbar-clone').removeClass('fc-migrate-export-toolbar');
+                    $filter.append($clone);
+                }
+                refreshMigrateExportLinks();
+            }
+
+            refreshMigrateExportLinks();
+            $('#filter_course, #filter_services').on('change', refreshMigrateExportLinks);
+            $('#filter_search').on('input', refreshMigrateExportLinks);
+
             var migrateRoot = document.getElementById('fc-migrate-page');
             if (migrateRoot && typeof window.initChoicesBootstrap5In === 'function') {
                 window.initChoicesBootstrap5In(migrateRoot);
             }
 
             var migrateTable = window.LaravelDataTables && window.LaravelDataTables['fcMigrateStudentsTable'];
-            var importedTable = window.LaravelDataTables && window.LaravelDataTables['fcImportedRosterTable'];
+            var migratedTable = window.LaravelDataTables && window.LaravelDataTables['fcMigratedRosterTable'];
             if (!migrateTable) {
                 return;
             }
@@ -269,12 +472,18 @@
                 return $migrateWrapper().find('thead .js-migrate-select-all');
             }
 
-            function syncImportedRecordCount() {
-                if (!importedTable) {
+            function syncFilterCountVisibility() {
+                var migrateOn = isMigrateTabActive();
+                $('#migrateTabCounts').toggleClass('d-none', !migrateOn);
+                $('#migratedTabCounts').toggleClass('d-none', migrateOn);
+            }
+
+            function syncMigratedRecordCount() {
+                if (!migratedTable) {
                     return;
                 }
-                var info = importedTable.page.info();
-                $('#importedRecordCount').text(info.recordsTotal || 0);
+                var info = migratedTable.page.info();
+                $('#migratedRecordCount').text(info.recordsTotal || 0);
             }
 
             function syncMigrateCheckboxState() {
@@ -298,11 +507,71 @@
                 syncMigrateCheckboxState();
             }
 
-            function reloadTables() {
-                if (importedTable) {
-                    importedTable.ajax.reload(null, false);
+            function refreshTabCounts() {
+                var qs = migrateExportQueryString();
+                var url = tabCountsUrl + (qs ? ('?' + qs) : '');
+                return $.getJSON(url).done(function (data) {
+                    if (data && typeof data.migrated !== 'undefined') {
+                        $('#migratedRecordCount').text(data.migrated);
+                    }
+                    if (data && typeof data.eligible !== 'undefined') {
+                        $('#migrateRecordCount, #migrateRecordCountHeader').text(data.eligible);
+                    }
+                });
+            }
+
+            function bootstrapEligibleTableIfNeeded(done) {
+                if (eligibleTableBootstrapped) {
+                    if (typeof done === 'function') {
+                        done();
+                    }
+                    return;
                 }
-                migrateTable.ajax.reload(null, false);
+                migrateTable.ajax.reload(function () {
+                    eligibleTableBootstrapped = true;
+                    syncMigrateCheckboxState();
+                    if (typeof done === 'function') {
+                        done();
+                    }
+                }, false);
+            }
+
+            function reloadTables() {
+                var migrateActive = isMigrateTabActive();
+                refreshTabCounts();
+
+                function afterReload() {
+                    enforceFcMigrateTabs();
+                    syncFilterCountVisibility();
+                    if (migrateActive) {
+                        ensureDataTableInPane('fcMigrateStudentsTable', 'pane-migrate');
+                        migrateTable.columns.adjust();
+                        mountMigrateExportToolbar(0);
+                    } else if (migratedTable) {
+                        ensureDataTableInPane('fcMigratedRosterTable', 'pane-migrated');
+                        migratedTable.columns.adjust();
+                        mountMigrateExportToolbar(0);
+                    }
+                }
+
+                if (migrateActive) {
+                    if (eligibleTableBootstrapped) {
+                        migrateTable.ajax.reload(function () {
+                            syncMigrateCheckboxState();
+                            afterReload();
+                        }, false);
+                    } else {
+                        bootstrapEligibleTableIfNeeded(afterReload);
+                    }
+                    return;
+                }
+
+                if (migratedTable) {
+                    migratedTable.ajax.reload(function () {
+                        syncMigratedRecordCount();
+                        afterReload();
+                    }, false);
+                }
             }
 
             $('#filterBtn').on('click', function() {
@@ -338,23 +607,36 @@
             document.querySelectorAll('#fcMigrateTabs button[data-bs-toggle="tab"]').forEach(function(btn) {
                 btn.addEventListener('shown.bs.tab', function(e) {
                     var isMigrate = e.target && e.target.id === 'tab-migrate';
-                    $('#migrateTabCounts').toggleClass('d-none', !isMigrate);
-                    $('#importedTabCounts').toggleClass('d-none', isMigrate);
-                    if (!isMigrate && importedTable) {
-                        importedTable.columns.adjust();
+                    enforceFcMigrateTabs();
+                    syncFilterCountVisibility();
+                    refreshMigrateExportLinks();
+                    if (!isMigrate && migratedTable) {
+                        ensureDataTableInPane('fcMigratedRosterTable', 'pane-migrated');
+                        migratedTable.columns.adjust();
+                        mountMigrateExportToolbar(0);
                     } else if (isMigrate) {
-                        migrateTable.columns.adjust();
+                        bootstrapEligibleTableIfNeeded(function () {
+                            ensureDataTableInPane('fcMigrateStudentsTable', 'pane-migrate');
+                            migrateTable.columns.adjust();
+                            mountMigrateExportToolbar(0);
+                        });
                     }
                 });
             });
 
-            if (importedTable) {
-                importedTable.on('init.dt draw.dt', function() {
-                    requestAnimationFrame(syncImportedRecordCount);
+            if (migratedTable) {
+                migratedTable.on('init.dt', function () {
+                    ensureDataTableInPane('fcMigratedRosterTable', 'pane-migrated');
+                    if (!isMigrateTabActive()) {
+                        mountMigrateExportToolbar(0);
+                    }
+                });
+                migratedTable.on('draw.dt', function() {
+                    requestAnimationFrame(syncMigratedRecordCount);
                 });
             }
 
-            migrateTable.on('init.dt draw.dt', function() {
+            migrateTable.on('draw.dt', function() {
                 requestAnimationFrame(syncMigrateCheckboxState);
             });
 
@@ -386,9 +668,14 @@
                 $('#selectedPksInput').val(pks.join(','));
             });
 
+            syncFilterCountVisibility();
+            refreshTabCounts();
+
             requestAnimationFrame(function() {
-                syncImportedRecordCount();
-                syncMigrateCheckboxState();
+                mountMigrateExportToolbar(0);
+                if (migratedTable) {
+                    syncMigratedRecordCount();
+                }
             });
         });
     </script>

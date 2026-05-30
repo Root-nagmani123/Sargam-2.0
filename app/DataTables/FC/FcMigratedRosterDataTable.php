@@ -2,13 +2,13 @@
 
 namespace App\DataTables\FC;
 
+use App\Services\FC\FcMigrateStudentsExportService;
 use Illuminate\Database\Query\Builder;
-use Illuminate\Support\Facades\DB;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
 
-class FcImportedRosterDataTable extends DataTable
+class FcMigratedRosterDataTable extends DataTable
 {
     public function dataTable($query)
     {
@@ -23,23 +23,8 @@ class FcImportedRosterDataTable extends DataTable
 
                 return e($parts ? strtoupper(implode(' ', $parts)) : ($row->display_name ?? '—'));
             })
-            ->addColumn('roster_status', function ($row) {
-                if ($row->uc_pk) {
-                    return '<span class="badge bg-success">Migrated</span>';
-                }
-                if ((int) ($row->is_registered ?? 0) === 1
-                    && trim((string) ($row->user_id ?? '')) !== ''
-                    && trim((string) ($row->password ?? '')) !== '') {
-                    return '<span class="badge bg-primary">Ready to migrate</span>';
-                }
-                if ((int) ($row->is_registered ?? 0) === 1) {
-                    return '<span class="badge bg-info text-dark">Forms complete</span>';
-                }
-                if (trim((string) ($row->user_id ?? '')) !== '') {
-                    return '<span class="badge bg-warning text-dark">Credentials staged</span>';
-                }
-
-                return '<span class="badge bg-secondary">Imported</span>';
+            ->addColumn('roster_status', function () {
+                return '<span class="badge bg-success">Migrated</span>';
             })
             ->filterColumn('student_name', function ($query, $keyword) {
                 $query->where(function ($q) use ($keyword) {
@@ -72,79 +57,37 @@ class FcImportedRosterDataTable extends DataTable
 
     public function query(): Builder
     {
-        $query = DB::table('fc_registration_master as r')
-            ->leftJoin('service_master as s', 'r.service_master_pk', '=', 's.pk')
-            ->leftJoin('course_master as c', 'r.course_master_pk', '=', 'c.pk')
-            ->leftJoin('user_credentials as uc', 'uc.user_name', '=', 'r.user_id')
-            ->select([
-                'r.pk',
-                'r.user_id',
-                'r.email',
-                'r.contact_no',
-                'r.first_name',
-                'r.middle_name',
-                'r.last_name',
-                'r.display_name',
-                'r.rank',
-                'r.exam_year',
-                'r.is_registered',
-                'r.generated_OT_code',
-                'r.course_master_pk',
-                'r.service_master_pk',
-                'r.password',
-                's.service_name',
-                's.service_short_name',
-                'c.course_name',
-                'c.couse_short_name as course_short_name',
-                'uc.pk as uc_pk',
-            ]);
-
-        if ($course = request('filter_course')) {
-            $query->where('r.course_master_pk', (int) $course);
-        }
-
-        if ($services = request('filter_services')) {
-            $ids = is_array($services) ? $services : explode(',', (string) $services);
-            $ids = array_filter(array_map('intval', $ids));
-            if ($ids !== []) {
-                $query->whereIn('r.service_master_pk', $ids);
-            }
-        }
-
-        if ($search = trim((string) request('filter_search'))) {
-            $query->where(function ($q) use ($search) {
-                $q->where('r.user_id', 'like', "%{$search}%")
-                    ->orWhere('r.email', 'like', "%{$search}%")
-                    ->orWhere('r.contact_no', 'like', "%{$search}%")
-                    ->orWhere('r.first_name', 'like', "%{$search}%")
-                    ->orWhere('r.last_name', 'like', "%{$search}%")
-                    ->orWhere('r.generated_OT_code', 'like', "%{$search}%")
-                    ->orWhere('c.course_name', 'like', "%{$search}%")
-                    ->orWhere('c.couse_short_name', 'like', "%{$search}%")
-                    ->orWhere('s.service_name', 'like', "%{$search}%")
-                    ->orWhere('s.service_short_name', 'like', "%{$search}%");
-            });
-        }
-
-        return $query;
+        return app(FcMigrateStudentsExportService::class)->migratedQuery(request());
     }
 
     public function html(): HtmlBuilder
     {
         $ajaxData = <<<'JS'
 function (d) {
-    d.filter_course = document.getElementById('filter_course')?.value || '';
+    var courseEl = document.getElementById('filter_course');
+    var courseVal = '';
+    if (courseEl) {
+        if (courseEl._choicesBs && typeof courseEl._choicesBs.getValue === 'function') {
+            var picked = courseEl._choicesBs.getValue(true);
+            if (picked !== null && picked !== undefined && picked !== '') {
+                courseVal = String(picked);
+            }
+        } else {
+            courseVal = courseEl.value || '';
+        }
+    }
+    d.course_filter = courseVal;
     d.filter_services = $('#filter_services').val() || [];
     d.filter_search = document.getElementById('filter_search')?.value || '';
 }
 JS;
 
         return $this->builder()
-            ->setTableId('fcImportedRosterTable')
+            ->setTableId('fcMigratedRosterTable')
             ->addTableClass('table table-striped table-hover table-sm align-middle w-100')
             ->columns($this->getColumns())
             ->ajax([
-                'url' => route('students.imported.index'),
+                'url' => route('students.migrated.index'),
                 'type' => 'GET',
                 'data' => $ajaxData,
             ])
@@ -189,7 +132,7 @@ JS;
 
     protected function filename(): string
     {
-        return 'FcImportedRoster_'.date('YmdHis');
+        return 'FcMigratedRoster_'.date('YmdHis');
     }
 
     private function formatNameWithShort(?string $name, ?string $short): string

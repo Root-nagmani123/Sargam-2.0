@@ -20,7 +20,8 @@
                 <li class="sidebar-panel-submenu-tree">
                     <ul class="list-unstyled mb-0">
                         <li class="sidebar-item mb-1">
-                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2" href="{{ route('frontpage.index') }}" target="_blank">
+                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2" href="{{ route('frontpage.index') }}" target="_blank"
+                                title="Generic landing page (no programme in URL). For a named programme, copy Landing Page URL from Form Management → Edit form.">
                                 <span class="hide-menu small small-sm-normal text-nowrap">User Landing Page (User)</span>
                             </a>
                         </li>
