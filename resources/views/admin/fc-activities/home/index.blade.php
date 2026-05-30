@@ -128,7 +128,7 @@
                 data-filter-activity="#fcGridActivity">
                 <thead class="table-light">
                     <tr>
-                        <th>#</th><th>Name</th><th>OT Code</th><th>Course</th><th>Activity</th><th>Value</th><th>Date/Time</th><th class="fc-dt-no-export">Action</th>
+                        <th>#</th><th>Name</th><th>OT Code</th><th>Course</th><th>Activity</th><th>Value</th><th>Date/Time</th><th class="fc-dt-no-export text-end text-nowrap">Action</th>
                     </tr>
                 </thead>
                 <tbody></tbody>

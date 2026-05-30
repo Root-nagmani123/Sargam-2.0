@@ -228,6 +228,11 @@
             </div>
 
             <h6 class="text-uppercase small fw-bold text-muted mb-2">Landing Page URL for Users</h6>
+            <p class="small text-muted mb-2">
+                Share <strong>this</strong> link for <strong>{{ $form->form_name }}</strong>. The public page shows
+                “Programme link recognised … {{ $form->form_name }}” only when candidates open a URL that includes
+                this form token — not the generic “User Landing Page” menu link.
+            </p>
             <div class="input-group">
                 <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
                 <input type="text" class="form-control" readonly value="{{ route('frontpage.index', ['form' => $form->getRouteKey()]) }}" id="landingUrl">

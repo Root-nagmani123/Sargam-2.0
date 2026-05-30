@@ -1,10 +1,96 @@
 @extends('admin.layouts.master')
 @section('title', 'Student Profile – ' . ($displayName ?? $userId))
 
-@section('setup_content')
-<div class="container-fluid px-3">
+@push('styles')
+<style>
+    @page {
+        size: A4;
+        margin: 10mm;
+    }
+    @media print {
+        html, body {
+            background: #fff !important;
+            height: auto !important;
+        }
+        body {
+            margin: 0 !important;
+            padding: 0 !important;
+        }
 
-    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        .sargam-loader,
+        #sargamLoader,
+        .topbar,
+        header.topbar,
+        .header-top-bar,
+        .left-sidebar,
+        .side-mini-panel,
+        aside.side-mini-panel,
+        #sidebarTabContent,
+        .mobile-tabbar,
+        #mainNavbar,
+        .navbar,
+        footer,
+        .no-print {
+            display: none !important;
+        }
+
+        #main-wrapper,
+        .page-wrapper,
+        .body-wrapper,
+        #main-content,
+        #mainNavbarContent,
+        #tab-setup {
+            margin: 0 !important;
+            padding: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            border: none !important;
+            box-shadow: none !important;
+        }
+
+        body * {
+            visibility: hidden;
+        }
+        .student-report-print-area,
+        .student-report-print-area * {
+            visibility: visible !important;
+        }
+        .student-report-print-area {
+            position: absolute;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            padding: 0 8px !important;
+            box-sizing: border-box;
+        }
+
+        .student-report-print-area .card {
+            box-shadow: none !important;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+        .student-report-print-area .card-header {
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .student-report-print-area table {
+            font-size: 11px !important;
+        }
+        .student-report-print-area tr {
+            page-break-inside: avoid;
+        }
+        .student-report-print-area a[href]:after {
+            content: none !important;
+        }
+    }
+</style>
+@endpush
+
+@section('setup_content')
+<div class="container-fluid px-3 student-report-page">
+
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2 no-print">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 small">
                 <li class="breadcrumb-item">
@@ -22,6 +108,8 @@
             </button>
         </div>
     </div>
+
+    <div class="student-report-print-area">
 
     <div class="card border-0 shadow-sm mb-3" style="border-radius:10px;background:linear-gradient(90deg,#1a3c6e,#2e6da4);color:#fff;">
         <div class="card-body py-3 px-4 d-flex align-items-center gap-4 flex-wrap">
@@ -157,6 +245,9 @@
                                                 <button type="submit" class="btn btn-sm btn-outline-primary px-2">Save</button>
                                             </div>
                                         </form>
+                                        @if($doc->remarks)
+                                            <div class="d-none d-print-block small text-muted">{{ $doc->remarks }}</div>
+                                        @endif
                                     @else
                                         <span class="text-muted">Not uploaded</span>
                                     @endif
@@ -177,5 +268,7 @@
             </div>
         </div>
     </div>
+
+    </div>{{-- .student-report-print-area --}}
 </div>
 @endsection

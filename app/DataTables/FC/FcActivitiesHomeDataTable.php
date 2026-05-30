@@ -120,11 +120,14 @@ class FcActivitiesHomeDataTable extends DataTable
                 $json = e(json_encode($payload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT));
                 $destroy = route('fc-reg.admin.activities.destroy', $r->activityid);
 
-                return '<button type="button" class="btn btn-link btn-sm p-0 js-fc-act-edit" data-bs-toggle="modal" data-bs-target="#modalFcActEdit" data-fc-act-edit="'.$json.'">Edit</button>'
-                    .'<form method="POST" action="'.e($destroy).'" class="d-inline" onsubmit="return confirm(\'Delete this record?\')">'
+                return '<span class="d-inline-flex align-items-center gap-1 flex-shrink-0">'
+                    .'<button type="button" class="btn btn-link btn-sm p-0 js-fc-act-edit" data-bs-toggle="modal" data-bs-target="#modalFcActEdit" data-fc-act-edit="'.$json.'" aria-label="Edit activity">'
+                    .'<i class="bi bi-pencil" aria-hidden="true"></i></button>'
+                    .'<form method="POST" action="'.e($destroy).'" class="d-inline m-0" onsubmit="return confirm(\'Delete this record?\')">'
                     .'<input type="hidden" name="_token" value="'.e(csrf_token()).'">'
                     .'<input type="hidden" name="_method" value="DELETE">'
-                    .'<button type="submit" class="btn btn-link btn-sm text-danger p-0 ms-1">Delete</button></form>';
+                    .'<button type="submit" class="btn btn-link btn-sm text-danger p-0" aria-label="Delete activity">'
+                    .'<i class="bi bi-trash" aria-hidden="true"></i></button></form></span>';
             })
             ->rawColumns(['action'])
             ->only([

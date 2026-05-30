@@ -516,17 +516,20 @@
                                     d.filter_activity = fcActSel ? String($(fcActSel).val() || '').trim() : '';
                                 }
                             },
+                            columnDefs: [
+                                { targets: -1, className: 'fc-dt-no-export text-end text-nowrap', width: '5.25rem' }
+                            ],
                             columns: [
-                                { data: null, name: 'rownum', searchable: false, orderable: false, className: 'text-muted text-nowrap', render: function (data, type, row, meta) {
+                                { data: null, name: 'rownum', title: '#', searchable: false, orderable: false, className: 'text-muted text-nowrap', render: function (data, type, row, meta) {
                                     return meta.row + 1 + meta.settings._iDisplayStart;
                                 }},
-                                { data: 'ot_name', name: 'ot_name', searchable: false, orderable: true },
-                                { data: 'ot_code', name: 'ot_code', searchable: false, orderable: true },
-                                { data: 'course', name: 'course', searchable: true, orderable: true },
-                                { data: 'activity_label', name: 'activity_label', searchable: false, orderable: true },
-                                { data: 'activityval', name: 'activityval', searchable: true, orderable: true },
-                                { data: 'activitydt', name: 'activitydt', searchable: true, orderable: true },
-                                { data: 'action', name: 'action', searchable: false, orderable: false, className: 'fc-dt-no-export', render: function (d) { return d; } }
+                                { data: 'ot_name', name: 'ot_name', title: 'Name', searchable: false, orderable: true },
+                                { data: 'ot_code', name: 'ot_code', title: 'OT Code', searchable: false, orderable: true },
+                                { data: 'course', name: 'course', title: 'Course', searchable: true, orderable: true },
+                                { data: 'activity_label', name: 'activity_label', title: 'Activity', searchable: false, orderable: true },
+                                { data: 'activityval', name: 'activityval', title: 'Value', searchable: true, orderable: true },
+                                { data: 'activitydt', name: 'activitydt', title: 'Date/Time', searchable: true, orderable: true },
+                                { data: 'action', name: 'action', title: 'Action', searchable: false, orderable: false, render: function (d) { return d; } }
                             ],
                             dom: commonDom,
                             buttons: [excelBtn]
