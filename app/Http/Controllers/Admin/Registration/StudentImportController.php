@@ -2,20 +2,32 @@
 
 namespace App\Http\Controllers\Admin\Registration;
 
-use App\DataTables\FC\FcImportedRosterDataTable;
+use App\DataTables\FC\FcMigratedRosterDataTable;
 use App\DataTables\FC\FcMigrateStudentsDataTable;
+use App\Exports\FcRosterListExport;
+use App\Http\Controllers\Concerns\LbsnaaReportExport;
 use App\Http\Controllers\Controller;
+use App\Services\FC\FcMigrateStudentsExportService;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\View\View;
+use Maatwebsite\Excel\Facades\Excel;
 
 class StudentImportController extends Controller
 {
+    use LbsnaaReportExport;
+
+    public function __construct(private FcMigrateStudentsExportService $exports)
+    {
+    }
+
     public function index(
         FcMigrateStudentsDataTable $migrateDataTable,
-        FcImportedRosterDataTable $importedDataTable
+        FcMigratedRosterDataTable $migratedDataTable
     ) {
         $courses = DB::table('course_master')
             ->where('active_inactive', 1)
@@ -30,13 +42,81 @@ class StudentImportController extends Controller
             'courses' => $courses,
             'services' => $services,
             // Yajra views call table()/scripts() on Html\Builder, not the service class.
-            'importedDataTable' => $importedDataTable->html(),
+            'migratedDataTable' => $migratedDataTable->html(),
         ]);
     }
 
-    public function importedIndex(FcImportedRosterDataTable $dataTable): JsonResponse
+    public function migratedIndex(FcMigratedRosterDataTable $dataTable): JsonResponse
     {
         return $dataTable->ajax();
+    }
+
+    public function tabCounts(Request $request): JsonResponse
+    {
+        return response()->json($this->exports->tabCounts($request));
+    }
+
+    public function exportPrint(Request $request, string $list): View
+    {
+        $list = $this->exports->validateList($list);
+        $payload = $this->exports->buildExportPayload($request, $list);
+
+        return view('admin.registration.export-report', array_merge($payload, [
+            'emblemSrc' => $this->lbsnaaExportEmblemDataUri(),
+            'logoSrc' => $this->lbsnaaExportLogoDataUri(),
+            'autoprint' => $request->boolean('autoprint'),
+            'forPdf' => false,
+        ]));
+    }
+
+    public function exportPdf(Request $request, string $list)
+    {
+        $list = $this->exports->validateList($list);
+
+        @ini_set('memory_limit', '256M');
+        @set_time_limit(120);
+
+        $payload = $this->exports->buildExportPayload($request, $list);
+
+        $pdf = Pdf::loadView('admin.registration.export-report', array_merge($payload, [
+            'emblemSrc' => $this->lbsnaaExportEmblemDataUri(),
+            'logoSrc' => $this->lbsnaaExportLogoDataUri(),
+            'autoprint' => false,
+            'forPdf' => true,
+        ]))
+            ->setPaper('a4', 'landscape')
+            ->setOptions([
+                'defaultFont' => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'dpi' => 96,
+            ]);
+
+        $slug = $list === FcMigrateStudentsExportService::LIST_ELIGIBLE ? 'ready-to-migrate' : 'migrated-roster';
+
+        return $pdf->download('fc-migrate-'.$slug.'-'.now()->format('Y-m-d_His').'.pdf');
+    }
+
+    public function exportExcel(Request $request, string $list)
+    {
+        $list = $this->exports->validateList($list);
+        $payload = $this->exports->buildExportPayload($request, $list);
+
+        $slug = $list === FcMigrateStudentsExportService::LIST_ELIGIBLE ? 'ready-to-migrate' : 'migrated-roster';
+        $fileName = 'fc-migrate-'.$slug.'-'.now()->format('Y-m-d_His').'.xlsx';
+
+        return Excel::download(
+            new FcRosterListExport(
+                collect($payload['rows']),
+                $payload['columns'],
+                $payload['filterLine'],
+                $list === FcMigrateStudentsExportService::LIST_ELIGIBLE ? 'Ready to migrate' : 'Migrated roster',
+                $payload['title'],
+                $payload['truncated'],
+                $payload['totalMatching'],
+            ),
+            $fileName
+        );
     }
 
     public function migrate(Request $request)
@@ -88,10 +168,60 @@ class StudentImportController extends Controller
                         ->get()
                         ->keyBy(fn ($row) => $this->normalizeLoginUsername($row->user_id));
 
-                    $existingCredentials = DB::table('user_credentials')
-                        ->whereIn('user_name', $userIds)
-                        ->get()
-                        ->keyBy(fn ($row) => $this->normalizeLoginUsername($row->user_name));
+                    $mobiles = [];
+                    $emails = [];
+                    foreach ($chunkedRecords as $chunkRecord) {
+                        $mobile = trim((string) ($chunkRecord->contact_no ?? ''));
+                        if ($mobile !== '') {
+                            $mobiles[] = $mobile;
+                        }
+                        $email = strtolower(trim((string) ($chunkRecord->email ?? '')));
+                        if ($email !== '') {
+                            $emails[] = $email;
+                        }
+                    }
+                    $mobiles = array_values(array_unique($mobiles));
+                    $emails = array_values(array_unique($emails));
+
+                    if ($userIds === [] && $mobiles === [] && $emails === []) {
+                        $credentialRows = collect();
+                    } else {
+                        $credentialRows = DB::table('user_credentials')
+                            ->where(function ($q) use ($userIds, $mobiles, $emails) {
+                                if ($userIds !== []) {
+                                    $q->whereIn('user_name', $userIds);
+                                }
+                                if ($mobiles !== []) {
+                                    $userIds !== []
+                                        ? $q->orWhereIn('mobile_no', $mobiles)
+                                        : $q->whereIn('mobile_no', $mobiles);
+                                }
+                                if ($emails !== []) {
+                                    ($userIds !== [] || $mobiles !== [])
+                                        ? $q->orWhereIn('email_id', $emails)
+                                        : $q->whereIn('email_id', $emails);
+                                }
+                            })
+                            ->get();
+                    }
+
+                    $existingCredentials = $credentialRows->keyBy(
+                        fn ($row) => $this->normalizeLoginUsername($row->user_name)
+                    );
+                    $existingCredentialsByMobile = $credentialRows
+                        ->filter(function ($row) {
+                            return trim((string) ($row->mobile_no ?? '')) !== '';
+                        })
+                        ->keyBy(function ($row) {
+                            return trim((string) ($row->mobile_no ?? ''));
+                        });
+                    $existingCredentialsByEmail = $credentialRows
+                        ->filter(function ($row) {
+                            return strtolower(trim((string) ($row->email_id ?? ''))) !== '';
+                        })
+                        ->keyBy(function ($row) {
+                            return strtolower(trim((string) ($row->email_id ?? '')));
+                        });
 
                     // Process each record
                     foreach ($chunkedRecords as $record) {
@@ -164,8 +294,13 @@ class StudentImportController extends Controller
                             }
                         }
 
-                        // 2. Handle user_credentials table
-                        $existingCredential = $existingCredentials[$userName] ?? null;
+                        // 2. Handle user_credentials table (match username, mobile, or email — same as list/eligible)
+                        $existingCredential = $this->resolveExistingCredential(
+                            $record,
+                            $existingCredentials,
+                            $existingCredentialsByMobile,
+                            $existingCredentialsByEmail
+                        );
 
                         if (!$existingCredential) {
                             // fc_registration_master → user_credentials (created at migration only)
@@ -227,9 +362,9 @@ class StudentImportController extends Controller
                                 }
                             }
 
-                            // If there are changes, add to update array
+                            // If there are changes, add to update array (keyed by credentials pk — may differ from roster user_id)
                             if (!empty($updateCredentialData)) {
-                                $credentialsToUpdate[$userName] = $updateCredentialData;
+                                $credentialsToUpdate[(int) $existingCredential->pk] = $updateCredentialData;
                             }
                         }
 
@@ -314,17 +449,17 @@ class StudentImportController extends Controller
                     }
 
                     // Batch update credentials
-                    foreach ($credentialsToUpdate as $userName => $updateData) {
+                    foreach ($credentialsToUpdate as $credentialsPk => $updateData) {
                         try {
                             DB::table('user_credentials')
-                                ->where('user_name', '=', $this->normalizeLoginUsername($userName))
+                                ->where('pk', '=', (int) $credentialsPk)
                                 ->update($updateData);
                         } catch (\Exception $e) {
                             continue;
                         }
                     }
 
-                    // Link user_credentials.user_id → student_master.pk (string match on user_name)
+                    // Link user_credentials.user_id → student_master.pk (roster username → student row)
                     foreach ($studentPkByUserId as $userId => $studentPk) {
                         $loginName = $this->normalizeLoginUsername($userId);
                         if ($loginName === '' || !is_numeric($studentPk)) {
@@ -334,6 +469,24 @@ class StudentImportController extends Controller
                         DB::table('user_credentials')
                             ->where('user_name', '=', $loginName)
                             ->update(['user_id' => (int) $studentPk]);
+
+                        // Also link when credentials exist under another user_name but same mobile/email
+                        $rosterRecord = $chunkedRecords->first(
+                            fn ($r) => $this->normalizeLoginUsername($r->user_id ?? '') === $loginName
+                        );
+                        if ($rosterRecord) {
+                            $matched = $this->resolveExistingCredential(
+                                $rosterRecord,
+                                $existingCredentials,
+                                $existingCredentialsByMobile,
+                                $existingCredentialsByEmail
+                            );
+                            if ($matched && $this->normalizeLoginUsername($matched->user_name) !== $loginName) {
+                                DB::table('user_credentials')
+                                    ->where('pk', '=', (int) $matched->pk)
+                                    ->update(['user_id' => (int) $studentPk]);
+                            }
+                        }
                     }
 
                     // Re-key form rows saved with roster pk placeholder → user_credentials.pk
@@ -341,12 +494,14 @@ class StudentImportController extends Controller
                         if (empty($record->user_id) || empty($record->pk)) {
                             continue;
                         }
-                        $loginName = $this->normalizeLoginUsername($record->user_id);
-                        $credentialsPk = DB::table('user_credentials')
-                            ->where('user_name', '=', $loginName)
-                            ->value('pk');
-                        if ($credentialsPk) {
-                            $this->rekeyFcFormUserIdFromRosterPk((int) $record->pk, (int) $credentialsPk);
+                        $existingForRekey = $this->resolveExistingCredential(
+                            $record,
+                            $existingCredentials,
+                            $existingCredentialsByMobile,
+                            $existingCredentialsByEmail
+                        );
+                        if ($existingForRekey && ! empty($existingForRekey->pk)) {
+                            $this->rekeyFcFormUserIdFromRosterPk((int) $record->pk, (int) $existingForRekey->pk);
                         }
                     }
 
@@ -415,12 +570,7 @@ class StudentImportController extends Controller
      */
     private function eligibleRosterQuery()
     {
-        return DB::table('fc_registration_master')
-            ->where('is_registered', 1)
-            ->whereNotNull('user_id')
-            ->where('user_id', '!=', '')
-            ->whereNotNull('password')
-            ->where('password', '!=', '');
+        return $this->exports->eligibleQuery(request());
     }
 
     /**
@@ -429,6 +579,35 @@ class StudentImportController extends Controller
     private function normalizeLoginUsername(mixed $userId): string
     {
         return trim((string) $userId);
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<string, object>  $byUserName
+     * @param  \Illuminate\Support\Collection<string, object>  $byMobile
+     * @param  \Illuminate\Support\Collection<string, object>  $byEmail
+     */
+    private function resolveExistingCredential(
+        object $record,
+        $byUserName,
+        $byMobile,
+        $byEmail
+    ): ?object {
+        $userName = $this->normalizeLoginUsername($record->user_id ?? '');
+        if ($userName !== '' && $byUserName->has($userName)) {
+            return $byUserName->get($userName);
+        }
+
+        $mobile = trim((string) ($record->contact_no ?? ''));
+        if ($mobile !== '' && $byMobile->has($mobile)) {
+            return $byMobile->get($mobile);
+        }
+
+        $email = strtolower(trim((string) ($record->email ?? '')));
+        if ($email !== '' && $byEmail->has($email)) {
+            return $byEmail->get($email);
+        }
+
+        return null;
     }
 
     /**

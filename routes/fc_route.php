@@ -230,7 +230,12 @@ Route::redirect('/foundation-course/status', '/fc/status', 301)->name('foundatio
 
 //admin migration route
 Route::get('/admin/migrate-students', [StudentImportController::class, 'index'])->name('students.index'); // index page
-Route::get('/admin/migrate-students/imported', [StudentImportController::class, 'importedIndex'])->name('students.imported.index');
+Route::get('/admin/migrate-students/counts', [StudentImportController::class, 'tabCounts'])->name('students.tab.counts');
+Route::get('/admin/migrate-students/migrated', [StudentImportController::class, 'migratedIndex'])->name('students.migrated.index');
+Route::get('/admin/migrate-students/imported', [StudentImportController::class, 'migratedIndex'])->name('students.imported.index');
+Route::get('/admin/migrate-students/export/{list}/print', [StudentImportController::class, 'exportPrint'])->name('students.export.print');
+Route::get('/admin/migrate-students/export/{list}/pdf', [StudentImportController::class, 'exportPdf'])->name('students.export.pdf');
+Route::get('/admin/migrate-students/export/{list}/excel', [StudentImportController::class, 'exportExcel'])->name('students.export.excel');
 Route::post('/admin/migrate-fc-registration', [StudentImportController::class, 'migrate'])->name('admin.migrate.fc');
 
 // course enrollment route
