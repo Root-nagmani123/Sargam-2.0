@@ -313,6 +313,26 @@
             '</' + tag + '>'
         );
 
+        var mountEl = document.getElementById('messColManagerMount-' + this.tableId);
+        if (mountEl) {
+            mountEl.innerHTML = '';
+            mountEl.appendChild($dropdown[0]);
+            return;
+        }
+
+        var $searchSlot = $('[data-dt-search-for="' + this.tableId + '"]');
+        if ($searchSlot.length) {
+            var $toolbar = $searchSlot.closest('.programme-dt-toolbar');
+            if ($toolbar.length) {
+                $toolbar.addClass('d-flex flex-wrap align-items-center justify-content-end gap-2 gap-md-3');
+                $searchSlot.after($dropdown);
+                return;
+            }
+            $searchSlot.addClass('d-flex align-items-center justify-content-end flex-wrap gap-2');
+            $searchSlot.append($dropdown);
+            return;
+        }
+
         if (this.mode === 'datatable' && this.dt) {
             var $wrapper = this.$table.closest('.dataTables_wrapper');
             var $filter = $wrapper.find('.dataTables_filter');
@@ -321,13 +341,6 @@
                 $filter.append($dropdown);
                 return;
             }
-        }
-
-        var mountEl = document.getElementById('messColManagerMount-' + this.tableId);
-        if (mountEl) {
-            mountEl.innerHTML = '';
-            mountEl.appendChild($dropdown[0]);
-            return;
         }
 
         var toolbarId = 'messColManagerToolbar-' + this.tableId;

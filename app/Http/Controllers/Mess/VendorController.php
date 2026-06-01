@@ -8,15 +8,21 @@ use Illuminate\Support\Facades\Storage;
 
 class VendorController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $vendors = Vendor::orderByDesc('id')->get();
-        return view('mess.vendors.index', compact('vendors'));
+        $editVendor = null;
+
+        if ($request->filled('id') && in_array($request->query('open'), ['edit', 'vnd_edit'], true)) {
+            $editVendor = Vendor::find($request->query('id'));
+        }
+
+        return view('mess.vendors.index', compact('vendors', 'editVendor'));
     }
 
     public function create()
     {
-        return view('mess.vendors.create');
+        return redirect()->route('admin.mess.vendors.index', ['open' => 'create']);
     }
 
     public function store(Request $request)
@@ -35,8 +41,7 @@ class VendorController extends Controller
 
     public function edit($id)
     {
-        $vendor = Vendor::findOrFail($id);
-        return view('mess.vendors.edit', compact('vendor'));
+        return redirect()->route('admin.mess.vendors.index', ['open' => 'edit', 'id' => $id]);
     }
 
     public function update(Request $request, $id)
@@ -110,6 +115,7 @@ class VendorController extends Controller
             'ifsc_code' => ['nullable', 'string', 'max:11', 'regex:' . self::IFSC_PATTERN],
             'account_number' => ['nullable', 'string', 'max:18', 'regex:/^[0-9]+$/'],
             'licence_document' => ['nullable', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:2048'],
+            'status'           => ['nullable', 'in:active,inactive'],
         ], [
             'name.regex' => 'Vendor name may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.',
             'contact_person.regex' => 'Contact person may only contain letters, numbers, spaces and hyphens. Special characters are not allowed.',
@@ -136,6 +142,7 @@ class VendorController extends Controller
             'bank_name' => $validated['bank_name'] ?? null,
             'ifsc_code' => $validated['ifsc_code'] ?? null,
             'account_number' => $validated['account_number'] ?? null,
+            'status' => $validated['status'] ?? Vendor::STATUS_ACTIVE,
         ];
     }
 

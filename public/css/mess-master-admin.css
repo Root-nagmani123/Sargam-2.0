@@ -1,0 +1,189 @@
+/* Shared Mess master list pages (Store, Vendor, Category, etc.) */
+.mess-master-page {
+    --mess-m-primary: #004a93;
+    --mess-m-border: #e4e7ec;
+    --mess-m-text: #344054;
+    --mess-m-heading: #101828;
+    --mess-m-muted: #667085;
+    --mess-m-danger: #d92d20;
+}
+
+.mess-master-page .mess-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--mess-m-border) !important;
+}
+
+.mess-master-page .mess-dt-toolbar {
+    width: 100%;
+}
+
+.mess-master-page .mess-dt-toolbar .programme-dt-search {
+    flex: 1 1 220px;
+    width: min(100%, 360px);
+    max-width: 360px;
+}
+
+.mess-master-page .mess-dt-toolbar .mess-col-manager-dropdown .btn {
+    height: 40px;
+    padding: 0 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.mess-master-page .mess-col-manager-toolbar {
+    display: none !important;
+}
+
+@media (min-width: 576px) {
+    .mess-master-page .mess-dt-toolbar {
+        flex-wrap: nowrap !important;
+    }
+}
+
+.mess-master-page .mess-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.mess-master-page .programme-dt-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--mess-m-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.mess-master-page .programme-dt-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.mess-master-page .programme-dt-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--mess-m-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.mess-master-page .programme-dt-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.mess-master-page .programme-dt-table thead th:first-child,
+.mess-master-page .programme-dt-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--mess-m-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.mess-master-page .programme-dt-table tbody td .mess-row-title {
+    font-weight: 600;
+    color: var(--mess-m-heading);
+}
+
+.mess-master-page .programme-dt-table thead th:last-child,
+.mess-master-page .programme-dt-table tbody td:last-child {
+    text-align: center !important;
+}
+
+.mess-master-page .programme-dt-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    min-width: 4.5rem;
+}
+
+.mess-master-page .mess-row-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.mess-master-page .mess-row-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.mess-master-page .mess-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.mess-master-page .mess-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.mess-master-page .mess-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.mess-master-page .mess-delete-btn:disabled,
+.mess-master-page .mess-delete-btn[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    color: var(--mess-m-danger) !important;
+}
+
+.mess-master-page .mess-row-actions .programme-action-btn--danger .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.mess-master-page .mess-dt-footer .dataTables_info,
+.mess-master-page .mess-dt-footer .programme-dt-count {
+    font-size: 0.875rem;
+    color: var(--mess-m-muted);
+}
+
+.mess-master-page .mess-empty-state {
+    padding: 2.5rem 1rem !important;
+}
+
+.mess-master-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+.mess-master-modal-dialog--lg {
+    max-width: 42rem;
+}
+
+.mess-master-modal-dialog--xl {
+    max-width: 56rem;
+}
+
+.mess-modal-form .form-control.is-invalid,
+.mess-modal-form .form-select.is-invalid {
+    border-color: #fda29b;
+}
+
+.mess-master-page .mess-filter-bar {
+    border-bottom: 1px solid var(--mess-m-border);
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 767.98px) {
+    .mess-master-page .mess-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}

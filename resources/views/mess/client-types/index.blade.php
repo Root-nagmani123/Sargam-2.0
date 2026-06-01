@@ -1,90 +1,113 @@
 @extends('admin.layouts.master')
-@section('title', 'Client Types Master')
+
+@section('title', 'Client Master')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/mess-master-admin.css') }}?v={{ @filemtime(public_path('css/mess-master-admin.css')) ?: time() }}">
+@endpush
+
 @section('content')
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
-    $canDeleteClientType = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteClientType = hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin');
+    $isClientTypeActive = static function ($clientType) {
+        return ($clientType->status ?? 'active') === 'active';
+    };
+    $openCreateModal = request('open') === 'create' || ($errors->any() && old('_method') !== 'PUT');
+    $openEditModal = request('open') === 'edit' || ($errors->any() && old('_method') === 'PUT');
 @endphp
-<div class="container-fluid">
-    <x-breadcrum title="Client Types Master"></x-breadcrum>
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h4 class="mb-0">Client Types Master</h4>
-                <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#createClientTypeModal">
-                    Add Client Type
-                </button>
+<div class="container-fluid mess-master-page py-4">
+    <x-breadcrum title="Client Master">
+        <button type="button" id="openCreateClientType"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm"
+            data-bs-toggle="modal" data-bs-target="#createClientTypeModal">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add Client</span>
+        </button>
+    </x-breadcrum>
+
+    <x-session_message />
+
+    <div class="card mess-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="programme-dt-toolbar mess-dt-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 gap-md-3 mb-4">
+                <div id="ctDtSearch" class="programme-dt-search" data-dt-search-for="clientTypesTable"></div>
+                <div id="messColManagerMount-clientTypesTable" class="flex-shrink-0"></div>
             </div>
 
-            @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-            @endif
-<hr class="my-2">
-            <div class="table-responsive">
-                <table id="clientTypesTable" class="table  align-middle w-100">
-                    <thead>
-                        <tr>
-                            <th>Client Types</th>
-                            <th>Client Name</th>
-                            <th>Status</th>
-                            <th>Action</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($clientTypes as $clientType)
+            <div class="programme-dt-panel">
+                <div class="table-responsive mess-dt-scroll">
+                    <table id="clientTypesTable"
+                        class="table table-hover align-middle mb-0 w-100 programme-dt-table border-0">
+                        <thead>
                             <tr>
-                                <td><div class="fw-semibold">{{ $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type }}</div></td>
-                                <td><div class="fw-semibold">{{ $clientType->client_name }}</div></td>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Client Types</th>
+                                <th scope="col">Client Name</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($clientTypes as $index => $clientType)
+                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+                                <td>{{ $index + 1 }}</td>
+                                <td>{{ $clientTypeOptions[$clientType->client_type] ?? $clientType->client_type }}</td>
+                                <td><span class="mess-row-title">{{ $clientType->client_name }}</span></td>
                                 <td>
-                                    <span class="badge bg-{{ $clientType->status_badge_class }}">
-                                        {{ $clientType->status_label }}
+                                    <span class="badge rounded-pill programme-status-badge mess-status-badge programme-status-badge--{{ $isClientTypeActive($clientType) ? 'active' : 'inactive' }}">
+                                        {{ $isClientTypeActive($clientType) ? 'Active' : 'Inactive' }}
                                     </span>
                                 </td>
                                 <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="text-primary btn-edit-clienttype bg-transparent border-0"
-                                                data-id="{{ $clientType->id }}"
-                                                data-client-type="{{ e($clientType->client_type) }}"
-                                                data-client-name="{{ e($clientType->client_name) }}"
-                                                data-status="{{ e($clientType->status ?? 'active') }}"
-                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        @if($canDeleteClientType)
-                                            <form method="POST" action="{{ route('admin.mess.client-types.destroy', $clientType->id) }}" class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this client type?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                    <i class="material-icons material-symbol-rounded">delete</i>
-                                                </button>
-                                            </form>
-                                        @endif
-                                    </div>
+                                    @include('components.mess-master-action-cell', [
+                                        'entityLabel' => 'client',
+                                        'recordId' => $clientType->id,
+                                        'isActive' => $isClientTypeActive($clientType),
+                                        'canDelete' => $canDeleteClientType,
+                                        'destroyUrl' => route('admin.mess.client-types.destroy', $clientType->id),
+                                        'toggleTable' => 'mess_client_types',
+                                        'editClass' => 'btn-edit-clienttype',
+                                        'editAttributes' => [
+                                            'data-id' => $clientType->id,
+                                            'data-client-type' => e($clientType->client_type),
+                                            'data-client-name' => e($clientType->client_name),
+                                            'data-status' => e($clientType->status ?? 'active'),
+                                        ],
+                                    ])
                                 </td>
                             </tr>
-                        @endforeach
-                    </tbody>
-                </table>
+                            @empty
+                            <tr>
+                                <td colspan="5" class="mess-empty-state text-center">
+                                    <i class="bi bi-people display-4 text-secondary opacity-50 d-block mb-3" aria-hidden="true"></i>
+                                    <h5 class="fw-semibold text-dark mb-1">No Clients Found</h5>
+                                    <p class="text-secondary mb-0">Add a client to get started.</p>
+                                </td>
+                            </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+
+                <div id="ctDtFooter"
+                    class="programme-dt-footer mess-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 pt-3"
+                    data-dt-footer-for="clientTypesTable"></div>
             </div>
-        </div>
         </div>
     </div>
 </div>
 
-{{-- Create Client Type Modal --}}
-<div class="modal fade" id="createClientTypeModal" tabindex="-1" aria-labelledby="createClientTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
+<div class="modal fade" id="createClientTypeModal" tabindex="-1" aria-labelledby="createClientTypeModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered mess-master-modal-dialog">
+        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4 mess-modal-form">
             <form method="POST" action="{{ route('admin.mess.client-types.store') }}">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="createClientTypeModalLabel">Add Client Type</h5>
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold mb-0" id="createClientTypeModalLabel">Add Client</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body pt-3">
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Client Types <span class="text-danger">*</span></label>
@@ -107,32 +130,30 @@
                                 <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
                                 <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
-                            <div class="text-muted small">Default is Active.</div>
-                            @error('status')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                <div class="modal-footer border-0 pt-0 gap-2">
+                    <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Save</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-{{-- Edit Client Type Modal --}}
-<div class="modal fade" id="editClientTypeModal" tabindex="-1" aria-labelledby="editClientTypeModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form id="editClientTypeForm" method="POST" action="">
+<div class="modal fade" id="editClientTypeModal" tabindex="-1" aria-labelledby="editClientTypeModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered mess-master-modal-dialog">
+        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4 mess-modal-form">
+            <form id="editClientTypeForm" method="POST" action="{{ $openEditModal && old('client_type_modal_id') ? route('admin.mess.client-types.update', old('client_type_modal_id')) : '' }}">
                 @csrf
                 @method('PUT')
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="editClientTypeModalLabel">Edit Client Type</h5>
+                <input type="hidden" name="client_type_modal_id" id="edit_client_type_modal_id" value="{{ old('client_type_modal_id', $editClientType?->id ?? '') }}">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold mb-0" id="editClientTypeModalLabel">Edit Client</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body pt-3">
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Client Types <span class="text-danger">*</span></label>
@@ -145,49 +166,93 @@
                         </div>
                         <div class="col-12">
                             <label class="form-label">Client Name <span class="text-danger">*</span></label>
-                            <input type="text" name="client_name" id="edit_client_name" class="form-control" required>
+                            <input type="text" name="client_name" id="edit_client_name" class="form-control" required
+                                value="{{ old('client_name', $editClientType->client_name ?? '') }}">
                         </div>
                         <div class="col-12">
                             <label class="form-label">Status</label>
                             <select name="status" id="edit_status" class="form-select">
-                                <option value="active">Active</option>
-                                <option value="inactive">Inactive</option>
+                                <option value="active" {{ old('status', $editClientType->status ?? 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                                <option value="inactive" {{ old('status', $editClientType->status ?? '') === 'inactive' ? 'selected' : '' }}>Inactive</option>
                             </select>
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Update</button>
+                <div class="modal-footer border-0 pt-0 gap-2">
+                    <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Update</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'clientTypesTable', 'searchPlaceholder' => 'Search client types...', 'orderColumn' => 0, 'actionColumnIndex' => 3, 'infoLabel' => 'client types'])
+@include('components.mess-master-datatables', [
+    'tableId' => 'clientTypesTable',
+    'searchPlaceholder' => 'Search',
+    'orderColumn' => 1,
+    'actionColumnIndex' => 4,
+    'infoLabel' => 'clients',
+    'pageLength' => 10,
+])
+
 @push('scripts')
+<script src="{{ asset('js/mess-master-list.js') }}?v={{ @filemtime(public_path('js/mess-master-list.js')) ?: time() }}"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    @if($errors->isNotEmpty())
-    new bootstrap.Modal(document.getElementById('createClientTypeModal')).show();
-    @endif
-    document.addEventListener('mousedown', function(e) {
-        var btn = e.target.closest('.btn-edit-clienttype');
-        if (!btn) return;
-        e.preventDefault();
-        e.stopPropagation();
-        document.getElementById('editClientTypeForm').action = '{{ url("admin/mess/client-types") }}/' + btn.getAttribute('data-id');
-        document.getElementById('edit_client_type').value = btn.getAttribute('data-client-type') || '';
-        document.getElementById('edit_client_name').value = btn.getAttribute('data-client-name') || '';
-        document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
-        new bootstrap.Modal(document.getElementById('editClientTypeModal')).show();
-    }, true);
-});
+(function () {
+    var tableSelector = '#clientTypesTable';
+    var canDelete = @json($canDeleteClientType);
+    var destroyBaseUrl = @json(url('admin/mess/client-types'));
+    var baseUrl = destroyBaseUrl;
+
+    function initPage() {
+        var ML = window.MessMasterList;
+        if (!ML) return;
+
+        ML.moveModalsToBody(['createClientTypeModal', 'editClientTypeModal']);
+        ML.wireModalExclusivity([{ create: 'createClientTypeModal', edit: 'editClientTypeModal' }]);
+        ML.bindMessStatusToggle(tableSelector, {
+            entityLabel: 'client',
+            canDelete: canDelete,
+            destroyBaseUrl: destroyBaseUrl,
+            confirmMessage: 'Are you sure you want to delete this client?'
+        });
+
+        document.addEventListener('click', function (e) {
+            var btn = e.target.closest('.btn-edit-clienttype');
+            if (!btn || !btn.closest('#clientTypesTable')) return;
+            e.preventDefault();
+            e.stopPropagation();
+            ML.hideMessModal('createClientTypeModal');
+            var id = btn.getAttribute('data-id');
+            document.getElementById('editClientTypeForm').action = baseUrl + '/' + id;
+            document.getElementById('edit_client_type_modal_id').value = id;
+            document.getElementById('edit_client_type').value = btn.getAttribute('data-client-type') || '';
+            document.getElementById('edit_client_name').value = btn.getAttribute('data-client-name') || '';
+            document.getElementById('edit_status').value = btn.getAttribute('data-status') || 'active';
+            ML.showMessModal('editClientTypeModal');
+        });
+
+        @if($openCreateModal)
+        ML.showMessModal('createClientTypeModal');
+        @endif
+        @if($openEditModal)
+        (function () {
+            var editId = document.getElementById('edit_client_type_modal_id');
+            if (editId && editId.value) {
+                document.getElementById('editClientTypeForm').action = baseUrl + '/' + editId.value;
+            }
+            ML.showMessModal('editClientTypeModal');
+        })();
+        @endif
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initPage);
+    } else {
+        initPage();
+    }
+})();
 </script>
 @endpush
-
-<style>
-.table thead th { background-color: #004a93 !important; color: #fff !important; }
-</style>
 @endsection

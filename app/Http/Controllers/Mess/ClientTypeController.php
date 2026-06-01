@@ -9,15 +9,21 @@ use App\Models\Mess\ClientType;
 
 class ClientTypeController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $clientTypes = ClientType::orderByDesc('id')->get();
-        return view('mess.client-types.index', compact('clientTypes'));
+        $editClientType = null;
+
+        if ($request->filled('id') && $request->query('open') === 'edit') {
+            $editClientType = ClientType::find($request->query('id'));
+        }
+
+        return view('mess.client-types.index', compact('clientTypes', 'editClientType'));
     }
 
     public function create()
     {
-        return view('mess.client-types.create');
+        return redirect()->route('admin.mess.client-types.index', ['open' => 'create']);
     }
 
     public function store(Request $request)
@@ -31,8 +37,7 @@ class ClientTypeController extends Controller
 
     public function edit($id)
     {
-        $clientType = ClientType::findOrFail($id);
-        return view('mess.client-types.edit', compact('clientType'));
+        return redirect()->route('admin.mess.client-types.index', ['open' => 'edit', 'id' => $id]);
     }
 
     public function update(Request $request, $id)

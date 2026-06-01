@@ -1,56 +1,78 @@
 @extends('admin.layouts.master')
-@section('title', 'Mess Vendors')
+
+@section('title', 'Vendor Master')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/vendor-master-admin.css') }}?v={{ @filemtime(public_path('css/vendor-master-admin.css')) ?: time() }}">
+@endpush
+
 @section('content')
 @php
-    $canDeleteVendor = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteVendor = hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin');
+    $isVendorActive = static function ($vendor) {
+        return ($vendor->status ?? 'active') === 'active';
+    };
+    $openCreateModal = request('open') === 'create' || ($errors->any() && old('_method') !== 'PUT');
+    $openEditModal = request('open') === 'edit' || ($errors->any() && old('_method') === 'PUT');
 @endphp
-<div class="container-fluid">
-    <x-breadcrum title="Mess Stores"></x-breadcrum>
-    <div class="datatables">
-        <div class="card">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h4 class="mb-0">Vendor Master</h4>
-                    <button type="button" class="btn btn-primary" data-bs-toggle="modal"
-                        data-bs-target="#createVendorModal">
-                        Add Vendor
-                    </button>
-                </div>
+<div class="container-fluid vnd-master-page py-4">
+    <x-breadcrum title="Vendor Master">
+        <button type="button" id="openCreateVendor"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm"
+            data-bs-toggle="modal" data-bs-target="#createVendorModal">
+            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <span>Add Vendor</span>
+        </button>
+    </x-breadcrum>
 
-                @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show" role="alert">
-                    {{ session('success') }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                @endif
+    <x-session_message />
 
-                <div class="table-responsive">
-                    <table id="vendorsTable" class="table align-middle w-100">
+    <div class="card vnd-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="programme-dt-toolbar vnd-dt-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 gap-md-3 mb-4">
+                <div id="vndDtSearch" class="programme-dt-search" data-dt-search-for="vendorsTable"></div>
+                <div id="messColManagerMount-vendorsTable" class="vnd-dt-columns-mount flex-shrink-0"></div>
+            </div>
+
+            <div class="programme-dt-panel vnd-dt-panel">
+                <div class="table-responsive vnd-dt-scroll">
+                    <table id="vendorsTable"
+                        class="table table-hover align-middle mb-0 w-100 programme-dt-table border-0">
                         <thead>
                             <tr>
-                                <th>Vendor Name</th>
-                                <th>Email</th>
-                                <th>Contact Person</th>
-                                <th>Phone</th>
-                                <th>Address</th>
-                                <th>Action</th>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Vendor Name</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Contact Person</th>
+                                <th scope="col">Phone</th>
+                                <th scope="col">Address</th>
+                                <th scope="col">Status</th>
+                                <th scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
-                            @foreach($vendors as $vendor)
-                            <tr>
+                            @forelse($vendors as $index => $vendor)
+                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
+                                <td>{{ $index + 1 }}</td>
                                 <td>
-                                    <div class="fw-semibold">{{ $vendor->name }}</div>
+                                    <div class="vnd-vendor-name">{{ $vendor->name }}</div>
                                 </td>
                                 <td>{{ $vendor->email ?? '-' }}</td>
                                 <td>{{ $vendor->contact_person ?? '-' }}</td>
                                 <td>{{ $vendor->phone ?? '-' }}</td>
-                                <td>{{ $vendor->address ?? '-' }}</td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
+                                <td class="text-start">{{ $vendor->address ?? '-' }}</td>
+                                <td class="vnd-status-cell">
+                                    <span class="badge rounded-pill programme-status-badge vnd-status-badge programme-status-badge--{{ $isVendorActive($vendor) ? 'active' : 'inactive' }}">
+                                        {{ $isVendorActive($vendor) ? 'Active' : 'Inactive' }}
+                                    </span>
+                                </td>
+                                <td class="vnd-action-cell">
+                                    <div class="vnd-vendor-actions d-inline-flex align-items-center gap-2 programme-action-group" role="group"
+                                        aria-label="Vendor actions">
                                         <button type="button"
-                                            class="text-primary btn-view-vendor bg-transparent border-0"
-                                            data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
+                                            class="btn-view-vendor programme-action-btn"
+                                            data-id="{{ $vendor->id }}"
+                                            data-name="{{ e($vendor->name) }}"
                                             data-email="{{ e($vendor->email ?? '') }}"
                                             data-contact-person="{{ e($vendor->contact_person ?? '') }}"
                                             data-phone="{{ e($vendor->phone ?? '') }}"
@@ -58,11 +80,15 @@
                                             data-gst-number="{{ e($vendor->gst_number ?? '') }}"
                                             data-bank-name="{{ e($vendor->bank_name ?? '') }}"
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
-                                            data-account-number="{{ e($vendor->account_number ?? '') }}" title="View"><i
-                                                class="material-icons material-symbol-rounded">visibility</i></button>
+                                            data-account-number="{{ e($vendor->account_number ?? '') }}"
+                                            aria-label="View vendor"
+                                            title="View vendor">
+                                            <i class="bi bi-eye" aria-hidden="true"></i>
+                                        </button>
                                         <button type="button"
-                                            class="text-primary btn-edit-vendor bg-transparent border-0"
-                                            data-id="{{ $vendor->id }}" data-name="{{ e($vendor->name) }}"
+                                            class="btn-edit-vendor programme-action-btn"
+                                            data-id="{{ $vendor->id }}"
+                                            data-name="{{ e($vendor->name) }}"
                                             data-email="{{ e($vendor->email ?? '') }}"
                                             data-contact-person="{{ e($vendor->contact_person ?? '') }}"
                                             data-phone="{{ e($vendor->phone ?? '') }}"
@@ -70,44 +96,87 @@
                                             data-gst-number="{{ e($vendor->gst_number ?? '') }}"
                                             data-bank-name="{{ e($vendor->bank_name ?? '') }}"
                                             data-ifsc-code="{{ e($vendor->ifsc_code ?? '') }}"
-                                            data-account-number="{{ e($vendor->account_number ?? '') }}" title="Edit"><i
-                                                class="material-icons material-symbol-rounded">edit</i></button>
-                                        @if($canDeleteVendor)
-                                            <form method="POST"
-                                                action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
-                                                class="d-inline"
+                                            data-account-number="{{ e($vendor->account_number ?? '') }}"
+                                            data-status="{{ e($vendor->status ?? 'active') }}"
+                                            aria-label="Edit vendor"
+                                            title="Edit vendor">
+                                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                                        </button>
+                                        <div class="form-check form-switch vnd-action-switch-wrap mb-0">
+                                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                data-table="mess_vendors"
+                                                data-column="status"
+                                                data-id="{{ $vendor->id }}"
+                                                data-id_column="id"
+                                                aria-label="Toggle vendor status"
+                                                {{ $isVendorActive($vendor) ? 'checked' : '' }}>
+                                        </div>
+                                        @if($isVendorActive($vendor))
+                                            <button type="button"
+                                                class="vnd-delete-btn programme-action-btn programme-action-btn--danger"
+                                                disabled
+                                                aria-disabled="true"
+                                                title="Cannot delete active vendor"
+                                                aria-label="Delete vendor">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                            </button>
+                                        @elseif($canDeleteVendor)
+                                            <form method="POST" action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}" class="d-inline vnd-delete-form m-0"
                                                 onsubmit="return confirm('Are you sure you want to delete this vendor?');">
                                                 @csrf
                                                 @method('DELETE')
-                                                <button type="submit" class="text-primary bg-transparent border-0 p-0" title="Delete">
-                                                    <i class="material-icons material-symbol-rounded">delete</i>
+                                                <button type="submit"
+                                                    class="vnd-delete-btn programme-action-btn programme-action-btn--danger"
+                                                    aria-label="Delete vendor"
+                                                    title="Delete vendor">
+                                                    <i class="bi bi-trash" aria-hidden="true"></i>
                                                 </button>
                                             </form>
+                                        @else
+                                            <button type="button"
+                                                class="vnd-delete-btn programme-action-btn programme-action-btn--danger"
+                                                disabled
+                                                aria-disabled="true"
+                                                title="You do not have permission to delete vendors"
+                                                aria-label="Delete vendor">
+                                                <i class="bi bi-trash" aria-hidden="true"></i>
+                                            </button>
                                         @endif
                                     </div>
                                 </td>
                             </tr>
-                            @endforeach
+                            @empty
+                            <tr class="vnd-empty-row">
+                                <td colspan="8" class="vnd-empty-state text-center">
+                                    <i class="bi bi-truck display-4 text-secondary opacity-50 d-block mb-3" aria-hidden="true"></i>
+                                    <h5 class="fw-semibold text-dark mb-1">No Vendors Found</h5>
+                                    <p class="text-secondary mb-0">Add a vendor to get started.</p>
+                                </td>
+                            </tr>
+                            @endforelse
                         </tbody>
                     </table>
                 </div>
+
+                <div id="vndDtFooter"
+                    class="programme-dt-footer vnd-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 pt-3"
+                    data-dt-footer-for="vendorsTable"></div>
             </div>
         </div>
     </div>
 </div>
 
 {{-- Create Vendor Modal --}}
-<div class="modal fade" id="createVendorModal" tabindex="-1" aria-labelledby="createVendorModalLabel"
-    aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-xl">
-        <div class="modal-content">
+<div class="modal fade" id="createVendorModal" tabindex="-1" aria-labelledby="createVendorModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered vnd-vendor-modal-dialog vnd-vendor-modal-dialog--xl">
+        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4 vnd-modal-form">
             <form method="POST" action="{{ route('admin.mess.vendors.store') }}" enctype="multipart/form-data">
                 @csrf
-                <div class="modal-header border-bottom bg-light">
-                    <h5 class="modal-title fw-semibold" id="createVendorModalLabel">Add Vendor</h5>
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold mb-0" id="createVendorModalLabel">Add Vendor</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body pt-3">
                     <div class="row g-3">
                         <div class="col-12">
                             <label class="form-label">Vendor Name <span class="text-danger">*</span></label>
@@ -179,15 +248,24 @@
                                 @error('account_number'){{ $message }}@enderror</div>
                         </div>
                         <div class="col-md-6">
-                            <label class="form-label">Upload Licence</label>
-                            <input type="file" name="licence_document" class="form-control">
+                            <label class="form-label fw-semibold" for="create_status">Status</label>
+                            <select name="status" id="create_status" class="form-select rounded-3">
+                                <option value="active" {{ old('status', 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                                <option value="inactive" {{ old('status') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                            </select>
+                            <div class="form-text">Default is Active.</div>
+                            @error('status')<div class="text-danger small">{{ $message }}</div>@enderror
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label fw-semibold">Upload Licence</label>
+                            <input type="file" name="licence_document" class="form-control rounded-3">
                             @error('licence_document')<div class="text-danger small">{{ $message }}</div>@enderror
                         </div>
                     </div>
                 </div>
-                <div class="modal-footer border-top bg-light">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary">Save</button>
+                <div class="modal-footer border-0 pt-0 gap-2">
+                    <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Save</button>
                 </div>
             </form>
         </div>
@@ -272,42 +350,18 @@
 </div>
 
 {{-- Edit Vendor Modal --}}
-<style>
-    /* Ensure body scroll works with sticky header/footer */
-    #editVendorModal .modal-dialog {
-        max-height: calc(100vh - 2rem);
-        margin: 1rem auto;
-    }
-    #editVendorModal .modal-content {
-        max-height: calc(100vh - 2rem);
-        display: flex;
-        flex-direction: column;
-    }
-    #editVendorModal .modal-body {
-        overflow-y: auto;
-    }
-</style>
-<div class="modal fade" id="editVendorModal" tabindex="-1" aria-labelledby="editVendorModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg modal-dialog-scrollable">
-        <div class="modal-content border-0 shadow-lg rounded-4 overflow-hidden">
-            <form id="editVendorForm" method="POST" action="" enctype="multipart/form-data">
+<div class="modal fade" id="editVendorModal" tabindex="-1" aria-labelledby="editVendorModalLabel" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable vnd-vendor-modal-dialog vnd-vendor-modal-dialog--xl">
+        <div class="modal-content cgt-form-modal border-0 shadow-lg rounded-4 vnd-modal-form">
+            <form id="editVendorForm" method="POST" action="{{ $openEditModal && old('vendor_modal_id') ? route('admin.mess.vendors.update', old('vendor_modal_id')) : '' }}" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-header bg-body border-bottom py-3 px-3 px-lg-4 position-sticky top-0 z-3">
-                    <div class="d-flex align-items-center gap-3">
-                        <span class="rounded-circle bg-primary-subtle text-primary d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width: 36px; height: 36px;">
-                            <i class="material-symbols-rounded" style="font-size: 1.35rem;">storefront</i>
-                        </span>
-                        <div class="lh-sm">
-                            <h5 class="modal-title fw-semibold mb-0" id="editVendorModalLabel">Edit Vendor</h5>
-                            <div class="small text-muted">Update vendor details and click Update.</div>
-                        </div>
-                    </div>
+                <input type="hidden" name="vendor_modal_id" id="edit_vendor_modal_id" value="{{ old('vendor_modal_id', $editVendor?->id ?? '') }}">
+                <div class="modal-header border-0 pb-0">
+                    <h5 class="modal-title fw-bold mb-0" id="editVendorModalLabel">Edit Vendor</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body p-3 p-lg-4 bg-body-tertiary">
-                    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
-                        <div class="card-body p-3 p-lg-4">
+                <div class="modal-body pt-3">
                             <div class="row g-3">
                                 <div class="col-12">
                                     <label class="form-label fw-medium">Vendor Name <span
@@ -376,26 +430,179 @@
                                     </div>
                                 </div>
                                 <div class="col-12 col-md-6">
+                                    <label class="form-label fw-medium" for="edit_vendor_status">Status</label>
+                                    <select name="status" id="edit_vendor_status" class="form-select rounded-3">
+                                        <option value="active" {{ old('status', $editVendor->status ?? 'active') === 'active' ? 'selected' : '' }}>Active</option>
+                                        <option value="inactive" {{ old('status', $editVendor->status ?? '') === 'inactive' ? 'selected' : '' }}>Inactive</option>
+                                    </select>
+                                </div>
+                                <div class="col-12 col-md-6">
                                     <label class="form-label fw-medium">Upload Licence</label>
-                                    <input type="file" name="licence_document" class="form-control form-control-sm">
+                                    <input type="file" name="licence_document" class="form-control rounded-3">
                                 </div>
                             </div>
-                        </div>
-                    </div>
                 </div>
-                <div class="modal-footer bg-body border-top py-3 px-3 px-lg-4 position-sticky bottom-0 z-3">
-                    <button type="button" class="btn btn-outline-secondary btn-sm px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary btn-sm px-4">Update</button>
+                <div class="modal-footer border-0 pt-0 gap-2">
+                    <button type="button" class="btn btn-light rounded-3 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-3 px-4">Update</button>
                 </div>
             </form>
         </div>
     </div>
 </div>
-@include('components.mess-master-datatables', ['tableId' => 'vendorsTable', 'searchPlaceholder' => 'Search vendors...',
-'orderColumn' => 0, 'actionColumnIndex' => 5, 'infoLabel' => 'vendors'])
+
+@include('components.mess-master-datatables', [
+    'tableId' => 'vendorsTable',
+    'searchPlaceholder' => 'Search',
+    'orderColumn' => 1,
+    'actionColumnIndex' => 7,
+    'infoLabel' => 'vendors',
+    'pageLength' => 10,
+])
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+(function () {
+    var tableSelector = '#vendorsTable';
+    var canDeleteVendor = @json($canDeleteVendor);
+    var vendorsDestroyBaseUrl = @json(url('admin/mess/vendors'));
+
+    function updateVndStatusBadge($row, isActive) {
+        if (typeof jQuery === 'undefined') return;
+        var $badge = jQuery($row).find('.vnd-status-badge').first();
+        if (!$badge.length) return;
+        $badge
+            .removeClass('programme-status-badge--active programme-status-badge--inactive')
+            .addClass(isActive ? 'programme-status-badge--active' : 'programme-status-badge--inactive')
+            .text(isActive ? 'Active' : 'Inactive');
+    }
+
+    function buildVndDeleteControl(isActive, vendorId) {
+        if (typeof jQuery === 'undefined') return null;
+        var $ = jQuery;
+        var baseClass = 'vnd-delete-btn programme-action-btn programme-action-btn--danger';
+
+        if (isActive) {
+            return $('<button>', {
+                type: 'button',
+                class: baseClass,
+                disabled: true,
+                'aria-disabled': 'true',
+                title: 'Cannot delete active vendor',
+                'aria-label': 'Delete vendor'
+            }).append('<i class="bi bi-trash" aria-hidden="true"></i>');
+        }
+
+        if (!canDeleteVendor) {
+            return $('<button>', {
+                type: 'button',
+                class: baseClass,
+                disabled: true,
+                'aria-disabled': 'true',
+                title: 'You do not have permission to delete vendors',
+                'aria-label': 'Delete vendor'
+            }).append('<i class="bi bi-trash" aria-hidden="true"></i>');
+        }
+
+        var $form = $('<form>', {
+            method: 'POST',
+            action: vendorsDestroyBaseUrl + '/' + vendorId,
+            class: 'd-inline vnd-delete-form m-0'
+        });
+        $form.append('<input type="hidden" name="_token" value="' + ($('meta[name="csrf-token"]').attr('content') || '') + '">');
+        $form.append('<input type="hidden" name="_method" value="DELETE">');
+        var $btn = $('<button>', {
+            type: 'submit',
+            class: baseClass,
+            title: 'Delete vendor',
+            'aria-label': 'Delete vendor'
+        }).append('<i class="bi bi-trash" aria-hidden="true"></i>');
+        $form.on('submit', function () {
+            return confirm('Are you sure you want to delete this vendor?');
+        });
+        $form.append($btn);
+        return $form;
+    }
+
+    function updateVndDeleteControl($row, isActive, vendorId) {
+        if (typeof jQuery === 'undefined') return;
+        var $group = jQuery($row).find('.vnd-vendor-actions').first();
+        if (!$group.length) return;
+        $group.find('.vnd-delete-form, .vnd-delete-btn').remove();
+        var $deleteControl = buildVndDeleteControl(isActive, vendorId);
+        if ($deleteControl) {
+            $group.append($deleteControl);
+        }
+    }
+
+    function bindVendorTableUi() {
+        if (typeof jQuery === 'undefined') return;
+        var $ = jQuery;
+        $(document).on('change', tableSelector + ' .status-toggle', function () {
+            var $toggle = $(this);
+            var isActive = $toggle.is(':checked');
+            var $row = $toggle.closest('tr');
+            var vendorId = $toggle.data('id');
+            window.setTimeout(function () {
+                updateVndStatusBadge($row, isActive);
+                updateVndDeleteControl($row, isActive, vendorId);
+                var $editBtn = $row.find('.btn-edit-vendor').first();
+                if ($editBtn.length) {
+                    $editBtn.attr('data-status', isActive ? 'active' : 'inactive');
+                }
+            }, 0);
+        });
+    }
+
+    function moveVendorModalsToBody() {
+        ['createVendorModal', 'editVendorModal', 'viewVendorModal'].forEach(function (id) {
+            var el = document.getElementById(id);
+            if (el && el.parentElement !== document.body) {
+                document.body.appendChild(el);
+            }
+        });
+    }
+
+    function showVendorModal(modalId) {
+        var el = document.getElementById(modalId);
+        if (!el || !window.bootstrap || !bootstrap.Modal) return;
+        bootstrap.Modal.getOrCreateInstance(el).show();
+    }
+
+    function hideVendorModal(modalId) {
+        var el = document.getElementById(modalId);
+        if (!el || !window.bootstrap || !bootstrap.Modal) return;
+        var instance = bootstrap.Modal.getInstance(el);
+        if (instance) instance.hide();
+    }
+
+    function openEditVendorModal(payload) {
+        payload = payload || {};
+        var id = String(payload.id || '').trim();
+        if (!id) return;
+
+        hideVendorModal('createVendorModal');
+
+        var form = document.getElementById('editVendorForm');
+        var modalIdInput = document.getElementById('edit_vendor_modal_id');
+        form.action = vendorsDestroyBaseUrl + '/' + id;
+        if (modalIdInput) modalIdInput.value = id;
+
+        document.getElementById('edit_vendor_name').value = payload.name || '';
+        document.getElementById('edit_vendor_email').value = payload.email || '';
+        document.getElementById('edit_vendor_contact_person').value = payload.contactPerson || '';
+        document.getElementById('edit_vendor_phone').value = payload.phone || '';
+        document.getElementById('edit_vendor_address').value = payload.address || '';
+        document.getElementById('edit_vendor_gst_number').value = payload.gstNumber || '';
+        document.getElementById('edit_vendor_bank_name').value = payload.bankName || '';
+        document.getElementById('edit_vendor_ifsc_code').value = payload.ifscCode || '';
+        document.getElementById('edit_vendor_account_number').value = payload.accountNumber || '';
+        var statusEl = document.getElementById('edit_vendor_status');
+        if (statusEl) statusEl.value = payload.status || 'active';
+
+        showVendorModal('editVendorModal');
+    }
+
+    function initVendorPage() {
     // Validation rules (must match VendorController)
     var nameRegex = /^[a-zA-Z0-9\s\-]+$/;
     var addressRegex = /^[a-zA-Z0-9\s\-\.\,\r\n]+$/;
@@ -735,9 +942,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var createVendorModal = document.getElementById('createVendorModal');
     if (createVendorModal) {
+        createVendorModal.addEventListener('show.bs.modal', function () {
+            hideVendorModal('editVendorModal');
+        });
         createVendorModal.addEventListener('hidden.bs.modal', function() {
             var form = createVendorModal.querySelector('form');
-            if (form) form.reset();
+            if (form) {
+                form.reset();
+                var statusSelect = form.querySelector('select[name="status"]');
+                if (statusSelect) statusSelect.value = 'active';
+            }
             ['create_vendor_name_error', 'create_contact_person_error', 'create_address_error',
                 'create_phone_error', 'create_gst_number_error', 'create_bank_name_error',
                 'create_ifsc_code_error', 'create_account_number_error'
@@ -770,6 +984,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     var editVendorModal = document.getElementById('editVendorModal');
     if (editVendorModal) {
+        editVendorModal.addEventListener('show.bs.modal', function () {
+            hideVendorModal('createVendorModal');
+        });
         editVendorModal.addEventListener('hidden.bs.modal', function() {
             ['edit_vendor_name_error', 'edit_vendor_contact_person_error', 'edit_vendor_address_error',
                 'edit_phone_error', 'edit_gst_number_error', 'edit_bank_name_error',
@@ -788,12 +1005,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    document.addEventListener('mousedown', function(e) {
+    moveVendorModalsToBody();
+    bindVendorTableUi();
+
+    document.addEventListener('click', function (e) {
         var viewBtn = e.target.closest('.btn-view-vendor');
-        if (viewBtn) {
+        if (viewBtn && viewBtn.closest(tableSelector)) {
             e.preventDefault();
             e.stopPropagation();
-            var set = function(id, val) {
+            var set = function (id, val) {
                 var el = document.getElementById(id);
                 if (el) el.textContent = val || '—';
             };
@@ -806,32 +1026,51 @@ document.addEventListener('DOMContentLoaded', function() {
             set('view_vendor_bank_name', viewBtn.getAttribute('data-bank-name'));
             set('view_vendor_ifsc_code', viewBtn.getAttribute('data-ifsc-code'));
             set('view_vendor_account_number', viewBtn.getAttribute('data-account-number'));
-            new bootstrap.Modal(document.getElementById('viewVendorModal')).show();
+            showVendorModal('viewVendorModal');
             return;
         }
-        var btn = e.target.closest('.btn-edit-vendor');
-        if (!btn) return;
+
+        var editBtn = e.target.closest('.btn-edit-vendor');
+        if (!editBtn || !editBtn.closest(tableSelector)) return;
         e.preventDefault();
         e.stopPropagation();
-        document.getElementById('editVendorForm').action = '{{ url("admin/mess/vendors") }}/' + btn
-            .getAttribute('data-id');
-        document.getElementById('edit_vendor_name').value = btn.getAttribute('data-name') || '';
-        document.getElementById('edit_vendor_email').value = btn.getAttribute('data-email') || '';
-        document.getElementById('edit_vendor_contact_person').value = btn.getAttribute(
-            'data-contact-person') || '';
-        document.getElementById('edit_vendor_phone').value = btn.getAttribute('data-phone') || '';
-        document.getElementById('edit_vendor_address').value = btn.getAttribute('data-address') || '';
-        document.getElementById('edit_vendor_gst_number').value = btn.getAttribute('data-gst-number') ||
-            '';
-        document.getElementById('edit_vendor_bank_name').value = btn.getAttribute('data-bank-name') ||
-            '';
-        document.getElementById('edit_vendor_ifsc_code').value = btn.getAttribute('data-ifsc-code') ||
-            '';
-        document.getElementById('edit_vendor_account_number').value = btn.getAttribute(
-            'data-account-number') || '';
-        new bootstrap.Modal(document.getElementById('editVendorModal')).show();
-    }, true);
-});
+        openEditVendorModal({
+            id: editBtn.getAttribute('data-id'),
+            name: editBtn.getAttribute('data-name') || '',
+            email: editBtn.getAttribute('data-email') || '',
+            contactPerson: editBtn.getAttribute('data-contact-person') || '',
+            phone: editBtn.getAttribute('data-phone') || '',
+            address: editBtn.getAttribute('data-address') || '',
+            gstNumber: editBtn.getAttribute('data-gst-number') || '',
+            bankName: editBtn.getAttribute('data-bank-name') || '',
+            ifscCode: editBtn.getAttribute('data-ifsc-code') || '',
+            accountNumber: editBtn.getAttribute('data-account-number') || '',
+            status: editBtn.getAttribute('data-status') || 'active'
+        });
+    });
+
+    @if($openCreateModal)
+    showVendorModal('createVendorModal');
+    @endif
+
+    @if($openEditModal)
+    (function () {
+        var editId = document.getElementById('edit_vendor_modal_id');
+        if (editId && editId.value) {
+            document.getElementById('editVendorForm').action = vendorsDestroyBaseUrl + '/' + editId.value;
+        }
+        showVendorModal('editVendorModal');
+    })();
+    @endif
+
+    } // initVendorPage
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initVendorPage);
+    } else {
+        initVendorPage();
+    }
+})();
 </script>
 @endpush
 @endsection

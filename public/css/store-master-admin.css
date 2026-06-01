@@ -1,0 +1,192 @@
+/* Store Master — programme-dt reference layout */
+.str-master-page {
+    --str-primary: #004a93;
+    --str-primary-dark: #003366;
+    --str-border: #e4e7ec;
+    --str-text: #344054;
+    --str-heading: #101828;
+    --str-muted: #667085;
+    --str-danger: #d92d20;
+}
+
+.str-master-page .str-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--str-border) !important;
+}
+
+.str-master-page .str-dt-toolbar {
+    width: 100%;
+}
+
+.str-master-page .str-dt-toolbar .programme-dt-search {
+    flex: 1 1 220px;
+    width: min(100%, 360px);
+    max-width: 360px;
+}
+
+.str-master-page .str-dt-toolbar .mess-col-manager-dropdown .btn {
+    height: 40px;
+    padding: 0 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.str-master-page .mess-col-manager-toolbar {
+    display: none !important;
+}
+
+@media (min-width: 576px) {
+    .str-master-page .str-dt-toolbar {
+        flex-wrap: nowrap !important;
+    }
+}
+
+.str-master-page .str-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.str-master-page #storesTable thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--str-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.str-master-page #storesTable {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.str-master-page #storesTable tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--str-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.str-master-page #storesTable tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.str-master-page #storesTable thead th:first-child,
+.str-master-page #storesTable tbody td:first-child {
+    text-align: left !important;
+    color: var(--str-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.str-master-page #storesTable thead th:nth-child(2),
+.str-master-page #storesTable tbody td:nth-child(2) {
+    text-align: left !important;
+}
+
+.str-master-page #storesTable tbody td:nth-child(2) .str-store-name {
+    font-weight: 600;
+    color: var(--str-heading);
+}
+
+.str-master-page #storesTable tbody td:nth-child(2) .str-store-code {
+    font-size: 0.8125rem;
+    color: var(--str-muted);
+}
+
+.str-master-page #storesTable thead th:nth-child(3),
+.str-master-page #storesTable thead th:nth-child(4),
+.str-master-page #storesTable thead th:nth-child(5),
+.str-master-page #storesTable thead th:nth-child(6),
+.str-master-page #storesTable tbody td:nth-child(3),
+.str-master-page #storesTable tbody td:nth-child(4),
+.str-master-page #storesTable tbody td:nth-child(5),
+.str-master-page #storesTable tbody td:nth-child(6) {
+    text-align: center !important;
+}
+
+.str-master-page #storesTable tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    min-width: 4.5rem;
+}
+
+.str-master-page .str-store-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.str-master-page .str-store-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.str-master-page .str-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.str-master-page .str-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.str-master-page .str-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.str-master-page .str-delete-btn:disabled,
+.str-master-page .str-delete-btn[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    color: var(--str-danger) !important;
+}
+
+.str-master-page .str-store-actions .programme-action-btn--danger .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.str-master-page .str-dt-footer .dataTables_info,
+.str-master-page .str-dt-footer .programme-dt-count {
+    font-size: 0.875rem;
+    color: var(--str-muted);
+}
+
+.str-master-page .str-empty-state {
+    padding: 2.5rem 1rem !important;
+}
+
+.str-store-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+.str-modal-form .form-control.is-invalid,
+.str-modal-form .form-select.is-invalid {
+    border-color: #fda29b;
+}
+
+@media (max-width: 767.98px) {
+    .str-master-page .str-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}

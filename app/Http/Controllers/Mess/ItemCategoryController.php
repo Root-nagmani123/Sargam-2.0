@@ -22,12 +22,18 @@ class ItemCategoryController extends Controller
         }
 
         $itemcategories = $query->orderByDesc('id')->get();
-        return view('mess.itemcategories.index', compact('itemcategories', 'categoryTypeFilter'));
+        $editItemCategory = null;
+
+        if ($request->filled('id') && $request->query('open') === 'edit') {
+            $editItemCategory = ItemCategory::find($request->query('id'));
+        }
+
+        return view('mess.itemcategories.index', compact('itemcategories', 'categoryTypeFilter', 'editItemCategory'));
     }
 
     public function create()
     {
-        return view('mess.itemcategories.create');
+        return redirect()->route('admin.mess.itemcategories.index', ['open' => 'create']);
     }
 
     public function store(Request $request)
@@ -41,8 +47,7 @@ class ItemCategoryController extends Controller
 
     public function edit($id)
     {
-        $itemcategory = ItemCategory::findOrFail($id);
-        return view('mess.itemcategories.edit', compact('itemcategory'));
+        return redirect()->route('admin.mess.itemcategories.index', ['open' => 'edit', 'id' => $id]);
     }
 
     public function update(Request $request, $id)

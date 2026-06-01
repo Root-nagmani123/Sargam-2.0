@@ -1,0 +1,199 @@
+/* Vendor Master — programme-dt reference layout (aligned with store master) */
+.vnd-master-page {
+    --vnd-primary: #004a93;
+    --vnd-primary-dark: #003366;
+    --vnd-border: #e4e7ec;
+    --vnd-text: #344054;
+    --vnd-heading: #101828;
+    --vnd-muted: #667085;
+    --vnd-danger: #d92d20;
+}
+
+.vnd-master-page .vnd-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--vnd-border) !important;
+}
+
+.vnd-master-page .vnd-dt-toolbar {
+    width: 100%;
+}
+
+.vnd-master-page .vnd-dt-toolbar .programme-dt-search {
+    flex: 1 1 220px;
+    width: min(100%, 360px);
+    max-width: 360px;
+}
+
+.vnd-master-page .vnd-dt-toolbar .mess-col-manager-dropdown .btn {
+    height: 40px;
+    padding: 0 0.875rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    border-radius: 8px;
+    white-space: nowrap;
+}
+
+.vnd-master-page .mess-col-manager-toolbar {
+    display: none !important;
+}
+
+@media (min-width: 576px) {
+    .vnd-master-page .vnd-dt-toolbar {
+        flex-wrap: nowrap !important;
+    }
+}
+
+.vnd-master-page .vnd-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vnd-master-page #vendorsTable thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--vnd-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.vnd-master-page #vendorsTable {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.vnd-master-page #vendorsTable tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--vnd-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.vnd-master-page #vendorsTable tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.vnd-master-page #vendorsTable thead th:first-child,
+.vnd-master-page #vendorsTable tbody td:first-child {
+    text-align: left !important;
+    color: var(--vnd-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.vnd-master-page #vendorsTable thead th:nth-child(2),
+.vnd-master-page #vendorsTable tbody td:nth-child(2) {
+    text-align: left !important;
+}
+
+.vnd-master-page #vendorsTable tbody td:nth-child(2) .vnd-vendor-name {
+    font-weight: 600;
+    color: var(--vnd-heading);
+}
+
+.vnd-master-page #vendorsTable thead th:nth-child(3),
+.vnd-master-page #vendorsTable thead th:nth-child(4),
+.vnd-master-page #vendorsTable thead th:nth-child(5),
+.vnd-master-page #vendorsTable thead th:nth-child(7),
+.vnd-master-page #vendorsTable thead th:nth-child(8),
+.vnd-master-page #vendorsTable tbody td:nth-child(3),
+.vnd-master-page #vendorsTable tbody td:nth-child(4),
+.vnd-master-page #vendorsTable tbody td:nth-child(5),
+.vnd-master-page #vendorsTable tbody td:nth-child(7),
+.vnd-master-page #vendorsTable tbody td:nth-child(8) {
+    text-align: center !important;
+}
+
+.vnd-master-page #vendorsTable thead th:nth-child(6),
+.vnd-master-page #vendorsTable tbody td:nth-child(6) {
+    text-align: left !important;
+    max-width: 14rem;
+}
+
+.vnd-master-page #vendorsTable tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+    min-width: 4.5rem;
+}
+
+.vnd-master-page .vnd-vendor-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.vnd-master-page .vnd-vendor-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.vnd-master-page .vnd-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.vnd-master-page .vnd-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.vnd-master-page .vnd-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.vnd-master-page .vnd-delete-btn:disabled,
+.vnd-master-page .vnd-delete-btn[disabled] {
+    opacity: 0.55;
+    cursor: not-allowed;
+    color: var(--vnd-danger) !important;
+}
+
+.vnd-master-page .vnd-vendor-actions .programme-action-btn--danger .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.vnd-master-page .vnd-dt-footer .dataTables_info,
+.vnd-master-page .vnd-dt-footer .programme-dt-count {
+    font-size: 0.875rem;
+    color: var(--vnd-muted);
+}
+
+.vnd-master-page .vnd-empty-state {
+    padding: 2.5rem 1rem !important;
+}
+
+.vnd-vendor-modal-dialog {
+    max-width: 42rem;
+    width: calc(100% - 1.5rem);
+}
+
+.vnd-vendor-modal-dialog.vnd-vendor-modal-dialog--xl {
+    max-width: 56rem;
+}
+
+.vnd-modal-form .form-control.is-invalid,
+.vnd-modal-form .form-select.is-invalid {
+    border-color: #fda29b;
+}
+
+@media (max-width: 767.98px) {
+    .vnd-master-page .vnd-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}

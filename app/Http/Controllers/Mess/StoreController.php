@@ -7,15 +7,21 @@ use App\Models\Mess\Store;
 
 class StoreController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $stores = Store::orderByDesc('id')->get();
-        return view('mess.stores.index', compact('stores'));
+        $editStore = null;
+
+        if ($request->filled('id') && in_array($request->query('open'), ['edit', 'str_edit'], true)) {
+            $editStore = Store::find($request->query('id'));
+        }
+
+        return view('mess.stores.index', compact('stores', 'editStore'));
     }
 
     public function create()
     {
-        return view('mess.stores.create');
+        return redirect()->route('admin.mess.stores.index', ['open' => 'create']);
     }
 
     public function store(Request $request)
@@ -31,8 +37,7 @@ class StoreController extends Controller
 
     public function edit($id)
     {
-        $store = Store::findOrFail($id);
-        return view('mess.stores.edit', compact('store'));
+        return redirect()->route('admin.mess.stores.index', ['open' => 'edit', 'id' => $id]);
     }
 
     public function update(Request $request, $id)

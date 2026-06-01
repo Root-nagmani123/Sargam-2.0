@@ -1827,9 +1827,59 @@ public function toggleStatus(Request $request)
         $id = $request->id;
         $status = $request->status;
 
-        DB::table($request->table)
-            ->where($idColumn, $id)
-            ->update([$column => $status]);
+        if ($table === 'mess_stores' && $column === 'status') {
+            $statusValue = (int) $status === 1
+                ? \App\Models\Mess\Store::STATUS_ACTIVE
+                : \App\Models\Mess\Store::STATUS_INACTIVE;
+
+            DB::table('mess_stores')
+                ->where($idColumn, $id)
+                ->update(['status' => $statusValue]);
+        } elseif ($table === 'mess_vendors' && $column === 'status') {
+            $statusValue = (int) $status === 1
+                ? \App\Models\Mess\Vendor::STATUS_ACTIVE
+                : \App\Models\Mess\Vendor::STATUS_INACTIVE;
+
+            DB::table('mess_vendors')
+                ->where($idColumn, $id)
+                ->update(['status' => $statusValue]);
+        } elseif ($table === 'mess_item_categories' && $column === 'status') {
+            $statusValue = (int) $status === 1
+                ? \App\Models\Mess\ItemCategory::STATUS_ACTIVE
+                : \App\Models\Mess\ItemCategory::STATUS_INACTIVE;
+
+            DB::table('mess_item_categories')
+                ->where($idColumn, $id)
+                ->update(['status' => $statusValue]);
+        } elseif ($table === 'mess_item_subcategories' && $column === 'status') {
+            $statusValue = (int) $status === 1
+                ? \App\Models\Mess\ItemSubcategory::STATUS_ACTIVE
+                : \App\Models\Mess\ItemSubcategory::STATUS_INACTIVE;
+
+            DB::table('mess_item_subcategories')
+                ->where($idColumn, $id)
+                ->update(['status' => $statusValue]);
+        } elseif ($table === 'mess_client_types' && $column === 'status') {
+            $statusValue = (int) $status === 1
+                ? \App\Models\Mess\ClientType::STATUS_ACTIVE
+                : \App\Models\Mess\ClientType::STATUS_INACTIVE;
+
+            DB::table('mess_client_types')
+                ->where($idColumn, $id)
+                ->update(['status' => $statusValue]);
+        } elseif ($table === 'mess_sub_stores' && $column === 'status') {
+            $statusValue = (int) $status === 1
+                ? \App\Models\Mess\SubStore::STATUS_ACTIVE
+                : \App\Models\Mess\SubStore::STATUS_INACTIVE;
+
+            DB::table('mess_sub_stores')
+                ->where($idColumn, $id)
+                ->update(['status' => $statusValue]);
+        } else {
+            DB::table($request->table)
+                ->where($idColumn, $id)
+                ->update([$column => $status]);
+        }
 
         if ($table === 'employee_type_master') {
             EmployeeTypeMasterDataTable::bumpListingCacheEpoch();

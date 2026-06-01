@@ -8,15 +8,21 @@ use App\Models\Mess\SubStore;
 
 class SubStoreController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
         $subStores = SubStore::orderByDesc('id')->get();
-        return view('mess.sub-stores.index', compact('subStores'));
+        $editSubStore = null;
+
+        if ($request->filled('id') && $request->query('open') === 'edit') {
+            $editSubStore = SubStore::find($request->query('id'));
+        }
+
+        return view('mess.sub-stores.index', compact('subStores', 'editSubStore'));
     }
 
     public function create()
     {
-        return view('mess.sub-stores.create');
+        return redirect()->route('admin.mess.sub-stores.index', ['open' => 'create']);
     }
 
     public function store(Request $request)
@@ -30,8 +36,7 @@ class SubStoreController extends Controller
 
     public function edit($id)
     {
-        $subStore = SubStore::findOrFail($id);
-        return view('mess.sub-stores.edit', compact('subStore'));
+        return redirect()->route('admin.mess.sub-stores.index', ['open' => 'edit', 'id' => $id]);
     }
 
     public function update(Request $request, $id)
