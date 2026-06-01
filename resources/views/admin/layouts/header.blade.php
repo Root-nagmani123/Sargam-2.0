@@ -1201,14 +1201,14 @@
                 if (activeTab && indicator) {
                     updateIndicatorPosition(activeTab);
 
-                    // Listen for tab changes
-                    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                    // Listen for tab changes (main header nav only — not nested page tablists)
+                    document.querySelectorAll('.header-main-nav [data-bs-toggle="tab"], .mobile-tab-link[data-bs-toggle="tab"]').forEach(tab => {
                         tab.addEventListener('shown.bs.tab', function(e) {
                             updateIndicatorPosition(e.target);
 
                             // Keep active state in sync between desktop and mobile tabs
                             const targetId = e.target.getAttribute('href');
-                            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(link => {
+                            document.querySelectorAll('.header-main-nav [data-bs-toggle="tab"], .mobile-tab-link[data-bs-toggle="tab"]').forEach(link => {
                                 if (link.getAttribute('href') === targetId) {
                                     link.classList.add('active');
                                     link.setAttribute('aria-selected', 'true');
@@ -1456,9 +1456,10 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    // Include both desktop and mobile tabs
-    const tabLinks = document.querySelectorAll('[data-bs-toggle="tab"]');
-    const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+    // Main header navigation only (exclude nested page tablists e.g. FC migrate students)
+    const tabLinks = document.querySelectorAll('.header-main-nav [data-bs-toggle="tab"], .mobile-tab-link[data-bs-toggle="tab"]');
+    // Top-level layout panes only — do not touch nested tab-panes inside page content (e.g. FC registration step groups)
+    const panes = document.querySelectorAll('#mainNavbarContent > .tab-pane');
 
     function showPane(targetId) {
         if (!targetId || targetId === '#') return; // Skip empty hrefs
@@ -1673,9 +1674,8 @@ document.addEventListener('DOMContentLoaded', function() {
     
     showPane(initial);
     
-    // Sync mobile tabs with initial state
-    const allTabs = document.querySelectorAll('[data-bs-toggle="tab"]');
-    allTabs.forEach(tab => {
+    // Sync desktop + mobile main nav tabs with initial state
+    tabLinks.forEach(tab => {
         const href = tab.getAttribute('href');
         if (href === initial) {
             tab.classList.add('active');

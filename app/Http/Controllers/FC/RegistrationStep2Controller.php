@@ -7,8 +7,11 @@ use App\Models\FC\{
     StudentMasterFirst, StudentMasterSecond, StudentMaster,
     CategoryMaster, ReligionMaster, StateMaster, CountryMaster, FatherProfession
 };
+use App\Models\FC\FcForm;
+use App\Services\FC\FcRegistrationIntentService;
 use App\Services\FC\RegistrationService;
 use App\Services\FC\DynamicFormService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 
@@ -86,8 +89,7 @@ class RegistrationStep2Controller extends Controller
 
         $this->formService->saveStepData('step2', $userId, $validated, $request);
 
-        return redirect()->route('fc-reg.registration.step3')
-            ->with('success', 'Step 2 saved. Please complete Step 3.');
+        return $this->redirectToStep3AfterSave();
     }
 
     private function saveStep2Legacy(Request $request, int $userId)
@@ -138,7 +140,53 @@ class RegistrationStep2Controller extends Controller
 
         app(\App\Services\FC\FcRegistrationRegisteredSyncService::class)->syncForCredentialsUser($userId);
 
-        return redirect()->route('fc-reg.registration.step3')
+        return $this->redirectToStep3AfterSave();
+    }
+
+    private function redirectToStep3AfterSave(): RedirectResponse
+    {
+        $formId = session(FcRegistrationIntentService::SESSION_FORM_ID);
+        if ($formId) {
+            $form = FcForm::query()->find((int) $formId);
+            $step = $this->resolveOtherDetailsStepForForm($form);
+            if ($form && $step) {
+                $groups = $step->activeFieldGroups()->orderBy('display_order')->get()->values();
+                $params = [$form, $step];
+                $firstGroup = fc_form_first_group_name($groups);
+                if ($firstGroup !== null) {
+                    $params['group'] = $firstGroup;
+                }
+
+                return redirect()
+                    ->route('fc-reg.forms.step', $params)
+                    ->with('success', 'Step 2 saved. Please complete Other Details.');
+            }
+        }
+
+        $groups = $this->formService->getStepGroups('step3')->values();
+        $params = [];
+        $firstGroup = fc_form_first_group_name($groups);
+        if ($firstGroup !== null) {
+            $params['group'] = $firstGroup;
+        }
+
+        return redirect()
+            ->route('fc-reg.registration.step3', $params)
             ->with('success', 'Step 2 saved. Please complete Step 3.');
+    }
+
+    private function resolveOtherDetailsStepForForm(?FcForm $form): ?\App\Models\FC\FcFormStep
+    {
+        if (! $form) {
+            return null;
+        }
+
+        $steps = $form->activeSteps;
+        $bySlug = $steps->first(fn ($s) => in_array($s->step_slug, ['step3', '99th-step3'], true));
+        if ($bySlug) {
+            return $bySlug;
+        }
+
+        return $steps->get(2);
     }
 }

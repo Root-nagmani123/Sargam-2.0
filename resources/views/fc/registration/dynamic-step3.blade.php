@@ -2,29 +2,49 @@
 @section('title', $step->step_name)
 
 @section('setup_content')
-<div class="container py-4">
+<div class="container py-2 fc-step3-page">
     @isset($form)
         <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
             <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-arrow-left me-1"></i>{{ $form->form_name }}
             </a>
+            @isset($allSteps)
+                @foreach($allSteps as $si => $s)
+                    <span class="badge {{ $s->id === $step->id ? 'bg-primary' : 'bg-light text-dark' }} rounded-pill px-3 py-2">
+                        {{ $si + 1 }}. {{ $s->step_name }}
+                    </span>
+                @endforeach
+            @endisset
         </div>
     @endisset
-    @include('partials.step-indicator', ['current' => 3])
+    @if (! isset($allSteps))
+        @include('partials.step-indicator', ['current' => 3])
+    @endif
 
     <div class="card border-0 shadow-sm" style="border-radius:10px;">
-        <div class="card-header bg-white py-3">
+        <div class="card-header bg-white py-2">
             <h5 class="mb-1"><i class="bi {{ $step->icon ?? 'bi-journal-text' }} me-2"></i>{{ $step->step_name }}</h5>
             @if($step->description)
                 <p class="text-muted small mb-0">{{ $step->description }}</p>
             @endif
         </div>
-        <div class="card-body">
+        <div class="card-body pt-2 pb-3">
+            @if($errors->any())
+                <div class="alert alert-danger small py-2 mb-3">
+                    <strong class="d-block mb-1">Please fix the following:</strong>
+                    <ul class="mb-0 ps-3">
+                        @foreach($errors->all() as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+            @php $activeGi = fc_form_group_active_index($groups, request()->query('group')); @endphp
             {{-- Group tabs from form builder (includes Pre-medical when configured as first group) --}}
-            <ul class="nav nav-tabs mb-3 flex-wrap" id="step3Tabs" role="tablist">
-                @foreach($groups as $gi => $group)
+            <ul class="nav nav-tabs mb-2 flex-wrap" id="step3Tabs" role="tablist">
+                @foreach($groups as $group)
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }} {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
+                        <button class="nav-link text-nowrap {{ $loop->index === $activeGi ? 'active' : '' }} {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
                                 id="tab-{{ $group->group_name }}-btn"
                                 data-bs-toggle="tab"
                                 data-bs-target="#tab-{{ $group->group_name }}"
@@ -41,7 +61,7 @@
             </ul>
 
             <div class="tab-content" id="step3TabContent">
-                @foreach($groups as $gi => $group)
+                @foreach($groups as $group)
                     @php
                         $rows         = $existingRows[$group->group_name] ?? collect();
                         $gLookups     = $groupLookups[$group->group_name] ?? [];
@@ -52,8 +72,11 @@
                             : $group->groupFields;
                         $needsMultipart = $groupFieldDefs->contains(fn ($f) => $f->field_type === 'file');
                     @endphp
-                    <div class="tab-pane fade {{ $gi === 0 ? 'show active' : '' }}" id="tab-{{ $group->group_name }}" role="tabpanel">
-                        <form method="POST" action="{{ route('fc-reg.registration.step3.save-group', $group->id) }}"
+                    <div class="tab-pane fade {{ $loop->index === $activeGi ? 'show active' : '' }}"
+                         id="tab-{{ $group->group_name }}" role="tabpanel"
+                         @if($loop->index === $activeGi) style="display:block !important;" @endif>
+                        <form method="POST"
+                              action="{{ isset($form) ? route('fc-reg.forms.group.save', [$form, $group]) : route('fc-reg.registration.step3.save-group', $group->id) }}"
                               @if($needsMultipart) enctype="multipart/form-data" @endif>
                             @csrf
 
@@ -95,10 +118,14 @@
                             @endif
 
                             <div class="d-flex justify-content-between mt-4">
-                                @if($gi > 0)
-                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tab-{{ $groups[$gi-1]->group_name }}-btn').click()">
+                                @if($loop->index > 0)
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tab-{{ $groups[$loop->index - 1]->group_name }}-btn').click()">
                                         <i class="bi bi-arrow-left me-1"></i>Previous Tab
                                     </button>
+                                @elseif(isset($prevStep, $form))
+                                    <a href="{{ route('fc-reg.forms.step', [$form, $prevStep]) }}" class="btn btn-outline-secondary">
+                                        <i class="bi bi-arrow-left me-1"></i>Previous Step
+                                    </a>
                                 @else
                                     <a href="{{ route('fc-reg.registration.step2') }}" class="btn btn-outline-secondary">
                                         <i class="bi bi-arrow-left me-1"></i>Back to Step 2
@@ -106,7 +133,9 @@
                                 @endif
 
                                 <button type="submit" class="btn btn-primary">
-                                    @if($isLastGroup)
+                                    @if($isLastGroup && isset($nextStep, $form))
+                                        Save & Next Step <i class="bi bi-arrow-right ms-1"></i>
+                                    @elseif($isLastGroup)
                                         Save & Continue to Bank Details <i class="bi bi-arrow-right ms-1"></i>
                                     @else
                                         Save <i class="bi bi-check me-1"></i>
@@ -127,6 +156,32 @@
 <style>
     .select2-container--default .select2-selection--single { height: 31px; padding: 2px 8px; font-size: 0.875rem; border: 1px solid #dee2e6; border-radius: 0.25rem; }
     .select2-container--default .select2-selection--single .select2-selection__arrow { height: 29px; }
+    /* Stack group panes in one grid cell so hidden tabs do not add vertical gap */
+    #step3TabContent {
+        display: grid;
+        grid-template-columns: 1fr;
+        margin-top: 0;
+    }
+    #step3TabContent > .tab-pane {
+        grid-row: 1;
+        grid-column: 1;
+        margin: 0;
+        padding: 0;
+    }
+    #step3TabContent > .tab-pane:not(.show.active) {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none;
+    }
+    #step3TabContent > .tab-pane.show.active {
+        display: block !important;
+        visibility: visible !important;
+        height: auto !important;
+        opacity: 1;
+    }
+    .fc-step3-page .repeatable-row { margin-bottom: 0.5rem; }
 </style>
 @endpush
 
@@ -186,5 +241,22 @@ function addGroupRow(groupName, groupId, maxRows) {
 $(document).ready(function() {
     $('.select2-dynamic').select2({ theme: 'bootstrap-5', width: '100%', placeholder: '-- Select --', allowClear: true });
 });
+
+document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (input) {
+    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10);
+    if (!maxKb) return;
+    var form = input.closest('form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+        if (!input.files || !input.files.length) return;
+        if (input.files[0].size > maxKb * 1024) {
+            e.preventDefault();
+            var mb = maxKb >= 1024 ? (maxKb / 1024) + ' MB' : maxKb + ' KB';
+            alert('File is too large. Maximum allowed size is ' + mb + '.');
+            input.focus();
+        }
+    });
+});
 </script>
+@include('fc.registration.partials.group-tabs-activate-script')
 @endpush

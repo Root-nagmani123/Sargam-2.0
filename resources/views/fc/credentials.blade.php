@@ -44,7 +44,11 @@
                 <div class="col-md-12">
                     <label class="form-label">User Name</label>
                     <input type="text" class="form-control" placeholder="Enter your User Name" name="reg_name"
-                        value="{{ old('reg_name') }}" required>
+                        id="reg_name" value="{{ strtolower((string) old('reg_name', '')) }}" required
+                        autocomplete="username" autocapitalize="none" spellcheck="false"
+                        pattern="[a-z][a-z0-9._]{5,19}"
+                        title="Lowercase letters, numbers, dots and underscores only (6–20 characters).">
+                    <div class="form-text text-muted">Use lowercase only — capital letters are converted automatically.</div>
                 </div>
 
                 <!-- Mobile Number -->
@@ -96,6 +100,24 @@
 </main>
 <!-- Toggle Password Visibility Script -->
 <script>
+(function () {
+    var usernameInput = document.getElementById('reg_name');
+    if (!usernameInput) {
+        return;
+    }
+    function toLowerUsername() {
+        var pos = usernameInput.selectionStart;
+        usernameInput.value = usernameInput.value.toLowerCase();
+        if (pos !== null) {
+            usernameInput.setSelectionRange(pos, pos);
+        }
+    }
+    usernameInput.addEventListener('input', toLowerUsername);
+    usernameInput.addEventListener('paste', function () {
+        setTimeout(toLowerUsername, 0);
+    });
+})();
+
 function togglePassword(id, btn) {
     const input = document.getElementById(id);
     const icon = btn.querySelector('i');

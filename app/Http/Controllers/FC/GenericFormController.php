@@ -18,6 +18,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Validator;
 use Illuminate\View\View;
 
 class GenericFormController extends Controller
@@ -91,7 +92,7 @@ class GenericFormController extends Controller
         }
 
         $fields   = $step->activeFields;
-        $groups   = $step->activeFieldGroups()->with('activeGroupFields')->get();
+        $groups   = $step->activeFieldGroups()->with('activeGroupFields')->get()->values();
 
         // If step has groups (like step3 pattern), use groups view
         if ($groups->isNotEmpty()) {
@@ -102,7 +103,7 @@ class GenericFormController extends Controller
             foreach ($groups as $group) {
                 $rows = $this->formService->getExistingGroupRows($group, $userId);
                 $existingRows[$group->group_name] = $rows;
-                $completedGroups[$group->group_name] = $rows->isNotEmpty();
+                $completedGroups[$group->group_name] = $this->formService->groupRowsHaveMeaningfulData($group, $rows);
                 $fieldsForLookups = $group->activeGroupFields->isNotEmpty()
                     ? $group->activeGroupFields
                     : $group->groupFields;
@@ -114,24 +115,16 @@ class GenericFormController extends Controller
             $prevStep = $stepIndex > 0 ? $allSteps[$stepIndex - 1] : null;
             $nextStep = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
 
-            // FC registration "Other details": dedicated step-3 layout (step indicator + same group tabs as builder).
-            if (($form->form_slug ?? '') === 'fc-registration' && ($step->step_slug ?? '') === 'step3') {
-                return view('fc.registration.dynamic-step3', compact(
-                    'form',
-                    'step',
-                    'groups',
-                    'existingRows',
-                    'groupLookups',
-                    'completedGroups',
-                    'allSteps',
-                    'prevStep',
-                    'nextStep'
-                ));
-            }
-
-            return view('forms.step-groups', compact(
-                'form', 'step', 'groups', 'existingRows', 'groupLookups', 'completedGroups',
-                'allSteps', 'prevStep', 'nextStep'
+            return view('fc.registration.dynamic-step3', compact(
+                'form',
+                'step',
+                'groups',
+                'existingRows',
+                'groupLookups',
+                'completedGroups',
+                'allSteps',
+                'prevStep',
+                'nextStep'
             ));
         }
 
@@ -183,8 +176,16 @@ class GenericFormController extends Controller
                 return back()->with('error', 'Invalid document field.');
             }
 
-            $rules = $this->formService->buildValidationRules(collect([$field]));
-            $request->validate($rules);
+            $single = collect([$field]);
+            $this->formService->assertMultipartUploadsValid($request, $single);
+            $rules = $this->formService->buildValidationRules($single);
+            [$customMessages, $customAttributes] = $this->formService->validationMessagesAndAttributes($single);
+            $validator = Validator::make($request->all(), $rules, $customMessages, $customAttributes);
+            if ($validator->fails()) {
+                return redirect()->route('fc-reg.forms.step', [$form, $step])
+                    ->withErrors($validator)
+                    ->withInput();
+            }
             $this->formService->saveSingleFileField($step, $field, $userId, $request);
 
             return redirect()->route('fc-reg.forms.step', [$form, $step])
@@ -212,8 +213,10 @@ class GenericFormController extends Controller
                 ->with('success', "{$step->step_name} saved. All steps completed!");
         }
 
-        $rules     = $this->formService->buildValidationRules($fields);
-        $validated = $request->validate($rules);
+        $validated = $this->validateFlatStepOrRedirect($request, $form, $step, $fields);
+        if ($validated instanceof RedirectResponse) {
+            return $validated;
+        }
 
         if ($request->boolean('same_as_permanent')) {
             $validated['pres_address_line1'] = $validated['perm_address_line1'] ?? null;
@@ -233,8 +236,7 @@ class GenericFormController extends Controller
         $nextStep  = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
 
         if ($nextStep) {
-            return redirect()->route('fc-reg.forms.step', [$form, $nextStep])
-                ->with('success', "{$step->step_name} saved. Please complete {$nextStep->step_name}.");
+            return $this->redirectToFormStep($form, $nextStep, "{$step->step_name} saved. Please complete {$nextStep->step_name}.");
         }
 
         return redirect()->route('fc-reg.forms.dashboard', $form)
@@ -255,8 +257,14 @@ class GenericFormController extends Controller
             return $guard;
         }
 
-        $rules     = $this->formService->buildGroupValidationRules($group);
-        $validated = $request->validate($rules);
+        $groupFields = $group->activeGroupFields->isNotEmpty()
+            ? $group->activeGroupFields
+            : $group->groupFields;
+
+        $validated = $this->validateGroupStepOrRedirect($request, $form, $step, $group, $groupFields);
+        if ($validated instanceof RedirectResponse) {
+            return $validated;
+        }
 
         $rows = $validated[$group->group_name] ?? [];
 
@@ -293,15 +301,92 @@ class GenericFormController extends Controller
             $nextStep  = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
 
             if ($nextStep) {
-                return redirect()->route('fc-reg.forms.step', [$form, $nextStep])
-                    ->with('success', "{$step->step_name} completed.");
+                return $this->redirectToFormStep($form, $nextStep, "{$step->step_name} completed.");
             }
 
             return redirect()->route('fc-reg.forms.dashboard', $form)
                 ->with('success', 'All steps completed!');
         }
 
-        return back()->with('success', "{$group->group_label} saved.");
+        $groupIndex = $allGroups->search(fn ($g) => $g->id === $group->id);
+        if ($groupIndex !== false && $groupIndex < $allGroups->count() - 1) {
+            $nextGroup = $allGroups[$groupIndex + 1];
+
+            return $this->redirectToFormStep(
+                $form,
+                $step,
+                "{$group->group_label} saved. Continue with {$nextGroup->group_label}.",
+                $nextGroup->group_name
+            );
+        }
+
+        return $this->redirectToFormStep(
+            $form,
+            $step,
+            "{$group->group_label} saved.",
+            $group->group_name
+        );
+    }
+
+    /**
+     * @return array<string, mixed>|RedirectResponse
+     */
+    private function validateFlatStepOrRedirect(Request $request, FcForm $form, FcFormStep $step, $fields)
+    {
+        $this->formService->assertMultipartUploadsValid($request, $fields);
+
+        $rules = $this->formService->buildValidationRules($fields);
+        [$customMessages, $customAttributes] = $this->formService->validationMessagesAndAttributes($fields);
+        $validator = Validator::make($request->all(), $rules, $customMessages, $customAttributes);
+
+        if ($validator->fails()) {
+            return redirect()->route('fc-reg.forms.step', [$form, $step])
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        return $validator->validated();
+    }
+
+    /**
+     * @return array<string, mixed>|RedirectResponse
+     */
+    private function validateGroupStepOrRedirect(Request $request, FcForm $form, FcFormStep $step, FcFormFieldGroup $group, $groupFields)
+    {
+        $this->formService->assertMultipartUploadsValid($request, $groupFields, $group->group_name);
+
+        $rules = $this->formService->buildGroupValidationRules($group);
+        [$customMessages, $customAttributes] = $this->formService->validationMessagesAndAttributes($groupFields, $group->group_name);
+        $validator = Validator::make($request->all(), $rules, $customMessages, $customAttributes);
+
+        if ($validator->fails()) {
+            return redirect()
+                ->route('fc-reg.forms.step', [$form, $step, 'group' => $group->group_name])
+                ->withErrors($validator)
+                ->withInput();
+        }
+
+        return $validator->validated();
+    }
+
+    private function redirectToFormStep(
+        FcForm $form,
+        FcFormStep $step,
+        string $message,
+        ?string $groupName = null
+    ): RedirectResponse {
+        $params = [$form, $step];
+        if ($groupName === null || $groupName === '') {
+            $groups = $step->activeFieldGroups()->orderBy('display_order')->get()->values();
+            $groupName = fc_form_first_group_name($groups);
+        }
+        if ($groupName !== null && $groupName !== '') {
+            $params['group'] = $groupName;
+        }
+
+        return redirect()
+            ->route('fc-reg.forms.step', $params)
+            ->with('success', $message);
     }
 
     private function guardSequentialFormAccess(FcForm $form, FcFormStep $step, string $userId): ?RedirectResponse

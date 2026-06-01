@@ -82,20 +82,18 @@
                 console.log('Home tab link activated in header');
             }
 
-            // Now handle BOTH content tab systems properly
-            // 1. Body wrapper tabs (main content area)
-            const bodyWrapper = document.querySelector('.body-wrapper');
-            if (bodyWrapper) {
-                const contentTabPanes = bodyWrapper.querySelectorAll('.tab-pane');
+            // Main layout tabs only — do not strip nested tab-panes (e.g. FC step 3 group forms)
+            const mainNavbarContent = document.querySelector('#mainNavbarContent');
+            if (mainNavbarContent) {
+                const contentTabPanes = mainNavbarContent.querySelectorAll(':scope > .tab-pane');
                 contentTabPanes.forEach(function(pane) {
                     pane.classList.remove('show', 'active');
                 });
 
-                // Activate home content pane
-                const homeContentPane = bodyWrapper.querySelector('#home.tab-pane');
+                const homeContentPane = mainNavbarContent.querySelector(':scope > #home.tab-pane');
                 if (homeContentPane) {
                     homeContentPane.classList.add('show', 'active');
-                    console.log('Home content pane activated in body wrapper');
+                    console.log('Home content pane activated in main navbar');
                 }
             }
 

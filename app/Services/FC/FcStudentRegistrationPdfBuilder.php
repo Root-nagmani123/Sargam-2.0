@@ -79,8 +79,8 @@ class FcStudentRegistrationPdfBuilder
                         (string) ($e->organisation_name ?? '-'),
                         (string) ($e->designation ?? '-'),
                         (string) ($e->job_type_name ?? '-'),
-                        (string) ($e->from_date ?? '-'),
-                        (string) ($e->to_date ?? '-'),
+                        format_date($e->from_date ?? null),
+                        format_date($e->to_date ?? null),
                         ($e->is_current ?? false) ? 'Yes / हाँ' : 'No / नहीं',
                     ];
                 })->all(),
@@ -163,7 +163,7 @@ class FcStudentRegistrationPdfBuilder
         return $this->filterEmptyRows([
             ['en' => "Father's name", 'hi' => 'पिता का नाम', 'value' => $s1->fathers_name ?? null],
             ['en' => "Mother's name", 'hi' => 'माता का नाम', 'value' => $s1->mothers_name ?? null],
-            ['en' => 'Date of birth', 'hi' => 'जन्म तिथि', 'value' => $s1->date_of_birth?->format('d/m/Y')],
+            ['en' => 'Date of birth', 'hi' => 'जन्म तिथि', 'value' => format_date($s1->date_of_birth)],
             ['en' => 'Gender', 'hi' => 'लिंग', 'value' => $s1->gender ?? null],
             ['en' => 'Mobile', 'hi' => 'मोबाइल', 'value' => $s1->mobile_no ?? null],
             ['en' => 'E-mail', 'hi' => 'ई-मेल', 'value' => $s1->email ?? null],

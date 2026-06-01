@@ -154,7 +154,7 @@
                 @forelse($students as $idx => $s)
                     <tr>
                         <td class="px-3">{{ $students->firstItem() + $idx }}</td>
-                        <td><code style="font-size:11px">{{ $s->{$userKey} }}</code></td>
+                        <td><code style="font-size:11px">{{ $s->login_username ?? '—' }}</code></td>
                         <td>{{ $s->full_name ?? '—' }}</td>
                         <td>
                             <span class="badge bg-primary-subtle text-primary" style="font-size:10px;">

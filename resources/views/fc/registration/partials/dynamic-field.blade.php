@@ -115,13 +115,21 @@
         @break
 
     @case('file')
+        @php
+            $fileMaxKb = (int) ($field->file_max_kb ?? 0);
+            $fileHint = $field->help_text ?: fc_file_upload_hint($field->validation_rules ?? null, $fileMaxKb > 0 ? $fileMaxKb : null);
+        @endphp
         <input type="file"
                name="{{ $fieldName }}"
-               class="form-control @error($fieldName) is-invalid @enderror"
-               accept="{{ $field->file_extensions ? '.' . implode(',.', explode(',', $field->file_extensions)) : '' }}"
+               class="form-control fc-file-upload @error($fieldName) is-invalid @enderror"
+               accept="{{ $field->file_extensions ? '.' . implode(',.', explode(',', $field->file_extensions)) : '.pdf,.jpg,.jpeg,.png' }}"
+               data-max-kb="{{ $fileMaxKb > 0 ? $fileMaxKb : (preg_match('/max:(\d+)/', (string) ($field->validation_rules ?? ''), $m) ? (int) $m[1] : 5120) }}"
                {{ $isReadonly ? 'disabled' : '' }}>
+        @if($fileHint)
+            <div class="form-text text-muted">{{ $fileHint }}</div>
+        @endif
         @if($value && !$isReadonly)
-            <small class="text-success"><i class="bi bi-check-circle"></i> File uploaded: {{ basename($value) }}</small>
+            <small class="text-success d-block mt-1"><i class="bi bi-check-circle"></i> File uploaded: {{ basename($value) }}</small>
         @endif
         @break
 

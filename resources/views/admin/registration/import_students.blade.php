@@ -160,6 +160,18 @@
         #fc-migrate-page #fcMigrateTabContent > .tab-pane:not(.show) {
             display: none !important;
         }
+
+        #fc-migrate-page #fcMigrateTabs .nav-link {
+            color: #555;
+            border-radius: 6px 6px 0 0;
+        }
+
+        #fc-migrate-page #fcMigrateTabs .nav-link.active {
+            color: #004a93;
+            font-weight: 600;
+            background-color: #fff;
+            border-color: #dee2e6 #dee2e6 #fff;
+        }
     </style>
 @endpush
 
@@ -395,11 +407,17 @@
                 return document.getElementById('tab-migrate')?.classList.contains('active') === true;
             }
 
-            function enforceFcMigrateTabs() {
-                var migrateOn = isMigrateTabActive();
+            function setFcMigrateActiveTab(which) {
+                var eligibleOn = which === 'eligible';
+                var $tabMigrated = $('#tab-migrated');
+                var $tabMigrate = $('#tab-migrate');
                 var $paneMigrated = $('#pane-migrated');
                 var $paneMigrate = $('#pane-migrate');
-                if (migrateOn) {
+
+                $tabMigrated.toggleClass('active', !eligibleOn).attr('aria-selected', !eligibleOn ? 'true' : 'false');
+                $tabMigrate.toggleClass('active', eligibleOn).attr('aria-selected', eligibleOn ? 'true' : 'false');
+
+                if (eligibleOn) {
                     $paneMigrated.removeClass('show active');
                     $paneMigrate.addClass('show active');
                 } else {
@@ -407,6 +425,17 @@
                     $paneMigrated.addClass('show active');
                 }
             }
+
+            function enforceFcMigrateTabs() {
+                setFcMigrateActiveTab(isMigrateTabActive() ? 'eligible' : 'migrated');
+            }
+
+            var initialMigrateTab = @json(
+                session('success')
+                    ? 'migrated'
+                    : (request()->query('tab') === 'eligible' ? 'eligible' : 'migrated')
+            );
+            setFcMigrateActiveTab(initialMigrateTab);
 
             function ensureDataTableInPane(tableId, paneId) {
                 var $pane = document.getElementById(paneId);
@@ -607,7 +636,7 @@
             document.querySelectorAll('#fcMigrateTabs button[data-bs-toggle="tab"]').forEach(function(btn) {
                 btn.addEventListener('shown.bs.tab', function(e) {
                     var isMigrate = e.target && e.target.id === 'tab-migrate';
-                    enforceFcMigrateTabs();
+                    setFcMigrateActiveTab(isMigrate ? 'eligible' : 'migrated');
                     syncFilterCountVisibility();
                     refreshMigrateExportLinks();
                     if (!isMigrate && migratedTable) {
@@ -672,6 +701,7 @@
             refreshTabCounts();
 
             requestAnimationFrame(function() {
+                setFcMigrateActiveTab(initialMigrateTab);
                 mountMigrateExportToolbar(0);
                 if (migratedTable) {
                     syncMigratedRecordCount();

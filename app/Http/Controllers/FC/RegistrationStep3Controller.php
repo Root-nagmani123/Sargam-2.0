@@ -37,7 +37,7 @@ class RegistrationStep3Controller extends Controller
         }
 
         $step   = $this->formService->getStep('step3');
-        $groups = $this->formService->getStepGroups('step3');
+        $groups = $this->formService->getStepGroups('step3')->values();
 
         // If no dynamic groups configured, fall back to original view
         if ($groups->isEmpty()) {
@@ -52,7 +52,7 @@ class RegistrationStep3Controller extends Controller
         foreach ($groups as $group) {
             $rows = $this->formService->getExistingGroupRows($group, $userId);
             $existingRows[$group->group_name] = $rows;
-            $completedGroups[$group->group_name] = $rows->isNotEmpty();
+            $completedGroups[$group->group_name] = $this->formService->groupRowsHaveMeaningfulData($group, $rows);
             $fieldsForLookups = $group->activeGroupFields->isNotEmpty()
                 ? $group->activeGroupFields
                 : $group->groupFields;
@@ -93,7 +93,18 @@ class RegistrationStep3Controller extends Controller
                 ->with('success', 'Step 3 completed. Please fill in bank details.');
         }
 
-        return back()->with('success', "{$group->group_label} saved.");
+        $groupIndex = $allGroups->search(fn ($g) => $g->id === $group->id);
+        if ($groupIndex !== false && $groupIndex < $allGroups->count() - 1) {
+            $nextGroup = $allGroups[$groupIndex + 1];
+
+            return redirect()
+                ->route('fc-reg.registration.step3', ['group' => $nextGroup->group_name])
+                ->with('success', "{$group->group_label} saved. Continue with {$nextGroup->group_label}.");
+        }
+
+        return redirect()
+            ->route('fc-reg.registration.step3', ['group' => $group->group_name])
+            ->with('success', "{$group->group_label} saved.");
     }
 
     // ═══════════════════════════════════════════════════════════════════
