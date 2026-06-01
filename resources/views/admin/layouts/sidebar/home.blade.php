@@ -122,7 +122,7 @@
                     @if(canSeeSecurityHomeSidebar())
                     <x-menu.setup_security_management />
                     @endif
-                    @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                    @if((! hasRole('Student-OT') && ! $isContractualEmployee) || hasRole('Super Admin'))
                     <x-menu.setup_issue_management />
                     @endif
 

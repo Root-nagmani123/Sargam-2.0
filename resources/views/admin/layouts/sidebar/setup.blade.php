@@ -55,6 +55,7 @@
                                                 || hasRole('Training-Induction')
                                                 || hasRole('Training-MCTP')
                                                 || hasRole('IST')
+                                                || isSuperAdmin()
                                             )
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
@@ -76,8 +77,8 @@
                                                 </a>
                                             </li>
                                             @endif
-                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
-                                            @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
+                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST') || isSuperAdmin())
+                                            @if((! hasRole('Training-MCTP') && ! hasRole('IST')) || isSuperAdmin())
                                             <li class="mini-nav-item {{ request()->is('master*') ? 'selected' : '' }}" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">

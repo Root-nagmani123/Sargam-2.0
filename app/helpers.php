@@ -301,6 +301,14 @@ function hasRole($role)
 }
 
 /**
+ * Check if current user is Super Admin (sare menus dikhne chahiye).
+ */
+function isSuperAdmin(): bool
+{
+    return hasRole('Super Admin');
+}
+
+/**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
  */
 function is_faculty_portal_user(): bool

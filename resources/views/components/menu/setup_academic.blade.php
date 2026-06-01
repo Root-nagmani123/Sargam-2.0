@@ -18,7 +18,7 @@
                             <!-- Main Container with Improved Layout -->
 
                             @if (hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') ||
-                            hasRole('IST'))
+                            hasRole('IST') || isSuperAdmin())
 
 
                             <li class="nav-section" role="listitem">
@@ -75,7 +75,7 @@
 
 
 
-                            @if (!hasRole('Training-MCTP') && !hasRole('IST'))
+                            @if (!hasRole('Training-MCTP') && !hasRole('IST') || isSuperAdmin())
                             <li class="sidebar-item" style="background: #4077ad;
                             border-radius: 30px 0px 0px 30px;
                             width: 100%;
@@ -233,7 +233,7 @@
                             @endif
 
                             <!-- faculty menu start -->
-                            @if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin'))
+                            @if (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || isSuperAdmin())
                             <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
@@ -281,7 +281,7 @@
                             @endif
                             <!-- faculty menu end -->
                             <!-- medical exemption for OTs -->
-                            @if (hasRole('Doctor'))
+                            @if (hasRole('Doctor') || isSuperAdmin())
                             <li class="sidebar-item"><a class="sidebar-link"
                                     href="{{ route('medical.exception.faculty.view') }}">
                                     <span class="hide-menu">OT - Medical Exemption</span>
@@ -298,7 +298,7 @@
                         @endif
                         <!-- faculty menu end -->
                         <!-- medical exemption for OTs -->
-                        @if (hasRole('Doctor'))
+                        @if (hasRole('Doctor') || isSuperAdmin())
                         <li class="sidebar-item"><a class="sidebar-link"
                                 href="{{ route('medical.exception.faculty.view') }}">
                                 <span class="hide-menu">OT - Medical Exemption</span>
@@ -306,7 +306,7 @@
                         @endif
 
                         <!-- OTs menu start -->
-                        @if (hasRole('Student-OT') || hasRole('Admin'))
+                        @if (hasRole('Student-OT') || hasRole('Admin') || isSuperAdmin())
                         <li class="sidebar-item" style="background: #4077ad;
                                 border-radius: 30px 0px 0px 30px;
                                 width: 100%;
