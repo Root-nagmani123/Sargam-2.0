@@ -184,18 +184,24 @@ document.addEventListener('DOMContentLoaded', function() {
             infoEmpty: 'No {{ $infoLabel }}',
             emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            paginate: { first: '\u00AB\u00AB', last: '\u00BB\u00BB', next: '\u203A', previous: '\u2039' }
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {
             if (typeof window.messDataTableBindSearchInputTrim === 'function') {
                 try { window.messDataTableBindSearchInputTrim(new $.fn.dataTable.Api(settings)); } catch (e) {}
             }
+            if (typeof window.messDataTableApplyPaginateIcons === 'function') {
+                try { window.messDataTableApplyPaginateIcons(new $.fn.dataTable.Api(settings)); } catch (e) {}
+            }
             messMasterInvokeAjaxJsonCallback(settings);
         },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
+            }
+            if (typeof window.messDataTableApplyPaginateIcons === 'function') {
+                try { window.messDataTableApplyPaginateIcons(new $.fn.dataTable.Api(settings)); } catch (e) {}
             }
             messMasterInvokeAjaxJsonCallback(settings);
             @if ($searchHighlight)
@@ -232,18 +238,24 @@ document.addEventListener('DOMContentLoaded', function() {
             infoEmpty: 'No {{ $infoLabel }}',
             emptyTable: 'No {{ $infoLabel }}',
             infoFiltered: '(filtered from _MAX_ total)',
-            paginate: { first: 'First', last: 'Last', next: 'Next', previous: 'Previous' }
+            paginate: { first: '\u00AB\u00AB', last: '\u00BB\u00BB', next: '\u203A', previous: '\u2039' }
         },
         columnDefs: columnDefsMerged,
         initComplete: function(settings) {
             if (typeof window.messDataTableBindSearchInputTrim === 'function') {
                 try { window.messDataTableBindSearchInputTrim(new $.fn.dataTable.Api(settings)); } catch (e) {}
             }
+            if (typeof window.messDataTableApplyPaginateIcons === 'function') {
+                try { window.messDataTableApplyPaginateIcons(new $.fn.dataTable.Api(settings)); } catch (e) {}
+            }
             messMasterInvokeAjaxJsonCallback(settings);
         },
         drawCallback: function(settings) {
             if (typeof window.adjustAllDataTables === 'function') {
                 try { window.adjustAllDataTables(); } catch (e) {}
+            }
+            if (typeof window.messDataTableApplyPaginateIcons === 'function') {
+                try { window.messDataTableApplyPaginateIcons(new $.fn.dataTable.Api(settings)); } catch (e) {}
             }
             messMasterInvokeAjaxJsonCallback(settings);
             @if ($searchHighlight)

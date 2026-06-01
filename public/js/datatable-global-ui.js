@@ -25,10 +25,90 @@
         infoEmpty: 'of 0 items',
         infoFiltered: 'of _MAX_ items',
         paginate: {
-            previous: '‹',
-            next: '›'
+            first: '\u00AB\u00AB',
+            previous: '\u2039',
+            next: '\u203A',
+            last: '\u00BB\u00BB'
         }
     };
+
+    var PAGINATE_ICON_NAV = {
+        first: { material: 'first_page', bi: 'bi-chevron-double-left', label: 'First page' },
+        previous: { material: 'chevron_left', bi: 'bi-chevron-left', label: 'Previous page' },
+        next: { material: 'chevron_right', bi: 'bi-chevron-right', label: 'Next page' },
+        last: { material: 'last_page', bi: 'bi-chevron-double-right', label: 'Last page' }
+    };
+
+    function buildPaginateIconMarkup(cfg) {
+        return (
+            '<span class="dt-paginate-icon d-inline-flex align-items-center justify-content-center" aria-hidden="true">' +
+                '<span class="material-symbols-rounded" style="font-size:1.125rem;line-height:1;width:1.125rem;">' +
+                    cfg.material +
+                '</span>' +
+            '</span>'
+        );
+    }
+
+    function resolvePaginateControl($node) {
+        if (!$node || !$node.length) {
+            return $();
+        }
+        if ($node.is('a, button')) {
+            return $node;
+        }
+        var $child = $node.children('a, button').first();
+        return $child.length ? $child : $node;
+    }
+
+    function applyPaginateIcons($paginate) {
+        if (!$paginate || !$paginate.length) {
+            return;
+        }
+
+        $.each(PAGINATE_ICON_NAV, function (key, cfg) {
+            var selector = [
+                '.paginate_button.' + key,
+                '.page-item.' + key,
+                'a.paginate_button.' + key,
+                'button.paginate_button.' + key
+            ].join(', ');
+
+            $paginate.find(selector).each(function () {
+                var $control = resolvePaginateControl($(this));
+                if (!$control.length || $control.find('.dt-paginate-icon').length) {
+                    return;
+                }
+                $control
+                    .attr('aria-label', cfg.label)
+                    .attr('title', cfg.label)
+                    .html(buildPaginateIconMarkup(cfg));
+            });
+        });
+    }
+
+    function findPaginateForTable($table, api) {
+        var tableId = getTableId($table);
+        var $paginate = $('[data-dt-footer-for="' + tableId + '"] .dataTables_paginate');
+        if (!$paginate.length) {
+            $paginate = getWrapper($table, api).find('.dataTables_paginate');
+        }
+        return $paginate;
+    }
+
+    function applyPaginateIconsForTable(api) {
+        if (!api) {
+            return;
+        }
+        var $table = $(api.table().node());
+        var $paginate = findPaginateForTable($table, api);
+        applyPaginateIcons($paginate);
+        window.setTimeout(function () {
+            applyPaginateIcons(findPaginateForTable($table, api));
+        }, 0);
+        window.setTimeout(function () {
+            applyPaginateIcons(findPaginateForTable($table, api));
+        }, 120);
+    }
 
   function parseBoolAttr(value) {
         if (value === undefined || value === null || value === '') {
@@ -268,6 +348,7 @@
         if ($paginate.length) {
             $paginate.find('.pagination').addClass('mb-0');
             $pagCol.append($paginate);
+            applyPaginateIcons($paginate);
         }
 
         if ($length.length) {
@@ -340,6 +421,7 @@
         api.on('draw' + NS, function () {
             resetFooterIfNeeded(api);
             updateCount(api);
+            applyPaginateIconsForTable(api);
         });
 
         api.on('length' + NS, function () {
@@ -402,10 +484,27 @@
         }, 300);
     });
 
+    $(document).on('draw.dt', function (e, settings) {
+        applyPaginateIconsForTable(new $.fn.dataTable.Api(settings));
+    });
+
+    $(document).on('init.dt', function (e, settings) {
+        window.setTimeout(function () {
+            applyPaginateIconsForTable(new $.fn.dataTable.Api(settings));
+        }, 0);
+        window.setTimeout(function () {
+            applyPaginateIconsForTable(new $.fn.dataTable.Api(settings));
+        }, 200);
+    });
+
+    window.messDataTableApplyPaginateIcons = applyPaginateIconsForTable;
+
     window.SargamDataTableUI = {
         enhance: enhance,
         updateCount: updateCount,
         shouldEnhance: shouldEnhance,
+        applyPaginateIcons: applyPaginateIcons,
+        applyPaginateIconsForTable: applyPaginateIconsForTable,
         DEFAULT_DOM: DEFAULT_DOM,
         DEFAULT_LANGUAGE: DEFAULT_LANGUAGE
     };

@@ -1,60 +1,39 @@
 @extends('admin.layouts.master')
 @section('title', 'Purchase Orders')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/mess-master-admin.css') }}?v={{ @filemtime(public_path('css/mess-master-admin.css')) ?: time() }}">
+<link rel="stylesheet" href="{{ asset('css/purchase-order-master-admin.css') }}?v={{ @filemtime(public_path('css/purchase-order-master-admin.css')) ?: time() }}">
+@endpush
+
 @section('content')
 @php
-$canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
+$canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin');
 @endphp
-<div class="container-fluid py-3 py-md-4 po-ux">
+<div class="container-fluid mess-master-page po-ux py-4">
     <div class="no-print">
-        <x-breadcrum title="Purchase Orders"></x-breadcrum>
-    </div>
-    <div class="datatables">
-        <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
-            <div class="card-header border-0 py-3 px-3 px-md-4 position-relative" style="background:#004a93;">
-                <div
-                    class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 no-print">
-                    <div class="d-flex align-items-center gap-3">
-                        <div class="rounded-3 bg-white bg-opacity-15 d-none d-sm-flex align-items-center justify-content-center flex-shrink-0"
-                            style="width: 2.75rem; height: 2.75rem;">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.4rem;"
-                                aria-hidden="true">receipt_long</i>
-                        </div>
-                        <div>
-                            <h4 class="mb-0 fw-bold text-white">Purchase Orders</h4>
-                            <p class="mb-0 text-white-50 small">Filter, view, or create a new purchase order</p>
-                        </div>
-                    </div>
-                    <div class="d-flex flex-wrap align-items-center gap-2">
-                        <button type="button"
-                            class="btn btn-outline-light px-3 py-2 rounded-2 d-inline-flex align-items-center gap-2 fw-semibold"
-                            id="poPrintListBtn" title="Print purchase order list">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                aria-hidden="true">print</i>
-                            <span class="d-none d-sm-inline">Print List</span>
-                        </button>
-                        <button type="button"
-                            class="btn btn-light text-primary px-4 py-2 rounded-2 d-inline-flex align-items-center gap-2 shadow-sm fw-semibold po-btn-create"
-                            data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
-                            <i class="material-icons material-symbol-rounded" style="font-size: 1.1rem;"
-                                aria-hidden="true">add</i>
-                            <span class="d-none d-sm-inline">Create Purchase Order</span>
-                            <span class="d-inline d-sm-none">New</span>
-                        </button>
-                    </div>
-                </div>
+        <x-breadcrum title="Purchase Orders">
+            <div class="d-flex flex-wrap align-items-center gap-2">
+                <button type="button"
+                    class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-2 fw-semibold"
+                    id="poPrintListBtn" title="Print purchase order list">
+                    <i class="bi bi-printer" aria-hidden="true"></i>
+                    <span class="d-none d-sm-inline">Print List</span>
+                </button>
+                <button type="button"
+                    class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm po-btn-create"
+                    data-bs-toggle="modal" data-bs-target="#createPurchaseOrderModal">
+                    <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                    <span>Create Purchase Order</span>
+                </button>
             </div>
-            <div class="card-body p-3 p-md-4">
-                @if(session('success'))
-                <div class="alert alert-success alert-dismissible fade show shadow-lg border-0 rounded-4 d-flex align-items-start gap-3 bg-gradient"
-                    role="alert"
-                    style="background: linear-gradient(135deg, #d1f4e0 0%, #a8e6cf 100%); border-left: 4px solid #28a745 !important;">
-                    <i class="material-icons material-symbol-rounded flex-shrink-0 text-success"
-                        style="font-size: 1.5rem;" aria-hidden="true">check_circle</i>
-                    <div class="flex-grow-1 fw-medium">{{ session('success') }}</div>
-                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                </div>
-                @endif
+        </x-breadcrum>
+    </div>
 
+    <x-session_message />
+
+    <div class="card mess-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+        <div class="card-body p-3 p-md-4">
                 {{-- Filters --}}
                 <form method="GET" action="{{ route('admin.mess.purchaseorders.index') }}"
                     class="card border-0 shadow-sm rounded-3 mb-4 no-print po-filter-card"
@@ -210,6 +189,12 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
                     </div>
                 </form>
 
+                <div class="programme-dt-toolbar mess-dt-toolbar no-print d-flex flex-wrap align-items-center justify-content-end gap-2 gap-md-3 mb-4">
+                    <div id="poDtSearch" class="programme-dt-search" data-dt-search-for="purchaseOrdersTable"></div>
+                    <div id="messColManagerMount-purchaseOrdersTable" class="flex-shrink-0"></div>
+                </div>
+
+                <div class="programme-dt-panel">
                 {{-- Printable area: isolation in @media print shows only header + table (LBSNAA branding + list) --}}
                 <div class="po-print-area">
                     {{-- Print header: LBSNAA / Sargam branding (shown only when printing) --}}
@@ -229,23 +214,27 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
                             {{ now()->format('d-m-Y, h:i A') }}</div>
                     </div>
 
-                    <div class="table-responsive">
-                        <table id="purchaseOrdersTable" class="table align-middle mb-0 w-100 po-data-table">
+                    <div class="table-responsive mess-dt-scroll">
+                        <table id="purchaseOrdersTable" class="table table-hover align-middle mb-0 w-100 programme-dt-table po-data-table border-0">
                             <thead>
-                                <tr class="small">
-                                    <th scope="col" class="po-th border-0 py-3 ps-4">#</th>
-                                    <th scope="col" class="po-th border-0 py-3">Order No.</th>
-                                    <th scope="col" class="po-th border-0 py-3">Vendor</th>
-                                    <th scope="col" class="po-th border-0 py-3">Store</th>
-                                    <th scope="col" class="po-th border-0 py-3">Status</th>
-                                    <th scope="col" class="po-th border-0 py-3 pe-4 text-end d-print-none">Actions</th>
+                                <tr>
+                                    <th scope="col">S. No.</th>
+                                    <th scope="col">Order No.</th>
+                                    <th scope="col">Vendor</th>
+                                    <th scope="col">Store</th>
+                                    <th scope="col">Status</th>
+                                    <th scope="col" class="d-print-none">Action</th>
                                 </tr>
                             </thead>
                             <tbody></tbody>
                         </table>
                     </div>
                 </div>{{-- /.po-print-area --}}
-            </div>
+
+                <div id="poDtFooter"
+                    class="programme-dt-footer mess-dt-footer no-print d-flex flex-wrap align-items-center justify-content-between gap-3 mt-3 pt-3"
+                    data-dt-footer-for="purchaseOrdersTable"></div>
+                </div>{{-- /.programme-dt-panel --}}
         </div>
     </div>
 </div>
@@ -254,8 +243,6 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 .po-ux .letter-spacing-1 {
     letter-spacing: 0.04em;
 }
-
-/* ── Navy table header ── */
 
 /* ── Row hover / transition ── */
 .po-row {
@@ -305,7 +292,7 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
     }
 }
 
-.po-ux .datatables {
+.po-ux .mess-dt-card {
     animation: po-fade-in .4s ease-out;
 }
 
@@ -314,8 +301,8 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 }
 
 @media (max-width: 575.98px) {
-    .po-ux .datatables .table thead th {
-        font-size: 0.65rem;
+    .mess-master-page.po-ux .programme-dt-table thead th {
+        font-size: 0.75rem;
     }
 }
 
@@ -390,9 +377,10 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 
     /* Hide chrome without visibility:hidden (that forced icon ligature text to print) */
     .po-ux>.no-print,
-    .po-ux .card-header,
     .po-ux .po-filter-card,
     .po-ux .alert,
+    .po-ux .programme-dt-toolbar,
+    .po-ux .programme-dt-footer,
     .po-ux .mess-col-manager-dropdown,
     .po-ux .dataTables_length,
     .po-ux .dataTables_filter,
@@ -551,7 +539,8 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
     #purchaseOrdersTable .po-actions-cell,
     #purchaseOrdersTable i.material-icons,
     #purchaseOrdersTable i.material-symbol-rounded,
-    #purchaseOrdersTable i[class*="material"] {
+    #purchaseOrdersTable i[class*="material"],
+    #purchaseOrdersTable i.bi {
         display: none !important;
     }
 
@@ -574,13 +563,15 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
 </style>
 
 @include('components.mess-master-datatables', [
-'tableId' => 'purchaseOrdersTable',
-'searchPlaceholder' => 'Search purchase orders...',
-'orderColumn' => 1,
-'actionColumnIndex' => 5,
-'infoLabel' => 'purchase orders',
-'serverSide' => true,
-'ajaxUrlBase' => route('admin.mess.purchaseorders.index')
+    'tableId' => 'purchaseOrdersTable',
+    'searchPlaceholder' => 'Search',
+    'orderColumn' => 1,
+    'orderDir' => 'desc',
+    'actionColumnIndex' => 5,
+    'infoLabel' => 'purchase orders',
+    'pageLength' => 10,
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.purchaseorders.index'),
 ])
 @include('mess.partials.modal-dropdown-stability')
 
@@ -605,7 +596,7 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
         'i[class*="material"],span[class*="material"],.material-icons,.material-symbol-rounded,' +
         '.material-symbols-rounded{display:none!important;font-size:0!important;width:0!important;height:0!important;' +
         'overflow:hidden!important;visibility:hidden!important;color:transparent!important;line-height:0!important;}' +
-        '.po-action-btn,.po-actions-cell,.modal-footer,.modal-header button{display:none!important;}';
+        '.po-action-btn,.mess-row-actions,.po-actions-cell,.modal-footer,.modal-header button{display:none!important;}';
 
     window.poSanitizePrintDom = function (root) {
         if (!root) {
@@ -645,7 +636,7 @@ $canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
         var root = document.querySelector('.po-print-area');
         if (!root) return;
         root.querySelectorAll(
-            'i.material-icons, i.material-symbol-rounded, i.material-symbols-rounded, i[class*="material"]'
+            'i.material-icons, i.material-symbol-rounded, i.material-symbols-rounded, i[class*="material"], i.bi'
         ).forEach(function(icon) {
             icon.remove();
         });

@@ -152,6 +152,18 @@
     color: var(--mess-m-muted);
 }
 
+.mess-master-page .programme-dt-footer .dataTables_paginate .dt-paginate-icon,
+.mess-master-page .programme-dt-footer .paginate_button .dt-paginate-icon {
+    line-height: 1;
+}
+
+.mess-master-page .programme-dt-footer .dataTables_paginate .dt-paginate-icon .material-symbols-rounded,
+.mess-master-page .programme-dt-footer .paginate_button .dt-paginate-icon .material-symbols-rounded {
+    font-size: 1.125rem;
+    line-height: 1;
+    width: 1.125rem;
+}
+
 .mess-master-page .mess-empty-state {
     padding: 2.5rem 1rem !important;
 }

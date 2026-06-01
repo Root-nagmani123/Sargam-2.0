@@ -1,0 +1,43 @@
+/* Purchase Orders list — extends mess-master-admin.css */
+.mess-master-page.po-ux .po-filter-card {
+    border-radius: 12px;
+    border: 1px solid #e4e7ec !important;
+}
+
+.mess-master-page.po-ux .po-data-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467 !important;
+    font-weight: 600;
+    border-bottom: 1px solid #e4e7ec;
+}
+
+.mess-master-page.po-ux .po-row:hover td {
+    background-color: #fafbfc;
+}
+
+.mess-master-page.po-ux .mess-row-actions .programme-action-btn,
+.mess-master-page.po-ux .po-actions-cell .programme-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.mess-master-page.po-ux .po-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.mess-master-page.po-ux #purchaseOrdersTable_wrapper .dataTables_length,
+.mess-master-page.po-ux #purchaseOrdersTable_wrapper .dataTables_filter {
+    display: none !important;
+}
+
+@media (max-width: 575.98px) {
+    .mess-master-page.po-ux .programme-dt-table thead th {
+        font-size: 0.75rem;
+    }
+}

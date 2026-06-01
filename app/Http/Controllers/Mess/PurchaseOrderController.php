@@ -103,44 +103,22 @@ class PurchaseOrderController extends Controller
 
             $purchaseOrders = $paged->get();
             $forPrint = $request->boolean('for_print');
-            $canDeletePurchaseOrder = function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin'));
+            $canDeletePurchaseOrder = function_exists('hasRole') && (
+                hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin')
+            );
             $rowStart = $start + 1;
 
             $data = $purchaseOrders->map(function ($po, $index) use ($canDeletePurchaseOrder, $rowStart, $forPrint) {
-                $statusBadgeClass = $po->status === 'approved'
-                    ? 'text-bg-success'
-                    : ($po->status === 'rejected' ? 'text-bg-danger' : ($po->status === 'completed' ? 'text-bg-primary' : 'text-bg-warning'));
-
                 $row = [
-                    '<span class="ps-4 d-inline-block text-body-secondary fw-medium">' . ($rowStart + $index) . '</span>',
-                    '<span class="fw-semibold text-body">' . e($po->po_number) . '</span>',
-                    '<span class="text-body-secondary">' . e(optional($po->vendor)->name ?? 'N/A') . '</span>',
-                    '<span class="text-body-secondary">' . e(optional($po->store)->store_name ?? 'N/A') . '</span>',
-                    '<span class="badge rounded-pill ' . $statusBadgeClass . ' px-3 py-1 fw-semibold" style="font-size: 0.72rem; letter-spacing: 0.02em;">' . e(ucfirst($po->status)) . '</span>',
+                    (string) ($rowStart + $index),
+                    '<span class="mess-row-title">' . e($po->po_number) . '</span>',
+                    e(optional($po->vendor)->name ?? 'N/A'),
+                    e(optional($po->store)->store_name ?? 'N/A'),
+                    $this->purchaseOrderStatusBadgeHtml($po->status),
                 ];
 
                 if (! $forPrint) {
-                    $viewBtn = '<button type="button" class="btn btn-sm btn-outline-primary btn-view-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="View">'
-                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">visibility</i>'
-                        . '</button>';
-                    $editBtn = '<button type="button" class="btn btn-sm btn-outline-info btn-edit-po rounded-2 po-action-btn" data-po-id="' . $po->id . '" title="Edit">'
-                        . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">edit</i>'
-                        . '</button>';
-                    $deleteForm = '';
-
-                    if ($canDeletePurchaseOrder) {
-                        $deleteUrl = route('admin.mess.purchaseorders.destroy', $po->id);
-                        $csrf = csrf_token();
-                        $deleteForm = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
-                            . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
-                            . '<input type="hidden" name="_method" value="DELETE">'
-                            . '<button type="submit" class="btn btn-sm btn-outline-danger rounded-2 po-action-btn" title="Delete">'
-                            . '<i class="material-icons material-symbol-rounded align-middle" style="font-size: 1rem;">delete</i>'
-                            . '</button>'
-                            . '</form>';
-                    }
-
-                    $row[] = '<div class="po-actions-cell d-inline-flex align-items-center justify-content-end gap-1">' . $viewBtn . $editBtn . $deleteForm . '</div>';
+                    $row[] = $this->purchaseOrderActionsHtml($po->id, $canDeletePurchaseOrder);
                 }
 
                 return $row;
@@ -155,7 +133,7 @@ class PurchaseOrderController extends Controller
         }
 
         $vendors = Vendor::orderBy('name')->get();
-        $stores = Store::where('status', 1)->orderBy('store_name')->get();
+        $stores = Store::active()->orderBy('store_name')->get();
         $itemSubcategories = ItemSubcategory::active()->orderBy('name')->get()
             ->map(fn ($s) => [
                 'id' => $s->id,
@@ -180,7 +158,7 @@ class PurchaseOrderController extends Controller
     public function create(Request $request)
     {
         $vendors = Vendor::all();
-        $stores = Store::where('status', 1)->get();
+        $stores = Store::active()->get();
         $inventories = Inventory::all();
         $materialRequest = null;
         
@@ -583,6 +561,52 @@ class PurchaseOrderController extends Controller
         }
 
         return (int) $rawId;
+    }
+
+    protected function purchaseOrderStatusBadgeHtml(?string $status): string
+    {
+        $status = strtolower((string) $status);
+        $label = ucfirst($status ?: 'pending');
+
+        $class = match ($status) {
+            'approved' => 'programme-status-badge programme-status-badge--active po-status-badge',
+            'rejected' => 'programme-status-badge programme-status-badge--inactive po-status-badge',
+            'completed' => 'badge rounded-pill bg-primary-subtle text-primary po-status-badge',
+            default => 'badge rounded-pill bg-warning-subtle text-warning-emphasis po-status-badge',
+        };
+
+        return '<span class="' . $class . '">' . e($label) . '</span>';
+    }
+
+    protected function purchaseOrderActionsHtml(int $poId, bool $canDelete): string
+    {
+        $viewBtn = '<button type="button" class="btn-view-po programme-action-btn po-action-btn" data-po-id="' . $poId . '"'
+            . ' title="View purchase order" aria-label="View purchase order">'
+            . '<i class="bi bi-eye" aria-hidden="true"></i></button>';
+
+        $editBtn = '<button type="button" class="btn-edit-po programme-action-btn po-action-btn" data-po-id="' . $poId . '"'
+            . ' title="Edit purchase order" aria-label="Edit purchase order">'
+            . '<i class="bi bi-pencil" aria-hidden="true"></i></button>';
+
+        if ($canDelete) {
+            $deleteUrl = route('admin.mess.purchaseorders.destroy', $poId);
+            $csrf = csrf_token();
+            $deleteControl = '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline mess-delete-form m-0"'
+                . ' onsubmit="return confirm(\'Are you sure you want to delete this purchase order?\');">'
+                . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
+                . '<input type="hidden" name="_method" value="DELETE">'
+                . '<button type="submit" class="mess-delete-btn programme-action-btn programme-action-btn--danger po-action-btn"'
+                . ' title="Delete purchase order" aria-label="Delete purchase order">'
+                . '<i class="bi bi-trash" aria-hidden="true"></i></button></form>';
+        } else {
+            $deleteControl = '<button type="button" class="mess-delete-btn programme-action-btn programme-action-btn--danger po-action-btn"'
+                . ' disabled aria-disabled="true" title="You do not have permission to delete"'
+                . ' aria-label="Delete purchase order">'
+                . '<i class="bi bi-trash" aria-hidden="true"></i></button>';
+        }
+
+        return '<div class="po-actions-cell mess-row-actions d-inline-flex align-items-center justify-content-center gap-2 programme-action-group" role="group"'
+            . ' aria-label="Purchase order actions">' . $viewBtn . $editBtn . $deleteControl . '</div>';
     }
 
     /**

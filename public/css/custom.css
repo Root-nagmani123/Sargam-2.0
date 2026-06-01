@@ -562,6 +562,22 @@ body.custom-loaded {
     cursor: not-allowed;
 }
 
+.programme-dt-footer .dataTables_paginate .page-link .bi,
+.programme-dt-footer .paginate_button .bi,
+.programme-dt-footer .dataTables_paginate .dt-paginate-icon .material-symbols-rounded,
+.programme-dt-footer .paginate_button .dt-paginate-icon .material-symbols-rounded {
+    font-size: 1.125rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.programme-dt-footer .dataTables_paginate .page-link,
+.programme-dt-footer .paginate_button.page-link {
+    min-width: 2rem;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
+
 .programme-dt-count {
     color: #667085;
     font-size: 0.875rem;
