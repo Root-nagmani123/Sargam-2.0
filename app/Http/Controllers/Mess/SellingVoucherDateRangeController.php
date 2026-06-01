@@ -96,6 +96,12 @@ class SellingVoucherDateRangeController extends Controller
 
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
+            ->when(Schema::hasColumn('employee_master', 'status'), function ($query) {
+                $query->where(function ($sub) {
+                    $sub->whereNull('employee_master_pk')
+                        ->orWhereIn('employee_master_pk', EmployeeMaster::active()->select('pk'));
+                });
+            })
             ->orderBy('full_name')
             ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
             ->map(function ($f) {
@@ -123,7 +129,7 @@ class SellingVoucherDateRangeController extends Controller
             return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
         };
 
-        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+        $employees = EmployeeMaster::active()
             ->when($officersMessDept, function ($q) use ($officersMessDept) {
                 $q->where(function ($sub) use ($officersMessDept) {
                     $sub->whereNull('department_master_pk')
@@ -159,7 +165,7 @@ class SellingVoucherDateRangeController extends Controller
             }
         });
         $messStaff = $officersMessDept
-            ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ? EmployeeMaster::active()
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
                 ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
