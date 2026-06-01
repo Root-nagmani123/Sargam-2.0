@@ -80,79 +80,34 @@ class CourseMasterDataTable extends DataTable
                 $csrf = csrf_token();
                 $btnId = 'dropdown-btn-' . $row->pk;
 
-                $checked = $isActive ? 'checked' : '';
-                $statusToggle = '<div class="form-check form-switch mb-0">'
-                    .'<input class="form-check-input status-toggle" type="checkbox" role="switch"'
-                    .' data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'"'
-                    .' aria-label="'.($isActive ? 'Deactivate' : 'Activate').' course" '.$checked.'>'
-                    .'</div>';
+                $deleteHtml = $isActive
+                    ? '<button type="button" class="programme-action-btn programme-action-btn--danger is-disabled" disabled aria-disabled="true" title="Cannot delete active course"><i class="bi bi-trash3" aria-hidden="true"></i></button>'
+                    : '<form action="'.$deleteUrl.'" method="POST" class="d-inline-flex align-items-center m-0 programme-delete-form">'
+                        .'<input type="hidden" name="_token" value="'.$csrf.'">'
+                        .'<input type="hidden" name="_method" value="DELETE">'
+                        .'<button type="submit" class="programme-action-btn programme-action-btn--danger programme-delete-btn" aria-label="Delete course">'
+                        .'<i class="bi bi-trash3" aria-hidden="true"></i>'
+                        .'</button>'
+                        .'</form>';
 
-        <!-- View -->
-        <a
-            href="{$viewUrl}"
-            class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-            aria-label="View course"
-        >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">
-                visibility
-            </span>
-        </a>
-
-        <!-- Edit -->
-        <a
-            href="{$editUrl}"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-            aria-label="Edit course"
-        >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">
-                edit
-            </span>
-        </a>
-
-        <!-- Delete -->
-        <?php if ($isActive): ?>
-            <button
-                type="button"
-                class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none bg-transparent border-0 p-0 text-primary"
-                disabled
-                aria-disabled="true"
-                title="Cannot delete active course"
-            >
-                <span class="material-icons material-symbols-rounded"
-                      style="font-size:18px;"
-                      aria-hidden="true">
-                    delete
-                </span>
-            </button>
-        <?php else: ?>
-            <form action="{$deleteUrl}" method="POST" class="d-inline">
-                <input type="hidden" name="_token" value="{$csrf}">
-                <input type="hidden" name="_method" value="DELETE">
-
-                <button
-                    type="submit"
-                    class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
-                    aria-label="Delete course"
-                    onclick="return confirm('Are you sure you want to delete this course?');"
-                >
-                    <span class="material-icons material-symbols-rounded"
-                          style="font-size:18px;"
-                          aria-hidden="true">
-                        delete
+                return '
+                <div class="d-inline-flex align-items-center justify-content-center gap-2 programme-action-group" role="group" aria-label="Row actions">
+                    <span class="programme-action-item programme-action-item--view">
+                        <a href="'.$viewUrl.'" class="programme-action-btn" aria-label="View course"><i class="bi bi-eye" aria-hidden="true"></i></a>
                     </span>
-                </button>
-            </form>
-        <?php endif; ?>
-
-    </div>
-</td>
-
-HTML;
-                return $html;
+                    <span class="programme-action-item programme-action-item--edit">
+                        <a href="'.$editUrl.'" class="programme-action-btn programme-edit-btn" aria-label="Edit course"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                    </span>
+                    <span class="programme-action-item programme-action-item--toggle">
+                        <div class="form-check form-switch programme-action-switch mb-0">
+                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
+                        </div>
+                    </span>
+                    <span class="programme-action-item programme-action-item--delete">
+                        '.$deleteHtml.'
+                    </span>
+                </div>';
             })
             ->filterColumn('course_name', function ($query, $keyword) {
                 $query->where('course_name', 'like', "%{$keyword}%");

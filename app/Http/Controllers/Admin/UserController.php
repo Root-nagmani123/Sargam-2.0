@@ -1498,11 +1498,11 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
-        $search = $request->input('search');
+        $search = trim((string) ($request->input('search') ?? ''));
         $user_type = trim((string) $request->input('User_type', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'admin_users_index:v1:' . md5(json_encode([
+        $cacheKey = 'admin_users_index:v3:' . md5(json_encode([
             'epoch' => $epoch,
             'search' => $search,
             'user_type' => $user_type,
@@ -1551,18 +1551,26 @@ class UserController extends Controller
             ->groupBy(
                 'uc.pk',
                 'uc.user_name',
+                'uc.name',
                 'uc.first_name',
                 'uc.last_name',
                 'uc.email_id',
                 'uc.mobile_no'
             );
 
-        if ($search) {
-            $usersQuery->where(function ($q) use ($search) {
-                $q->where('uc.user_name', 'like', "%{$search}%")
-                    ->orWhere('uc.first_name', 'like', "%{$search}%")
-                    ->orWhere('uc.last_name', 'like', "%{$search}%")
-                    ->orWhere('uc.email_id', 'like', "%{$search}%");
+        $search = trim((string) ($search ?? ''));
+
+        if ($search !== '') {
+            $searchLower = strtolower(preg_replace('/\s+/', ' ', $search) ?? $search);
+
+            $usersQuery->where(function ($q) use ($searchLower) {
+                $q->whereRaw("LOWER(TRIM(COALESCE(uc.name, ''))) LIKE ?", ["%{$searchLower}%"])
+                    ->orWhereRaw("LOWER(TRIM(uc.user_name)) LIKE ?", ["%{$searchLower}%"])
+                    ->orWhereRaw("LOWER(TRIM(uc.first_name)) LIKE ?", ["%{$searchLower}%"])
+                    ->orWhereRaw("LOWER(TRIM(uc.last_name)) LIKE ?", ["%{$searchLower}%"])
+                    ->orWhereRaw("LOWER(TRIM(uc.email_id)) LIKE ?", ["%{$searchLower}%"])
+                    ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.first_name), TRIM(uc.last_name))) LIKE ?", ["%{$searchLower}%"])
+                    ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.last_name), TRIM(uc.first_name))) LIKE ?", ["%{$searchLower}%"]);
             });
         }
         if ($user_type !== '') {

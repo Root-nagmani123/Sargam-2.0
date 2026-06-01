@@ -190,7 +190,7 @@
             </li>
 
             <li class="notification-dropdown-footer border-top text-center py-3 bg-white">
-                <a href="javascript:void(0)" class="link-primary text-decoration-underline small notification-view-all-link">
+                <a href="{{ route('admin.dashboard.feed', ['tab' => 'notifications']) }}" class="link-primary text-decoration-underline small notification-view-all-link">
                     Check all notifications
                 </a>
             </li>
@@ -870,6 +870,10 @@
 
             // Notification click (avoid inline onclick to prevent Blade JS parsing issues)
             document.addEventListener('click', function (e) {
+                // Don't intercept wish reply buttons or wish card clicks — handled by page-level logic
+                if (e.target && e.target.closest && e.target.closest('.btn-wish-reply')) return;
+                if (e.target && e.target.closest && e.target.closest('.dashboard-feed-wish-card')) return;
+
                 const target = e.target && e.target.closest ? e.target.closest('[data-notification-id]') : null;
                 if (!target) return;
 

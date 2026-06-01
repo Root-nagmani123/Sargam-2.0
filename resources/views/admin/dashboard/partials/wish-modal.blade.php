@@ -149,9 +149,6 @@
         if (replyBtn) {
             e.preventDefault();
             e.stopPropagation();
-            if (replyBtn.dataset.notificationId && typeof window.markAsReadDashboard === 'function') {
-                window.markAsReadDashboard(replyBtn.dataset.notificationId, replyBtn);
-            }
             openWishModal({
                 name: replyBtn.dataset.name || '',
                 email: replyBtn.dataset.email || '',
