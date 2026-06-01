@@ -149,7 +149,7 @@
                 @if($confirmation?->declaration_accepted)
                     <div class="mt-1" style="font-size:.75rem;opacity:.85;">
                         <i class="bi bi-patch-check-fill text-warning me-1"></i>Declaration accepted
-                        {{ $confirmation->confirmed_at?->format('d M Y, H:i') }}
+                        {{ $confirmation->confirmed_at?->format('d-m-Y H:i') }}
                     </div>
                 @endif
             </div>

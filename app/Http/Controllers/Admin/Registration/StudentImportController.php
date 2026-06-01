@@ -143,8 +143,8 @@ class StudentImportController extends Controller
             $migratedCount = 0;
 
             $this->eligibleRosterQuery()
-                ->whereIn('pk', $pks)
-                ->orderBy('pk')
+                ->whereIn('r.pk', $pks)
+                ->orderBy('r.pk')
                 ->chunk($batchSize, function ($chunkedRecords) use ($now, $studentMasterColumns, &$migratedCount) {
                     $studentsToInsert = [];
                     $studentsToUpdate = [];

@@ -1308,3 +1308,200 @@ if (! function_exists('fc_checkbox_single_checked')) {
         return in_array(strtolower((string) $raw), ['1', 'true', 'yes', 'on'], true);
     }
 }
+
+if (! function_exists('fc_form_group_active_index')) {
+    /**
+     * Index of the active group tab within a step (for ?group= query param after save).
+     *
+     * @param  iterable<int, object{group_name?: string}|array{group_name?: string}>  $groups
+     */
+    function fc_form_group_active_index(iterable $groups, ?string $activeGroupName = null): int
+    {
+        if ($activeGroupName === null || $activeGroupName === '') {
+            return 0;
+        }
+
+        $index = 0;
+        foreach ($groups as $group) {
+            $name = is_object($group)
+                ? ($group->group_name ?? null)
+                : ($group['group_name'] ?? null);
+            if ($name === $activeGroupName) {
+                return $index;
+            }
+            $index++;
+        }
+
+        return 0;
+    }
+}
+
+if (! function_exists('fc_form_first_group_name')) {
+    /**
+     * @param  iterable<int, object{group_name?: string}|array{group_name?: string}>  $groups
+     */
+    function fc_form_first_group_name(iterable $groups): ?string
+    {
+        foreach ($groups as $group) {
+            $name = is_object($group)
+                ? ($group->group_name ?? null)
+                : ($group['group_name'] ?? null);
+            if ($name !== null && $name !== '') {
+                return (string) $name;
+            }
+        }
+
+        return null;
+    }
+}
+
+if (! function_exists('fc_ini_size_to_bytes')) {
+    function fc_ini_size_to_bytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '' || $value === '-1') {
+            return PHP_INT_MAX;
+        }
+
+        $unit = strtolower(substr($value, -1));
+        $number = (float) $value;
+
+        return (int) match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => (float) $value,
+        };
+    }
+}
+
+if (! function_exists('fc_file_upload_hint')) {
+    /**
+     * Human-readable upload hint from Laravel validation_rules (e.g. "nullable|file|mimes:pdf,jpg|max:10240").
+     */
+    function fc_file_upload_hint(?string $validationRules, ?int $fileMaxKb = null): string
+    {
+        $maxKb = $fileMaxKb ?? 10240;
+        $mimes = ['pdf', 'jpg', 'jpeg', 'png'];
+
+        if ($validationRules) {
+            if ($fileMaxKb === null && preg_match('/max:(\d+)/', $validationRules, $m)) {
+                $maxKb = (int) $m[1];
+            }
+            if (preg_match('/mimes:([^|]+)/', $validationRules, $m)) {
+                $mimes = array_map('trim', explode(',', $m[1]));
+            }
+        }
+
+        $labels = [];
+        foreach ($mimes as $ext) {
+            $labels[] = match (strtolower($ext)) {
+                'pdf' => 'PDF',
+                'jpg', 'jpeg' => 'JPG',
+                'png' => 'PNG',
+                default => strtoupper($ext),
+            };
+        }
+        $types = implode(', ', array_values(array_unique($labels)));
+
+        $sizeLabel = $maxKb >= 1024 && $maxKb % 1024 === 0
+            ? ($maxKb / 1024).' MB'
+            : ($maxKb >= 1024 ? round($maxKb / 1024, 1).' MB' : $maxKb.' KB');
+
+        return $types.', max '.$sizeLabel;
+    }
+}
+
+if (! function_exists('fc_report_apply_tracker_user_resolution')) {
+    /**
+     * Join credentials (+ roster) so admin reports can show login name, not raw tracker user_id.
+     *
+     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    function fc_report_apply_tracker_user_resolution($query, string $trackerTable, ?string $alias = null): string
+    {
+        $t = $alias ?? $trackerTable;
+        $u = fc_user_col($trackerTable);
+
+        if ($u !== 'user_id') {
+            $query->leftJoin('user_credentials as uc', "{$t}.{$u}", '=', 'uc.user_name');
+
+            return 'username_legacy';
+        }
+
+        $query->leftJoin('user_credentials as uc', "{$t}.user_id", '=', 'uc.pk');
+
+        if (Schema::hasTable('fc_registration_master')) {
+            $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "{$t}.user_id")
+                ->leftJoin('user_credentials as uc_frm', 'uc_frm.user_name', '=', 'frm.user_id');
+        }
+
+        return 'user_id';
+    }
+}
+
+if (! function_exists('fc_report_login_username_sql')) {
+    function fc_report_login_username_sql(string $trackerTable, ?string $alias = null): string
+    {
+        $t = $alias ?? $trackerTable;
+        $parts = ["NULLIF(TRIM(uc.user_name), '')"];
+
+        if (Schema::hasTable('fc_registration_master')) {
+            $parts[] = "NULLIF(TRIM(frm.user_id), '')";
+            $parts[] = "NULLIF(TRIM(uc_frm.user_name), '')";
+        }
+
+        $parts[] = "CAST(`{$t}`.`user_id` AS CHAR)";
+
+        return 'COALESCE('.implode(', ', $parts).')';
+    }
+}
+
+if (! function_exists('fc_report_route_user_id_sql')) {
+    function fc_report_route_user_id_sql(string $trackerTable, ?string $alias = null): string
+    {
+        $t = $alias ?? $trackerTable;
+
+        if (Schema::hasTable('fc_registration_master')) {
+            return "COALESCE(uc.pk, uc_frm.pk, `{$t}`.`user_id`)";
+        }
+
+        return "COALESCE(uc.pk, `{$t}`.`user_id`)";
+    }
+}
+
+if (! function_exists('fc_report_join_student_master_firsts')) {
+    /**
+     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    function fc_report_join_student_master_firsts($query, string $trackerTable, ?string $alias = null): void
+    {
+        $t = $alias ?? $trackerTable;
+        $u = fc_user_col($trackerTable);
+        $s1Col = fc_user_col('student_master_firsts');
+
+        $query->leftJoin('student_master_firsts as s1', function ($join) use ($t, $u, $s1Col) {
+            if ($u !== 'user_id') {
+                $join->on("s1.{$s1Col}", '=', "{$t}.{$u}");
+
+                return;
+            }
+
+            $join->on(function ($join) use ($t, $s1Col) {
+                $join->on("s1.{$s1Col}", '=', "{$t}.user_id");
+
+                if (Schema::hasColumn('student_master_firsts', 'user_id')) {
+                    $join->orOn('s1.user_id', '=', 'uc.pk');
+                    if (Schema::hasTable('fc_registration_master')) {
+                        $join->orOn('s1.user_id', '=', 'uc_frm.pk');
+                    }
+                }
+
+                if (Schema::hasTable('fc_registration_master')
+                    && Schema::hasColumn('student_master_firsts', 'username')) {
+                    $join->orOn('s1.username', '=', 'frm.user_id');
+                }
+            });
+        });
+    }
+}

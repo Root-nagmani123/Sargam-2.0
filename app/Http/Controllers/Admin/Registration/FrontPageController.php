@@ -208,14 +208,18 @@ class FrontPageController extends Controller
     // Store user credentials
     public function credential_store(Request $request)
     {
-        // @dd($request->all());
+        $request->merge([
+            'reg_name' => Str::lower(trim((string) $request->input('reg_name', ''))),
+        ]);
+
         $request->validate([
             'reg_name' => [
                 'required',
                 'string',
                 'min:6',
                 'max:20',
-                'regex:/^(?=.{6,20}$)(?!.*[_.]{2})[a-zA-Z][a-zA-Z0-9._]*[a-zA-Z0-9]$/',
+                'lowercase',
+                'regex:/^(?=.{6,20}$)(?!.*[_.]{2})[a-z][a-z0-9._]*[a-z0-9]$/',
                 'unique:user_credentials,user_name',
                 function (string $attribute, mixed $value, \Closure $fail) {
                     $takenOnRoster = DB::table('fc_registration_master')
@@ -238,8 +242,8 @@ class FrontPageController extends Controller
             ],
             'reg_confirm_password' => 'required|same:reg_password',
         ], [
-            'reg_name.regex' => 'username must start with a letter and can contain letters, numbers, dots, and underscores. 
-            No consecutive dots/underscores or ending with special characters.',
+            'reg_name.regex' => 'Username must be lowercase, start with a letter, and may contain letters, numbers, dots, and underscores. No consecutive dots/underscores or ending with a special character.',
+            'reg_name.lowercase' => 'Username must not contain capital letters.',
             'reg_name.unique' => 'The username has already been taken.',
             'reg_mobile.required' => 'Mobile number is required.',
             'reg_mobile.digits' => 'Mobile number must be 10 digits.',

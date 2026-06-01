@@ -70,23 +70,39 @@ class ReportController extends Controller
         $states   = StateMaster::orderBy('state_name')->get();
 
         $smUserCol = fc_user_col('student_masters');
-        $s1UserCol = fc_user_col('student_master_firsts');
         $scUserCol = fc_user_col('student_confirm_masters');
 
         $query = StudentMaster::with([
                 'session',
-            ])
-            ->leftJoin('student_master_firsts as s1',"student_masters.{$smUserCol}","=","s1.{$s1UserCol}")
-            ->leftJoin('service_master as svc','s1.service_id','=','svc.pk')
-            ->leftJoin('state_masters as st','s1.allotted_state_id','=','st.id')
-            ->leftJoin('student_confirm_masters as sc',"student_masters.{$smUserCol}","=","sc.{$scUserCol}");
+            ]);
 
-        // Always expose an integer user_id for routing
+        fc_report_apply_tracker_user_resolution($query, 'student_masters', 'student_masters');
+        fc_report_join_student_master_firsts($query, 'student_masters', 'student_masters');
+
+        $query->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
+            ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id')
+            ->leftJoin('student_confirm_masters as sc', function ($join) use ($smUserCol, $scUserCol) {
+                if ($smUserCol === 'user_id') {
+                    $join->on('sc.'.$scUserCol, '=', 'student_masters.user_id')
+                        ->orOn('sc.'.$scUserCol, '=', 'uc.pk');
+                    if (Schema::hasTable('fc_registration_master')) {
+                        $join->orOn('sc.'.$scUserCol, '=', 'uc_frm.pk');
+                    }
+                } else {
+                    $join->on("student_masters.{$smUserCol}", '=', "sc.{$scUserCol}");
+                }
+            });
+
         if ($smUserCol === 'user_id') {
-            $query->addSelect(DB::raw('student_masters.user_id'));
+            $query->addSelect([
+                DB::raw(fc_report_route_user_id_sql('student_masters', 'student_masters').' as route_user_id'),
+                DB::raw(fc_report_login_username_sql('student_masters', 'student_masters').' as login_username'),
+            ]);
         } else {
-            $query->leftJoin('user_credentials as uc', "student_masters.{$smUserCol}", '=', 'uc.user_name')
-                  ->addSelect(DB::raw('uc.pk as user_id'));
+            $query->addSelect([
+                DB::raw('uc.pk as route_user_id'),
+                DB::raw("student_masters.{$smUserCol} as login_username"),
+            ]);
         }
 
         $query->addSelect(
@@ -135,11 +151,18 @@ class ReportController extends Controller
         }
         if ($request->filled('search')) {
             $s = '%'.$request->search.'%';
-            $query->where(function($q) use ($s, $smUserCol) {
-                $q->where("student_masters.{$smUserCol}",'like',$s)
-                  ->orWhere('s1.full_name','like',$s)
-                  ->orWhere('s1.mobile_no','like',$s)
-                  ->orWhere('s1.email','like',$s);
+            $query->where(function ($q) use ($s, $smUserCol) {
+                $q->where('s1.full_name', 'like', $s)
+                    ->orWhere('s1.mobile_no', 'like', $s)
+                    ->orWhere('s1.email', 'like', $s)
+                    ->orWhere('uc.user_name', 'like', $s);
+                if ($smUserCol !== 'user_id') {
+                    $q->orWhere("student_masters.{$smUserCol}", 'like', $s);
+                } else {
+                    $q->orWhere('student_masters.user_id', 'like', $s)
+                        ->orWhere('frm.user_id', 'like', $s)
+                        ->orWhere('uc_frm.user_name', 'like', $s);
+                }
             });
         }
 
@@ -209,20 +232,25 @@ class ReportController extends Controller
 
         // Build paginated student query with filters
         $u = $userKey;
-        $s1UserCol = fc_user_col('student_master_firsts');
 
-        $query = DB::table($t)
-            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', "s1.{$s1UserCol}")
-            ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
+        $query = DB::table($t);
+
+        fc_report_apply_tracker_user_resolution($query, $t, $t);
+        fc_report_join_student_master_firsts($query, $t, $t);
+
+        $query->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
             ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id');
 
-        // Always resolve integer user_id for routing (pre-migration: join user_credentials)
         if ($u === 'user_id') {
-            $query->addSelect(DB::raw("`{$t}`.`user_id` as route_user_id"));
+            $query->addSelect([
+                DB::raw(fc_report_route_user_id_sql($t, $t).' as route_user_id'),
+                DB::raw(fc_report_login_username_sql($t, $t).' as login_username'),
+            ]);
         } else {
-            $ucJoinCol = ($u === 'userid') ? 'user_name' : 'user_name';
-            $query->leftJoin('user_credentials as uc', "{$t}.{$u}", '=', 'uc.user_name')
-                  ->addSelect(DB::raw('uc.pk as route_user_id'));
+            $query->addSelect([
+                DB::raw('uc.pk as route_user_id'),
+                DB::raw("`{$t}`.`{$u}` as login_username"),
+            ]);
         }
 
         $query->addSelect([
@@ -255,13 +283,20 @@ class ReportController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($t, $u, $search) {
-                $q->where("{$t}.{$u}", 'like', "%{$search}%")
-                  ->orWhere('s1.full_name', 'like', "%{$search}%")
-                  ->orWhere('s1.mobile_no', 'like', "%{$search}%");
+                $q->where('s1.full_name', 'like', "%{$search}%")
+                    ->orWhere('s1.mobile_no', 'like', "%{$search}%")
+                    ->orWhere('uc.user_name', 'like', "%{$search}%");
+                if ($u === 'user_id') {
+                    $q->orWhere("{$t}.user_id", 'like', "%{$search}%")
+                        ->orWhere('frm.user_id', 'like', "%{$search}%")
+                        ->orWhere('uc_frm.user_name', 'like', "%{$search}%");
+                } else {
+                    $q->orWhere("{$t}.{$u}", 'like', "%{$search}%");
+                }
             });
         }
 
-        $students = $query->orderBy("{$t}.{$u}")->paginate(50)->withQueryString();
+        $students = $query->orderBy('s1.full_name')->paginate(50)->withQueryString();
 
         return view(
             'fc.report.form-overview',
@@ -285,12 +320,20 @@ class ReportController extends Controller
                     ->implode(' + ')
             : '0';
 
-        $query = DB::table($t)
-            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', 's1.' . fc_user_col('student_master_firsts'))
-            ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
+        $query = DB::table($t);
+
+        fc_report_apply_tracker_user_resolution($query, $t, $t);
+        fc_report_join_student_master_firsts($query, $t, $t);
+
+        $query->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
             ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id')
             ->select([
-                "{$t}.{$u} as user_id",
+                DB::raw($u === 'user_id'
+                    ? fc_report_login_username_sql($t, $t).' as login_username'
+                    : "`{$t}`.`{$u}` as login_username"),
+                DB::raw($u === 'user_id'
+                    ? fc_report_route_user_id_sql($t, $t).' as route_user_id'
+                    : "{$t}.{$u} as route_user_id"),
                 "{$t}.status",
                 's1.full_name',
                 's1.mobile_no',
@@ -317,13 +360,20 @@ class ReportController extends Controller
         if ($request->filled('search')) {
             $search = $request->input('search');
             $query->where(function ($q) use ($t, $u, $search) {
-                $q->where("{$t}.{$u}", 'like', "%{$search}%")
-                  ->orWhere('s1.full_name', 'like', "%{$search}%")
-                  ->orWhere('s1.mobile_no', 'like', "%{$search}%");
+                $q->where('s1.full_name', 'like', "%{$search}%")
+                    ->orWhere('s1.mobile_no', 'like', "%{$search}%")
+                    ->orWhere('uc.user_name', 'like', "%{$search}%");
+                if ($u === 'user_id') {
+                    $q->orWhere("{$t}.user_id", 'like', "%{$search}%")
+                        ->orWhere('frm.user_id', 'like', "%{$search}%")
+                        ->orWhere('uc_frm.user_name', 'like', "%{$search}%");
+                } else {
+                    $q->orWhere("{$t}.{$u}", 'like', "%{$search}%");
+                }
             });
         }
 
-        $rows = $query->orderBy("{$t}.{$u}")->get();
+        $rows = $query->orderBy('s1.full_name')->get();
 
         $filename = Str::slug($form->form_name) . '-' . now()->format('Ymd_His') . '.csv';
 
@@ -336,7 +386,7 @@ class ReportController extends Controller
             $handle = fopen('php://output', 'w');
 
             // Header row
-            $cols = [strtoupper($userKey), 'Full Name', 'Mobile', 'Service', 'Cadre', 'State'];
+            $cols = ['Username', 'Full Name', 'Mobile', 'Service', 'Cadre', 'State'];
             foreach ($steps as $step) {
                 $cols[] = $step->step_name;
             }
@@ -346,7 +396,7 @@ class ReportController extends Controller
 
             foreach ($rows as $row) {
                 $line = [
-                    $row->{$userKey} ?? $row->user_id,
+                    $row->login_username ?? $row->{$userKey} ?? $row->route_user_id ?? '',
                     $row->full_name ?? '',
                     $row->mobile_no ?? '',
                     $row->service_code ?? '',
