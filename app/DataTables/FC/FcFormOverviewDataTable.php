@@ -39,7 +39,6 @@ class FcFormOverviewDataTable extends DataTable
     {
         $t = $this->trackerTable;
         $u = $this->userKey;
-        $s1Col = fc_user_col('student_master_firsts');
 
         $stepsDoneExpr = $this->totalSteps > 0
             ? $this->steps
@@ -47,16 +46,24 @@ class FcFormOverviewDataTable extends DataTable
                 ->implode(' + ')
             : '0';
 
-        $query = DB::table($t)
-            ->leftJoin('student_master_firsts as s1', "{$t}.{$u}", '=', "s1.{$s1Col}")
-            ->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
+        $query = DB::table($t);
+
+        fc_report_apply_tracker_user_resolution($query, $t, $t);
+        fc_report_join_student_master_firsts($query, $t, $t);
+
+        $query->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
             ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id');
 
         if ($u === 'user_id') {
-            $query->addSelect(DB::raw("`{$t}`.`user_id` as route_user_id"));
+            $query->addSelect([
+                DB::raw(fc_report_route_user_id_sql($t, $t).' as route_user_id'),
+                DB::raw(fc_report_login_username_sql($t, $t).' as login_username'),
+            ]);
         } else {
-            $query->leftJoin('user_credentials as uc', "{$t}.{$u}", '=', 'uc.user_name')
-                ->addSelect(DB::raw('uc.pk as route_user_id'));
+            $query->addSelect([
+                DB::raw('uc.pk as route_user_id'),
+                DB::raw("`{$t}`.`{$u}` as login_username"),
+            ]);
         }
 
         $query->select([
@@ -89,9 +96,9 @@ class FcFormOverviewDataTable extends DataTable
             ->query($query)
             ->addIndexColumn();
 
-        // Username as <code>
+        // Login name (OT / user_name), not roster pk stored in user_id
         $dt->editColumn($userKey, fn ($row) =>
-            '<code style="font-size:11px">' . e($row->{$userKey}) . '</code>'
+            '<code style="font-size:11px">' . e($row->login_username ?? '—') . '</code>'
         );
 
         // Full name fallback
@@ -143,7 +150,10 @@ class FcFormOverviewDataTable extends DataTable
 
         // Action button
         $dt->addColumn('action', function ($row) use ($userKey) {
-            $routeId = $row->route_user_id ?? $row->{$userKey};
+            $routeId = $row->route_user_id ?? $row->{$userKey} ?? null;
+            if (! $routeId) {
+                return '—';
+            }
             $url = route('admin.reports.student', $routeId);
             return '<a href="' . e($url) . '" class="btn btn-outline-primary py-0 px-2" style="font-size:11px;" title="View Profile">'
                 . '<i class="bi bi-eye"></i></a>';
@@ -174,9 +184,16 @@ class FcFormOverviewDataTable extends DataTable
             if ($req->filled('f_search')) {
                 $term = '%' . $req->f_search . '%';
                 $q->where(function ($sub) use ($term, $t, $userKey) {
-                    $sub->where("{$t}.{$userKey}", 'like', $term)
-                        ->orWhere('s1.full_name', 'like', $term)
-                        ->orWhere('s1.mobile_no', 'like', $term);
+                    $sub->where('s1.full_name', 'like', $term)
+                        ->orWhere('s1.mobile_no', 'like', $term)
+                        ->orWhere('uc.user_name', 'like', $term);
+                    if ($userKey === 'user_id') {
+                        $sub->orWhere("{$t}.user_id", 'like', $term)
+                            ->orWhere('frm.user_id', 'like', $term)
+                            ->orWhere('uc_frm.user_name', 'like', $term);
+                    } else {
+                        $sub->orWhere("{$t}.{$userKey}", 'like', $term);
+                    }
                 });
             }
         }, false);
@@ -230,7 +247,7 @@ class FcFormOverviewDataTable extends DataTable
                 ->width('40px'),
 
             Column::make($this->userKey)
-                ->title($this->userKey === 'user_id' ? 'User ID' : 'Username'),
+                ->title('Username'),
 
             Column::make('full_name')
                 ->title('Full Name'),

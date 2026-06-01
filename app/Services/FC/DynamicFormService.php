@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class DynamicFormService
 {
@@ -126,6 +127,88 @@ class DynamicFormService
         }
 
         return $rules;
+    }
+
+    /**
+     * Detect PHP upload errors and post_max_size truncation before Laravel validation runs.
+     *
+     * @param  string|null  $nestedPrefix  Group name when validating repeatable rows (e.g. pre_medical_history).
+     */
+    public function assertMultipartUploadsValid(Request $request, Collection $fields, ?string $nestedPrefix = null): void
+    {
+        $fileFields = $fields->where('field_type', 'file');
+        if ($fileFields->isEmpty()) {
+            return;
+        }
+
+        $messages = [];
+        $contentLength = (int) $request->server('CONTENT_LENGTH', 0);
+        $postMaxBytes = fc_ini_size_to_bytes((string) ini_get('post_max_size'));
+
+        if ($contentLength > 0 && $postMaxBytes > 0 && $contentLength > $postMaxBytes) {
+            $msg = 'The upload is too large for the server (limit '.($postMaxBytes >= 1048576 ? round($postMaxBytes / 1048576).' MB' : round($postMaxBytes / 1024).' KB').'). Reduce the file size and try again.';
+            foreach ($fileFields as $field) {
+                $messages[$this->validationErrorKey($field->field_name, $nestedPrefix)] = $msg;
+            }
+            throw ValidationException::withMessages($messages);
+        }
+
+        if ($this->multipartTextPayloadLost($request, $fields, $nestedPrefix)) {
+            $maxLabel = $this->fileUploadMaxLabel($fileFields->first());
+            $msg = "Your form data was lost because the file exceeds the allowed size ({$maxLabel}). Please use a smaller file and submit again.";
+            foreach ($fileFields as $field) {
+                $messages[$this->validationErrorKey($field->field_name, $nestedPrefix)] = $msg;
+            }
+            throw ValidationException::withMessages($messages);
+        }
+
+        foreach ($fileFields as $field) {
+            $errorKey = $this->validationErrorKey($field->field_name, $nestedPrefix);
+            $uploaded = $this->resolveUploadedFile($request, $field->field_name, $nestedPrefix);
+
+            if ($uploaded) {
+                $phpError = $uploaded->getError();
+                if ($phpError !== UPLOAD_ERR_OK) {
+                    $messages[$errorKey] = $this->uploadErrorMessage($phpError, $field);
+                }
+
+                continue;
+            }
+
+            $phpError = $this->rawUploadErrorCode($request, $field->field_name, $nestedPrefix);
+            if ($phpError !== null && $phpError !== UPLOAD_ERR_NO_FILE) {
+                $messages[$errorKey] = $this->uploadErrorMessage($phpError, $field);
+            }
+        }
+
+        if ($messages !== []) {
+            throw ValidationException::withMessages($messages);
+        }
+    }
+
+    /**
+     * Custom attribute names and messages for flat / group field validation.
+     *
+     * @return array{0: array<string, string>, 1: array<string, string>}
+     */
+    public function validationMessagesAndAttributes(Collection $fields, ?string $nestedPrefix = null): array
+    {
+        $attributes = [];
+        $messages = [];
+
+        foreach ($fields as $field) {
+            $key = $this->validationErrorKey($field->field_name, $nestedPrefix);
+            $attributes[$key] = $field->label;
+
+            if ($field->field_type === 'file') {
+                $maxLabel = $this->fileUploadMaxLabel($field);
+                $messages[$key.'.max'] = "{$field->label} must not be larger than {$maxLabel}.";
+                $messages[$key.'.uploaded'] = "{$field->label} could not be uploaded. It may exceed {$maxLabel}.";
+                $messages[$key.'.mimes'] = "{$field->label} must be a ".str_replace('|', ', ', (string) ($field->file_extensions ?? 'allowed file')).'.';
+            }
+        }
+
+        return [$messages, $attributes];
     }
 
     /**
@@ -319,7 +402,43 @@ class DynamicFormService
         }
 
         $t = $group->target_table;
-        return collect(DB::table($t)->where($this->userCol($t), $this->userVal($t, $userId))->get());
+        $uCol = $this->userCol($t);
+        $uVal = $this->userVal($t, $userId);
+        if ($uVal === '' || $uVal === null) {
+            return collect();
+        }
+
+        return collect(DB::table($t)->where($uCol, $uVal)->get());
+    }
+
+    /**
+     * Whether a group tab should show the green "completed" state (at least one stored field value).
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $rows
+     */
+    public function groupRowsHaveMeaningfulData(FcFormFieldGroup $group, Collection $rows): bool
+    {
+        if ($rows->isEmpty()) {
+            return false;
+        }
+
+        $fields = $group->activeGroupFields->isNotEmpty()
+            ? $group->activeGroupFields
+            : $group->groupFields;
+
+        foreach ($rows as $row) {
+            foreach ($fields as $field) {
+                $col = $field->target_column;
+                if (! $col || $col === '_skip') {
+                    continue;
+                }
+                if ($this->isMeaningfulStoredValue($row->{$col} ?? null, $field)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -504,6 +623,18 @@ class DynamicFormService
                 $uVal = $this->userVal($table, $userId);
                 $data[$uCol] = $uVal;
 
+                $existing = DB::table($table)->where($uCol, $uVal)->first();
+                if ($existing) {
+                    foreach ($data as $col => $val) {
+                        if (in_array($col, [$uCol, 'updated_at', 'created_at'], true)) {
+                            continue;
+                        }
+                        if (($val === null || $val === '') && filled($existing->{$col} ?? null)) {
+                            unset($data[$col]);
+                        }
+                    }
+                }
+
                 if ($markStepComplete && $table === $step->target_table && $step->completion_column) {
                     $data[$step->completion_column] = 1;
                 }
@@ -614,13 +745,26 @@ class DynamicFormService
                     DB::table($gt)->insert($data);
                 }
             } else {
-                // upsert mode (single-row tables like spouse, hobbies)
+                // upsert mode (single-row tables like spouse, hobbies, dress sizes)
+                $row = $rows[0] ?? [];
                 $data = [$uCol => $uVal, 'updated_at' => now()];
-                $row  = $rows[0] ?? [];
+                $hasMeaningful = false;
+
                 foreach ($fields as $field) {
                     $value = $row[$field->field_name] ?? null;
-                    $data[$field->target_column] = $this->normalizeGroupFieldStoredValue($field, $value);
+                    $stored = $this->normalizeGroupFieldStoredValue($field, $value);
+                    $data[$field->target_column] = $stored;
+                    if ($this->isMeaningfulStoredValue($stored, $field)) {
+                        $hasMeaningful = true;
+                    }
                 }
+
+                if (! $hasMeaningful) {
+                    DB::table($gt)->where($uCol, $uVal)->delete();
+
+                    return;
+                }
+
                 DB::table($gt)->updateOrInsert([$uCol => $uVal], $data);
                 $existing = DB::table($gt)->where($uCol, $uVal)->first();
                 if ($existing && ! $existing->created_at) {
@@ -628,6 +772,152 @@ class DynamicFormService
                 }
             }
         });
+    }
+
+    /**
+     * @param  mixed  $value
+     */
+    private function validationErrorKey(string $fieldName, ?string $nestedPrefix): string
+    {
+        if ($nestedPrefix) {
+            return "{$nestedPrefix}.0.{$fieldName}";
+        }
+
+        return $fieldName;
+    }
+
+    private function multipartTextPayloadLost(Request $request, Collection $fields, ?string $nestedPrefix): bool
+    {
+        $nonFileFields = $fields->where('field_type', '!=', 'file');
+        if ($nonFileFields->isEmpty()) {
+            return false;
+        }
+
+        $contentLength = (int) $request->server('CONTENT_LENGTH', 0);
+        if ($contentLength < 1024) {
+            return false;
+        }
+
+        $hasAnyFileAttempt = false;
+        foreach ($fields->where('field_type', 'file') as $field) {
+            if ($this->rawUploadErrorCode($request, $field->field_name, $nestedPrefix) !== null) {
+                $hasAnyFileAttempt = true;
+                break;
+            }
+        }
+
+        if (! $hasAnyFileAttempt) {
+            return false;
+        }
+
+        foreach ($nonFileFields as $field) {
+            if ($nestedPrefix) {
+                $rows = $request->input($nestedPrefix);
+                if (is_array($rows)) {
+                    foreach ($rows as $row) {
+                        if (is_array($row) && filled($row[$field->field_name] ?? null)) {
+                            return false;
+                        }
+                    }
+                }
+            } elseif ($request->filled($field->field_name)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private function resolveUploadedFile(Request $request, string $fieldName, ?string $nestedPrefix): ?\Illuminate\Http\UploadedFile
+    {
+        if ($nestedPrefix) {
+            $rows = $request->file($nestedPrefix);
+            if (! is_array($rows)) {
+                return null;
+            }
+            $first = $rows[0] ?? null;
+
+            return is_array($first) ? ($first[$fieldName] ?? null) : null;
+        }
+
+        $file = $request->file($fieldName);
+
+        return $file instanceof \Illuminate\Http\UploadedFile ? $file : null;
+    }
+
+    private function rawUploadErrorCode(Request $request, string $fieldName, ?string $nestedPrefix): ?int
+    {
+        if ($nestedPrefix) {
+            $files = $_FILES[$nestedPrefix] ?? null;
+            if (! is_array($files) || ! isset($files['error'][0][$fieldName])) {
+                return null;
+            }
+
+            return (int) $files['error'][0][$fieldName];
+        }
+
+        if (! isset($_FILES[$fieldName]['error'])) {
+            return null;
+        }
+
+        return (int) $_FILES[$fieldName]['error'];
+    }
+
+    private function uploadErrorMessage(int $phpError, FcFormField|FcFormGroupField $field): string
+    {
+        $maxLabel = $this->fileUploadMaxLabel($field);
+
+        return match ($phpError) {
+            UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE => "{$field->label} is too large. Maximum allowed size is {$maxLabel}.",
+            UPLOAD_ERR_PARTIAL => "{$field->label} was only partially uploaded. Please try again.",
+            UPLOAD_ERR_NO_TMP_DIR, UPLOAD_ERR_CANT_WRITE, UPLOAD_ERR_EXTENSION => "{$field->label} could not be saved on the server. Please contact support.",
+            default => "{$field->label} could not be uploaded. Please try again.",
+        };
+    }
+
+    private function fileUploadMaxLabel(FcFormField|FcFormGroupField $field): string
+    {
+        if (! empty($field->file_max_kb)) {
+            $kb = (int) $field->file_max_kb;
+
+            return $kb >= 1024 && $kb % 1024 === 0 ? ($kb / 1024).' MB' : $kb.' KB';
+        }
+
+        if ($field->validation_rules && preg_match('/max:(\d+)/', $field->validation_rules, $m)) {
+            $kb = (int) $m[1];
+
+            return $kb >= 1024 && $kb % 1024 === 0 ? ($kb / 1024).' MB' : $kb.' KB';
+        }
+
+        return '10 MB';
+    }
+
+    private function isMeaningfulStoredValue(mixed $value, FcFormGroupField $field): bool
+    {
+        if ($value === null || $value === '') {
+            return false;
+        }
+
+        if ($field->field_type === 'checkbox') {
+            $opts = $field->decoded_options ?? [];
+            if (count($opts) > 0) {
+                if (is_string($value)) {
+                    $decoded = json_decode($value, true);
+
+                    return is_array($decoded) && $decoded !== [];
+                }
+
+                return is_array($value) && $value !== [];
+            }
+
+            return (bool) $value;
+        }
+
+        if (is_string($value) && trim($value) === '') {
+            return false;
+        }
+
+        return true;
     }
 
     /**

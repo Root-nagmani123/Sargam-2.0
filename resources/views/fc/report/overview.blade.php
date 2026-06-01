@@ -146,7 +146,7 @@
                 @forelse($students as $idx => $s)
                     <tr>
                         <td class="px-3">{{ $students->firstItem() + $idx }}</td>
-                        <td><code style="font-size:11px">{{ $s->user_id }}</code></td>
+                        <td><code style="font-size:11px">{{ $s->login_username ?? '—' }}</code></td>
                         <td>{{ $s->full_name ?? '—' }}</td>
                         <td>{{ $s->gender ?? '—' }}</td>
                         <td><span class="badge bg-primary-subtle text-primary" style="font-size:10px;">{{ $s->service_code ?? '—' }}</span></td>
@@ -176,7 +176,7 @@
                             @endif
                         </td>
                         <td>
-                            <a href="{{ route('admin.reports.student', $s->user_id) }}"
+                            <a href="{{ route('admin.reports.student', $s->route_user_id ?? $s->user_id) }}"
                                class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px;">
                                 <i class="bi bi-eye"></i>
                             </a>

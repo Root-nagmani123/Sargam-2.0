@@ -621,7 +621,7 @@ class RegistrationService
         }
 
         $rows = array_values(array_filter([
-            ['group' => 'Travel Plan', 'en' => 'Arrival date', 'hi' => 'आगमन तिथि', 'value' => $plan->joining_date?->format('d/m/Y') ?? '-'],
+            ['group' => 'Travel Plan', 'en' => 'Arrival date', 'hi' => 'आगमन तिथि', 'value' => format_date($plan->joining_date)],
             ['group' => 'Travel Plan', 'en' => 'Activity slot', 'hi' => 'गतिविधि स्लॉट', 'value' => $slotLabel],
             ['group' => 'Travel Plan', 'en' => 'Mode of journey', 'hi' => 'यात्रा का माध्यम', 'value' => (string) ($plan->mode_of_journey ?? '-')],
             ['group' => 'Travel Plan', 'en' => 'Flight / Train / Vehicle no.', 'hi' => 'फ्लाइट / ट्रेन / वाहन संख्या', 'value' => (string) ($plan->journey_vehicle_no ?? '-')],
@@ -653,6 +653,10 @@ class RegistrationService
     {
         if ($raw === null || $raw === '') {
             return '-';
+        }
+
+        if ($this->fieldDisplaysAsDate($field, $raw)) {
+            return format_date($raw);
         }
 
         if (($field->field_type ?? '') === 'checkbox') {
@@ -693,6 +697,34 @@ class RegistrationService
         }
 
         return (string) $raw;
+    }
+
+    /**
+     * @param  FcFormField|FcFormGroupField  $field
+     */
+    private function fieldDisplaysAsDate(object $field, mixed $raw): bool
+    {
+        if (($field->field_type ?? '') === 'date') {
+            return true;
+        }
+
+        if ($raw instanceof \DateTimeInterface) {
+            return true;
+        }
+
+        $col = strtolower((string) ($field->target_column ?? $field->field_name ?? ''));
+        if (! in_array($col, [
+            'date_of_birth', 'dob', 'joining_date', 'from_date', 'to_date',
+            'spouse_dob', 'wedding_date', 'exam_date',
+        ], true) && ! str_ends_with($col, '_date')) {
+            return false;
+        }
+
+        $str = trim((string) $raw);
+
+        return $str !== ''
+            && $str !== '0000-00-00'
+            && preg_match('/^\d{4}-\d{2}-\d{2}/', $str) === 1;
     }
 
     private function hindiSectionTitle(string $stepSlug, string $fallback): string

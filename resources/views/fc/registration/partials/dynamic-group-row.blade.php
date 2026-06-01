@@ -91,10 +91,17 @@
                         @endif
                         @break
                     @case('file')
-                        @php $existingFilePath = ($gf->target_column ?? null) ? ($row->{$gf->target_column} ?? null) : null; @endphp
+                        @php
+                            $existingFilePath = ($gf->target_column ?? null) ? ($row->{$gf->target_column} ?? null) : null;
+                            $gFileMaxKb = (int) ($gf->file_max_kb ?? 0);
+                            $fileHint = $gf->help_text ?: fc_file_upload_hint($gf->validation_rules ?? null, $gFileMaxKb > 0 ? $gFileMaxKb : null);
+                            $gMaxKbAttr = $gFileMaxKb > 0 ? $gFileMaxKb : (preg_match('/max:(\d+)/', (string) ($gf->validation_rules ?? ''), $gm) ? (int) $gm[1] : 10240);
+                        @endphp
                         <input type="file" name="{{ $fieldName }}"
-                               class="form-control form-control-sm @error($errorKey) is-invalid @enderror"
-                               accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+                               class="form-control form-control-sm fc-file-upload @error($errorKey) is-invalid @enderror"
+                               accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                               data-max-kb="{{ $gMaxKbAttr }}">
+                        <div class="form-text text-muted">{{ $fileHint }}</div>
                         @if(! empty($existingFilePath))
                             <div class="small mt-1 dynamic-current-file-hint">Current file: <a href="{{ asset($existingFilePath) }}" target="_blank" rel="noopener">View</a></div>
                         @endif
