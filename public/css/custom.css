@@ -422,6 +422,9 @@ body.custom-loaded {
 }
 
 .programme-action-group {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
     gap: 0.75rem;
 }
 
@@ -459,15 +462,80 @@ body.custom-loaded {
     color: #b42318;
 }
 
+.programme-action-btn.is-disabled,
+.programme-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
+    transform: none;
+}
+
 .programme-action-switch {
     display: inline-flex;
     align-items: center;
-    padding-left: 0;
+    justify-content: center;
     min-height: auto;
+    margin: 0;
+    min-width: 2.25rem;
 }
 
 .programme-action-switch .form-check-input {
     margin: 0;
+    float: none;
+}
+
+/* Course Master: prevent icon crowding/overlap in action cell */
+#coursemaster-table .programme-action-group {
+    display: inline-flex;
+    flex-wrap: nowrap;
+    white-space: nowrap;
+    column-gap: 0;
+    gap: 0;
+    align-items: center;
+    justify-content: center;
+}
+
+#coursemaster-table .programme-action-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#coursemaster-table .programme-action-item--view,
+#coursemaster-table .programme-action-item--edit,
+#coursemaster-table .programme-action-item--delete {
+    width: 1.75rem;
+}
+
+#coursemaster-table .programme-action-item--toggle {
+    width: 3rem;
+    margin-left: 0.55rem;
+}
+
+#coursemaster-table .programme-action-btn {
+    width: 1.5rem;
+    height: 1.5rem;
+}
+
+#coursemaster-table .programme-action-switch {
+    min-width: 3rem;
+    margin: 0;
+    justify-content: center;
+}
+
+#coursemaster-table .programme-edit-btn {
+    margin: 0;
+}
+
+#coursemaster-table .programme-delete-form {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0;
+}
+
+#coursemaster-table td:last-child {
+    min-width: 180px;
 }
 
 .programme-dt-footer {

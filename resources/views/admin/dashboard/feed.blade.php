@@ -112,13 +112,26 @@
                     $feedNoticeDates = ($feedNoticeFrom && $feedNoticeTo) ? $feedNoticeFrom . ' to ' . $feedNoticeTo : ($feedNoticeFrom ?? '—');
                     $feedNoticeSearch = strtolower(($feedNotice->notice_title ?? '') . ' ' . ($feedNotice->notice_type ?? '') . ' ' . $feedNoticeDates);
                     @endphp
+                    @php
+                        $plainDesc = !empty($feedNotice->description) ? strip_tags($feedNotice->description) : '';
+                        $descWordCount = $plainDesc !== '' ? str_word_count($plainDesc) : 0;
+                        $needsTruncation = $descWordCount > 50;
+                        $truncatedText = $needsTruncation ? Str::words($plainDesc, 50, '') : null;
+                    @endphp
                     <div class="dashboard-notice-item {{ $noticeTab !== $defaultNoticeTab ? 'd-none' : '' }}"
                         data-notice-tab-item="{{ $noticeTab }}"
                         data-feed-search="{{ $feedNoticeSearch }}">
                         <span class="dashboard-notice-title">{{ $feedNotice->notice_title }}</span>
                         <small class="dashboard-notice-date">{{ $feedNoticeDates }}</small>
                         @if(!empty($feedNotice->description))
-                        <p class="dashboard-feed-expanded-card__body mb-0 mt-2">{{ Str::limit(strip_tags($feedNotice->description), 200) }}</p>
+                        <div class="notice-description-content mt-2">
+                            @if($needsTruncation)
+                            <span class="notice-desc-preview">{{ $truncatedText }}<span class="notice-desc-ellipsis">... </span><button type="button" class="btn btn-link btn-sm p-0 notice-desc-toggle align-baseline">See more</button></span>
+                            <span class="notice-desc-full d-none">{!! $feedNotice->description !!}<button type="button" class="btn btn-link btn-sm p-0 ms-1 notice-desc-toggle align-baseline">See less</button></span>
+                            @else
+                            {!! $feedNotice->description !!}
+                            @endif
+                        </div>
                         @endif
                         @if($feedNotice->document)
                         <a href="{{ asset('storage/' . $feedNotice->document) }}" target="_blank"
@@ -192,7 +205,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=5">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-feed.css') }}?v=6">
 @endpush
 
 @push('scripts')
@@ -361,10 +374,49 @@ if (typeof window.markAsReadDashboard !== 'function') {
 }
 
 document.addEventListener('click', function(e) {
+    // Let reply button and wish button handle their own clicks
     if (e.target && e.target.closest && e.target.closest('.btn-wish-reply')) return;
-    const btn = e.target && e.target.closest ? e.target.closest('.dashboard-notification-item[data-notification-id]') : null;
-    if (!btn) return;
-    window.markAsReadDashboard(btn.dataset.notificationId, btn);
+    if (e.target && e.target.closest && e.target.closest('.btn-custom-wish')) return;
+
+    // Birthday item card click → open wish modal via the "Wish them" button
+    const birthdayItem = e.target && e.target.closest ? e.target.closest('.dashboard-birthday-item') : null;
+    if (birthdayItem) {
+        const wishBtn = birthdayItem.querySelector('.btn-custom-wish');
+        if (wishBtn) { wishBtn.click(); }
+        return;
+    }
+
+    const notifItem = e.target && e.target.closest ? e.target.closest('.dashboard-notification-item[data-notification-id]') : null;
+    if (!notifItem) return;
+
+    // Wish card click → open reply modal via the "Reply" button
+    if (notifItem.classList.contains('dashboard-feed-wish-card')) {
+        const replyBtn = notifItem.querySelector('.btn-wish-reply');
+        if (replyBtn) { replyBtn.click(); return; }
+    }
+
+    window.markAsReadDashboard(notifItem.dataset.notificationId, notifItem);
+});
+
+// Notice description See more / See less toggle
+document.addEventListener('click', function(e) {
+    const toggleBtn = e.target && e.target.closest ? e.target.closest('.notice-desc-toggle') : null;
+    if (!toggleBtn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const container = toggleBtn.closest('.notice-description-content');
+    if (!container) return;
+    const preview = container.querySelector('.notice-desc-preview');
+    const full = container.querySelector('.notice-desc-full');
+    if (!preview || !full) return;
+    const isCollapsed = full.classList.contains('d-none');
+    if (isCollapsed) {
+        preview.classList.add('d-none');
+        full.classList.remove('d-none');
+    } else {
+        full.classList.add('d-none');
+        preview.classList.remove('d-none');
+    }
 });
 </script>
 @endpush

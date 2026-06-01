@@ -7,6 +7,77 @@
     --bd-pill-bg: #f3f4f6;
 }
 
+/* Notice description: preserve full Summernote HTML formatting */
+.notice-description-content {
+    font-size: 0.875rem;
+    line-height: 1.65;
+    color: #334155;
+    word-break: break-word;
+}
+.notice-description-content p { margin: 0 0 0.5rem; }
+.notice-description-content ul,
+.notice-description-content ol { padding-left: 1.5rem; margin: 0 0 0.5rem; }
+.notice-description-content li { margin-bottom: 0.2rem; }
+.notice-description-content table { border-collapse: collapse; width: 100%; margin-bottom: 0.5rem; }
+.notice-description-content table th,
+.notice-description-content table td { border: 1px solid #cbd5e1; padding: 4px 8px; }
+.notice-description-content h1,
+.notice-description-content h2,
+.notice-description-content h3,
+.notice-description-content h4,
+.notice-description-content h5,
+.notice-description-content h6 { margin: 0.75rem 0 0.35rem; }
+.notice-description-content blockquote {
+    border-left: 3px solid #cbd5e1;
+    margin: 0 0 0.5rem;
+    padding: 2px 0.75rem;
+    color: #64748b;
+}
+.notice-description-content a { color: #1d4ed8; }
+.notice-description-content img { max-width: 100%; height: auto; }
+
+/* Notice item actions row */
+.notice-desc-toggle {
+    font-size: 0.8rem;
+    line-height: 1.2;
+    vertical-align: baseline;
+    text-decoration: none;
+    color: #004a8f;
+}
+.notice-desc-toggle:hover {
+    text-decoration: underline;
+    color: #003066;
+}
+
+/* Print: hide UI chrome, show notice description with full formatting */
+@media print {
+    .notice-description-content {
+        font-size: 12pt;
+        color: #000;
+        line-height: 1.6;
+    }
+    .notice-description-content p,
+    .notice-description-content ul,
+    .notice-description-content ol,
+    .notice-description-content li,
+    .notice-description-content table,
+    .notice-description-content th,
+    .notice-description-content td,
+    .notice-description-content h1,
+    .notice-description-content h2,
+    .notice-description-content h3,
+    .notice-description-content h4,
+    .notice-description-content h5,
+    .notice-description-content h6,
+    .notice-description-content blockquote,
+    .notice-description-content a,
+    .notice-description-content strong,
+    .notice-description-content em {
+        display: revert;
+    }
+}
+
+
 .dashboard-feed-page .dashboard-feed-panel {
     border: 0;
     border-radius: 1rem;

@@ -80,8 +80,8 @@ class CourseMasterDataTable extends DataTable
                 $csrf = csrf_token();
 
                 $deleteHtml = $isActive
-                    ? '<button type="button" class="programme-action-btn programme-action-btn--danger d-none" disabled aria-disabled="true" title="Cannot delete active course"><i class="bi bi-trash3" aria-hidden="true"></i></button>'
-                    : '<form action="'.$deleteUrl.'" method="POST" class="d-inline-flex m-0 programme-delete-form">'
+                    ? '<button type="button" class="programme-action-btn programme-action-btn--danger is-disabled" disabled aria-disabled="true" title="Cannot delete active course"><i class="bi bi-trash3" aria-hidden="true"></i></button>'
+                    : '<form action="'.$deleteUrl.'" method="POST" class="d-inline-flex align-items-center m-0 programme-delete-form">'
                         .'<input type="hidden" name="_token" value="'.$csrf.'">'
                         .'<input type="hidden" name="_method" value="DELETE">'
                         .'<button type="submit" class="programme-action-btn programme-action-btn--danger programme-delete-btn" aria-label="Delete course">'
@@ -90,14 +90,22 @@ class CourseMasterDataTable extends DataTable
                         .'</form>';
 
                 return '
-                <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
-                    <a href="'.$viewUrl.'" class="programme-action-btn" aria-label="View course"><i class="bi bi-eye" aria-hidden="true"></i></a>
-                    <a href="'.$editUrl.'" class="programme-action-btn" aria-label="Edit course"><i class="bi bi-pencil" aria-hidden="true"></i></a>
-                    <div class="form-check form-switch programme-action-switch mb-0">
-                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                            data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
-                    </div>
-                    '.$deleteHtml.'
+                <div class="d-inline-flex align-items-center justify-content-center gap-2 programme-action-group" role="group" aria-label="Row actions">
+                    <span class="programme-action-item programme-action-item--view">
+                        <a href="'.$viewUrl.'" class="programme-action-btn" aria-label="View course"><i class="bi bi-eye" aria-hidden="true"></i></a>
+                    </span>
+                    <span class="programme-action-item programme-action-item--edit">
+                        <a href="'.$editUrl.'" class="programme-action-btn programme-edit-btn" aria-label="Edit course"><i class="bi bi-pencil" aria-hidden="true"></i></a>
+                    </span>
+                    <span class="programme-action-item programme-action-item--toggle">
+                        <div class="form-check form-switch programme-action-switch mb-0">
+                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
+                        </div>
+                    </span>
+                    <span class="programme-action-item programme-action-item--delete">
+                        '.$deleteHtml.'
+                    </span>
                 </div>';
             })
             ->filterColumn('course_name', function ($query, $keyword) {
