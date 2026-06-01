@@ -210,7 +210,7 @@
 @endphp
 
 <div class="modern-breadcrumb-wrapper mb-4" data-variant="{{ $variant }}">
-    <div class="modern-breadcrumb-shell rounded-4 px-3 px-md-4 py-3">
+    <div class="modern-breadcrumb-shell rounded-1 px-3 px-md-4 py-3">
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
             <div class="min-w-0 flex-grow-1 d-flex align-items-center gap-2 gap-md-3">
                 @if($showBackButton)
