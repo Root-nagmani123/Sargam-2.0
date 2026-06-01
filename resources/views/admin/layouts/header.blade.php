@@ -72,7 +72,7 @@
             <div class="collapse navbar-collapse flex-grow-1" id="navbarNav">
                 <div class="header-nav-center d-none d-lg-flex flex-grow-1 justify-content-center px-2">
                     <div class="header-nav-scroll-wrap rounded-1">
-                        <div class="header-nav-scroll flex-grow-1" tabindex="0">
+                        <div class="header-nav-scroll" tabindex="0">
                             <ul class="navbar-nav header-main-nav align-items-center mb-0" id="mainNavbar" role="menubar" aria-label="Main navigation">
                                 <li class="nav-item flex-shrink-0" role="none">
                                     <a href="#home"
@@ -118,7 +118,7 @@
                                 @endif
                             </ul>
                         </div>
-                        <button type="button" class="header-nav-scroll-btn" aria-label="Scroll navigation" title="More">
+                        <button type="button" class="header-nav-scroll-btn" aria-label="Scroll navigation" title="More" hidden>
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">chevron_right</i>
                         </button>
                     </div>
@@ -664,19 +664,27 @@
     max-width: 100%;
 }
 .header-nav-scroll-wrap {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     background: #e8eaee;
     padding: 4px 4px 4px 6px;
+    width: fit-content;
+    max-width: min(100%, 760px);
+}
+.header-nav-scroll-wrap.is-expanded {
+    display: flex;
     width: min(100%, 760px);
-    max-width: 100%;
 }
 .header-nav-scroll {
     overflow-x: auto;
     overflow-y: hidden;
     scrollbar-width: none;
     -ms-overflow-style: none;
+    flex: 0 1 auto;
     min-width: 0;
+}
+.header-nav-scroll-wrap.is-expanded .header-nav-scroll {
+    flex: 1 1 auto;
 }
 .header-nav-scroll::-webkit-scrollbar { display: none; }
 .header-main-nav {
@@ -716,7 +724,7 @@
     color: #6b7280;
     width: 30px;
     height: 30px;
-    display: inline-flex;
+    display: none;
     align-items: center;
     justify-content: center;
     padding: 0;
@@ -724,6 +732,12 @@
     border-radius: 50%;
     cursor: pointer;
     transition: background-color 0.15s ease, color 0.15s ease;
+}
+.header-nav-scroll-wrap.is-overflow .header-nav-scroll-btn {
+    display: inline-flex;
+}
+.header-nav-scroll-wrap.is-overflow .header-nav-scroll-btn[hidden] {
+    display: none !important;
 }
 .header-nav-scroll-btn .material-icons {
     font-size: 20px !important;
@@ -1806,6 +1820,61 @@ document.addEventListener('DOMContentLoaded', function() {
                 scrollEl.scrollBy({ left: 140, behavior: 'smooth' });
             }
         });
+    });
+
+    var headerNavMaxWidth = 760;
+
+    function updateHeaderNavLayout() {
+        document.querySelectorAll('.header-nav-scroll-wrap').forEach(function (wrap) {
+            var scrollEl = wrap.querySelector('.header-nav-scroll');
+            var nav = wrap.querySelector('.header-main-nav');
+            var btn = wrap.querySelector('.header-nav-scroll-btn');
+            if (!scrollEl || !nav) {
+                return;
+            }
+
+            wrap.classList.remove('is-overflow', 'is-expanded');
+            if (btn) {
+                btn.hidden = true;
+            }
+
+            var parentWidth = wrap.parentElement ? wrap.parentElement.clientWidth : window.innerWidth;
+            var cap = Math.min(headerNavMaxWidth, parentWidth || headerNavMaxWidth);
+            var chrome = 40;
+            var navWidth = nav.scrollWidth;
+
+            if (navWidth + chrome > cap) {
+                wrap.classList.add('is-overflow', 'is-expanded');
+                if (btn) {
+                    btn.hidden = false;
+                }
+                return;
+            }
+
+            if (navWidth > scrollEl.clientWidth + 1) {
+                wrap.classList.add('is-overflow', 'is-expanded');
+                if (btn) {
+                    btn.hidden = false;
+                }
+            }
+        });
+    }
+
+    updateHeaderNavLayout();
+
+    var headerNavResizeTimer;
+    window.addEventListener('resize', function () {
+        clearTimeout(headerNavResizeTimer);
+        headerNavResizeTimer = setTimeout(updateHeaderNavLayout, 120);
+    });
+
+    document.querySelectorAll('.header-main-nav').forEach(function (nav) {
+        if (typeof ResizeObserver !== 'undefined') {
+            var ro = new ResizeObserver(function () {
+                updateHeaderNavLayout();
+            });
+            ro.observe(nav);
+        }
     });
 });
 </script>
