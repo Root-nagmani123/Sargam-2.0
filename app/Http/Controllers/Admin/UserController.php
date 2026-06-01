@@ -1551,7 +1551,6 @@ class UserController extends Controller
             ->groupBy(
                 'uc.pk',
                 'uc.user_name',
-                'uc.name',
                 'uc.first_name',
                 'uc.last_name',
                 'uc.email_id',
@@ -1563,14 +1562,23 @@ class UserController extends Controller
         if ($search !== '') {
             $searchLower = strtolower(preg_replace('/\s+/', ' ', $search) ?? $search);
 
-            $usersQuery->where(function ($q) use ($searchLower) {
-                $q->whereRaw("LOWER(TRIM(COALESCE(uc.name, ''))) LIKE ?", ["%{$searchLower}%"])
-                    ->orWhereRaw("LOWER(TRIM(uc.user_name)) LIKE ?", ["%{$searchLower}%"])
-                    ->orWhereRaw("LOWER(TRIM(uc.first_name)) LIKE ?", ["%{$searchLower}%"])
-                    ->orWhereRaw("LOWER(TRIM(uc.last_name)) LIKE ?", ["%{$searchLower}%"])
-                    ->orWhereRaw("LOWER(TRIM(uc.email_id)) LIKE ?", ["%{$searchLower}%"])
-                    ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.first_name), TRIM(uc.last_name))) LIKE ?", ["%{$searchLower}%"])
-                    ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.last_name), TRIM(uc.first_name))) LIKE ?", ["%{$searchLower}%"]);
+            // Split the query into terms so a multi-word search (e.g. "virender virodia")
+            // matches when each term is found in *some* field, even across different
+            // columns (one term in user_name, another in last_name).
+            $terms = array_filter(explode(' ', $searchLower), fn ($t) => $t !== '');
+
+            $usersQuery->where(function ($outer) use ($terms) {
+                foreach ($terms as $term) {
+                    $like = "%{$term}%";
+                    $outer->where(function ($q) use ($like) {
+                        $q->whereRaw("LOWER(TRIM(COALESCE(uc.user_name, ''))) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(TRIM(uc.first_name)) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(TRIM(uc.last_name)) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(TRIM(uc.email_id)) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.first_name), TRIM(uc.last_name))) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.last_name), TRIM(uc.first_name))) LIKE ?", [$like]);
+                    });
+                }
             });
         }
         if ($user_type !== '') {
