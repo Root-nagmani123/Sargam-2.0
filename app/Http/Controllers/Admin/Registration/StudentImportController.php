@@ -570,7 +570,17 @@ class StudentImportController extends Controller
      */
     private function eligibleRosterQuery()
     {
-        return $this->exports->eligibleQuery(request());
+        // Override the limited display-only column list with r.* so the migration
+        // logic can access all fc_registration_master fields (e.g. course_master_pk,
+        // service_master_pk, contact_no, password, dob …).
+        return $this->exports->eligibleQuery(request())
+            ->select([
+                'r.*',
+                's.service_name',
+                's.service_short_name',
+                'c.course_name',
+                'c.couse_short_name as course_short_name',
+            ]);
     }
 
     /**
