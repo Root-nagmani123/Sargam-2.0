@@ -1,0 +1,216 @@
+/* State Master — programme-dt reference layout */
+.stt-master-page {
+    --stt-primary: #004a93;
+    --stt-primary-dark: #003366;
+    --stt-border: #e4e7ec;
+    --stt-text: #344054;
+    --stt-heading: #101828;
+    --stt-muted: #667085;
+    --stt-danger: #d92d20;
+}
+
+.stt-master-page .stt-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--stt-border) !important;
+}
+
+.stt-master-page .stt-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.stt-master-page #state-master-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--stt-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.stt-master-page #state-master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.stt-master-page #state-master-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--stt-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.stt-master-page #state-master-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.stt-master-page #state-master-table thead th:first-child,
+.stt-master-page #state-master-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--stt-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.stt-master-page #state-master-table thead th:nth-child(2),
+.stt-master-page #state-master-table tbody td:nth-child(2) {
+    text-align: center !important;
+    font-weight: 600;
+    color: var(--stt-heading);
+}
+
+.stt-master-page #state-master-table thead th:nth-child(3),
+.stt-master-page #state-master-table thead th:nth-child(4),
+.stt-master-page #state-master-table tbody td:nth-child(3),
+.stt-master-page #state-master-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.stt-master-page #state-master-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.stt-master-page .stt-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.stt-master-page .stt-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.stt-master-page .stt-state-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.stt-master-page .stt-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.stt-master-page .stt-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.stt-master-page .stt-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.stt-master-page .stt-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.stt-master-page .stt-action-edit {
+    color: var(--stt-primary);
+}
+
+.stt-master-page .stt-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--stt-primary-dark);
+}
+
+.stt-master-page .stt-action-delete {
+    color: var(--stt-danger);
+}
+
+.stt-master-page .stt-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.stt-master-page .stt-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.stt-master-page .stt-status-badge {
+    min-width: 4.5rem;
+}
+
+.stt-master-page .stt-state-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.stt-master-page .stt-dt-footer .pagination .page-item.active .page-link,
+.stt-master-page .stt-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.stt-master-page .stt-dt-info {
+    font-size: 0.875rem;
+    color: var(--stt-muted);
+}
+
+.stt-master-page .stt-empty-state {
+    padding: 2.5rem 1rem !important;
+}
+
+.stt-state-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+.stt-modal-form .form-control.is-invalid,
+.stt-modal-form .form-select.is-invalid {
+    border-color: #fda29b;
+}
+
+.stt-modal-form .stt-field-error:not(.d-none) {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+}
+
+@media (max-width: 767.98px) {
+    .stt-master-page .stt-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stt-master-page .stt-action-btn {
+        transition: none;
+    }
+
+    .stt-master-page .stt-action-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}
