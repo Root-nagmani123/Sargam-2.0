@@ -16,6 +16,32 @@ class EmployeeMaster extends Model
     protected $primaryKey = 'pk';
 
     /**
+     * Model boot method to prevent deletion of active records
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($model) {
+            if ($model->status == 1) {
+                throw new \Exception('Cannot delete active record. Please set status to inactive first.');
+            }
+        });
+    }
+
+    /**
+     * Active employees only (employee_master.status = 1). No-op when status column is absent.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        if (Schema::hasColumn($this->getTable(), 'status')) {
+            return $query->where($this->getTable() . '.status', 1);
+        }
+
+        return $query;
+    }
+
+    /**
      * Scope: match employee by pk OR pk_old.
      */
     public function scopeWhereIdOrPkOld(Builder $query, $id): Builder
