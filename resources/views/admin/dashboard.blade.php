@@ -1642,8 +1642,7 @@ $notificationBadgeCount = ($user && $user->user_id)
 : 0;
 $notices = get_notice_notification_by_role();
 $hour = (int) date('G');
-$greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening' ); $userName=$user ? ($user->
-    first_name ?? $user->name ?? 'User') : 'User';
+$greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening' ); $userName=$user ? (trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->name ?? 'User')) : 'User';
 
     $todayBirthdayWishNotifications = collect();
     $myBirthdayWishesSummary = '';
@@ -2438,9 +2437,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <div class="card-header bg-white border-0">
                         <div class="d-flex align-items-center justify-content-between w-100">
                             <h5 class="dashboard-birthdays-panel__title mb-0">Calendar</h5>
-                            <time class="dashboard-calendar-date-badge mb-0" datetime="{{ now()->toDateString() }}">
-                                {{ now()->format('d M Y') }}
-                            </time>
+                            <span class="dashboard-calendar-date-badge mb-0">
+                                {{ now()->format('d-m-Y') }}
+                            </span>
                         </div>
                         <hr class="dashboard-birthdays-divider mb-0">
                     </div>
@@ -2616,9 +2615,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             if (replyBtn) {
                 e.preventDefault();
                 e.stopPropagation();
-                if (replyBtn.dataset.notificationId && typeof window.markAsReadDashboard === 'function') {
-                    window.markAsReadDashboard(replyBtn.dataset.notificationId, replyBtn);
-                }
                 openWishModal({
                     name: replyBtn.dataset.name || '',
                     email: replyBtn.dataset.email || '',
