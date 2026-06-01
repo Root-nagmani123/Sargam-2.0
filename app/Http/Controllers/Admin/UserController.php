@@ -6,6 +6,7 @@ use App\DataTables\CourseMasterDataTable;
 use App\DataTables\FacultyDataTable;
 use App\DataTables\GroupMappingDataTable;
 use App\DataTables\Master\EmployeeTypeMasterDataTable;
+use App\DataTables\MemberDataTable;
 use App\DataTables\RoleDataTable;
 use App\Http\Controllers\Admin\Master\FacultyExpertiseMasterController;
 use App\Http\Controllers\Admin\Master\FacultyTypeMasterController;
@@ -68,15 +69,15 @@ class UserController extends Controller
     {
          $year = $request->input('year', now()->year);
         $month = $request->input('month', now()->month);
-        
+
         // Fetch holidays for the selected month/year
         $startDate = \Carbon\Carbon::create($year, $month, 1)->startOfMonth();
         $endDate = \Carbon\Carbon::create($year, $month, 1)->endOfMonth();
-        
+
         $holidays = Holiday::active()
             ->whereBetween('holiday_date', [$startDate, $endDate])
             ->get();
-        
+
         // Format events array with holidays
         $events = [];
         foreach ($holidays as $holiday) {
@@ -183,9 +184,9 @@ class UserController extends Controller
       $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
 
 
-      
-       $total_guest_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count();    
-       $total_internal_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count();    
+
+       $total_guest_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 2)->count();
+       $total_internal_faculty = FacultyMaster::where('active_inactive', 1)->where('faculty_type', 1)->count();
 //   print_r($emp_data);exit;
         $exemptionCount = 0;
         $MDO_count = 0;
@@ -206,12 +207,12 @@ class UserController extends Controller
             // Fetch today's timetable for the logged-in student
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
          }
-         
+
          // Calculate total sessions for Internal Faculty or Guest Faculty
          if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
              // Get faculty_master.pk from user_id
              $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
-             
+
              if ($faculty) {
                  $facultyPk = $faculty->pk;
                  $totalSessions = CalendarEvent::where('active_inactive', 1)
@@ -220,13 +221,13 @@ class UserController extends Controller
                                ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
                      })
                      ->count();
-                 
+
                  // Check if faculty is CC or ACC
                  $coordinatorCourses = CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
                      $query->where('Coordinator_name', $facultyPk)
                            ->orWhere('Assistant_Coordinator_name', $facultyPk);
                  })->pluck('courses_master_pk')->unique();
-                 
+
                  // ========== SOURCE 1: CC/ACC Courses Students ==========
                  $source1StudentPks = collect([]);
                  if ($coordinatorCourses->isNotEmpty()) {
@@ -236,7 +237,7 @@ class UserController extends Controller
                         ->where('active_inactive', 1)
                         ->where('end_date', '>=', now())
                         ->pluck('pk');
-                     
+
                      // Count total students enrolled in these courses (Source 1)
                      if ($activeCourseIds->isNotEmpty()) {
                          $source1StudentPks = StudentMasterCourseMap::whereIn('course_master_pk', $activeCourseIds)
@@ -245,33 +246,33 @@ class UserController extends Controller
                              ->unique();
                      }
                  }
-                 
+
                  // ========== SOURCE 2: Group Mappings Students ==========
                  $source2StudentPks = collect([]);
-                 
+
                  // Step 1: Find group mappings where faculty is assigned
                  $groupMappings = DB::table('group_type_master_course_master_map')
                      ->where('facility_id', $facultyPk)
                      ->where('active_inactive', 1)
                      ->get();
-                 
+
                  if ($groupMappings->isNotEmpty()) {
                      // Step 2: Get course_name (course_pk) from group mappings
                      $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
-                     
+
                      // Step 3: Check in course_master if these courses are active
                      $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
                          ->where('active_inactive', 1)
                          ->where('end_date', '>=', now())
                          ->pluck('pk');
-                     
+
                      if ($activeCourseIds->isNotEmpty()) {
                          // Step 4: Get group_type_master_course_master_map.pk for active courses
                          $activeGroupMappingPks = $groupMappings
                              ->whereIn('course_name', $activeCourseIds)
                              ->pluck('pk')
                              ->unique();
-                         
+
                          // Step 5: Get students from student_course_group_map (Source 2)
                          if ($activeGroupMappingPks->isNotEmpty()) {
                              $source2StudentPks = StudentCourseGroupMap::whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
@@ -281,7 +282,7 @@ class UserController extends Controller
                          }
                      }
                  }
-                 
+
                  // ========== MERGE BOTH SOURCES ==========
                  // Combine Source 1 and Source 2 student PKs and get unique count
                  $allStudentPks = $source1StudentPks->merge($source2StudentPks)->unique();
@@ -289,7 +290,7 @@ class UserController extends Controller
              } else {
                  $totalSessions = 0;
              }
-             
+
              // Fetch today's timetable for the logged-in faculty
              $todayTimetable = $this->getTodayTimetableForFaculty($userId);
         }
@@ -951,39 +952,39 @@ class UserController extends Controller
         $students = collect([]);
         $availableCourses = collect([]);
         $facultyPk = null;
-        
+
         // Check if user is Internal Faculty or Guest Faculty
         if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
             // Get faculty_master.pk from user_id
             $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
-            
+
             if ($faculty) {
                 $facultyPk = $faculty->pk;
-                
+
                 // ========== SOURCE 1: CC/ACC Courses ==========
                 $source1Students = collect([]);
                 $coordinatorCourses = CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
                     $query->where('Coordinator_name', $facultyPk)
                           ->orWhere('Assistant_Coordinator_name', $facultyPk);
                 })->pluck('courses_master_pk')->unique();
-                
+
                 if ($coordinatorCourses->isNotEmpty()) {
                     // Filter for active courses only
                     $activeCoordinatorCourses = CourseMaster::whereIn('pk', $coordinatorCourses)
                         ->where('active_inactive', 1)
                         ->where('end_date', '>=', now())
                         ->pluck('pk');
-                    
+
                     if ($activeCoordinatorCourses->isNotEmpty()) {
                         // Get students from student_master_course_map for Source 1
                         $source1StudentMaps = StudentMasterCourseMap::with([
-                            'studentMaster.cadre', 
+                            'studentMaster.cadre',
                             'course'
                         ])
                             ->whereIn('course_master_pk', $activeCoordinatorCourses)
                             ->where('active_inactive', 1)
                             ->get();
-                        
+
                         // Convert Source 1 to stdClass format for consistency
                         $source1Students = collect([]);
                         foreach ($source1StudentMaps as $studentMap) {
@@ -997,33 +998,33 @@ class UserController extends Controller
                         }
                     }
                 }
-                
+
                 // ========== SOURCE 2: Group Mappings ==========
                 $source2Students = collect([]);
-                
+
                 // Step 1: Find group mappings where faculty is assigned
                 $groupMappings = DB::table('group_type_master_course_master_map')
                     ->where('facility_id', $facultyPk)
                     ->where('active_inactive', 1)
                     ->get();
-                
+
                 if ($groupMappings->isNotEmpty()) {
                     // Step 2: Get course_name (course_pk) from group mappings
                     $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
-                    
+
                     // Step 3: Check in course_master if these courses are active
                     $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
                         ->where('active_inactive', 1)
                         ->where('end_date', '>=', now())
                         ->pluck('pk');
-                    
+
                     if ($activeCourseIds->isNotEmpty()) {
                         // Step 4: Get group_type_master_course_master_map.pk for active courses
                         $activeGroupMappingPks = $groupMappings
                             ->whereIn('course_name', $activeCourseIds)
                             ->pluck('pk')
                             ->unique();
-                        
+
                         // Step 5: Get students from student_course_group_map using group mapping pk
                         if ($activeGroupMappingPks->isNotEmpty()) {
                             $source2GroupMaps = StudentCourseGroupMap::with([
@@ -1035,16 +1036,16 @@ class UserController extends Controller
                                 ->whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
                                 ->where('active_inactive', 1)
                                 ->get();
-                            
+
                             // Step 6: Convert to unified format (similar to Source 1 structure)
                             foreach ($source2GroupMaps as $groupMap) {
                                 $studentPk = $groupMap->student_master_pk;
                                 $coursePk = $groupMap->groupTypeMasterCourseMasterMap->course_name ?? null;
-                                
+
                                 if ($coursePk && $groupMap->student) {
                                     // Get course from relationship (already loaded via with())
                                     $course = $groupMap->groupTypeMasterCourseMasterMap->courseGroup ?? null;
-                                    
+
                                     if ($course) {
                                         // Create a stdClass object to mimic StudentMasterCourseMap structure
                                         $studentMap = new \stdClass();
@@ -1054,7 +1055,7 @@ class UserController extends Controller
                                         $studentMap->course = $course;
                                         $studentMap->groupMapping = $groupMap;
                                         $studentMap->source = 'group_mapping'; // Track source
-                                        
+
                                         $source2Students->push($studentMap);
                                     }
                                 }
@@ -1062,13 +1063,13 @@ class UserController extends Controller
                         }
                     }
                 }
-                
+
                 // ========== MERGE BOTH SOURCES ==========
                 // Combine Source 1 and Source 2 students manually to avoid getKey() issues
                 // Priority: Source 2 students (they have groupMapping) over Source 1 students
                 $seenStudentPks = [];
                 $uniqueStudents = collect([]);
-                
+
                 // Process Source 2 students FIRST (they have groupMapping, so prioritize them)
                 foreach ($source2Students as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
@@ -1077,7 +1078,7 @@ class UserController extends Controller
                         $uniqueStudents->push($studentMap);
                     }
                 }
-                
+
                 // Process Source 1 students (only if not already added from Source 2)
                 foreach ($source1Students as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
@@ -1086,14 +1087,14 @@ class UserController extends Controller
                         $uniqueStudents->push($studentMap);
                     }
                 }
-                
+
                 // Load additional data for each student
                 $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
-                
+
                 foreach ($uniqueStudents as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
                     $coursePk = $studentMap->course_master_pk ?? null;
-                    
+
                     // For Source 1 students, get group mapping if not already set
                     // Load full relationship including group_name
                     if (!isset($studentMap->groupMapping) && $coursePk) {
@@ -1108,33 +1109,33 @@ class UserController extends Controller
                                 $query->where('course_name', $coursePk);
                             })
                             ->first();
-                        
+
                         $studentMap->groupMapping = $groupMap;
                     }
-                    
+
                     // Get counts for each student
                     $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)->count();
-                    
+
                     $studentMap->total_medical_exception_count = StudentMedicalExemption::where('student_master_pk', $studentPk)
                         ->where('active_inactive', 1)
                         ->count();
-                    
+
                     // Get notices and memos using OTNoticeMemoService
                     $notices = $noticeMemoService->getNotices($studentPk);
                     $memos = $noticeMemoService->getMemos($studentPk);
-                    
+
                     $studentMap->total_notice_count = $notices->count();
                     $studentMap->total_memo_count = $memos->count();
                 }
-                
+
                 $students = $uniqueStudents;
-                
+
                 // Get unique courses from the student list - only active courses
                 $availableCourses = $students->pluck('course')
                     ->filter(function($course) {
                         // Filter only active courses
-                        return $course && 
-                               isset($course->active_inactive) && 
+                        return $course &&
+                               isset($course->active_inactive) &&
                                $course->active_inactive == 1 &&
                                isset($course->end_date) &&
                                \Carbon\Carbon::parse($course->end_date)->gte(now());
@@ -1150,7 +1151,7 @@ class UserController extends Controller
                     ->sortBy('course_name');
             }
         }
-        
+
         // Get counsellor type names and courses from group_type_master_course_master_map
         // From group_type_master_course_master_map, get faculty_id, type_name and course_name
         // Then match type_name (pk) with course_group_type_master to get the type_name
@@ -1166,12 +1167,12 @@ class UserController extends Controller
             ->where('cm.active_inactive', 1)
             ->where('cm.end_date', '>=', now())
             ->where('fm.active_inactive', 1);
-        
+
         // Filter by logged-in faculty if available
         if ($facultyPk) {
             $counsellorTypesQuery->where('gmap.facility_id', $facultyPk);
         }
-        
+
         $counsellorTypes = $counsellorTypesQuery
             ->select(
                 'cgroup.pk as type_pk',
@@ -1180,7 +1181,7 @@ class UserController extends Controller
             ->distinct()
             ->orderBy('cgroup.type_name')
             ->get();
-        
+
         // Get courses from group_type_master_course_master_map and merge with available courses
         // Only include active courses (active_inactive = 1 and end_date >= now())
         // Filter by logged-in faculty if available
@@ -1191,12 +1192,12 @@ class UserController extends Controller
             ->where('cm.active_inactive', 1)
             ->where('cm.end_date', '>=', now())
             ->where('fm.active_inactive', 1);
-        
+
         // Filter by logged-in faculty if available
         if ($facultyPk) {
             $groupMapCoursesQuery->where('gmap.facility_id', $facultyPk);
         }
-        
+
         $groupMapCourses = $groupMapCoursesQuery
             ->select(
                 'cm.pk',
@@ -1210,13 +1211,13 @@ class UserController extends Controller
                     'course_name' => $course->course_name
                 ];
             });
-        
+
         // Merge courses from students and group_type_master_course_master_map
         $availableCourses = $availableCourses->merge($groupMapCourses)
             ->unique('pk')
             ->sortBy('course_name')
             ->values();
-        
+
         // Get group names from group_type_master_course_master_map with their type_name (counsellor type)
         // Only include groups for active courses (active_inactive = 1 and end_date >= now())
         // Filter by logged-in faculty if available
@@ -1229,12 +1230,12 @@ class UserController extends Controller
             ->where('fm.active_inactive', 1)
             ->whereNotNull('gmap.group_name')
             ->where('gmap.group_name', '!=', '');
-        
+
         // Filter by logged-in faculty if available
         if ($facultyPk) {
             $groupNamesQuery->where('gmap.facility_id', $facultyPk);
         }
-        
+
         $groupNames = $groupNamesQuery
             ->select(
                 'gmap.pk as group_pk',
@@ -1244,7 +1245,7 @@ class UserController extends Controller
             ->distinct()
             ->orderBy('gmap.group_name')
             ->get();
-        
+
         return view('admin.dashboard.student_list', compact('students', 'availableCourses', 'counsellorTypes', 'groupNames'));
     }
 
@@ -1408,7 +1409,7 @@ class UserController extends Controller
 
         // Get student basic information
         $student = StudentMaster::with(['service', 'courses'])->find($studentPk);
-        
+
         if (!$student) {
             return redirect()->route('admin.dashboard.students')
                 ->with('error', 'Student not found.');
@@ -1476,7 +1477,7 @@ class UserController extends Controller
         $markedSessions = $markedResult ? (int)$markedResult->count : 0;
 
         $notMarkedCount = max(0, $totalExpectedSessions - $markedSessions);
-        
+
         // Add not_marked_count to attendance summary if it doesn't exist
         if ($attendanceSummary) {
             $attendanceSummary->not_marked_count = $notMarkedCount;
@@ -1604,7 +1605,7 @@ class UserController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $user = User::create([
                 'name' => $request->name,
                 'email' => $request->email,
@@ -1660,11 +1661,11 @@ class UserController extends Controller
                     }
                 }
             }
-            
+
             DB::commit();
 
             self::bumpAdminUsersIndexCacheEpoch();
-            
+
             return redirect()->route('admin.users.index')
                 ->with('success', 'User created successfully');
         } catch (\Exception $e) {
@@ -1710,18 +1711,18 @@ class UserController extends Controller
     {
         try {
             DB::beginTransaction();
-            
+
             $userData = [
                 'name' => $request->name,
                 'email' => $request->email,
             ];
-            
+
             if ($request->filled('password')) {
                 $userData['password'] = Hash::make($request->password);
             }
-            
+
             $user->update($userData);
-            
+
              if ($request->has('roles')) {
             // Remove old roles
            EmployeeRoleMapping::where('user_credentials_pk', $user->id)->delete();
@@ -1756,7 +1757,7 @@ class UserController extends Controller
                     }
                 }
             }
-            
+
             // Send notification to the user if roles were assigned
             if (!empty($assignedRoleNames) && $user->user_id) {
                 try {
@@ -1776,11 +1777,11 @@ class UserController extends Controller
                 }
             }
         }
-            
+
             DB::commit();
 
             self::bumpAdminUsersIndexCacheEpoch();
-            
+
             return redirect()->route('admin.users.index')
                 ->with('success', 'User updated successfully');
         } catch (\Exception $e) {
@@ -1804,11 +1805,11 @@ class UserController extends Controller
                 return redirect()->route('admin.users.index')
                     ->with('error', 'Cannot delete admin user');
             }
-            
+
             $user->delete();
 
             self::bumpAdminUsersIndexCacheEpoch();
-            
+
             return redirect()->route('admin.users.index')
                 ->with('success', 'User deleted successfully');
         } catch (\Exception $e) {
@@ -1819,48 +1820,58 @@ class UserController extends Controller
 
 public function toggleStatus(Request $request)
 {
-    $idColumn = $request->id_column ?? 'pk'; 
-    $table = $request->table;
-    $column = $request->column;
-    $id = $request->id;
-    $status = $request->status;
+    try {
+        $idColumn = $request->id_column ?? 'pk';
+        $table = $request->table;
+        $column = $request->column;
+        $id = $request->id;
+        $status = $request->status;
 
-    DB::table($request->table)
-        ->where($idColumn, $id)
-        ->update([$column => $status]);
+        DB::table($request->table)
+            ->where($idColumn, $id)
+            ->update([$column => $status]);
 
-    if ($table === 'employee_type_master') {
-        EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
-    }
-    if ($table === 'faculty_expertise_master') {
-        FacultyExpertiseMasterController::bumpListCacheEpoch();
-    }
-    if ($table === 'faculty_master') {
-        FacultyDataTable::bumpListingCacheEpoch();
-    }
-    if ($table === 'user_role_master') {
-        RoleDataTable::bumpListingCacheEpoch();
-    }
-    if ($table === 'venue_master') {
-        VenueMasterController::bumpIndexCacheEpoch();
-    }
-    if ($table === 'course_master') {
-        CourseMasterDataTable::bumpListingCacheEpoch();
-    }
-    if ($table === 'group_type_master_course_master_map') {
-        GroupMappingDataTable::bumpListingCacheEpoch();
-    }
-    if ($table === 'faculty_type_master') {
-        FacultyTypeMasterController::bumpListCacheEpoch();
-    }
+        if ($table === 'employee_type_master') {
+            EmployeeTypeMasterDataTable::bumpListingCacheEpoch();
+        }
+        if ($table === 'employee_master') {
+            MemberDataTable::bumpListingCacheEpoch();
+        }
+        if ($table === 'faculty_expertise_master') {
+            FacultyExpertiseMasterController::bumpListCacheEpoch();
+        }
+        if ($table === 'faculty_master') {
+            FacultyDataTable::bumpListingCacheEpoch();
+        }
+        if ($table === 'user_role_master') {
+            RoleDataTable::bumpListingCacheEpoch();
+        }
+        if ($table === 'venue_master') {
+            VenueMasterController::bumpIndexCacheEpoch();
+        }
+        if ($table === 'course_master') {
+            CourseMasterDataTable::bumpListingCacheEpoch();
+        }
+        if ($table === 'group_type_master_course_master_map') {
+            GroupMappingDataTable::bumpListingCacheEpoch();
+        }
+        if ($table === 'faculty_type_master') {
+            FacultyTypeMasterController::bumpListCacheEpoch();
+        }
 
-    $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
-    session()->flash('success', "Status updated to {$newState}.");
+        $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
+        session()->flash('success', "Status updated to {$newState}.");
 
-    return response()->json([
-        'message' => "Status updated to {$newState}.",
-        'state' => $newState,
-    ]);
+        return response()->json([
+            'message' => "Status updated to {$newState}.",
+            'state' => $newState,
+        ]);
+    } catch (\Exception $e) {
+        \Log::error('Toggle status error: ' . $e->getMessage());
+        return response()->json([
+            'message' => 'Failed to update status: ' . $e->getMessage(),
+        ], 500);
+    }
 }
 public function assignRole($id)
 {
@@ -1870,9 +1881,9 @@ public function assignRole($id)
         return redirect()->route('admin.users.index')
             ->with('error', 'Invalid user ID. Please try again.');
     }
-    
+
     $user = User::findOrFail($decryptedId);
-   
+
     $userRoles = \DB::table('employee_role_mapping')
         ->where('user_credentials_pk', $decryptedId)
         ->pluck('user_role_master_pk')
@@ -1944,7 +1955,7 @@ public function assignRoleSave(Request $request)
         \DB::commit();
 
         self::bumpAdminUsersIndexCacheEpoch();
-        
+
         // Send notification to the user if roles were assigned
         if (!empty($assignedRoleNames)) {
             try {
@@ -1952,7 +1963,7 @@ public function assignRoleSave(Request $request)
                 $userCredential = \DB::table('user_credentials')
                     ->where('pk', $userId)
                     ->first();
-                
+
                 if ($userCredential && $userCredential->user_id) {
                     $notificationService = app(NotificationService::class);
                     $roleNames = implode(', ', $assignedRoleNames);
@@ -2002,7 +2013,7 @@ public function uploadPdf(Request $request)
     }
     function change_password(){
     return view('admin.password.change_password');
-        
+
     }
     function submit_change_password(Request $request) {
     $request->validate([
@@ -2048,7 +2059,7 @@ public function uploadPdf(Request $request)
             'ldap_error' => 'LDAP Error: ' . $e->getMessage()
         ]);
 }
-   
+
     }
 
     /**
@@ -2060,10 +2071,10 @@ public function uploadPdf(Request $request)
     private function getTodayTimetableForFaculty($facultyUserId)
     {
         $today = Carbon::today()->toDateString();
-        
+
         // Get faculty_master.pk from user_id
         $faculty = FacultyMaster::where('employee_master_pk', $facultyUserId)->first();
-        
+
         if (!$faculty) {
             return collect([]);
         }
@@ -2146,12 +2157,12 @@ public function uploadPdf(Request $request)
     private function getTodayTimetableForStudent($studentId)
     {
         $today = Carbon::today()->toDateString();
-        
+
         // Get student's group mappings
         $studentGroupMaps = StudentCourseGroupMap::with('groupTypeMasterCourseMasterMap')
             ->where('student_master_pk', $studentId)
             ->get();
-           
+
 
         if ($studentGroupMaps->isEmpty()) {
             return collect([]);
