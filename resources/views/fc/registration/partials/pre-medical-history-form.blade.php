@@ -35,6 +35,7 @@
         <div class="col-12">
             <label class="form-label small fw-semibold">Supporting document (PDF or image)</label>
             <input type="file" name="pre_med_doc" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+            <div class="form-text text-muted">{{ fc_file_upload_hint('nullable|file|mimes:pdf,jpg,jpeg,png|max:10240') }}</div>
             @if($preMedical?->doc_path)
                 <div class="small mt-1">Current file: <a href="{{ asset($preMedical->doc_path) }}" target="_blank" rel="noopener">View</a></div>
             @endif

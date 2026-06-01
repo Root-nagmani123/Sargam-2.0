@@ -49,6 +49,16 @@
             @if(session('error'))
                 <div class="alert alert-danger small py-2">{{ session('error') }}</div>
             @endif
+            @if($errors->any())
+                <div class="alert alert-danger small py-2 mb-3">
+                    <strong class="d-block mb-1">Please fix the following:</strong>
+                    <ul class="mb-0 ps-3">
+                        @foreach($errors->all() as $err)
+                            <li>{{ $err }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
             @php $allFileFields = $fields->isNotEmpty() && $fields->every(fn ($f) => $f->field_type === 'file'); @endphp
 
             @if($allFileFields)
@@ -139,8 +149,25 @@
 @php
     $hasSameAsPermanent = $fields->contains(fn ($f) => $f->field_name === 'same_as_permanent');
 @endphp
-@if($hasSameAsPermanent)
 @push('scripts')
+@if($hasSameAsPermanent ?? false)
 @include('fc.registration.partials.same-as-permanent-script')
-@endpush
 @endif
+<script>
+document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (input) {
+    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10);
+    if (!maxKb) return;
+    var form = input.closest('form');
+    if (!form) return;
+    form.addEventListener('submit', function (e) {
+        if (!input.files || !input.files.length) return;
+        if (input.files[0].size > maxKb * 1024) {
+            e.preventDefault();
+            var mb = maxKb >= 1024 ? (maxKb / 1024) + ' MB' : maxKb + ' KB';
+            alert('File is too large. Maximum allowed size is ' + mb + '.');
+            input.focus();
+        }
+    });
+});
+</script>
+@endpush

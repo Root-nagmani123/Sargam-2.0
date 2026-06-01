@@ -2,7 +2,7 @@
 @section('title', $step->step_name . ' – ' . $form->form_name)
 
 @section('setup_content')
-<div class="container py-4">
+<div class="container py-2 fc-step3-page">
     {{-- Step indicator --}}
     <div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
         <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-sm btn-outline-secondary">
@@ -16,18 +16,19 @@
     </div>
 
     <div class="card border-0 shadow-sm" style="border-radius:10px;">
-        <div class="card-header bg-white py-3">
+        <div class="card-header bg-white py-2">
             <h5 class="mb-1"><i class="bi {{ $step->icon ?? 'bi-journal-text' }} me-2"></i>{{ $step->step_name }}</h5>
             @if($step->description)
                 <p class="text-muted small mb-0">{{ $step->description }}</p>
             @endif
         </div>
-        <div class="card-body">
+        <div class="card-body pt-2 pb-3">
+            @php $activeGi = fc_form_group_active_index($groups, request()->query('group')); @endphp
             {{-- Group Tabs --}}
-            <ul class="nav nav-tabs mb-3 flex-wrap" id="groupTabs" role="tablist">
-                @foreach($groups as $gi => $group)
+            <ul class="nav nav-tabs mb-2 flex-wrap" id="groupTabs" role="tablist">
+                @foreach($groups as $group)
                     <li class="nav-item" role="presentation">
-                        <button class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }} {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
+                        <button class="nav-link text-nowrap {{ $loop->index === $activeGi ? 'active' : '' }} {{ ($completedGroups[$group->group_name] ?? false) ? 'text-success' : '' }}"
                                 id="tab-{{ $group->group_name }}-btn"
                                 data-bs-toggle="tab"
                                 data-bs-target="#tab-{{ $group->group_name }}"
@@ -45,7 +46,7 @@
 
             {{-- Tab Content --}}
             <div class="tab-content" id="groupTabContent">
-                @foreach($groups as $gi => $group)
+                @foreach($groups as $group)
                     @php
                         $rows         = $existingRows[$group->group_name] ?? collect();
                         $gLookups     = $groupLookups[$group->group_name] ?? [];
@@ -56,7 +57,7 @@
                             : $group->groupFields;
                         $needsMultipart = $groupFieldDefs->contains(fn ($f) => $f->field_type === 'file');
                     @endphp
-                    <div class="tab-pane fade {{ $gi === 0 ? 'show active' : '' }}" id="tab-{{ $group->group_name }}" role="tabpanel">
+                    <div class="tab-pane fade {{ $loop->index === $activeGi ? 'show active' : '' }}" id="tab-{{ $group->group_name }}" role="tabpanel">
                         <form method="POST" action="{{ route('fc-reg.forms.group.save', [$form, $group]) }}"
                               @if($needsMultipart) enctype="multipart/form-data" @endif>
                             @csrf
@@ -99,8 +100,8 @@
                             @endif
 
                             <div class="d-flex justify-content-between mt-4">
-                                @if($gi > 0)
-                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tab-{{ $groups[$gi-1]->group_name }}-btn').click()">
+                                @if($loop->index > 0)
+                                    <button type="button" class="btn btn-outline-secondary" onclick="document.getElementById('tab-{{ $groups[$loop->index - 1]->group_name }}-btn').click()">
                                         <i class="bi bi-arrow-left me-1"></i>Previous Tab
                                     </button>
                                 @elseif($prevStep)
@@ -131,6 +132,36 @@
     </div>
 </div>
 @endsection
+
+@push('styles')
+<style>
+    #groupTabContent {
+        display: grid;
+        grid-template-columns: 1fr;
+        margin-top: 0;
+    }
+    #groupTabContent > .tab-pane {
+        grid-row: 1;
+        grid-column: 1;
+        margin: 0;
+        padding: 0;
+    }
+    #groupTabContent > .tab-pane:not(.show.active) {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none;
+    }
+    #groupTabContent > .tab-pane.show.active {
+        display: block !important;
+        visibility: visible !important;
+        height: auto !important;
+        opacity: 1;
+    }
+    .fc-step3-page .repeatable-row { margin-bottom: 0.5rem; }
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -171,4 +202,5 @@ function addGroupRow(groupName, groupId, maxRows) {
     container.appendChild(clone);
 }
 </script>
+@include('fc.registration.partials.group-tabs-activate-script')
 @endpush
