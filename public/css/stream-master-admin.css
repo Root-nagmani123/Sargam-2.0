@@ -1,0 +1,216 @@
+/* Stream Master — programme-dt reference layout */
+.stm-master-page {
+    --stm-primary: #004a93;
+    --stm-primary-dark: #003366;
+    --stm-border: #e4e7ec;
+    --stm-text: #344054;
+    --stm-heading: #101828;
+    --stm-muted: #667085;
+    --stm-danger: #d92d20;
+}
+
+.stm-master-page .stm-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--stm-border) !important;
+}
+
+.stm-master-page .stm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.stm-master-page #stream-master-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--stm-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.stm-master-page #stream-master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.stm-master-page #stream-master-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--stm-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.stm-master-page #stream-master-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.stm-master-page #stream-master-table thead th:first-child,
+.stm-master-page #stream-master-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--stm-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.stm-master-page #stream-master-table thead th:nth-child(2),
+.stm-master-page #stream-master-table tbody td:nth-child(2) {
+    text-align: left !important;
+    font-weight: 600;
+    color: var(--stm-heading);
+}
+
+.stm-master-page #stream-master-table thead th:nth-child(3),
+.stm-master-page #stream-master-table thead th:nth-child(4),
+.stm-master-page #stream-master-table tbody td:nth-child(3),
+.stm-master-page #stream-master-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.stm-master-page #stream-master-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.stm-master-page .stm-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.stm-master-page .stm-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.stm-master-page .stm-stream-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.stm-master-page .stm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.stm-master-page .stm-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.stm-master-page .stm-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.stm-master-page .stm-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.stm-master-page .stm-action-edit {
+    color: var(--stm-primary);
+}
+
+.stm-master-page .stm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--stm-primary-dark);
+}
+
+.stm-master-page .stm-action-delete {
+    color: var(--stm-danger);
+}
+
+.stm-master-page .stm-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.stm-master-page .stm-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.stm-master-page .stm-status-badge {
+    min-width: 4.5rem;
+}
+
+.stm-master-page .stm-stream-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.stm-master-page .stm-dt-footer .pagination .page-item.active .page-link,
+.stm-master-page .stm-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.stm-master-page .stm-dt-info {
+    font-size: 0.875rem;
+    color: var(--stm-muted);
+}
+
+.stm-master-page .stm-empty-state {
+    padding: 2.5rem 1rem !important;
+}
+
+.stm-stream-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+.stm-modal-form .form-control.is-invalid,
+.stm-modal-form .form-select.is-invalid {
+    border-color: #fda29b;
+}
+
+.stm-modal-form .stm-field-error:not(.d-none) {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+}
+
+@media (max-width: 767.98px) {
+    .stm-master-page .stm-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .stm-master-page .stm-action-btn {
+        transition: none;
+    }
+
+    .stm-master-page .stm-action-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}

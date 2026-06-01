@@ -1,0 +1,229 @@
+/* Venue Master — programme-dt reference layout */
+.vm-master-page {
+    --vm-primary: #004a93;
+    --vm-primary-dark: #003366;
+    --vm-border: #e4e7ec;
+    --vm-text: #344054;
+    --vm-heading: #101828;
+    --vm-muted: #667085;
+    --vm-danger: #d92d20;
+}
+
+.vm-master-page .vm-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--vm-border) !important;
+}
+
+.vm-master-page .vm-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.vm-master-page #venue-master-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--vm-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.vm-master-page #venue-master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.vm-master-page #venue-master-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--vm-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.vm-master-page #venue-master-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.vm-master-page #venue-master-table thead th:first-child,
+.vm-master-page #venue-master-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--vm-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.vm-master-page #venue-master-table thead th:nth-child(2),
+.vm-master-page #venue-master-table tbody td:nth-child(2) {
+    text-align: left !important;
+    font-weight: 600;
+    color: var(--vm-heading);
+}
+
+.vm-master-page #venue-master-table thead th:nth-child(3),
+.vm-master-page #venue-master-table tbody td:nth-child(3) {
+    text-align: left !important;
+    font-weight: 600;
+    color: var(--vm-heading);
+    text-transform: uppercase;
+    letter-spacing: 0.02em;
+    font-size: 0.875rem;
+}
+
+.vm-master-page #venue-master-table thead th:nth-child(4),
+.vm-master-page #venue-master-table tbody td:nth-child(4) {
+    text-align: left !important;
+    font-weight: 500;
+    color: var(--vm-text);
+    max-width: 280px;
+}
+
+.vm-master-page #venue-master-table tbody td.vm-desc-cell {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.vm-master-page #venue-master-table thead th:nth-child(5),
+.vm-master-page #venue-master-table thead th:nth-child(6),
+.vm-master-page #venue-master-table tbody td:nth-child(5),
+.vm-master-page #venue-master-table tbody td:nth-child(6) {
+    text-align: center !important;
+}
+
+.vm-master-page #venue-master-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.vm-master-page .vm-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.vm-master-page .vm-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.vm-master-page .vm-venue-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.vm-master-page .vm-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.vm-master-page .vm-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.vm-master-page .vm-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.vm-master-page .vm-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.vm-master-page .vm-action-edit {
+    color: var(--vm-primary);
+}
+
+.vm-master-page .vm-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--vm-primary-dark);
+}
+
+.vm-master-page .vm-action-delete {
+    color: var(--vm-danger);
+}
+
+.vm-master-page .vm-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.vm-master-page .vm-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.vm-master-page .vm-status-badge {
+    min-width: 4.5rem;
+}
+
+.vm-master-page .vm-venue-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.vm-master-page .vm-dt-footer .pagination .page-item.active .page-link,
+.vm-master-page .vm-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.vm-master-page .vm-dt-info {
+    font-size: 0.875rem;
+    color: var(--vm-muted);
+}
+
+.vm-master-page .vm-empty-state {
+    padding: 2.5rem 1rem !important;
+}
+
+.vm-venue-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+@media (max-width: 767.98px) {
+    .vm-master-page .vm-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .vm-master-page .vm-action-btn {
+        transition: none;
+    }
+
+    .vm-master-page .vm-action-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}

@@ -66,8 +66,13 @@ class VenueMasterController extends Controller
         ];
     }
 
-    public function create() {
-        return view('admin.venueMaster.create');
+    public function create(Request $request)
+    {
+        if ($request->ajax() || $request->expectsJson()) {
+            return view('admin.venueMaster._form');
+        }
+
+        return redirect()->route('Venue-Master.index', ['open_venue_modal' => 'add']);
     }
 
     public function store(Request $request) {
@@ -83,12 +88,28 @@ class VenueMasterController extends Controller
             'created_date' => now(),
         ]);
         self::bumpIndexCacheEpoch();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Venue Added Successfully',
+            ]);
+        }
+
         return redirect()->route('Venue-Master.index')->with('success', 'Venue Added Successfully');
     }
 
-    public function edit($id) {
+    public function edit(Request $request, $id) {
         $venue = VenueMaster::findOrFail($id);
-        return view('admin.venueMaster.edit', compact('venue'));
+
+        if ($request->ajax() || $request->expectsJson()) {
+            return view('admin.venueMaster._form', compact('venue'));
+        }
+
+        return redirect()->route('Venue-Master.index', [
+            'open_venue_modal' => 'edit',
+            'venue_id' => $id,
+        ]);
     }
 
     public function update(Request $request, $id) {
@@ -104,6 +125,14 @@ class VenueMasterController extends Controller
             'modified_date' => now(),
         ]);
         self::bumpIndexCacheEpoch();
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Venue Updated Successfully',
+            ]);
+        }
+
         return redirect()->route('Venue-Master.index')->with('success', 'Venue Updated Successfully');
     }
 

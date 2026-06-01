@@ -14,9 +14,15 @@ class ClassSessionMasterController extends Controller
         $classSessionMaster = ClassSessionMaster::paginate(10);
         return view('admin.master.class_session_master.index', compact('classSessionMaster'));
     }
-    function create() {
-        return view('admin.master.class_session_master.create');
+
+    function create(Request $request) {
+        if ($request->ajax() || $request->expectsJson()) {
+            return view('admin.master.class_session_master._form');
+        }
+
+        return redirect()->route('master.class.session.index', ['open_csm_modal' => 'add']);
     }
+
     function store(ClassSessionMasterRequest $request) {
         
         try {
@@ -35,22 +41,47 @@ class ClassSessionMasterController extends Controller
             
             $classSessionMaster->save();
 
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => $message,
+                ]);
+            }
+
             return redirect()->route('master.class.session.index')->with('success', $message);
         } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 500);
+            }
+
             return redirect()->back()->with('error',$e->getMessage())->withInput();
         }
-        
-
-        
     }
-    function edit(String $id) {
+
+    function edit(String $id, Request $request) {
         try {
             $classSessionMaster = ClassSessionMaster::find(decrypt($id));
             if (!$classSessionMaster) {
+                if ($request->ajax() || $request->expectsJson()) {
+                    return response()->json(['message' => 'Class session not found.'], 404);
+                }
+
                 return redirect()->route('master.class.session.index')->with('error', 'Class session not found.');
             }
-            return view('admin.master.class_session_master.create', compact('classSessionMaster'));
+
+            if ($request->ajax() || $request->expectsJson()) {
+                return view('admin.master.class_session_master._form', compact('classSessionMaster'));
+            }
+
+            return redirect()->route('master.class.session.index', [
+                'open_csm_modal' => 'edit',
+                'csm_id' => $id,
+            ]);
         } catch (\Exception $e) {
+            if ($request->ajax() || $request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 400);
+            }
+
             return redirect()->back()->with('error',$e->getMessage())->withInput();
         }
     }
