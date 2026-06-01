@@ -1,0 +1,216 @@
+/* District Master — programme-dt reference layout */
+.dst-master-page {
+    --dst-primary: #004a93;
+    --dst-primary-dark: #003366;
+    --dst-border: #e4e7ec;
+    --dst-text: #344054;
+    --dst-heading: #101828;
+    --dst-muted: #667085;
+    --dst-danger: #d92d20;
+}
+
+.dst-master-page .dst-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--dst-border) !important;
+}
+
+.dst-master-page .dst-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dst-master-page #district-master-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--dst-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.dst-master-page #district-master-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    margin-bottom: 0;
+}
+
+.dst-master-page #district-master-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--dst-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.dst-master-page #district-master-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.dst-master-page #district-master-table thead th:first-child,
+.dst-master-page #district-master-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--dst-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.dst-master-page #district-master-table thead th:nth-child(2),
+.dst-master-page #district-master-table tbody td:nth-child(2) {
+    text-align: left !important;
+    font-weight: 600;
+    color: var(--dst-heading);
+}
+
+.dst-master-page #district-master-table thead th:nth-child(3),
+.dst-master-page #district-master-table thead th:nth-child(4),
+.dst-master-page #district-master-table tbody td:nth-child(3),
+.dst-master-page #district-master-table tbody td:nth-child(4) {
+    text-align: center !important;
+}
+
+.dst-master-page #district-master-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.dst-master-page .dst-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.dst-master-page .dst-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.dst-master-page .dst-district-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.dst-master-page .dst-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.dst-master-page .dst-action-btn:hover:not(:disabled) {
+    transform: translateY(-1px);
+}
+
+.dst-master-page .dst-action-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.dst-master-page .dst-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.dst-master-page .dst-action-edit {
+    color: var(--dst-primary);
+}
+
+.dst-master-page .dst-action-edit:hover {
+    background: #f0f6fc;
+    color: var(--dst-primary-dark);
+}
+
+.dst-master-page .dst-action-delete {
+    color: var(--dst-danger);
+}
+
+.dst-master-page .dst-action-delete:hover:not(:disabled) {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.dst-master-page .dst-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.dst-master-page .dst-status-badge {
+    min-width: 4.5rem;
+}
+
+.dst-master-page .dst-district-actions form {
+    display: inline-flex;
+    margin: 0;
+}
+
+.dst-master-page .dst-dt-footer .pagination .page-item.active .page-link,
+.dst-master-page .dst-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.dst-master-page .dst-dt-info {
+    font-size: 0.875rem;
+    color: var(--dst-muted);
+}
+
+.dst-master-page .dst-empty-state {
+    padding: 2.5rem 1rem !important;
+}
+
+.dst-district-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+.dst-modal-form .form-control.is-invalid,
+.dst-modal-form .form-select.is-invalid {
+    border-color: #fda29b;
+}
+
+.dst-modal-form .dst-field-error:not(.d-none) {
+    display: block;
+    margin-top: 0.25rem;
+    font-size: 0.8125rem;
+}
+
+@media (max-width: 767.98px) {
+    .dst-master-page .dst-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .dst-master-page .dst-action-btn {
+        transition: none;
+    }
+
+    .dst-master-page .dst-action-btn:hover:not(:disabled) {
+        transform: none;
+    }
+}
