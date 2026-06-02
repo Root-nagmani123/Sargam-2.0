@@ -223,18 +223,9 @@ $(document).on('change', '.status-toggle', function () {
                         <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
                 `);
-                setTimeout(function () {
-                    if (table === 'notice_category_master' || table === 'notice_subcategory_master') {
-                        window.location.reload();
-                        return;
-                    }
-                    try {
-                        var $dt = $('.dataTable');
-                        if ($dt.length && $.fn.DataTable && $dt.DataTable) {
-                            $dt.DataTable().ajax.reload();
-                        }
-                    } catch (e) { /* no server-side DataTable on this page */ }
-                }, 400);
+                 setTimeout(function() {
+                 $('.dataTable ').DataTable().ajax.reload();
+                }, 500);
             },
             error: function () {
                 Swal.fire('Error', 'Status update failed', 'error');

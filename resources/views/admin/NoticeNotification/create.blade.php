@@ -2,7 +2,6 @@
 
 @section('title', 'Create Notice notification')
 
-<<<<<<< HEAD
 @push('styles')
 <link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
 <style>
@@ -89,12 +88,6 @@
 
 @section('content')
 <div class="container-fluid notice-form-page py-1">
-=======
-@section('setup_content')
-
-
-<div class="container-fluid">
->>>>>>> 72c69fa0 (notice_notification category subcategory mapping work)
     <x-breadcrum title="Notice List" />
     <x-session_message />
 
@@ -233,69 +226,6 @@
                             </button>
                         </div>
                     </div>
-<<<<<<< HEAD
-=======
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Notice Type (Category) <span class="text-danger">*</span></label>
-                            <select name="notice_category_master_pk" id="noticeCategory" class="form-control" required>
-                                <option value="">Select category</option>
-                                @foreach($categories as $cat)
-                                <option value="{{ $cat->pk }}" {{ (string) old('notice_category_master_pk') === (string) $cat->pk ? 'selected' : '' }}>{{ $cat->name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Notice Sub Type (Subcategory)</label>
-                            <select name="notice_subcategory_master_pk" id="noticeSubcategory" class="form-control">
-                                <option value="">Select sub type</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Display Date <span class="text-danger">*</span></label>
-                            <input type="date" name="display_date" class="form-control" value="{{ old('display_date') }}">
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
-                            <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Upload Document</label>
-                            <input type="file" name="document" class="form-control">
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3">
-                            <label class="form-label">Target Audience <span class="text-danger">*</span></label>
-                            <select name="target_audience" id="targetAudience" class="form-control">
-                                <option value="">Select Target Audience</option>
-                                @foreach($target as $t)
-                                <option value="{{ $t }}" {{ old('target_audience') == $t ? 'selected' : '' }}>{{ $t }}</option>
-                                @endforeach
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-6">
-                        <div class="mb-3 d-none" id="courseBox">
-                            <label class="form-label">Select Course</label>
-                            <select name="course_master_pk" id="courseSelect" class="form-control">
-                                <option value="">Select Course</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="d-flex justify-content-end gap-2">
-                        <button class="btn btn-primary">Save</button>
-                        <a href="{{ route('admin.notice.index') }}" class="btn btn-secondary">Cancel</a>
-                    </div>
->>>>>>> 72c69fa0 (notice_notification category subcategory mapping work)
                 </div>
             </form>
         </div>
@@ -396,33 +326,6 @@
                     return button.render();
                 }
             }
-        });
-
-        function loadNoticeSubcategories(categoryId, selectedId) {
-            const $sub = $('#noticeSubcategory');
-            $sub.empty().append('<option value="">Select sub type</option>');
-            if (!categoryId) {
-                return;
-            }
-            $.get(`{{ url('admin/notice/subcategories') }}/${encodeURIComponent(categoryId)}`, function(res) {
-                if (!res.status || !res.data) {
-                    return;
-                }
-                $.each(res.data, function(_, item) {
-                    const sel = selectedId && String(selectedId) === String(item.pk) ? 'selected' : '';
-                    $sub.append('<option value="' + item.pk + '" ' + sel + '>' + item.name + '</option>');
-                });
-            });
-        }
-
-        const oldCat = @json(old('notice_category_master_pk'));
-        const oldSub = @json(old('notice_subcategory_master_pk'));
-        if (oldCat) {
-            loadNoticeSubcategories(oldCat, oldSub);
-        }
-
-        $('#noticeCategory').on('change', function() {
-            loadNoticeSubcategories($(this).val(), null);
         });
 
         $('#targetAudience').on('change', function() {

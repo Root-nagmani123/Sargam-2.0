@@ -26,8 +26,6 @@ use App\Http\Controllers\Admin\{
     HostelBuildingFloorMappingController,
     HostelBuildingFloorRoomMappingController,
     NoticeNotificationController,
-    NoticeNotificationCategoryMasterController,
-    NoticeNotificationSubcategoryMasterController,
     MedicalExceptionFacultyViewController,
     MedicalExceptionOTViewController,
     OTMDOEscrotExemptionController,
@@ -398,44 +396,12 @@ Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
 
-        Route::get('notice/categories-master', function () {
-            return redirect()->route('admin.notice.category-master.index', [], 301);
-        })->name('notice.categories-master.index');
-
-        Route::post('/notice/category-master', [NoticeNotificationCategoryMasterController::class, 'store'])
-            ->name('notice.category-master.store');
-        Route::put('/notice/category-master/{id}', [NoticeNotificationCategoryMasterController::class, 'update'])
-            ->whereNumber('id')
-            ->name('notice.category-master.update');
-        Route::delete('/notice/category-master/{id}', [NoticeNotificationCategoryMasterController::class, 'destroy'])
-            ->whereNumber('id')
-            ->name('notice.category-master.destroy');
-        Route::get('/notice/category-master', [NoticeNotificationCategoryMasterController::class, 'index'])
-            ->name('notice.category-master.index');
-
-        Route::post('/notice/subcategory-master', [NoticeNotificationSubcategoryMasterController::class, 'store'])
-            ->name('notice.subcategory-master.store');
-        Route::put('/notice/subcategory-master/{id}', [NoticeNotificationSubcategoryMasterController::class, 'update'])
-            ->whereNumber('id')
-            ->name('notice.subcategory-master.update');
-        Route::delete('/notice/subcategory-master/{id}', [NoticeNotificationSubcategoryMasterController::class, 'destroy'])
-            ->whereNumber('id')
-            ->name('notice.subcategory-master.destroy');
-        Route::get('/notice/subcategory-master', [NoticeNotificationSubcategoryMasterController::class, 'index'])
-            ->name('notice.subcategory-master.index');
-
-        Route::get('/notice/subcategories/{categoryId}', [NoticeNotificationController::class, 'getSubcategoriesByCategory'])
-            ->name('notice.subcategories');
-
-        Route::get('/notice/get-courses', [NoticeNotificationController::class, 'getCourses'])
-            ->name('notice.getCourses');
-
-        Route::get('/notice/feed', [NoticeNotificationController::class, 'feed'])
-            ->name('notice.feed');
-
         Route::resource('notice', NoticeNotificationController::class)
             ->except(['show'])
             ->parameters(['notice' => 'encId']);
+
+        Route::get('/notice/get-courses', [NoticeNotificationController::class, 'getCourses'])
+            ->name('notice.getCourses');
         Route::post('/summernote/upload', [UserController::class, 'uploadPdf'])->name('summernote.upload');
     });
 

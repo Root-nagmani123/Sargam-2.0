@@ -1855,13 +1855,6 @@ public function toggleStatus(Request $request)
             $statusValue = (int) $status === 1
                 ? \App\Models\Mess\Vendor::STATUS_ACTIVE
                 : \App\Models\Mess\Vendor::STATUS_INACTIVE;
-    $newState = ((int) $status === 1) ? 'Active' : 'Inactive';
-
-    // AJAX toggles use JSON message only; flashing here duplicates the pill alert
-    // from <x-session_message /> on the next paint plus #status-msg from custom.js.
-    if (!$request->ajax()) {
-        session()->flash('success', "Status updated to {$newState}.");
-    }
 
             DB::table('mess_vendors')
                 ->where($idColumn, $id)

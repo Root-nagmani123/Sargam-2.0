@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 @endpush
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Notice notification List">
         <a href="{{ route('admin.notice.create') }}"
@@ -22,23 +22,6 @@
                 <span class="badge bg-primary-subtle text-primary fw-semibold text-uppercase">Notices</span>
                 <h4 class="card-title mb-0">Notice notification List</h4>
             </div>
-<<<<<<< HEAD
-=======
-            <div class="d-flex align-items-center gap-2 flex-wrap">
-                <a href="{{ route('admin.notice.category-master.index') }}" class="btn btn-outline-primary btn-sm">
-                    <span class="material-symbols-rounded align-middle me-1" style="font-size:18px;">category</span>
-                    Category master
-                </a>
-                <a href="{{ route('admin.notice.subcategory-master.index') }}" class="btn btn-outline-primary btn-sm">
-                    <span class="material-symbols-rounded align-middle me-1" style="font-size:18px;">topic</span>
-                    Subcategory master
-                </a>
-                <a href="{{ route('admin.notice.create') }}" class="btn btn-primary">
-                    <span class="material-symbols-rounded align-middle me-1">add</span>
-                    <span class="align-middle">Add Notice Notification</span>
-                </a>
-            </div>
->>>>>>> 72c69fa0 (notice_notification category subcategory mapping work)
         </div>
 
         <div class="card-body">
@@ -67,12 +50,12 @@
                 <form method="GET" action="{{ route('admin.notice.index') }}">
                     <div class="row g-3 align-items-end">
                         <div class="col-md-3">
-                            <label class="form-label fw-semibold">Category</label>
-                            <select name="notice_category_master_pk" class="form-select form-select-sm js-choice" onchange="this.form.submit()">
+                            <label class="form-label fw-semibold">Notice Type</label>
+                            <select name="notice_type" class="form-select form-select-sm js-choice" onchange="this.form.submit()">
                                 <option value="">All</option>
-                                @foreach($categories as $cat)
-                                <option value="{{ $cat->pk }}" {{ request('notice_category_master_pk') == $cat->pk ? 'selected' : '' }}>
-                                    {{ $cat->name }}
+                                @foreach($types as $type)
+                                <option value="{{ $type }}" {{ request('notice_type') == $type ? 'selected' : '' }}>
+                                    {{ $type }}
                                 </option>
                                 @endforeach
                             </select>
@@ -83,7 +66,7 @@
                             <select name="course_id" class="form-select form-select-sm js-choice" onchange="this.form.submit()">
                                 <option value="">All</option>
                                 @foreach($courses as $c)
-                                <option value="{{ $c->pk }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
+                                <option value="{{ $c->id }}" {{ request('course_id') == $c->pk ? 'selected' : '' }}>
                                     {{ $c->course_name }}
                                 </option>
                                 @endforeach
@@ -117,8 +100,7 @@
                         <tr>
                             <th scope="col" style="width: 60px;">S.N.</th>
                             <th scope="col">Notice Title</th>
-                            <th scope="col">Category</th>
-                            <th scope="col">Subcategory</th>
+                            <th scope="col">Notice Type</th>
                             <th scope="col">Course Name</th>
                             <th scope="col">Created By</th>
                             <th scope="col">Created Date</th>
@@ -139,11 +121,10 @@
                                 {{ $n->notice_title }}
                             </td>
                             <td>
-                                <span class="badge rounded-pill bg-info-subtle text-info">
-                                    {{ $n->noticeCategory->name ?? $n->notice_type ?? '—' }}
+                                <span class="badge rounded-pill bg-info-subtle text-info text-capitalize">
+                                    {{ $n->notice_type }}
                                 </span>
                             </td>
-                            <td>{{ $n->noticeSubcategory->name ?? '—' }}</td>
                             <td>{{ $n->course->course_name ?? 'N/A' }}</td>
                             <td>{{ $n->user->first_name }} {{ $n->user->last_name }}</td>
                             <td>{{ \Carbon\Carbon::parse($n->created_date)->format('d-m-Y') }}</td>

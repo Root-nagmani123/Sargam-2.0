@@ -59,22 +59,6 @@
                                 </a>
                             </li>
                             @endif
-<<<<<<< HEAD
-=======
-                            <!-- Notice Notification Route -->
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('admin.notice.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice
-                                        Notifications</span>
-                                </a></li>
-                            @if(hasRole('Admin') || hasRole('Training-Induction'))
-                            <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.notice.category-master.*') ? 'active' : '' }}" href="{{ route('admin.notice.category-master.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice category master</span>
-                                </a></li>
-                            <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.notice.subcategory-master.*') ? 'active' : '' }}" href="{{ route('admin.notice.subcategory-master.index') }}">
-                                    <span class="hide-menu small small-sm-normal text-nowrap">Notice subcategory master</span>
-                                </a></li>
-                            @endif
->>>>>>> 72c69fa0 (notice_notification category subcategory mapping work)
 
                             <li class="sidebar-item mb-1">
                                 <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ request()->routeIs('admin.notice.index') ? 'active' : '' }}"
