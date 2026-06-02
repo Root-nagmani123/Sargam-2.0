@@ -343,19 +343,28 @@ class RegistrationImportController extends Controller
         $applicationTypeOptions = $guard->adminApplicationTypeOptions();
         $currentApplicationTypeLabel = $guard->applicationTypeLabel($registration->application_type);
 
+        $exemptionCategories = \DB::table('fc_exemption_master')
+            ->select('Pk', 'Exemption_name')
+            ->orderBy('Exemption_name')
+            ->get();
+
         return view('admin.registration.fcregistrationmaster_edit', compact(
             'registration',
             'serviceMasters',
             'cadres',
             'applicationTypeOptions',
             'currentApplicationTypeLabel',
+            'exemptionCategories',
         ));
     }
 
 
     public function fc_masterupdate(Request $request, $id)
     {
-        $request->validate([
+        $applicationType = (int) $request->input('application_type');
+        $isExemption = $applicationType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION;
+
+        $rules = [
             'email' => 'required|email',
             'contact_no' => 'required',
             'first_name' => 'required',
@@ -373,16 +382,28 @@ class RegistrationImportController extends Controller
                     FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
                 ]),
             ],
-        ]);
+        ];
+
+        if ($isExemption) {
+            $rules['exemption_category'] = 'required|exists:fc_exemption_master,Pk';
+            $rules['exemption_doc'] = 'nullable|file|mimes:pdf,jpg,jpeg,png|max:4096';
+        }
+
+        $request->validate($rules);
 
         $record = FcRegistrationMaster::findOrFail($id);
 
         $guard = app(FcRosterApplicationGuardService::class);
-        $applicationType = (int) $request->input('application_type');
-        $exemptionPk = $applicationType === FcRosterApplicationGuardService::APPLICATION_EXEMPTION
-            ? (int) ($record->fc_exemption_master_pk ?? 0)
-            : null;
+        $exemptionPk = $isExemption ? (int) $request->input('exemption_category') : null;
         $statusPayload = $guard->adminApplicationTypePayload($applicationType, $exemptionPk ?: null);
+
+        // Handle document upload
+        $docPath = $record->medical_exemption_doc;
+        if ($isExemption && $request->hasFile('exemption_doc') && $request->file('exemption_doc')->isValid()) {
+            $docPath = $request->file('exemption_doc')->store('medical_docs', 'public');
+        } elseif (!$isExemption) {
+            $docPath = null;
+        }
 
         $record->update(array_merge(
             $request->only([
@@ -400,7 +421,8 @@ class RegistrationImportController extends Controller
                 'service_master_pk',
                 'cadre_master_pk',
             ]),
-            $statusPayload
+            $statusPayload,
+            ['medical_exemption_doc' => $docPath]
         ));
 
         return redirect()->route('admin.registration.index')->with('success', 'Record updated successfully.');
