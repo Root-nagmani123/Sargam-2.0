@@ -34,7 +34,7 @@
 
         <div class="card">
             <div class="card-body">
-                <form action="{{ route('admin.registration.update', $registration->pk) }}" method="POST" novalidate>
+                <form action="{{ route('admin.registration.update', $registration->pk) }}" method="POST" enctype="multipart/form-data" novalidate>
                     @csrf
                     @method('PUT')
 
@@ -202,6 +202,56 @@
                             @enderror
                         </div>
 
+                        {{-- Exemption fields (shown only when Exemption is selected) --}}
+                        <div class="col-md-6" id="exemption_category_wrapper"
+                            style="{{ (old('application_type', $registration->application_type) == 2) ? '' : 'display:none;' }}">
+                            <label for="exemption_category" class="form-label">Exemption Category <span class="text-danger">*</span></label>
+                            <select id="exemption_category" name="exemption_category"
+                                class="form-select @error('exemption_category') is-invalid @enderror">
+                                <option value="">-- Select Category --</option>
+                                @foreach ($exemptionCategories as $cat)
+                                    <option value="{{ $cat->Pk }}"
+                                        data-is-medical="{{ str_contains(strtolower($cat->Exemption_name), 'medical') ? '1' : '0' }}"
+                                        {{ (string) old('exemption_category', $registration->fc_exemption_master_pk) === (string) $cat->Pk ? 'selected' : '' }}>
+                                        {{ $cat->Exemption_name }}
+                                    </option>
+                                @endforeach
+                            </select>
+                            @error('exemption_category')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
+                        @php
+                            $isMedicalSelected = false;
+                            if (old('application_type', $registration->application_type) == 2) {
+                                $selectedCatPk = old('exemption_category', $registration->fc_exemption_master_pk);
+                                $selectedCat = $exemptionCategories->firstWhere('Pk', $selectedCatPk);
+                                $isMedicalSelected = $selectedCat && str_contains(strtolower($selectedCat->Exemption_name), 'medical');
+                            }
+                        @endphp
+                        <div class="col-md-6" id="exemption_doc_wrapper"
+                            style="{{ $isMedicalSelected ? '' : 'display:none;' }}">
+                            <label for="exemption_doc" class="form-label">Exemption Document</label>
+                            @if ($registration->medical_exemption_doc)
+                                <div class="mb-2">
+                                    <a href="{{ asset('storage/' . $registration->medical_exemption_doc) }}"
+                                        target="_blank" class="btn btn-sm btn-outline-info">
+                                        <iconify-icon icon="solar:document-line-duotone" class="me-1"></iconify-icon>
+                                        View Uploaded Document
+                                    </a>
+                                    <small class="text-muted ms-2">Upload a new file to replace it</small>
+                                </div>
+                            @endif
+                            <input type="file" id="exemption_doc" name="exemption_doc"
+                                class="form-control @error('exemption_doc') is-invalid @enderror"
+                                accept=".pdf,.jpg,.jpeg,.png">
+                            <div class="form-text">PDF, JPG, JPEG or PNG — max 5 MB</div>
+                            @error('exemption_doc')
+                                <div class="invalid-feedback">{{ $message }}</div>
+                            @enderror
+                        </div>
+
                     </div>
 
                     <hr class="mt-4">
@@ -215,3 +265,41 @@
         </div>
     </div>
 @endsection
+
+@push('scripts')
+<script>
+    (function () {
+        const appTypeSelect = document.getElementById('application_type');
+        const categoryWrapper = document.getElementById('exemption_category_wrapper');
+        const docWrapper = document.getElementById('exemption_doc_wrapper');
+        const categorySelect = document.getElementById('exemption_category');
+        const docInput = document.getElementById('exemption_doc');
+
+        function isMedicalSelected() {
+            const opt = categorySelect.options[categorySelect.selectedIndex];
+            return opt && opt.getAttribute('data-is-medical') === '1';
+        }
+
+        function toggleExemptionFields() {
+            const isExemption = appTypeSelect.value === '2';
+            categoryWrapper.style.display = isExemption ? '' : 'none';
+            categorySelect.required = isExemption;
+            if (!isExemption) {
+                categorySelect.value = '';
+                docInput.value = '';
+            }
+            toggleDocField();
+        }
+
+        function toggleDocField() {
+            const show = appTypeSelect.value === '2' && isMedicalSelected();
+            docWrapper.style.display = show ? '' : 'none';
+            if (!show) docInput.value = '';
+        }
+
+        appTypeSelect.addEventListener('change', toggleExemptionFields);
+        categorySelect.addEventListener('change', toggleDocField);
+        toggleExemptionFields();
+    })();
+</script>
+@endpush

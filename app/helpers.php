@@ -71,14 +71,29 @@ function fc_user_col(string $table): string
  */
 function fc_user_val(string $table, int $userId): string|int
 {
-    static $usernameCache = [];
+    static $usernameCache  = [];
+    static $credPkCache    = []; // staged roster pk → resolved user_credentials.pk (or roster pk if not yet migrated)
     $col = fc_user_col($table);
 
     // Staged /fc/login (Auth id = -fc_registration_master.pk).
     if ($userId < 0) {
         if ($col === 'user_id') {
-            // Placeholder until migration: store fc_registration_master.pk in user_id columns.
-            return abs($userId);
+            // If the trainee has already been migrated to user_credentials, use that pk
+            // so that FC form data (fc_pre_history etc.) is stored under the correct id
+            // even when they log in via /fc/login after migration.
+            $rosterPk = abs($userId);
+            if (! array_key_exists($rosterPk, $credPkCache)) {
+                $rosterUserName = \Illuminate\Support\Facades\DB::table('fc_registration_master')
+                    ->where('pk', $rosterPk)
+                    ->value('user_id');
+                $credPk = ($rosterUserName !== null && trim((string) $rosterUserName) !== '')
+                    ? \Illuminate\Support\Facades\DB::table('user_credentials')
+                        ->where('user_name', trim((string) $rosterUserName))
+                        ->value('pk')
+                    : null;
+                $credPkCache[$rosterPk] = $credPk ? (int) $credPk : $rosterPk;
+            }
+            return $credPkCache[$rosterPk];
         }
         if (! array_key_exists($userId, $usernameCache)) {
             $usernameCache[$userId] = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
