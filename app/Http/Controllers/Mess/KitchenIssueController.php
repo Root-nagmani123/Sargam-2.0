@@ -1051,7 +1051,7 @@ class KitchenIssueController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
-            'client_id' => 'nullable|integer',
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
@@ -1102,6 +1102,12 @@ class KitchenIssueController extends Controller
             ];
             $clientType = $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE;
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
+            
+            // For Employee (type 1) and OT (type 2), store the actual pk (employee_master.pk or student_master.pk)
+            $clientId = null;
+            if (in_array($request->client_type_slug, ['employee', 'ot']) && $request->filled('client_id')) {
+                $clientId = (int) $request->client_id;
+            }
 
             // Always create a fresh Selling Voucher entry.
             // Earlier logic tried to "reuse" an existing pending voucher for the same
@@ -1113,7 +1119,7 @@ class KitchenIssueController extends Controller
                 'payment_type' => $request->payment_type,
                 'client_type' => $clientType,
                 'client_type_pk' => $clientTypePk,
-                'client_id' => $request->client_id,
+                'client_id' => $clientId,
                 'name_id' => $request->name_id,
                 'client_name' => $request->client_name,
                 'issue_date' => $request->issue_date,
@@ -1427,7 +1433,7 @@ class KitchenIssueController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
-            'client_id' => 'nullable|integer',
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
@@ -1487,13 +1493,19 @@ class KitchenIssueController extends Controller
                 'other' => KitchenIssueMaster::CLIENT_OTHER,
             ];
 
+            // For Employee (type 1) and OT (type 2), store the actual pk (employee_master.pk or student_master.pk)
+            $clientId = null;
+            if (in_array($request->client_type_slug, ['employee', 'ot']) && $request->filled('client_id')) {
+                $clientId = (int) $request->client_id;
+            }
+
             $kitchenIssue->update([
                 'store_id' => $storeId,
                 'store_type' => $storeType,
                 'payment_type' => $request->payment_type,
                 'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
                 'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
-                'client_id' => $request->client_id,
+                'client_id' => $clientId,
                 'name_id' => $request->name_id,
                 'client_name' => $request->client_name,
                 'issue_date' => $request->issue_date,

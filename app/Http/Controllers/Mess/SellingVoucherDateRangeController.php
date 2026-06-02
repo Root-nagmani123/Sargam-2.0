@@ -497,6 +497,7 @@ class SellingVoucherDateRangeController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'remarks' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',
@@ -561,6 +562,9 @@ class SellingVoucherDateRangeController extends Controller
 
             $issueDate = now()->toDateString();
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
+            $clientId = (in_array((string) $request->client_type_slug, ['employee', 'ot'], true) && $request->filled('client_id'))
+                ? (int) $request->client_id
+                : null;
             $clientName = trim((string) $request->client_name) ?: null;
 
             // One bill per person: reuse existing unpaid report for same buyer (same store + client)
@@ -569,11 +573,17 @@ class SellingVoucherDateRangeController extends Controller
                 ->where('store_type', $storeType)
                 ->where('client_type_slug', $request->client_type_slug)
                 ->where('status', '!=', SellingVoucherDateRangeReport::STATUS_APPROVED)
-                ->where(function ($q) use ($clientTypePk, $clientName) {
+                ->where(function ($q) use ($clientTypePk, $clientId, $clientName) {
                     if ($clientTypePk !== null) {
                         $q->where('client_type_pk', $clientTypePk);
                     } else {
                         $q->whereNull('client_type_pk');
+                    }
+
+                    if ($clientId !== null) {
+                        $q->where('client_id', $clientId);
+                    } else {
+                        $q->whereNull('client_id');
                     }
 
                     if ($clientName !== null) {
@@ -599,6 +609,7 @@ class SellingVoucherDateRangeController extends Controller
                     'order_by' => $request->order_by,
                     'client_type_slug' => $request->client_type_slug,
                     'client_type_pk' => $clientTypePk,
+                    'client_id' => $clientId,
                     'client_name' => $request->client_name,
                     'payment_type' => (int) $request->payment_type,
                     'issue_date' => $issueDate,
@@ -783,6 +794,7 @@ class SellingVoucherDateRangeController extends Controller
                 'order_by' => $report->order_by,
                 'client_type_slug' => $clientTypeSlug,
                 'client_type_pk' => $report->client_type_pk,
+                'client_id' => $report->client_id,
                 'client_name' => $report->client_name,
                 'payment_type' => (int) $report->payment_type,
                 'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
@@ -842,6 +854,7 @@ class SellingVoucherDateRangeController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'remarks' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',
@@ -908,6 +921,9 @@ class SellingVoucherDateRangeController extends Controller
                 ?: ($report->issue_date
                     ? $report->issue_date->format('Y-m-d')
                     : ($report->date_from ? $report->date_from->format('Y-m-d') : now()->toDateString()));
+            $clientId = (in_array((string) $request->client_type_slug, ['employee', 'ot'], true) && $request->filled('client_id'))
+                ? (int) $request->client_id
+                : null;
             $report->update([
                 'date_from' => $issueDate,
                 'date_to' => $issueDate,
@@ -920,6 +936,7 @@ class SellingVoucherDateRangeController extends Controller
                 'order_by' => $request->order_by,
                 'client_type_slug' => $request->client_type_slug,
                 'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
+                'client_id' => $clientId,
                 'client_name' => $request->client_name,
                 'payment_type' => (int) $request->payment_type,
                 'issue_date' => $issueDate,

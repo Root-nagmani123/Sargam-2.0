@@ -840,6 +840,7 @@ $selectedClientType = (string) request()->input('client_type', '');
             <form action="{{ route('admin.mess.selling-voucher-date-range.store') }}" method="POST" id="addReportForm"
                 enctype="multipart/form-data">
                 @csrf
+                <input type="hidden" name="client_id" id="drClientId" value="">
                 <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="addReportModalLabel">ADD Selling Voucher with Date Range
                     </h5>
@@ -933,21 +934,21 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     <select id="drFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                        <option value="{{ e($f->full_name) }}">
+                                        <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">
                                             {{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drAcademyStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">
                                             {{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="drMessStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">
                                             {{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
@@ -1372,6 +1373,7 @@ $selectedClientType = (string) request()->input('client_type', '');
             <form id="editReportForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="client_id" id="editDrClientId" value="">
                 <div class="modal-header border-bottom">
                     <h5 class="modal-title fw-semibold" id="editReportModalLabel">Edit Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -1449,21 +1451,21 @@ $selectedClientType = (string) request()->input('client_type', '');
                                     <select id="editDrFacultySelect" class="form-select " style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                        <option value="{{ e($f->full_name) }}">
+                                        <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">
                                             {{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrAcademyStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">
                                             {{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="editDrMessStaffSelect" class="form-select " style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">
+                                        <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">
                                             {{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
@@ -3128,8 +3130,10 @@ $selectedClientType = (string) request()->input('client_type', '');
         radio.addEventListener('change', function() {
             var clientNameWrap = document.getElementById('drClientNameWrap');
             var nameFieldWrap = document.getElementById('drNameFieldWrap');
+            var clientIdInput = document.getElementById('drClientId');
             if (clientNameWrap) clientNameWrap.style.display = '';
             if (nameFieldWrap) nameFieldWrap.style.display = '';
+            if (clientIdInput) clientIdInput.value = '';
 
             const isOt = (this.value || '').toLowerCase() === 'ot';
             const isCourse = (this.value || '').toLowerCase() === 'course';
@@ -3345,7 +3349,9 @@ $selectedClientType = (string) request()->input('client_type', '');
         const coursePk = getSelectValue(this);
         const otStudentSelect = document.getElementById('drOtStudentSelect');
         const nameInput = document.getElementById('drClientNameInput');
+        const clientIdInput = document.getElementById('drClientId');
         if (!otStudentSelect || !nameInput) return;
+        if (clientIdInput) clientIdInput.value = '';
         if (otStudentSelect.tomselect) {
             try {
                 otStudentSelect.tomselect.destroy();
@@ -3377,6 +3383,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                     const opt = document.createElement('option');
                     opt.value = s.display_name || '';
                     opt.textContent = s.display_name || '—';
+                    opt.dataset.pk = s.pk || '';
                     otStudentSelect.appendChild(opt);
                 });
                 if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, {
@@ -3396,28 +3403,42 @@ $selectedClientType = (string) request()->input('client_type', '');
     });
     document.getElementById('drOtStudentSelect').addEventListener('change', function() {
         const inp = document.getElementById('drClientNameInput');
+        const clientIdInput = document.getElementById('drClientId');
+        const selectedOpt = getSelectSelectedOption(this);
         if (inp) inp.value = getSelectValue(this) || '';
+        if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
     document.getElementById('drCourseSelect').addEventListener('change', function() {
         loadAddDrBuyerNames();
     });
     document.getElementById('drClientNameSelect').addEventListener('change', function() {
+        const clientIdInput = document.getElementById('drClientId');
+        if (clientIdInput) clientIdInput.value = '';
         updateDrNameField();
         loadAddDrBuyerNames();
     });
     document.getElementById('drFacultySelect').addEventListener('change', function() {
         const inp = document.getElementById('drClientNameInput');
+        const clientIdInput = document.getElementById('drClientId');
+        const selectedOpt = getSelectSelectedOption(this);
         if (inp) inp.value = getSelectValue(this) || '';
+        if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
     const drAcademyStaffEl = document.getElementById('drAcademyStaffSelect');
     if (drAcademyStaffEl) drAcademyStaffEl.addEventListener('change', function() {
         const inp = document.getElementById('drClientNameInput');
+        const clientIdInput = document.getElementById('drClientId');
+        const selectedOpt = getSelectSelectedOption(this);
         if (inp) inp.value = this.value || '';
+        if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
     const drMessStaffEl = document.getElementById('drMessStaffSelect');
     if (drMessStaffEl) drMessStaffEl.addEventListener('change', function() {
         const inp = document.getElementById('drClientNameInput');
+        const clientIdInput = document.getElementById('drClientId');
+        const selectedOpt = getSelectSelectedOption(this);
         if (inp) inp.value = this.value || '';
+        if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
     const addChecked = document.querySelector('#addReportModal .dr-client-type-radio:checked');
     if (addChecked) addChecked.dispatchEvent(new Event('change'));
@@ -3599,8 +3620,10 @@ $selectedClientType = (string) request()->input('client_type', '');
         radio.addEventListener('change', function() {
             var editClientNameWrap = document.getElementById('editDrClientNameWrap');
             var editNameFieldWrap = document.getElementById('editDrNameFieldWrap');
+            var clientIdInput = document.getElementById('editDrClientId');
             if (editClientNameWrap) editClientNameWrap.style.display = '';
             if (editNameFieldWrap) editNameFieldWrap.style.display = '';
+            if (clientIdInput) clientIdInput.value = '';
 
             const isOt = (this.value || '').toLowerCase() === 'ot';
             const isCourse = (this.value || '').toLowerCase() === 'course';
@@ -3763,7 +3786,9 @@ $selectedClientType = (string) request()->input('client_type', '');
         const coursePk = getSelectValue(this);
         const otStudentSelect = document.getElementById('editDrOtStudentSelect');
         const nameInput = document.getElementById('editDrClientNameInput');
+        const clientIdInput = document.getElementById('editDrClientId');
         if (!otStudentSelect || !nameInput) return;
+        if (clientIdInput) clientIdInput.value = '';
         if (otStudentSelect.tomselect) {
             try {
                 otStudentSelect.tomselect.destroy();
@@ -3795,6 +3820,7 @@ $selectedClientType = (string) request()->input('client_type', '');
                     const opt = document.createElement('option');
                     opt.value = s.display_name || '';
                     opt.textContent = s.display_name || '—';
+                    opt.dataset.pk = s.pk || '';
                     otStudentSelect.appendChild(opt);
                 });
                 if (typeof Choices !== 'undefined') createChoicesInstance(otStudentSelect, {
@@ -3814,28 +3840,42 @@ $selectedClientType = (string) request()->input('client_type', '');
     });
     document.getElementById('editDrOtStudentSelect').addEventListener('change', function() {
         const inp = document.getElementById('editDrClientNameInput');
+        const clientIdInput = document.getElementById('editDrClientId');
+        const selectedOpt = getSelectSelectedOption(this);
         if (inp) inp.value = getSelectValue(this) || '';
+        if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
     document.getElementById('editDrCourseSelect').addEventListener('change', function() {
         loadEditDrBuyerNames();
     });
     document.getElementById('editDrClientNameSelect').addEventListener('change', function() {
+        const clientIdInput = document.getElementById('editDrClientId');
+        if (clientIdInput) clientIdInput.value = '';
         updateEditDrNameField();
         loadEditDrBuyerNames();
     });
     document.getElementById('editDrFacultySelect').addEventListener('change', function() {
         const inp = document.getElementById('editDrClientNameInput');
+        const clientIdInput = document.getElementById('editDrClientId');
+        const selectedOpt = getSelectSelectedOption(this);
         if (inp) inp.value = getSelectValue(this) || '';
+        if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
     const editDrAcademyStaffEl = document.getElementById('editDrAcademyStaffSelect');
     if (editDrAcademyStaffEl) editDrAcademyStaffEl.addEventListener('change', function() {
         const inp = document.getElementById('editDrClientNameInput');
+        const clientIdInput = document.getElementById('editDrClientId');
+        const selectedOpt = getSelectSelectedOption(this);
         if (inp) inp.value = getSelectValue(this) || '';
+        if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
     const editDrMessStaffEl = document.getElementById('editDrMessStaffSelect');
     if (editDrMessStaffEl) editDrMessStaffEl.addEventListener('change', function() {
         const inp = document.getElementById('editDrClientNameInput');
+        const clientIdInput = document.getElementById('editDrClientId');
+        const selectedOpt = getSelectSelectedOption(this);
         if (inp) inp.value = getSelectValue(this) || '';
+        if (clientIdInput && selectedOpt) clientIdInput.value = selectedOpt.dataset.pk || '';
     });
 
     // Edit modal row helpers
@@ -4687,6 +4727,8 @@ $selectedClientType = (string) request()->input('client_type', '');
         }
         var clientPkSel = addReportModal.querySelector('#drClientNameSelect');
         if (clientPkSel) clientPkSel.value = '';
+        var clientIdInp = addReportModal.querySelector('#drClientId');
+        if (clientIdInp) clientIdInp.value = '';
         var clientNameInp = document.getElementById('drClientNameInput');
         if (clientNameInp) clientNameInp.value = '';
         addReportModal.querySelectorAll('#drClientNameWrap select, #drNameFieldWrap select').forEach(function(s) {
@@ -4730,6 +4772,8 @@ $selectedClientType = (string) request()->input('client_type', '');
     }
 
     // Reset add modal when closed (so next open starts fresh)
+                const editClientIdInput = document.getElementById('editDrClientId');
+                if (editClientIdInput) editClientIdInput.value = v.client_id || '';
     const addReportModal = document.getElementById('addReportModal');
     if (addReportModal) {
         // Reset ASAP when user closes via X/Cancel/backdrop.

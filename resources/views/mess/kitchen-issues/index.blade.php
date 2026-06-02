@@ -504,6 +504,7 @@
                 @csrf
                 {{-- Forces JSON response from store() so the modal can reset without a full page redirect --}}
                 <input type="hidden" name="respond_json" value="1">
+                <input type="hidden" name="client_id" id="modalClientId" value="">
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -578,19 +579,19 @@
                                     <select id="modalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalOtStudentSelect" class="form-select" style="display:none;">
@@ -702,6 +703,7 @@
             <form id="editSellingVoucherForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="client_id" id="editModalClientId" value="">
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="editSellingVoucherModalLabel">Edit Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -2981,6 +2983,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const opt = document.createElement('option');
                         opt.value = s.display_name || '';
                         opt.textContent = s.display_name || '—';
+                        opt.dataset.pk = s.pk || '';
                         otStudentSelect.appendChild(opt);
                     });
                     reinitNameSelectTomSelect(otStudentSelect, 'Select Student');
@@ -2999,6 +3002,11 @@ document.addEventListener('DOMContentLoaded', function() {
         modalOtStudentSelect.addEventListener('change', function() {
             const inp = document.getElementById('modalClientNameInput');
             if (inp) inp.value = this.value || '';
+            const clientIdField = document.getElementById('modalClientId');
+            const selectedOpt = this.options[this.selectedIndex];
+            if (clientIdField && selectedOpt) {
+                clientIdField.value = (selectedOpt.dataset.pk || '');
+            }
         });
     }
     
@@ -3043,17 +3051,32 @@ document.addEventListener('DOMContentLoaded', function() {
         modalFacultySelect.addEventListener('change', function() {
             const inp = document.getElementById('modalClientNameInput');
             if (inp) inp.value = this.value || '';
+            const clientIdField = document.getElementById('modalClientId');
+            const selectedOpt = this.options[this.selectedIndex];
+            if (clientIdField && selectedOpt) {
+                clientIdField.value = (selectedOpt.dataset.pk || '');
+            }
         });
     }
     const modalAcademyEl = document.getElementById('modalAcademyStaffSelect');
     if (modalAcademyEl) modalAcademyEl.addEventListener('change', function() {
         const inp = document.getElementById('modalClientNameInput');
         if (inp) inp.value = this.value || '';
+        const clientIdField = document.getElementById('modalClientId');
+        const selectedOpt = this.options[this.selectedIndex];
+        if (clientIdField && selectedOpt) {
+            clientIdField.value = (selectedOpt.dataset.pk || '');
+        }
     });
     const modalMessEl = document.getElementById('modalMessStaffSelect');
     if (modalMessEl) modalMessEl.addEventListener('change', function() {
         const inp = document.getElementById('modalClientNameInput');
         if (inp) inp.value = this.value || '';
+        const clientIdField = document.getElementById('modalClientId');
+        const selectedOpt = this.options[this.selectedIndex];
+        if (clientIdField && selectedOpt) {
+            clientIdField.value = (selectedOpt.dataset.pk || '');
+        }
     });
     const checked = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
     if (checked) checked.dispatchEvent(new Event('change'));
@@ -3250,17 +3273,32 @@ document.addEventListener('DOMContentLoaded', function() {
         editModalFacultySelect.addEventListener('change', function() {
             const inp = document.getElementById('editModalClientNameInput');
             if (inp) inp.value = this.value || '';
+            const clientIdField = document.getElementById('editModalClientId');
+            const selectedOpt = this.options[this.selectedIndex];
+            if (clientIdField && selectedOpt) {
+                clientIdField.value = (selectedOpt.dataset.pk || '');
+            }
         });
     }
     const editModalAcademyEl = document.getElementById('editModalAcademyStaffSelect');
     if (editModalAcademyEl) editModalAcademyEl.addEventListener('change', function() {
         const inp = document.getElementById('editModalClientNameInput');
         if (inp) inp.value = this.value || '';
+        const clientIdField = document.getElementById('editModalClientId');
+        const selectedOpt = this.options[this.selectedIndex];
+        if (clientIdField && selectedOpt) {
+            clientIdField.value = (selectedOpt.dataset.pk || '');
+        }
     });
     const editModalMessEl = document.getElementById('editModalMessStaffSelect');
     if (editModalMessEl) editModalMessEl.addEventListener('change', function() {
         const inp = document.getElementById('editModalClientNameInput');
         if (inp) inp.value = this.value || '';
+        const clientIdField = document.getElementById('editModalClientId');
+        const selectedOpt = this.options[this.selectedIndex];
+        if (clientIdField && selectedOpt) {
+            clientIdField.value = (selectedOpt.dataset.pk || '');
+        }
     });
 
     function getEditRowHtml(index, item) {
