@@ -64,7 +64,7 @@
         // Wait for DOM to be ready
         setTimeout(function() {
             // Only target the header nav tabs (navbar-nav), not content tabs
-            const headerNav = document.getElementById('mainNavbar');
+            const headerNav = document.querySelector('.navbar-nav');
             if (!headerNav) return;
 
             // Remove active class from all header nav links
@@ -129,7 +129,7 @@
      * Store active tab when user clicks on a tab
      */
     function initializeTabTracking() {
-        const headerNav = document.getElementById('mainNavbar');
+        const headerNav = document.querySelector('.navbar-nav');
         if (!headerNav) return;
 
         const navLinks = headerNav.querySelectorAll('[data-bs-toggle="tab"]');

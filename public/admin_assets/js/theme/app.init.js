@@ -3,9 +3,9 @@ var userSettings = {
   // Default to collapsed on first use; persist user choice in localStorage
   SidebarType: (function() {
     try {
-      return localStorage.getItem('SidebarType') || "full";
+      return localStorage.getItem('SidebarType') || "mini-sidebar";
     } catch (e) {
-      return "full";
+      return "mini-sidebar";
     }
   })(), // full | mini-sidebar
   BoxedLayout: true, // true | false

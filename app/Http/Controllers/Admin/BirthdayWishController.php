@@ -154,8 +154,6 @@ class BirthdayWishController extends Controller
         $validator = Validator::make($request->all(), [
             'employee_pks'   => 'required|array|min:1',
             'employee_pks.*' => 'required|integer',
-            'message'        => 'nullable|string|max:5000',
-            'title'          => 'nullable|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -163,12 +161,10 @@ class BirthdayWishController extends Controller
         }
 
         $senderName = Auth::user() ? (Auth::user()->first_name ?? Auth::user()->name ?? 'Someone') : 'Someone';
-        $customMessage = $request->input('message');
-        $customTitle = $request->input('title');
         $count = 0;
 
         foreach ($request->input('employee_pks') as $pk) {
-            $this->createBirthdayNotification((int) $pk, $senderName, $customMessage, $customTitle);
+            $this->createBirthdayNotification((int) $pk, $senderName);
             $count++;
         }
 
@@ -181,26 +177,17 @@ class BirthdayWishController extends Controller
     /**
      * Create a birthday wish notification for the recipient.
      */
-    private function createBirthdayNotification(
-        int $employeePk,
-        string $senderName,
-        ?string $customMessage = null,
-        ?string $customTitle = null
-    ): void {
+    private function createBirthdayNotification(int $employeePk, string $senderName): void
+    {
         try {
-            $title = $customTitle ? trim($customTitle) : 'Birthday Wish Received!';
-            $message = $customMessage && trim($customMessage) !== ''
-                ? trim($customMessage)
-                : "$senderName wished you a Happy Birthday! 🎂";
-
             $notificationService = app(NotificationService::class);
             $notificationService->create(
                 receiverUserId: $employeePk,
                 type: 'birthday',
                 moduleName: 'BirthdayWish',
                 referencePk: $employeePk,
-                title: $title,
-                message: $message
+                title: 'Birthday Wish Received!',
+                message: "$senderName wished you a Happy Birthday! 🎂"
             );
         } catch (\Throwable $e) {
             Log::error('BirthdayWishController: notification create failed', [

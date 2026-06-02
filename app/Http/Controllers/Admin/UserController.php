@@ -366,162 +366,6 @@ class UserController extends Controller
     }
 
     /**
-     * Dashboard feed "See all" page (notifications, notices, birthdays, wishes).
-     */
-    public function dashboardFeed(Request $request)
-    {
-        $allowedTabs = ['notifications', 'notices', 'birthdays', 'wishes'];
-        $activeTab = $request->query('tab', 'notifications');
-        if (! in_array($activeTab, $allowedTabs, true)) {
-            $activeTab = 'notifications';
-        }
-
-        $data = $this->buildDashboardFeedData();
-        $data['activeTab'] = $activeTab;
-
-        return view('admin.dashboard.feed', $data);
-    }
-
-    /**
-     * Shared data for dashboard feed page.
-     */
-    protected function buildDashboardFeedData(): array
-    {
-        $user = Auth::user();
-        $isAdminSummary = hasRole('Admin');
-        $daysOld = $isAdminSummary ? 10 : null;
-        $currentUserPk = ($user && $user->user_id) ? $user->user_id : 0;
-
-        $emp_dob_data = EmployeeMaster::where('status', 1)
-            ->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
-            ->where('employee_master.pk', '!=', $currentUserPk)
-            ->leftJoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
-            ->select(
-                'employee_master.pk',
-                'employee_master.first_name',
-                'employee_master.email',
-                'employee_master.mobile',
-                'employee_master.office_extension_no',
-                'employee_master.profile_picture',
-                'employee_master.last_name',
-                'designation_master.designation_name',
-                'employee_master.dob'
-            )
-            ->get();
-
-        $birthdayWishCounts = [];
-        if ($emp_dob_data->isNotEmpty()) {
-            $birthdayPks = $emp_dob_data->pluck('pk')->toArray();
-            $birthdayWishCounts = \App\Models\Notification::whereIn('receiver_user_id', $birthdayPks)
-                ->where('type', 'birthday')
-                ->whereDate('created_at', today())
-                ->selectRaw('receiver_user_id, COUNT(*) as wish_count')
-                ->groupBy('receiver_user_id')
-                ->pluck('wish_count', 'receiver_user_id')
-                ->toArray();
-        }
-
-        $upcomingBirthdays = collect();
-        for ($i = 1; $i <= 7; $i++) {
-            $futureDate = now()->addDays($i);
-            $upcoming = EmployeeMaster::where('status', 1)
-                ->whereRaw("DATE_FORMAT(dob, '%m-%d') = ?", [$futureDate->format('m-d')])
-                ->leftJoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
-                ->select(
-                    'employee_master.pk',
-                    'employee_master.first_name',
-                    'employee_master.last_name',
-                    'employee_master.email',
-                    'employee_master.mobile',
-                    'employee_master.office_extension_no',
-                    'employee_master.profile_picture',
-                    'employee_master.dob',
-                    'designation_master.designation_name'
-                )
-                ->get()
-                ->each(function ($emp) use ($futureDate) {
-                    $emp->birthday_date = $futureDate->format('d M');
-                    $emp->days_away = $futureDate->diffInDays(now());
-                });
-            $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
-        }
-
-        $notices = get_notice_notification_by_role();
-
-        $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
-        $noticeTabLabels = [
-            'office-orders' => 'Office Orders',
-            'work-allocation' => 'Work Allocation',
-            'notice-circular' => 'Notice/ Circular/ Order',
-        ];
-        $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
-        foreach ($notices as $noticeForTab) {
-            $tabKey = $this->resolveDashboardNoticeTabKey($noticeForTab->notice_type ?? '');
-            $noticeTabCounts[$tabKey]++;
-        }
-        $defaultNoticeTab = 'office-orders';
-        foreach ($noticeTabKeys as $tabKeyCandidate) {
-            if ($noticeTabCounts[$tabKeyCandidate] > 0) {
-                $defaultNoticeTab = $tabKeyCandidate;
-                break;
-            }
-        }
-
-        $feedExpandedNotifications = collect();
-        $feedExpandedWishes = collect();
-        $notificationBadgeCount = 0;
-
-        if ($user && $user->user_id) {
-            $feedNotificationsQuery = \App\Models\Notification::with('sender')
-                ->where('receiver_user_id', $user->user_id);
-            if ($daysOld !== null) {
-                $feedNotificationsQuery->where('created_at', '>=', now()->subDays($daysOld));
-            }
-            $feedAll = $feedNotificationsQuery->orderByDesc('created_at')->limit(100)->get();
-            $feedExpandedWishes = $feedAll->filter(function ($item) {
-                return strtolower((string) ($item->type ?? '')) === 'birthday';
-            })->values();
-            $feedExpandedNotifications = $feedAll->filter(function ($item) {
-                return strtolower((string) ($item->type ?? '')) !== 'birthday';
-            })->values();
-
-            $notificationBadgeCount = $isAdminSummary
-                ? notification()->getUnreadCount($user->user_id, $daysOld)
-                : $feedAll->where('is_read', 0)->count();
-        }
-
-        return compact(
-            'user',
-            'isAdminSummary',
-            'daysOld',
-            'emp_dob_data',
-            'upcomingBirthdays',
-            'birthdayWishCounts',
-            'notices',
-            'noticeTabKeys',
-            'noticeTabLabels',
-            'noticeTabCounts',
-            'defaultNoticeTab',
-            'feedExpandedNotifications',
-            'feedExpandedWishes',
-            'notificationBadgeCount'
-        );
-    }
-
-    public function resolveDashboardNoticeTabKey(?string $type): string
-    {
-        $t = strtolower((string) ($type ?? ''));
-        if (str_contains($t, 'office order')) {
-            return 'office-orders';
-        }
-        if (str_contains($t, 'course notice')) {
-            return 'work-allocation';
-        }
-
-        return 'notice-circular';
-    }
-
-    /**
      * Split "today pending employee id requests" into:
      * - perm: pending Permanent ID cards
      * - cont: pending Contractual ID cards
@@ -1498,11 +1342,11 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
-        $search = trim((string) ($request->input('search') ?? ''));
+        $search = $request->input('search');
         $user_type = trim((string) $request->input('User_type', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'admin_users_index:v4:' . md5(json_encode([
+        $cacheKey = 'admin_users_index:v1:' . md5(json_encode([
             'epoch' => $epoch,
             'search' => $search,
             'user_type' => $user_type,
@@ -1546,7 +1390,6 @@ class UserController extends Controller
                 'uc.last_name',
                 'uc.email_id',
                 'uc.mobile_no',
-                'uc.user_category as User_type',
                 DB::raw("GROUP_CONCAT(urm.user_role_display_name SEPARATOR ', ') as roles")
             )
             ->groupBy(
@@ -1555,32 +1398,15 @@ class UserController extends Controller
                 'uc.first_name',
                 'uc.last_name',
                 'uc.email_id',
-                'uc.mobile_no',
-                'uc.user_category'
+                'uc.mobile_no'
             );
 
-        $search = trim((string) ($search ?? ''));
-
-        if ($search !== '') {
-            $searchLower = strtolower(preg_replace('/\s+/', ' ', $search) ?? $search);
-
-            // Split the query into terms so a multi-word search (e.g. "virender virodia")
-            // matches when each term is found in *some* field, even across different
-            // columns (one term in user_name, another in last_name).
-            $terms = array_filter(explode(' ', $searchLower), fn ($t) => $t !== '');
-
-            $usersQuery->where(function ($outer) use ($terms) {
-                foreach ($terms as $term) {
-                    $like = "%{$term}%";
-                    $outer->where(function ($q) use ($like) {
-                        $q->whereRaw("LOWER(TRIM(COALESCE(uc.user_name, ''))) LIKE ?", [$like])
-                            ->orWhereRaw("LOWER(TRIM(uc.first_name)) LIKE ?", [$like])
-                            ->orWhereRaw("LOWER(TRIM(uc.last_name)) LIKE ?", [$like])
-                            ->orWhereRaw("LOWER(TRIM(uc.email_id)) LIKE ?", [$like])
-                            ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.first_name), TRIM(uc.last_name))) LIKE ?", [$like])
-                            ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.last_name), TRIM(uc.first_name))) LIKE ?", [$like]);
-                    });
-                }
+        if ($search) {
+            $usersQuery->where(function ($q) use ($search) {
+                $q->where('uc.user_name', 'like', "%{$search}%")
+                    ->orWhere('uc.first_name', 'like', "%{$search}%")
+                    ->orWhere('uc.last_name', 'like', "%{$search}%")
+                    ->orWhere('uc.email_id', 'like', "%{$search}%");
             });
         }
         if ($user_type !== '') {

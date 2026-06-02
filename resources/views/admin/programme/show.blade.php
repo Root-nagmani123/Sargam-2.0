@@ -14,7 +14,7 @@
         $generatedAt = \Carbon\Carbon::now()->format('d F Y, h:i A');
     @endphp
 
-    <main class="container-fluid pb-3" id="main-content" role="main" tabindex="-1">
+    <main class="container-fluid px-3 px-lg-4 pb-3" id="main-content" role="main" tabindex="-1">
 
         <section class="card border-0 shadow-sm rounded-4 overflow-hidden programme-shell">
             <div class="programme-hero px-3 px-xl-4 py-3 py-xl-4">
