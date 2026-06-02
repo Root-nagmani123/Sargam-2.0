@@ -60,6 +60,7 @@
                                 <th scope="col">Name</th>
                                 <th scope="col">Email</th>
                                 <th scope="col">Mobile</th>
+                                <th scope="col">User Type</th>
                                 <th scope="col">Roles</th>
                                 <th scope="col" class="text-center">Action</th>
                             </tr>
@@ -72,6 +73,15 @@
                                 <td>{{ trim($user->first_name . ' ' . $user->last_name) }}</td>
                                 <td>{{ $user->email_id }}</td>
                                 <td>{{ $user->mobile_no ?: '—' }}</td>
+                                <td>
+                                    @if($user->User_type === 'S')
+                                        <span class="badge rounded-pill bg-primary">Student</span>
+                                    @elseif($user->User_type === 'E')
+                                        <span class="badge rounded-pill bg-success">Employee</span>
+                                    @else
+                                        <span class="badge rounded-pill bg-secondary">Unknown</span>
+                                    @endif
+                                </td>
                                 <td>
                                     @if(!empty($user->roles))
                                         <span class="badge rounded-pill users-role-badge">{{ $user->roles }}</span>
