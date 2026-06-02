@@ -17900,7 +17900,7 @@ progress {
 .container-sm,
 .container-xl,
 .container-xxl {
-    --bs-gutter-x: 10px;
+    --bs-gutter-x: 30px;
     --bs-gutter-y: 0;
     width: 100%;
     padding-right: calc(var(--bs-gutter-x) * 0.5);
@@ -38294,9 +38294,9 @@ fieldset:disabled .btn {
     margin-left: calc(90px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
-    border-radius: 10px;
+    border-radius: 30px;
     background: #f2f2f2;
-    min-height: calc(100vh - 155px);
+    min-height: calc(100vh - 102px);
 }
 @media (max-width: 480px) {
     .body-wrapper {
@@ -38311,7 +38311,7 @@ fieldset:disabled .btn {
 .container-sm,
 .container-xl,
 .container-xxl {
-    padding: 10px;
+    padding: 30px;
 }
 
 @media (max-width: 991.98px) {
@@ -38797,6 +38797,7 @@ pre.code-view code.hljs {
     width: 100%;
     background: var(--bs-body-bg);
     z-index: 9;
+    padding: 0 15px;
 }
 
 .topbar .navbar {
@@ -40039,8 +40040,8 @@ html[data-layout="horizontal"]>.container-xxl {
 }
 
 .table th {
-background-color: #F3F3F3 !important;
-    color: #787878 !important;
+background-color: #004a93 !important;
+    color: #ffffff !important;
 }
 
 .table.table-dark th,
@@ -51267,7 +51268,7 @@ h6 {
 
 .header-fp .navbar .navbar-nav .nav-link.active {
     background-color: var(--bs-primary-bg-subtle);
-    color: white !important;
+    color: var(--bs-primary) !important;
 }
 
 .tabs-pills .nav-item .nav-link {
@@ -51450,7 +51451,7 @@ h6 {
 }
 .navbar-nav .nav-link.active {
     background-color: transparent;
-    color: #ffffff !important;
+    color: #004a93 !important;
     font-size: 16px !important;
     line-height: 24px;
     font-weight: 500 !important;

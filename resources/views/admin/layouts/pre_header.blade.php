@@ -17,7 +17,6 @@
 <!-- Core Css -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <link rel="stylesheet" href="{{asset('css/custom.css')}}">
-<link rel="stylesheet" href="{{ asset('css/admin-header.css') }}?v={{ @filemtime(public_path('css/admin-header.css')) ?: time() }}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
 <!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
 
@@ -29,7 +28,6 @@
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <!-- Sidebar Menu Enhanced CSS -->
 <link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
-<link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}?v=7">
 <style>
 .material-symbols-rounded {
   font-variation-settings:

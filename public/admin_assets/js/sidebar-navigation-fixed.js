@@ -5,236 +5,7 @@
 
 document.addEventListener('DOMContentLoaded', function() {
     'use strict';
-
-    function normalizePathname(urlInput) {
-        try {
-            var u = typeof urlInput === 'string' ? new URL(urlInput, global.location.origin) : urlInput;
-            var p = u.pathname || '/';
-            if (p.length > 1 && p.charAt(p.length - 1) === '/') {
-                p = p.slice(0, -1);
-            }
-            return p;
-        } catch (e) {
-            return '';
-        }
-    }
-
-    function isSidebarPageNavLink(link) {
-        var href = link.getAttribute('href');
-        if (!href || href === '#' || href === 'javascript:void(0)') {
-            return false;
-        }
-        if (href.charAt(0) === '#') {
-            return false;
-        }
-        if (link.getAttribute('data-bs-toggle') === 'collapse') {
-            return false;
-        }
-        return true;
-    }
-
-    /**
-     * Per-nav: clear .active, then mark the best .sidebar-link for the current URL.
-     * Uses exact match or longest pathname prefix so index + create/edit/show stay highlighted.
-     *
-     * @param {NodeListOf<Element>|Element[]} sidebarMenus - .sidebarmenu nav elements
-     */
-    global.sargamMarkSidebarActiveLinks = function (sidebarMenus) {
-        if (!sidebarMenus || !sidebarMenus.length) {
-            return;
-        }
-        var currentPath = normalizePathname(global.location.href);
-        Array.prototype.forEach.call(sidebarMenus, function (nav) {
-            var links = Array.prototype.slice.call(nav.querySelectorAll('.sidebar-link[href]')).filter(isSidebarPageNavLink);
-            links.forEach(function (l) {
-                l.classList.remove('active');
-            });
-            var best = null;
-            var bestLen = -1;
-            links.forEach(function (link) {
-                var linkPath = '';
-                try {
-                    linkPath = normalizePathname(link.href);
-                } catch (e2) {
-                    return;
-                }
-                if (!linkPath) {
-                    return;
-                }
-                if (currentPath !== linkPath && currentPath.indexOf(linkPath + '/') !== 0) {
-                    return;
-                }
-                if (linkPath.length > bestLen) {
-                    bestLen = linkPath.length;
-                    best = link;
-                }
-            });
-            if (best) {
-                best.classList.add('active');
-            }
-        });
-    };
-})(typeof window !== 'undefined' ? window : this);
-
-function sargamIsDesktopFlyoutMode() {
-    return !!(window.matchMedia && window.matchMedia('(min-width: 992px)').matches);
-}
-
-function sargamIsSidebarExpanded() {
-    return (
-        document.body &&
-        document.body.getAttribute('data-sidebartype') === 'full'
-    );
-}
-
-function sargamGetPreferredSidebarType() {
-    var type = 'full';
-    try {
-        type = localStorage.getItem('SidebarType') || 'full';
-    } catch (e) {}
-    if (!sargamIsDesktopFlyoutMode()) {
-        return 'mini-sidebar';
-    }
-    return type === 'mini-sidebar' ? 'mini-sidebar' : 'full';
-}
-
-function sargamSyncSidebarToggleIcons(type) {
-    var expanded = type === 'full';
-    document.querySelectorAll('.sidebarToggleIcon, #sidebarToggleIcon').forEach(function (icon) {
-        icon.textContent = expanded ? 'left_panel_close' : 'left_panel_open';
-        icon.classList.remove('rotated');
-    });
-    document.querySelectorAll('[data-sargam-sidebar-expand-toggle]').forEach(function (btn) {
-        btn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-        btn.setAttribute(
-            'aria-label',
-            expanded ? 'Collapse sidebar' : 'Expand sidebar'
-        );
-    });
-}
-
-function sargamRunSidebarNavigationInit() {
-    'use strict';
-
-    /* Browser has no bare `global`; all APIs below use this alias. */
-    var global =
-        typeof window !== 'undefined'
-            ? window
-            : typeof globalThis !== 'undefined'
-              ? globalThis
-              : this;
-
-    function isDesktopFlyoutMode() {
-        return sargamIsDesktopFlyoutMode();
-    }
-
-    function isSidebarExpanded() {
-        return sargamIsSidebarExpanded();
-    }
-
-    function refreshVisiblePaneMiniNav() {
-        var activePane = document.querySelector(
-            '#sidebarTabContent .tab-pane.show.active'
-        );
-        var miniNav =
-            (activePane && activePane.querySelector('.mini-nav')) ||
-            document.querySelector('.side-mini-panel:not([style*="display: none"]) .mini-nav') ||
-            document.querySelector('.side-mini-panel .mini-nav');
-        if (miniNav) {
-            restoreOrActivatePaneMiniNav(miniNav);
-        }
-    }
-
-    function applySidebarMenusForType(type) {
-        document.querySelectorAll('.sidebarmenu').forEach(function (el) {
-            if (type === 'full') {
-                el.classList.remove('close');
-            } else {
-                el.classList.add('close');
-            }
-        });
-        document.querySelectorAll('.side-mini-panel').forEach(function (panel) {
-            if (type === 'mini-sidebar') {
-                hidePaneFlyoutMenus(panel);
-                setPanelFlyoutOpen(panel, false);
-            }
-        });
-        if (type === 'full') {
-            global.requestAnimationFrame(function () {
-                refreshVisiblePaneMiniNav();
-            });
-        }
-    }
-
-    global.sargamSetSidebarType = function (type, persist) {
-        var body = document.body;
-        if (!body) {
-            return;
-        }
-        body.classList.remove('sargam-sidebar-mini-only');
-        body.setAttribute('data-sidebartype', type);
-        if (persist) {
-            try {
-                localStorage.setItem('SidebarType', type);
-            } catch (e) {}
-        }
-        applySidebarMenusForType(type);
-        sargamSyncSidebarToggleIcons(type);
-        var mainWrapper = document.getElementById('main-wrapper');
-        if (mainWrapper && isDesktopFlyoutMode() && type === 'full') {
-            mainWrapper.classList.remove('show-sidebar');
-        }
-        setTimeout(adjustAllDataTables, 200);
-    };
-
-    global.sargamToggleSidebarType = function () {
-        var current = document.body.getAttribute('data-sidebartype') || 'full';
-        var next = current === 'full' ? 'mini-sidebar' : 'full';
-        global.sargamSetSidebarType(next, true);
-    };
-
-    global.sargamSyncSidebarToggleIcons = sargamSyncSidebarToggleIcons;
-
-    function bindSidebarToggleClick() {
-        if (document.documentElement.getAttribute('data-sargam-toggle-bound') === '1') {
-            return;
-        }
-        document.documentElement.setAttribute('data-sargam-toggle-bound', '1');
-        document.addEventListener(
-            'click',
-            function (e) {
-                if (
-                    !e.target.closest(
-                        '.sidebartoggler, #headerCollapse, [data-sargam-sidebar-expand-toggle]'
-                    )
-                ) {
-                    return;
-                }
-                e.preventDefault();
-                e.stopImmediatePropagation();
-
-                if (!isDesktopFlyoutMode()) {
-                    var mainWrapper = document.getElementById('main-wrapper');
-                    if (mainWrapper) {
-                        mainWrapper.classList.toggle('show-sidebar');
-                    }
-                    document.querySelectorAll('.sidebarmenu').forEach(function (el) {
-                        el.classList.toggle('close');
-                    });
-                    return;
-                }
-
-                global.sargamToggleSidebarType();
-            },
-            true
-        );
-    }
-
-    if (document.documentElement.getAttribute('data-sargam-sidebar-nav-init') === '1') {
-        bindSidebarToggleClick();
-        return;
-    }
-
+    
     console.log('Sidebar navigation system initializing...');
 
     // ==========================================
@@ -296,318 +67,6 @@ function sargamRunSidebarNavigationInit() {
     // MINI-NAV: Controls sidebar menu visibility
     // ==========================================
     
-    function getSidebarPaneFromMiniNav(container) {
-        return (
-            container.closest('.side-mini-panel') ||
-            container.closest('.tab-pane') ||
-            document
-        );
-    }
-
-    function getFlyoutPanelRoot(container) {
-        return container.closest('.side-mini-panel') || getSidebarPaneFromMiniNav(container);
-    }
-
-    function getMiniNavStorageKey(pane) {
-        const paneId = pane && pane.id ? pane.id : 'global';
-        return 'active-mini-nav-' + paneId;
-    }
-
-    function escapeMenuId(id) {
-        if (typeof CSS !== 'undefined' && CSS.escape) {
-            return CSS.escape(id);
-        }
-        return String(id).replace(/([#.;?+*^$[\]\\(){}|\-])/g, '\\$1');
-    }
-
-    function getPaneFlyoutMenus(paneRoot) {
-        return paneRoot.querySelectorAll('.sidebarmenu nav.sidebar-nav, .sidebarmenu nav.sargam-menu-flyout');
-    }
-
-    function hidePaneFlyoutMenus(paneRoot) {
-        getPaneFlyoutMenus(paneRoot).forEach(function (nav) {
-            nav.classList.remove('d-block', 'is-active', 'sargam-menu-visible', 'left-none');
-            nav.style.removeProperty('display');
-            nav.style.removeProperty('visibility');
-            nav.style.removeProperty('opacity');
-        });
-    }
-
-    function showPaneFlyoutMenu(nav) {
-        if (!nav) {
-            return;
-        }
-        nav.classList.add('d-block', 'is-active', 'sargam-menu-visible', 'left-none');
-        nav.style.removeProperty('display');
-        if (isSidebarExpanded()) {
-            nav.style.setProperty('display', 'block', 'important');
-            nav.style.setProperty('visibility', 'visible', 'important');
-            nav.style.setProperty('opacity', '1', 'important');
-        }
-        var paneRoot = nav.closest('.side-mini-panel');
-        var miniNav = paneRoot && paneRoot.querySelector('.mini-nav');
-        if (miniNav) {
-            syncMiniNavSelectedFromActiveMenu(miniNav);
-        }
-    }
-
-    /** Remember active module menu without showing the flyout (desktop hover-only mode). */
-    function markPaneFlyoutMenu(nav) {
-        if (!nav) {
-            return;
-        }
-        nav.classList.add('is-active');
-        nav.classList.remove('d-block', 'sargam-menu-visible', 'left-none');
-        nav.style.removeProperty('display');
-    }
-
-    function setPanelFlyoutOpen(panel, open) {
-        if (!panel) {
-            return;
-        }
-        panel.classList.toggle('expanded', open);
-        panel.classList.toggle('sidebar-flyout-open', open);
-        panel.setAttribute('data-flyout-open', open ? 'true' : 'false');
-        var sidebarmenu = panel.querySelector('.sidebarmenu');
-        if (sidebarmenu) {
-            sidebarmenu.classList.toggle('hovermenus', open);
-        }
-    }
-
-    /**
-     * Resolve flyout <nav> for a mini-nav item id within a sidebar pane.
-     * @param {Element} paneRoot
-     * @param {string} itemId - li.mini-nav-item id (e.g. mini-1, setup-mini-9)
-     * @returns {Element|null}
-     */
-    function resolveMenuForMiniItem(paneRoot, itemId) {
-        if (!paneRoot || !itemId) {
-            return null;
-        }
-        var byId = paneRoot.querySelector('#' + escapeMenuId('menu-right-' + itemId));
-        if (byId) {
-            return byId;
-        }
-        var dataMenus = paneRoot.querySelectorAll('.sidebarmenu nav[data-mini-nav-target]');
-        for (var i = 0; i < dataMenus.length; i++) {
-            if (dataMenus[i].getAttribute('data-mini-nav-target') === itemId) {
-                return dataMenus[i];
-            }
-        }
-        return document.getElementById('menu-right-' + itemId);
-    }
-
-    global.sargamResolveMenuForMiniItem = resolveMenuForMiniItem;
-    global.sargamShowPaneFlyoutMenu = showPaneFlyoutMenu;
-    global.sargamHidePaneFlyoutMenus = hidePaneFlyoutMenus;
-
-    function getMiniIdFromMenuNav(nav) {
-        if (!nav) {
-            return '';
-        }
-        var fromData = nav.getAttribute('data-mini-nav-target');
-        if (fromData) {
-            return fromData;
-        }
-        if (nav.id && nav.id.indexOf('menu-right-') === 0) {
-            return nav.id.replace(/^menu-right-/, '');
-        }
-        return '';
-    }
-
-    /**
-     * Active sidebarmenu panel: has .is-active on <nav> and/or .sidebar-link.active inside.
-     */
-    function findActiveMenuNav(paneRoot) {
-        var menus = getPaneFlyoutMenus(paneRoot);
-        var withActiveLink = null;
-        var withNavActive = null;
-
-        menus.forEach(function (nav) {
-            if (nav.querySelector('.sidebar-link.active')) {
-                withActiveLink = nav;
-            }
-            if (
-                nav.classList.contains('is-active') ||
-                nav.classList.contains('sargam-menu-visible')
-            ) {
-                withNavActive = nav;
-            }
-        });
-
-        return withActiveLink || withNavActive || null;
-    }
-
-    /**
-     * Match mini-nav .selected to the active sidebarmenu module.
-     * @returns {{ miniItem: Element, activeNav: Element }|null}
-     */
-    function syncMiniNavSelectedFromActiveMenu(container) {
-        if (!container) {
-            return null;
-        }
-        var paneRoot = getFlyoutPanelRoot(container);
-        var activeNav = findActiveMenuNav(paneRoot);
-        if (!activeNav) {
-            return null;
-        }
-
-        var miniId = getMiniIdFromMenuNav(activeNav);
-        if (!miniId) {
-            return null;
-        }
-
-        var miniItem = paneRoot.querySelector('#' + escapeMenuId(miniId));
-        if (!miniItem || miniItem.classList.contains('sargam-mini-sidebar-toggle-item')) {
-            return null;
-        }
-
-        paneRoot.querySelectorAll('.mini-nav-item').forEach(function (item) {
-            item.classList.remove('selected');
-        });
-        miniItem.classList.add('selected');
-
-        return { miniItem: miniItem, activeNav: activeNav };
-    }
-
-    global.sargamSyncMiniNavFromActiveMenu = syncMiniNavSelectedFromActiveMenu;
-
-    function activateMiniFromActiveMenu(container, persistSelection) {
-        var synced = syncMiniNavSelectedFromActiveMenu(container);
-        if (synced && synced.miniItem) {
-            global.sargamActivateMiniNavItem(
-                container,
-                synced.miniItem,
-                persistSelection,
-                false
-            );
-            return true;
-        }
-        return false;
-    }
-
-    /**
-     * Restore saved mini-nav, match active route, or open first item / sole menu for a pane.
-     */
-    function restoreOrActivatePaneMiniNav(container) {
-        if (!container) {
-            return;
-        }
-
-        const paneRoot = getFlyoutPanelRoot(container);
-        const storageKey = getMiniNavStorageKey(
-            container.closest('.tab-pane') || paneRoot
-        );
-        const menus = getPaneFlyoutMenus(paneRoot);
-
-        if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
-            global.sargamMarkSidebarActiveLinks(menus);
-        }
-
-        if (activateMiniFromActiveMenu(container, false)) {
-            return;
-        }
-
-        let activeId = null;
-        try {
-            activeId = localStorage.getItem(storageKey);
-        } catch (e) {}
-
-        if (activeId) {
-            const storedItem = paneRoot.querySelector('#' + escapeMenuId(activeId));
-            if (storedItem && !storedItem.classList.contains('sargam-mini-sidebar-toggle-item')) {
-                global.sargamActivateMiniNavItem(container, storedItem, false);
-                return;
-            }
-        }
-
-        const firstMini = container.querySelector(
-            '.mini-nav-item[id]:not(.sargam-mini-sidebar-toggle-item)'
-        );
-        if (firstMini) {
-            global.sargamActivateMiniNavItem(container, firstMini, false);
-            return;
-        }
-
-        hidePaneFlyoutMenus(paneRoot);
-        if (menus.length > 0) {
-            var defaultMenu = menus[0];
-            if (isSidebarExpanded()) {
-                showPaneFlyoutMenu(defaultMenu);
-                setPanelFlyoutOpen(paneRoot, true);
-            } else {
-                markPaneFlyoutMenu(defaultMenu);
-                setPanelFlyoutOpen(paneRoot, false);
-            }
-            syncMiniNavSelectedFromActiveMenu(container);
-        }
-    }
-
-    global.sargamRestoreOrActivatePaneMiniNav = restoreOrActivatePaneMiniNav;
-
-    /**
-     * Show flyout menu for a mini-nav item without changing page layout (data-sidebartype).
-     * @param {Element} container - .mini-nav element
-     * @param {Element} miniNavItem - li.mini-nav-item
-     * @param {boolean} persist - write selection to localStorage
-     */
-    /**
-     * @param {boolean} persist - save mini-nav selection to localStorage
-     * @param {boolean} expandSidebar - user clicked a module: expand rail and show sidebarmenu
-     */
-    global.sargamActivateMiniNavItem = function (
-        container,
-        miniNavItem,
-        persist,
-        expandSidebar
-    ) {
-        if (!container || !miniNavItem || !miniNavItem.id) {
-            return;
-        }
-        if (miniNavItem.classList.contains('sargam-mini-sidebar-toggle-item')) {
-            return;
-        }
-        const paneRoot = getFlyoutPanelRoot(container);
-        const itemId = miniNavItem.id;
-        const shouldExpand = expandSidebar === true;
-
-        paneRoot.querySelectorAll('.mini-nav-item').forEach(function (navItem) {
-            navItem.classList.remove('selected');
-        });
-        miniNavItem.classList.add('selected');
-
-        hidePaneFlyoutMenus(paneRoot);
-
-        if (shouldExpand && isDesktopFlyoutMode() && !isSidebarExpanded()) {
-            global.sargamSetSidebarType('full', true);
-        }
-        if (shouldExpand && !isDesktopFlyoutMode()) {
-            var mainWrapper = document.getElementById('main-wrapper');
-            if (mainWrapper) {
-                mainWrapper.classList.add('show-sidebar');
-            }
-            document.querySelectorAll('.sidebarmenu').forEach(function (el) {
-                el.classList.remove('close');
-            });
-        }
-
-        const targetMenu = resolveMenuForMiniItem(paneRoot, itemId);
-        if (shouldExpand || isSidebarExpanded()) {
-            showPaneFlyoutMenu(targetMenu);
-            setPanelFlyoutOpen(paneRoot, !!targetMenu);
-        } else {
-            markPaneFlyoutMenu(targetMenu);
-            setPanelFlyoutOpen(paneRoot, false);
-        }
-
-        if (persist && itemId) {
-            try {
-                var tabPane = container.closest('.tab-pane');
-                localStorage.setItem(getMiniNavStorageKey(tabPane || paneRoot), itemId);
-            } catch (e) {}
-        }
-    };
-
     function initializeMiniNav() {
         // GLOBAL SINGLE-CLICK HANDLER using event delegation
         // This prevents multiple event listeners from causing multi-click issues
@@ -620,22 +79,23 @@ function sargamRunSidebarNavigationInit() {
         }
         
         console.log('Found', miniNavContainers.length, 'mini-nav containers');
+        
+        function getSidebarPaneFromContainer(container) {
+            return container.closest('.tab-pane') || document;
+        }
 
-        miniNavContainers.forEach(function (container) {
-            const aside = container.closest('.side-mini-panel');
+        function getStorageKeyForPane(pane) {
+            const paneId = pane && pane.id ? pane.id : 'global';
+            return 'active-mini-nav-' + paneId;
+        }
 
-            container.addEventListener('click', function (e) {
+        // Use event delegation on each container to handle all clicks
+        miniNavContainers.forEach(function(container) {
+            container.addEventListener('click', function(e) {
                 const miniNavItem = e.target.closest('.mini-nav-item');
-                if (!miniNavItem || !container.contains(miniNavItem)) {
-                    return;
-                }
-                if (
-                    miniNavItem.classList.contains('sargam-mini-sidebar-toggle-item') ||
-                    !miniNavItem.id
-                ) {
-                    return;
-                }
-
+                
+                if (!miniNavItem || !container.contains(miniNavItem)) return;
+                
                 e.preventDefault();
                 e.stopPropagation();
                 
@@ -651,22 +111,21 @@ function sargamRunSidebarNavigationInit() {
                 // Add selected class to clicked item
                 miniNavItem.classList.add('selected');
                 
+                // Hide sidebar menus only within current pane
+                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                    nav.classList.remove('d-block');
+                    nav.style.display = 'none';
+                });
+                
+                // Show the target menu
                 const targetMenuId = 'menu-right-' + itemId;
                 let targetMenu = paneRoot.querySelector('#' + CSS.escape(targetMenuId));
                 if (!targetMenu) {
                     targetMenu = document.getElementById(targetMenuId);
                 }
                 if (targetMenu) {
-                    if (typeof window.activateSidebarPanelNav === 'function') {
-                        window.activateSidebarPanelNav(targetMenu);
-                    } else {
-                        paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
-                            nav.classList.remove('d-block', 'is-active-panel');
-                            nav.style.display = 'none';
-                        });
-                        targetMenu.classList.add('d-block', 'is-active-panel');
-                        targetMenu.style.display = 'flex';
-                    }
+                    targetMenu.classList.add('d-block');
+                    targetMenu.style.display = 'block';
                     document.body.setAttribute('data-sidebartype', 'full');
                     console.log('Displayed menu:', targetMenuId);
                 }
@@ -687,22 +146,23 @@ function sargamRunSidebarNavigationInit() {
             const activeItem = paneRoot.querySelector('#' + CSS.escape(activeId));
             if (!activeItem) return;
 
-        document.querySelectorAll('.side-mini-panel').forEach(function (panel) {
-            const miniNav = panel.querySelector('.mini-nav');
-            if (miniNav) {
-                restoreOrActivatePaneMiniNav(miniNav);
+            paneRoot.querySelectorAll('.mini-nav-item').forEach(function(navItem) {
+                navItem.classList.remove('selected');
+            });
+            activeItem.classList.add('selected');
+
+            const targetMenuId = 'menu-right-' + activeId;
+            let targetMenu = paneRoot.querySelector('#' + CSS.escape(targetMenuId));
+            if (!targetMenu) {
+                targetMenu = document.getElementById(targetMenuId);
             }
             if (targetMenu) {
-                if (typeof window.activateSidebarPanelNav === 'function') {
-                    window.activateSidebarPanelNav(targetMenu);
-                } else {
-                    paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
-                        nav.classList.remove('d-block', 'is-active-panel');
-                        nav.style.display = 'none';
-                    });
-                    targetMenu.classList.add('d-block', 'is-active-panel');
-                    targetMenu.style.display = 'flex';
-                }
+                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                    nav.classList.remove('d-block');
+                    nav.style.display = 'none';
+                });
+                targetMenu.classList.add('d-block');
+                targetMenu.style.display = 'block';
             }
             console.log('Restored active mini-nav:', activeId, 'for pane:', paneRoot.id || 'global');
         });
@@ -755,9 +215,7 @@ function sargamRunSidebarNavigationInit() {
     // ==========================================
     
     function initializeHeaderTabs() {
-        const headerTabs = document.querySelectorAll(
-            '#mainNavbar [data-bs-toggle="tab"], .mobile-tabbar [data-bs-toggle="tab"]'
-        );
+        const headerTabs = document.querySelectorAll('.navbar-nav [data-bs-toggle="tab"]');
         
         console.log('Found', headerTabs.length, 'header tab links');
         
@@ -827,23 +285,6 @@ function sargamRunSidebarNavigationInit() {
         if (targetSidebarPane) {
             targetSidebarPane.classList.add('show', 'active');
             console.log('Sidebar pane activated:', sidebarTargetId);
-
-            const miniNav = targetSidebarPane.querySelector('.mini-nav');
-            if (miniNav) {
-                restoreOrActivatePaneMiniNav(miniNav);
-            }
-            const paneMenus = targetSidebarPane.querySelectorAll('.sidebarmenu nav.sidebar-nav');
-            if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
-                global.sargamMarkSidebarActiveLinks(paneMenus);
-            }
-            if (miniNav && typeof global.sargamSyncMiniNavFromActiveMenu === 'function') {
-                global.sargamSyncMiniNavFromActiveMenu(miniNav);
-            }
-            setTimeout(function () {
-                if (typeof global.sargamInitAllSidebarPanels === 'function') {
-                    global.sargamInitAllSidebarPanels();
-                }
-            }, 50);
         } else {
             // Safe fallback: keep home sidebar visible instead of leaving empty state
             const homeSidebarPane = sidebarTabContent.querySelector('#sidebar-home.tab-pane');
@@ -884,12 +325,10 @@ function sargamRunSidebarNavigationInit() {
             console.log('Auto-activating tab based on content:', activeTabId);
             
             // Find and activate the corresponding header tab
-            const headerTab = document.querySelector(
-                '#mainNavbar a[href="' + activeTabId + '"], .mobile-tabbar a[href="' + activeTabId + '"]'
-            );
+            const headerTab = document.querySelector('.navbar-nav a[href="' + activeTabId + '"]');
             if (headerTab) {
                 // Remove active from all tabs
-                document.querySelectorAll('#mainNavbar [data-bs-toggle="tab"], .mobile-tabbar [data-bs-toggle="tab"]').forEach(function(tab) {
+                document.querySelectorAll('.navbar-nav [data-bs-toggle="tab"]').forEach(function(tab) {
                     tab.classList.remove('active');
                     tab.setAttribute('aria-selected', 'false');
                 });
@@ -927,22 +366,6 @@ function sargamRunSidebarNavigationInit() {
         }
     }
     
-    // After route-based .sidebar-link.active is set, sync mini-nav .selected
-    if (typeof global.sargamMarkSidebarActiveLinks === 'function') {
-        var _sargamMarkSidebarActiveLinks = global.sargamMarkSidebarActiveLinks;
-        global.sargamMarkSidebarActiveLinks = function (sidebarMenus) {
-            _sargamMarkSidebarActiveLinks(sidebarMenus);
-            if (!sidebarMenus || !sidebarMenus.length) {
-                return;
-            }
-            var pane = sidebarMenus[0].closest('.tab-pane');
-            var miniNav = pane && pane.querySelector('.mini-nav');
-            if (miniNav) {
-                syncMiniNavSelectedFromActiveMenu(miniNav);
-            }
-        };
-    }
-
     // ==========================================
     // INITIALIZE ALL FUNCTIONALITY
     // ==========================================
@@ -953,14 +376,6 @@ function sargamRunSidebarNavigationInit() {
         initializeSidebarCollapse();
         initializeHeaderTabs();
         initializeScrollPersistence();
-        bindSidebarToggleClick();
-        global.sargamSetSidebarType(sargamGetPreferredSidebarType(), false);
-        global.setTimeout(function () {
-            var synced = document.body.getAttribute('data-sidebartype');
-            if (synced === 'full' || synced === 'mini-sidebar') {
-                global.sargamSetSidebarType(synced, false);
-            }
-        }, 50);
         
         // Observe layout width changes and adjust DataTables accordingly
         const mainWrapper = document.getElementById('main-wrapper');
