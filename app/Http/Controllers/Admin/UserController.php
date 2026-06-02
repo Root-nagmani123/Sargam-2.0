@@ -22,6 +22,10 @@ use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
 use App\Models\Holiday;
 use App\Services\NotificationService;
+use App\Exports\UsersExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 use Adldap\Laravel\Facades\Adldap;
 use Illuminate\Support\Facades\Auth;
@@ -60,6 +64,31 @@ use Carbon\Carbon;
 class UserController extends Controller
 {
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
+
+    /**
+     * Human-readable labels for the user_category code stored on user_credentials.
+     * Extend this map as new user types are introduced.
+     */
+    public const USER_TYPE_LABELS = [
+        'S' => 'Student',
+        'E' => 'Employee',
+        'F' => 'Faculty',
+        'A' => 'Admin',
+    ];
+
+    /**
+     * Resolve a user_category code to a display label, falling back gracefully.
+     */
+    public static function userTypeLabel($code): string
+    {
+        $code = trim((string) $code);
+
+        if ($code === '') {
+            return 'Unknown';
+        }
+
+        return self::USER_TYPE_LABELS[$code] ?? 'Other';
+    }
     /**
      * Display a listing of users.
      *
@@ -1536,6 +1565,25 @@ class UserController extends Controller
      */
     private function buildAdminUsersIndexPaginator(Request $request, int $perPage, $search, string $user_type): array
     {
+        $paginator = $this->adminUsersBaseQuery($search, $user_type)
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return [
+            'items' => $paginator->items(),
+            'total' => $paginator->total(),
+            'perPage' => $paginator->perPage(),
+            'currentPage' => $paginator->currentPage(),
+        ];
+    }
+
+    /**
+     * Build the base query for the admin users listing, applying the same
+     * search + user-type filters used by both the paginated index and exports.
+     * Keeping this in one place ensures exports honour the active filters.
+     */
+    private function adminUsersBaseQuery($search, string $user_type)
+    {
         $usersQuery = DB::table('user_credentials as uc')
             ->leftJoin('employee_role_mapping as erm', 'erm.user_credentials_pk', '=', 'uc.pk')
             ->leftJoin('user_role_master as urm', 'urm.pk', '=', 'erm.user_role_master_pk')
@@ -1587,14 +1635,81 @@ class UserController extends Controller
             $usersQuery->where('uc.user_category', $user_type);
         }
 
-        $paginator = $usersQuery->paginate($perPage)->withQueryString();
+        return $usersQuery;
+    }
 
+    /**
+     * Column definitions available for export, keyed by the toggle key used in
+     * the listing. Each entry maps to a heading and a value resolver.
+     *
+     * @return array<string, array{label: string, value: callable}>
+     */
+    private function adminUsersExportColumns(): array
+    {
         return [
-            'items' => $paginator->items(),
-            'total' => $paginator->total(),
-            'perPage' => $paginator->perPage(),
-            'currentPage' => $paginator->currentPage(),
+            'username'    => ['label' => 'Username',  'value' => fn ($u) => $u->user_name ?? ''],
+            'name'        => ['label' => 'Name',      'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
+            'email'       => ['label' => 'Email',     'value' => fn ($u) => $u->email_id ?? ''],
+            'mobile'      => ['label' => 'Mobile',    'value' => fn ($u) => $u->mobile_no ?: '—'],
+            'usertype'    => ['label' => 'User Type', 'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
+            'roles'       => ['label' => 'Roles',     'value' => fn ($u) => $u->roles ?: 'No Role'],
         ];
+    }
+
+    /**
+     * Export the users listing (csv / xlsx / pdf) honouring the active search,
+     * user-type filter and — where provided — the columns the user has left
+     * visible in the grid.
+     */
+    public function export(Request $request, string $format)
+    {
+        $search = trim((string) ($request->input('search') ?? ''));
+        $user_type = trim((string) $request->input('User_type', ''));
+
+        // Determine which columns to export based on the grid's visible columns.
+        $allColumns = $this->adminUsersExportColumns();
+        $requested = array_filter(explode(',', (string) $request->input('columns', '')));
+        $requested = array_values(array_intersect($requested, array_keys($allColumns)));
+
+        if (empty($requested)) {
+            $requested = array_keys($allColumns);
+        }
+
+        $headings = array_merge(['S. No.'], array_map(fn ($k) => $allColumns[$k]['label'], $requested));
+
+        $records = $this->adminUsersBaseQuery($search, $user_type)
+            ->orderBy('uc.pk')
+            ->get();
+
+        $rows = [];
+        foreach ($records as $i => $record) {
+            $row = [$i + 1];
+            foreach ($requested as $key) {
+                $row[] = $allColumns[$key]['value']($record);
+            }
+            $rows[] = $row;
+        }
+
+        $timestamp = now()->format('Ymd_His');
+        $fileBase = "users_{$timestamp}";
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', [
+                'headings' => $headings,
+                'rows' => $rows,
+                'generatedAt' => now()->format('d-m-Y H:i'),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download("{$fileBase}.pdf");
+        }
+
+        $writerType = $format === 'csv' ? ExcelWriter::CSV : ExcelWriter::XLSX;
+
+        return Excel::download(
+            new UsersExport($headings, $rows),
+            "{$fileBase}.{$format}",
+            $writerType
+        );
     }
 
     private static function bumpAdminUsersIndexCacheEpoch(): void

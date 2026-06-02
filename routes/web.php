@@ -130,6 +130,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
 
         // Route::resource('permissions', PermissionController::class);
+        Route::get('users/export/{format}', [UserController::class, 'export'])
+            ->whereIn('format', ['csv', 'xlsx', 'pdf'])
+            ->name('users.export');
         Route::resource('users', UserController::class);
         Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
         Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
