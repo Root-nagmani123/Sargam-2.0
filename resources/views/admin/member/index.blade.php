@@ -7,70 +7,59 @@
 <x-breadcrum title="Member"></x-breadcrum>
  <div id="status-msg"></div>
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="row">
-                        <div class="col-6">
-                            <h4>Member</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="float-end gap-2">
-                                <a href="{{ route('member.create') }}" class="btn btn-primary">+ Add Member</a>
-                                {{-- <a href="#" class="btn btn-success" data-bs-toggle="modal"
-                                    data-bs-target="#vertical-center-scroll-modal">Bulk Upload</a> --}}
-                                <a href="{{ route('member.excel.export') }}" class="btn btn-secondary">Export</a>
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-3 p-md-4">
+                <div class="modal fade" id="vertical-center-scroll-modal" tabindex="-1"
+                    aria-labelledby="vertical-center-modal" aria-hidden="true">
+                    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+                        <div class="modal-content rounded-3 border-0 shadow">
+                            <div class="modal-header d-flex align-items-center border-0 pb-0">
+                                <h4 class="modal-title fs-6 fw-bold text-primary-emphasis" id="myLargeModalLabel">
+                                    Bulk Upload for member
+                                </h4>
+                                <button type="button" class="btn-close" data-bs-dismiss="modal"
+                                    aria-label="Close"></button>
+                            </div>
+                            <div class="modal-body pt-2">
+                                <form action="" method="POST">
+                                    <label for="file" class="form-label small fw-medium">Upload CSV</label>
+                                    <input type="file" name="file" id="file" class="form-control rounded-2">
+                                </form>
+                            </div>
+                            <div class="modal-footer border-0 pt-0">
+                                <button type="submit"
+                                    class="btn btn-success btn-sm px-4 fw-semibold">
+                                    Submit
+                                </button>
+                                <button type="button"
+                                    class="btn btn-outline-secondary btn-sm px-4"
+                                    data-bs-dismiss="modal">
+                                    Close
+                                </button>
                             </div>
                         </div>
                     </div>
-                    <!-- Vertically centered modal -->
-                    <div class="modal fade" id="vertical-center-scroll-modal" tabindex="-1"
-                        aria-labelledby="vertical-center-modal" aria-hidden="true">
-                        <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
-                            <div class="modal-content">
-                                <div class="modal-header d-flex align-items-center">
-                                    <h4 class="modal-title" id="myLargeModalLabel">
-                                        Bulk Upload for member
-                                    </h4>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal"
-                                        aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                                    <form action="" method="POST">
-                                        <label for="" class="form-label">Upload CSV</label>
-                                        <input type="file" name="file" id="file" class="form-control">
-                                    </form>
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="submit"
-                                        class="btn bg-success-subtle text-success  waves-effect text-start">
-                                        Submit
-                                    </button>
-                                    <button type="button"
-                                        class="btn bg-danger-subtle text-danger  waves-effect text-start"
-                                        data-bs-dismiss="modal">
-                                        Close
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
+                </div>
+
+                <div class="d-flex justify-content-end mb-3">
+                    <div class="mem-search-wrap">
+                        <i class="material-icons material-symbols-rounded mem-search-icon" aria-hidden="true">search</i>
+                        <input type="search" id="memSearch" class="form-control" placeholder="Search"
+                            aria-controls="member-table" autocomplete="off">
                     </div>
-                    <hr>
-                    <div class="table-responsive">
-                        {!! $dataTable->table(['class' => 'table']) !!}
-                    </div>
+                </div>
+
+                <div class="table-responsive">
+                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100', 'id' => 'member-table']) !!}
+                </div>
             </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
-
-
 @endsection
 
 @push('scripts')
 {{ $dataTable->scripts() }}
-
 <script>
 $(document).ready(function() {
     // Handle member status toggle
@@ -139,48 +128,29 @@ $(document).ready(function() {
     $(document).on('click', '.member-delete-btn', function(e) {
         e.preventDefault();
 
-        if ($(this).is(':disabled')) {
-            return false;
-        }
+    var table = $tableEl.DataTable();
 
-        const deleteUrl = $(this).data('delete-url');
-        const $btn = $(this);
-        const $row = $btn.closest('tr');
+    var $paginate = $('#member-table_wrapper .dataTables_paginate');
+    if ($paginate.length) {
+        $paginate.appendTo('#memPaginationCell');
+    }
 
-        if (!confirm('Are you sure you want to delete this member?')) {
-            return false;
-        }
+    $tableEl.on('draw.dt', function () {
+        var info = table.page.info();
+        $('#memTotalInfo').text('of ' + info.recordsTotal + ' items');
+        $('#memPerPage').val(table.page.len());
+    }).trigger('draw.dt');
 
-        $.ajax({
-            url: deleteUrl,
-            type: 'DELETE',
-            headers: {
-                'X-CSRF-TOKEN': $('meta[name="csrf-token"]').attr('content')
-            },
-            dataType: 'json',
-            success: function(response) {
-                // Show success message
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Success',
-                    text: response.message || 'Member deleted successfully',
-                    timer: 1500
-                }).then(function() {
-                    // Reload the DataTable without refreshing the page
-                    $('#member-table').DataTable().ajax.reload();
-                });
-            },
-            error: function(xhr) {
-                const response = xhr.responseJSON || {};
-                const message = response.message || 'Error deleting member';
+    $('#memSearch').on('input', function () {
+        clearTimeout(window._memSearchTimer);
+        var q = $(this).val();
+        window._memSearchTimer = setTimeout(function () {
+            table.search(q).draw();
+        }, 350);
+    });
 
-                Swal.fire({
-                    icon: 'error',
-                    title: 'Error',
-                    text: message
-                });
-            }
-        });
+    $('#memPerPage').on('change', function () {
+        table.page.len(parseInt($(this).val(), 10)).draw();
     });
 });
 </script>

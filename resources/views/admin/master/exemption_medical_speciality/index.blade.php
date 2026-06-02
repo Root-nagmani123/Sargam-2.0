@@ -7,24 +7,11 @@
 <div class="container-fluid">
     <x-breadcrum title="Exemption medical speciality" />
     <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-body">
-                <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Exemption medical speciality</h4>
-                        </div>
-                        <div class="col-6">
-                             <!-- <button id="showAlert" class="btn btn-primary">+ Add Exemption categories</button> -->
-                            <div class="float-end gap-2">
-                                 <button id="showAlert" class="btn btn-primary">+ Add Exemption medical speciality</button>
-                                <!-- <a href="{{route('master.exemption.category.master.create')}}" class="btn btn-primary">+
-                                    Add Exemption categories</a> -->
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
+        <div class="card shadow-sm border-0 rounded-3">
+            <div class="card-body p-4">
+
+                {{-- Custom Search --}}
+                <div class="mb-3">
                     <div class="table-responsive">
                         <table class="table" id="exemptionMedicalSpecialityTable">
                             <thead>

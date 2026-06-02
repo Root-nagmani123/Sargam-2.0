@@ -486,11 +486,13 @@
         50% { transform: scale(1.2); background: #0d6efd; }
     }
 
-    /* Sidebar toggle icon rotation */
+    /* Sidebar toggle icon (+ 17px per layout spec) */
+    .sidebarToggleIcon,
     #sidebarToggleIcon {
         transition: transform 0.3s ease-in-out;
         display: inline-block;
     }
+    .sidebarToggleIcon.rotated,
     #sidebarToggleIcon.rotated {
         transform: rotate(180deg);
     }
@@ -500,7 +502,7 @@
     @stack('styles')
 </head>
 
-<body data-sidebartype="full" @class(['admin-mess-module' => request()->routeIs('admin.mess.*')])>
+<body data-sidebartype="full">
     <!-- Preloader - Advanced Sargam 2.0 Loader (Bootstrap 5) -->
     <div class="sargam-loader d-flex align-items-center justify-content-center" id="sargamLoader" role="status" aria-live="polite" aria-label="Loading Sargam 2.0">
         <div class="sargam-loader-particles">
@@ -562,7 +564,13 @@
                 str_starts_with($path, 'admin/employee-idcard') ||
                 str_starts_with($path, 'admin/duplicate-idcard') ||
                 str_starts_with($path, 'admin/family-idcard') ||
-                str_starts_with($path, 'security/')
+                str_starts_with($path, 'security/') ||
+                request()->routeIs('admin.dashboard.feed') ||
+                request()->routeIs('admin.notice.create') ||
+                request()->routeIs('admin.notice.index') ||
+                request()->routeIs('admin.notice.edit') ||
+                request()->routeIs('member.profile.edit') ||
+                str_starts_with($path, 'member/profile/edit')
             ) {
                 $activeNavTab = '#home';
             } elseif (
@@ -598,13 +606,14 @@
             }
         @endphp
         @include('admin.layouts.header')
+        <link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}?v=7">
         <div class="page-wrapper">
 
             @include('admin.layouts.sidebar')
             <div class="body-wrapper">
                 <main id="main-content" tabindex="-1" role="main">
                 @if(request()->routeIs('admin.mess.*'))
-                    <div class="container-fluid px-3 px-lg-4 pt-0">
+                    <div class="container-fluid pt-0">
                         <div class="mess-dt-stale-hint alert alert-warning border-0 shadow-sm rounded-3 mb-3 align-items-center justify-content-between flex-wrap gap-2 no-print" role="status">
                             <span class="small mb-0">Table data may be outdated after a long idle period. Click refresh or apply filters again.</span>
                             <button type="button" class="btn btn-sm btn-warning" id="messDtStaleRefreshBtn">Refresh data</button>
@@ -646,6 +655,7 @@
     @include('admin.layouts.footer')
      <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
+    <script src="{{ asset('admin_assets/js/sidebar-panel-accordion.js') }}?v=2"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -697,7 +707,7 @@ document.addEventListener("DOMContentLoaded", function () {
     const toggleBtn = document.getElementById("headerCollapse");
     if (!sidebar || !toggleBtn) return;
     // Query all icons across all tabs (multiple instances due to tab structure)
-    const icons = document.querySelectorAll("#sidebarToggleIcon");
+    const icons = document.querySelectorAll(".sidebarToggleIcon, #sidebarToggleIcon");
     const body = document.body;
     const sidebarmenus = document.querySelectorAll(".sidebarmenu");
     const isDashboard = {{ (request()->routeIs('admin.dashboard') || request()->is('dashboard')) ? 'true' : 'false' }};
@@ -759,7 +769,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         // Set all icon instances to expand (collapsed state)
         icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
+            icon.textContent = "left_panel_open";
             icon.classList.remove("rotated");
         });
         console.log('Set all icons to non-rotated (collapsed state)');
@@ -773,8 +783,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         // Set all icon instances to rotated (expanded state)
         icons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
-            icon.classList.add("rotated");
+            icon.textContent = "left_panel_close";
+            icon.classList.remove("rotated");
         });
         console.log('Set all icons to rotated (expanded state)');
         // After initial expanded state, adjust DataTables to new layout
@@ -785,12 +795,12 @@ document.addEventListener("DOMContentLoaded", function () {
     function syncIconWithSidebar(type) {
         const allIcons = document.querySelectorAll("#sidebarToggleIcon");
         allIcons.forEach(function(icon) {
-            icon.textContent = "keyboard_double_arrow_right";
             if (type === "full") {
-                icon.classList.add("rotated");
+                icon.textContent = "left_panel_close";
             } else {
-                icon.classList.remove("rotated");
+                icon.textContent = "left_panel_open";
             }
+            icon.classList.remove("rotated");
         });
         console.log('Synced', allIcons.length, 'icon(s) to type:', type);
     }
