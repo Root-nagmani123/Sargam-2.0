@@ -4772,8 +4772,6 @@ $selectedClientType = (string) request()->input('client_type', '');
     }
 
     // Reset add modal when closed (so next open starts fresh)
-                const editClientIdInput = document.getElementById('editDrClientId');
-                if (editClientIdInput) editClientIdInput.value = v.client_id || '';
     const addReportModal = document.getElementById('addReportModal');
     if (addReportModal) {
         // Reset ASAP when user closes via X/Cancel/backdrop.
