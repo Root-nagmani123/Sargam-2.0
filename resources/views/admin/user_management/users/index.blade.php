@@ -46,13 +46,14 @@
                     <table class="table" id="zero_config_table">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Username</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Mobile</th>
-                                <th>Roles</th>
-                                <th>Action</th>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Username</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Mobile</th>
+                                <th scope="col">User Type</th>
+                                <th scope="col">Roles</th>
+                                <th scope="col" class="text-center">Action</th>
                             </tr>
                         </thead>
 
@@ -65,9 +66,20 @@
                                 <td>{{ $user->email_id }}</td>
                                 <td>{{ $user->mobile_no }}</td>
                                 <td>
-                                    <span class="badge bg-success">
-                                        {{ $user->roles ?? 'No Role' }}
-                                    </span>
+                                    @if($user->User_type === 'S')
+                                        <span class="badge rounded-pill bg-primary">Student</span>
+                                    @elseif($user->User_type === 'E')
+                                        <span class="badge rounded-pill bg-success">Employee</span>
+                                    @else
+                                        <span class="badge rounded-pill bg-secondary">Unknown</span>
+                                    @endif
+                                </td>
+                                <td>
+                                    @if(!empty($user->roles))
+                                        <span class="badge rounded-pill users-role-badge">{{ $user->roles }}</span>
+                                    @else
+                                        <span class="badge rounded-pill users-role-badge users-role-badge--empty">No Role</span>
+                                    @endif
                                 </td>
                                 <td>
                                     <a href="{{ route('admin.users.assignRole', encrypt($user->pk)) }}"
