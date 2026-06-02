@@ -4,6 +4,40 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+<style>
+.notice-title-cell {
+    max-width: 260px;
+}
+
+.notice-title-text {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    cursor: default;
+}
+
+.custom-notice-tooltip {
+    position: fixed;
+    z-index: 1080;
+    max-width: min(520px, calc(100vw - 24px));
+    padding: 8px 10px;
+    border-radius: 6px;
+    background-color: rgba(28, 28, 28, 0.96);
+    color: #fff;
+    font-size: 0.8rem;
+    line-height: 1.4;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.2);
+    pointer-events: none;
+    opacity: 0;
+    transform: translate3d(0, 0, 0);
+    transition: opacity 0.12s ease-in-out;
+}
+
+.custom-notice-tooltip.is-visible {
+    opacity: 1;
+}
+</style>
 @endpush
 
 @section('content')
@@ -155,8 +189,11 @@
 
                         <tr>
                             <td class="fw-semibold">{{ $index + $notices->firstItem() }}</td>
-                            <td class="fw-semibold text-truncate col-title" style="max-width: 260px;">
-                                {{ $n->notice_title }}
+                            <td class="fw-semibold col-title notice-title-cell">
+                                <span class="notice-title-text js-custom-title-tooltip"
+                                    data-full-title="{{ $n->notice_title }}">
+                                    {{ $n->notice_title }}
+                                </span>
                             </td>
                             <td class="col-type">
                                 <span class="badge rounded-pill bg-info-subtle text-info text-capitalize">
@@ -313,6 +350,7 @@ function initNoticeIndexPage() {
     document.querySelectorAll('.js-auto-hide-alert').forEach(autoHideAlert);
 
     initColumnToggle();
+    initCustomNoticeTitleTooltip();
 
     var statusMsgBox = document.getElementById('status-msg');
     if (statusMsgBox && statusMsgBox.dataset.observingAutoHide !== 'true') {
@@ -406,6 +444,68 @@ function initNoticeIndexPage() {
 
         el.dataset.choicesInitialized = 'true';
     });
+}
+
+function initCustomNoticeTitleTooltip() {
+    if (document.body.dataset.noticeTooltipBound === 'true') {
+        return;
+    }
+
+    var tooltip = document.createElement('div');
+    tooltip.className = 'custom-notice-tooltip';
+    document.body.appendChild(tooltip);
+
+    function moveTooltip(event) {
+        var offsetX = 14;
+        var offsetY = 16;
+        var left = event.clientX + offsetX;
+        var top = event.clientY + offsetY;
+        var maxLeft = window.innerWidth - tooltip.offsetWidth - 10;
+        var maxTop = window.innerHeight - tooltip.offsetHeight - 10;
+
+        tooltip.style.left = Math.max(10, Math.min(left, maxLeft)) + 'px';
+        tooltip.style.top = Math.max(10, Math.min(top, maxTop)) + 'px';
+    }
+
+    document.addEventListener('mouseover', function(event) {
+        var target = event.target.closest('.js-custom-title-tooltip');
+        if (!target) {
+            return;
+        }
+
+        var fullTitle = target.getAttribute('data-full-title');
+        if (!fullTitle) {
+            return;
+        }
+
+        tooltip.textContent = fullTitle;
+        tooltip.classList.add('is-visible');
+        moveTooltip(event);
+    });
+
+    document.addEventListener('mousemove', function(event) {
+        if (!tooltip.classList.contains('is-visible')) {
+            return;
+        }
+        moveTooltip(event);
+    });
+
+    document.addEventListener('mouseout', function(event) {
+        var related = event.relatedTarget;
+        var leavingTarget = event.target.closest('.js-custom-title-tooltip');
+
+        if (!leavingTarget) {
+            return;
+        }
+
+        if (related && related.closest('.js-custom-title-tooltip')) {
+            return;
+        }
+
+        tooltip.classList.remove('is-visible');
+    });
+
+    document.body.dataset.noticeTooltipBound = 'true';
 }
 
 if (document.readyState === 'loading') {
