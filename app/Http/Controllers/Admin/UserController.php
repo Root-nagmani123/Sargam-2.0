@@ -1502,7 +1502,7 @@ class UserController extends Controller
         $user_type = trim((string) $request->input('User_type', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'admin_users_index:v3:' . md5(json_encode([
+        $cacheKey = 'admin_users_index:v4:' . md5(json_encode([
             'epoch' => $epoch,
             'search' => $search,
             'user_type' => $user_type,
@@ -1546,6 +1546,7 @@ class UserController extends Controller
                 'uc.last_name',
                 'uc.email_id',
                 'uc.mobile_no',
+                'uc.user_category as User_type',
                 DB::raw("GROUP_CONCAT(urm.user_role_display_name SEPARATOR ', ') as roles")
             )
             ->groupBy(
@@ -1554,7 +1555,8 @@ class UserController extends Controller
                 'uc.first_name',
                 'uc.last_name',
                 'uc.email_id',
-                'uc.mobile_no'
+                'uc.mobile_no',
+                'uc.user_category'
             );
 
         $search = trim((string) ($search ?? ''));

@@ -46,13 +46,14 @@
                     <table class="table" id="zero_config_table">
                         <thead>
                             <tr>
-                                <th>#</th>
-                                <th>Username</th>
-                                <th>Name</th>
-                                <th>Email</th>
-                                <th>Mobile</th>
-                                <th>Roles</th>
-                                <th>Action</th>
+                                <th scope="col">S. No.</th>
+                                <th scope="col">Username</th>
+                                <th scope="col">Name</th>
+                                <th scope="col">Email</th>
+                                <th scope="col">Mobile</th>
+                                <th scope="col">User Type</th>
+                                <th scope="col">Roles</th>
+                                <th scope="col" class="text-center">Action</th>
                             </tr>
                         </thead>
 
