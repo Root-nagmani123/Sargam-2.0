@@ -60,39 +60,43 @@
         box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .15);
     }
 
-    /* Unified toolbar buttons: custom Columns dropdown + DataTables export/print */
-    .dt-external-toolbar .dt-toolbar-right .btn,
-    .dt-external-toolbar .dt-buttons .dt-button {
-        --bs-btn-padding-y: .375rem;
-        --bs-btn-padding-x: .75rem;
-        --bs-btn-font-size: .8125rem;
+    /* Unified toolbar buttons with a Bootstrap 5.3 colour hierarchy:
+       Columns = secondary, Export = success, Print = primary. */
+    .dt-external-toolbar .dt-buttons { margin: 0; }
+    .dt-external-toolbar .dtb-btn,
+    .dt-external-toolbar .dt-buttons .dt-button.dtb-btn {
         display: inline-flex;
         align-items: center;
         gap: .375rem;
         margin: 0;
+        padding: .375rem .75rem;
+        border: 1px solid transparent;
         border-radius: .5rem;
-        font-weight: 500;
+        font-size: .8125rem;
+        font-weight: 600;
+        line-height: 1.2;
         background-color: #fff;
-        border: 1px solid #dee2e6;
-        color: #495057;
         box-shadow: none;
-        transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+        transition: background-color .15s ease, border-color .15s ease, color .15s ease, box-shadow .15s ease;
     }
-    .dt-external-toolbar .dt-toolbar-right .btn:hover,
-    .dt-external-toolbar .dt-buttons .dt-button:hover,
-    .dt-external-toolbar .dt-toolbar-right .btn.show,
-    .dt-external-toolbar .dt-buttons .dt-button:focus {
-        background-color: #eef4ff;
-        border-color: #0d6efd;
-        color: #0d6efd;
-    }
-    .dt-external-toolbar .dt-buttons {
-        margin: 0;
-    }
-    .dt-external-toolbar .dt-toolbar-right .btn i,
-    .dt-external-toolbar .dt-buttons .dt-button span {
-        line-height: 1;
-    }
+    .dt-external-toolbar .dtb-btn i { line-height: 1; }
+
+    /* Columns — secondary */
+    .dt-external-toolbar .dtb-columns { border-color: #ced4da !important; color: #495057 !important; }
+    .dt-external-toolbar .dtb-columns:hover,
+    .dt-external-toolbar .dtb-columns.show { background-color: #6c757d !important; border-color: #6c757d !important; color: #fff !important; }
+
+    /* Export — success */
+    .dt-external-toolbar .dtb-export { border-color: #198754 !important; color: #198754 !important; }
+    .dt-external-toolbar .dtb-export:hover,
+    .dt-external-toolbar .dtb-export.show { background-color: #198754 !important; border-color: #198754 !important; color: #fff !important; }
+
+    /* Print — primary */
+    .dt-external-toolbar .dtb-print { border-color: #0d6efd !important; color: #0d6efd !important; }
+    .dt-external-toolbar .dtb-print:hover,
+    .dt-external-toolbar .dtb-print:focus { background-color: #0d6efd !important; border-color: #0d6efd !important; color: #fff !important; }
+
+    .dt-external-toolbar .dtb-btn:focus-visible { box-shadow: 0 0 0 .2rem rgba(13, 110, 253, .25); }
 
     /* Columns dropdown menu + export collection menu */
     .dt-external-toolbar .dropdown-menu,
@@ -159,7 +163,7 @@
                                 <th scope="col">Session Count</th>
                                 <th scope="col">Feedback Average</th>
                                 @if(hasRole('Admin'))
-                                <th scope="col">Action</th>
+                                <th scope="col" class="dt-no-export">Action</th>
                                 @endif
                             </tr>
                         </thead>
@@ -231,7 +235,7 @@
                                     @endif
                                 </td>
                                 @if(hasRole('Admin'))
-                                <td>
+                                <td class="dt-no-export">
                                     <a href="{{ route('feedback.average', ['faculty_name' => $faculty->full_name]) }}"
                                        class="btn btn-view-feedback btn-sm">
                                         <span class="material-symbols-rounded">visibility</span>
@@ -262,6 +266,13 @@ $(document).ready(function() {
     var tableId = '{{ $tableId }}';
     var exportTitle = @json($exportTitle);
     var $toolbar = $('#' + tableId + '_toolbar');
+
+    // LBSNAA report branding (mirrors the Mess report theme)
+    var brandEmblem = @json('https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png');
+    var brandLogo   = @json(asset('admin_assets/images/logos/logo.png'));
+    var brandLine1  = 'Government of India';
+    var brandLine2  = 'Lal Bahadur Shastri National Academy of Administration';
+    var brandLine3  = 'Mussoorie, Uttarakhand';
 
     var table = $('#' + tableId).DataTable({
         order: [[0, 'asc']], // Sort by S. No. by default
@@ -315,7 +326,7 @@ $(document).ready(function() {
     function buildColumnToggle(api) {
         var $dropdown = $(
             '<div class="dropdown">' +
-                '<button class="btn btn-sm btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-1" ' +
+                '<button class="btn btn-sm dtb-btn dtb-columns dropdown-toggle" ' +
                     'type="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false" title="Show / hide columns">' +
                     '<i class="bi bi-layout-three-columns"></i><span class="d-none d-sm-inline">Columns</span>' +
                 '</button>' +
@@ -353,25 +364,181 @@ $(document).ready(function() {
         if (!($.fn.dataTable && $.fn.dataTable.Buttons)) {
             return; // Buttons not loaded — skip gracefully, table stays functional.
         }
+
+        // Strip icon ligatures (mail / event / visibility), action buttons and
+        // other UI chrome from a cell so only real data text is exported.
+        function cleanCellText(innerHtml, node) {
+            if (node && node.cloneNode) {
+                var clone = node.cloneNode(true);
+                clone.querySelectorAll(
+                    '.material-symbols-rounded, .material-icons, i, button, a.btn, .btn, [aria-hidden="true"]'
+                ).forEach(function (el) { el.parentNode && el.parentNode.removeChild(el); });
+                return (clone.textContent || '').replace(/\s+/g, ' ').trim();
+            }
+            return String(innerHtml || '').replace(/<[^>]*>/g, ' ').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+        }
+
+        // Export only visible, non-action columns.
+        function exportableColumns(idx) {
+            return api.column(idx).visible() && !$(api.column(idx).header()).hasClass('dt-no-export');
+        }
+
+        // Shared options: column filtering + text cleaning for every format.
+        // DataTables passes body as (data, row, column, node) and header as (data, column).
+        var sharedExportOptions = {
+            columns: exportableColumns,
+            format: {
+                body: function (data, row, column, node) {
+                    return cleanCellText(data, node);
+                },
+                header: function (data) {
+                    return cleanCellText(data, null);
+                }
+            }
+        };
+
+        // Mess-report print theme: LBSNAA branding header, blue (#004a93) accents,
+        // grey table headers, zebra rows. Non-cropping A4 landscape.
+        var PRINT_CSS =
+            '@page { size: A4 landscape; margin: 12mm; }' +
+            '* { box-sizing: border-box; }' +
+            'body { font-family: "DejaVu Sans", Arial, sans-serif; font-size: 11pt; margin: 0; padding: 0; ' +
+                'color: #222; background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }' +
+            '.lbsnaa-header-wrap { border-bottom: 2px solid #004a93; margin-bottom: 12px; padding: 2px 0 8px; }' +
+            '.branding-table { width: 100%; border-collapse: collapse; margin: 0; }' +
+            '.branding-table td { border: 0; padding: 0; vertical-align: middle; }' +
+            '.branding-logo-left { width: 42px; }' +
+            '.branding-text { text-align: left; padding: 0 10px 0 2px; line-height: 1.25; }' +
+            '.branding-logo-right { width: 200px; text-align: right; }' +
+            '.lbsnaa-brand-line-1 { font-size: 8pt; color: #004a93; text-transform: uppercase; letter-spacing: .05em; font-weight: 600; }' +
+            '.lbsnaa-brand-line-2 { font-size: 13pt; color: #222; font-weight: 700; text-transform: uppercase; margin-top: 2px; }' +
+            '.lbsnaa-brand-line-3 { font-size: 10pt; color: #555; margin-top: 2px; }' +
+            '.header-img-left { width: 34px; height: 34px; }' +
+            '.header-img-right { width: 165px; height: auto; }' +
+            '.report-header-block { text-align: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #dee2e6; }' +
+            '.report-title-center { font-size: 14pt; font-weight: 700; text-transform: uppercase; margin: 0 0 8px; color: #212529; }' +
+            '.report-date-bar { background: #004a93; color: #fff; padding: 8px 12px; text-align: center; font-weight: 600; font-size: 10pt; display: inline-block; }' +
+            '.report-meta-print { font-size: 9pt; margin: 10px 0 12px; line-height: 1.45; text-align: left; }' +
+            '.report-meta-print .meta-line { margin-bottom: 4px; word-wrap: break-word; }' +
+            'table { width: 100%; border-collapse: collapse; font-size: 9pt; margin-bottom: 10px; table-layout: auto; }' +
+            'thead { display: table-header-group; }' +
+            'th, td { padding: 5px 8px; border: 1px solid #dee2e6; vertical-align: top; ' +
+                'white-space: normal; word-wrap: break-word; overflow-wrap: anywhere; }' +
+            'thead th { background: #d3d6d9 !important; font-weight: 600; text-align: left; }' +
+            'tbody tr:nth-child(even) td { background: #fafbfc !important; }' +
+            'tr { page-break-inside: avoid; }' +
+            '.report-footer { border-top: 1px solid #dee2e6; font-size: 8pt; color: #666; text-align: center; padding-top: 6px; margin-top: 8px; }';
+
+        function escapeHtml(str) {
+            return String(str).replace(/[&<>"]/g, function (c) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+            });
+        }
+
+        function customizePrint(win) {
+            var doc = win.document;
+            var recordCount = api.rows({ search: 'applied' }).count();
+            var printedOn = new Date().toLocaleString();
+
+            var style = doc.createElement('style');
+            style.appendChild(doc.createTextNode(PRINT_CSS));
+            doc.head.appendChild(style);
+
+            var defaultTitle = doc.querySelector('h1');
+            if (defaultTitle) { defaultTitle.parentNode.removeChild(defaultTitle); }
+
+            doc.body.insertAdjacentHTML('afterbegin',
+                '<div class="lbsnaa-header-wrap">' +
+                    '<table class="branding-table"><tr>' +
+                        '<td class="branding-logo-left"><img src="' + brandEmblem + '" alt="Emblem of India" class="header-img-left"></td>' +
+                        '<td class="branding-text">' +
+                            '<div class="lbsnaa-brand-line-1">' + escapeHtml(brandLine1) + '</div>' +
+                            '<div class="lbsnaa-brand-line-2">' + escapeHtml(brandLine2) + '</div>' +
+                            '<div class="lbsnaa-brand-line-3">' + escapeHtml(brandLine3) + '</div>' +
+                        '</td>' +
+                        '<td class="branding-logo-right"><img src="' + brandLogo + '" alt="LBSNAA Logo" class="header-img-right"></td>' +
+                    '</tr></table>' +
+                '</div>' +
+                '<div class="report-header-block">' +
+                    '<h1 class="report-title-center">' + escapeHtml(exportTitle) + ' Report</h1>' +
+                    '<div class="report-date-bar">Total Records: ' + recordCount + '</div>' +
+                '</div>' +
+                '<div class="report-meta-print">' +
+                    '<div class="meta-line"><strong>Printed on:</strong> ' + escapeHtml(printedOn) + '</div>' +
+                '</div>'
+            );
+            doc.body.insertAdjacentHTML('beforeend',
+                '<div class="report-footer"><small>' + escapeHtml(brandLine2) + ' &mdash; ' + escapeHtml(exportTitle) + ' Report</small></div>'
+            );
+        }
+
+        // PDF (pdfmake) theme matched to the Mess report look: blue title, grey
+        // header fill, zebra rows, page numbers. (pdfmake cannot embed the logo
+        // images the way the server-side Mess PDFs do, so it uses a text header.)
+        function customizePdf(doc) {
+            try {
+                doc.pageMargins = [22, 26, 22, 32];
+                doc.defaultStyle.fontSize = 8;
+
+                doc.styles = doc.styles || {};
+                doc.styles.title = { fontSize: 14, bold: true, color: '#212529', alignment: 'center', margin: [0, 0, 0, 8] };
+                doc.styles.tableHeader = { bold: true, fontSize: 8, color: '#212529', fillColor: '#d3d6d9' };
+
+                // Branding lines above the title.
+                doc.content.unshift(
+                    { text: brandLine1, fontSize: 8, color: '#004a93', alignment: 'center', characterSpacing: 0.5 },
+                    { text: brandLine2.toUpperCase(), fontSize: 12, bold: true, alignment: 'center', margin: [0, 2, 0, 2] },
+                    { canvas: [{ type: 'line', x1: 0, y1: 0, x2: 751, y2: 0, lineWidth: 1.5, lineColor: '#004a93' }], margin: [0, 0, 0, 8] }
+                );
+
+                var tableNode = doc.content.find(function (c) { return c && c.table; });
+                if (tableNode) {
+                    tableNode.layout = {
+                        fillColor: function (rowIndex) {
+                            if (rowIndex === 0) { return '#d3d6d9'; }
+                            return rowIndex % 2 === 0 ? '#fafbfc' : null;
+                        },
+                        hLineWidth: function () { return 0.5; },
+                        vLineWidth: function () { return 0.5; },
+                        hLineColor: function () { return '#dee2e6'; },
+                        vLineColor: function () { return '#dee2e6'; }
+                    };
+                }
+
+                doc.footer = function (page, pages) {
+                    return {
+                        columns: [
+                            { text: brandLine2 + ' — ' + exportTitle + ' Report', fontSize: 7, color: '#666', margin: [22, 6, 0, 0] },
+                            { text: page + ' / ' + pages, fontSize: 7, color: '#666', alignment: 'right', margin: [0, 6, 22, 0] }
+                        ]
+                    };
+                };
+            } catch (e) {
+                console.warn('PDF customize failed:', e);
+            }
+        }
+
         try {
             new $.fn.dataTable.Buttons(api, {
                 buttons: [
                     {
                         extend: 'collection',
                         text: '<i class="bi bi-download me-1"></i>Export',
-                        className: 'btn btn-sm btn-outline-secondary',
+                        className: 'btn btn-sm dtb-btn dtb-export',
+                        autoClose: true,
                         buttons: [
-                            { extend: 'excelHtml5', text: 'Excel (.xlsx)', title: exportTitle, exportOptions: { columns: ':visible' } },
-                            { extend: 'csvHtml5',   text: 'CSV (.csv)',   title: exportTitle, exportOptions: { columns: ':visible' } },
-                            { extend: 'pdfHtml5',   text: 'PDF (.pdf)',   title: exportTitle, orientation: 'landscape', pageSize: 'A4', exportOptions: { columns: ':visible' } }
+                            { extend: 'excelHtml5', text: '<i class="bi bi-file-earmark-excel me-2"></i>Excel (.xlsx)', title: exportTitle, exportOptions: sharedExportOptions },
+                            { extend: 'csvHtml5',   text: '<i class="bi bi-filetype-csv me-2"></i>CSV (.csv)',   title: exportTitle, exportOptions: sharedExportOptions },
+                            { extend: 'pdfHtml5',   text: '<i class="bi bi-file-earmark-pdf me-2"></i>PDF (.pdf)',   title: exportTitle + ' Report', orientation: 'landscape', pageSize: 'A4', exportOptions: sharedExportOptions, customize: customizePdf }
                         ]
                     },
                     {
                         extend: 'print',
                         text: '<i class="bi bi-printer me-1"></i>Print',
-                        className: 'btn btn-sm btn-outline-secondary',
-                        title: exportTitle,
-                        exportOptions: { columns: ':visible' } // only visible columns
+                        className: 'btn btn-sm dtb-btn dtb-print',
+                        title: '',
+                        exportOptions: sharedExportOptions,
+                        customize: customizePrint
                     }
                 ]
             });
