@@ -27,6 +27,7 @@ class FcRegistrationMaster extends Model
         'dob',
         'application_type',
         'fc_exemption_master_pk',
+        'medical_exemption_doc',
         'is_registered',
         'user_id',
     ];
