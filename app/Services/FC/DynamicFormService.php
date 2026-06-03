@@ -392,11 +392,14 @@ class DynamicFormService
     {
         if ($group->target_table === 'fc_pre_history') {
             $course = $this->registrationPreMedicalCourse($userId);
+            $courseMasterPk = app(\App\Services\FC\FcActivityStudentResolver::class)->courseMasterPkFromName($course) ?: null;
             $col = $this->userCol('fc_pre_history');
-            $row = DB::table('fc_pre_history')
-                ->where($col, $this->userVal('fc_pre_history', $userId))
-                ->where('course', $course)
-                ->first();
+            $q = DB::table('fc_pre_history')
+                ->where($col, $this->userVal('fc_pre_history', $userId));
+            if ($courseMasterPk) {
+                $q->where('course_master_pk', $courseMasterPk);
+            }
+            $row = $q->first();
 
             return $row ? collect([$row]) : collect();
         }
@@ -448,7 +451,42 @@ class DynamicFormService
     {
         $first = StudentMasterFirst::with('session')->where(fc_user_col('student_master_firsts'), fc_user_val('student_master_firsts', $userId))->first();
 
-        return trim((string) ($first?->session?->session_name ?? ''));
+        $sessionName = trim((string) ($first?->session?->session_name ?? ''));
+        if ($sessionName !== '') {
+            return $sessionName;
+        }
+
+        // Fallback: resolve course name from course_master via the roster record.
+        // This handles cases where student_master_firsts.session_id is null (e.g. pre-migration
+        // staged-login users who belong to a dynamic-form course set on fc_registration_master).
+        $rosterPk = $userId < 0 ? abs($userId) : null;
+        if ($rosterPk === null && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+            // Positive userId post-migration: find roster via user_credentials.user_name
+            $userName = \Illuminate\Support\Facades\DB::table('user_credentials')
+                ->where('pk', $userId)
+                ->value('user_name');
+            if ($userName) {
+                $rosterPk = (int) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+                    ->where('user_id', $userName)
+                    ->value('pk') ?? 0);
+            }
+        }
+
+        if ($rosterPk && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+            $courseMasterPk = \Illuminate\Support\Facades\DB::table('fc_registration_master')
+                ->where('pk', $rosterPk)
+                ->value('course_master_pk');
+            if ($courseMasterPk && \Illuminate\Support\Facades\Schema::hasTable('course_master')) {
+                $courseName = trim((string) (\Illuminate\Support\Facades\DB::table('course_master')
+                    ->where('pk', $courseMasterPk)
+                    ->value('course_name') ?? ''));
+                if ($courseName !== '') {
+                    return $courseName;
+                }
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -966,12 +1004,16 @@ class DynamicFormService
             }
         }
 
-        $existing = FcPreHistory::where($uCol, $uVal)->where('course', $course)->first();
+        $courseMasterPk = app(\App\Services\FC\FcActivityStudentResolver::class)->courseMasterPkFromName($course) ?: null;
+
+        $existing = FcPreHistory::where($uCol, $uVal)
+            ->when($courseMasterPk, fn ($q) => $q->where('course_master_pk', $courseMasterPk))
+            ->first();
 
         $payload = [
-            $uCol    => $uVal,
-            'course' => $course,
-            'status' => 1,
+            $uCol             => $uVal,
+            'course_master_pk'=> $courseMasterPk,
+            'status'          => 1,
         ];
 
         foreach ($fields as $field) {
@@ -1014,7 +1056,7 @@ class DynamicFormService
         }
 
         FcPreHistory::updateOrCreate(
-            [$uCol => $uVal, 'course' => $course],
+            [$uCol => $uVal, 'course_master_pk' => $courseMasterPk],
             $payload
         );
     }
