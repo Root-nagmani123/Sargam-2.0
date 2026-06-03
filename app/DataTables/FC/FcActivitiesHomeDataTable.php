@@ -111,6 +111,7 @@ class FcActivitiesHomeDataTable extends DataTable
                     'course' => $r->course,
                     'menuid' => $r->activity,
                     'menun' => $r->activityMaster->menun ?? $r->activity,
+                    'department_id' => (int) ($r->activityMaster->department_id ?? 0),
                     'activityval' => $r->activityval,
                     'otname' => $sm ? $this->trainees->displayName($sm) : '',
                     'otcode' => (string) ($sm->generated_OT_code ?? ''),

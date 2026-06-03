@@ -4,6 +4,7 @@ namespace App\Http\Controllers\FC;
 
 use App\DataTables\FC\FcActivitiesHomeDataTable;
 use App\Http\Controllers\Controller;
+use App\Models\FC\FcActivityDepartment;
 use App\Models\FC\FcActivityMaster;
 use App\Models\FC\FcForm;
 use App\Services\FC\FcActivityStudentResolver;
@@ -111,7 +112,7 @@ class FcActivityHomeController extends Controller
             'found' => true,
             'warning' => $this->trainees->hasPreHistoryForTrainee(
                 $trainee,
-                $course !== '' ? $course : null
+                $courseMasterPk > 0 ? $courseMasterPk : null
             ),
         ]);
     }
@@ -132,13 +133,43 @@ class FcActivityHomeController extends Controller
         ]);
     }
 
+    public function ajaxDepartments(): JsonResponse
+    {
+        $ids = $this->access->departmentIdsForActivityEntry();
+
+        $query = FcActivityDepartment::query()
+            ->active()
+            ->ordered()
+            ->select(['id', 'code', 'name']);
+
+        if ($ids !== null) {
+            if ($ids === []) {
+                return response()->json([]);
+            }
+            $query->whereIn('id', $ids);
+        }
+
+        return response()->json($query->get());
+    }
+
     public function ajaxActivities(Request $request): JsonResponse
     {
         $ccode = trim((string) $request->query('ccode', ''));
+        $deptId = (int) $request->query('dept_id', 0);
+
+        $allowedIds = $this->access->departmentIdsForActivityEntry();
+
+        // When a specific department is selected, scope to that dept (within user's allowed scope)
+        $effectiveDeptIds = $allowedIds;
+        if ($deptId > 0) {
+            if ($allowedIds === null || in_array($deptId, $allowedIds, true)) {
+                $effectiveDeptIds = [$deptId];
+            }
+        }
 
         $base = FcActivityMaster::query()
             ->active()
-            ->forDepartmentIds($this->access->departmentIdsForActivityEntry())
+            ->forDepartmentIds($effectiveDeptIds)
             ->ordered()
             ->select(['menuid', 'menun', 'entry_policy']);
 
@@ -146,7 +177,8 @@ class FcActivityHomeController extends Controller
             ->when($ccode !== '', fn ($q) => $q->forCourse($ccode))
             ->get();
 
-        if ($activities->isEmpty()) {
+        // Fallback: drop ccode filter only when no specific dept is chosen
+        if ($activities->isEmpty() && $deptId === 0) {
             $activities = (clone $base)->get();
         }
 

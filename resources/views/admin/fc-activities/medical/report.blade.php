@@ -286,7 +286,7 @@
         <form id="pathoForm" enctype="multipart/form-data" class="mb-0">
             @csrf
             <input type="hidden" name="otcode" value="{{ $ot->otcode }}">
-            <input type="hidden" name="course" value="{{ $course }}">
+            <input type="hidden" name="course_master_pk" value="{{ $ot->course_master_pk }}">
 
             {{-- Screen / print dialog only — omitted from PDF (html2pdf uses screen snapshot; .no-print + .is-pdf-capture) --}}
             <div class="card border-0 shadow-sm mb-3 no-print">
