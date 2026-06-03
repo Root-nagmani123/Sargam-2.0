@@ -105,11 +105,11 @@ class FcActivityStudentResolver
         return $pk !== null ? (int) $pk : null;
     }
 
-    public function hasPreHistoryForTrainee(object $trainee, ?string $course = null): bool
+    public function hasPreHistoryForTrainee(object $trainee, ?int $courseMasterPk = null): bool
     {
         $credentialsPk = (int) ($trainee->credentials_pk ?? 0);
 
-        return $credentialsPk > 0 && $this->hasPreHistory($credentialsPk, $course);
+        return $credentialsPk > 0 && $this->hasPreHistory($credentialsPk, $courseMasterPk);
     }
 
     public function displayName(StudentMaster $student): string
@@ -149,7 +149,7 @@ class FcActivityStudentResolver
             ->value($nameCol) ?? ''));
     }
 
-    public function hasPreHistory(int $credentialsPk, ?string $course = null): bool
+    public function hasPreHistory(int $credentialsPk, ?int $courseMasterPk = null): bool
     {
         if (! Schema::hasTable('fc_pre_history')) {
             return false;
@@ -158,12 +158,8 @@ class FcActivityStudentResolver
         $col = fc_user_col('fc_pre_history');
         $q = FcPreHistory::query()->where($col, fc_user_val('fc_pre_history', $credentialsPk));
 
-        if ($course !== null && trim($course) !== '') {
-            $course = trim($course);
-            $q->where(function ($w) use ($course) {
-                $w->where('course', $course)
-                    ->orWhereRaw('TRIM(course) = ?', [$course]);
-            });
+        if ($courseMasterPk !== null) {
+            $q->where('course_master_pk', $courseMasterPk);
         }
 
         return $q->exists();
@@ -171,6 +167,7 @@ class FcActivityStudentResolver
 
     /**
      * Keep medical / consultation screens working on fc_ot_details.
+     * Stores course_master_pk (INT) alongside the legacy course-name string.
      */
     public function syncMedicalOtDetail(object $trainee, ?string $courseName = null): void
     {
@@ -182,6 +179,20 @@ class FcActivityStudentResolver
             ? Str::limit(trim($courseName), 120, '')
             : ($trainee->student ? $this->courseNameForStudent($trainee->student) : null);
 
+        // Resolve the integer pk for this course name.
+        $courseMasterPk = $this->courseMasterPkFromName($course);
+        // Also try via the student's course_master_pk when the name didn't match.
+        if ($courseMasterPk === null && $trainee->student) {
+            $cmPk = $trainee->student->course_master_pk ?? null;
+            if ($cmPk) {
+                $courseMasterPk = (int) $cmPk;
+                // Back-fill the course name from course_master so the string column stays consistent.
+                if ($course === null && Schema::hasTable('course_master')) {
+                    $course = trim((string) (DB::table('course_master')->where('pk', $courseMasterPk)->value('course_name') ?? '')) ?: null;
+                }
+            }
+        }
+
         $userCol = fc_user_col('fc_ot_details');
         $credentialsPk = (int) ($trainee->credentials_pk ?? 0);
         if ($credentialsPk < 1) {
@@ -191,15 +202,15 @@ class FcActivityStudentResolver
         $userVal = fc_user_val('fc_ot_details', $credentialsPk);
 
         $attrs = [
-            $userCol => $userVal,
-            'otname' => $trainee->otname,
-            'otcode' => $trainee->otcode,
-            'course' => $course,
-            'mobileno' => $trainee->mobileno,
-            'service' => Str::limit($trainee->service, 40, ''),
-            'house' => null,
-            'housen' => Str::limit($trainee->housen, 50, ''),
-            'status' => 1,
+            $userCol          => $userVal,
+            'otname'          => $trainee->otname,
+            'otcode'          => $trainee->otcode,
+            'course_master_pk'=> $courseMasterPk,
+            'mobileno'        => $trainee->mobileno,
+            'service'         => Str::limit($trainee->service, 40, ''),
+            'house'           => null,
+            'housen'          => Str::limit($trainee->housen, 50, ''),
+            'status'          => 1,
         ];
 
         $existing = FcOtDetail::query()->where('otcode', $trainee->otcode)->first();
@@ -211,6 +222,24 @@ class FcActivityStudentResolver
         }
 
         FcOtDetail::query()->create($attrs);
+    }
+
+    /**
+     * Look up course_master.pk by an exact course name string.
+     */
+    public function courseMasterPkFromName(?string $courseName): ?int
+    {
+        if ($courseName === null || trim($courseName) === '') {
+            return null;
+        }
+        if (! Schema::hasTable('course_master')) {
+            return null;
+        }
+        $pk = DB::table('course_master')
+            ->whereRaw('TRIM(course_name) = ?', [trim($courseName)])
+            ->value('pk');
+
+        return $pk !== null ? (int) $pk : null;
     }
 
     /**

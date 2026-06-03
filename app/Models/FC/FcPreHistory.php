@@ -19,7 +19,7 @@ class FcPreHistory extends Model
         'altitude_illness',
         'additional_info',
         'doc_path',
-        'course',
+        'course_master_pk',
         'status',
     ];
 }

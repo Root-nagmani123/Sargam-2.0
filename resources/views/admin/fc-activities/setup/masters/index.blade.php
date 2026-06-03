@@ -109,7 +109,7 @@
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label small">Department <span class="text-danger" title="Required">*</span></label>
-                            <select name="department_id" id="masterCreateDept" class="form-select form-select-sm fc-master-dept-choices @error('department_id') is-invalid @enderror" @if($departmentsActive->isEmpty()) disabled @else required aria-required="true" @endif data-placeholder="Select department" data-search="true">
+                            <select name="department_id" id="masterCreateDept" class="form-select form-select-sm fc-master-dept-choices @error('department_id') is-invalid @enderror" @if($departmentsActive->isEmpty()) disabled @endif aria-required="true" data-placeholder="Select department" data-search="true">
                                 @foreach($departmentsActive as $d)
                                     <option value="{{ $d->id }}" @selected((string)$createDeptPreselect === (string)$d->id)>{{ $d->name }}</option>
                                 @endforeach
@@ -194,7 +194,7 @@
                     <div class="row g-2">
                         <div class="col-md-6">
                             <label class="form-label small">Department <span class="text-danger" title="Required">*</span></label>
-                            <select name="department_id" id="masterEditDept" class="form-select form-select-sm fc-master-dept-choices @error('department_id') is-invalid @enderror" required aria-required="true" data-placeholder="Select department" data-search="true">
+                            <select name="department_id" id="masterEditDept" class="form-select form-select-sm fc-master-dept-choices @error('department_id') is-invalid @enderror" aria-required="true" data-placeholder="Select department" data-search="true">
                                 @foreach($departments as $d)
                                     <option value="{{ $d->id }}" @selected(old('_form') === 'master_edit' && (string)old('department_id') === (string)$d->id)>{{ $d->name }}{{ $d->status ? '' : ' — inactive' }}</option>
                                 @endforeach
@@ -332,20 +332,6 @@ function syncFcMasterDeptChoicesValue(selectEl) {
     }
 }
 (function () {
-    var hadMasterCreateErr = @json($errors->any() && old('_form') === 'master_create');
-    var hadMasterEditErr = @json($errors->any() && old('_form') === 'master_edit');
-
-    document.addEventListener('DOMContentLoaded', function () {
-        if (hadMasterCreateErr) {
-            var m = document.getElementById('modalMasterCreate');
-            if (m && window.bootstrap) new bootstrap.Modal(m).show();
-        }
-        if (hadMasterEditErr) {
-            var m2 = document.getElementById('modalMasterEdit');
-            if (m2 && window.bootstrap) new bootstrap.Modal(m2).show();
-        }
-    });
-
     var modalMasterEdit = document.getElementById('modalMasterEdit');
     if (modalMasterEdit) {
         modalMasterEdit.addEventListener('show.bs.modal', function (e) {
@@ -380,6 +366,41 @@ function syncFcMasterDeptChoicesValue(selectEl) {
 
 $(function () {
     initFcMasterDeptChoices();
+
+    // Pre-submit validation for department (Choices.js hides the native <select> so
+    // the browser cannot focus it for required validation — we guard in JS instead).
+    document.getElementById('modalMasterCreate')?.querySelector('form')?.addEventListener('submit', function (e) {
+        var deptEl = document.getElementById('masterCreateDept');
+        if (deptEl && !deptEl.value) {
+            e.preventDefault();
+            deptEl.closest('.col-md-6').querySelector('.choices__inner').style.borderColor = 'var(--bs-danger)';
+            deptEl.closest('.col-md-6').insertAdjacentHTML('beforeend',
+                '<div class="invalid-feedback d-block js-dept-err">Please select a department.</div>');
+        }
+    });
+    document.getElementById('formMasterEdit')?.addEventListener('submit', function (e) {
+        var deptEl = document.getElementById('masterEditDept');
+        var errEl = document.getElementById('formMasterEdit').querySelector('.js-dept-err');
+        if (errEl) errEl.remove();
+        if (deptEl && !deptEl.value) {
+            e.preventDefault();
+            deptEl.closest('.col-md-6').querySelector('.choices__inner').style.borderColor = 'var(--bs-danger)';
+            deptEl.closest('.col-md-6').insertAdjacentHTML('beforeend',
+                '<div class="invalid-feedback d-block js-dept-err">Please select a department.</div>');
+        }
+    });
+
+    // Re-open modal on validation error (DOMContentLoaded is already fired at this point
+    // in @@push scripts, so we must use jQuery ready which handles the already-ready case).
+    if (@json($errors->any() && old('_form') === 'master_create')) {
+        var mc = document.getElementById('modalMasterCreate');
+        if (mc && window.bootstrap) new bootstrap.Modal(mc).show();
+    }
+    if (@json($errors->any() && old('_form') === 'master_edit')) {
+        var me = document.getElementById('modalMasterEdit');
+        if (me && window.bootstrap) new bootstrap.Modal(me).show();
+    }
+
     var $t = $('#fcMasterSetupTable');
     var $filter = $('#fcMasterDeptFilter');
     if (!$t.length || !$.fn.DataTable) return;
