@@ -3457,26 +3457,40 @@ class FeedbackController extends Controller
 
     /**
      * Base join for pending-feedback-by-student (one row per student × session with attendance).
+     *
+     * Deduplication strategy (mirrors student-side logic):
+     *   - smcm: joined as a DISTINCT subquery → prevents inflation from multiple enrollment rows
+     *   - csa:  joined via whereExists → prevents inflation from duplicate attendance records
+     *   - tf:   uses COUNT(DISTINCT faculty_pk) → accurately counts unique faculty feedbacks submitted
+     *   - session filter: uses TIMESTAMP(END_DATE, session_end_time) <= NOW(IST) → only fully-ended sessions
      */
     private function buildPendingStudentsGroupedBaseQuery(Request $request): \Illuminate\Database\Query\Builder
     {
+        // Count distinct faculty PKs submitted per student per session — prevents over-count from duplicate topic_feedback rows
         $feedbackSub = DB::raw("(
-            SELECT timetable_pk, student_master_pk, COUNT(*) as submitted_count
+            SELECT timetable_pk, student_master_pk, COUNT(DISTINCT faculty_pk) as submitted_count
             FROM topic_feedback
             WHERE is_submitted = 1
             GROUP BY timetable_pk, student_master_pk
         ) as tf");
 
+        // Deduplicated enrollment: one row per (course, student) regardless of duplicate smcm entries
+        $smcmSub = DB::raw("(
+            SELECT DISTINCT course_master_pk, student_master_pk
+            FROM student_master_course__map
+            WHERE active_inactive = 1
+        ) as smcm");
+
         $query = DB::table('timetable as t')
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-            ->join('student_master_course__map as smcm', function ($join) {
-                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                    ->where('smcm.active_inactive', 1);
-            })
+            ->join($smcmSub, 'smcm.course_master_pk', '=', 't.course_master_pk')
             ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-            ->join('course_student_attendance as csa', function ($join) {
-                $join->on('csa.timetable_pk', '=', 't.pk')
-                    ->on('csa.Student_master_pk', '=', 'sm.pk')
+            // Attendance check via EXISTS — avoids row multiplication from duplicate csa records
+            ->whereExists(function ($sub) {
+                $sub->select(DB::raw(1))
+                    ->from('course_student_attendance as csa')
+                    ->whereColumn('csa.timetable_pk', 't.pk')
+                    ->whereColumn('csa.Student_master_pk', 'sm.pk')
                     ->where('csa.status', '1');
             })
             ->leftJoin($feedbackSub, function ($join) {
@@ -3484,7 +3498,16 @@ class FeedbackController extends Controller
                     ->on('tf.student_master_pk', '=', 'sm.pk');
             })
             ->where('t.feedback_checkbox', 1)
-            ->where('t.START_DATE', '<=', now());
+            // Mirror student page: only include sessions whose end time has passed (IST)
+            ->whereRaw("
+                TIMESTAMP(
+                    t.END_DATE,
+                    STR_TO_DATE(
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
+                    )
+                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+            ");
 
         $this->applyFeedbackReportCourseScope($query, 'c.pk');
 
