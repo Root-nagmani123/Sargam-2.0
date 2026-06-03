@@ -28,9 +28,9 @@
             <p class="small text-muted mb-2"><span class="text-danger" aria-hidden="true">*</span> Required to save an activity.</p>
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <label class="form-label small mb-1" for="selcourse">Form <span class="text-danger" title="Required">*</span></label>
+                    <label class="form-label small mb-1" for="selcourse">Course <span class="text-danger" title="Required">*</span></label>
                     <select id="selcourse" class="form-select form-select-sm" required aria-required="true">
-                        <option value="">Select Form</option>
+                        <option value="">Select Course</option>
                         @foreach($forms ?? [] as $form)
                             @php
                                 $cCode = trim((string) ($form->courseMaster?->course_name ?? $form->form_name));
@@ -62,20 +62,24 @@
                 </div>
             </div>
             <div class="row g-3 align-items-end mt-1 mt-lg-2">
-                <div class="col-12 col-md-6 col-lg-4">
+                <div class="col-12 col-sm-6 col-lg-3">
+                    <label class="form-label small mb-1" for="seldepartment">Department <span class="text-danger" title="Required">*</span></label>
+                    <select id="seldepartment" class="form-select form-select-sm" required aria-required="true"><option value="">Select Department</option></select>
+                </div>
+                <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label small mb-1" for="selactivity">Activity <span class="text-danger" title="Required">*</span></label>
                     <select id="selactivity" class="form-select form-select-sm" required aria-required="true"><option value="">Select Activity</option></select>
                 </div>
-                <div class="col-12 col-md-6 col-lg-5">
+                <div class="col-12 col-md-6 col-lg-3">
                     <label class="form-label small mb-1" for="txtactvalue">Value <span class="text-danger" title="Required">*</span></label>
                     <input type="text" id="txtactvalue" class="form-control form-control-sm" maxlength="500" autocomplete="off" required aria-required="true">
                 </div>
-                <div class="col-12 col-lg-3 d-grid d-md-block">
+                <div class="col-12 col-md-6 col-lg-3 d-grid d-md-block">
                     <label class="form-label small mb-1 d-none d-lg-block">&nbsp;</label>
                     <button type="button" id="btnSaveActivity" class="btn btn-sm btn-primary w-100 w-lg-auto px-lg-4">Save activity</button>
                 </div>
             </div>
-            <p class="small text-muted mb-0 mt-3 pt-2 border-top"><strong>FC activity coordinators</strong> and users with <strong>full setup access</strong> see every active activity. Other users see only activities for <strong>departments you are assigned to</strong> (Activity setup → Departments, or your single department in staff access). <strong>Upsert</strong> updates the last value; <strong>repeat</strong> keeps a new reading each time (medical report shows full history). If the list stays empty after choosing a form, ask a coordinator to assign the right department(s).</p>
+
         </div>
     </div>
 
@@ -84,9 +88,9 @@
             <p class="small fw-semibold text-secondary text-uppercase mb-3" style="letter-spacing: 0.04em;">Activity log filters</p>
             <div class="row g-3 align-items-end">
                 <div class="col-12 col-sm-6 col-lg-3">
-                    <label class="form-label small mb-1" for="fcGridCourse">Form</label>
+                    <label class="form-label small mb-1" for="fcGridCourse">Course</label>
                     <select id="fcGridCourse" class="form-select form-select-sm">
-                        <option value="">All forms</option>
+                        <option value="">Select course</option>
                         @foreach($forms ?? [] as $form)
                             @php
                                 $cCode = trim((string) ($form->courseMaster?->course_name ?? $form->form_name));
@@ -100,7 +104,7 @@
                 </div>
                 <div class="col-12 col-sm-6 col-lg-3">
                     <label class="form-label small mb-1" for="fcGridOtcode">OT code contains</label>
-                    <input type="text" id="fcGridOtcode" class="form-control form-control-sm" placeholder="Optional" autocomplete="off">
+                    <input type="text" id="fcGridOtcode" class="form-control form-control-sm" placeholder="" autocomplete="off">
                 </div>
                 <div class="col-12 col-md-8 col-lg-4">
                     <label class="form-label small mb-1" for="fcGridActivity">Activity</label>
@@ -114,7 +118,7 @@
                     </div>
                 </div>
             </div>
-            <p class="small text-muted mb-0 mt-3 pt-2 border-top">Filters apply to the table below (AJAX). Use the search box on the table for free-text across name, code, course, activity name, value, and date. Print, PDF, and Excel use the rows currently loaded in the table (choose <strong>All</strong> in page length to export everything that matches).</p>
+
         </div>
     </div>
 
@@ -166,6 +170,10 @@
                 </div>
                 <div class="row g-2 align-items-end">
                     <div class="col-md-6">
+                        <label class="form-label small mb-0">Department</label>
+                        <input type="text" class="form-control form-control-sm" id="fcActEditDept" readonly>
+                    </div>
+                    <div class="col-md-6">
                         <label class="form-label small" for="fcActEditActivity">Activity <span class="text-danger" title="Required">*</span></label>
                         <select id="fcActEditActivity" class="form-select form-select-sm" required aria-required="true"><option value="">Loading…</option></select>
                     </div>
@@ -194,12 +202,14 @@ jQuery(function($) {
         courses: "{{ route('fc-reg.admin.activities.ajax.courses') }}",
         otName: "{{ route('fc-reg.admin.activities.ajax.ot-name') }}",
         house: "{{ route('fc-reg.admin.activities.ajax.house') }}",
+        departments: "{{ route('fc-reg.admin.activities.ajax.departments') }}",
         activities: "{{ route('fc-reg.admin.activities.ajax.activities') }}",
         store: "{{ route('fc-reg.admin.activities.store') }}",
         csrf: "{{ csrf_token() }}",
     };
     var fcActEditRow = null;
     var otLookupXhr = null;
+    var departmentsMap = {}; // id -> name, populated on load
 
     function asArray(data) {
         if (Array.isArray(data)) return data;
@@ -273,8 +283,10 @@ jQuery(function($) {
         });
     }
 
-    function fillActivitySelect($sel, ccode, defaultFirstLabel) {
-        $.get(R.activities, { ccode: ccode || '' }, function(data) {
+    function fillActivitySelect($sel, ccode, defaultFirstLabel, deptId) {
+        var params = { ccode: ccode || '' };
+        if (deptId) params.dept_id = deptId;
+        $.get(R.activities, params, function(data) {
             const rows = asArray(data);
             $sel.empty().append('<option value="">' + defaultFirstLabel + '</option>');
             rows.forEach(function(a){
@@ -331,8 +343,32 @@ jQuery(function($) {
 
     loadForms();
 
+    // Load departments the current user is assigned to
+    $.get(R.departments, function(data) {
+        var rows = asArray(data);
+        var $sel = $('#seldepartment');
+        $sel.empty().append('<option value="">Select Department</option>');
+        rows.forEach(function(d) {
+            departmentsMap[String(d.id)] = d.name;
+            $sel.append('<option value="' + d.id + '">' + d.name + '</option>');
+        });
+        // Auto-select when user only belongs to one department
+        if (rows.length === 1) {
+            $sel.val(rows[0].id).trigger('change');
+        }
+    }).fail(function() {
+        console.error('Failed to load departments');
+    });
+
+    $('#seldepartment').on('change', function() {
+        var deptId = $(this).val();
+        var ccode = selectedFormCourseCode($('#selcourse'));
+        fillActivitySelect($('#selactivity'), ccode, 'Select Activity', deptId);
+    });
+
     $('#selcourse').on('change', function() {
-        fillActivitySelect($('#selactivity'), selectedFormCourseCode($(this)), 'Select Activity');
+        var deptId = $('#seldepartment').val();
+        fillActivitySelect($('#selactivity'), selectedFormCourseCode($(this)), 'Select Activity', deptId);
         if ($('#txtotcode').val().trim()) fetchOtDetails();
     });
     $('#fcGridCourse').on('change', function() {
@@ -363,7 +399,7 @@ jQuery(function($) {
             uactivity: $('#selactivity').val(),
             actvalue: $('#txtactvalue').val().trim(),
         };
-        if (!payload.ccode || !$('#selcourse').val() || !payload.otcode || !payload.uactivity || !payload.actvalue) {
+        if (!payload.ccode || !$('#selcourse').val() || !payload.otcode || !$('#seldepartment').val() || !payload.uactivity || !payload.actvalue) {
             alert('All fields are mandatory.');
             return;
         }
@@ -394,8 +430,13 @@ jQuery(function($) {
             $('#fcActEditHouse').val(fcActEditRow.house || '');
             $('#fcActEditHousen').val(fcActEditRow.housen || '');
             $('#fcActEditValue').val(fcActEditRow.activityval || '');
+            var deptId = fcActEditRow.department_id ? String(fcActEditRow.department_id) : '';
+            var deptName = deptId && departmentsMap[deptId] ? departmentsMap[deptId] : (deptId || '');
+            $('#fcActEditDept').val(deptName);
             var sel = $('#fcActEditActivity').empty().append('<option value="">Loading…</option>');
-            $.get(R.activities, { ccode: fcActEditRow.course || '' }, function (data) {
+            var actParams = { ccode: fcActEditRow.course || '' };
+            if (deptId) actParams.dept_id = deptId;
+            $.get(R.activities, actParams, function (data) {
                 var rows = asArray(data);
                 sel.empty().append($('<option>').val('').text('Select Activity'));
                 rows.forEach(function (a) {

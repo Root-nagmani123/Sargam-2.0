@@ -2,36 +2,42 @@
 @foreach($sections as $sec)
     <div class="col-12">
         <div class="card border-0 shadow-sm" style="border-radius:8px;">
-            <div class="card-header bg-white border-bottom py-2 px-3 fw-semibold small" style="color:#1a3c6e;">
-                <i class="bi bi-journal-text me-1"></i>{{ $sec['title_en'] ?? 'Section' }}
+            <div class="card-header py-2 px-3 fw-semibold small d-flex justify-content-between align-items-center"
+                 style="background:#f8fafd;color:#1a3c6e;">
+                <span><i class="bi bi-journal-text me-1"></i>{{ $sec['title_en'] ?? 'Section' }}</span>
                 @if(!empty($sec['title_hi']))
-                    <span class="text-muted fw-normal"> | {{ $sec['title_hi'] }}</span>
+                    <span class="text-muted fw-normal" style="font-size:10px;">{{ $sec['title_hi'] }}</span>
                 @endif
             </div>
 
             @if(($sec['type'] ?? '') === 'fields' && !empty($sec['rows']))
                 <div class="card-body p-0">
-                    @php $lastGroup = null; @endphp
-                    @foreach($sec['rows'] as $row)
-                        @if(!empty($row['group']) && $row['group'] !== $lastGroup)
-                            <div class="px-3 py-2 bg-light border-bottom">
-                                <span class="text-uppercase small fw-bold text-muted" style="letter-spacing:0.4px;">{{ $row['group'] }}</span>
+                    <div class="section-fields">
+                        @php $lastGroup = null; @endphp
+                        @foreach($sec['rows'] as $row)
+                            @if(!empty($row['group']) && $row['group'] !== $lastGroup)
+                                <div class="field-group-hd px-3 py-1 bg-light border-bottom"
+                                     style="font-size:11px;font-weight:600;color:#1a3c6e;letter-spacing:.3px;">
+                                    {{ $row['group'] }}
+                                </div>
+                                @php $lastGroup = $row['group']; @endphp
+                            @endif
+                            <div class="field-row border-bottom" style="font-size:12px;display:flex;">
+                                <div class="field-lbl fw-semibold px-3 py-2"
+                                     style="width:40%;flex-shrink:0;background:#f0f4f9;color:#0a2a50;">{{ $row['en'] ?? '' }}</div>
+                                <div class="field-val flex-grow-1 px-3 py-2">
+                                    @if(!empty($row['file_href']))
+                                        <a href="{{ $row['file_href'] }}" target="_blank" rel="noopener"
+                                           class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px;">
+                                            <i class="bi bi-eye me-1"></i>{{ $row['value'] ?? 'View file' }}
+                                        </a>
+                                    @else
+                                        {{ $row['value'] ?? 'â' }}
+                                    @endif
+                                </div>
                             </div>
-                            @php $lastGroup = $row['group']; @endphp
-                        @endif
-                        <div class="d-flex border-bottom px-3 py-2" style="font-size:12px;">
-                            <div class="text-muted fw-semibold" style="width:38%;flex-shrink:0;">{{ $row['en'] ?? '' }}</div>
-                            <div class="flex-grow-1">
-                                @if(!empty($row['file_href']))
-                                    <a href="{{ $row['file_href'] }}" target="_blank" rel="noopener" class="btn btn-xs btn-outline-primary py-0 px-2" style="font-size:11px;">
-                                        <i class="bi bi-eye me-1"></i>{{ $row['value'] ?? 'View file' }}
-                                    </a>
-                                @else
-                                    {{ $row['value'] ?? '—' }}
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
+                        @endforeach
+                    </div>
                 </div>
             @elseif(($sec['type'] ?? '') === 'table' && !empty($sec['body']))
                 <div class="table-responsive">

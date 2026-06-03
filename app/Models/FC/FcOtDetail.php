@@ -14,7 +14,7 @@ class FcOtDetail extends Model
         'user_id', 'username',
         'otname',
         'otcode',
-        'course',
+        'course_master_pk',
         'c_name',
         'gender',
         'dob',

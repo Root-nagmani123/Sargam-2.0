@@ -58,10 +58,21 @@
             <div class="col-md-4 col-lg-3">
                 <label class="form-label small mb-1">Course</label>
                 <select id="medicalFilterCourse" class="form-select form-select-sm">
-                    <option value="">All active courses</option>
-                    @foreach($courses as $c)
-                        <option value="{{ $c->c_code }}">{{ $c->c_name }}</option>
-                    @endforeach
+                    <option value="">All courses</option>
+                    @if($activeCourses->isNotEmpty())
+                        <optgroup label="— Active —">
+                            @foreach($activeCourses as $c)
+                                <option value="{{ $c->pk }}">{{ $c->course_name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
+                    @if($archivedCourses->isNotEmpty())
+                        <optgroup label="— Archived —">
+                            @foreach($archivedCourses as $c)
+                                <option value="{{ $c->pk }}">{{ $c->course_name }}</option>
+                            @endforeach
+                        </optgroup>
+                    @endif
                 </select>
             </div>
             <div class="col-md-4 col-lg-3">
@@ -187,7 +198,7 @@ $(function () {
         columns: [
             { data: 'otname', name: 'otname' },
             { data: 'otcode', name: 'otcode' },
-            { data: 'course', name: 'course' },
+            { data: 'course_display_name', name: 'course_display_name', searchable: false, orderable: false },
             { data: 'service', name: 'service' },
             { data: 'pre_history_badge', name: 'pre_history_exists', orderable: true, searchable: false },
             { data: 'consultation', name: 'consultation_required', orderable: true, searchable: false },

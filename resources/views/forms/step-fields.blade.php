@@ -155,19 +155,44 @@
 @endif
 <script>
 document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (input) {
-    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10);
-    if (!maxKb) return;
-    var form = input.closest('form');
-    if (!form) return;
-    form.addEventListener('submit', function (e) {
-        if (!input.files || !input.files.length) return;
-        if (input.files[0].size > maxKb * 1024) {
-            e.preventDefault();
-            var mb = maxKb >= 1024 ? (maxKb / 1024) + ' MB' : maxKb + ' KB';
-            alert('File is too large. Maximum allowed size is ' + mb + '.');
-            input.focus();
+    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10) || 0;
+    var allowedExts = ['pdf','jpg','jpeg','png'];
+
+    function validateFile(file) {
+        if (!file) return;
+        var ext = file.name.split('.').pop().toLowerCase();
+        var errEl = input.nextElementSibling;
+        if (!errEl || !errEl.classList.contains('js-file-error')) {
+            errEl = document.createElement('div');
+            errEl.className = 'js-file-error text-danger small mt-1';
+            input.parentNode.insertBefore(errEl, input.nextSibling);
         }
-    });
+        var msg = '';
+        if (allowedExts.indexOf(ext) === -1) {
+            msg = 'Invalid file type. Allowed: ' + allowedExts.join(', ').toUpperCase() + '.';
+        } else if (maxKb > 0 && file.size > maxKb * 1024) {
+            var limit = maxKb >= 1024 ? (maxKb / 1024) + ' MB' : maxKb + ' KB';
+            msg = 'File is too large. Maximum allowed size is ' + limit + '.';
+        }
+        if (msg) {
+            errEl.textContent = msg;
+            input.classList.add('is-invalid');
+            input.value = '';
+        } else {
+            errEl.textContent = '';
+            input.classList.remove('is-invalid');
+        }
+    }
+
+    input.addEventListener('change', function () { validateFile(this.files[0]); });
+
+    var form = input.closest('form');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            if (input.files && input.files.length) { validateFile(input.files[0]); }
+            if (input.classList.contains('is-invalid')) { e.preventDefault(); input.focus(); }
+        });
+    }
 });
 </script>
 @endpush

@@ -489,7 +489,12 @@ class StudentImportController extends Controller
                         }
                     }
 
-                    // Re-key form rows saved with roster pk placeholder → user_credentials.pk
+                    // Re-key form rows saved with roster pk placeholder → user_credentials.pk.
+                    // The pre-loaded $existingCredentials only covers credentials that existed
+                    // BEFORE this batch. For credentials inserted in this same batch we fall back
+                    // to a fresh DB lookup by username so that newly-created accounts are also
+                    // re-keyed immediately (preventing a split-identity where form data sits under
+                    // the roster pk while reports resolve the user to user_credentials.pk).
                     foreach ($chunkedRecords as $record) {
                         if (empty($record->user_id) || empty($record->pk)) {
                             continue;
@@ -500,6 +505,21 @@ class StudentImportController extends Controller
                             $existingCredentialsByMobile,
                             $existingCredentialsByEmail
                         );
+
+                        // Fallback: credential may have been inserted in this same batch and
+                        // therefore is absent from the pre-loaded collection.
+                        if (! $existingForRekey) {
+                            $userName = $this->normalizeLoginUsername($record->user_id ?? '');
+                            if ($userName !== '') {
+                                $freshCred = DB::table('user_credentials')
+                                    ->where('user_name', $userName)
+                                    ->first(['pk']);
+                                if ($freshCred) {
+                                    $existingForRekey = $freshCred;
+                                }
+                            }
+                        }
+
                         if ($existingForRekey && ! empty($existingForRekey->pk)) {
                             $this->rekeyFcFormUserIdFromRosterPk((int) $record->pk, (int) $existingForRekey->pk);
                         }
@@ -668,6 +688,31 @@ class StudentImportController extends Controller
                 DB::table($table)->where('user_id', $rosterPk)->update(['user_id' => $credentialsPk]);
             } catch (\Exception $e) {
                 continue;
+            }
+        }
+
+        // Populate course_master_pk (INT) on fc_pre_history and fc_ot_details rows for this user.
+        if (\Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')
+            && \Illuminate\Support\Facades\Schema::hasTable('course_master')) {
+            $rosterCoursePk = (int) (DB::table('fc_registration_master')
+                ->where('pk', $rosterPk)
+                ->value('course_master_pk') ?? 0);
+
+            if ($rosterCoursePk > 0) {
+                if (\Illuminate\Support\Facades\Schema::hasTable('fc_pre_history')) {
+                    DB::table('fc_pre_history')
+                        ->where('user_id', $credentialsPk)
+                        ->whereNull('course_master_pk')
+                        ->update(['course_master_pk' => $rosterCoursePk]);
+                }
+
+                // fc_ot_details: set course_master_pk on rows for this user that are still null
+                if (\Illuminate\Support\Facades\Schema::hasTable('fc_ot_details')) {
+                    DB::table('fc_ot_details')
+                        ->where('user_id', $credentialsPk)
+                        ->whereNull('course_master_pk')
+                        ->update(['course_master_pk' => $rosterCoursePk]);
+                }
             }
         }
     }

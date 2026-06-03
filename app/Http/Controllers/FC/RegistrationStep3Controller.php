@@ -135,7 +135,10 @@ class RegistrationStep3Controller extends Controller
         $degreeMasters        = DB::table('degree_master')->orderBy('degree_name')->get();
 
         $preMedicalCourse = $this->registrationSessionName($userId);
-        $preMedical = FcPreHistory::where(fc_user_col('fc_pre_history'), fc_user_val('fc_pre_history', $userId))->where('course', $preMedicalCourse)->first();
+        $preMedicalCoursePk = app(\App\Services\FC\FcActivityStudentResolver::class)->courseMasterPkFromName($preMedicalCourse);
+        $preMedical = FcPreHistory::where(fc_user_col('fc_pre_history'), fc_user_val('fc_pre_history', $userId))
+            ->when($preMedicalCoursePk, fn ($q) => $q->where('course_master_pk', $preMedicalCoursePk))
+            ->first();
 
         return view('fc.registration.step3', compact(
             'qualifications','higherEdus','employments','spouse','languages','hindi',
@@ -148,12 +151,45 @@ class RegistrationStep3Controller extends Controller
 
     /**
      * Session / course label for FC pre-history (matches fc_pre_history.course used post-arrival).
+     * Falls back to course_master.course_name via fc_registration_master when session_id is null.
      */
     private function registrationSessionName(int $userId): string
     {
         $first = StudentMasterFirst::with('session')->forUser($userId)->first();
 
-        return trim((string) ($first?->session?->session_name ?? ''));
+        $sessionName = trim((string) ($first?->session?->session_name ?? ''));
+        if ($sessionName !== '') {
+            return $sessionName;
+        }
+
+        // Fallback: course_master.course_name via roster record.
+        $rosterPk = $userId < 0 ? abs($userId) : null;
+        if ($rosterPk === null && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+            $userName = \Illuminate\Support\Facades\DB::table('user_credentials')
+                ->where('pk', $userId)
+                ->value('user_name');
+            if ($userName) {
+                $rosterPk = (int) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+                    ->where('user_id', $userName)
+                    ->value('pk') ?? 0);
+            }
+        }
+
+        if ($rosterPk && \Illuminate\Support\Facades\Schema::hasTable('fc_registration_master')) {
+            $courseMasterPk = \Illuminate\Support\Facades\DB::table('fc_registration_master')
+                ->where('pk', $rosterPk)
+                ->value('course_master_pk');
+            if ($courseMasterPk && \Illuminate\Support\Facades\Schema::hasTable('course_master')) {
+                $courseName = trim((string) (\Illuminate\Support\Facades\DB::table('course_master')
+                    ->where('pk', $courseMasterPk)
+                    ->value('course_name') ?? ''));
+                if ($courseName !== '') {
+                    return $courseName;
+                }
+            }
+        }
+
+        return '';
     }
 
     /**
@@ -171,10 +207,12 @@ class RegistrationStep3Controller extends Controller
             'hospital_history' => 'nullable|string|max:60000',
             'altitude_illness' => 'nullable|string|max:60000',
             'additional_info' => 'nullable|string|max:60000',
-            'pre_med_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+            'pre_med_doc' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120',
         ]);
 
-        $existing = FcPreHistory::where(fc_user_col('fc_pre_history'), fc_user_val('fc_pre_history', $userId))->where('course', $course)->first();
+        $existing = FcPreHistory::where(fc_user_col('fc_pre_history'), fc_user_val('fc_pre_history', $userId))
+            ->when($courseMasterPk, fn ($q) => $q->where('course_master_pk', $courseMasterPk))
+            ->first();
 
         $docPath = $existing?->doc_path;
         if ($request->hasFile('pre_med_doc') && $request->file('pre_med_doc')->isValid()) {
@@ -187,16 +225,19 @@ class RegistrationStep3Controller extends Controller
             $docPath = 'storage/'.$stored;
         }
 
+        $courseMasterPk = app(\App\Services\FC\FcActivityStudentResolver::class)->courseMasterPkFromName($course) ?: null;
+
         FcPreHistory::updateOrCreate(
-            [fc_user_col('fc_pre_history') => fc_user_val('fc_pre_history', $userId), 'course' => $course],
+            [fc_user_col('fc_pre_history') => fc_user_val('fc_pre_history', $userId), 'course_master_pk' => $courseMasterPk],
             [
                 'allergy_illness' => $validated['allergy_illness'] ?? null,
                 'prolonged_medication' => $validated['prolonged_medication'] ?? null,
                 'hospital_history' => $validated['hospital_history'] ?? null,
                 'altitude_illness' => $validated['altitude_illness'] ?? null,
                 'additional_info' => $validated['additional_info'] ?? null,
-                'doc_path' => $docPath,
-                'status' => 1,
+                'doc_path'         => $docPath,
+                'course_master_pk'  => $courseMasterPk,
+                'status'           => 1,
             ]
         );
 

@@ -152,7 +152,7 @@ class RegistrationService
         
 
         $verifications = FcFormDocumentVerification::query()
-            ->where(fc_user_col('fc_form_document_verifications'), fc_user_val('fc_form_document_verifications', $userId))
+            ->where('user_id', $this->resolveStudentMasterId($userId))
             ->whereIn('form_field_id', $fields->pluck('id'))
             ->get()
             ->keyBy('form_field_id');
@@ -207,7 +207,7 @@ class RegistrationService
 
         FcFormDocumentVerification::updateOrCreate(
             [
-                fc_user_col('fc_form_document_verifications') => fc_user_val('fc_form_document_verifications', $userId),
+                'user_id' => $this->resolveStudentMasterId($userId),
                 'form_field_id' => $formFieldId,
             ],
             [
@@ -782,6 +782,17 @@ class RegistrationService
         ];
 
         return $map[$label] ?? $label;
+    }
+
+    /**
+     * fc_form_document_verifications.user_id has a FK to student_masters.id (not user_credentials.pk).
+     * Resolve the correct student_masters.id for a given user_credentials.pk.
+     */
+    private function resolveStudentMasterId(int $credentialsPk): int
+    {
+        $id = DB::table('student_masters')->where('user_id', $credentialsPk)->value('id');
+
+        return $id ? (int) $id : $credentialsPk;
     }
 
     /**

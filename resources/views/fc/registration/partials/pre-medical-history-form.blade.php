@@ -34,7 +34,11 @@
         </div>
         <div class="col-12">
             <label class="form-label small fw-semibold">Supporting document (PDF or image)</label>
-            <input type="file" name="pre_med_doc" class="form-control form-control-sm" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png">
+            <input type="file" name="pre_med_doc"
+                   class="form-control form-control-sm fc-file-upload"
+                   accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
+                   data-max-kb="5120">
+            <div id="pre-med-doc-error" class="text-danger small mt-1"></div>
             <div class="form-text text-muted">{{ fc_file_upload_hint('nullable|file|mimes:pdf,jpg,jpeg,png|max:10240') }}</div>
             @if($preMedical?->doc_path)
                 <div class="small mt-1">Current file: <a href="{{ asset($preMedical->doc_path) }}" target="_blank" rel="noopener">View</a></div>
@@ -54,3 +58,45 @@
         </div>
     @endif
 </form>
+<script>
+(function () {
+    var input = document.querySelector('input[name="pre_med_doc"].fc-file-upload');
+    if (!input) return;
+    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10) || 5120;
+    var allowedExts = ['pdf', 'jpg', 'jpeg', 'png'];
+    var errEl = document.getElementById('pre-med-doc-error');
+
+    function validate(file) {
+        if (!file) { errEl.textContent = ''; return true; }
+        var ext = file.name.split('.').pop().toLowerCase();
+        if (allowedExts.indexOf(ext) === -1) {
+            errEl.textContent = 'Invalid file type. Allowed: PDF, JPG, PNG.';
+            input.classList.add('is-invalid');
+            input.value = '';
+            return false;
+        }
+        if (file.size > maxKb * 1024) {
+            var limit = maxKb >= 1024 ? (maxKb / 1024) + ' MB' : maxKb + ' KB';
+            errEl.textContent = 'File is too large. Maximum allowed size is ' + limit + '.';
+            input.classList.add('is-invalid');
+            input.value = '';
+            return false;
+        }
+        errEl.textContent = '';
+        input.classList.remove('is-invalid');
+        return true;
+    }
+
+    input.addEventListener('change', function () { validate(this.files[0]); });
+
+    var form = input.closest('form');
+    if (form) {
+        form.addEventListener('submit', function (e) {
+            if (input.files && input.files.length && !validate(input.files[0])) {
+                e.preventDefault();
+                input.focus();
+            }
+        });
+    }
+}());
+</script>
