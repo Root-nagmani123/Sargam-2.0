@@ -1,128 +1,151 @@
-@include('components.menu.partials.panel-shell-open', [
-    'panelMenuId' => 'menu-right-setup-mini-7',
-    'panelMenuTitle' => 'MASTER',
-    'panelMenuClass' => 'sidebar-setup-mappings-menu',
-])
-                            @if(hasRole('Admin') || hasRole('Training-Induction'))
+<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-setup-mini-7" data-simplebar="init">
+    <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
+        <div class="simplebar-height-auto-observer-wrapper">
+            <div class="simplebar-height-auto-observer"></div>
+        </div>
+        <div class="simplebar-mask">
+            <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
+                <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
+                    style="height: 100%; overflow: hidden scroll;">
+                    <div class="simplebar-content" style="padding: 0px 0px 20px 24px;">
+                        <ul class="sidebar-menu" id="sidebarnav">
+                          
+                            <li class="nav-section" role="listitem">
+                                @if(hasRole('Admin') || hasRole('Training-Induction'))
 
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link sidebar-link-collapse d-flex align-items-center justify-content-between rounded-2 px-3 py-2"
+                                <!-- Main Container with Improved Layout -->
+                                <div class="d-flex align-items-center justify-content-between w-100 mt-4">
+
+                                    <!-- Left Side: Collapse Button with Enhanced Accessibility -->
+                                    <div class="d-flex align-items-center mb-3">
+                                        <!-- Section Title with Proper Semantic Markup -->
+                                        <h2 class="section-title text-white m-0"
+                                            style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
+                                            Master
+                                        </h2>
+                                    </div>
+                                </div>
+                            </li>
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
+                                        border-radius: 30px 0px 0px 30px;
+                                        width: 100%;
+                                        box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                        min-width: 250px;">
+                                <a class="text-white d-flex justify-content-between align-items-center"
                                     data-bs-toggle="collapse" href="#generalMasterMenu" role="button"
                                     aria-expanded="false" aria-controls="generalMasterMenu">
-                                    <span class="d-flex align-items-center gap-2 min-w-0">
-                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">inventory_2</i>
-                                        <span class="hide-menu small small-sm-normal text-nowrap">General Master</span>
-                                    </span>
-                                    <i class="material-icons material-symbols-rounded sidebar-panel-menu__chevron menu-icon" aria-hidden="true">chevron_right</i>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">General Master</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled mb-2" id="generalMasterMenu">
-                                <li class="sidebar-panel-submenu-tree">
-                                    <ul class="list-unstyled mb-0">
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('Venue-Master.*') ? 'active' : '' }}"
-                                                href="{{ route('Venue-Master.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Venue Master</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.class.session.*') ? 'active' : '' }}"
-                                                href="{{ route('master.class.session.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Class Session</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('stream.*') ? 'active' : '' }}"
-                                                href="{{ route('stream.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Stream</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </li>
+                            <ul class="collapse show" id="generalMasterMenu">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('Venue-Master.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Venue
+                                            Master</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.class.session.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Class
+                                            Session</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('stream.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Stream</span>
+                                    </a></li>
                             </ul>
 
-                            <li class="sidebar-item mb-1 d-none">
-                                <a class="sidebar-link sidebar-link-collapse d-flex align-items-center justify-content-between rounded-2 px-3 py-2"
-                                    data-bs-toggle="collapse" href="#hostelMenu" role="button"
-                                    aria-expanded="false" aria-controls="hostelMenu">
-                                    <span class="d-flex align-items-center gap-2 min-w-0">
-                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">hotel</i>
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Hostel</span>
-                                    </span>
-                                    <i class="material-icons material-symbols-rounded sidebar-panel-menu__chevron menu-icon" aria-hidden="true">chevron_right</i>
+                            <!-- HOSTEL -->
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2 d-none" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="text-white d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#hostelMenu" role="button" aria-expanded="false"
+                                    aria-controls="hostelMenu">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Hostel</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled mb-2 d-none" id="hostelMenu">
-                                <li class="sidebar-panel-submenu-tree">
-                                    <ul class="list-unstyled mb-0">
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.hostel.building.*') ? 'active' : '' }}"
-                                                href="{{ route('master.hostel.building.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Building Master</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.hostel.floor.*') ? 'active' : '' }}"
-                                                href="{{ route('master.hostel.floor.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Floor</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('hostel.building.floor.room.map.*') ? 'active' : '' }}"
-                                                href="{{ route('hostel.building.floor.room.map.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Building Floor Room Mapping</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('hostel.building.map.assign.student.*') ? 'active' : '' }}"
-                                                href="{{ route('hostel.building.map.assign.student') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Assign Hostel</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </li>
-                            </ul>
+                            <div class="collapse" id="hostelMenu">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.hostel.building.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Building Master</span>
+                                    </a></li>
+                                {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('master.hostel.room.index') }}">
+                                <span class="hide-menu">Hostel
+                                    Room</span>
+                                </a></li> --}}
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.hostel.floor.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">
+                                            Floor</span>
+                                    </a></li>
+                                {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('hostel.building.map.index') }}">
+                                <iconify-icon icon="solar:airbuds-case-line-duotone"></iconify-icon><span
+                                    class="hide-menu">Hostel
+                                    Floor Mapping</span>
+                                </a></li> --}}
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('hostel.building.floor.room.map.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Building
+                                            Floor Room Mapping</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('hostel.building.map.assign.student') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Assign
+                                            Hostel</span>
+                                    </a></li>
+                            </div>
 
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link sidebar-link-collapse d-flex align-items-center justify-content-between rounded-2 px-3 py-2"
-                                    data-bs-toggle="collapse" href="#addressMenu" role="button"
-                                    aria-expanded="false" aria-controls="addressMenu">
-                                    <span class="d-flex align-items-center gap-2 min-w-0">
-                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">location_on</i>
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Address</span>
-                                    </span>
-                                    <i class="material-icons material-symbols-rounded sidebar-panel-menu__chevron menu-icon" aria-hidden="true">chevron_right</i>
+                            <!-- ADDRESS -->
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="text-white d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#addressMenu" role="button" aria-expanded="false"
+                                    aria-controls="addressMenu">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Address</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled mb-2" id="addressMenu">
-                                <li class="sidebar-panel-submenu-tree">
-                                    <ul class="list-unstyled mb-0">
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.country.*') ? 'active' : '' }}"
-                                                href="{{ route('master.country.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">Country</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.state.*') ? 'active' : '' }}"
-                                                href="{{ route('master.state.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">State</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.district.*') ? 'active' : '' }}"
-                                                href="{{ route('master.district.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">District</span>
-                                            </a>
-                                        </li>
-                                        <li class="sidebar-item mb-1">
-                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.city.*') ? 'active' : '' }}"
-                                                href="{{ route('master.city.index') }}">
-                                                <span class="hide-menu small small-sm-normal text-nowrap">City</span>
-                                            </a>
-                                        </li>
-                                    </ul>
-                                </li>
-                            </ul>
-                            @endif
-@include('components.menu.partials.panel-shell-close')
+                            <div class="collapse" id="addressMenu">
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.country.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Country</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.state.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">State</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.district.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">District</span>
+                                    </a></li>
+                                <li class="sidebar-item"><a class="sidebar-link"
+                                        href="{{ route('master.city.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">City</span>
+                                    </a></li>
+                            </div>
+                        </ul>
+                        @endif
+
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="simplebar-placeholder" style="width: 240px; height: 864px;"></div>
+    </div>
+    <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
+        <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
+    </div>
+    <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
+        <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);">
+        </div>
+    </div>
+</nav>

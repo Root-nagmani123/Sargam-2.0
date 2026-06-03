@@ -6,8 +6,10 @@
 <div class="container-fluid">
     <x-breadcrum title="Active Course"></x-breadcrum>
 
-    <div class="card">
+    <div class="card" style="border-left: 4px solid #004a93;">
         <div class="card-body">
+            <h4>Active Course</h4>
+            <hr class="my-2">
             <div class="datatables">
                 <div class="table-responsive">
                     <table class="table" id="active_course">
