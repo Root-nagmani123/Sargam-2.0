@@ -22,8 +22,8 @@
     </div>
 
     <!-- Filters Section (Hide on Print) -->
-    <div class="card mb-4 border-0 shadow-sm rounded-3 overflow-hidden no-print">
-        <div style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
+    <div class="card mb-4 border-0 shadow-sm rounded-3 no-print stock-summary-filter-card">
+        <div class="rounded-top-3" style="height:3px;background:linear-gradient(90deg,#0b4a7e 0%,#2980b9 50%,#0b4a7e 100%);" aria-hidden="true"></div>
         <div class="card-header bg-body-tertiary border-0 py-3 px-3 px-lg-4">
             <div class="d-flex flex-column flex-sm-row align-items-sm-center justify-content-between gap-2">
                 <div class="d-flex align-items-start gap-3">
@@ -479,6 +479,25 @@ document.addEventListener('DOMContentLoaded', function () {
     .report-header p {
         color: #333;
         font-size: 1.125rem;
+    }
+
+    /* Filter card: allow Tom Select dropdowns to extend outside the card */
+    .stock-summary-report .stock-summary-filter-card,
+    .stock-summary-report .stock-summary-filter-card .card-header,
+    .stock-summary-report .stock-summary-filter-card .card-body,
+    .stock-summary-report .stock-summary-filter-card .row,
+    .stock-summary-report .stock-summary-filter-card [class*="col-"] {
+        overflow: visible;
+    }
+    .stock-summary-report .stock-summary-filter-card .ts-wrapper {
+        position: relative;
+        z-index: 1;
+    }
+    .stock-summary-report .stock-summary-filter-card .ts-wrapper.dropdown-active {
+        z-index: 2;
+    }
+    body > .ts-dropdown {
+        z-index: 1065 !important;
     }
 
     /* —— Stock summary card + table (redesigned) —— */
@@ -1266,6 +1285,7 @@ document.addEventListener('DOMContentLoaded', function () {
     document.addEventListener('DOMContentLoaded', function () {
         if (typeof window.TomSelect === 'undefined') return;
 
+        var tsDropdownToBody = { dropdownParent: 'body' };
         var storeTypeSelect = document.getElementById('store_type');
         var mainStoreDiv = document.getElementById('main_store_div');
         var subStoreDiv = document.getElementById('sub_store_div');
@@ -1273,13 +1293,13 @@ document.addEventListener('DOMContentLoaded', function () {
         function initStoreMultiselect(el) {
             if (!el || el.tomselect) return;
             var placeholder = el.getAttribute('data-placeholder') || 'Select';
-            new TomSelect(el, {
+            new TomSelect(el, Object.assign({
                 create: false,
                 maxItems: null,
                 placeholder: placeholder,
                 plugins: ['remove_button', 'dropdown_input'],
                 sortField: { field: 'text', direction: 'asc' }
-            });
+            }, tsDropdownToBody));
         }
 
         function syncStoreMultiselects() {
@@ -1323,14 +1343,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
         var typeEl = document.getElementById('store_type');
         if (typeEl && !typeEl.tomselect) {
-            new TomSelect(typeEl, {
+            new TomSelect(typeEl, Object.assign({
                 create: false,
                 maxItems: 1,
                 allowEmptyOption: false,
                 placeholder: typeEl.getAttribute('data-placeholder') || 'Select',
                 plugins: ['dropdown_input'],
                 sortField: { field: 'text', direction: 'asc' }
-            });
+            }, tsDropdownToBody));
         }
 
         syncStoreMultiselects();

@@ -91,7 +91,7 @@ class EmployeeMaster extends Model
         return trim($this->first_name . ' ' . $this->last_name);
     }
 
-    
+
     public static function getDeputationEmployeeList()
     {
         $deputationEmployeeList = self::where('emp_type', EmployeeTypeMaster::getDeputationPK())->get();
@@ -127,7 +127,7 @@ class EmployeeMaster extends Model
         if(!$userRoleMaster) {
             return collect();
         }
-        
+
         $assignedRoles = [];
         // dd($userRoleMaster);
         $userRoleMaster->each(function ($role) use (&$assignedRoles) {

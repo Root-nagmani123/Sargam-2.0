@@ -279,7 +279,7 @@ class MemberController extends Controller
     {
         $requestRules = (new StoreMemberStep5Request())->rules();
         $requestMessages = (new StoreMemberStep5Request())->messages();
-        
+
         $validator = Validator::make($request->all(), $requestRules, $requestMessages);
 
         if ($validator->fails()) {
@@ -332,9 +332,9 @@ class MemberController extends Controller
 
         $requestRules = (new StoreMemberStep5Request())->rules();
         $requestMessages = (new StoreMemberStep5Request())->messages();
-        
+
         $validator = Validator::make($request->all(), $requestRules, $requestMessages);
-        
+
         if ($validator->fails()) {
             return response()->json(['errors' => $validator->errors()], 422);
         }
@@ -348,7 +348,7 @@ class MemberController extends Controller
         if ($request->hasFile('additionaldocument')) {
             $additional_doc_upload = $request->file('additionaldocument')->store('members', 'public');
         }
-        
+
         EmployeeMaster::find($request->emp_id)->update([
             'residence_no' => $request->residencenumber,
             'home_town_details' => $request->homeaddress,
@@ -530,6 +530,15 @@ class MemberController extends Controller
             $memberId = decrypt($id);
             $member = EmployeeMaster::findOrFail($memberId);
 
+            // Check if member is active
+            if ($member->status == 1) {
+                $message = 'Cannot delete active record. Please set status to inactive first.';
+                if (request()->ajax()) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+                return redirect()->route('member.index')->with('error', $message);
+            }
+
             // Delete related UserCredential and EmployeeRoleMapping
             $userCredential = UserCredential::where('user_id', $memberId)->first();
             if ($userCredential) {
@@ -544,9 +553,17 @@ class MemberController extends Controller
 
             MemberDataTable::bumpListingCacheEpoch();
 
-            return redirect()->route('member.index')->with('success', 'Member deleted successfully.');
+            $message = 'Member deleted successfully.';
+            if (request()->ajax()) {
+                return response()->json(['success' => true, 'message' => $message]);
+            }
+            return redirect()->route('member.index')->with('success', $message);
         } catch (\Exception $e) {
-            return redirect()->route('member.index')->with('error', 'Error deleting member: ' . $e->getMessage());
+            $message = 'Error deleting member: ' . $e->getMessage();
+            if (request()->ajax()) {
+                return response()->json(['success' => false, 'message' => $message], 500);
+            }
+            return redirect()->route('member.index')->with('error', $message);
         }
     }
 }

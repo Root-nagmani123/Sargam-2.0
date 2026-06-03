@@ -31,15 +31,31 @@
     }
 
     MessColumnManager.prototype._headerText = function (index) {
+        var th = null;
         if (this.mode === 'datatable' && this.dt) {
-            return ($(this.dt.column(index).header()).text() || '').trim();
+            th = this.dt.column(index).header();
+        } else {
+            th = this.$table.find('thead tr').first().children('th,td').get(index);
         }
-        var $th = this.$table.find('thead tr').first().children('th,td').eq(index);
-        var original = $th.attr('data-mess-col-original');
+        if (!th) {
+            return '';
+        }
+        if (typeof window.messPrintThLabel === 'function') {
+            var viaHelper = window.messPrintThLabel(th);
+            if (viaHelper) {
+                return viaHelper;
+            }
+        }
+        var original = th.getAttribute && th.getAttribute('data-mess-col-original');
         if (original) {
             return String(original).trim();
         }
-        return ($th.text() || '').trim();
+        var $clone = $(th).clone();
+        $clone.find(
+            '.mess-report-sort-icon, .material-symbols-rounded, .material-icons, .material-symbol-rounded, i[class*="material"]'
+        ).remove();
+        var label = ($clone.text() || '').replace(/\s+/g, ' ').trim();
+        return label.replace(/\s+(unfold_more|arrow_upward|arrow_downward|swap_vert)$/i, '');
     };
 
     MessColumnManager.prototype._isLocked = function (index) {
