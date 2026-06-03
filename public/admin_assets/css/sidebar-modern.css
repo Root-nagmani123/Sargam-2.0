@@ -1,0 +1,572 @@
+/**
+ * Sargam 2.0 — dual sidebar (reference: mini-nav + white panel + dashed submenu)
+ * Loads after styles.css and sidebar-menu-enhanced.css
+ */
+:root {
+    --sargam-header-offset: 122px;
+    --sargam-mini-nav-width: 90px;
+    --sargam-mini-squircle-size: 56px;
+    --sargam-mini-squircle-radius: 14px;
+    --sargam-mini-nav-gap: 0.75rem;
+    --sargam-panel-width: 252px;
+    --sargam-sidebar-full-width: calc(var(--sargam-mini-nav-width) + var(--sargam-panel-width));
+    --sargam-sidebar-active-bg: #e7f1ff;
+    --sargam-sidebar-active-color: #004a93;
+    --sargam-sidebar-border: #e5e7eb;
+    --sargam-sidebar-radius: 0.5rem;
+}
+
+/* ─── Fixed shell below header ─── */
+@media (min-width: 992px) {
+    html[data-layout="vertical"] aside.side-mini-panel.sidebar-google-style {
+        position: fixed !important;
+        top: var(--sargam-header-offset) !important;
+        left: 0 !important;
+        height: calc(100vh - var(--sargam-header-offset)) !important;
+        z-index: 99 !important;
+        background: #fff !important;
+        border-right: 1px solid var(--sargam-sidebar-border) !important;
+        transition: width 0.25s ease, max-width 0.25s ease !important;
+        overflow: hidden !important;
+        box-shadow: 1px 0 0 rgba(15, 23, 42, 0.04) !important;
+    }
+
+    html[data-layout="vertical"] body[data-sidebartype="full"] aside.side-mini-panel.sidebar-google-style {
+        width: var(--sargam-sidebar-full-width) !important;
+        max-width: var(--sargam-sidebar-full-width) !important;
+    }
+
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] aside.side-mini-panel.sidebar-google-style {
+        width: var(--sargam-mini-nav-width) !important;
+        max-width: var(--sargam-mini-nav-width) !important;
+    }
+
+    html[data-layout="vertical"] .page-wrapper {
+        margin-left: 0 !important;
+    }
+
+    html[data-layout="vertical"] body[data-sidebartype="full"] .body-wrapper {
+        margin-left: var(--sargam-sidebar-full-width) !important;
+    }
+
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .body-wrapper {
+        margin-left: var(--sargam-mini-nav-width) !important;
+    }
+
+    html[data-layout="vertical"] #sidebarTabContent {
+        position: fixed !important;
+        top: var(--sargam-header-offset) !important;
+        left: 0 !important;
+        z-index: 99 !important;
+        width: 0 !important;
+        height: 0 !important;
+        overflow: visible !important;
+        border: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    html[data-layout="vertical"] #sidebarTabContent > .tab-pane {
+        display: none !important;
+    }
+
+    html[data-layout="vertical"] #sidebarTabContent > .tab-pane.show.active {
+        display: block !important;
+    }
+}
+
+@media (min-width: 1300px) {
+    html[data-layout="vertical"] body[data-sidebartype="full"] .body-wrapper {
+        margin-left: var(--sargam-sidebar-full-width) !important;
+    }
+
+    html[data-layout="vertical"] body[data-sidebartype="mini-sidebar"] .body-wrapper {
+        margin-left: var(--sargam-mini-nav-width) !important;
+    }
+}
+
+/* ─── Iconbar row ─── */
+.side-mini-panel.sidebar-google-style .vh-100,
+.side-mini-panel.sidebar-google-style .iconbar {
+    height: 100% !important;
+    min-height: 0 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sargam-sidebar-iconbar {
+    display: flex !important;
+    flex-direction: row !important;
+    align-items: stretch !important;
+    flex: 1 1 auto !important;
+    min-height: 0 !important;
+    width: 100% !important;
+    background: #fff !important;
+}
+
+/* Mini rail — white + right border (reference) */
+.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav,
+.side-mini-panel.sidebar-google-style .mini-nav.sargam-mini-nav,
+.side-mini-panel.sidebar-google-style .mini-nav {
+    flex: 0 0 var(--sargam-mini-nav-width) !important;
+    width: var(--sargam-mini-nav-width) !important;
+    min-width: var(--sargam-mini-nav-width) !important;
+    max-width: var(--sargam-mini-nav-width) !important;
+    height: 100% !important;
+    margin-top: 0 !important;
+    padding: 0.5rem 0.3rem 1rem !important;
+    background: #fff !important;
+    border-right: 1px solid var(--sargam-sidebar-border) !important;
+    border-radius: 0 !important;
+    position: relative !important;
+    z-index: 2 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebarmenu {
+    flex: 1 1 auto !important;
+    width: var(--sargam-panel-width) !important;
+    min-width: var(--sargam-panel-width) !important;
+    max-width: var(--sargam-panel-width) !important;
+    height: 100% !important;
+    background: #fff !important;
+    overflow: hidden !important;
+    position: relative !important;
+    display: block !important;
+}
+
+@media (min-width: 992px) {
+    body[data-sidebartype="mini-sidebar"] .side-mini-panel.sidebar-google-style .sidebarmenu {
+        display: none !important;
+        width: 0 !important;
+        min-width: 0 !important;
+        max-width: 0 !important;
+        border: none !important;
+    }
+}
+
+/* ─── Mini-nav: fixed icon slot + label below (reference alignment) ─── */
+.sidebar-google-hamburger {
+    padding: 0.5rem 0 0.25rem !important;
+    margin: 0 0 0.25rem !important;
+    width: 100% !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+
+.sidebar-mini-squircle-item,
+.side-mini-panel.sidebar-google-style .sidebar-mini-toggle.sidebar-mini-squircle-item {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.35rem !important;
+    width: 100% !important;
+    max-width: var(--sargam-mini-nav-width) !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    text-decoration: none !important;
+    color: #1a1a1a !important;
+}
+
+/* Fixed 56×56 slot — keeps every icon on the same vertical axis */
+.sidebar-mini-squircle-box {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: var(--sargam-mini-squircle-size) !important;
+    height: var(--sargam-mini-squircle-size) !important;
+    min-width: var(--sargam-mini-squircle-size) !important;
+    min-height: var(--sargam-mini-squircle-size) !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    border: none !important;
+    border-radius: var(--sargam-mini-squircle-radius) !important;
+    background: transparent !important;
+    flex-shrink: 0 !important;
+    transition: background-color 0.15s ease !important;
+}
+
+/* Close / Open — gray squircle */
+.sidebar-mini-squircle-box--neutral,
+.sidebar-google-hamburger .sidebar-mini-squircle-box {
+    background: #f0f0f0 !important;
+}
+
+.sidebar-mini-squircle-box .material-icons,
+.sidebar-mini-squircle-box .menu-icon {
+    font-size: 26px !important;
+    width: 26px !important;
+    height: 26px !important;
+    line-height: 1 !important;
+    color: #1a1a1a !important;
+    opacity: 1 !important;
+}
+
+/* Label directly under icon slot */
+.sidebar-mini-squircle-label,
+.sidebar-mini-toggle-label {
+    font-size: 0.6875rem !important;
+    font-weight: 500 !important;
+    line-height: 1.2 !important;
+    color: #1a1a1a !important;
+    text-align: center !important;
+    max-width: 82px;
+    padding: 0 0.15rem !important;
+    word-break: break-word;
+    hyphens: auto;
+    display: block !important;
+}
+
+.sidebar-mini-toggle-text-open {
+    display: none !important;
+}
+
+body[data-sidebartype="mini-sidebar"] .sidebar-mini-toggle-text-close {
+    display: none !important;
+}
+
+body[data-sidebartype="mini-sidebar"] .sidebar-mini-toggle-text-open {
+    display: inline !important;
+}
+
+/* Nav list */
+.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav ul.mini-nav-ul,
+.side-mini-panel.sidebar-google-style .mini-nav ul.mini-nav-ul {
+    padding: 0 !important;
+    margin: 0 !important;
+    list-style: none !important;
+    height: auto !important;
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+}
+
+.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item {
+    list-style: none !important;
+    width: 100% !important;
+    padding: 0 !important;
+    margin: 0 0 var(--sargam-mini-nav-gap) !important;
+    display: flex !important;
+    justify-content: center !important;
+}
+
+/* Link wrapper */
+.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item > a,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item > a.mini-nav-link,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item > a {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    gap: 0.35rem !important;
+    width: 100% !important;
+    max-width: var(--sargam-mini-nav-width) !important;
+    min-height: 0 !important;
+    height: auto !important;
+    padding: 0 !important;
+    margin: 0 auto !important;
+    background: transparent !important;
+    text-align: center !important;
+    position: relative !important;
+    border: none !important;
+    box-shadow: none !important;
+}
+
+.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item > a::before,
+.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item > a::after,
+.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item.selected > a::before,
+.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item.selected > span::before,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item > a::before,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item > a::after,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected > a::before,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected > span::before {
+    display: none !important;
+    content: none !important;
+}
+
+/* Inactive — same 56px slot, transparent bg, black icon + label */
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item:not(.selected) .sidebar-mini-squircle-box {
+    background: transparent !important;
+    border-radius: var(--sargam-mini-squircle-radius) !important;
+}
+
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item:not(.selected) .sidebar-mini-squircle-box .material-icons,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item:not(.selected) .sidebar-mini-squircle-box .menu-icon {
+    color: #1a1a1a !important;
+}
+
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item:not(.selected) .sidebar-mini-squircle-label,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item:not(.selected) .mini-nav-title {
+    color: #1a1a1a !important;
+    font-weight: 500 !important;
+}
+
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item:not(.selected) > a:hover .sidebar-mini-squircle-box {
+    background: transparent !important;
+}
+
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item:not(.selected) > a:hover .material-icons {
+    color: #374151 !important;
+}
+
+/* Active — blue squircle in same slot + blue label */
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected > a {
+    background: transparent !important;
+}
+
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected .sidebar-mini-squircle-box {
+    background: var(--sargam-sidebar-active-bg) !important;
+}
+
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected .sidebar-mini-squircle-box .material-icons,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected .sidebar-mini-squircle-box .menu-icon {
+    color: var(--sargam-sidebar-active-color) !important;
+}
+
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected .sidebar-mini-squircle-label,
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected .mini-nav-title {
+    color: var(--sargam-sidebar-active-color) !important;
+    font-weight: 600 !important;
+}
+
+/* ─── Secondary panel: one mini-nav menu visible at a time (stacked, not in document flow) ─── */
+.side-mini-panel.sidebar-google-style .sidebarmenu > nav.sidebar-panel-menu,
+.side-mini-panel.sidebar-google-style .sidebarmenu .sidebar-nav.sidebar-panel-menu {
+    position: absolute !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #fff !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    display: none !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    overflow: hidden !important;
+    z-index: 1 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebarmenu > nav.sidebar-panel-menu.is-active-panel,
+.side-mini-panel.sidebar-google-style .sidebarmenu .sidebar-nav.sidebar-panel-menu.is-active-panel,
+.side-mini-panel.sidebar-google-style .sidebarmenu > nav.sidebar-panel-menu.d-block:not([style*="display: none"]),
+.side-mini-panel.sidebar-google-style .sidebarmenu .sidebar-nav.sidebar-panel-menu.d-block:not([style*="display: none"]) {
+    display: flex !important;
+    flex-direction: column !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
+    z-index: 2 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebarmenu .sidebar-nav .simplebar-content,
+.side-mini-panel.sidebar-google-style .sidebarmenu nav.sidebar-panel-menu .sidebar-panel-menu__content {
+    padding: 1.1rem 0.85rem 1.25rem 1rem !important;
+    background: #fff !important;
+}
+
+/* Section title GENERAL / ACADEMICS */
+.sidebar-panel-menu .sidebar-panel-menu__title,
+.side-mini-panel.sidebar-google-style .sidebar-panel-menu__title {
+    letter-spacing: 0.14em;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    color: #9ca3af !important;
+    margin-bottom: 0.75rem !important;
+    padding-left: 0.35rem !important;
+}
+
+/* Override sidebar-menu-enhanced.css inside modern shell */
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-item {
+    margin-bottom: 0.125rem !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link,
+.side-mini-panel.sidebar-google-style .sidebarmenu .sidebar-nav ul .sidebar-item .sidebar-link {
+    display: flex !important;
+    align-items: center !important;
+    gap: 0.625rem !important;
+    padding: 0.5rem 0.75rem !important;
+    margin-bottom: 0 !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    color: #1f2937 !important;
+    background: transparent !important;
+    border-radius: var(--sargam-sidebar-radius) !important;
+    box-shadow: none !important;
+    transform: none !important;
+    white-space: nowrap !important;
+    max-width: none !important;
+    width: 100% !important;
+    overflow: visible !important;
+    transition: background-color 0.15s ease, color 0.15s ease !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link:hover,
+.side-mini-panel.sidebar-google-style .sidebarmenu .sidebar-nav ul .sidebar-item .sidebar-link:hover {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+    transform: none !important;
+    box-shadow: none !important;
+    padding-left: 0.75rem !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link.active,
+.side-mini-panel.sidebar-google-style .sidebarmenu .sidebar-nav ul .sidebar-item .sidebar-link.active {
+    background: var(--sargam-sidebar-active-bg) !important;
+    color: var(--sargam-sidebar-active-color) !important;
+    font-weight: 600 !important;
+    box-shadow: none !important;
+    transform: none !important;
+}
+
+/* Collapse headers stay neutral when expanded (not active pill) */
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link-collapse[aria-expanded="true"],
+.side-mini-panel.sidebar-google-style .sidebar-link-collapse[aria-expanded="true"] {
+    background: transparent !important;
+    color: #1f2937 !important;
+    font-weight: 500 !important;
+    box-shadow: none !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link .material-icons,
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link .sidebar-panel-menu__icon {
+    color: #6b7280 !important;
+    font-size: 20px !important;
+    opacity: 1 !important;
+    flex-shrink: 0 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link.active .material-icons,
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link.active .sidebar-panel-menu__icon {
+    color: var(--sargam-sidebar-active-color) !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-menu .hide-menu,
+.side-mini-panel.sidebar-google-style .sidebar-nav .sidebar-link span {
+    color: inherit !important;
+}
+
+/* Chevron: right when closed, up when open (reference) */
+.side-mini-panel.sidebar-google-style .sidebar-panel-menu__chevron,
+.side-mini-panel.sidebar-google-style .sidebar-menu .menu-icon.sidebar-panel-menu__chevron {
+    font-size: 1.35rem !important;
+    color: #9ca3af !important;
+    margin-left: auto !important;
+    transition: transform 0.2s ease, color 0.2s ease !important;
+    transform: none !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-link-collapse[aria-expanded="true"] .sidebar-panel-menu__chevron,
+.side-mini-panel.sidebar-google-style .sidebar-link-collapse[aria-expanded="true"] .menu-icon {
+    transform: rotate(-90deg) !important;
+    color: #6b7280 !important;
+}
+
+/* Neutralize enhanced.css chevron rotation */
+.side-mini-panel.sidebar-google-style .sidebar-menu .sidebar-link[aria-expanded="true"] .menu-icon:not(.sidebar-panel-menu__chevron) {
+    transform: rotate(-90deg) !important;
+}
+
+/* ─── Dashed submenu tree (Course Master reference) ─── */
+.side-mini-panel.sidebar-google-style .sidebar-panel-submenu-tree {
+    list-style: none !important;
+    margin: 0.15rem 0 0.5rem 0 !important;
+    margin-left: 0.75rem !important;
+    padding: 0.15rem 0 0.15rem 0.875rem !important;
+    border-left: 1px dashed #cbd5e1 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-panel-submenu-tree > .list-unstyled {
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-panel-submenu-tree .sidebar-item {
+    margin-bottom: 0.125rem !important;
+    margin-left: 0 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-panel-submenu-tree .sidebar-link {
+    font-size: 0.875rem !important;
+    font-weight: 400 !important;
+    padding: 0.45rem 0.75rem !important;
+    border-radius: var(--sargam-sidebar-radius) !important;
+    color: #374151 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-panel-submenu-tree .sidebar-link:hover {
+    background: #f3f4f6 !important;
+    color: #111827 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-panel-submenu-tree .sidebar-link.active {
+    background: var(--sargam-sidebar-active-bg) !important;
+    color: var(--sargam-sidebar-active-color) !important;
+    font-weight: 600 !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-panel-submenu-tree .sidebar-link::before {
+    display: none !important;
+    content: none !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebar-item.selected > .sidebar-link::before,
+.side-mini-panel.sidebar-google-style .sidebar-item > .sidebar-link::before {
+    display: none !important;
+    content: none !important;
+}
+
+.side-mini-panel.sidebar-google-style .sidebarmenu .nav-section .section-title {
+    color: #9ca3af !important;
+    font-size: 0.6875rem !important;
+    font-weight: 600 !important;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+}
+
+/* Final kill-switch for styles.css mini-nav (higher specificity) */
+aside.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav {
+    background: #fff !important;
+    margin-top: 0 !important;
+    border-radius: 0 !important;
+}
+
+aside.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item > a {
+    background: transparent !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding-left: 0 !important;
+    text-align: center !important;
+}
+
+aside.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item.selected > a {
+    background: transparent !important;
+}
+
+aside.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item:not(.selected) .sidebar-mini-squircle-box {
+    background: transparent !important;
+}
+
+aside.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item.selected .sidebar-mini-squircle-box {
+    background: var(--sargam-sidebar-active-bg) !important;
+}
+
+/* Legacy styles.css — force column layout in mini rail */
+aside.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item > a {
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: flex-start !important;
+    padding-left: 0 !important;
+    height: auto !important;
+    background: transparent !important;
+}
+
+.side-mini-panel.sidebar-google-style .mini-nav .mini-nav-item.selected > a .mini-nav-title {
+    font-size: 0.6875rem !important;
+}
