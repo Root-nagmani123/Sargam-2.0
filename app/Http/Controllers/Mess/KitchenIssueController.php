@@ -200,12 +200,20 @@ class KitchenIssueController extends Controller
 
         // When the user filtered by buyer only, restore type/category for the filter UI from the latest voucher.
         if ($selectedBuyerName !== '' && $selectedClientType === '') {
-            $inferred = KitchenIssueMaster::query()
-                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where(function ($q) use ($selectedBuyerName) {
+            $clientIdForInference = $this->resolveClientIdForBuyerFilter($selectedBuyerName, '');
+            $inferredQuery = KitchenIssueMaster::query()
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+
+            if ($clientIdForInference !== null && $clientIdForInference > 0) {
+                $inferredQuery->where('client_id', $clientIdForInference);
+            } else {
+                $inferredQuery->where(function ($q) use ($selectedBuyerName) {
                     $q->where('client_name', $selectedBuyerName)
                         ->orWhere('client_name', 'LIKE', $selectedBuyerName.' (%');
-                })
+                });
+            }
+
+            $inferred = $inferredQuery
                 ->orderByDesc('issue_date')
                 ->orderByDesc('pk')
                 ->first(['client_type', 'client_type_pk']);
@@ -215,6 +223,11 @@ class KitchenIssueController extends Controller
                 $selectedClientTypePk = (string) ($inferred->client_type_pk ?? '');
                 $selectedTypeSlug = $typeSlugMap[$selectedClientType] ?? '';
             }
+        }
+
+        $resolvedBuyerClientId = $this->resolveClientIdForBuyerFilter($selectedBuyerName, $selectedTypeSlug);
+        if ($resolvedBuyerClientId !== null && $resolvedBuyerClientId > 0) {
+            $selectedBuyerName = (string) $resolvedBuyerClientId;
         }
 
         $filterClientTypePkOptions = collect();
@@ -236,16 +249,20 @@ class KitchenIssueController extends Controller
                 ->values();
         }
 
+        $filterEmployeeBuyerOptions = $this->employeeBuyerFilterOptions($employees);
+        $filterFacultyBuyerOptions = $this->facultyBuyerFilterOptions($faculties);
+        $filterMessStaffBuyerOptions = $this->employeeBuyerFilterOptions($messStaff);
+
         $filterBuyerNames = collect();
         if ($selectedTypeSlug === 'employee' && $selectedClientTypePk !== '') {
             $selectedEmployeeBucket = strtolower(trim((string) $filterClientTypePkOptions
                 ->firstWhere('value', $selectedClientTypePk)['text'] ?? ''));
             if ($selectedEmployeeBucket === 'academy staff') {
-                $filterBuyerNames = $employees->pluck('full_name_with_department')->filter()->values();
+                $filterBuyerNames = collect($filterEmployeeBuyerOptions);
             } elseif ($selectedEmployeeBucket === 'faculty') {
-                $filterBuyerNames = $faculties->pluck('full_name')->filter()->values();
+                $filterBuyerNames = collect($filterFacultyBuyerOptions);
             } elseif ($selectedEmployeeBucket === 'mess staff') {
-                $filterBuyerNames = $messStaff->pluck('full_name_with_department')->filter()->values();
+                $filterBuyerNames = collect($filterMessStaffBuyerOptions);
             }
         } elseif ($selectedTypeSlug === 'ot' && $selectedClientTypePk !== '') {
             $filterBuyerNames = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
@@ -297,8 +314,22 @@ class KitchenIssueController extends Controller
                 ->values();
         }
 
-        if ($selectedBuyerName !== '' && ! $filterBuyerNames->contains($selectedBuyerName)) {
-            $filterBuyerNames = $filterBuyerNames->prepend($selectedBuyerName)->values();
+        if ($selectedBuyerName !== '' && ! $filterBuyerNames->contains(function ($item) use ($selectedBuyerName) {
+            $value = is_array($item) ? (string) ($item['value'] ?? '') : (string) $item;
+
+            return $value === (string) $selectedBuyerName;
+        })) {
+            $label = $selectedBuyerName;
+            if (ctype_digit($selectedBuyerName)) {
+                $resolvedLabel = $this->resolveEmployeeBuyerNameForFilter((int) $selectedBuyerName, (int) $selectedClientTypePk);
+                if ($resolvedLabel !== '') {
+                    $label = $resolvedLabel;
+                }
+            }
+            $filterBuyerNames = $filterBuyerNames->prepend([
+                'value' => $selectedBuyerName,
+                'text' => $label,
+            ])->values();
         }
 
         if ($selectedClientTypePk !== '' && $selectedClientType !== '') {
@@ -334,8 +365,45 @@ class KitchenIssueController extends Controller
             'selectedClientTypePk',
             'selectedBuyerName',
             'filterClientTypePkOptions',
-            'filterBuyerNames'
+            'filterBuyerNames',
+            'filterEmployeeBuyerOptions',
+            'filterFacultyBuyerOptions',
+            'filterMessStaffBuyerOptions'
         ));
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, object>  $employees
+     * @return list<array{value: string, text: string}>
+     */
+    private function employeeBuyerFilterOptions($employees): array
+    {
+        return $employees->map(function ($employee) {
+            $value = (string) ($employee->pk ?? '');
+            $text = (string) ($employee->full_name_with_department ?? $employee->full_name ?? '');
+            if ($value === '' || $text === '') {
+                return null;
+            }
+
+            return ['value' => $value, 'text' => $text];
+        })->filter()->values()->all();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, object>  $faculties
+     * @return list<array{value: string, text: string}>
+     */
+    private function facultyBuyerFilterOptions($faculties): array
+    {
+        return $faculties->map(function ($faculty) {
+            $value = (string) ($faculty->pk ?? '');
+            $text = (string) ($faculty->full_name ?? '');
+            if ($value === '' || $text === '') {
+                return null;
+            }
+
+            return ['value' => $value, 'text' => $text];
+        })->filter()->values()->all();
     }
 
     /**
@@ -602,7 +670,7 @@ class KitchenIssueController extends Controller
                 $q->where('kim.client_type_pk', $clientTypePk);
             }
         }
-        $this->applySellingVoucherBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
+        $this->applySellingVoucherBuyerNameFilter($q, $request);
 
         // Date filter: default last 30 days when blank; skip default when user searches or targets a buyer/category.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
@@ -672,19 +740,232 @@ class KitchenIssueController extends Controller
     }
 
     /**
-     * Match buyer names saved with optional department suffix, e.g. "Name (Dept)".
+     * Match buyer by client_id when available; otherwise fall back to client_name patterns.
      */
-    private function applySellingVoucherBuyerNameFilter(Builder $q, string $buyerName): void
+    private function applySellingVoucherBuyerNameFilter(Builder $q, Request $request): void
     {
-        $buyerName = trim($buyerName);
+        $buyerName = trim((string) $request->input('buyer_name', ''));
         if ($buyerName === '') {
             return;
         }
 
+        $clientTypeSlug = $this->sellingVoucherClientTypeSlugFromRequest($request);
+        $clientTypePk = (int) $request->input('client_type_pk', 0);
+
+        if (in_array($clientTypeSlug, [ClientType::TYPE_OT, ClientType::TYPE_COURSE], true)) {
+            if (ctype_digit($buyerName)) {
+                $q->where('kim.client_id', (int) $buyerName);
+            } else {
+                $q->where(function ($bq) use ($buyerName) {
+                    $this->applyKitchenIssueBuyerNamePatternFilter($bq, $buyerName);
+                });
+            }
+
+            return;
+        }
+
+        $clientId = $this->resolveClientIdForBuyerFilter($buyerName, $clientTypeSlug);
+        if ($clientId !== null && $clientId > 0) {
+            $nameVariants = $this->buyerNameVariantsForClientFilter($buyerName, $clientId, $clientTypePk);
+
+            $q->where(function ($bq) use ($clientId, $nameVariants) {
+                $bq->where('kim.client_id', $clientId);
+
+                if ($nameVariants !== []) {
+                    $bq->orWhere(function ($fallback) use ($nameVariants) {
+                        $fallback->where(function ($nullId) {
+                            $nullId->whereNull('kim.client_id')->orWhere('kim.client_id', '<=', 0);
+                        });
+                        $fallback->where(function ($nameQ) use ($nameVariants) {
+                            foreach ($nameVariants as $variant) {
+                                $nameQ->orWhere(function ($nq) use ($variant) {
+                                    $this->applyKitchenIssueBuyerNamePatternFilter($nq, $variant);
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
+            return;
+        }
+
         $q->where(function ($bq) use ($buyerName) {
-            $bq->where('kim.client_name', $buyerName)
-                ->orWhere('kim.client_name', 'LIKE', $buyerName.' (%');
+            $this->applyKitchenIssueBuyerNamePatternFilter($bq, $buyerName);
         });
+    }
+
+    private function applyKitchenIssueBuyerNamePatternFilter(Builder $q, string $buyerName): void
+    {
+        $q->where('kim.client_name', $buyerName)
+            ->orWhere('kim.client_name', 'LIKE', $buyerName.' (%');
+    }
+
+    private function sellingVoucherClientTypeSlugFromRequest(Request $request): string
+    {
+        $map = [
+            (string) KitchenIssueMaster::CLIENT_EMPLOYEE => ClientType::TYPE_EMPLOYEE,
+            (string) KitchenIssueMaster::CLIENT_OT => ClientType::TYPE_OT,
+            (string) KitchenIssueMaster::CLIENT_COURSE => ClientType::TYPE_COURSE,
+            (string) KitchenIssueMaster::CLIENT_SECTION => ClientType::TYPE_SECTION,
+            (string) KitchenIssueMaster::CLIENT_OTHER => ClientType::TYPE_OTHER,
+        ];
+
+        return $map[(string) $request->input('client_type', '')] ?? '';
+    }
+
+    private function resolveClientIdForBuyerFilter(string $buyerName, string $clientTypeSlug): ?int
+    {
+        $buyerName = trim($buyerName);
+        if ($buyerName === '') {
+            return null;
+        }
+
+        if (ctype_digit($buyerName)) {
+            return (int) $buyerName;
+        }
+
+        $baseName = trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerName));
+
+        $existingClientIdQuery = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereNotNull('client_id')
+            ->where('client_id', '>', 0)
+            ->where(function ($nameQ) use ($buyerName, $baseName) {
+                $nameQ->where('client_name', $buyerName)
+                    ->orWhere('client_name', 'LIKE', $buyerName.' (%');
+                if ($baseName !== '' && $baseName !== $buyerName) {
+                    $nameQ->orWhere('client_name', $baseName)
+                        ->orWhere('client_name', 'LIKE', $baseName.' (%');
+                }
+            });
+
+        if ($clientTypeSlug !== '') {
+            $clientTypeMap = [
+                ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
+                ClientType::TYPE_OT => KitchenIssueMaster::CLIENT_OT,
+                ClientType::TYPE_COURSE => KitchenIssueMaster::CLIENT_COURSE,
+                ClientType::TYPE_SECTION => KitchenIssueMaster::CLIENT_SECTION,
+                ClientType::TYPE_OTHER => KitchenIssueMaster::CLIENT_OTHER,
+            ];
+            if (isset($clientTypeMap[$clientTypeSlug])) {
+                $existingClientIdQuery->where('client_type', $clientTypeMap[$clientTypeSlug]);
+            }
+        }
+
+        $existingClientId = $existingClientIdQuery->value('client_id');
+        if ($existingClientId !== null && (int) $existingClientId > 0) {
+            return (int) $existingClientId;
+        }
+
+        if ($clientTypeSlug !== '' && ! in_array($clientTypeSlug, [ClientType::TYPE_EMPLOYEE, ''], true)) {
+            return null;
+        }
+
+        $employeePk = $this->findEmployeePkByDisplayName($buyerName, $baseName);
+        if ($employeePk !== null && $employeePk > 0) {
+            return $employeePk;
+        }
+
+        $facultyPk = FacultyMaster::query()
+            ->where(function ($q) use ($buyerName, $baseName) {
+                $q->where('full_name', $buyerName);
+                if ($baseName !== '' && $baseName !== $buyerName) {
+                    $q->orWhere('full_name', $baseName);
+                }
+            })
+            ->value('pk');
+
+        return ($facultyPk !== null && (int) $facultyPk > 0) ? (int) $facultyPk : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buyerNameVariantsForClientFilter(string $buyerName, int $clientId, int $clientTypePk): array
+    {
+        $variants = array_values(array_unique(array_filter([
+            trim($buyerName),
+            trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerName)),
+            trim($this->resolveEmployeeBuyerNameForFilter($clientId, $clientTypePk)),
+        ], fn ($name) => $name !== '')));
+
+        $historicalNames = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('client_id', $clientId)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()
+            ->values()
+            ->all();
+
+        return array_values(array_unique(array_merge($variants, $historicalNames)));
+    }
+
+    private function findEmployeePkByDisplayName(string $buyerName, string $baseName): ?int
+    {
+        $nameForMatch = trim($baseName !== '' ? $baseName : $buyerName);
+        if ($nameForMatch === '') {
+            return null;
+        }
+
+        $pk = EmployeeMaster::query()
+            ->whereRaw(
+                "TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(middle_name,''), ' ', COALESCE(last_name,''))) = ?",
+                [$nameForMatch]
+            )
+            ->value('pk');
+
+        return ($pk !== null && (int) $pk > 0) ? (int) $pk : null;
+    }
+
+    private function resolveEmployeeBuyerNameForFilter(int $employeePk, int $clientTypePk): string
+    {
+        if ($employeePk <= 0) {
+            return '';
+        }
+
+        $categoryName = '';
+        if ($clientTypePk > 0) {
+            $categoryName = strtolower(trim((string) ClientType::query()
+                ->where('id', $clientTypePk)
+                ->where('client_type', ClientType::TYPE_EMPLOYEE)
+                ->value('client_name')));
+        }
+
+        if ($categoryName === 'faculty') {
+            return trim((string) FacultyMaster::query()
+                ->where('pk', $employeePk)
+                ->value('full_name'));
+        }
+
+        $employee = EmployeeMaster::query()
+            ->select('first_name', 'middle_name', 'last_name', 'department_master_pk')
+            ->where('pk', $employeePk)
+            ->first();
+
+        if (! $employee) {
+            return '';
+        }
+
+        $fullName = trim(($employee->first_name ?? '').' '.($employee->middle_name ?? '').' '.($employee->last_name ?? ''));
+        if ($fullName === '') {
+            return '';
+        }
+
+        if (in_array($categoryName, ['academy staff', 'mess staff'], true)) {
+            $departmentName = trim((string) DepartmentMaster::query()
+                ->where('pk', $employee->department_master_pk)
+                ->value('department_name'));
+            if ($departmentName !== '') {
+                return $fullName.' ('.$departmentName.')';
+            }
+        }
+
+        return $fullName;
     }
 
     private function applySellingVoucherItemSearch(Builder $q, string $search): void

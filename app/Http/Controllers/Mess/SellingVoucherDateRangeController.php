@@ -179,6 +179,10 @@ class SellingVoucherDateRangeController extends Controller
         $selectedClientType = (string) $request->input('client_type', '');
         $selectedClientTypePk = (string) $request->input('client_type_pk', '');
         $selectedBuyerName = trim((string) $request->input('buyer_name', ''));
+        $resolvedBuyerClientId = $this->resolveClientIdForBuyerFilter($selectedBuyerName, $selectedClientType);
+        if ($resolvedBuyerClientId !== null && $resolvedBuyerClientId > 0) {
+            $selectedBuyerName = (string) $resolvedBuyerClientId;
+        }
 
         $filterClientTypePkOptions = collect();
         if (in_array($selectedClientType, ['ot', 'course'], true)) {
@@ -199,16 +203,20 @@ class SellingVoucherDateRangeController extends Controller
                 ->values();
         }
 
+        $filterEmployeeBuyerOptions = $this->employeeBuyerFilterOptions($employees);
+        $filterFacultyBuyerOptions = $this->facultyBuyerFilterOptions($faculties);
+        $filterMessStaffBuyerOptions = $this->employeeBuyerFilterOptions($messStaff);
+
         $filterBuyerNames = collect();
         if ($selectedClientType === 'employee' && $selectedClientTypePk !== '') {
             $selectedEmployeeBucket = strtolower(trim((string) $filterClientTypePkOptions
                 ->firstWhere('value', $selectedClientTypePk)['text'] ?? ''));
             if ($selectedEmployeeBucket === 'academy staff') {
-                $filterBuyerNames = $employees->pluck('full_name')->filter()->values();
+                $filterBuyerNames = collect($filterEmployeeBuyerOptions);
             } elseif ($selectedEmployeeBucket === 'faculty') {
-                $filterBuyerNames = $faculties->pluck('full_name')->filter()->values();
+                $filterBuyerNames = collect($filterFacultyBuyerOptions);
             } elseif ($selectedEmployeeBucket === 'mess staff') {
-                $filterBuyerNames = $messStaff->pluck('full_name')->filter()->values();
+                $filterBuyerNames = collect($filterMessStaffBuyerOptions);
             }
         } elseif ($selectedClientType === 'ot' && $selectedClientTypePk !== '') {
             $filterBuyerNames = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
@@ -254,8 +262,45 @@ class SellingVoucherDateRangeController extends Controller
             'selectedClientTypePk',
             'selectedBuyerName',
             'filterClientTypePkOptions',
-            'filterBuyerNames'
+            'filterBuyerNames',
+            'filterEmployeeBuyerOptions',
+            'filterFacultyBuyerOptions',
+            'filterMessStaffBuyerOptions'
         ));
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, object>  $employees
+     * @return list<array{value: string, text: string}>
+     */
+    private function employeeBuyerFilterOptions($employees): array
+    {
+        return $employees->map(function ($employee) {
+            $value = (string) ($employee->pk ?? '');
+            $text = (string) ($employee->full_name_with_department ?? $employee->full_name ?? '');
+            if ($value === '' || $text === '') {
+                return null;
+            }
+
+            return ['value' => $value, 'text' => $text];
+        })->filter()->values()->all();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, object>  $faculties
+     * @return list<array{value: string, text: string}>
+     */
+    private function facultyBuyerFilterOptions($faculties): array
+    {
+        return $faculties->map(function ($faculty) {
+            $value = (string) ($faculty->pk ?? '');
+            $text = (string) ($faculty->full_name ?? '');
+            if ($value === '' || $text === '') {
+                return null;
+            }
+
+            return ['value' => $value, 'text' => $text];
+        })->filter()->values()->all();
     }
 
     /**
@@ -1107,6 +1152,7 @@ class SellingVoucherDateRangeController extends Controller
                     'success' => true,
                     'message' => 'Return updated successfully.',
                     'client_name' => trim((string) ($report->client_name ?? '')),
+                    'client_id' => $report->client_id,
                     'client_type_slug' => (string) ($report->client_type_slug ?? ''),
                 ]);
             }
@@ -1115,7 +1161,9 @@ class SellingVoucherDateRangeController extends Controller
                 $request->only(['status', 'store', 'client_type', 'client_type_pk', 'start_date', 'end_date', 'return_status']),
                 fn ($value) => $value !== null && $value !== '' && $value !== []
             );
-            $redirectParams['buyer_name'] = trim((string) ($report->client_name ?? ''));
+            $redirectParams['buyer_name'] = ($report->client_id !== null && (int) $report->client_id > 0)
+                ? (string) (int) $report->client_id
+                : trim((string) ($report->client_name ?? ''));
             $redirectParams['return_status'] = 'returned';
 
             return redirect()->route('admin.mess.selling-voucher-date-range.index', $redirectParams)
@@ -1274,7 +1322,7 @@ class SellingVoucherDateRangeController extends Controller
                 $q->where('sv.client_type_pk', $clientTypePk);
             }
         }
-        $this->applySellingVoucherDateRangeBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
+        $this->applySellingVoucherDateRangeBuyerNameFilter($q, $request);
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $q->whereBetween('sv.date_from', [$request->start_date, $request->end_date]);
@@ -1322,19 +1370,220 @@ class SellingVoucherDateRangeController extends Controller
     }
 
     /**
-     * Match buyer names saved with optional department suffix, e.g. "Name (Dept)".
+     * Match buyer by client_id when available; otherwise fall back to client_name patterns.
      */
-    private function applySellingVoucherDateRangeBuyerNameFilter(Builder $q, string $buyerName): void
+    private function applySellingVoucherDateRangeBuyerNameFilter(Builder $q, Request $request): void
     {
-        $buyerName = trim($buyerName);
+        $buyerName = trim((string) $request->input('buyer_name', ''));
         if ($buyerName === '') {
             return;
         }
 
+        $clientTypeSlug = strtolower(trim((string) $request->input('client_type', '')));
+        $clientTypePk = (int) $request->input('client_type_pk', 0);
+
+        if (in_array($clientTypeSlug, [ClientType::TYPE_OT, ClientType::TYPE_COURSE], true)) {
+            if (ctype_digit($buyerName)) {
+                $q->where('sv.client_id', (int) $buyerName);
+            } else {
+                $q->where(function ($bq) use ($buyerName) {
+                    $this->applyBuyerNamePatternFilter($bq, $buyerName);
+                });
+            }
+
+            return;
+        }
+
+        $clientId = $this->resolveClientIdForBuyerFilter($buyerName, $clientTypeSlug);
+        if ($clientId !== null && $clientId > 0) {
+            $nameVariants = $this->buyerNameVariantsForClientFilter($buyerName, $clientId, $clientTypePk);
+
+            $q->where(function ($bq) use ($clientId, $nameVariants) {
+                $bq->where('sv.client_id', $clientId);
+
+                if ($nameVariants !== []) {
+                    $bq->orWhere(function ($fallback) use ($nameVariants) {
+                        $fallback->where(function ($nullId) {
+                            $nullId->whereNull('sv.client_id')->orWhere('sv.client_id', '<=', 0);
+                        });
+                        $fallback->where(function ($nameQ) use ($nameVariants) {
+                            foreach ($nameVariants as $variant) {
+                                $nameQ->orWhere(function ($nq) use ($variant) {
+                                    $this->applyBuyerNamePatternFilter($nq, $variant);
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
+            return;
+        }
+
         $q->where(function ($bq) use ($buyerName) {
-            $bq->where('sv.client_name', $buyerName)
-                ->orWhere('sv.client_name', 'LIKE', $buyerName.' (%');
+            $this->applyBuyerNamePatternFilter($bq, $buyerName);
         });
+    }
+
+    private function applyBuyerNamePatternFilter(Builder $q, string $buyerName): void
+    {
+        $q->where('sv.client_name', $buyerName)
+            ->orWhere('sv.client_name', 'LIKE', $buyerName.' (%');
+    }
+
+    private function resolveClientIdForBuyerFilter(string $buyerName, string $clientTypeSlug): ?int
+    {
+        $buyerName = trim($buyerName);
+        if ($buyerName === '') {
+            return null;
+        }
+
+        if (ctype_digit($buyerName)) {
+            return (int) $buyerName;
+        }
+
+        $baseName = trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerName));
+
+        $existingClientIdQuery = SellingVoucherDateRangeReport::query()
+            ->whereNotNull('client_id')
+            ->where('client_id', '>', 0)
+            ->where(function ($nameQ) use ($buyerName, $baseName) {
+                $nameQ->where('client_name', $buyerName)
+                    ->orWhere('client_name', 'LIKE', $buyerName.' (%');
+                if ($baseName !== '' && $baseName !== $buyerName) {
+                    $nameQ->orWhere('client_name', $baseName)
+                        ->orWhere('client_name', 'LIKE', $baseName.' (%');
+                }
+            });
+
+        if ($clientTypeSlug !== '' && in_array($clientTypeSlug, array_keys(ClientType::clientTypes()), true)) {
+            $existingClientIdQuery->where('client_type_slug', $clientTypeSlug);
+        }
+
+        $existingClientId = $existingClientIdQuery->value('client_id');
+        if ($existingClientId !== null && (int) $existingClientId > 0) {
+            return (int) $existingClientId;
+        }
+
+        if ($clientTypeSlug !== '' && ! in_array($clientTypeSlug, [ClientType::TYPE_EMPLOYEE, ''], true)) {
+            return null;
+        }
+
+        $employeePk = $this->findEmployeePkByDisplayName($buyerName, $baseName);
+        if ($employeePk !== null && $employeePk > 0) {
+            return $employeePk;
+        }
+
+        $facultyPk = FacultyMaster::query()
+            ->where(function ($q) use ($buyerName, $baseName) {
+                $q->where('full_name', $buyerName);
+                if ($baseName !== '' && $baseName !== $buyerName) {
+                    $q->orWhere('full_name', $baseName);
+                }
+            })
+            ->value('pk');
+
+        return ($facultyPk !== null && (int) $facultyPk > 0) ? (int) $facultyPk : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buyerNameVariantsForClientFilter(string $buyerName, int $clientId, int $clientTypePk): array
+    {
+        $variants = array_values(array_unique(array_filter([
+            trim($buyerName),
+            trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerName)),
+            trim($this->resolveEmployeeBuyerNameForFilter($clientId, $clientTypePk)),
+        ], fn ($name) => $name !== '')));
+
+        $historicalNames = SellingVoucherDateRangeReport::query()
+            ->where('client_id', $clientId)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()
+            ->values()
+            ->all();
+
+        return array_values(array_unique(array_merge($variants, $historicalNames)));
+    }
+
+    private function findEmployeePkByDisplayName(string $buyerName, string $baseName): ?int
+    {
+        $candidates = array_values(array_unique(array_filter([trim($buyerName), trim($baseName)])));
+
+        foreach ($candidates as $candidate) {
+            $employee = EmployeeMaster::query()
+                ->select('pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk')
+                ->get()
+                ->first(function ($row) use ($candidate) {
+                    $fullName = trim(($row->first_name ?? '').' '.($row->middle_name ?? '').' '.($row->last_name ?? ''));
+                    if ($fullName === $candidate) {
+                        return true;
+                    }
+
+                    $departmentName = trim((string) DepartmentMaster::query()
+                        ->where('pk', $row->department_master_pk)
+                        ->value('department_name'));
+
+                    return $departmentName !== '' && ($fullName.' ('.$departmentName.')') === $candidate;
+                });
+
+            if ($employee) {
+                return (int) $employee->pk;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveEmployeeBuyerNameForFilter(int $employeePk, int $clientTypePk): string
+    {
+        if ($employeePk <= 0) {
+            return '';
+        }
+
+        $categoryName = '';
+        if ($clientTypePk > 0) {
+            $categoryName = strtolower(trim((string) ClientType::query()
+                ->where('id', $clientTypePk)
+                ->where('client_type', ClientType::TYPE_EMPLOYEE)
+                ->value('client_name')));
+        }
+
+        if ($categoryName === 'faculty') {
+            return trim((string) FacultyMaster::query()
+                ->where('pk', $employeePk)
+                ->value('full_name'));
+        }
+
+        $employee = EmployeeMaster::query()
+            ->select('first_name', 'middle_name', 'last_name', 'department_master_pk')
+            ->where('pk', $employeePk)
+            ->first();
+
+        if (!$employee) {
+            return '';
+        }
+
+        $fullName = trim(($employee->first_name ?? '').' '.($employee->middle_name ?? '').' '.($employee->last_name ?? ''));
+        if ($fullName === '') {
+            return '';
+        }
+
+        if (in_array($categoryName, ['academy staff', 'mess staff'], true)) {
+            $departmentName = trim((string) DepartmentMaster::query()
+                ->where('pk', $employee->department_master_pk)
+                ->value('department_name'));
+            if ($departmentName !== '') {
+                return $fullName.' ('.$departmentName.')';
+            }
+        }
+
+        return $fullName;
     }
 
     private function applySellingVoucherDateRangeItemSearch(Builder $q, string $search): void

@@ -99,8 +99,12 @@
                             <select name="buyer_name" id="filter_buyer_name" class="form-select w-100">
                                 <option value="">All Buyers</option>
                                 @foreach(($filterBuyerNames ?? collect()) as $buyerName)
-                                    <option value="{{ $buyerName }}" {{ (string) ($selectedBuyerName ?? '') === (string) $buyerName ? 'selected' : '' }}>
-                                        {{ $buyerName }}
+                                @php
+                                    $buyerValue = is_array($buyerName) ? (string) ($buyerName['value'] ?? '') : (string) $buyerName;
+                                    $buyerLabel = is_array($buyerName) ? (string) ($buyerName['text'] ?? $buyerValue) : (string) $buyerName;
+                                @endphp
+                                    <option value="{{ $buyerValue }}" {{ (string) ($selectedBuyerName ?? '') === $buyerValue ? 'selected' : '' }}>
+                                        {{ $buyerLabel }}
                                     </option>
                                 @endforeach
                             </select>
@@ -1739,9 +1743,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var selectedTypePk = @json((string) ($selectedClientTypePk ?? ''));
         var selectedBuyer = @json((string) ($selectedBuyerName ?? ''));
         var isRestoringSellingVoucherFilters = false;
-        var employees = @json(($employees ?? collect())->pluck('full_name_with_department')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
-        var faculties = @json(($faculties ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
-        var messStaff = @json(($messStaff ?? collect())->pluck('full_name_with_department')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var employees = @json($filterEmployeeBuyerOptions ?? [], JSON_UNESCAPED_UNICODE);
+        var faculties = @json($filterFacultyBuyerOptions ?? [], JSON_UNESCAPED_UNICODE);
+        var messStaff = @json($filterMessStaffBuyerOptions ?? [], JSON_UNESCAPED_UNICODE);
 
         var typeSlugMap = {
             '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE }}': 'employee',
@@ -1783,7 +1787,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function setBuyerOptions(options, preserveSelection) {
-            fillSelect(buyerEl, (options || []).map(function (name) { return { value: name, text: name }; }), 'All Buyers', preserveSelection ? selectedBuyer : '');
+            fillSelect(buyerEl, (options || []).map(function (option) {
+                if (typeof option === 'string') {
+                    return { value: option, text: option };
+                }
+                return {
+                    value: String((option && option.value) || ''),
+                    text: String((option && option.text) || ''),
+                };
+            }).filter(function (option) {
+                return option.value !== '' && option.text !== '';
+            }), 'All Buyers', preserveSelection ? selectedBuyer : '');
         }
 
         function loadBuyerOptions(preserveSelection) {
