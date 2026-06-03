@@ -1903,21 +1903,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         var employeeNames = {
-            'academy staff': [
-@foreach($employees ?? [] as $e)
-                { value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },
-@endforeach
-            ],
-            'faculty': [
-@foreach($faculties ?? [] as $f)
-                { value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },
-@endforeach
-            ],
-            'mess staff': [
-@foreach($messStaff ?? [] as $m)
-                { value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },
-@endforeach
-            ]
+            'academy staff': @json($filterEmployeeBuyerOptions ?? [], JSON_UNESCAPED_UNICODE),
+            'faculty': @json($filterFacultyBuyerOptions ?? [], JSON_UNESCAPED_UNICODE),
+            'mess staff': @json($filterMessStaffBuyerOptions ?? [], JSON_UNESCAPED_UNICODE)
         };
 
         var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
@@ -2306,21 +2294,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         var employeeNames = {
-            'academy staff': [
-@foreach($employees ?? [] as $e)
-                { value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },
-@endforeach
-            ],
-            'faculty': [
-@foreach($faculties ?? [] as $f)
-                { value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },
-@endforeach
-            ],
-            'mess staff': [
-@foreach($messStaff ?? [] as $m)
-                { value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },
-@endforeach
-            ]
+            'academy staff': @json($filterEmployeeBuyerOptions ?? [], JSON_UNESCAPED_UNICODE),
+            'faculty': @json($filterFacultyBuyerOptions ?? [], JSON_UNESCAPED_UNICODE),
+            'mess staff': @json($filterMessStaffBuyerOptions ?? [], JSON_UNESCAPED_UNICODE)
         };
         var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};

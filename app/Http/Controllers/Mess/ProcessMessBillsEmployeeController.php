@@ -16,6 +16,7 @@ use App\Models\Notification;
 use App\Exports\ProcessMessBillsExport;
 use App\Services\NotificationService;
 use App\Support\DataTableSearchHelper;
+use App\Support\MessBuyerClientFilter;
 use App\Support\RedisBackedCache;
 use Carbon\Carbon;
 use Illuminate\Contracts\Cache\Repository;
@@ -88,6 +89,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $clientTypePk = $clientTypePks[0] ?? null; // For backward compatibility
         
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
+        $buyerNames = $this->normalizeBuyerNamesToClientIds($buyerNames, $clientTypes, $clientTypePks);
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
         $invoiceSentFilter = $this->resolveInvoiceSentFilter($request);
@@ -117,7 +119,7 @@ class ProcessMessBillsEmployeeController extends Controller
         // Match Sale Voucher Report: filter SV date-range vouchers by line item request dates, not header dates only.
         $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
         $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
-        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
+        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames, $clientTypes, $clientTypePks);
 
         // Query 2: Regular Selling Voucher (kitchen_issue_master)
         $kitchenClientTypes = !empty($clientTypes)
@@ -151,7 +153,7 @@ class ProcessMessBillsEmployeeController extends Controller
         if ($dateTo) {
             $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
         }
-        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames);
+        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames, $clientTypes, $clientTypePks);
 
         $effectiveDateFrom = $request->filled('date_from') ? $request->date_from : now()->startOfMonth()->format('d-m-Y');
         $effectiveDateTo = $request->filled('date_to') ? $request->date_to : now()->endOfMonth()->format('d-m-Y');
@@ -241,15 +243,30 @@ class ProcessMessBillsEmployeeController extends Controller
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
             ->orderBy('full_name')
-            ->get(['pk', 'full_name']);
+            ->get(['pk', 'full_name', 'faculty_code']);
+
+        $departmentNamesByPk = DepartmentMaster::pluck('department_name', 'pk');
+        $buildEmployeeLabel = function ($fullName, $departmentPk) use ($departmentNamesByPk) {
+            $fullName = trim((string) $fullName);
+            if ($fullName === '') {
+                $fullName = '—';
+            }
+            $departmentName = trim((string) ($departmentNamesByPk[$departmentPk] ?? ''));
+            return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
+        };
 
         $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
             ->orderBy('first_name')
             ->orderBy('last_name')
-            ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-            ->map(function ($e) {
+            ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+            ->map(function ($e) use ($buildEmployeeLabel) {
                 $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                $fullName = $fullName ?: '—';
+                return (object) [
+                    'pk' => $e->pk,
+                    'full_name' => $fullName,
+                    'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                ];
             })
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
@@ -260,14 +277,23 @@ class ProcessMessBillsEmployeeController extends Controller
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')
                 ->orderBy('last_name')
-                ->get(['pk', 'first_name', 'middle_name', 'last_name'])
-                ->map(function ($e) {
+                ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
+                ->map(function ($e) use ($buildEmployeeLabel) {
                     $fullName = trim(($e->first_name ?? '') . ' ' . ($e->middle_name ?? '') . ' ' . ($e->last_name ?? ''));
-                    return (object) ['pk' => $e->pk, 'full_name' => $fullName ?: '—'];
+                    $fullName = $fullName ?: '—';
+                    return (object) [
+                        'pk' => $e->pk,
+                        'full_name' => $fullName,
+                        'full_name_with_department' => $buildEmployeeLabel($fullName, $e->department_master_pk ?? null),
+                    ];
                 })
                 ->filter(fn($e) => $e->full_name !== '—')
                 ->values()
             : collect();
+
+        $filterEmployeeBuyerOptions = MessBuyerClientFilter::employeeBuyerOptions($employees);
+        $filterFacultyBuyerOptions = MessBuyerClientFilter::facultyBuyerOptions($faculties);
+        $filterMessStaffBuyerOptions = MessBuyerClientFilter::employeeBuyerOptions($messStaff);
 
         $otCourses = CourseMaster::where('active_inactive', 1)
             ->where(function ($q) {
@@ -301,7 +327,10 @@ class ProcessMessBillsEmployeeController extends Controller
             'courseBuyerNames',
             'otherBuyerNames',
             'sectionBuyerNames',
-            'allBuyerNames'
+            'allBuyerNames',
+            'filterEmployeeBuyerOptions',
+            'filterFacultyBuyerOptions',
+            'filterMessStaffBuyerOptions'
         ));
     }
 
@@ -2377,8 +2406,11 @@ class ProcessMessBillsEmployeeController extends Controller
         $unionCollation = 'utf8mb4_unicode_ci';
         $search = $request->filled('search') ? trim((string) $request->search) : null;
         $search = ($search !== null && $search !== '') ? $search : null;
-        $clientType = $request->filled('client_type') ? $request->client_type : null;
+        $clientTypes = $this->normalizeFilterArrayValues($request->input('client_type'));
+        $clientType = $clientTypes[0] ?? ($request->filled('client_type') ? $request->client_type : null);
+        $clientTypePks = $this->normalizeFilterArrayValues($request->input('client_type_pk'));
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
+        $buyerNames = $this->normalizeBuyerNamesToClientIds($buyerNames, $clientTypes, $clientTypePks);
         $buyerName = $buyerNames[0] ?? null;
         $statusFilter = $request->filled('status') ? $request->status : null;
         $invoiceSentFilter = $this->resolveInvoiceSentFilter($request);
@@ -2400,7 +2432,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ])
             ->whereIn('client_type_slug', $clientType ? [$clientType] : self::ALLOWED_CLIENT_SLUGS);
 
-        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
+        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames, $clientTypes, $clientTypePks);
         $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
         $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
 
@@ -2424,7 +2456,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type', $kitchenClientTypes)
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES);
 
-        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames);
+        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames, $clientTypes, $clientTypePks);
         if ($dateFrom) {
             $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
         }
@@ -3134,6 +3166,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $clientTypes = $this->normalizeFilterArrayValues($request->input('client_type'));
         $clientTypePks = $this->normalizeFilterArrayValues($request->input('client_type_pk'));
         $buyerNames = $this->normalizeBuyerNames($request->input('buyer_name'));
+        $buyerNames = $this->normalizeBuyerNamesToClientIds($buyerNames, $clientTypes, $clientTypePks);
         $forPrint = $request->boolean('for_print') || $request->input('for_print') === '1';
         $page = max(1, (int) $request->input('page', 1));
         $perPage = (int) $request->input('per_page', 10);
@@ -3167,7 +3200,7 @@ class ProcessMessBillsEmployeeController extends Controller
         if (!empty($clientTypePks)) {
             $dateRangeQuery->whereIn('client_type_pk', $clientTypePks);
         }
-        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames);
+        $this->applyBuyerNameFilter($dateRangeQuery, $buyerNames, $clientTypes, $clientTypePks);
         $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
 
         // Query 2: Regular Selling Voucher (Kitchen Issue)
@@ -3192,7 +3225,7 @@ class ProcessMessBillsEmployeeController extends Controller
         if (!empty($clientTypePks)) {
             $kitchenIssueQuery->whereIn('client_type_pk', $clientTypePks);
         }
-        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames);
+        $this->applyBuyerNameFilter($kitchenIssueQuery, $buyerNames, $clientTypes, $clientTypePks);
         if ($dateFrom) {
             $kitchenIssueQuery->where('issue_date', '>=', $dateFrom);
         }
@@ -4615,17 +4648,38 @@ class ProcessMessBillsEmployeeController extends Controller
         return $single !== '' ? [$single] : [];
     }
 
-    private function applyBuyerNameFilter($query, array $buyerNames): void
+    private function applyBuyerNameFilter($query, array $buyerNames, array $clientTypeSlugs = [], array $clientTypePks = []): void
     {
-        if (empty($buyerNames)) {
-            return;
-        }
+        MessBuyerClientFilter::apply(
+            $query,
+            $buyerNames,
+            $clientTypeSlugs,
+            (int) ($clientTypePks[0] ?? 0)
+        );
+    }
 
-        $query->where(function ($q) use ($buyerNames) {
-            foreach ($buyerNames as $name) {
-                $q->orWhere('client_name', 'like', '%' . $name . '%');
-            }
-        });
+    /**
+     * @param  array<int, string>  $buyerNames
+     * @param  array<int, string>  $clientTypeSlugs
+     * @param  array<int, string>  $clientTypePks
+     * @return array<int, string>
+     */
+    private function normalizeBuyerNamesToClientIds(array $buyerNames, array $clientTypeSlugs, array $clientTypePks): array
+    {
+        return collect($buyerNames)
+            ->map(function ($buyerValue) use ($clientTypeSlugs, $clientTypePks) {
+                $buyerValue = trim((string) $buyerValue);
+                if ($buyerValue === '') {
+                    return null;
+                }
+                $resolved = MessBuyerClientFilter::resolveClientId($buyerValue, $clientTypeSlugs);
+
+                return ($resolved !== null && $resolved > 0) ? (string) $resolved : $buyerValue;
+            })
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     private function escapeSqlLikeValue(string $value): string
