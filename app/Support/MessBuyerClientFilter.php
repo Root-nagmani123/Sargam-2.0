@@ -9,6 +9,7 @@ use App\Models\Mess\ClientType;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\DepartmentMaster;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 
 /**
  * Match mess voucher rows by client_id when available; fall back to client_name patterns.
@@ -149,6 +150,111 @@ class MessBuyerClientFilter
     }
 
     /**
+     * Current display name for a buyer (e.g. employee name with latest department).
+     */
+    public static function resolveDisplayNameForClient(int $clientId, int $clientTypePk = 0): string
+    {
+        return self::resolveEmployeeDisplayName($clientId, $clientTypePk);
+    }
+
+    /** @var list<string> */
+    private const BUYER_GROUP_CLIENT_SLUGS = [
+        ClientType::TYPE_EMPLOYEE,
+        ClientType::TYPE_OT,
+        ClientType::TYPE_COURSE,
+        ClientType::TYPE_OTHER,
+    ];
+
+    public static function voucherClientTypeSlug(object $voucher): string
+    {
+        if (isset($voucher->client_type_slug) && trim((string) $voucher->client_type_slug) !== '') {
+            return (string) $voucher->client_type_slug;
+        }
+
+        return self::kitchenClientTypeIdToSlug((int) ($voucher->client_type ?? 0));
+    }
+
+    public static function voucherClientId(object $voucher): int
+    {
+        if (isset($voucher->client_id) && (int) $voucher->client_id > 0) {
+            return (int) $voucher->client_id;
+        }
+
+        $name = trim((string) ($voucher->client_name ?? ''));
+        if ($name === '') {
+            return 0;
+        }
+
+        $resolved = self::resolveClientId($name, [self::voucherClientTypeSlug($voucher)]);
+
+        return ($resolved !== null && $resolved > 0) ? $resolved : 0;
+    }
+
+    /**
+     * Stable group key: one report section per client_id (not per historical client_name).
+     */
+    public static function buyerGroupKey(object $voucher): string
+    {
+        $slug = self::voucherClientTypeSlug($voucher);
+        $clientId = self::voucherClientId($voucher);
+        if ($clientId > 0 && in_array($slug, self::BUYER_GROUP_CLIENT_SLUGS, true)) {
+            return 'cid:' . $clientId . '|' . $slug;
+        }
+
+        $name = trim((string) ($voucher->client_name ?? ''));
+        $pk = (string) ($voucher->client_type_pk ?? '');
+
+        return 'name:' . $name . '|' . $slug . '|' . $pk;
+    }
+
+    /**
+     * @param  Collection<int, object>|null  $group
+     */
+    public static function resolveBuyerDisplayName(object $voucher, $group = null): string
+    {
+        $clientTypePk = (int) ($voucher->client_type_pk ?? 0);
+        $clientId = 0;
+        if ($group instanceof Collection) {
+            foreach ($group as $row) {
+                $clientId = max($clientId, self::voucherClientId($row));
+            }
+        } else {
+            $clientId = self::voucherClientId($voucher);
+        }
+
+        if ($clientId > 0) {
+            $display = self::resolveDisplayNameForClient($clientId, $clientTypePk);
+            if ($display !== '') {
+                return $display;
+            }
+        }
+
+        return trim((string) ($voucher->client_name ?? ''));
+    }
+
+    /**
+     * @param  Collection<int, object>  $vouchers
+     * @return Collection<int, object>
+     */
+    public static function normalizeVoucherGroupDisplayNames(Collection $vouchers): Collection
+    {
+        if ($vouchers->isEmpty()) {
+            return $vouchers;
+        }
+
+        $displayName = self::resolveBuyerDisplayName($vouchers->first(), $vouchers);
+        if ($displayName === '' || $displayName === '—') {
+            return $vouchers;
+        }
+
+        return $vouchers->map(function ($voucher) use ($displayName) {
+            $voucher->client_name = $displayName;
+
+            return $voucher;
+        });
+    }
+
+    /**
      * @return list<string>
      */
     public static function nameVariants(string $buyerValue, int $clientId, int $clientTypePk = 0): array
@@ -275,6 +381,18 @@ class MessBuyerClientFilter
             ClientType::TYPE_OTHER => KitchenIssueMaster::CLIENT_OTHER,
             ClientType::TYPE_SECTION, 'section' => KitchenIssueMaster::CLIENT_SECTION,
             default => null,
+        };
+    }
+
+    private static function kitchenClientTypeIdToSlug(int $clientType): string
+    {
+        return match ($clientType) {
+            KitchenIssueMaster::CLIENT_EMPLOYEE => ClientType::TYPE_EMPLOYEE,
+            KitchenIssueMaster::CLIENT_OT => ClientType::TYPE_OT,
+            KitchenIssueMaster::CLIENT_COURSE => ClientType::TYPE_COURSE,
+            KitchenIssueMaster::CLIENT_OTHER => ClientType::TYPE_OTHER,
+            KitchenIssueMaster::CLIENT_SECTION => 'section',
+            default => ClientType::TYPE_OTHER,
         };
     }
 

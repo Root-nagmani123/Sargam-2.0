@@ -33,6 +33,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Pagination\LengthAwarePaginator;
 use App\Support\DataTableRedisCache;
+use App\Support\MessBuyerClientFilter;
 use App\Support\RedisBackedCache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
@@ -1873,6 +1874,15 @@ class ReportController extends Controller
         $fromDate = $request->filled('from_date') ? $request->from_date : null;
         $toDate   = $request->filled('to_date') ? $request->to_date : null;
 
+        $buyerFilterSlugs = $slugs !== [] ? $slugs : [
+            ClientType::TYPE_EMPLOYEE,
+            ClientType::TYPE_OT,
+            ClientType::TYPE_COURSE,
+            ClientType::TYPE_OTHER,
+            'section',
+        ];
+        $buyerFilterPk = (int) ($pksUnion[0] ?? 0);
+
         $svQuery = \App\Models\Mess\SellingVoucherDateRangeReport::with([
             'store',
             'clientTypeCategory',
@@ -1896,9 +1906,11 @@ class ReportController extends Controller
             $svQuery->whereIn('client_type_pk', $pksUnion);
         }
         if ($buyerNames !== []) {
-            $svQuery->where(function ($q) use ($buyerNames) {
+            $svQuery->where(function ($outer) use ($buyerNames, $buyerFilterSlugs, $buyerFilterPk) {
                 foreach ($buyerNames as $bn) {
-                    $q->orWhere('client_name', 'LIKE', '%' . $bn . '%');
+                    $outer->orWhere(function ($single) use ($bn, $buyerFilterSlugs, $buyerFilterPk) {
+                        MessBuyerClientFilter::apply($single, [$bn], $buyerFilterSlugs, $buyerFilterPk);
+                    });
                 }
             });
         }
@@ -1953,9 +1965,11 @@ class ReportController extends Controller
             $kiQuery->whereIn('client_type_pk', $pksUnion);
         }
         if ($buyerNames !== []) {
-            $kiQuery->where(function ($q) use ($buyerNames) {
+            $kiQuery->where(function ($outer) use ($buyerNames, $buyerFilterSlugs, $buyerFilterPk) {
                 foreach ($buyerNames as $bn) {
-                    $q->orWhere('client_name', 'LIKE', '%' . $bn . '%');
+                    $outer->orWhere(function ($single) use ($bn, $buyerFilterSlugs, $buyerFilterPk) {
+                        MessBuyerClientFilter::apply($single, [$bn], $buyerFilterSlugs, $buyerFilterPk);
+                    });
                 }
             });
         }
@@ -1978,13 +1992,7 @@ class ReportController extends Controller
             })
             ->values();
 
-        $groupedByBuyer = $vouchers->groupBy(function ($v) {
-            $name = trim((string) ($v->client_name ?? ($v->clientTypeCategory->client_name ?? '')));
-            $slug = (string) ($v->client_type_slug ?? '');
-            $pk = (string) ($v->client_type_pk ?? '');
-
-            return $name . '|' . $slug . '|' . $pk;
-        });
+        $groupedByBuyer = $vouchers->groupBy(fn ($v) => MessBuyerClientFilter::buyerGroupKey($v));
 
         $courseBuyerNames = collect();
         $otherBuyerNames = collect();
@@ -2014,6 +2022,8 @@ class ReportController extends Controller
         }
 
         $allBuyersSections = $groupedByBuyer->values()->map(function ($buyerVouchers) {
+            $buyerVouchers = MessBuyerClientFilter::normalizeVoucherGroupDisplayNames($buyerVouchers);
+
             return $buyerVouchers->groupBy(function ($v) {
                 $pk = $v->client_type_pk ?? '';
                 $slug = $v->client_type_slug ?? '';
@@ -2118,7 +2128,7 @@ class ReportController extends Controller
         }
 
         $startedAt = microtime(true);
-        $cacheKey = 'sale-voucher-report:v2:' . md5(json_encode([
+        $cacheKey = 'sale-voucher-report:v3:' . md5(json_encode([
             $request->input('from_date'),
             $request->input('to_date'),
             $cwSlugs,

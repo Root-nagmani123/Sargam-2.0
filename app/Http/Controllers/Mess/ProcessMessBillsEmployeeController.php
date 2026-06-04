@@ -587,7 +587,7 @@ class ProcessMessBillsEmployeeController extends Controller
      */
     private function combinedBillsCacheKey(string $dateFrom, string $dateTo, array $filters): string
     {
-        return 'process_mess_bills_combined_v7:'
+        return 'process_mess_bills_combined_v8:'
             . $this->processMessBillsCombinedCacheVersion()
             . ':'
             . md5(json_encode([
@@ -648,7 +648,7 @@ class ProcessMessBillsEmployeeController extends Controller
         array $clientTypePks,
         array $buyerNames
     ): string {
-        return 'process_mess_bills_modal_dataset_v2:'
+        return 'process_mess_bills_modal_dataset_v3:'
             . $this->processMessBillsCombinedCacheVersion()
             . ':'
             . md5(json_encode([
@@ -1142,7 +1142,7 @@ class ProcessMessBillsEmployeeController extends Controller
         $svHeaders = $drIds !== []
             ? SellingVoucherDateRangeReport::query()
                 ->whereIn('id', $drIds)
-                ->get(['id', 'client_name', 'client_type_slug', 'client_type_pk', 'payment_type', 'paid_amount', 'issue_date'])
+                ->get(['id', 'client_name', 'client_id', 'client_type_slug', 'client_type_pk', 'payment_type', 'paid_amount', 'issue_date'])
                 ->keyBy('id')
             : collect();
 
@@ -1192,7 +1192,7 @@ class ProcessMessBillsEmployeeController extends Controller
                     'client_type_slug' => $slug,
                     'client_type' => null,
                     'client_type_pk' => (int) ($header->client_type_pk ?? 0),
-                    'client_id' => null,
+                    'client_id' => isset($header->client_id) ? (int) $header->client_id : null,
                     'payment_type' => $header->payment_type,
                     'issue_date' => $header->issue_date,
                     'net_total' => (float) ($svNetTotals[$reportId] ?? 0),
@@ -1513,15 +1513,11 @@ class ProcessMessBillsEmployeeController extends Controller
     ): Collection {
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
-        return $vouchers->groupBy(function ($bill) {
-            $name = trim((string) ($bill->client_name ?? ''));
-            $slug = (string) ($bill->client_type_slug ?? 'employee');
-
-            return $name . '|' . $slug;
-        })->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap) {
+        return $vouchers->groupBy(fn ($bill) => $this->messBillBuyerGroupKey($bill))
+            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap) {
             $first = $group->first();
-            $buyerName = trim((string) ($first->client_name ?? '—'));
-            $clientTypeSlug = (string) ($first->client_type_slug ?? 'employee');
+            $buyerName = $this->resolveMessBillBuyerDisplayName($first, $group);
+            $clientTypeSlug = $this->getBillClientTypeSlug($first);
             $combinedId = 'combined-' . rawurlencode($buyerName) . '-' . $clientTypeSlug;
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
 
@@ -1690,8 +1686,111 @@ class ProcessMessBillsEmployeeController extends Controller
     /**
      * Get client_type_slug from a bill model (KitchenIssueMaster or SellingVoucherDateRangeReport).
      */
+    private function getBillClientId($bill): int
+    {
+        if ($bill instanceof SellingVoucherDateRangeReport) {
+            return (int) ($bill->client_id ?? 0);
+        }
+        if ($bill instanceof KitchenIssueMaster) {
+            return (int) ($bill->client_id ?? 0);
+        }
+        if (is_object($bill) && isset($bill->client_id) && (int) $bill->client_id > 0) {
+            return (int) $bill->client_id;
+        }
+
+        $name = trim((string) ($bill->client_name ?? ''));
+        if ($name === '') {
+            return 0;
+        }
+
+        $slug = $this->getBillClientTypeSlug($bill);
+        $resolved = MessBuyerClientFilter::resolveClientId($name, [$slug]);
+
+        return ($resolved !== null && $resolved > 0) ? $resolved : 0;
+    }
+
+    /**
+     * Stable group key: one combined bill per client_id (employee/OT/course), not per historical client_name.
+     */
+    private function messBillBuyerGroupKey($bill): string
+    {
+        $slug = $this->getBillClientTypeSlug($bill);
+        $clientId = $this->getBillClientId($bill);
+        if ($clientId > 0 && in_array($slug, self::ALLOWED_CLIENT_SLUGS, true)) {
+            return 'cid:' . $clientId . '|' . $slug;
+        }
+
+        $name = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
+
+        return 'name:' . $name . '|' . $slug;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, mixed>|null  $group
+     */
+    private function resolveMessBillBuyerDisplayName($bill, $group = null): string
+    {
+        $clientTypePk = (int) ($bill->client_type_pk ?? 0);
+        $clientId = 0;
+        if ($group instanceof Collection) {
+            foreach ($group as $row) {
+                $clientId = max($clientId, $this->getBillClientId($row));
+            }
+        } else {
+            $clientId = $this->getBillClientId($bill);
+        }
+
+        if ($clientId > 0) {
+            $display = MessBuyerClientFilter::resolveDisplayNameForClient($clientId, $clientTypePk);
+            if ($display !== '') {
+                return $display;
+            }
+        }
+
+        return trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '—')));
+    }
+
+    private function applyMessBillBuyerScope($query, string $buyerName, string $clientTypeSlug, int $clientTypePk = 0): void
+    {
+        $buyerName = trim($buyerName);
+        if ($buyerName === '' || $buyerName === '—') {
+            return;
+        }
+
+        MessBuyerClientFilter::apply($query, [$buyerName], [$clientTypeSlug], $clientTypePk);
+    }
+
+    /**
+     * @param  array{name: string, slug: string, client_id: int}  $entry
+     */
+    private function billMatchesMessBuyerEntry($bill, array $entry): bool
+    {
+        $slug = $this->getBillClientTypeSlug($bill);
+        if ($slug !== $entry['slug']) {
+            return false;
+        }
+
+        $billClientId = $this->getBillClientId($bill);
+        if ($entry['client_id'] > 0) {
+            if ($billClientId > 0 && $billClientId === $entry['client_id']) {
+                return true;
+            }
+
+            $variants = MessBuyerClientFilter::nameVariants($entry['name'], $entry['client_id']);
+
+            return in_array(trim((string) ($bill->client_name ?? '')), $variants, true);
+        }
+
+        $billName = trim((string) ($bill->client_name ?? ''));
+
+        return $billName === $entry['name'];
+    }
+
     private function getBillClientTypeSlug($bill): string
     {
+        if (is_object($bill) && isset($bill->client_type_slug) && trim((string) $bill->client_type_slug) !== '') {
+            return (string) $bill->client_type_slug;
+        }
         if ($bill instanceof SellingVoucherDateRangeReport) {
             return (string) ($bill->client_type_slug ?? 'employee');
         }
@@ -1715,23 +1814,19 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Group bills by buyer (client_name + client_type_slug) and build combined bill rows.
+     * Group bills by buyer (client_id when available, else client_name + client_type_slug) and build combined bill rows.
      * Returns array of combined bill objects for display and payment.
      * Uses a single combined_invoice_no (e.g. CB-20260312-00123) so slip/receipt shows one invoice like others.
      */
     private function groupBillsByBuyer($bills, ?string $dateFromYmd = null, ?string $dateToYmd = null): \Illuminate\Support\Collection
     {
-        $groups = collect($bills)->groupBy(function ($bill) {
-            $name = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
-            $slug = $this->getBillClientTypeSlug($bill);
-            return $name . '|' . $slug;
-        });
+        $groups = collect($bills)->groupBy(fn ($bill) => $this->messBillBuyerGroupKey($bill));
 
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
         return $groups->map(function ($group, $key) use ($paymentTypeMap, $dateFromYmd, $dateToYmd) {
             $first = $group->first();
-            $buyerName = trim((string) ($first->client_name ?? ($first->clientTypeCategory->client_name ?? '—')));
+            $buyerName = $this->resolveMessBillBuyerDisplayName($first, $group);
             $clientTypeSlug = $this->getBillClientTypeSlug($first);
             $combinedId = 'combined-' . rawurlencode($buyerName) . '-' . $clientTypeSlug;
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
@@ -1780,6 +1875,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'combined_id' => $combinedId,
                 'combined_invoice_no' => $combinedInvoiceNo,
                 'buyer_name' => $buyerName,
+                'client_type_slug' => $clientTypeSlug,
                 'client_type_display' => $first->client_type_display ?? ($first->client_type_label ?? ($first->clientTypeCategory ? ucfirst($first->clientTypeCategory->client_type ?? '') : ucfirst($clientTypeSlug))),
                 'invoice_date_range' => $invoiceDateRange,
                 'total' => $total,
@@ -2836,19 +2932,18 @@ class ProcessMessBillsEmployeeController extends Controller
             'items.itemSubcategory',
         ])
             ->where('client_type_slug', $clientTypeSlug)
-            ->where('client_name', $buyerName)
             ->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applyMessBillBuyerScope($drBillQuery, $buyerName, $clientTypeSlug);
         $this->applySellingVoucherDateRangeItemIssueDateFilter($drBillQuery, $dateFrom, $dateTo);
         $dateRangeBills = $drBillQuery->orderBy('issue_date')->get();
 
-        $kitchenBills = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'course', 'items'])
+        $kitchenBillQuery = KitchenIssueMaster::with(['store', 'clientTypeCategory', 'course', 'items'])
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->where('client_type', $this->clientTypeSlugToKitchenId($clientTypeSlug))
-            ->where('client_name', $buyerName)
             ->where('issue_date', '>=', $dateFrom)
-            ->where('issue_date', '<=', $dateTo)
-            ->orderBy('issue_date')
-            ->get();
+            ->where('issue_date', '<=', $dateTo);
+        $this->applyMessBillBuyerScope($kitchenBillQuery, $buyerName, $clientTypeSlug);
+        $kitchenBills = $kitchenBillQuery->orderBy('issue_date')->get();
 
         return $dateRangeBills->concat($kitchenBills)->sortBy('issue_date')->values()->all();
     }
@@ -3717,9 +3812,33 @@ class ProcessMessBillsEmployeeController extends Controller
             return;
         }
 
-        $names = $buyerKeys->pluck('name')->unique()->values()->all();
-        $slugs = $buyerKeys->pluck('slug')->unique()->values()->all();
         $dateToSuffix = $dateToYmd ?? '';
+
+        $buyerEntries = $buyerKeys
+            ->map(function (array $buyerKey) use ($dateToSuffix) {
+                $name = trim((string) ($buyerKey['name'] ?? ''));
+                $slug = (string) ($buyerKey['slug'] ?? 'employee');
+                if ($name === '' || $name === '—') {
+                    return null;
+                }
+                $clientId = MessBuyerClientFilter::resolveClientId($name, [$slug]) ?? 0;
+
+                return [
+                    'name' => $name,
+                    'slug' => $slug,
+                    'client_id' => $clientId,
+                    'cache_key' => $name . '|' . $slug . '|' . $dateToSuffix,
+                ];
+            })
+            ->filter()
+            ->unique(fn (array $entry) => $entry['cache_key'])
+            ->values();
+
+        if ($buyerEntries->isEmpty()) {
+            return;
+        }
+
+        $slugs = $buyerEntries->pluck('slug')->unique()->values()->all();
 
         $drQuery = SellingVoucherDateRangeReport::with([
             'items' => function ($itemQ) use ($dateToYmd) {
@@ -3728,13 +3847,19 @@ class ProcessMessBillsEmployeeController extends Controller
             'items.itemSubcategory',
         ])
             ->whereIn('client_type_slug', $slugs)
-            ->whereIn('client_name', $names)
-            ->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+            ->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses())
+            ->where(function ($outer) use ($buyerEntries) {
+                foreach ($buyerEntries as $entry) {
+                    $outer->orWhere(function ($single) use ($entry) {
+                        $single->where('client_type_slug', $entry['slug']);
+                        $buyerValue = $entry['client_id'] > 0 ? (string) $entry['client_id'] : $entry['name'];
+                        MessBuyerClientFilter::apply($single, [$buyerValue], [$entry['slug']]);
+                    });
+                }
+            });
         $this->applySellingVoucherDateRangeItemIssueDateFilter($drQuery, null, $dateToYmd);
 
-        $drByBuyer = $drQuery->orderBy('issue_date')->get()->groupBy(function ($bill) {
-            return trim((string) ($bill->client_name ?? '')) . '|' . (string) ($bill->client_type_slug ?? 'employee');
-        });
+        $drBills = $drQuery->orderBy('issue_date')->get();
 
         $kitchenClientTypes = collect($slugs)
             ->map(fn (string $slug) => $this->clientTypeSlugToKitchenId($slug))
@@ -3745,24 +3870,29 @@ class ProcessMessBillsEmployeeController extends Controller
         $kitchenQuery = KitchenIssueMaster::with(['items', 'paymentDetails'])
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
             ->whereIn('client_type', $kitchenClientTypes)
-            ->whereIn('client_name', $names);
+            ->where(function ($outer) use ($buyerEntries) {
+                foreach ($buyerEntries as $entry) {
+                    $outer->orWhere(function ($single) use ($entry) {
+                        $single->where('client_type', $this->clientTypeSlugToKitchenId($entry['slug']));
+                        $buyerValue = $entry['client_id'] > 0 ? (string) $entry['client_id'] : $entry['name'];
+                        MessBuyerClientFilter::apply($single, [$buyerValue], [$entry['slug']]);
+                    });
+                }
+            });
         if ($dateToYmd) {
             $kitchenQuery->where('issue_date', '<=', $dateToYmd);
         }
 
-        $kiByBuyer = $kitchenQuery->orderBy('issue_date')->get()->groupBy(function ($bill) {
-            return trim((string) ($bill->client_name ?? '')) . '|' . $this->kitchenClientTypeIdToSlug((int) ($bill->client_type ?? 0));
-        });
+        $kiBills = $kitchenQuery->orderBy('issue_date')->get();
 
-        foreach ($buyerKeys as $buyerKey) {
-            $groupKey = $buyerKey['name'] . '|' . $buyerKey['slug'];
-            $cacheKey = $buyerKey['name'] . '|' . $buyerKey['slug'] . '|' . $dateToSuffix;
-            if (isset($this->buyerBillsForAllocationCache[$cacheKey])) {
+        foreach ($buyerEntries as $entry) {
+            if (isset($this->buyerBillsForAllocationCache[$entry['cache_key']])) {
                 continue;
             }
 
-            $allocationBills = ($drByBuyer->get($groupKey, collect()))
-                ->concat($kiByBuyer->get($groupKey, collect()))
+            $allocationBills = $drBills
+                ->filter(fn ($bill) => $this->billMatchesMessBuyerEntry($bill, $entry))
+                ->concat($kiBills->filter(fn ($bill) => $this->billMatchesMessBuyerEntry($bill, $entry)))
                 ->sortBy(function ($bill) {
                     $issueDate = $bill->issue_date ?? null;
                     if ($issueDate instanceof Carbon) {
@@ -3773,7 +3903,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 })
                 ->values();
 
-            $this->buyerBillsForAllocationCache[$cacheKey] = $allocationBills;
+            $this->buyerBillsForAllocationCache[$entry['cache_key']] = $allocationBills;
         }
     }
 
@@ -3794,14 +3924,14 @@ class ProcessMessBillsEmployeeController extends Controller
             'items.itemSubcategory',
         ])
             ->where('client_type_slug', $clientTypeSlug)
-            ->where('client_name', $buyerName)
             ->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
+        $this->applyMessBillBuyerScope($drQuery, $buyerName, $clientTypeSlug);
         $this->applySellingVoucherDateRangeItemIssueDateFilter($drQuery, null, $dateToYmd);
 
         $kitchenQuery = KitchenIssueMaster::with(['items', 'paymentDetails'])
             ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
-            ->where('client_type', $this->clientTypeSlugToKitchenId($clientTypeSlug))
-            ->where('client_name', $buyerName);
+            ->where('client_type', $this->clientTypeSlugToKitchenId($clientTypeSlug));
+        $this->applyMessBillBuyerScope($kitchenQuery, $buyerName, $clientTypeSlug);
         if ($dateToYmd) {
             $kitchenQuery->where('issue_date', '<=', $dateToYmd);
         }
