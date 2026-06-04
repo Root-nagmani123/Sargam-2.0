@@ -54,16 +54,13 @@
             </div>
 
             <div class="mb-4">
-                <p class="fw-bold">You are advised to do the following:</p>
-                <ul>
-                    <li>Reply to this Memo online through this <a href="#">conversation</a></li>
-                    <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
-                </ul>
-                <p>{!! $template_details->content ?? '' !!}</p>
+                {!! $template_details->content ?? '<p>It has been brought to the notice of the undersigned that you were absent without prior authorization from following session(s).</p>' !!}
             </div>
 
-            <p><strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}</p>
+            <p>
+                <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
+                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
+            </p>
 
             <p class="text-end"><strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}</p>
 
@@ -265,6 +262,43 @@
                     <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
                 </div>
                  @endif
+
+                @php
+                    $isClosed = (isset($memoNotice->first()->communication_status) && $memoNotice->first()->communication_status == 2)
+                             || (isset($memoNotice->first()->notice_status) && $memoNotice->first()->notice_status == 2);
+                    $conclusionTypeName = '';
+                    if (!empty($template_details->conclusion_type_pk)) {
+                        $conclusionTypeName = $memo_conclusion_master->firstWhere('pk', $template_details->conclusion_type_pk)->discussion_name ?? '';
+                    }
+                @endphp
+
+                @if($isClosed && (!empty($template_details->conclusion_type_pk) || !empty($template_details->conclusion_remark)))
+                <div class="card border-secondary mt-3">
+                    <div class="card-header fw-semibold bg-light">Conclusion Details</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            @if($conclusionTypeName)
+                            <div class="col-md-6">
+                                <label class="form-label text-muted mb-1">Conclusion Type</label>
+                                <p class="mb-0 fw-semibold">{{ $conclusionTypeName }}</p>
+                            </div>
+                            @endif
+                            @if(!empty($template_details->mark_of_deduction))
+                            <div class="col-md-6">
+                                <label class="form-label text-muted mb-1">Mark of Deduction</label>
+                                <p class="mb-0 fw-semibold">{{ $template_details->mark_of_deduction }}</p>
+                            </div>
+                            @endif
+                            @if(!empty($template_details->conclusion_remark))
+                            <div class="col-12">
+                                <label class="form-label text-muted mb-1">Conclusion Remark</label>
+                                <p class="mb-0">{{ $template_details->conclusion_remark }}</p>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>

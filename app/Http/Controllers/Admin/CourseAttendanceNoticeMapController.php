@@ -585,6 +585,21 @@ public function create(Request $request)
 // print_r($activeCourses);die;
     return view('admin.courseAttendanceNoticeMap.create', compact('activeCourses'));
 }
+public function getTemplateByCourse(Request $request)
+{
+    $courseId = $request->course_id;
+    $type     = $request->type; // 'Notice' or 'Memo'
+
+    $template = DB::table('memo_notice_templates')
+        ->where('course_master_pk', $courseId)
+        ->where('memo_notice_type', $type)
+        ->where('active_inactive', 1)
+        ->whereNull('deleted_at')
+        ->first();
+
+    return response()->json($template);
+}
+
 public function getSubjectByCourse(Request $request)
 {
     $courseId = $request->course_id;
@@ -630,17 +645,24 @@ $topics = DB::table('timetable as t')
 public function gettimetableDetailsBytopic(Request $request)
 {
     $topicId = $request->topic_id;
-     $query = DB::table('timetable as t')
-        ->leftJoin('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+    $query = DB::table('timetable as t')
         ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+        ->leftJoin('faculty_master as f', DB::raw("f.pk"), '=', DB::raw("JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]'))"))
         ->where('t.pk', $topicId)
         ->select(
             't.*',
             'f.full_name as faculty_name',
+            DB::raw("JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]')) as faculty_master_first_pk"),
             'v.venue_name',
             't.class_session as shift_name'
         );
     $timetable = $query->first();
+
+    // faculty_master_first_pk expose karo so JS can pick it up as faculty_master PK
+    if ($timetable) {
+        $timetable->faculty_master = $timetable->faculty_master_first_pk;
+    }
+
     return response()->json($timetable);
 }
 public function conversation($id, $type)
@@ -685,12 +707,17 @@ $memo_conclusion_master = collect(); // default empty collection
     ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
     ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
     ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
-    ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
-    ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
+    ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
+    ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
+    ->leftJoin('memo_notice_templates as mnt', function($join) {
+        $join->on('mnt.course_master_pk', '=', 'sns.course_master_pk')
+             ->where('mnt.memo_notice_type', 'Notice')
+             ->where('mnt.active_inactive', 1)
+             ->whereNull('mnt.deleted_at');
+    })
     ->where('sns.pk', $id)
-    ->where('mnt.memo_notice_type', 'Notice')
     ->select(
-        't.course_master_pk',
+        'sns.course_master_pk',
         't.subject_topic',
         'v.venue_name',
         't.class_session as session_time',
@@ -698,9 +725,14 @@ $memo_conclusion_master = collect(); // default empty collection
         'sm.display_name',
         'sm.generated_OT_code',
         'cm.course_name',
+        'fm.full_name as faculty_name',
         'mnt.content',
         'mnt.director_name',
-        'mnt.director_designation'
+        'mnt.director_designation',
+        'sns.conclusion_type_pk',
+        'sns.conclusion_remark',
+        'sns.mark_of_deduction',
+        'sns.status as notice_current_status'
     )
     ->first();
     $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
@@ -729,9 +761,14 @@ $memo_conclusion_master = collect(); // default empty collection
     ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
     ->leftJoin('student_master as sm', 'sms.student_pk', '=', 'sm.pk')
     ->leftJoin('course_master as cm', 'sms.course_master_pk', '=', 'cm.pk')
-    ->leftJoin('memo_notice_templates as mnt', 'sms.course_master_pk', '=', 'mnt.course_master_pk')
+    ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
+    ->leftJoin('memo_notice_templates as mnt', function($join) {
+        $join->on('mnt.course_master_pk', '=', 'sms.course_master_pk')
+             ->where('mnt.memo_notice_type', 'Memo')
+             ->where('mnt.active_inactive', 1)
+             ->whereNull('mnt.deleted_at');
+    })
     ->where('sms.pk', $id)
-    ->where('mnt.memo_notice_type', 'Memo')
     ->select(
         't.subject_topic',
         'v.venue_name',
@@ -740,9 +777,14 @@ $memo_conclusion_master = collect(); // default empty collection
         'sm.display_name',
         'sm.generated_OT_code',
         'cm.course_name',
+        'fm.full_name as faculty_name',
         'mnt.content',
         'mnt.director_name',
-        'mnt.director_designation'
+        'mnt.director_designation',
+        'sms.memo_conclusion_master_pk as conclusion_type_pk',
+        'sms.conclusion_remark',
+        'sms.mark_of_deduction',
+        'sms.communication_status as notice_current_status'
     )
     ->first();
           
@@ -1538,18 +1580,26 @@ if (!$id || !is_numeric($id)) {
             ->get();
   $template_details = DB::table('student_notice_status as sns')
             ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+            ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
             ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
-            ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
-            ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
+            ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
+            ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
+            ->leftJoin('memo_notice_templates as mnt', function($join) {
+                $join->on('mnt.course_master_pk', '=', 'sns.course_master_pk')
+                     ->where('mnt.memo_notice_type', 'Notice')
+                     ->where('mnt.active_inactive', 1)
+                     ->whereNull('mnt.deleted_at');
+            })
             ->where('sns.pk', $id)
-            ->where('mnt.memo_notice_type', 'Notice')
             ->select(
                 't.subject_topic',
-                't.venue_id',
-                't.class_session',
+                'v.venue_name',
+                't.class_session as session_time',
+                'sns.date_ as session_date',
                 'sm.display_name',
                 'sm.generated_OT_code',
                 'cm.course_name',
+                'fm.full_name as faculty_name',
                 'mnt.content',
                 'mnt.director_name',
                 'mnt.director_designation'
@@ -1573,20 +1623,29 @@ if (!$id || !is_numeric($id)) {
             )
             ->get();
           
-             $template_details = DB::table('student_notice_status as sns')
+             $template_details = DB::table('student_memo_status as sms')
+            ->leftJoin('student_notice_status as sns', 'sms.student_notice_status_pk', '=', 'sns.pk')
             ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-            ->leftJoin('student_master as sm', 'sns.student_pk', '=', 'sm.pk')
-            ->leftJoin('course_master as cm', 't.course_master_pk', '=', 'cm.pk')
-            ->leftJoin('memo_notice_templates as mnt', 'sns.course_master_pk', '=', 'mnt.course_master_pk')
-            ->where('sns.pk', $id)
-            ->where('mnt.memo_notice_type', 'Memo')
+            ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+            ->leftJoin('student_master as sm', 'sms.student_pk', '=', 'sm.pk')
+            ->leftJoin('course_master as cm', 'sms.course_master_pk', '=', 'cm.pk')
+            ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
+            ->leftJoin('memo_notice_templates as mnt', function($join) {
+                $join->on('mnt.course_master_pk', '=', 'sms.course_master_pk')
+                     ->where('mnt.memo_notice_type', 'Memo')
+                     ->where('mnt.active_inactive', 1)
+                     ->whereNull('mnt.deleted_at');
+            })
+            ->where('sms.pk', $id)
             ->select(
                 't.subject_topic',
-                't.venue_id',
-                't.class_session',
+                'v.venue_name',
+                't.class_session as session_time',
+                'sns.date_ as session_date',
                 'sm.display_name',
                 'sm.generated_OT_code',
                 'cm.course_name',
+                'fm.full_name as faculty_name',
                 'mnt.content',
                 'mnt.director_name',
                 'mnt.director_designation'
@@ -1806,10 +1865,16 @@ public function memo_notice_conversation_model(Request $request){
             'student_decip_incharge_msg' => 'required_without:document|nullable|string|max:500',
             'created_by' => 'required',
             'document' => 'nullable|file|mimes:jpg,jpeg,png,pdf|max:2048',
+        ], [
+            'document.mimes'  => 'Only JPG, JPEG, PNG, and PDF files are allowed.',
+            'document.max'    => 'Attachment must not exceed 2 MB.',
+            'student_decip_incharge_msg.required_without' => 'Please enter a message or attach a file.',
+            'student_decip_incharge_msg.max' => 'Message must not exceed 500 characters.',
         ]);
     } catch (\Illuminate\Validation\ValidationException $e) {
+        $firstError = collect($e->errors())->flatten()->first() ?? 'Validation failed.';
         if ($isAjax) {
-            return response()->json(['success' => false, 'message' => 'Validation failed.', 'errors' => $e->errors()], 422);
+            return response()->json(['success' => false, 'message' => $firstError, 'errors' => $e->errors()], 422);
         }
         throw $e;
     }
@@ -1922,7 +1987,7 @@ public function getMemoData(Request $request)
     $memoId = $request->memo_notice_id;
 
     $memo = DB::table('student_notice_status')
-        ->leftJoin('faculty_master as fm', 'student_notice_status.faculty_master_pk', '=', 'fm.pk')
+        ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN student_notice_status.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(student_notice_status.faculty_master_pk, '$[0]')) ELSE student_notice_status.faculty_master_pk END"))
         ->leftJoin('course_master as cm', 'student_notice_status.course_master_pk', '=', 'cm.pk')
         ->leftJoin('subject_master as subm', 'student_notice_status.subject_master_pk', '=', 'subm.pk')
         ->leftJoin('student_master as sm', 'student_notice_status.student_pk', '=', 'sm.pk')
@@ -1979,7 +2044,7 @@ public function getGeneratedMemoData(Request $request)
         ->leftJoin('student_notice_status as sns', 'sms.student_notice_status_pk', '=', 'sns.pk')
         ->leftJoin('student_master as sm', 'sms.student_pk', '=', 'sm.pk')
         ->leftJoin('course_master as cm', 'sms.course_master_pk', '=', 'cm.pk')
-        ->leftJoin('faculty_master as fm', 'sns.faculty_master_pk', '=', 'fm.pk')
+        ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
         ->leftJoin('subject_master as subm', 'sns.subject_master_pk', '=', 'subm.pk')
         ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
         ->where('sms.pk', $memoId)
@@ -2044,7 +2109,7 @@ public function store_memo_status(Request $request)
         'course_master_pk'                => 'required|integer',
         'course_master_name'             => 'required|string',
         'memo_count'                      => 'required|integer',
-        'date_memo_notice'               => 'required|date',
+        'date_memo_notice'               => 'required|date|after_or_equal:today',
         'venue'                          => 'required|integer',
         'meeting_time'                   => 'required|date_format:H:i',
         'Remark'                         => 'nullable|string',

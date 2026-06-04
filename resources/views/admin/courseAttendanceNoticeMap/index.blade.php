@@ -819,7 +819,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             </div>
                             <div class="col-12 col-md-3 mb-3">
                                 <label for="memo_date" class="form-label">Date</label>
-                                <input type="date" id="memo_date" class="form-control">
+                                <input type="date" id="memo_date" class="form-control" min="{{ date('Y-m-d') }}">
                                 @error('memo_date')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -985,7 +985,9 @@ $(document).ready(function() {
                 $('#student_pk').val(res.student_pk);
                 $('#memo_number').val(res.memo_number);
 
-                // Add more if needed
+                // Default memo_date to today (no backdating allowed)
+                const today = new Date().toISOString().split('T')[0];
+                $('#memo_date').val(today);
             },
             error: function() {
                 alert('Something went wrong!');

@@ -137,57 +137,23 @@
 
         </div>
     </div>
+    <div id="template-preview-wrapper" style="display:none;">
     <div class="bg-white p-4 rounded shadow-sm">
-    <h5 class="text-center fw-bold mb-3">88th Foundation Course</h5>
-    <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
-    <hr>
-
-    <p class="mb-1">SHOW CAUSE NOTICE</p>
-    <p><strong>Date:</strong> 22/11/2013</p>
-
-    <p>It has been brought to the notice of the undersigned that you were absent without prior authorization from
-        following session(s)...</p>
-
-    <div class="table-responsive mb-3">
-        <table class="table table-bordered text-center">
-            <thead class="table-light">
-                <tr>
-                    <th>Date</th>
-                    <th>No. of Session(s)</th>
-                    <th>Topics</th>
-                    <th>
-                        Venue
-                    </th>
-                    <th>Session(s)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>22-11-2013</td>
-                    <td>1</td>
-                    <td>Lorem ipsum dolor sit amet.</td>
-                    <td>Lorem, ipsum.</td>
-                    <td>06:00-07:00</td>
-                </tr>
-            </tbody>
-        </table>
+        <h5 class="text-center fw-bold mb-3" id="tpl_course_name"></h5>
+        <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+        <hr>
+        <p class="mb-1" id="tpl_type_label"></p>
+        <p><strong>Date:</strong> <span id="tpl_date"></span></p>
+        <div id="tpl_content" class="mb-3"></div>
+        <p class="text-end">
+            <strong id="tpl_director_name"></strong><br>
+            <span id="tpl_director_designation"></span>
+        </p>
     </div>
-
-    <div class="mb-4">
-        <p class="fw-bold">You are advised to do the following:</p>
-        <ul>
-            <li>Reply to this Memo online through this <a href="#">conversation</a></li>
-            <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
-        </ul>
-        <p>In absence of online explanation and your personal appearance, unilateral decision may be taken.</p>
     </div>
-
-    <p><strong>ALBY VARGHESE, A42</strong><br>
-        Remarks: Show Cause Notice for 22.11.13</p>
-
-    <p class="text-end"><strong>Rajesh Arya</strong><br>Deputy Director Sr. & I/C Discipline 88th F.C.</p>
-
-</div>
+    <div id="template-not-found" class="alert alert-warning mt-3" style="display:none;">
+        No active template found for the selected course and type.
+    </div>
     <!-- end Vertical Steps Example -->
 </div>
 
@@ -219,6 +185,54 @@
         } else {
              $('#subject_master_id').html('<option value="">Select Subject</option>');
         }
+        // Reset template preview when course changes
+        $('#template-preview-wrapper, #template-not-found').hide();
+        // Auto-load Notice template for selected course
+        if (courseId) {
+            loadTemplatePreview(courseId, 'Notice');
+        }
+    });
+
+    function loadTemplatePreview(courseId, type) {
+        if (!courseId || !type) return;
+        $.ajax({
+            url: "{{ route('memo.notice.management.getTemplateByCourse') }}",
+            type: "GET",
+            data: { course_id: courseId, type: type },
+            success: function(tpl) {
+                if (tpl) {
+                    var courseName = $('#courseSelect option:selected').text();
+                    var today = new Date().toLocaleDateString('en-GB');
+                    $('#tpl_course_name').text(courseName);
+                    $('#tpl_type_label').text('SHOW CAUSE ' + type.toUpperCase());
+                    $('#tpl_date').text(today);
+                    $('#tpl_content').html(tpl.content);
+                    $('#tpl_director_name').text(tpl.director_name || '');
+                    $('#tpl_director_designation').text(tpl.director_designation || '');
+                    $('#template-not-found').hide();
+                    $('#template-preview-wrapper').show();
+                } else {
+                    $('#template-preview-wrapper').hide();
+                    $('#template-not-found').show();
+                }
+            },
+            error: function() {
+                $('#template-preview-wrapper').hide();
+                $('#template-not-found').show();
+            }
+        });
+    }
+
+    // Show template preview when Notice button clicked (in case course was pre-selected)
+    $('button[name="submission_type"]').on('click', function(e) {
+        var courseId = $('#courseSelect').val();
+        var type = ($(this).val() == '1') ? 'Notice' : 'Memo';
+        if (!courseId) {
+            e.preventDefault();
+            alert('Please select a course first.');
+            return;
+        }
+        loadTemplatePreview(courseId, type);
     });
    $('#subject_master_id').on('change', function() {
     var subject_master_id = $(this).val();

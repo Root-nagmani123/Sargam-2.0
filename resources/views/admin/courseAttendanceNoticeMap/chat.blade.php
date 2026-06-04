@@ -14,12 +14,8 @@
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
 
-            <p class="mb-1">SHOW CAUSE NOTICE</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::now()->format('d/m/Y') }} </p>
-
-            <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
-                from
-                following session(s)...</p>
+            <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
+            <p><strong>Date:</strong> {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
             <div class="table-responsive mb-3">
                 <table class="table">
@@ -28,35 +24,30 @@
                             <th>Date</th>
                             <th>No. of Session(s)</th>
                             <th>Topics</th>
-                            <th>
-                                Venue
-                            </th>
+                            <th>Venue</th>
                             <th>Session(s)</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
+                            <td>{{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}</td>
                             <td>1</td>
                             <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
                             <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
-                            <td>{{ $template_details->session_time ?? '06:00-07:00' }}</td>
+                            <td>{{ $template_details->session_time ?? '' }}</td>
                         </tr>
                     </tbody>
                 </table>
             </div>
 
             <div class="mb-4">
-                <p class="fw-bold">You are advised to do the following:</p>
-                <ul>
-                    <li>Reply to this Memo online through this <a href="#">conversation</a></li>
-                    <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
-                </ul>
-                <p>{!! $template_details->content ?? '' !!}</p>
+                {!! $template_details->content ?? '<p>It has been brought to the notice of the undersigned that you were absent without prior authorization from following session(s).</p>' !!}
             </div>
 
-            <p><strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: Show Cause Notice for {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
+            <p>
+                <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
+                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
+            </p>
 
             <p class="text-end"><strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}</p>
 

@@ -33,6 +33,10 @@
     .chat-attachment{margin-top:.4rem}
     .chat-attachment a{font-size:.78rem;text-decoration:none;color:#ff6b35;display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .4rem;border-radius:999px;background:rgba(255,107,53,.06)}
     .chat-attachment a:hover{background:rgba(255,107,53,.15)}
+    .chat-attachment .file-meta{font-size:.7rem;color:#94a3b8;margin-left:.35rem}
+    .file-preview-chip{display:inline-flex;align-items:center;gap:.4rem;background:#f0f4ff;border:1px solid #c7d7fc;border-radius:8px;padding:.25rem .55rem;font-size:.75rem;color:#1e3a8a;margin:.25rem 0}
+    .file-preview-chip .chip-remove{cursor:pointer;font-size:.8rem;color:#64748b;line-height:1}
+    .file-preview-chip .chip-remove:hover{color:#ef4444}
     .date-separator{display:flex;align-items:center;gap:.75rem;margin:1rem 0;position:relative}
     .date-separator::before,.date-separator::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent 0,#cbd5e1 20%,#cbd5e1 80%,transparent 100%)}
     .date-chip{font-size:.72rem;color:#334155;background:#e2e8f0;border-radius:999px;padding:.15rem .6rem}
@@ -84,7 +88,7 @@
     @endif
 
     <div class="chat-row {{ $isOwn ? 'chat-right' : 'chat-left' }}">
-      <div class="chat-bubble flash-new" data-message-id="{{ data_get($msg, 'id', data_get($msg, 'pk', '')) }}">
+      <div class="chat-bubble" data-message-id="{{ data_get($msg, 'id', data_get($msg, 'pk', '')) }}">
         <div class="chat-header">
           <span class="chat-user">{{ $msg->display_name }}</span>
           <span class="chat-meta">
@@ -106,10 +110,21 @@
         <div class="chat-text">{{ $msg->student_decip_incharge_msg }}</div>
 
         @if ($hasAttachment)
+          @php
+            $fileName = basename($msg->doc_upload);
+            $ext = strtoupper(pathinfo($fileName, PATHINFO_EXTENSION));
+            $filePath = storage_path('app/public/' . $msg->doc_upload);
+            $rawSize = @filesize($filePath);
+            $fileSize = $rawSize !== false ? round($rawSize / 1024, 1) . ' KB' : '';
+          @endphp
           <div class="chat-attachment">
             <a href="{{ asset('storage/' . $msg->doc_upload) }}" target="_blank" rel="noopener">
-              📎 View Attachment
+              📎 {{ $fileName }}
             </a>
+            <span class="file-meta">
+              @if($ext) {{ $ext }} @endif
+              @if($fileSize) · {{ $fileSize }} @endif
+            </span>
           </div>
         @endif
       </div>
@@ -156,6 +171,7 @@
 
             <label class="chat-attach-btn" for="memo_notice_attachment" title="Attach file" aria-label="Attach file">📎</label>
             <input id="memo_notice_attachment" type="file" name="document" hidden>
+            <div id="file-preview-area" style="width:100%;padding:0 .25rem"></div>
 
             <textarea name="student_decip_incharge_msg"
                       class="chat-input"
@@ -231,6 +247,9 @@
             const fileBtn = form.querySelector('#memo_notice_attachment');
             if (!ta.value.trim() && !(fileBtn && fileBtn.files && fileBtn.files.length)) return;
 
+            // Block send if file input was cleared due to validation error
+            if (fileBtn && fileBtn.files && fileBtn.files.length === 0 && !ta.value.trim()) return;
+
             isSending = true;
             if (sendBtn) sendBtn.disabled = true;
 
@@ -249,6 +268,9 @@
                     const hadAttachment = !!(fileBtn && fileBtn.files && fileBtn.files.length);
                     if (ta) { ta.value = ''; ta.style.height = 'auto'; }
                     if (fileBtn) fileBtn.value = '';
+                    // Clear file preview chip
+                    const previewArea = form.querySelector('#file-preview-area');
+                    if (previewArea) previewArea.innerHTML = '';
                     showSendSuccess(hadAttachment);
                     reloadConversation(true);
                 } else {
@@ -325,6 +347,63 @@
             ta.style.height = 'auto';
             ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
         });
+
+        // ─── File preview chip + client-side validation ───────────────
+        const ALLOWED_TYPES = ['image/jpeg','image/png','application/pdf'];
+        const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+
+        document.addEventListener('change', function(e) {
+            if (!e.target.matches('#memo_notice_attachment')) return;
+            const file = e.target.files && e.target.files[0];
+            const form = e.target.closest('form');
+            const area = form && form.querySelector('#file-preview-area');
+            if (!area) return;
+            if (!file) { area.innerHTML = ''; return; }
+
+            // Validate type
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                area.innerHTML = `<span class="file-preview-chip" style="border-color:#fca5a5;background:#fef2f2;color:#b91c1c;">
+                    ⚠️ Only JPG, PNG, PDF allowed.
+                    <span class="chip-remove" title="Remove">✕</span>
+                </span>`;
+                e.target.value = '';
+                return;
+            }
+            // Validate size
+            if (file.size > MAX_SIZE_BYTES) {
+                const sizeMB = (file.size / 1048576).toFixed(1);
+                area.innerHTML = `<span class="file-preview-chip" style="border-color:#fca5a5;background:#fef2f2;color:#b91c1c;">
+                    ⚠️ File too large (${sizeMB} MB). Max 2 MB.
+                    <span class="chip-remove" title="Remove">✕</span>
+                </span>`;
+                e.target.value = '';
+                return;
+            }
+
+            const ext = file.name.split('.').pop().toUpperCase();
+            const sizeLabel = file.size >= 1048576
+                ? (file.size / 1048576).toFixed(1) + ' MB'
+                : (file.size / 1024).toFixed(1) + ' KB';
+            area.innerHTML = `<span class="file-preview-chip">
+                <span>📄 ${escHtml(file.name)}</span>
+                <span style="color:#64748b;">${ext} · ${sizeLabel}</span>
+                <span class="chip-remove" title="Remove">✕</span>
+            </span>`;
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.matches('.chip-remove')) return;
+            const form = e.target.closest('form');
+            if (!form) return;
+            const fi = form.querySelector('#memo_notice_attachment');
+            if (fi) fi.value = '';
+            const area = form.querySelector('#file-preview-area');
+            if (area) area.innerHTML = '';
+        });
+
+        function escHtml(str) {
+            return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
 
         // Clear send lock when offcanvas closes (safety reset)
         const offcanvasEl = document.getElementById('chatOffcanvas');
