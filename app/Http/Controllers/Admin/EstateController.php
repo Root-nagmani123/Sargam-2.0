@@ -403,7 +403,7 @@ class EstateController extends Controller
      */
     public function putInHacAction(Request $request)
     {
-        if (! (hasRole('HAC Person') || hasRole('Estate'))) {
+        if (! (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
             abort(403, 'You do not have permission to put requests in HAC.');
         }
 
@@ -747,6 +747,22 @@ class EstateController extends Controller
             'change_status' => (int) ($request->input('change_status', 0)),
         ];
 
+        // These four workflow flags are never posted by the create/edit form.
+        // New requests must enter the Put In HAC queue at zero; edits must
+        // preserve the existing HAC / approval / change flags from the DB.
+        if ($isEdit) {
+            $workflow = EstateHomeRequestDetails::findOrFail($request->id);
+            $data['app_status']    = (int) ($workflow->app_status ?? 0);
+            $data['hac_status']    = (int) ($workflow->hac_status ?? 0);
+            $data['f_status']      = (int) ($workflow->f_status ?? 0);
+            $data['change_status'] = (int) ($workflow->change_status ?? 0);
+        } else {
+            $data['app_status']    = 0;
+            $data['hac_status']    = 0;
+            $data['f_status']      = 0;
+            $data['change_status'] = 0;
+        }
+
         if ($user && ! $isEstateAuthority) {
             $data['employee_pk'] = !empty($selfEmployeeIds) ? (int) reset($selfEmployeeIds) : 0;
         } else {
@@ -754,7 +770,8 @@ class EstateController extends Controller
         }
 
         // Non–Estate/Admin/Super Admin users cannot choose eligibility; force payroll-derived value when available.
-        if ($user && ! $isEstateAuthority && (int) ($data['employee_pk'] ?? 0) > 0) {
+        $canChooseEligibility = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        if ($user && ! $canChooseEligibility && (int) ($data['employee_pk'] ?? 0) > 0) {
             $resolvedElig = $this->resolveEstateEligibilityTypePkForEmployeeMasterPk((int) $data['employee_pk']);
             if ($resolvedElig > 0) {
                 $data['eligibility_type_pk'] = $resolvedElig;

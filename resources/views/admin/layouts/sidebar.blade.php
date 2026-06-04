@@ -52,17 +52,20 @@ function syncSidebarWithMainTabs() {
     function activateSidebarTab(mainTabId) {
         const sidebarTabId = tabMapping[mainTabId];
         if (!sidebarTabId) return;
-        
+
+        // Resolve the target pane BEFORE deactivating anything. If it is absent
+        // (e.g. the Academics / Material panes are not present in this layout),
+        // keep the currently shown pane instead of blanking the sidebar.
+        const sidebarTab = document.querySelector(sidebarTabId);
+        if (!sidebarTab) return;
+
         // Deactivate all sidebar tabs
         sidebarTabPanes.forEach(pane => {
             pane.classList.remove('show', 'active');
         });
-        
+
         // Activate corresponding sidebar tab
-        const sidebarTab = document.querySelector(sidebarTabId);
-        if (sidebarTab) {
-            sidebarTab.classList.add('show', 'active');
-        }
+        sidebarTab.classList.add('show', 'active');
     }
     
     // Listen for main tab clicks
