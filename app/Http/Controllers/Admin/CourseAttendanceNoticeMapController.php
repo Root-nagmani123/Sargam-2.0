@@ -1612,7 +1612,11 @@ if (!$id || !is_numeric($id)) {
                 'fm.full_name as faculty_name',
                 'mnt.content',
                 'mnt.director_name',
-                'mnt.director_designation'
+                'mnt.director_designation',
+                'sns.conclusion_type_pk',
+                'sns.conclusion_remark',
+                'sns.mark_of_deduction',
+                'sns.status as notice_current_status'
             )
             ->first();
 
@@ -1658,7 +1662,11 @@ if (!$id || !is_numeric($id)) {
                 'fm.full_name as faculty_name',
                 'mnt.content',
                 'mnt.director_name',
-                'mnt.director_designation'
+                'mnt.director_designation',
+                'sms.memo_conclusion_master_pk as conclusion_type_pk',
+                'sms.conclusion_remark',
+                'sms.mark_of_deduction',
+                'sms.communication_status as notice_current_status'
             )
             ->first();
             
@@ -1678,8 +1686,10 @@ if (!$id || !is_numeric($id)) {
         return $item;
     });
 
+    $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
+
     
-   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details'));
+   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details', 'memo_conclusion_master', 'memo_conclusion_master'));
 }
 public function memo_notice_conversation_student(Request $request)
 {

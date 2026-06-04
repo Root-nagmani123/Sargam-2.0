@@ -131,8 +131,43 @@
                 </div>
                 @else
                 <div class="alert alert-warning mt-3">
-                    <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
+                    <strong>{{ $type == 'memo' ? 'Memo' : 'Notice' }} Closed:</strong> This {{ $type == 'memo' ? 'memo' : 'notice' }} has been closed. You cannot reply to it.
                 </div>
+
+                @php
+                    $conclusionTypeName = '';
+                    if (!empty($template_details->conclusion_type_pk)) {
+                        $conclusionTypeName = $memo_conclusion_master->firstWhere('pk', $template_details->conclusion_type_pk)->discussion_name ?? '';
+                    }
+                @endphp
+
+                @if(!empty($template_details->conclusion_type_pk) || !empty($template_details->conclusion_remark))
+                <div class="card border-secondary mt-3">
+                    <div class="card-header fw-semibold bg-light">Conclusion Details</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            @if($conclusionTypeName)
+                            <div class="col-md-6">
+                                <label class="form-label text-muted mb-1">Conclusion Type</label>
+                                <p class="mb-0 fw-semibold">{{ $conclusionTypeName }}</p>
+                            </div>
+                            @endif
+                            @if(!empty($template_details->mark_of_deduction))
+                            <div class="col-md-6">
+                                <label class="form-label text-muted mb-1">Mark of Deduction</label>
+                                <p class="mb-0 fw-semibold">{{ $template_details->mark_of_deduction }}</p>
+                            </div>
+                            @endif
+                            @if(!empty($template_details->conclusion_remark))
+                            <div class="col-12">
+                                <label class="form-label text-muted mb-1">Conclusion Remark</label>
+                                <p class="mb-0">{{ $template_details->conclusion_remark }}</p>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                @endif
                 @endif
 
             </div>
