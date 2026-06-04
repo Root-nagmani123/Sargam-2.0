@@ -888,7 +888,8 @@ $(document).ready(function() {
 
     // Reset listener guard when offcanvas fully hides, so next open re-registers cleanly if needed
     document.getElementById('chatOffcanvas').addEventListener('hidden.bs.offcanvas', function () {
-        document._memoNoticeListenersRegistered = false;
+        // Do NOT reset _memoNoticeListenersRegistered — document-level listeners persist across opens
+        // Resetting it causes duplicate listener registration on each re-open
     });});
 </script>
 @push('scripts')
@@ -985,7 +986,7 @@ $(document).ready(function() {
                 $('#student_pk').val(res.student_pk);
                 $('#memo_number').val(res.memo_number);
 
-                // Default memo_date to today (no backdating allowed)
+                // Set memo_date to the notice date by default
                 const today = new Date().toISOString().split('T')[0];
                 $('#memo_date').val(today);
             },

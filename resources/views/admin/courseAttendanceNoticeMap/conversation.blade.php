@@ -184,7 +184,9 @@
                         <!-- Upload -->
                         <div class="col-6">
                             <label class="form-label">Upload Document</label>
-                            <input type="file" class="form-control" name="document" accept=".jpg,.jpeg,.png,.pdf">
+                            <input type="file" class="form-control" id="conv_doc_input" name="document" accept=".jpg,.jpeg,.png,.pdf">
+                            <div id="conv_file_preview" class="mt-1"></div>
+                            <small class="text-muted">Allowed: JPG, PNG, PDF · Max 2 MB</small>
                         </div>
 
                         <!-- Status -->
@@ -342,6 +344,42 @@ document.addEventListener('DOMContentLoaded', function () {
     // On page load
     toggleConclusion();
     toggleDeduction();
+
+    // File preview with type & size
+    const convDocInput = document.getElementById('conv_doc_input');
+    const convFilePreview = document.getElementById('conv_file_preview');
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+    const MAX_SIZE = 2 * 1024 * 1024;
+
+    if (convDocInput) {
+        convDocInput.addEventListener('change', function () {
+            convFilePreview.innerHTML = '';
+            const file = this.files[0];
+            if (!file) return;
+
+            const ext = file.name.split('.').pop().toUpperCase();
+            const sizeKB = (file.size / 1024).toFixed(1);
+            const sizeLabel = file.size >= 1024 * 1024
+                ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
+                : sizeKB + ' KB';
+            const isValidType = ALLOWED_TYPES.includes(file.type);
+            const isValidSize = file.size <= MAX_SIZE;
+
+            if (!isValidType || !isValidSize) {
+                const msg = !isValidType
+                    ? 'Invalid file type. Only JPG, PNG, PDF allowed.'
+                    : 'File too large. Max 2 MB allowed.';
+                convFilePreview.innerHTML = `<span class="badge bg-danger mt-1">⚠ ${msg}</span>`;
+                convDocInput.value = '';
+                return;
+            }
+
+            convFilePreview.innerHTML = `
+                <span class="badge bg-light border text-dark mt-1" style="font-size:.78rem;">
+                    📎 ${file.name} &nbsp;|&nbsp; <strong>${ext}</strong> &nbsp;|&nbsp; ${sizeLabel}
+                </span>`;
+        });
+    }
 
     // Set current date & time
     const now = new Date();

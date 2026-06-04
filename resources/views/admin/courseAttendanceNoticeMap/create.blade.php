@@ -261,6 +261,7 @@
     var topic_id = $(this).val();
    
     if (topic_id) {
+        // Fetch timetable details (venue, session, faculty)
         $.ajax({
             url: "{{ route('memo.notice.management.gettimetableDetailsBytopic') }}",
             type: "GET",
@@ -284,8 +285,35 @@
                 alert('Error fetching timetable details.');
             }
         });
+
+        // Fetch defaulter students for this topic
+        $.ajax({
+            url: "{{ route('memo.notice.management.getStudentAttendanceBytopic') }}",
+            type: "POST",
+            data: {
+                topic_id: topic_id,
+                _token: "{{ csrf_token() }}"
+            },
+            success: function(response) {
+                var select = $('#select_memo_student');
+                select.empty();
+                if (response.status && response.students && response.students.length > 0) {
+                    $.each(response.students, function(i, student) {
+                        select.append('<option value="' + student.pk + '">' + student.display_name + '</option>');
+                    });
+                    // Auto-select all students
+                    select.find('option').prop('selected', true);
+                } else {
+                    select.append('<option value="" disabled>No defaulter students found</option>');
+                }
+            },
+            error: function() {
+                $('#select_memo_student').empty().append('<option value="" disabled>Error loading students</option>');
+            }
+        });
     } else {
         $('#venue_name, #session_name, #faculty_name').val('');
+        $('#select_memo_student').empty();
     }
     });
 

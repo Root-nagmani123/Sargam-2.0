@@ -171,7 +171,6 @@
 
             <label class="chat-attach-btn" for="memo_notice_attachment" title="Attach file" aria-label="Attach file">📎</label>
             <input id="memo_notice_attachment" type="file" name="document" hidden>
-            <div id="file-preview-area" style="width:100%;padding:0 .25rem"></div>
 
             <textarea name="student_decip_incharge_msg"
                       class="chat-input"
@@ -183,6 +182,7 @@
                 <span class="visually-hidden">Send</span>➤
             </button>
         </form>
+        <div id="file-preview-area" style="padding:.15rem .75rem;background:#fff;"></div>
 
     @elseif($conversations->last()->notice_status == 2)
 
@@ -269,7 +269,7 @@
                     if (ta) { ta.value = ''; ta.style.height = 'auto'; }
                     if (fileBtn) fileBtn.value = '';
                     // Clear file preview chip
-                    const previewArea = form.querySelector('#file-preview-area');
+                    const previewArea = wrapper.querySelector('#file-preview-area');
                     if (previewArea) previewArea.innerHTML = '';
                     showSendSuccess(hadAttachment);
                     reloadConversation(true);
@@ -356,7 +356,7 @@
             if (!e.target.matches('#memo_notice_attachment')) return;
             const file = e.target.files && e.target.files[0];
             const form = e.target.closest('form');
-            const area = form && form.querySelector('#file-preview-area');
+            const area = form && form.closest('.chat-wrapper') && form.closest('.chat-wrapper').querySelector('#file-preview-area');
             if (!area) return;
             if (!file) { area.innerHTML = ''; return; }
 
@@ -397,7 +397,7 @@
             if (!form) return;
             const fi = form.querySelector('#memo_notice_attachment');
             if (fi) fi.value = '';
-            const area = form.querySelector('#file-preview-area');
+            const area = form.closest('.chat-wrapper') ? form.closest('.chat-wrapper').querySelector('#file-preview-area') : null;
             if (area) area.innerHTML = '';
         });
 
