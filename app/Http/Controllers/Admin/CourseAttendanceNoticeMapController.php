@@ -590,6 +590,7 @@ public function getTemplateByCourse(Request $request)
     $courseId = $request->course_id;
     $type     = $request->type; // 'Notice' or 'Memo'
 
+    
     $template = DB::table('memo_notice_templates')
         ->where('course_master_pk', $courseId)
         ->where('memo_notice_type', $type)
