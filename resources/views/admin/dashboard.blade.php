@@ -183,107 +183,93 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         ? route('admin.security.employee_idcard_approval.approval3')
         : route('admin.security.employee_idcard_approval.approval2');
         @endphp
-        <div class="dashboard-stats-grid row g-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3">
+        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3 mb-4">
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-blue h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-person-badge"></i></span>
-                                <p class="stat-label">Pending Permanent ID Requests</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue"><i class="bi bi-person-badge"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Pending Permanent ID Requests</p>
+                                @php $v = (int) ($todayPendingPermanentIdCardRequests ?? 0); @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-meta mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayPendingPermanentIdCardRequests ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-blue h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-person-vcard"></i></span>
-                                <p class="stat-label">Pending Contractual ID Requests</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue"><i class="bi bi-person-vcard"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Pending Contractual ID Requests</p>
+                                @php $v = (int) ($todayPendingContractualIdCardRequests ?? 0); @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-meta mb-0">Total pending: {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayPendingContractualIdCardRequests ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-amber h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-copy"></i></span>
-                                <p class="stat-label">Duplicate Permanent ID Requests</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber"><i class="bi bi-copy"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Duplicate Permanent ID Requests</p>
+                                @php $v = (int) ($todayDuplicatePermIdCardRequests ?? 0); @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-meta mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}</p>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayDuplicatePermIdCardRequests ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-amber h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-files"></i></span>
-                                <p class="stat-label">Duplicate Contractual ID Requests</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber"><i class="bi bi-files"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Duplicate Contractual ID Requests</p>
+                                @php $v = (int) ($todayDuplicateContractualIdCardRequests ?? 0); @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-meta mb-0">Total pending: {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayDuplicateContractualIdCardRequests ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
-                <a href="{{ route('admin.security.family_idcard_approval.index') }}"
-                    class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-blue h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-people"></i></span>
-                                <p class="stat-label">Requested Family ID</p>
+                <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue"><i class="bi bi-people"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Requested Family ID</p>
+                                @php $v = (int) ($todayFamilyApprovals ?? 0); @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-meta mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayFamilyApprovals ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
-                <a href="{{ route('admin.security.vehicle_pass_approval.index') }}"
-                    class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-green h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-car-front"></i></span>
-                                <p class="stat-label">Requested Vehicle Pass</p>
+                <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-green"><i class="bi bi-car-front"></i></div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Requested Vehicle Pass</p>
+                                @php $v = (int) ($todayVehicleApprovals ?? 0); @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-meta mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayVehicleApprovals ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
                         </div>
                     </div>
                 </a>
