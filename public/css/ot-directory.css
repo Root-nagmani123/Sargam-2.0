@@ -1,0 +1,425 @@
+/* ============================================================
+   OT Directory – Scoped Styles
+   ============================================================ */
+
+/* === Card === */
+.ot-directory-card {
+    border-radius: 1rem;
+    border: none;
+    box-shadow: 0 2px 12px rgba(0, 0, 0, .06);
+    overflow: hidden;
+    background: #fff;
+}
+
+/* === Top bar (Active / Archived + Download) === */
+.ot-topbar {
+    background: #fff;
+    padding: 16px 28px;
+}
+
+.ot-status-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #fff;
+    border: 1px solid #e3e8ef;
+    border-radius: 0.8rem;
+    padding: 4px;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .04);
+}
+
+.ot-toggle-btn {
+    border: none;
+    outline: none;
+    background: transparent;
+    border-radius: 0.8rem;
+    padding: 8px 26px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #4b5c72;
+    cursor: pointer;
+    transition: all .22s ease;
+    line-height: 1.4;
+}
+
+.ot-toggle-btn:hover:not(.active) {
+    color: #1a3255;
+    background: rgba(0, 0, 0, .04);
+}
+
+.ot-toggle-btn.active {
+    background: #0d47a1;
+    color: #fff;
+    box-shadow: 0 4px 14px rgba(13, 71, 161, .3);
+}
+
+.ot-download-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    border-radius: .6rem;
+    background: #fff;
+    color: #1565c0;
+    border: 1px solid #d6e0f0;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
+    transition: background .2s ease, box-shadow .2s ease, border-color .2s ease;
+}
+
+.ot-download-btn:hover,
+.ot-download-btn:focus {
+    background: #f4f8ff;
+    color: #0d47a1;
+    border-color: #b6cdf0;
+    box-shadow: 0 4px 12px rgba(13, 71, 161, .12);
+}
+
+.ot-download-btn i {
+    font-size: 16px;
+}
+
+/* === Filter bar === */
+.ot-filter-bar {
+    background: #fff;
+    padding: 16px 28px;
+}
+
+.ot-filter-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7a8d;
+    white-space: nowrap;
+}
+
+.ot-filter-select {
+    min-width: 180px;
+    border: 1px solid #d0d7e2;
+    border-radius: .5rem;
+    padding: 8px 14px;
+    padding-right: 32px;
+    font-size: 14px;
+    font-weight: 500;
+    color: #374151;
+    background-color: #fff;
+    appearance: auto;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+.ot-filter-select:focus {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 3px rgba(13, 110, 253, .1);
+    outline: none;
+}
+
+.ot-reset-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 8px 18px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #dc3545;
+    border: 1.5px solid #dc3545;
+    border-radius: .5rem;
+    background: transparent;
+    text-decoration: none;
+    transition: all .18s ease;
+    white-space: nowrap;
+}
+
+.ot-reset-btn:hover {
+    background: #dc3545;
+    color: #fff;
+    border-color: #dc3545;
+}
+
+.ot-columns-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    border: 1px solid #d0d7e2;
+    border-radius: .5rem;
+    background: #fff;
+    cursor: pointer;
+    transition: all .18s ease;
+    white-space: nowrap;
+}
+
+.ot-columns-btn:hover {
+    background: #f1f5f9;
+    border-color: #b0bec5;
+}
+
+.ot-columns-btn i {
+    font-size: 15px;
+    color: #6b7a8d;
+}
+
+/* === Search icon button === */
+.ot-search-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: .6rem;
+    border: 1px solid #e3e8ef;
+    background: #f1f3f7;
+    color: #6b7a8d;
+    cursor: pointer;
+    font-size: 15px;
+    transition: all .2s ease;
+    position: relative;
+    overflow: hidden;
+}
+
+.ot-search-btn:hover {
+    background: #e7ebf2;
+    border-color: #c7d0dd;
+    color: #374151;
+}
+
+/* Expandable search */
+.ot-search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.ot-search-wrap .ot-search-field {
+    width: 0;
+    opacity: 0;
+    border: none;
+    padding: 0;
+    font-size: 13px;
+    transition: width .3s ease, opacity .25s ease, padding .3s ease;
+    background: transparent;
+    outline: none;
+}
+
+.ot-search-wrap.expanded .ot-search-field {
+    width: 200px;
+    opacity: 1;
+    padding: 6px 12px;
+    border: 1px solid #d0d7e2;
+    border-radius: .5rem;
+    margin-right: 8px;
+}
+
+/* === Table === */
+.ot-table {
+    border-collapse: separate;
+    border-spacing: 0;
+    width: 100%;
+    min-width: 1080px;
+}
+
+.ot-th {
+    background: #f8f9fb;
+    color: #6b7a8d;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .15px;
+    padding: 14px 18px;
+    white-space: nowrap;
+    border-bottom: 1px solid #e8ecf1;
+    text-transform: none;
+    vertical-align: middle;
+}
+
+.ot-td {
+    font-size: 14px;
+    color: #374151;
+    padding: 18px 18px;
+    border-bottom: 1px solid #f2f4f7;
+    vertical-align: middle;
+}
+
+.ot-td-sno {
+    color: #6b7a8d;
+    font-weight: 600;
+    width: 56px;
+    text-align: left;
+}
+
+.ot-row {
+    transition: background-color .15s ease;
+}
+
+.ot-row:hover {
+    background-color: #f9fbff;
+}
+
+.ot-row:last-child .ot-td {
+    border-bottom: none;
+}
+
+/* Photo */
+.ot-photo {
+    width: 44px;
+    height: 44px;
+    object-fit: cover;
+    border-radius: 50%;
+    border: 2px solid #e8ecf1;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .07);
+    flex-shrink: 0;
+}
+
+/* Letter avatar fallback */
+.ot-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: 700;
+    color: #fff;
+    background: #5b7fa4;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, .07);
+}
+
+.ot-name {
+    font-weight: 500;
+    color: #1e293b;
+    font-size: 14px;
+    white-space: nowrap;
+}
+
+/* === Pagination bar === */
+.ot-pagination-bar {
+    background: #fff;
+    padding: 14px 28px;
+}
+
+.ot-pagination-bar .pagination {
+    margin-bottom: 0;
+    gap: 4px;
+}
+
+.ot-pagination-bar .pagination .page-link {
+    border: 1px solid #dee2e6;
+    border-radius: .375rem;
+    padding: 6px 12px;
+    font-size: 13px;
+    color: #374151;
+    font-weight: 500;
+    min-width: 36px;
+    text-align: center;
+    transition: all .15s ease;
+}
+
+.ot-pagination-bar .pagination .page-item.active .page-link {
+    background: #0d47a1;
+    border-color: #0d47a1;
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(13, 71, 161, .2);
+}
+
+.ot-pagination-bar .pagination .page-link:hover {
+    background: #f1f5f9;
+    border-color: #b0bec5;
+}
+
+.ot-per-page-select {
+    width: auto;
+    display: inline-block;
+    padding: 4px 10px;
+    font-size: 13px;
+    font-weight: 500;
+    border: 1px solid #d0d7e2;
+    border-radius: .375rem;
+    color: #374151;
+    background: #fff;
+}
+
+.ot-showing-text {
+    font-size: 13px;
+    color: #6b7a8d;
+    font-weight: 500;
+}
+
+/* === Responsive === */
+@media (max-width: 1199.98px) {
+    .ot-topbar,
+    .ot-filter-bar,
+    .ot-pagination-bar {
+        padding-left: 20px;
+        padding-right: 20px;
+    }
+}
+
+@media (max-width: 991.98px) {
+    .ot-topbar,
+    .ot-filter-bar {
+        flex-direction: column;
+        align-items: stretch !important;
+        gap: 12px;
+    }
+
+    .ot-status-toggle {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .ot-toggle-btn {
+        flex: 1;
+        text-align: center;
+    }
+
+    .ot-filter-select {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .ot-filter-bar .d-flex {
+        flex-wrap: wrap;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .ot-directory-scroll {
+        max-height: 70vh;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .ot-th,
+    .ot-td {
+        font-size: 12px;
+        padding: 12px 12px;
+    }
+
+    .ot-photo {
+        width: 36px;
+        height: 36px;
+    }
+
+    .ot-topbar,
+    .ot-filter-bar,
+    .ot-pagination-bar {
+        padding-left: 14px !important;
+        padding-right: 14px !important;
+    }
+
+    .ot-toggle-btn {
+        padding: 6px 16px;
+        font-size: 13px;
+    }
+
+    .ot-pagination-bar {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start !important;
+    }
+}

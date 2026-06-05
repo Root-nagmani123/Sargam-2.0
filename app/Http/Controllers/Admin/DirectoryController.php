@@ -7,8 +7,8 @@ use App\Models\CourseMaster;
 use App\Models\EmployeeMaster;
 use App\Models\StudentMasterCourseMap;
 use Illuminate\Http\Request;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Symfony\Component\HttpFoundation\StreamedResponse;
+use Yajra\DataTables\Facades\DataTables;
 
 class DirectoryController extends Controller
 {
@@ -77,39 +77,42 @@ class DirectoryController extends Controller
 
     public function ot(Request $request)
     {
-        $activeCourses = CourseMaster::query()
-            ->where('active_inactive', 1)
-            ->where('end_date', '<', now()->toDateString())
+        // Active = ongoing/upcoming courses, Archived = courses that have ended.
+        $status = (string) $request->input('status', 'active');
+        if (!in_array($status, ['active', 'archived'], true)) {
+            $status = 'active';
+        }
+        $today = now()->toDateString();
+
+        $coursesQuery = CourseMaster::query()->where('active_inactive', 1);
+        if ($status === 'archived') {
+            $coursesQuery->where('end_date', '<', $today);
+        } else {
+            $coursesQuery->where('end_date', '>=', $today);
+        }
+        $activeCourses = $coursesQuery
             ->orderByDesc('end_date')
             ->orderBy('course_name')
             ->get(['pk', 'course_name', 'couse_short_name']);
 
         $selectedCourseId = (int) $request->input('course_id', 0);
         $search = trim((string) $request->input('search', ''));
-        $sort = (string) $request->input('sort', 'name_asc');
-        $perPage = (int) $request->input('per_page', 10);
-        if (!in_array($perPage, [25, 50, 100], true)) {
-            $perPage = 10;
-        }
-        $export = (string) $request->input('export', '');
-        $sortMap = [
-            'name_asc' => ['sm.display_name', 'asc'],
-            'name_desc' => ['sm.display_name', 'desc'],
-            'ot_code_asc' => ['sm.generated_OT_code', 'asc'],
-            'ot_code_desc' => ['sm.generated_OT_code', 'desc'],
-        ];
-        [$sortColumn, $sortDirection] = $sortMap[$sort] ?? $sortMap['name_asc'];
 
         if ($selectedCourseId <= 0 && $activeCourses->isNotEmpty()) {
             $selectedCourseId = (int) $activeCourses->first()->pk;
         }
 
-        $students = new LengthAwarePaginator([], 0, $perPage);
+        $students = collect();
         if ($selectedCourseId > 0) {
             $studentsQuery = StudentMasterCourseMap::query()
                 ->join('student_master as sm', 'student_master_course__map.student_master_pk', '=', 'sm.pk')
                 ->join('course_master as cm', 'student_master_course__map.course_master_pk', '=', 'cm.pk')
                 ->leftJoin('cadre_master as cad', 'sm.cadre_master_pk', '=', 'cad.pk')
+                ->leftJoin('ot_hostel_room_details as ohrd', function ($join) {
+                    $join->on('ohrd.user_name', '=', 'sm.user_id')
+                         ->on('ohrd.course_master_pk', '=', 'cm.pk')
+                         ->where('ohrd.active_inactive', 1);
+                })
                 ->where('student_master_course__map.active_inactive', 1)
                 ->where('sm.status', 1)
                 ->where('cm.active_inactive', 1)
@@ -122,6 +125,7 @@ class DirectoryController extends Controller
                     'sm.photo_path',
                     'cm.course_name',
                     'cad.cadre_name',
+                    'ohrd.hostel_room_name',
                 ]);
 
             if ($search !== '') {
@@ -133,18 +137,85 @@ class DirectoryController extends Controller
                 });
             }
 
-            $studentsQuery = $studentsQuery->orderBy($sortColumn, $sortDirection);
-
-            if (in_array($export, ['csv', 'excel'], true)) {
-                return $this->streamOtExport($studentsQuery->cursor(), $export);
-            }
-
-            $students = $studentsQuery
-                ->paginate($perPage)
-                ->withQueryString();
+            $students = $studentsQuery->orderBy('sm.display_name')->get();
         }
 
-        return view('admin.directory.ot', compact('students', 'activeCourses', 'selectedCourseId', 'search', 'sort', 'perPage'));
+        return view('admin.directory.ot', compact('students', 'activeCourses', 'selectedCourseId', 'search', 'status'));
+    }
+
+    public function otData(Request $request)
+    {
+        $status = (string) $request->input('status', 'active');
+        $courseId = (int) $request->input('course_id', 0);
+
+        $today = now()->toDateString();
+
+        // If no course ID provided, get the first active course
+        if ($courseId <= 0) {
+            $coursesQuery = CourseMaster::query()->where('active_inactive', 1);
+            if ($status === 'archived') {
+                $coursesQuery->where('end_date', '<', $today);
+            } else {
+                $coursesQuery->where('end_date', '>=', $today);
+            }
+            $firstCourse = $coursesQuery
+                ->orderByDesc('end_date')
+                ->orderBy('course_name')
+                ->first(['pk']);
+            
+            if ($firstCourse) {
+                $courseId = (int) $firstCourse->pk;
+            }
+        }
+
+        $query = StudentMasterCourseMap::query()
+            ->join('student_master as sm', 'student_master_course__map.student_master_pk', '=', 'sm.pk')
+            ->join('course_master as cm', 'student_master_course__map.course_master_pk', '=', 'cm.pk')
+            ->leftJoin('cadre_master as cad', 'sm.cadre_master_pk', '=', 'cad.pk')
+            ->where('student_master_course__map.active_inactive', 1)
+            ->where('sm.status', 1)
+            ->where('cm.active_inactive', 1);
+
+        // Filter by course
+        if ($courseId > 0) {
+            $query->where('cm.pk', $courseId);
+        }
+
+        // Filter by status
+        if ($status === 'archived') {
+            $query->where('cm.end_date', '<', $today);
+        } else {
+            $query->where('cm.end_date', '>=', $today);
+        }
+
+        $query->select([
+            'sm.pk',
+            'sm.display_name',
+            'sm.generated_OT_code',
+            'sm.email',
+            'sm.photo_path',
+            'cm.course_name',
+            'cad.cadre_name',
+        ]);
+
+        return DataTables::of($query)
+            ->addIndexColumn()
+            ->editColumn('display_name', function ($row) {
+                return $row->display_name ?: '-';
+            })
+            ->editColumn('generated_OT_code', function ($row) {
+                return $row->generated_OT_code ?: '-';
+            })
+            ->editColumn('email', function ($row) {
+                return $row->email ?: '-';
+            })
+            ->editColumn('course_name', function ($row) {
+                return $row->course_name ?: '-';
+            })
+            ->editColumn('cadre_name', function ($row) {
+                return $row->cadre_name ?: '-';
+            })
+            ->make(true);
     }
 
     private function streamEmployeesExport(iterable $rows, string $export): StreamedResponse
