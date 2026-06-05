@@ -47,7 +47,7 @@
     </div>
 
     <div class="header-bottom-bar with-vertical px-1">
-        <nav class="navbar navbar-expand-lg p-0">
+        <nav class="navbar navbar-expand-lg px-3">
             <ul class="navbar-nav">
                 <li class="nav-item d-flex d-xl-none">
                     <a class="nav-link nav-icon-hover-bg rounded-circle sidebartoggler" id="headerCollapse"
@@ -108,13 +108,13 @@
     <!-- Notifications (visible on both desktop and mobile) -->
     <div class="dropdown position-relative d-none d-lg-block">
         <button type="button"
-            class="btn btn-light rounded-1 p-2 position-relative shadow-sm notification-btn "
+            class="btn notification-btn position-relative"
             id="notificationDropdown"
             data-bs-toggle="dropdown"
             aria-expanded="false"
             aria-label="Notifications">
 
-            <i class="material-icons material-symbols-rounded fs-5">
+            <i class="material-icons material-symbols-rounded" style="font-size:20px;">
                 notifications
             </i>
 
@@ -184,16 +184,43 @@
         </ul>
     </div>
 
-    <!-- Logout -->
-    <form action="{{ route('logout') }}" method="POST" class="m-0">
-        @csrf
-        <button type="submit"
-            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1 px-3 rounded-1 shadow-sm"
-            aria-label="Sign out">
-            <i class="material-icons material-symbols-rounded fs-6">logout</i>
-            <span class="small fw-medium">Logout</span>
+    <!-- User Profile Dropdown -->
+    <div class="dropdown header-profile-dropdown">
+        <button type="button" class="btn p-0 border-0 bg-transparent d-none d-lg-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false">
+            <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width:36px;height:36px;font-size:0.875rem;font-weight:600;">
+                {{ strtoupper(substr(Auth::user()->first_name ?? Auth::user()->name ?? 'U', 0, 1)) }}{{ strtoupper(substr(Auth::user()->last_name ?? '', 0, 1)) }}
+            </div>
+            <div class="lh-sm text-start">
+                <div class="fw-semibold small text-dark">{{ trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) ?: (Auth::user()->name ?? 'User') }}</div>
+                <div class="text-body-secondary" style="font-size:11px;">{{ Auth::user()->getRoleNames()->implode(', ') ?: 'User' }}</div>
+            </div>
+            <i class="bi bi-chevron-down text-body-secondary" style="font-size:12px;"></i>
         </button>
-    </form>
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2 px-3" href="{{ route('member.profile.edit', Auth::user()->user_id ?? 0) }}">
+                    <i class="bi bi-person-gear" style="font-size:16px;"></i>
+                    <span>Edit Profile</span>
+                </a>
+            </li>
+            <li>
+                <a class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2 px-3" href="{{ route('admin.password.change_password') }}">
+                    <i class="bi bi-key" style="font-size:16px;"></i>
+                    <span>Change Password</span>
+                </a>
+            </li>
+            <li><hr class="dropdown-divider my-1"></li>
+            <li>
+                <form action="{{ route('logout') }}" method="POST" class="m-0">
+                    @csrf
+                    <button type="submit" class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2 px-3 text-danger">
+                        <i class="bi bi-box-arrow-right" style="font-size:16px;"></i>
+                        <span>Logout</span>
+                    </button>
+                </form>
+            </li>
+        </ul>
+    </div>
 </div>
 
             </div>
@@ -343,13 +370,26 @@
 
             <style>
                 .notification-btn:hover {
-    background-color: var(--bs-light);
-    transform: translateY(-1px);
+    background-color: #f3f4f6 !important;
+}
+
+.notification-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px !important;
+    border: 1px solid #d1d5db !important;
+    background: #fff !important;
+    color: #374151 !important;
+    box-shadow: none !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 !important;
 }
 
 .notification-badge {
-    font-size: 10px;
-    padding: 4px 6px;
+    font-size: 9px;
+    padding: 3px 5px;
 }
 
 .notification-dropdown {
@@ -393,48 +433,45 @@
 
 /* Header - Match reference design */
 .header-top-bar {
-    background: #122442;
-    height: 40px;
+    background: #0f1d35;
+    height: 36px;
     border: none;
 }
-.header-flag-icon { height: 20px; }
+.header-flag-icon { height: 16px; border-radius: 2px; }
 .header-utility-nav .header-utility-sep {
     width: 1px;
-    height: 16px;
-    background: rgba(255,255,255,0.5);
-    margin: 0 8px;
+    height: 14px;
+    background: rgba(255,255,255,0.3);
+    margin: 0 6px;
     display: inline-block;
 }
-.header-font-btn { text-decoration: none !important; }
+.header-font-btn { text-decoration: none !important; font-size: 0.75rem; }
 .header-lang-dropdown {
     display: flex;
     align-items: center;
-    gap: 6px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 6px;
-    padding: 4px 10px;
+    gap: 4px;
+    padding: 0;
 }
-.header-globe-icon { font-size: 18px !important; color: #fff !important; }
+.header-globe-icon { font-size: 14px !important; color: #fff !important; opacity: 0.85; }
 .header-lang-select {
     background: transparent !important;
     border: none !important;
     color: #fff !important;
-    font-size: 0.875rem;
-    padding: 2px 4px;
-    min-width: 80px;
+    font-size: 0.75rem;
+    padding: 0 2px;
+    min-width: 64px;
 }
-.header-lang-select option { background: #122442; color: #fff; }
+.header-lang-select option { background: #0f1d35; color: #fff; }
 
 /* Main nav bar - white background */
-.with-vertical .navbar { background: #fff !important }
-.header-brand { gap: 10px !important; }
-.header-logo-emblem { height: 40px; object-fit: contain; }
-.header-logo { height: 32px; object-fit: contain; }
-/* Desktop: larger, more prominent logo */
+.with-vertical .navbar { background: #fff !important; min-height: 87px; }
+.header-brand { gap: 10px !important; padding-left: 0.5rem; }
+.header-logo-emblem { height: 48px; object-fit: contain; }
+.header-logo { height: 40px; object-fit: contain; }
 @media (min-width: 992px) {
     .header-brand { gap: 12px !important; }
-    .header-logo-emblem { height: 52px !important; }
-    .header-logo { height: 44px !important; }
+    .header-logo-emblem { height: 44px !important; }
+    .header-logo { height: 36px !important; }
 }
 .header-app-name {
     font-size: 1.25rem;
@@ -442,25 +479,35 @@
     color: #004a93;
 }
 
-/* Nav container - light grey pill */
+/* Nav container - pill style matching reference */
 .header-main-nav {
-    background: #f0f0f0 !important;
-    border-radius: 12px;
-    height: 48px;
-    border: 1px solid rgba(0,0,0,0.05);
+    background: #eef1f5 !important;
+    border-radius: 10px;
+    height: 60px;
+    border: none;
+    padding: 14px !important;
+    gap: 2px !important;
 }
 .header-nav-link {
-    color: #6c757d !important;
+    color: #4b5563 !important;
     border-radius: 8px;
     text-decoration: none !important;
-    border-bottom: 2px solid transparent;
-    transition: color 0.2s, border-color 0.2s;
-}
-.header-nav-link:hover { color: #495057 !important; }
-.header-nav-link.active {
-    color: #004a93 !important;
-    border-bottom-color: #004a93;
+    font-size: 0.8125rem;
     font-weight: 500;
+    padding: 6px 16px !important;
+    border: none;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+}
+.header-nav-link:hover {
+    color: #1f2937 !important;
+    background: rgba(255,255,255,0.6);
+}
+.header-nav-link.active {
+    color: #fff !important;
+    background: #004a93 !important;
+    font-weight: 500;
+    box-shadow: 0 1px 3px rgba(0, 74, 147, 0.3);
 }
 .header-search-btn {
     background: transparent !important;
@@ -472,9 +519,9 @@
 .header-search-btn:hover { color: #004a93 !important; }
 
 /* Right side */
-.header-right-actions { margin-right: 1rem; }
-.header-icon-sm { font-size: 24px !important; }
-.header-logout-icon { font-size: 22px !important; }
+.header-right-actions { margin-right: 0.75rem; }
+.header-icon-sm { font-size: 22px !important; }
+.header-logout-icon { font-size: 20px !important; }
 .header-last-login { font-size: 0.8125rem; }
 
 /* Divider before logout */
@@ -483,6 +530,25 @@
     height: 28px;
     background: rgba(0, 0, 0, 0.08);
     flex-shrink: 0;
+}
+
+/* Profile dropdown - open on hover */
+.header-profile-dropdown:hover > .dropdown-menu {
+    display: block;
+    margin-top: 0;
+}
+.header-profile-dropdown > .dropdown-menu {
+    margin-top: 0.5rem;
+    right: 0 !important;
+    left: auto !important;
+    transform: none !important;
+    position: absolute !important;
+}
+.header-profile-dropdown .dropdown-item:hover {
+    background: #f3f4f6;
+}
+.header-profile-dropdown .dropdown-item.text-danger:hover {
+    background: #fef2f2;
 }
 
 /* Logout button - enhanced */
