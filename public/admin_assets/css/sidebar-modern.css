@@ -6,7 +6,7 @@
     --sargam-header-offset: 122px;
     --sargam-mini-nav-width: 90px;
     --sargam-mini-squircle-size: 56px;
-    --sargam-mini-squircle-radius: 14px;
+    --sargam-mini-squircle-radius: 0.75rem;
     --sargam-mini-nav-gap: 0.75rem;
     --sargam-panel-width: 252px;
     --sargam-sidebar-full-width: calc(var(--sargam-mini-nav-width) + var(--sargam-panel-width));
@@ -111,7 +111,7 @@
     max-width: var(--sargam-mini-nav-width) !important;
     height: 100% !important;
     margin-top: 0 !important;
-    padding: 0.5rem 0.3rem 1rem !important;
+    padding: 0.5rem 0.25rem 1rem !important;
     background: #fff !important;
     border-right: 1px solid var(--sargam-sidebar-border) !important;
     border-top:1px solid var(--sargam-sidebar-border) !important;
@@ -159,7 +159,7 @@
     flex-direction: column !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 0.35rem !important;
+    gap: 0.25rem !important;
     width: 100% !important;
     max-width: var(--sargam-mini-nav-width) !important;
     padding: 0 !important;
@@ -262,7 +262,7 @@ body[data-sidebartype="mini-sidebar"] .sidebar-mini-toggle-text-open {
     flex-direction: column !important;
     align-items: center !important;
     justify-content: flex-start !important;
-    gap: 0.35rem !important;
+    gap: 0.25rem !important;
     width: 100% !important;
     max-width: var(--sargam-mini-nav-width) !important;
     min-height: 0 !important;
