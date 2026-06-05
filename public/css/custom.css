@@ -238,11 +238,6 @@ body.custom-loaded {
     color: #7a271a;
 }
 
-.programme-dt-search {
-    flex: 0 0 auto;
-    width: min(100%, 360px);
-}
-
 .programme-dt-search .dataTables_filter {
     float: none !important;
     margin: 0 !important;

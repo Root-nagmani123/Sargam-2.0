@@ -186,12 +186,6 @@
     border-color: #fda29b;
 }
 
-.mess-master-page .mess-filter-bar {
-    border-bottom: 1px solid var(--mess-m-border);
-    padding-bottom: 1rem;
-    margin-bottom: 1rem;
-}
-
 @media (max-width: 767.98px) {
     .mess-master-page .mess-dt-footer {
         flex-direction: column;

@@ -19,7 +19,7 @@
 <div class="container-fluid mess-master-page py-4">
     <x-breadcrum title="Client Master">
         <button type="button" id="openCreateClientType"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold text-nowrap shadow-sm"
             data-bs-toggle="modal" data-bs-target="#createClientTypeModal">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
             <span>Add Client</span>
@@ -31,8 +31,8 @@
     <div class="card mess-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="programme-dt-toolbar mess-dt-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 gap-md-3 mb-4">
-                <div id="ctDtSearch" class="programme-dt-search" data-dt-search-for="clientTypesTable"></div>
-                <div id="messColManagerMount-clientTypesTable" class="flex-shrink-0"></div>
+            <div id="messColManagerMount-clientTypesTable" class="flex-shrink-0"></div>    
+            <div id="ctDtSearch" class="programme-dt-search" data-dt-search-for="clientTypesTable"></div>
             </div>
 
             <div class="programme-dt-panel">
