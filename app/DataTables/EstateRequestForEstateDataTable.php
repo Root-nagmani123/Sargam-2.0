@@ -3,12 +3,11 @@
 namespace App\DataTables;
 
 use App\Models\EstateHomeRequestDetails;
-use App\Support\RedisBackedCache;
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -17,94 +16,45 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateRequestForEstateDataTable extends DataTable
 {
-    /**
-     * Server-side JSON for the listing (same env as other estate Redis: ESTATE_UPDATE_METER_READING_CACHE_*).
-     * Keys: estate_rfet:v1:… — draw is applied per request so DataTables stays in sync.
-     */
-    public function ajax(): JsonResponse
+    public const LISTING_CACHE_EPOCH_KEY = 'estate_rfet_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
     {
-        $draw = (int) $this->request()->input('draw', 0);
-        $fingerprint = $this->requestForEstateDataTableCacheFingerprint();
-        $cacheKey = 'estate_rfet:v1:' . md5(json_encode($fingerprint));
-
-        $payload = $this->rememberEstateListingCache($cacheKey, function () {
-            $resp = parent::ajax();
-            $data = $resp->getData(true);
-            if (! is_array($data)) {
-                return ['__passthrough' => true, 'body' => $resp->getContent()];
-            }
-            unset($data['draw']);
-
-            return $data;
-        });
-
-        if (isset($payload['__passthrough']) && $payload['__passthrough']) {
-            $decoded = json_decode((string) ($payload['body'] ?? ''), true);
-
-            return is_array($decoded)
-                ? new JsonResponse(array_merge($decoded, ['draw' => $draw]))
-                : parent::ajax();
-        }
-
-        $payload['draw'] = $draw;
-
-        return new JsonResponse($payload);
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'EstateRequestForEstateDataTable');
     }
 
     /**
-     * @template T
-     *
-     * @param  callable(): T  $callback
-     * @return T
+     * Server-side JSON for the listing (.env: ESTATE_UPDATE_METER_READING_CACHE_*).
      */
-    private function rememberEstateListingCache(string $cacheKey, callable $callback)
+    public function ajax(): JsonResponse
     {
-        $enabled = ! in_array(strtolower((string) env('ESTATE_UPDATE_METER_READING_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
-        $ttl = max(30, (int) env('ESTATE_UPDATE_METER_READING_CACHE_SECONDS', 300));
-        $storeName = RedisBackedCache::estateUpdateMeterReadingStoreName();
-        $repository = RedisBackedCache::repositoryForStore($storeName);
-        if (! $enabled) {
-            return $callback();
-        }
-        try {
-            return $repository->remember($cacheKey, $ttl, $callback);
-        } catch (\Throwable $e) {
-            Log::warning('Request for estate DataTable: cache store failed, using DB only.', [
-                'store' => $storeName,
-                'message' => $e->getMessage(),
-            ]);
-
-            return $callback();
-        }
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'estate_rfet:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'ESTATE_UPDATE_METER_READING_CACHE_ENABLED',
+                'seconds' => 'ESTATE_UPDATE_METER_READING_CACHE_SECONDS',
+            ],
+            'EstateRequestForEstateDataTable',
+            fn () => parent::ajax(),
+            $this->requestForEstateListingCacheExtra()
+        );
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function requestForEstateDataTableCacheFingerprint(): array
+    private function requestForEstateListingCacheExtra(): array
     {
         $r = $this->request();
-        $columns = $r->input('columns', []);
-        $colSearch = [];
-        if (is_array($columns)) {
-            foreach ($columns as $c) {
-                if (! is_array($c)) {
-                    continue;
-                }
-                $colSearch[] = [
-                    'data' => $c['data'] ?? '',
-                    'sv' => trim((string) data_get($c, 'search.value', '')),
-                ];
-            }
-        }
-
         $user = Auth::user();
         $applySelfEmployeeFilter = false;
         if ($user) {
             // Only Estate (+ HAC listing behaviour) sees all rows; Admin / Super Admin behave like Staff (own rows).
-            if (! (hasRole('Estate') || hasRole('HAC Person'))) {
+            if (! (hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person'))) {
                 $applySelfEmployeeFilter = true;
-            } elseif ($r->input('scope') === 'self' && hasRole('Estate')) {
+            } elseif ($r->input('scope') === 'self' && (hasRole('Estate') || hasRole('Super Admin'))) {
                 $applySelfEmployeeFilter = true;
             }
         }
@@ -120,11 +70,6 @@ class EstateRequestForEstateDataTable extends DataTable
         }
 
         return [
-            'start' => (int) $r->input('start', 0),
-            'len' => $r->input('length', 10),
-            'q' => trim((string) data_get($r->all(), 'search.value', '')),
-            'order' => $r->input('order', []),
-            'cols' => $colSearch,
             'status_filter' => $r->input('status_filter'),
             'scope' => (string) $r->input('scope', ''),
             'emp' => $empScope,
@@ -456,9 +401,9 @@ class EstateRequestForEstateDataTable extends DataTable
         $user = Auth::user();
         $applySelfEmployeeFilter = false;
         if ($user) {
-            if (! (hasRole('Estate') || hasRole('HAC Person'))) {
+            if (! (hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person'))) {
                 $applySelfEmployeeFilter = true;
-            } elseif (request('scope') === 'self' && hasRole('Estate')) {
+            } elseif (request('scope') === 'self' && (hasRole('Estate') || hasRole('Super Admin'))) {
                 $applySelfEmployeeFilter = true;
             }
         }
@@ -491,7 +436,8 @@ class EstateRequestForEstateDataTable extends DataTable
             }
         }
 
-        return $query;
+        return $query->orderByDesc('estate_home_request_details.req_date')
+            ->orderByDesc('estate_home_request_details.pk');
     }
 
     public function html(): HtmlBuilder
