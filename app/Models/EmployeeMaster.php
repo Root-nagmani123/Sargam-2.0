@@ -16,6 +16,20 @@ class EmployeeMaster extends Model
     protected $primaryKey = 'pk';
 
     /**
+     * Model boot method to prevent deletion of active records
+     */
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::deleting(function ($model) {
+            if ($model->status == 1) {
+                throw new \Exception('Cannot delete active record. Please set status to inactive first.');
+            }
+        });
+    }
+
+    /**
      * Scope: match employee by pk OR pk_old.
      */
     public function scopeWhereIdOrPkOld(Builder $query, $id): Builder
@@ -65,7 +79,7 @@ class EmployeeMaster extends Model
         return trim($this->first_name . ' ' . $this->last_name);
     }
 
-    
+
     public static function getDeputationEmployeeList()
     {
         $deputationEmployeeList = self::where('emp_type', EmployeeTypeMaster::getDeputationPK())->get();
@@ -101,7 +115,7 @@ class EmployeeMaster extends Model
         if(!$userRoleMaster) {
             return collect();
         }
-        
+
         $assignedRoles = [];
         // dd($userRoleMaster);
         $userRoleMaster->each(function ($role) use (&$assignedRoles) {

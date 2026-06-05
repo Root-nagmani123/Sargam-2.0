@@ -24,6 +24,7 @@ final class FeedbackReportRouteRegistry
             'database' => route('admin.feedback.database'),
             'database_data' => route('admin.feedback.database.data'),
             'database_courses' => route('admin.feedback.database.courses'),
+            'database_faculties' => route('admin.feedback.database.faculties'),
             'database_print' => route('admin.feedback.database.print'),
             'database_export_pdf' => route('admin.feedback.database.export.pdf'),
             'database_export_excel' => route('admin.feedback.database.export.excel'),

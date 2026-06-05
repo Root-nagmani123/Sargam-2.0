@@ -5,11 +5,80 @@
 
 @section('title', 'Faculty Feedback with Comments All Details - Sargam | Lal Bahadur')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<style>
+#programSelect + .choices .choices__inner {
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid #d0d7de;
+    border-radius: var(--bs-border-radius, 0.375rem);
+    background-color: #fff;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+#programSelect + .choices .choices__inner:focus-within {
+    border-color: #af2910;
+    box-shadow: 0 0 0 0.2rem rgba(175,41,16,.12);
+}
+#programSelect + .choices .choices__input {
+    font-size: 0.85rem;
+}
+</style>
+@endpush
+
 @section('setup_content')
     <style>
         :root {
             --fb-brand: #af2910;
             --fb-brand-rgb: 175, 41, 16;
+            --fb-border: #d0d7de;
+        }
+
+        /* ── Filter Card ── */
+        .filter-card {
+            border: 0;
+            border-radius: var(--bs-border-radius-lg);
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+            overflow: visible;
+        }
+
+        .filter-card .card-header {
+            background: var(--fb-brand);
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.7rem 1rem;
+            border: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .filter-card .card-body {
+            padding: 1.1rem 1rem;
+        }
+
+        .filter-card .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--bs-secondary-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .filter-card .form-select,
+        .filter-card .form-control {
+            font-size: 0.85rem;
+            border-color: var(--fb-border);
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        }
+
+        .filter-card .form-select:focus,
+        .filter-card .form-control:focus {
+            border-color: var(--fb-brand);
+            box-shadow: 0 0 0 0.2rem rgba(var(--fb-brand-rgb), .12);
         }
 
         .feedback-page-title {
@@ -18,10 +87,6 @@
             color: var(--fb-brand);
         }
 
-        .feedback-filter-card .card-header {
-            background: linear-gradient(135deg, var(--fb-brand) 0%, #8c2010 100%);
-            border: 0;
-        }
 
         .rating-badge {
             display: inline-flex;
@@ -117,15 +182,31 @@
         }
 
         .feedback-pagination .page-link {
+            font-size: 0.82rem;
             color: var(--fb-brand);
-            border-radius: var(--bs-border-radius) !important;
-            margin: 0 0.125rem;
+            border-color: var(--fb-border);
+            min-width: 2rem;
+            text-align: center;
+            border-radius: 0.375rem !important;
+            margin: 0 0.1rem;
         }
 
         .feedback-pagination .page-item.active .page-link {
             background-color: var(--fb-brand);
             border-color: var(--fb-brand);
             color: #fff;
+            font-weight: 600;
+        }
+
+        .feedback-pagination .page-item.disabled .page-link {
+            color: #adb5bd;
+            border-color: var(--fb-border);
+            background-color: #f8f9fa;
+        }
+
+        .feedback-pagination .page-link:hover:not(.active) {
+            background-color: rgba(175,41,16,.08);
+            color: var(--fb-brand);
         }
 
         .feedback-session-card {
@@ -160,18 +241,14 @@
             </div>
         </div>
 
-        <div class="card feedback-filter-card shadow-sm border-0 rounded-3 mb-4 no-print">
-            <div class="card-header text-white py-3 px-4 rounded-top">
-                <div class="d-flex flex-wrap align-items-center gap-2">
-                    <i class="fas fa-filter opacity-75"></i>
-                    <span class="fw-semibold">Feedback Details</span>
-                    <span class="badge bg-white bg-opacity-25 text-white fw-normal ms-lg-2">Filters apply automatically on change</span>
-                </div>
+        <div class="card filter-card mb-3 no-print">
+            <div class="card-header">
+                <i class="fas fa-sliders-h"></i> Feedback Details
             </div>
-            <div class="card-body p-4 bg-body-tertiary bg-opacity-50">
-                <div class="row g-3 g-lg-4 align-items-end">
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
                     <div class="col-12 col-sm-6 col-lg-auto">
-                        <span class="form-label text-uppercase small text-muted fw-semibold letter-spacing-1 d-block mb-2">Course status</span>
+                        <label class="form-label d-block">Course status</label>
                         <div class="btn-group flex-wrap" role="group" aria-label="Course status">
                             <input class="btn-check course-type-radio" type="radio" name="course_type" value="current" id="current"
                                 {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
@@ -187,8 +264,8 @@
                     </div>
 
                     <div class="col-12 col-md-6 col-xl-3">
-                        <label for="programSelect" class="form-label fw-semibold small mb-1">Program name</label>
-                        <select class="form-select shadow-sm" id="programSelect" name="program_id">
+                        <label for="programSelect" class="form-label">Program name</label>
+                        <select class="form-select" id="programSelect" name="program_id">
                             <option value="">All Programs</option>
                             @foreach ($programs as $key => $program)
                                 <option value="{{ $key }}" {{ $currentProgram == $key ? 'selected' : '' }}>
@@ -199,20 +276,20 @@
                     </div>
 
                     <div class="col-6 col-md-3 col-xl-2">
-                        <label for="fromDate" class="form-label fw-semibold small mb-1">From date</label>
-                        <input type="date" id="fromDate" class="form-control shadow-sm" name="from_date"
+                        <label for="fromDate" class="form-label">From date</label>
+                        <input type="date" id="fromDate" class="form-control" name="from_date"
                             value="{{ $fromDate ?? '' }}" />
                     </div>
 
                     <div class="col-6 col-md-3 col-xl-2">
-                        <label for="toDate" class="form-label fw-semibold small mb-1">To date</label>
-                        <input type="date" id="toDate" class="form-control shadow-sm" name="to_date"
+                        <label for="toDate" class="form-label">To date</label>
+                        <input type="date" id="toDate" class="form-control" name="to_date"
                             value="{{ $toDate ?? '' }}" />
                     </div>
 
                     @if (!hasRole('Internal Faculty') && !hasRole('Guest Faculty'))
                         <div class="col-12 col-md-6 col-xl-auto">
-                            <span class="form-label text-uppercase small text-muted fw-semibold d-block mb-2">Faculty type</span>
+                            <label class="form-label d-block">Faculty type</label>
                             <div class="d-flex flex-wrap gap-3">
                                 <div class="form-check">
                                     <input class="form-check-input faculty-type-checkbox" type="checkbox"
@@ -230,8 +307,8 @@
                         </div>
 
                         <div class="col-12 col-md-6 col-xl suggestions-container">
-                            <label for="facultySearch" class="form-label fw-semibold small mb-1">Faculty name</label>
-                            <input type="text" id="facultySearch" class="form-control shadow-sm" name="faculty_name"
+                            <label for="facultySearch" class="form-label">Faculty name</label>
+                            <input type="text" id="facultySearch" class="form-control" name="faculty_name"
                                 value="{{ $currentFaculty ?? '' }}" placeholder="Search by name…" autocomplete="off" />
                             <div class="suggestions-list shadow" id="facultySuggestions">
                                 @if ($facultySuggestions->isNotEmpty())
@@ -254,34 +331,32 @@
                     @endif
                 </div>
 
-                <hr class="border-opacity-50 my-4">
-
-                <div class="d-flex flex-wrap align-items-center gap-2 pt-1">
-                    <div class="btn-group shadow-sm rounded-2" role="group" aria-label="Print or download PDF">
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-start-2" onclick="printFeedbackDetails()" title="Print report or choose Save as PDF in print dialog">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">print</span>
-                            <span>Print</span>
-                        </button>
-                        <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center justify-content-center gap-1 px-3 rounded-0 rounded-end-2" onclick="exportToPDF()" title="Download PDF">
-                            <span class="material-symbols-rounded" style="font-size: 18px; line-height: 1;" aria-hidden="true">picture_as_pdf</span>
-                            <span>PDF</span>
-                        </button>
-                    </div>
-                    <button type="button" class="btn btn-success btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" onclick="exportToExcel()" title="Export to Excel">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">table_view</span>
-                        <span>Export Excel</span>
+            </div>
+            <div class="card-footer bg-body-tertiary border-top py-3 px-3 d-flex flex-wrap gap-2 align-items-center justify-content-end">
+                <div class="btn-group rounded-1" role="group" aria-label="Print or download PDF">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-3 d-inline-flex align-items-center justify-content-center gap-1 rounded-0 rounded-start-1" onclick="printFeedbackDetails()" title="Print report or choose Save as PDF in print dialog">
+                        <span class="material-symbols-rounded" style="font-size: 1.1rem;">print</span>
+                        <span>Print</span>
                     </button>
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-2 d-inline-flex align-items-center gap-1 px-3" id="resetButton">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">refresh</span>
-                        <span>Reset filters</span>
+                    <button type="button" class="btn btn-outline-danger rounded-1 px-3 d-inline-flex align-items-center justify-content-center gap-1 rounded-0 rounded-end-1" onclick="exportToPDF()" title="Download PDF">
+                        <span class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</span>
+                        <span>PDF</span>
                     </button>
-                    @if (empty($hidePendingFeedbackAdminLink))
-                    <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-warning btn-sm text-dark rounded-2 d-inline-flex align-items-center gap-1 px-3">
-                        <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">pending_actions</span>
-                        <span>Pending feedback (students)</span>
-                    </a>
-                    @endif
                 </div>
+                <button type="button" class="btn btn-success rounded-1 px-3 d-inline-flex align-items-center gap-1" onclick="exportToExcel()" title="Export to Excel">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</span>
+                    <span>Export Excel</span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary rounded-1 px-3 d-inline-flex align-items-center gap-1" id="resetButton">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">refresh</span>
+                    <span>Reset filters</span>
+                </button>
+                @if (empty($hidePendingFeedbackAdminLink))
+                <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-warning text-dark rounded-1 d-inline-flex align-items-center gap-1 px-3">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">pending_actions</span>
+                    <span>Pending feedback (students)</span>
+                </a>
+                @endif
             </div>
         </div>
 
@@ -454,6 +529,7 @@
             </div>
         </div>
 
+        <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
         <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const loadingSpinner = document.getElementById('loadingSpinner');
@@ -463,10 +539,50 @@
                 const resetButton = document.getElementById('resetButton');
                 let debounceTimer;
                 let currentPage = {{ $currentPage }};
+                let programChoices = null;
 
-                // Get all filter inputs
+                // Choices.js config
+                function makeChoicesConfig(placeholder) {
+                    return {
+                        shouldSort: false,
+                        searchEnabled: true,
+                        searchResultLimit: 100,
+                        searchPlaceholderValue: placeholder,
+                        itemSelectText: '',
+                        allowHTML: false,
+                        classNames: {
+                            containerInner: ['choices__inner', 'shadow-sm'],
+                            input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                            inputCloned: ['choices__input--cloned'],
+                            listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                            item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                            itemSelectable: ['choices__item--selectable'],
+                            itemDisabled: ['choices__item--disabled', 'disabled'],
+                            itemChoice: ['choices__item--choice'],
+                            placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                            highlightedState: ['is-highlighted', 'active'],
+                            notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+                        }
+                    };
+                }
+
+                function initProgramChoices() {
+                    const el = document.getElementById('programSelect');
+                    if (!el || typeof window.Choices === 'undefined') return;
+                    if (programChoices) { programChoices.destroy(); programChoices = null; }
+                    programChoices = new Choices(el, makeChoicesConfig('Search programs...'));
+                }
+
+                // Register change listener once (not inside initProgramChoices to avoid duplicates)
+                const _programEl = document.getElementById('programSelect');
+                if (_programEl) {
+                    _programEl.addEventListener('change', function() {
+                        loadFeedbackData(1);
+                    });
+                }
+
+                // Get all filter inputs (programSelect handled via Choices listener)
                 const filterInputs = [
-                    document.getElementById('programSelect'),
                     document.getElementById('fromDate'),
                     document.getElementById('toDate'),
                     ...document.querySelectorAll('.course-type-radio'),
@@ -510,8 +626,6 @@
                         params.append('faculty_type[]', cb.value);
                     });
 
-                    console.log('Loading data with params:', params.toString()); // Debug log
-
                     // Make AJAX request - GET with query parameters
                     fetch('{{ $fr['details'] }}?' + params.toString(), {
                             method: 'GET',
@@ -527,7 +641,6 @@
                             return response.json();
                         })
                         .then(data => {
-                            console.log('Data received:', data); // Debug log
                             if (data.success) {
                                 updateContent(data);
                                 updateFilters(data);
@@ -547,13 +660,20 @@
 
                 // Function to update content with new data
                 function updateContent(data) {
-                    console.log('Updating content with data:', data); // Debug log
                     if (data.groupedData && Object.keys(data.groupedData).length > 0) {
                         let html = '';
+
+                        // Global row counter — continues across groups on this page
+                        // e.g. page 3 starts at row 21, page 2 at row 11
+                        const perPage = 10;
+                        let rowCounter = (parseInt(data.currentPage, 10) - 1) * perPage;
 
                         Object.entries(data.groupedData).forEach(([groupKey, group]) => {
                             const [programName, facultyName, topicName] = groupKey.split('|');
                             const firstRecord = group[0];
+                            // Capture counter start for this group before incrementing
+                            const groupStartRow = rowCounter;
+                            rowCounter += group.length;
 
                             html += `
                     <div class="session-header feedback-session-card card border-0 shadow-sm mb-4">
@@ -601,7 +721,7 @@
                             <tbody class="small">
                                 ${group.map((item, index) => `
                                     <tr>
-                                        <td class="ps-3 text-body-secondary">${index + 1}</td>
+                                        <td class="ps-3 text-body-secondary">${groupStartRow + index + 1}</td>
                                         <td class="fw-medium">${item.ot_name || ''}</td>
                                         <td><code class="small bg-body-secondary px-2 py-1 rounded">${item.ot_code || ''}</code></td>
                                         <td class="text-center">
@@ -648,50 +768,67 @@
 
                 // Function to generate pagination HTML
                 function generatePagination(currentPage, totalPages, totalRecords) {
-                    let pagination = `
-            <nav aria-label="Feedback pagination" class="pb-2">
-                <ul class="pagination feedback-pagination flex-wrap justify-content-center gap-1 mb-0">
-                    <!-- First Page -->
-                    <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First">
-                            <i class="fas fa-angle-double-left"></i>
-                        </a>
-                    </li>
-                    
-                    <!-- Previous Page -->
-                    <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous">
-                            <i class="fas fa-angle-left"></i>
-                        </a>
-                    </li>
-        `;
+                    currentPage  = parseInt(currentPage,  10);
+                    totalPages   = parseInt(totalPages,   10);
+                    totalRecords = parseInt(totalRecords, 10);
 
-                    // Calculate page range
-                    const startPage = Math.max(1, currentPage - 2);
-                    const endPage = Math.min(totalPages, currentPage + 2);
+                    // Build the set of page numbers to display (with null = ellipsis)
+                    function pageNumbers(cur, total) {
+                        if (total <= 7) {
+                            return Array.from({ length: total }, (_, i) => i + 1);
+                        }
+                        const delta  = 2;          // pages either side of current
+                        const left   = cur - delta;
+                        const right  = cur + delta;
+                        const pages  = [];
 
-                    for (let i = startPage; i <= endPage; i++) {
-                        pagination += `
-                <li class="page-item ${i == currentPage ? 'active' : ''}">
-                    <a class="page-link" href="javascript:void(0)" onclick="goToPage(${i})">${i}</a>
-                </li>
-            `;
+                        // always show first page
+                        pages.push(1);
+
+                        // ellipsis after 1 if window doesn't start at 2
+                        if (left > 2) pages.push(null);
+
+                        for (let i = Math.max(2, left); i <= Math.min(total - 1, right); i++) {
+                            pages.push(i);
+                        }
+
+                        // ellipsis before last if window doesn't end at total-1
+                        if (right < total - 1) pages.push(null);
+
+                        // always show last page
+                        pages.push(total);
+
+                        return pages;
                     }
 
-                    pagination += `
-                    <!-- Next Page -->
-                    <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next">
-                            <i class="fas fa-angle-right"></i>
-                        </a>
-                    </li>
-                    
-                    <!-- Last Page -->
-                    <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" aria-label="Last">
-                            <i class="fas fa-angle-double-right"></i>
-                        </a>
-                    </li>
+                    let items = '';
+
+                    // First + Prev
+                    items += `<li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First"><i class="fas fa-angle-double-left"></i></a></li>`;
+                    items += `<li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous"><i class="fas fa-angle-left"></i></a></li>`;
+
+                    // Numbered pages + ellipsis
+                    pageNumbers(currentPage, totalPages).forEach(function(p) {
+                        if (p === null) {
+                            items += `<li class="page-item disabled"><span class="page-link px-1 border-0 bg-transparent text-muted">…</span></li>`;
+                        } else {
+                            items += `<li class="page-item ${p == currentPage ? 'active' : ''}">
+                                <a class="page-link" href="javascript:void(0)" onclick="goToPage(${p})">${p}</a></li>`;
+                        }
+                    });
+
+                    // Next + Last
+                    items += `<li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next"><i class="fas fa-angle-right"></i></a></li>`;
+                    items += `<li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" aria-label="Last"><i class="fas fa-angle-double-right"></i></a></li>`;
+
+                    let pagination = `
+            <nav aria-label="Feedback pagination" class="pb-2">
+                <ul class="pagination feedback-pagination justify-content-center mb-0">
+                    ${items}
                 </ul>
             </nav>
             
@@ -709,19 +846,20 @@
 
                 // Function to update filters with new data
                 function updateFilters(data) {
-                    console.log('Updating filters with data:', data); // Debug log
-
-                    // Update program dropdown
-                    const programSelect = document.getElementById('programSelect');
-                    if (data.programs && Object.keys(data.programs).length > 0) {
-                        let options = '<option value="">All Programs</option>';
+                    // Update program dropdown via Choices.js.
+                    // IMPORTANT: do NOT call setChoiceByValue here — it fires a native 'change' event
+                    // which would trigger loadFeedbackData(1) and reset the page back to 1 after every
+                    // AJAX response. Instead, embed selected:true in the choices array so setChoices
+                    // marks the correct option internally without dispatching any change event.
+                    if (programChoices && data.programs) {
+                        const currentProgram = data.currentProgram ? String(data.currentProgram) : '';
+                        const newChoices = [
+                            { value: '', label: 'All Programs', placeholder: true, selected: currentProgram === '' }
+                        ];
                         Object.entries(data.programs).forEach(([key, value]) => {
-                            const selected = key == data.currentProgram ? 'selected' : '';
-                            options += `<option value="${key}" ${selected}>${value}</option>`;
+                            newChoices.push({ value: String(key), label: value, selected: String(key) === currentProgram });
                         });
-                        programSelect.innerHTML = options;
-                    } else {
-                        programSelect.innerHTML = '<option value="">No programs available</option>';
+                        programChoices.setChoices(newChoices, 'value', 'label', true);
                     }
 
                     // Update faculty suggestions if needed
@@ -807,13 +945,10 @@
                     if (input) {
                         if (input.type === 'radio' || input.type === 'checkbox') {
                             input.addEventListener('change', function() {
-                                console.log(`${input.type} changed:`, input.name, input.value, input
-                                    .checked);
                                 loadFeedbackData(1);
                             });
                         } else {
                             input.addEventListener('change', function() {
-                                console.log('Input changed:', input.name, input.value);
                                 loadFeedbackData(1);
                             });
 
@@ -852,20 +987,15 @@
 
                 // Reset button
                 resetButton.addEventListener('click', function() {
-                    console.log('Resetting filters');
                     // Reset all filters
                     document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
                     document.querySelectorAll('input[type="radio"]').forEach(rb => {
                         if (rb.value === 'current') rb.checked = true;
                     });
-                    document.querySelectorAll('select').forEach(select => select.value = '');
                     document.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
-                    if (facultySearch) {
-                        facultySearch.value = '';
-                    }
-                    if (suggestionsList) {
-                        suggestionsList.style.display = 'none';
-                    }
+                    if (programChoices) { programChoices.setChoiceByValue(''); }
+                    if (facultySearch) { facultySearch.value = ''; }
+                    if (suggestionsList) { suggestionsList.style.display = 'none'; }
 
                     // Load data with reset filters
                     loadFeedbackData(1);
@@ -873,14 +1003,13 @@
 
                 // Initialize with current page
                 window.goToPage = function(page) {
-                    console.log('Going to page:', page);
                     if (page >= 1) {
                         loadFeedbackData(page);
                     }
                 };
 
                 // Initial load
-                console.log('Initial load with page:', currentPage);
+                initProgramChoices();
                 loadFeedbackData(currentPage);
             });
 
