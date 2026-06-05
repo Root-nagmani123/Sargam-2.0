@@ -258,7 +258,7 @@
     font-size: 14px;
     color: #333;
     padding: 14px 16px;
-    border-bottom: 1px solid #f2f2f2;
+    border-bottom: 1px solid #f7f7f7;
     vertical-align: middle;
 }
 

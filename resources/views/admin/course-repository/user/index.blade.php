@@ -114,7 +114,7 @@
                                  loading="lazy"
                                  onerror="this.src='https://via.placeholder.com/400x200/004a93/ffffff?text={{ urlencode($repository->course_repository_name) }}'">
                         </div>
-                        <div class="card-body d-flex flex-column" style="background-color: #F2F2F2;">
+                        <div class="card-body d-flex flex-column" style="background-color: #f7f7f7;">
                             <h5 class="card-title text-center fw-bold mb-3">{{ $repository->course_repository_name }}</h5>
                             <div class="mt-auto">
                                 @php
