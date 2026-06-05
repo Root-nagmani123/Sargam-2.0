@@ -5,6 +5,32 @@
 
 @section('title', 'Faculty Feedback Average - Sargam | Lal Bahadur')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<style>
+/* Choices.js — program & faculty dropdowns */
+#avgProgramSelect + .choices .choices__inner,
+#avgFacultySelect + .choices .choices__inner {
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid #d0d7de;
+    border-radius: var(--bs-border-radius, 0.375rem);
+    background-color: #fff;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+#avgProgramSelect + .choices .choices__inner:focus-within,
+#avgFacultySelect + .choices .choices__inner:focus-within {
+    border-color: #0b4f8a;
+    box-shadow: 0 0 0 0.2rem rgba(11,79,138,.12);
+}
+#avgProgramSelect + .choices .choices__input,
+#avgFacultySelect + .choices .choices__input {
+    font-size: 0.85rem;
+}
+</style>
+@endpush
+
 @section('setup_content')
 <style>
         /* ── Variables ── */
@@ -211,7 +237,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Program Name</label>
-                                <select class="form-select" name="program_name">
+                                <select name="program_name" id="avgProgramSelect">
                                     <option value="">All Programs</option>
                                     @foreach ($programs as $key => $program)
                                         <option value="{{ $key }}" {{ $currentProgram == $key ? 'selected' : '' }}>
@@ -224,7 +250,7 @@
 
                             <div class="mb-3">
                                 <label class="form-label">Faculty Name</label>
-                                <select class="form-select select2" name="faculty_name">
+                                <select name="faculty_name" id="avgFacultySelect">
                                     <option value="">All Faculty</option>
                                     @foreach ($faculties as $key => $faculty)
                                         <option value="{{ $key }}" {{ $currentFaculty == $key ? 'selected' : '' }}>
@@ -489,7 +515,17 @@
                     const newProgramSelect = doc.querySelector('select[name="program_name"]');
                     if (newProgramSelect) {
                         const currentProgramSelect = document.querySelector('select[name="program_name"]');
+                        const currentVal = currentProgramSelect.value;
+                        // Destroy Choices instance before touching innerHTML
+                        if (currentProgramSelect._choicesInstance) {
+                            currentProgramSelect._choicesInstance.destroy();
+                            currentProgramSelect._choicesInstance = null;
+                        }
                         currentProgramSelect.innerHTML = newProgramSelect.innerHTML;
+                        // Restore previously selected value if still present
+                        if (currentVal) { currentProgramSelect.value = currentVal; }
+                        // Reinitialise Choices.js
+                        initAvgProgramChoices();
                     }
 
                     // Extract the table content from the response
@@ -562,7 +598,12 @@
 
                     if (newProgramSelect) {
                         const currentProgramSelect = document.querySelector('select[name="program_name"]');
+                        if (currentProgramSelect._choicesInstance) {
+                            currentProgramSelect._choicesInstance.destroy();
+                            currentProgramSelect._choicesInstance = null;
+                        }
                         currentProgramSelect.innerHTML = newProgramSelect.innerHTML;
+                        initAvgProgramChoices();
                     }
                 })
                 .catch(error => console.error('Error loading programs:', error));
@@ -686,4 +727,50 @@
             setTimeout(updateExportLinks, 300);
         });
     </script>
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+function makeChoicesConfig(placeholder) {
+    return {
+        shouldSort: false,
+        searchEnabled: true,
+        searchResultLimit: 100,
+        searchPlaceholderValue: placeholder,
+        itemSelectText: '',
+        allowHTML: false,
+        classNames: {
+            containerInner: ['choices__inner', 'shadow-sm'],
+            input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+            inputCloned: ['choices__input--cloned'],
+            listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+            item: ['choices__item', 'dropdown-item', 'rounded-0'],
+            itemSelectable: ['choices__item--selectable'],
+            itemDisabled: ['choices__item--disabled', 'disabled'],
+            itemChoice: ['choices__item--choice'],
+            placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+            highlightedState: ['is-highlighted', 'active'],
+            notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+        }
+    };
+}
+function initAvgProgramChoices() {
+    const el = document.getElementById('avgProgramSelect');
+    if (!el || typeof window.Choices === 'undefined') return;
+    if (el._choicesInstance) { el._choicesInstance.destroy(); el._choicesInstance = null; }
+    el._choicesInstance = new Choices(el, makeChoicesConfig('Search programs...'));
+    el.addEventListener('change', function() { setTimeout(updateExportLinks, 100); });
+}
+function initAvgFacultyChoices() {
+    const el = document.getElementById('avgFacultySelect');
+    if (!el || typeof window.Choices === 'undefined') return;
+    if (el._choicesInstance) { el._choicesInstance.destroy(); el._choicesInstance = null; }
+    el._choicesInstance = new Choices(el, makeChoicesConfig('Search faculty...'));
+    el.addEventListener('change', function() { setTimeout(updateExportLinks, 100); });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    initAvgProgramChoices();
+    initAvgFacultyChoices();
+});
+</script>
+@endpush
 @endsection
