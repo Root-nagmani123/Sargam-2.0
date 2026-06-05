@@ -19,13 +19,13 @@
             font-size: 11px;
             line-height: 1.4;
             margin: 0;
-            padding: 15px;
+            padding: 10px;
         }
 
         .header {
             text-align: center;
-            margin-bottom: 25px;
-            padding-bottom: 15px;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
             border-bottom: 2px solid var(--primary);
         }
 
@@ -44,38 +44,35 @@
 
         .filters-section {
             background: #f8f9fa;
-            padding: 12px;
-            border-radius: 5px;
-            margin-bottom: 25px;
+            padding: 8px 10px;
+            margin-bottom: 12px;
             border: 1px solid var(--border);
         }
 
         .filters-section h3 {
-            margin: 0 0 12px 0;
+            margin: 0 0 6px 0;
             color: var(--primary);
-            font-size: 13px;
+            font-size: 11px;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
 
-        .filter-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 25px;
-            margin-bottom: 8px;
+        .filter-table {
+            width: 100%;
+            border-collapse: collapse;
         }
 
-        .filter-item {
-            flex: 1;
-            min-width: 180px;
+        .filter-table td {
+            padding: 2px 6px 2px 0;
+            font-size: 10px;
+            vertical-align: top;
+            width: 33%;
         }
 
         .filter-label {
             font-weight: 600;
             color: #555;
-            display: inline-block;
-            width: 100px;
         }
 
         .filter-value {
@@ -85,8 +82,7 @@
 
         /* Feedback section styling */
         .feedback-section {
-            margin-bottom: 25px;
-            page-break-inside: avoid;
+            margin-bottom: 20px;
         }
 
         .meta-info {
@@ -235,34 +231,18 @@
 
     <div class="filters-section">
         <h3>Applied Filters</h3>
-        <div class="filter-row">
-            <div class="filter-item">
-                <span class="filter-label">Course Status:</span>
-                <span class="filter-value">{{ $filters['course_type'] }}</span>
-            </div>
-            <div class="filter-item">
-                <span class="filter-label">Program:</span>
-                <span class="filter-value">{{ $filters['program'] }}</span>
-            </div>
-            <div class="filter-item">
-                <span class="filter-label">Faculty Name:</span>
-                <span class="filter-value">{{ $filters['faculty_name'] }}</span>
-            </div>
-        </div>
-        <div class="filter-row">
-            <div class="filter-item">
-                <span class="filter-label">Faculty Type:</span>
-                <span class="filter-value">{{ $filters['faculty_type'] }}</span>
-            </div>
-            <div class="filter-item">
-                <span class="filter-label">Date Range:</span>
-                <span class="filter-value">{{ $filters['date_range'] }}</span>
-            </div>
-            <div class="filter-item">
-                <span class="filter-label">Total Records:</span>
-                <span class="filter-value">{{ count($feedbackData) }}</span> {{-- FIXED: Use count() function --}}
-            </div>
-        </div>
+        <table class="filter-table">
+            <tr>
+                <td><span class="filter-label">Course Status: </span><span class="filter-value">{{ $filters['course_type'] }}</span></td>
+                <td><span class="filter-label">Program: </span><span class="filter-value">{{ $filters['program'] }}</span></td>
+                <td><span class="filter-label">Faculty Name: </span><span class="filter-value">{{ $filters['faculty_name'] }}</span></td>
+            </tr>
+            <tr>
+                <td><span class="filter-label">Faculty Type: </span><span class="filter-value">{{ $filters['faculty_type'] }}</span></td>
+                <td><span class="filter-label">Date Range: </span><span class="filter-value">{{ $filters['date_range'] }}</span></td>
+                <td><span class="filter-label">Total Records: </span><span class="filter-value">{{ count($feedbackData) }}</span></td>
+            </tr>
+        </table>
     </div>
 
     @if(count($feedbackData) > 0) {{-- FIXED: Use count() function --}}
