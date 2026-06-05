@@ -25,7 +25,6 @@
         height: calc(100vh - var(--sargam-header-offset)) !important;
         z-index: 99 !important;
         background: #fff !important;
-        border-right: 1px solid var(--sargam-sidebar-border) !important;
         transition: width 0.25s ease, max-width 0.25s ease !important;
         overflow: hidden !important;
         box-shadow: 1px 0 0 rgba(15, 23, 42, 0.04) !important;
@@ -115,7 +114,10 @@
     padding: 0.5rem 0.3rem 1rem !important;
     background: #fff !important;
     border-right: 1px solid var(--sargam-sidebar-border) !important;
-    border-radius: 0 !important;
+    border-top:1px solid var(--sargam-sidebar-border) !important;
+    border-bottom:0 !important;
+    border-left:0 !important;
+    border-radius: 10px !important;
     position: relative !important;
     z-index: 2 !important;
 }
@@ -534,7 +536,7 @@ body[data-sidebartype="mini-sidebar"] .sidebar-mini-toggle-text-open {
 aside.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav {
     background: #fff !important;
     margin-top: 0 !important;
-    border-radius: 0 !important;
+    border-radius: 5px !important;
 }
 
 aside.side-mini-panel.with-vertical.sidebar-google-style .mini-nav.sargam-mini-nav .mini-nav-item > a {

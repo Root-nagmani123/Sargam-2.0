@@ -216,7 +216,7 @@
     }
 }
 .header-brand-block { min-width: 0; }
-.header-brand { gap: 0 !important; padding-right: 0.25rem; }
+.header-brand { gap: 0 !important; padding-right: 0.25rem;margin-left: 35px; }
 .header-brand-divider {
     width: 1px;
     height: 38px;
