@@ -1,86 +1,141 @@
 @extends('admin.layouts.master')
 
-@section('title', 'LBSNAA Directory - Sargam')
+@section('title', 'LBSNAA Directory')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-3">
     <x-breadcrum title="LBSNAA Directory"></x-breadcrum>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <div class="border rounded-3 p-3 bg-white mb-3">
-                <div class="row g-2 align-items-end">
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <label for="quickSearch" class="form-label mb-1 fw-semibold">Quick Search</label>
-                        <input
-                            id="quickSearch"
-                            type="text"
-                            class="form-control"
-                            placeholder="Search name, email, mobile, designation..."
-                            autocomplete="off"
-                        >
-                    </div>
-                    <div class="col-6 col-md-3 col-lg-2">
-                        <button type="button" id="clearSearch" class="btn btn-outline-secondary w-100">
-                            <i class="ti ti-refresh"></i> Clear
-                        </button>
-                    </div>
-                    <div class="col-auto ms-auto">
-                        <form method="GET" action="{{ route('admin.directory.lbsnaa') }}" class="d-inline">
-                            <button type="submit" name="export" value="csv" class="btn btn-outline-success btn-sm">
-                                <i class="ti ti-file-spreadsheet"></i> CSV
-                            </button>
-                            <button type="submit" name="export" value="excel" class="btn btn-outline-success btn-sm ms-1">
-                                <i class="ti ti-file-excel"></i> Excel
-                            </button>
-                        </form>
-                    </div>
+    {{-- Top bar: Download --}}
+    <div class="d-flex align-items-center justify-content-end mb-4">
+        <div class="dropdown">
+            <button class="lbs-download-btn dropdown-toggle" type="button" data-bs-toggle="dropdown"
+                aria-expanded="false">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 12L3 7h3.5V2h3V7H13L8 12z" fill="currentColor" />
+                    <path d="M2 13h12v1.5H2V13z" fill="currentColor" />
+                </svg>
+                Download
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li>
+                    <form method="GET" action="{{ route('admin.directory.lbsnaa') }}" class="d-inline">
+                        <button type="submit" name="export" value="csv" class="dropdown-item">CSV</button>
+                    </form>
+                </li>
+                <li>
+                    <form method="GET" action="{{ route('admin.directory.lbsnaa') }}" class="d-inline">
+                        <button type="submit" name="export" value="excel" class="dropdown-item">Excel</button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    {{-- Directory table --}}
+    <div class="lbs-table-card">
+        {{-- Filter row --}}
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="lbs-filter-label">Filters</span>
+                <select id="designationFilter" class="lbs-filter-select">
+                    <option value="">Designation</option>
+                </select>
+                <select id="sectionFilter" class="lbs-filter-select">
+                    <option value="">Section</option>
+                </select>
+                <button type="button" id="clearSearch" class="lbs-reset-link">Reset Filters</button>
+            </div>
+
+            <div class="d-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <button class="lbs-columns-btn dropdown-toggle" type="button" id="columnsDropdown"
+                        data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        Columns
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg"
+                            style="margin-left:4px;">
+                            <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.2"
+                                fill="none" />
+                            <rect x="6" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.2"
+                                fill="none" />
+                            <rect x="11" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.2"
+                                fill="none" />
+                        </svg>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width: 180px;">
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="0" checked> S.No.</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="1" checked> Name</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="2" checked> Designation</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="3" checked> Section</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="4" checked> Address</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="5" checked> Office Ext.</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="6" checked> Contact Number</label>
+                        </li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="7" checked> Residence</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox"
+                                    class="form-check-input col-toggle" data-col="8" checked> Email</label></li>
+                    </ul>
                 </div>
+                <input id="quickSearch" type="text" class="lbs-search-input" placeholder="Search..." autocomplete="off">
             </div>
-            <div class="table-responsive lbsnaa-table-wrapper">
-                <table class="table align-middle" id="lbsnaaDirectoryTable">
-                    <thead>
-                        <tr>
-                            <th>S.No.</th>
-                            <th>Name</th>
-                            <th>Designation</th>
-                            <th>Section</th>
-                            <th>Address</th>
-                            <th>Office Ext.</th>
-                            <th>Mobile</th>
-                            <th>Residence</th>
-                            <th>Email</th>
-                            <th>Photo</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($employees as $index => $employee)
-                            @php
-                                $name = trim(($employee->first_name ?? '') . ' ' . ($employee->middle_name ?? '') . ' ' . ($employee->last_name ?? ''));
-                                $email = $employee->officalemail ?: $employee->email;
-                            @endphp
-                            <tr>
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $name ?: '-' }}</td>
-                                <td>{{ $employee->designation_name ?: '-' }}</td>
-                                <td>{{ $employee->department_name ?: '-' }}</td>
-                                <td>{{ $employee->current_address ?: '-' }}</td>
-                                <td>{{ $employee->office_extension_no ?: '-' }}</td>
-                                <td>{{ $employee->mobile ?: '-' }}</td>
-                                <td>{{ $employee->residence_no ?: '-' }}</td>
-                                <td>{{ $email ?: '-' }}</td>
-                                <td>
+        </div>
+        <div class="table-responsive">
+            <table class="table mb-0" id="lbsnaaDirectoryTable" data-sargam-dt-ui="false">
+                <thead>
+                    <tr>
+                        <th>S.No.</th>
+                        <th>Name</th>
+                        <th>Designation</th>
+                        <th>Section</th>
+                        <th>Address</th>
+                        <th>Office Ext.</th>
+                        <th>Contact Number</th>
+                        <th>Residence</th>
+                        <th>Email</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($employees as $index => $employee)
+                    @php
+                    $name = trim(($employee->first_name ?? '') . ' ' . ($employee->middle_name ?? '') . ' ' .
+                    ($employee->last_name ?? ''));
+                    $email = $employee->officalemail ?: $employee->email;
+                    $initial = strtoupper(substr($name ?: '-', 0, 1));
+                    @endphp
+                    <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>
+                            <div class="lbs-name-cell">
+                                <div class="lbs-avatar-wrap">
+                                    <span class="lbs-avatar-letter">{{ $initial }}</span>
                                     @if(!empty($employee->profile_picture))
-                                        <img src="{{ asset('storage/' . $employee->profile_picture) }}" alt="photo" class="directory-photo" loading="lazy" decoding="async">
-                                    @else
-                                        <img src="{{ asset('images/dummypic.jpeg') }}" alt="photo" class="directory-photo" loading="lazy" decoding="async">
+                                    <img src="{{ asset('storage/' . $employee->profile_picture) }}" alt=""
+                                        loading="lazy" decoding="async" onload="this.style.opacity='1';"
+                                        onerror="this.remove();" class="lbs-avatar-img">
                                     @endif
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+                                </div>
+                                <span class="lbs-emp-name">{{ $name ?: '-' }}</span>
+                            </div>
+                        </td>
+                        <td>{{ $employee->designation_name ?: '-' }}</td>
+                        <td>{{ $employee->department_name ?: '-' }}</td>
+                        <td>{{ $employee->current_address ?: '-' }}</td>
+                        <td>{{ $employee->office_extension_no ?: '-' }}</td>
+                        <td>{{ $employee->mobile ?: '-' }}</td>
+                        <td>{{ $employee->residence_no ?: '-' }}</td>
+                        <td>{{ $email ?: '-' }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -203,7 +258,7 @@
     font-size: 14px;
     color: #333;
     padding: 14px 16px;
-    border-bottom: 1px solid #f7f7f7;
+    border-bottom: 1px solid #f2f2f2;
     vertical-align: middle;
 }
 
@@ -358,60 +413,11 @@
     .lbs-filter-select {
         min-width: 120px;
     }
-    #lbsnaaDirectoryTable tbody td {
-        font-size: 12px;
-        vertical-align: middle;
-        white-space: nowrap;
+
+    .lbs-search-input {
+        width: 120px;
     }
-    .directory-photo {
-        width: 56px;
-        height: 56px;
-        object-fit: cover;
-        border-radius: 6px;
-    }
-    div.dataTables_wrapper div.dataTables_length select {
-        width: auto;
-        display: inline-block;
-    }
-    
-    /* Responsive scroll for small screens */
-    @media (max-width: 768px) {
-        .lbsnaa-table-wrapper {
-            max-height: 70vh;
-            overflow-x: auto !important;
-            overflow-y: auto !important;
-            -webkit-overflow-scrolling: touch;
-        }
-        
-        #lbsnaaDirectoryTable {
-            min-width: 1200px;
-            margin-bottom: 0;
-        }
-        
-        #lbsnaaDirectoryTable thead th,
-        #lbsnaaDirectoryTable tbody td {
-            font-size: 11px;
-            padding: 0.5rem;
-        }
-        
-        .directory-photo {
-            width: 48px;
-            height: 48px;
-        }
-    }
-    
-    @media (max-width: 576px) {
-        #lbsnaaDirectoryTable thead th,
-        #lbsnaaDirectoryTable tbody td {
-            font-size: 10px;
-            padding: 0.4rem;
-        }
-        
-        .directory-photo {
-            width: 40px;
-            height: 40px;
-        }
-    }
+}
 </style>
 @endpush
 
@@ -420,37 +426,66 @@
 $(document).ready(function() {
     var table = $('#lbsnaaDirectoryTable').DataTable({
         responsive: false,
-        scrollX: true,
-        scrollCollapse: true,
         pageLength: 10,
-        lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, "All"]],
-        order: [[1, 'asc']], // Sort by Name
+        lengthMenu: [10, 20, 50, 100, 200, 500, "All"],
+        order: [
+            [1, 'asc']
+        ],
+        dom: 't<"lbs-pagination-footer"<"lbs-pag-left"p><"lbs-pag-right"l i>>',
         language: {
-            search: "Search:",
-            lengthMenu: "Show _MENU_ entries",
-            info: "Showing _START_ to _END_ of _TOTAL_ entries",
-            infoEmpty: "Showing 0 to 0 of 0 entries",
-            infoFiltered: "(filtered from _MAX_ total entries)",
+            lengthMenu: 'Showing _MENU_',
+            info: 'of _TOTAL_ items',
+            infoEmpty: 'of 0 items',
+            infoFiltered: '',
             paginate: {
-                first: "First",
-                last: "Last",
-                next: "Next",
-                previous: "Previous"
+                previous: '‹',
+                next: '›'
             }
         },
-        dom: '<"row"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rtip',
-        columnDefs: [
-            {
-                targets: 0, // S.No. column
-                orderable: true,
-                searchable: false
-            },
-            {
-                targets: 9, // Photo column
-                orderable: false,
-                searchable: false
-            }
-        ]
+        searching: true,
+        ordering: true,
+        search: {
+            smart: false
+        },
+        columnDefs: [{
+            orderable: false,
+            searchable: false,
+            targets: [0]
+        }]
+    });
+
+    // Populate Designation filter from column 2
+    var designations = [];
+    table.column(2).data().each(function(val) {
+        if (val && val !== '-' && designations.indexOf(val) === -1) designations.push(val);
+    });
+    designations.sort();
+    designations.forEach(function(d) {
+        $('#designationFilter').append('<option value="' + d + '">' + d + '</option>');
+    });
+
+    // Populate Section filter from column 3
+    var sections = [];
+    table.column(3).data().each(function(val) {
+        if (val && val !== '-' && sections.indexOf(val) === -1) sections.push(val);
+    });
+    sections.sort();
+    sections.forEach(function(s) {
+        $('#sectionFilter').append('<option value="' + s + '">' + s + '</option>');
+    });
+
+    // Designation filter
+    $('#designationFilter').on('change', function() {
+        var val = $(this).val();
+        table.column(2).search(val ? '^' + $.fn.dataTable.util.escapeRegex(val) + '$' : '', true, false)
+            .draw();
+    });
+
+    // Section filter
+    $('#sectionFilter').on('change', function() {
+        var val = $(this).val();
+        table.column(3).search(val ? '^' + $.fn.dataTable.util.escapeRegex(val) + '$' : '', true, false)
+            .draw();
     });
 
     // Quick search functionality
@@ -458,14 +493,22 @@ $(document).ready(function() {
         table.search(this.value).draw();
     });
 
-    // Clear search button
+    // Clear/Reset all filters
     $('#clearSearch').on('click', function() {
         $('#quickSearch').val('');
-        table.search('').draw();
+        $('#designationFilter').val('');
+        $('#sectionFilter').val('');
+        table.search('').columns().search('').draw();
+    });
+
+    // Column toggle
+    $('.col-toggle').on('change', function() {
+        var colIdx = parseInt($(this).data('col'));
+        var column = table.column(colIdx);
+        column.visible($(this).is(':checked'));
     });
 });
 </script>
 @endpush
 
 @endsection
-
