@@ -1,98 +1,136 @@
 @extends('admin.layouts.master')
 
-@section('title', 'OT Directory - Sargam')
+@section('title', 'OT Directory')
 
 @section('content')
-<div class="container-fluid">
+<div class="container-fluid py-3">
     <x-breadcrum title="OT Directory"></x-breadcrum>
 
-    <div class="card border-0 shadow-sm">
-        <div class="card-body">
-            <form method="GET" action="{{ route('admin.directory.ot') }}" class="mb-3">
-                <div class="border rounded-3 p-3 bg-white">
-                    <div class="row g-2 align-items-end ot-toolbar-row">
-                        <div class="col-12 col-lg-3">
-                            <label for="otCourseSelect" class="form-label mb-1 fw-semibold">Program Name*</label>
-                            <select name="course_id" class="form-select" id="otCourseSelect">
-                                <option value="">Select Program</option>
-                                @foreach($activeCourses as $course)
-                                    <option value="{{ $course->pk }}" {{ (int) $selectedCourseId === (int) $course->pk ? 'selected' : '' }}>
-                                        {{ $course->couse_short_name ?: $course->course_name }}
-                                    </option>
-                                @endforeach
-                            </select>
-                        </div>
+    {{-- Top bar: Active/Archived + Download --}}
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <div class="ot-tab-group">
+            <button type="button" class="ot-tab {{ ($status ?? 'active') === 'active' ? 'active' : '' }}" data-status="active" onclick="switchStatus('active')">Active</button>
+            <button type="button" class="ot-tab {{ ($status ?? 'active') === 'archived' ? 'active' : '' }}" data-status="archived" onclick="switchStatus('archived')">Archived</button>
+        </div>
+        
+        <div class="dropdown">
+            <button class="ot-download-btn dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M8 12L3 7h3.5V2h3V7H13L8 12z" fill="currentColor"/>
+                    <path d="M2 13h12v1.5H2V13z" fill="currentColor"/>
+                </svg>
+                Download
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <li><a class="dropdown-item" href="#" onclick="exportToCSV(); return false;">CSV</a></li>
+                <li><a class="dropdown-item" href="#" onclick="exportToExcel(); return false;">Excel</a></li>
+            </ul>
+        </div>
+    </div>
 
-                        <div class="col-12 col-lg-4">
-                            <label for="otSearchInput" class="form-label mb-1 fw-semibold">Search</label>
-                            <input
-                                id="otSearchInput"
-                                type="text"
-                                name="search"
-                                value="{{ $search ?? '' }}"
-                                class="form-control"
-                                placeholder="Name, OT code, email, cadre"
-                                autocomplete="off"
-                            >
-                        </div>
-
-                        <div class="col-6 col-lg-2 d-grid">
-                            <button type="submit" class="btn btn-primary">Apply</button>
-                        </div>
-
-                        <div class="col-6 col-lg-1 d-grid">
-                            <a href="{{ route('admin.directory.ot', ['course_id' => $selectedCourseId]) }}" class="btn btn-outline-secondary">Reset</a>
-                        </div>
-
-                        <div class="col-6 col-lg-1 d-grid">
-                            <button type="submit" name="export" value="csv" class="btn btn-outline-success btn-sm">CSV</button>
-                        </div>
-
-                        <div class="col-6 col-lg-1 d-grid">
-                            <button type="submit" name="export" value="excel" class="btn btn-outline-success btn-sm">Excel</button>
-                        </div>
-                    </div>
-                </div>
-            </form>
-
-            <div class="table-responsive ot-directory-scroll">
-                <table class="table align-middle datatable" id="otDirectoryTable" data-export="false">
-                    <thead>
-                        <tr>
-                            <th>S.No.</th>
-                            <th>Name</th>
-                            <th>OT Code</th>
-                            <th>Room No.</th>
-                            <th>Room Extension No.</th>
-                            <th>Email ID</th>
-                            <th>Course Name</th>
-                            <th>Cadre Name</th>
-                            <th>Photo</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($students as $index => $student)
-                            <tr>
-                                <td>{{ ($students->firstItem() ?? 0) + $index }}</td>
-                                <td>{{ $student->display_name ?: '-' }}</td>
-                                <td>{{ $student->generated_OT_code ?: '-' }}</td>
-                                <td>-</td>
-                                <td>-</td>
-                                <td>{{ $student->email ?: '-' }}</td>
-                                <td>{{ $student->course_name ?: '-' }}</td>
-                                <td>{{ $student->cadre_name ?: '-' }}</td>
-                                <td>
-                                    @if(!empty($student->photo_path))
-                                        <img src="{{ asset('storage/' . $student->photo_path) }}" alt="photo" class="directory-photo" loading="lazy" decoding="async">
-                                    @else
-                                        <img src="{{ asset('images/dummypic.jpeg') }}" alt="photo" class="directory-photo" loading="lazy" decoding="async">
-                                    @endif
-                                </td>
-                            </tr>
+    {{-- Directory table --}}
+    <div class="ot-table-card">
+        {{-- Filter row --}}
+    <form method="GET" action="{{ route('admin.directory.ot') }}" id="otFilterForm">
+        <input type="hidden" name="status" value="{{ $status ?? 'active' }}">
+        <div class="d-flex align-items-center justify-content-between mb-3">
+            <div class="d-flex align-items-center gap-3">
+                <span class="ot-filter-label">Filters</span>
+                <div class="ot-select-wrap">
+                    <select name="course_id" class="ot-select" id="otCourseSelect">
+                        <option value="">Program Name</option>
+                        @foreach($activeCourses as $course)
+                        <option value="{{ $course->pk }}" {{ (int) $selectedCourseId === (int) $course->pk ? 'selected' : '' }}>
+                            {{ $course->couse_short_name ?: $course->course_name }}
+                        </option>
                         @endforeach
-                    </tbody>
-                </table>
+                    </select>
+                </div>
+                <a href="{{ route('admin.directory.ot', ['status' => $status ?? 'active']) }}" class="ot-reset-link">Reset Filters</a>
             </div>
+            
+            <div class="d-flex align-items-center gap-2">
+                <div class="dropdown">
+                    <button class="ot-columns-btn dropdown-toggle" type="button" id="columnsDropdown" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        Columns
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-left:4px;">
+                            <rect x="1" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                            <rect x="6" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                            <rect x="11" y="2" width="4" height="12" rx="1" stroke="currentColor" stroke-width="1.2" fill="none"/>
+                        </svg>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end p-2" style="min-width: 180px;">
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox" class="form-check-input col-toggle" data-col="0" checked> S. No.</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox" class="form-check-input col-toggle" data-col="1" checked> Name</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox" class="form-check-input col-toggle" data-col="2" checked> OT Code</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox" class="form-check-input col-toggle" data-col="3" checked> Room No.</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox" class="form-check-input col-toggle" data-col="4" checked> Room Extension No.</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox" class="form-check-input col-toggle" data-col="5" checked> Email ID</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox" class="form-check-input col-toggle" data-col="6" checked> Course Name ID</label></li>
+                        <li><label class="dropdown-item py-1 d-flex align-items-center gap-2"><input type="checkbox" class="form-check-input col-toggle" data-col="7" checked> Cadre Name</label></li>
+                    </ul>
+                </div>
+                <button type="button" class="ot-search-btn" onclick="toggleSearch()">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="7" cy="7" r="5" stroke="currentColor" stroke-width="1.5" fill="none"/>
+                        <line x1="11" y1="11" x2="14" y2="14" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </form>
+
+    {{-- Search bar (hidden by default) --}}
+    <div id="otSearchWrap" class="mb-3 d-none">
+        <input type="text" id="otSearchInput" class="form-control" placeholder="Search by name, OT code, email..." onkeyup="filterTable(this.value)">
+    </div>
+        <div class="table-responsive">
+            <table class="table mb-0" id="otDirectoryTable" data-sargam-dt-ui="false">
+                <thead>
+                    <tr>
+                        <th>S. No.</th>
+                        <th>Name</th>
+                        <th>OT Code</th>
+                        <th>Room No.</th>
+                        <th>Room Extension No.</th>
+                        <th>Email ID</th>
+                        <th>Course Name ID</th>
+                        <th>Cadre Name</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @forelse($students as $index => $student)
+                    <tr>
+                        <td>{{ $index + 1 }}</td>
+                        <td>
+                            <div class="ot-name-cell">
+                                <div class="ot-avatar-wrap">
+                                    <span class="ot-avatar-letter">{{ strtoupper(substr($student->display_name ?? '-', 0, 1)) }}</span>
+                                    @if(!empty($student->photo_path))
+                                    <img src="{{ asset('storage/' . $student->photo_path) }}" alt=""
+                                        loading="lazy" decoding="async"
+                                        onload="this.style.opacity='1';"
+                                        onerror="this.remove();"
+                                        class="ot-avatar-img">
+                                    @endif
+                                </div>
+                                <span class="ot-student-name">{{ $student->display_name ?: '-' }}</span>
+                            </div>
+                        </td>
+                        <td>{{ $student->generated_OT_code ?: '-' }}</td>
+                        <td>{{ $student->hostel_room_name ?: '-' }}</td>
+                        <td>-</td>
+                        <td>{{ $student->email ?: '-' }}</td>
+                        <td>{{ $student->course_name ?: '-' }}</td>
+                        <td>{{ $student->cadre_name ?: '-' }}</td>
+                    </tr>
+                    @empty
+                    <tr>
+                        <td colspan="8" class="text-center text-muted py-5">No records found</td>
+                    </tr>
+                    @endforelse
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -254,7 +292,7 @@
     font-size: 14px;
     color: #333;
     padding: 16px 16px;
-    border-bottom: 1px solid #f7f7f7;
+    border-bottom: 1px solid #f2f2f2;
     vertical-align: middle;
 }
 #otDirectoryTable tbody tr:last-child td {
@@ -376,5 +414,109 @@
 </style>
 @endpush
 
-@endsection
+@push('scripts')
+<script>
+var otTable;
 
+$(document).ready(function() {
+    otTable = $('#otDirectoryTable').DataTable({
+        pageLength: 10,
+        lengthMenu: [10, 25, 50, 100, 200, 500],
+        responsive: false,
+        dom: 't<"ot-pagination-footer"<"ot-pag-left"p><"ot-pag-right"l i>>',
+        language: {
+            lengthMenu: 'Showing _MENU_',
+            info: 'of _TOTAL_ items',
+            infoEmpty: 'of 0 items',
+            infoFiltered: '',
+            paginate: {
+                previous: '‹',
+                next: '›'
+            }
+        },
+        searching: true,
+        ordering: true,
+        search: { smart: false },
+        columnDefs: [
+            { orderable: false, targets: [0] }
+        ]
+    });
+
+    // Auto-submit course filter on change
+    $('#otCourseSelect').on('change', function() {
+        $('#otFilterForm').submit();
+    });
+
+    // Column toggle
+    $('.col-toggle').on('change', function() {
+        var colIdx = parseInt($(this).data('col'));
+        var column = otTable.column(colIdx);
+        column.visible($(this).is(':checked'));
+    });
+});
+
+function toggleSearch() {
+    var wrap = document.getElementById('otSearchWrap');
+    var input = document.getElementById('otSearchInput');
+    if (wrap.classList.contains('d-none')) {
+        wrap.classList.remove('d-none');
+        input.focus();
+    } else {
+        wrap.classList.add('d-none');
+        input.value = '';
+        if (otTable) otTable.search('').draw();
+    }
+}
+
+function filterTable(val) {
+    if (otTable) otTable.search(val).draw();
+}
+
+function switchStatus(status) {
+    document.querySelectorAll('.ot-tab').forEach(function(btn) { btn.classList.remove('active'); });
+    document.querySelector('[data-status="' + status + '"]').classList.add('active');
+    document.querySelector('input[name="status"]').value = status;
+    document.getElementById('otFilterForm').submit();
+}
+
+function exportToCSV() {
+    var csv = [];
+    var headers = [];
+    otTable.columns(':visible').every(function() { headers.push($(this.header()).text().trim()); });
+    csv.push(headers.join(','));
+    otTable.rows({search:'applied'}).every(function(rowIdx) {
+        var cols = [];
+        otTable.columns(':visible').every(function(colIdx) {
+            var cellText = $(otTable.cell(rowIdx, colIdx).node()).text().trim();
+            cols.push('"' + cellText.replace(/"/g, '""') + '"');
+        });
+        csv.push(cols.join(','));
+    });
+    downloadFile(csv.join('\n'), 'OT_Directory.csv', 'text/csv');
+}
+
+function exportToExcel() {
+    var table = document.getElementById('otDirectoryTable');
+    var html = table.outerHTML.replace(/<img[^>]*>/g, '');
+    var tpl = '<html xmlns:x="urn:schemas-microsoft-com:office:excel"><head><meta charset="UTF-8"></head><body>' + html + '</body></html>';
+    var b64 = window.btoa(unescape(encodeURIComponent(tpl)));
+    var blob = new Blob([Uint8Array.from(atob(b64), c => c.charCodeAt(0))], {type:'application/vnd.ms-excel'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = 'OT_Directory.xls';
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function downloadFile(content, filename, type) {
+    var blob = new Blob([content], {type: type});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+</script>
+@endpush
+
+@endsection

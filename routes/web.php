@@ -152,6 +152,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
     Route::get('/directory/ot', [DirectoryController::class, 'ot'])->name('admin.directory.ot');
+    Route::get('/directory/ot-data', [DirectoryController::class, 'otData'])->name('admin.directory.ot-data');
 
     // Birthday Wish Routes
     Route::get('/birthday-wishes', [BirthdayWishController::class, 'index'])->name('admin.birthday-wish.index');
