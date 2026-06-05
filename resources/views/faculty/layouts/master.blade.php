@@ -135,7 +135,7 @@
     }
 
     .calendar-cell:hover {
-        background: #f2f2f2;
+        background: #f7f7f7;
     }
 
     .calendar-cell:focus {

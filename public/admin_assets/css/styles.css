@@ -38296,7 +38296,7 @@ fieldset:disabled .btn {
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
     border-radius: 10px;
-    background: #f2f2f2;
+    background: #f7f7f7;
     min-height: calc(100vh - 155px);
 }
 @media (max-width: 480px) {

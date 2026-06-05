@@ -208,9 +208,9 @@
             transition: background .12s ease;
         }
 
-        .calendar-cell:hover {
-            background: #f2f2f2;
-        }
+    .calendar-cell:hover {
+        background: #f7f7f7;
+    }
 
         .calendar-cell:focus {
             outline: 3px solid #004a93;
