@@ -106,8 +106,8 @@
 }
 .header-top-inner {
     min-height: 38px;
-    padding-top: 0.35rem;
-    padding-bottom: 0.35rem;
+    padding-top: 0.25rem;
+    padding-bottom: 0.25rem;
 }
 .header-govt-wrap {
     min-width: 0;
@@ -135,7 +135,7 @@
     width: 1px;
     height: 13px;
     background: rgba(255,255,255,0.34);
-    margin: 0 4px;
+    margin: 0 0.25rem;
     display: inline-block;
 }
 .header-utility-link,
@@ -144,8 +144,8 @@
     font-size: 0.765rem;
     font-weight: 500;
     opacity: 0.92;
-    padding-left: 0.45rem !important;
-    padding-right: 0.45rem !important;
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
     transition: color 0.2s ease, opacity 0.2s ease;
 }
 .header-utility-link:hover,
@@ -156,7 +156,7 @@
 .header-lang-dropdown {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 0.25rem;
     padding: 0;
 }
 .header-globe-icon {
@@ -211,7 +211,7 @@
 @media (min-width: 992px) {
     .header-main-navbar {
         flex-wrap: nowrap;
-        padding: 0 1.25rem;
+        padding: 0 1.5rem;
         gap: 0.75rem;
     }
 }
@@ -246,10 +246,10 @@
     display: inline-flex;
     align-items: center;
     background: #e8eaee;
-    padding: 4px 6px;
+    padding: 0.25rem 0.25rem;
     width: fit-content;
     max-width: min(100%, 760px);
-    gap: 2px;
+    gap: 0.25rem;
 }
 .header-nav-scroll-wrap.is-expanded {
     display: flex;
@@ -270,7 +270,7 @@
 .header-main-nav {
     flex-direction: row;
     flex-wrap: nowrap;
-    gap: 2px;
+    gap: 0.25rem;
     background: transparent !important;
     border: none !important;
     box-shadow: none !important;
@@ -283,7 +283,7 @@
     font-size: 0.8125rem;
     font-weight: 500;
     border: none !important;
-    padding: 7px 15px !important;
+    padding: 0.5rem 1rem !important;
     white-space: nowrap;
     line-height: 1.25;
     transition: color 0.15s ease, background-color 0.15s ease;
@@ -335,7 +335,7 @@
     background: transparent !important;
     border: none !important;
     color: #6c757d !important;
-    padding: 6px 10px !important;
+    padding: 0.5rem 0.75rem !important;
     border-radius: 8px;
 }
 .header-search-btn:hover { color: #004a93 !important; }
@@ -490,9 +490,9 @@
 
 /* Logout button - enhanced */
 .header-logout-btn {
-    gap: 3px;
+    gap: 0.25rem;
     min-width: 52px;
-    padding: 6px 10px !important;
+    padding: 0.5rem 0.75rem !important;
     border-radius: 10px;
     color: #6c757d !important;
     border: 1px solid transparent;

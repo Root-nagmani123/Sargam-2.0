@@ -49,7 +49,7 @@
                                 @error('category_image')
                                     <small class="text-danger d-block mt-1">{{ $message }}</small>
                                 @enderror
-                                <img id="preview_image" src="" alt="Preview" style="max-width: 150px; margin-top: 10px; display: none; border-radius: 4px;" class="img-thumbnail">
+                                <img id="preview_image" src="" alt="Preview" style="max-width: 150px; margin-top: 0.5rem; display: none; border-radius: 8px;" class="img-thumbnail">
                             </div>
 
                             <div class="d-flex gap-2 mt-4">

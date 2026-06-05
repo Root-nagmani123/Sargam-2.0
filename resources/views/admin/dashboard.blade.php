@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Dashboard - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Dashboard')
 
 @section('content')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
@@ -271,9 +271,11 @@
 .dashboard-stat-card .card-body.dashboard-stat-card-inner {
     position: relative;
     z-index: 2;
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
+    display: grid;
+    grid-template-columns: var(--stat-icon-size) 1fr;
+    column-gap: 12px;
+    row-gap: 8px;
+    align-content: space-between;
     min-height: var(--stat-card-min-h);
     height: 100%;
     padding: var(--stat-pad-y) var(--stat-pad-x) 26px var(--stat-pad-left);
@@ -283,8 +285,14 @@
     --stat-card-min-h: 172px;
 }
 
+.dashboard-stat-card:has(.stat-meta) .dashboard-stat-card-inner,
+.dashboard-stat-card:has(.stat-meta) .card-body.dashboard-stat-card-inner {
+    align-content: start;
+    row-gap: 4px;
+}
+
 .dashboard-stat-card:has(.stat-meta) .dashboard-stat-value {
-    margin-top: 0;
+    margin: 0;
     padding-top: 8px;
 }
 
@@ -298,10 +306,14 @@
     font-size: 1.125rem;
     line-height: 1;
     flex-shrink: 0;
-    margin: 0 0 14px 0;
+    grid-column: 1;
+    align-self: center;
+    margin: 0;
 }
 
 .dashboard-stat-card .stat-label {
+    grid-column: 2;
+    align-self: center;
     margin: 0;
     padding: 0;
     font-size: var(--stat-label-size);
@@ -312,15 +324,16 @@
 }
 
 .dashboard-stat-card .stat-meta {
-    margin: 4px 0 0 0;
+    grid-column: 1 / -1;
+    margin: 0;
     font-size: 12px;
     line-height: 1.35;
     color: #94a3b8;
 }
 
 .dashboard-stat-card .dashboard-stat-value {
-    margin-top: auto;
-    padding-top: 16px;
+    grid-column: 1 / -1;
+    margin: 0;
     font-size: var(--stat-value-size);
     font-weight: 700;
     line-height: 1;
@@ -1746,15 +1759,17 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             {{ $greeting }},
                             <span class="text-primary fw-semibold">{{ $userName }}</span>
                         </p>
-                        <h1 class="h2 fw-bold text-dark mb-1 mb-md-2">Dashboard</h1>
-                        <p class="text-body-secondary mb-0 small">
+                        <h1 class="h2 fw-bold text-dark mb-0">Dashboard</h1>
+                    </div>
+                    <div class="ms-auto text-end">
+                        <div class="d-flex align-items-center justify-content-end gap-2 text-primary">
+                            <i class="bi bi-clock fs-5" aria-hidden="true"></i>
+                            <span class="fs-4 fw-semibold tabular-nums"
+                                id="dashboard-live-time">{{ now()->format('H:i') }}</span>
+                        </div>
+                        <p class="text-body-secondary small mb-0 mt-1">
                             {{ now()->format('l, d F Y') }}
                         </p>
-                    </div>
-                    <div class="d-flex align-items-center gap-2 text-primary ms-auto">
-                        <i class="bi bi-clock fs-5" aria-hidden="true"></i>
-                        <span class="fs-4 fw-semibold tabular-nums"
-                            id="dashboard-live-time">{{ now()->format('H:i') }}</span>
                     </div>
                 </div>
             </div>
@@ -2071,7 +2086,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         @endif
 
         <div class="row g-3 g-lg-4">
-            <div class="col-lg-7">
+            <div class="col-8">
                 @php
                 $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
                 $noticeTabLabels = [
@@ -2346,7 +2361,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
             </div>
 
-            <div class="col-lg-5">
+            <div class="col-4">
                 <div class="card dashboard-panel dashboard-birthdays-panel border-0 mb-4">
                     <div class="card-header bg-white border-0">
                         <div class="d-flex align-items-center justify-content-between w-100">
