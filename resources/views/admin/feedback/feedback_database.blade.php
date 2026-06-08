@@ -5,6 +5,31 @@
 
 @section('title', 'Feedback Database - Sargam | Lal Bahadur')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<style>
+#courseSelect + .choices .choices__inner,
+#facultyFilter + .choices .choices__inner {
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid #d0d7de;
+    border-radius: var(--bs-border-radius, 0.375rem);
+    background-color: #fff;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+#courseSelect + .choices .choices__inner:focus-within,
+#facultyFilter + .choices .choices__inner:focus-within {
+    border-color: #0b4f8a;
+    box-shadow: 0 0 0 0.2rem rgba(11,79,138,.12);
+}
+#courseSelect + .choices .choices__input,
+#facultyFilter + .choices .choices__input {
+    font-size: 0.85rem;
+}
+</style>
+@endpush
+
 @section('setup_content')
     <style>
         /* ── Variables ── */
@@ -19,7 +44,12 @@
             border: 0;
             border-radius: var(--bs-border-radius-lg);
             box-shadow: 0 1px 4px rgba(0,0,0,.06);
-            overflow: hidden;
+            overflow: visible;
+        }
+
+        .filter-card .choices__list--dropdown,
+        .filter-card .choices__list[aria-expanded] {
+            z-index: 1050 !important;
         }
 
         .filter-card .card-header {
@@ -162,20 +192,41 @@
         }
 
         /* ── Pagination ── */
+        #paginationSection {
+            border-bottom-left-radius: var(--bs-border-radius-lg);
+            border-bottom-right-radius: var(--bs-border-radius-lg);
+        }
+
+        #paginationInfo {
+            font-size: 0.82rem;
+        }
+
         .pagination .page-link {
             font-size: 0.82rem;
             color: var(--fb-primary);
             border-color: var(--fb-border);
+            min-width: 2rem;
+            text-align: center;
+            border-radius: 0.375rem !important;
+            margin: 0 0.1rem;
         }
 
         .pagination .page-item.active .page-link {
             background-color: var(--fb-primary);
             border-color: var(--fb-primary);
             color: #fff;
+            font-weight: 600;
         }
 
-        .pagination .page-link:hover {
+        .pagination .page-item.disabled .page-link {
+            color: #adb5bd;
+            border-color: var(--fb-border);
+            background-color: #f8f9fa;
+        }
+
+        .pagination .page-link:hover:not(.active) {
             background-color: var(--fb-primary-light);
+            color: var(--fb-primary);
         }
 
         /* ── Table Controls ── */
@@ -241,7 +292,7 @@
                     {{-- Program Name --}}
                     <div class="col-lg-3 col-md-4">
                         <label class="form-label">Program Name <span class="text-danger">*</span></label>
-                        <select class="form-select" id="courseSelect" name="course_id">
+                        <select id="courseSelect" name="course_id">
                             <option value="">Select Program</option>
                             @if (isset($courses) && $courses->count() > 0)
                                 @foreach ($courses as $course)
@@ -266,13 +317,8 @@
                     {{-- Faculty Filter (Hidden by default) --}}
                     <div class="col-lg-3 col-md-3 dynamic-filter-container d-none" id="facultyFilterContainer">
                         <label class="form-label">Select Faculty</label>
-                        <select class="form-select" id="facultyFilter" name="faculty_id">
+                        <select id="facultyFilter" name="faculty_id">
                             <option value="">All Faculties</option>
-                            @if (isset($faculties) && $faculties->count() > 0)
-                                @foreach ($faculties as $faculty)
-                                    <option value="{{ $faculty->pk }}">{{ $faculty->full_name }}</option>
-                                @endforeach
-                            @endif
                         </select>
                     </div>
 
@@ -382,8 +428,8 @@
                         </div>
 
                         {{-- PAGINATION --}}
-                        <div class="d-flex flex-column flex-sm-row justify-content-between align-items-center px-3 py-2 border-top"
-                             id="paginationSection" style="display: none; background: #fafbfc;">
+                        <div class="d-none d-flex flex-column flex-sm-row justify-content-between align-items-center px-3 py-3 border-top"
+                             id="paginationSection" style="background: #fafbfc;">
                             <small class="text-muted record-count" id="paginationInfo">Showing 0 to 0 of 0 entries</small>
                             <nav aria-label="Feedback pagination">
                                 <ul class="pagination pagination-sm mb-0 mt-2 mt-sm-0" id="paginationLinks">
@@ -411,6 +457,7 @@
 @endsection
 
 @section('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script>
         const FEEDBACK_DB_EXPORT_ROUTES = {
             print: @json($fr['database_print']),
@@ -418,6 +465,7 @@
             excel: @json($fr['database_export_excel']),
         };
         const FEEDBACK_DB_COURSES_URL = @json($fr['database_courses']);
+        const FEEDBACK_DB_FACULTIES_URL = @json($fr['database_faculties']);
 
         $(document).ready(function() {
             // Prevent duplicate execution
@@ -447,8 +495,97 @@
                 return;
             }
 
+            // Choices.js helpers
+            function makeChoicesConfig(placeholder) {
+                return {
+                    shouldSort: false,
+                    searchEnabled: true,
+                    searchResultLimit: 100,
+                    searchPlaceholderValue: placeholder,
+                    itemSelectText: '',
+                    allowHTML: false,
+                    classNames: {
+                        containerInner: ['choices__inner', 'shadow-sm'],
+                        input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                        inputCloned: ['choices__input--cloned'],
+                        listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                        item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                        itemSelectable: ['choices__item--selectable'],
+                        itemDisabled: ['choices__item--disabled', 'disabled'],
+                        itemChoice: ['choices__item--choice'],
+                        placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                        highlightedState: ['is-highlighted', 'active'],
+                        notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+                    }
+                };
+            }
+
+            function initCourseChoices() {
+                const el = document.getElementById('courseSelect');
+                if (!el || typeof window.Choices === 'undefined') return;
+                if (el._choicesInstance) { el._choicesInstance.destroy(); el._choicesInstance = null; }
+                el._choicesInstance = new Choices(el, makeChoicesConfig('Search programs...'));
+                el.addEventListener('change', function() {
+                    const courseId = el.value;
+                    if (courseId) {
+                        currentFilters.course_id = courseId;
+                        currentFilters.faculty_id = '';
+                        currentPage = 1;
+                        loadFacultyForCourse(courseId);
+                        loadFeedbackData();
+                    } else {
+                        showInitialMessage();
+                        syncFeedbackDbExportLinks();
+                    }
+                });
+            }
+
+            function initFacultyChoices() {
+                const el = document.getElementById('facultyFilter');
+                if (!el || typeof window.Choices === 'undefined') return;
+                if (el._choicesInstance) { el._choicesInstance.destroy(); el._choicesInstance = null; }
+                el._choicesInstance = new Choices(el, makeChoicesConfig('Search faculty...'));
+                el.addEventListener('change', function() {
+                    currentFilters.faculty_id = el.value;
+                    if (currentFilters.course_id) {
+                        currentPage = 1;
+                        loadFeedbackData();
+                    }
+                });
+            }
+
+            function loadFacultyForCourse(courseId) {
+                if (!courseId) return;
+                fetch(FEEDBACK_DB_FACULTIES_URL + '?course_id=' + encodeURIComponent(courseId), {
+                    headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+                })
+                .then(r => r.json())
+                .then(data => {
+                    const el = document.getElementById('facultyFilter');
+                    if (!el) return;
+                    // Destroy Choices instance first
+                    if (el._choicesInstance) { el._choicesInstance.destroy(); el._choicesInstance = null; }
+                    // Rebuild options
+                    el.innerHTML = '<option value="">All Faculties</option>';
+                    if (data.success && data.faculties.length > 0) {
+                        data.faculties.forEach(function(f) {
+                            const opt = document.createElement('option');
+                            opt.value = f.pk;
+                            opt.textContent = f.full_name;
+                            el.appendChild(opt);
+                        });
+                    }
+                    // Re-init Choices if faculty container is visible
+                    if (!document.getElementById('facultyFilterContainer').classList.contains('d-none')) {
+                        initFacultyChoices();
+                    }
+                })
+                .catch(function(err) { console.error('loadFacultyForCourse error:', err); });
+            }
+
             // Initialize
             initializeEventListeners();
+            initCourseChoices();
             autoSelectFirstCourse();
             syncFeedbackDbExportLinks();
             syncFeedbackDbCourseTypeUrl();
@@ -480,8 +617,12 @@
                     const courseId = firstCourseOption.val();
                     const courseName = firstCourseOption.text();
 
-                    courseSelect.val(courseId);
-                    currentFilters.course_id = courseId;
+                    // Set via Choices.js if available, else native
+const el = document.getElementById('courseSelect');
+                        if (el._choicesInstance) { el._choicesInstance.setChoiceByValue(String(courseId)); } else { courseSelect.val(courseId); }
+                        currentFilters.course_id = courseId;
+
+                        loadFacultyForCourse(courseId);
 
                     $('#feedbackTableBody').html(`
                 <tr>
@@ -494,6 +635,7 @@
                 </tr>
             `);
 
+                    loadFacultyForCourse(courseId);
                     loadFeedbackData();
                 } else {
                     showInitialMessage();
@@ -503,18 +645,7 @@
 
             function initializeEventListeners() {
                 // Safely bind events only if elements exist
-                safeBind('#courseSelect', 'change', function(e) {
-                    e.preventDefault();
-                    const courseId = $(this).val();
-                    if (courseId) {
-                        currentFilters.course_id = courseId;
-                        currentPage = 1;
-                        loadFeedbackData();
-                    } else {
-                        showInitialMessage();
-                        syncFeedbackDbExportLinks();
-                    }
-                });
+                // #courseSelect change is handled via Choices.js listener in initCourseChoices()
 
                 safeBind('#searchParam', 'change', function(e) {
                     e.preventDefault();
@@ -525,7 +656,13 @@
 
                     if (searchParam === 'faculty') {
                         showElement('#facultyFilterContainer');
-                        currentFilters.faculty_id = $('#facultyFilter').val();
+                        // Load faculty for current course and init Choices.js
+                        if (currentFilters.course_id) {
+                            loadFacultyForCourse(currentFilters.course_id);
+                        } else {
+                            setTimeout(function() { initFacultyChoices(); }, 50);
+                        }
+                        currentFilters.faculty_id = '';
                         currentFilters.topic_value = '';
                         $('#topicFilter').val('');
                     } else if (searchParam === 'topic') {
@@ -546,14 +683,7 @@
                     }
                 });
 
-                safeBind('#facultyFilter', 'change', function(e) {
-                    e.preventDefault();
-                    currentFilters.faculty_id = $(this).val();
-                    if (currentFilters.course_id) {
-                        currentPage = 1;
-                        loadFeedbackData();
-                    }
-                });
+                // #facultyFilter change is handled via Choices.js listener in initFacultyChoices()
 
                 safeBind('#topicFilter', 'input', function(e) {
                     e.preventDefault();
@@ -638,22 +768,32 @@
                             alert('Could not load programs for this course type.');
                             return;
                         }
-                        const sel = $('#courseSelect');
-                        sel.empty().append('<option value="">Select Program</option>');
+                        // Rebuild course select via Choices.js
+                        const rawSel = document.getElementById('courseSelect');
+                        if (rawSel._choicesInstance) { rawSel._choicesInstance.destroy(); rawSel._choicesInstance = null; }
+                        rawSel.innerHTML = '<option value="">Select Program</option>';
                         if (data.courses && data.courses.length > 0) {
                             data.courses.forEach(function(c) {
-                                const label = $('<div/>').text(c.course_name || '').html();
-                                sel.append('<option value="' + c.pk + '">' + label + '</option>');
+                                const opt = document.createElement('option');
+                                opt.value = c.pk;
+                                opt.textContent = c.course_name || '';
+                                rawSel.appendChild(opt);
                             });
                         } else {
-                            sel.append('<option value="" disabled>No courses available</option>');
+                            const opt = document.createElement('option');
+                            opt.value = ''; opt.disabled = true;
+                            opt.textContent = 'No courses available';
+                            rawSel.appendChild(opt);
                         }
+                        initCourseChoices();
                         currentFilters.course_id = '';
                         currentFilters.search_param = 'all';
                         currentFilters.faculty_id = '';
                         currentFilters.topic_value = '';
                         $('#searchParam').val('all');
-                        $('#facultyFilter').val('');
+                        if (document.getElementById('facultyFilter')._choicesInstance) {
+                            document.getElementById('facultyFilter')._choicesInstance.setChoiceByValue('');
+                        }
                         $('#topicFilter').val('');
                         $('.dynamic-filter-container').addClass('d-none').removeClass('d-block');
                         currentPage = 1;
@@ -725,9 +865,11 @@
             }
 
             function clearAllFilters() {
-                $('#courseSelect').val('');
+                const cEl = document.getElementById('courseSelect');
+                if (cEl._choicesInstance) { cEl._choicesInstance.setChoiceByValue(''); } else { $('#courseSelect').val(''); }
+                const fEl = document.getElementById('facultyFilter');
+                if (fEl && fEl._choicesInstance) { fEl._choicesInstance.setChoiceByValue(''); } else { $('#facultyFilter').val(''); }
                 $('#searchParam').val('all');
-                $('#facultyFilter').val('');
                 $('#topicFilter').val('');
 
                 $('.dynamic-filter-container').addClass('d-none').removeClass('d-block');
@@ -770,7 +912,7 @@
                 </tr>
             `);
                 }
-                $('#paginationSection').hide();
+                $('#paginationSection').addClass('d-none');
             }
 
             function loadFeedbackData() {
@@ -818,7 +960,7 @@
 
                 if (!data || data.length === 0) {
                     showNoDataMessage();
-                    $('#paginationSection').hide();
+                    $('#paginationSection').addClass('d-none');
                     return;
                 }
 
@@ -924,11 +1066,11 @@
                 paginationLinks.empty();
 
                 if (totalPages <= 1) {
-                    paginationSection.hide();
+                    paginationSection.addClass('d-none');
                     return;
                 }
 
-                paginationSection.show();
+                paginationSection.removeClass('d-none');
 
                 const prevLi = $(`<li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
             <a class="page-link" href="javascript:void(0)" data-page="${currentPage - 1}">
