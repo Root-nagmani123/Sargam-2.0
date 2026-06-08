@@ -99,6 +99,14 @@ Route::get('clear-cache', function () {
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
+// Allow GET logout (for redirect/link-based logout)
+Route::get('/logout', function () {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
+})->name('get.logout');
+
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
@@ -109,7 +117,7 @@ Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'
 Route::resource('roles', RoleController::class);
 
 // Protected Routes
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'ensure.role'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
@@ -940,7 +948,7 @@ use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
 use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
 
 // Setup -> Employee Type (moved to controller with modal CRUD)
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'ensure.role'])->group(function () {
     Route::prefix('admin/setup/employee-type')->name('admin.setup.employee_type.')->controller(EmployeeTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');

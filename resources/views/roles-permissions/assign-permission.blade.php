@@ -6,12 +6,26 @@
     <x-session_message />
     <div class="datatables">
         <div class="card" style="border-left: 4px solid #004a93;">
-            <div class="card-header border-bottom">
-                <h4>Assign Permission ({{ ucfirst($role->name) }})</h4>
+            <div class="card-header border-bottom d-flex justify-content-between align-items-center">
+                <h4 class="mb-0">Assign Permission ({{ ucfirst($role->name) }})</h4>
+                <div class="dropdown">
+                    <button class="btn btn-outline-primary btn-sm dropdown-toggle" type="button" id="columnToggleBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                        <i class="bi bi-layout-three-columns me-1"></i> Columns
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end p-2" aria-labelledby="columnToggleBtn">
+                        <li class="dropdown-item-text fw-semibold border-bottom pb-1 mb-1">Show/Hide Columns</li>
+                        <li><label class="dropdown-item"><input type="checkbox" class="form-check-input me-2 col-toggle" data-col="0" checked> Category</label></li>
+                        <li><label class="dropdown-item"><input type="checkbox" class="form-check-input me-2 col-toggle" data-col="1" checked> Group</label></li>
+                        <li><label class="dropdown-item"><input type="checkbox" class="form-check-input me-2 col-toggle" data-col="2" checked> Menu</label></li>
+                        <li><label class="dropdown-item"><input type="checkbox" class="form-check-input me-2 col-toggle" data-col="3" checked> Sub Menu</label></li>
+                        <li><label class="dropdown-item"><input type="checkbox" class="form-check-input me-2 col-toggle" data-col="4" checked> Permission</label></li>
+                        <li><label class="dropdown-item"><input type="checkbox" class="form-check-input me-2 col-toggle" data-col="5" checked> Action</label></li>
+                    </ul>
+                </div>
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table table-bordered">
+                    <table class="table">
                         <thead>
                             <tr>
                                 <th>Category</th>
@@ -206,6 +220,13 @@
                 form.submit();
             }
         });
+    });
+
+    // Column hide/unhide toggle
+    $(document).on('change', '.col-toggle', function () {
+        let colIndex = $(this).data('col');
+        let isVisible = $(this).is(':checked');
+        $('table.table-bordered th:nth-child(' + (colIndex + 1) + '), table.table-bordered td:nth-child(' + (colIndex + 1) + ')').toggle(isVisible);
     });
 
     $(document).on('change', '.permission-toggle', function () {
