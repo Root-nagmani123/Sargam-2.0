@@ -115,8 +115,14 @@ class User extends Authenticatable
                 }
             })
             ->leftJoin('designation_master as d', 'e.designation_master_pk', '=', 'd.pk')
-            ->where('uc.user_category', '!=', 'S')
-            ->select(
+            ->where('uc.user_category', '!=', 'S');
+
+        // Only filter by status if the column exists (backward compatibility)
+        if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'status')) {
+            $query->where('e.status', 1);
+        }
+
+        $query->select(
                 'e.pk as employee_pk',
                 DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),
                 DB::raw("COALESCE(e.mobile, '') as mobile"),
