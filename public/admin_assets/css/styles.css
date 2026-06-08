@@ -38495,19 +38495,22 @@ pre.code-view code.hljs {
 
 /* MAIN SIDEBAR */
 .side-mini-panel .sidebarmenu .sidebar-nav {
-    position: absolute;
-    top: 130px;
-    left: 90px;
-    width: 275px;
-    height: calc(100vh - 72px);
+    position: relative;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
 
-    /* SVG background panel */
-    background: #004384;
-    margin-top: -5px;
-    display: none;
-    padding: 20px 0px 24px 20px;
+    /* Clean white panel */
+    background: #ffffff;
+    margin-top: 0;
+    display: block;
+    padding: 16px 12px 24px 12px;
     z-index: 98;
-    border-radius: 0 30px 30px 0;
+    border-radius: 0;
+    border: none;
+    border-left: 1px solid #f0f0f0;
+    box-shadow: none;
 }
 
 .brand-logo {
@@ -38537,40 +38540,51 @@ pre.code-view code.hljs {
     width: 100%;
 }
 
+/* Sidebar title override for white background */
+.sidebar-nav #sidebar-title,
+.sidebarmenu #sidebar-title,
+#sidebar-title.text-light {
+    color: #9ca3af !important;
+    font-size: 0.6875rem !important;
+    font-weight: 500 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.14em !important;
+    border-bottom: none;
+    padding: 16px 12px 12px 12px !important;
+    margin-bottom: 4px !important;
+}
+
 /* NORMAL STATE */
 .sidebar-nav ul .sidebar-item .sidebar-link {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 11px;
+    gap: 12px;
+    padding: 14px 12px;
     font-size: 14px;
-    font-weight: 600;
+    font-weight: 400;
     white-space: normal;
-    color: #ffffff;
-    border-radius: 30px;
-    /* keep shape always round */
+    color: #1f2937;
+    border-radius: 8px;
     background: transparent;
-    transition: 0.25s ease-in-out;
-    margin-bottom: 10px;
+    transition: 0.15s ease;
+    margin-bottom: 0;
 }
 
 /* HOVER STATE */
 .sidebar-nav ul .sidebar-item .sidebar-link:hover {
-    background-color: #4077ad;
-    color: #fff;
-    padding-left: 20px;
-    /* smooth slide effect */
-    box-shadow: -2px 3px rgba(255, 255, 255, 0.1);
+    background-color: #f9fafb;
+    color: #111827;
+    padding-left: 12px;
+    box-shadow: none;
     width: 100%;
-    border-radius: 30px 0 0 30px;
-    /* keep shape always round */
-    transition: all 0.3s ease-in-out;
+    border-radius: 8px;
+    transition: all 0.15s ease;
 }
 
 
 .sidebar-nav ul .sidebar-item .sidebar-link .active {
-    background-color: #E5EDF4;
-    color: #fff;
+    background-color: #dbeafe;
+    color: #1e40af;
 }
 
 .sidebar-nav ul .sidebar-item .sidebar-link span:first-child {
@@ -38578,82 +38592,102 @@ pre.code-view code.hljs {
 }
 
 .sidebar-nav ul .sidebar-item .sidebar-link .material-icons {
-    font-size: 18px;
-    color: #fff;
+    font-size: 20px;
+    color: #6b7280;
     opacity: 1;
-    transition: all 0.3s ease-in-out;
+    transition: all 0.15s ease;
     flex-shrink: 0;
-    font-weight: 600;
+    font-weight: 400;
 }
 
 .sidebar-nav ul .sidebar-item .sidebar-link:hover iconify-icon {
-    color: var(--bs-primary);
+    color: #374151;
     opacity: 1;
 }
 
 .sidebar-nav ul .sidebar-item .sidebar-link:hover.has-arrow::after {
-    border-color: var(--bs-primary);
+    border-color: #9ca3af;
 }
 
 .sidebar-nav ul .sidebar-item .sidebar-link.active:hover.has-arrow::after {
-    border-color: var(--bs-white);
+    border-color: #2563eb;
 }
 
 .sidebar-nav ul .sidebar-item .link-disabled {
     opacity: 0.38;
 }
 
+/* Vertical dotted connector line for first-level sub-items */
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item {
-    transition: all 0.4s ease-in-out;
+    transition: all 0.2s ease;
     border-bottom: 0;
+    position: relative;
+}
+
+/* Dotted vertical line */
+.sidebar-nav ul .sidebar-item .first-level .sidebar-item::before {
+    content: '';
+    position: absolute;
+    left: 28px;
+    top: 0;
+    bottom: 0;
+    width: 0;
+    border-left: 1.5px dotted #d1d5db;
+}
+
+.sidebar-nav ul .sidebar-item .first-level .sidebar-item:last-child::before {
+    bottom: 50%;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item .icon-small {
     width: 6px;
     height: 6px;
     border-radius: 100%;
-    background: var(--bs-body-color);
+    background: #9ca3af;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item .sidebar-link:hover {
-    background-color: transparent;
-    color: var(--bs-primary);
+    background-color: #f3f4f6;
+    color: #111827;
+    border-radius: 24px;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item .sidebar-link:hover .icon-small {
-    background: var(--bs-primary);
+    background: #374151;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item .sidebar-link.active.has-arrow::after {
-    border-color: var(--bs-primary);
+    border-color: #2563eb;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item .sidebar-link.active .icon-small {
-    background: var(--bs-primary);
+    background: #2563eb;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item>.sidebar-link {
-    padding: 8px 21px;
+    padding: 12px 14px 12px 48px;
     font-size: 14px;
-    gap: 21px;
+    gap: 10px;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item>.sidebar-link .sidebar-icon {
     flex-shrink: 0;
-    margin-left: 12px;
-    margin-right: 35px;
+    margin-left: 0;
+    margin-right: 8px;
     width: 14px;
     height: 14px;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item:last-child {
-    margin-bottom: 16px;
+    margin-bottom: 8px;
 }
 
 .sidebar-nav ul .sidebar-item .first-level .sidebar-item .sidebar-link.active {
     box-shadow: none !important;
-    background-color: #004a93 !important;
-    color: #fff !important;
+    background-color: #dbeafe !important;
+    color: #1e40af !important;
+    border-radius: 24px !important;
+    font-weight: 500 !important;
 }
 
 .sidebar-nav ul .sidebar-item .three-level .sidebar-item .sidebar-link,
@@ -38664,30 +38698,30 @@ pre.code-view code.hljs {
 .sidebar-nav ul .sidebar-item.selected>.sidebar-link,
 .sidebar-nav ul .sidebar-item.selected>.sidebar-link.active,
 .sidebar-nav ul .sidebar-item>.sidebar-link.active {
-    background-color: #E5EDF4;
-    color: #004384;
-    box-shadow: -2px 0 7px 0 rgba(26, 98, 52, 0.9);
-    border-radius: 20px 0 0 20px;
-    padding: 8px 0 8px 20px;
-    max-width: 260px !important;
+    background-color: transparent;
+    color: #1f2937;
+    box-shadow: none;
+    border-radius: 8px;
+    padding: 14px 12px;
+    max-width: none !important;
     width: 100%;
-
+    font-weight: 500;
 }
 
 .sidebar-nav ul .sidebar-item.selected>.sidebar-link iconify-icon,
 .sidebar-nav ul .sidebar-item.selected>.sidebar-link.active iconify-icon,
 .sidebar-nav ul .sidebar-item>.sidebar-link.active iconify-icon {
-    color: var(--bs-dark);
+    color: #374151;
 }
 
 .sidebar-nav ul .sidebar-item.selected>.sidebar-link.active.has-arrow::after,
 .sidebar-nav ul .sidebar-item.selected>.sidebar-link.has-arrow::after,
 .sidebar-nav ul .sidebar-item>.sidebar-link.active.has-arrow::after {
-    border-color: var(--bs-white);
+    border-color: #9ca3af;
 }
 
 .sidebar-nav ul .sidebar-item.selected .sidebar-link.has-arrow::after {
-    border-color: var(--bs-white);
+    border-color: #9ca3af;
 }
 
 .nav-small-cap {
@@ -38759,23 +38793,24 @@ pre.code-view code.hljs {
 .sidebar-nav .has-arrow::after {
     position: absolute;
     content: "";
-    width: 9px;
-    height: 9px;
-    border-width: 1px 0 0 1px;
+    width: 8px;
+    height: 8px;
+    border-width: 2px 0 0 2px;
     border-style: solid;
-    border-color: var(--bs-dark-text-emphasis);
+    border-color: #6b7280;
     margin-left: 10px;
     transform: rotate(-135deg) translate(0, -50%);
     transform-origin: top;
-    top: 21px;
-    right: 16px;
-    transition: all 0.3s ease-out;
+    top: 50%;
+    right: 14px;
+    transition: all 0.2s ease;
 }
 
 .sidebar-nav .has-arrow[aria-expanded="true"]::after,
 .sidebar-nav li.active>.has-arrow::after,
 .sidebar-nav li>.has-arrow.active::after {
-    border-color: var(--bs-primary);
+    border-color: #2563eb;
+    transform: rotate(45deg) translate(0, -50%);
 }
 
 .hover-border {
@@ -38838,7 +38873,6 @@ pre.code-view code.hljs {
 .topbar .navbar .navbar-nav .nav-item .nav-link {
     display: flex;
     align-items: center;
-    margin: 10px 0;
     padding: 0 16px;
     font-size: 14px;
     color: var(--bs-muted);

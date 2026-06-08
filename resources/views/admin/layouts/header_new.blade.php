@@ -9,12 +9,12 @@
     </a>
 
     <div class="header-top-bar d-none d-lg-block px-3">
-        <div class="d-flex align-items-center justify-content-between flex-wrap py-1">
+        <div class="d-flex align-items-center justify-content-between py-0" style="height: 34px;">
             <!-- Left: Government Identity -->
             <div class="d-flex align-items-center gap-2">
                 <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
                     alt="Emblem of India" class="header-flag-icon">
-                <span class="fw-semibold small text-white">
+                <span class="fw-medium text-white" style="font-size: 0.75rem;">
                     भारत सरकार | Government of India
                 </span>
             </div>
@@ -27,9 +27,9 @@
                     </li>
                     <li class="header-utility-sep" aria-hidden="true"></li>
                     <li class="list-inline-item d-flex align-items-center gap-1" aria-label="Font size controls">
-                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Decrease font size">A-</a>
-                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Normal font size">A</a>
-                        <a href="javascript:void(0)" class="text-white px-2 header-font-btn" aria-label="Increase font size">A+</a>
+                        <a href="javascript:void(0)" class="text-white px-1 header-font-btn" aria-label="Increase font size">A+</a>
+                        <a href="javascript:void(0)" class="text-white px-1 header-font-btn" aria-label="Normal font size">A</a>
+                        <a href="javascript:void(0)" class="text-white px-1 header-font-btn" aria-label="Decrease font size">A-</a>
                     </li>
                     <li class="header-utility-sep" aria-hidden="true"></li>
                     <li class="list-inline-item">
@@ -99,6 +99,12 @@
                                     </a>
                                 </li>
                             @endforeach
+                            <!-- More indicator chevron -->
+                            <li class="nav-item" role="none" aria-hidden="true">
+                                <span class="nav-link header-nav-link header-nav-more px-2 py-2">
+                                    <i class="material-icons material-symbols-rounded" style="font-size:18px; line-height:1;">chevron_right</i>
+                                </span>
+                            </li>
                         </ul>
                     </div>
                 </div>
@@ -115,7 +121,7 @@
             aria-label="Notifications">
 
             <i class="material-icons material-symbols-rounded" style="font-size:20px;">
-                notifications
+                notifications_none
             </i>
 
             @php
@@ -134,11 +140,12 @@
             aria-labelledby="notificationDropdown">
 
             <!-- Header -->
-            <li class="dropdown-header sticky-top bg-white d-flex justify-content-between align-items-center px-3 py-2 border-bottom">
-                <span class="fw-semibold">Notifications</span>
+            <li class="dropdown-header sticky-top bg-white d-flex justify-content-between align-items-center px-3 py-3 border-bottom">
+                <span class="fw-bold text-dark" style="font-size:1rem;">Notifications</span>
                 @if($unreadCount > 0)
                     <button type="button"
-                        class="btn btn-sm btn-link text-primary p-0"
+                        class="btn btn-sm btn-link text-primary p-0 text-decoration-underline fw-medium"
+                        style="font-size:0.8125rem;"
                         onclick="markAllAsRead()">
                         Mark all as read
                     </button>
@@ -153,21 +160,18 @@
                 @if($notifications->count() > 0)
                     @foreach($notifications as $notification)
                         <li>
-                            <a class="dropdown-item px-3 py-3 d-flex gap-2 notification-item
-                                {{ $notification->is_read ? '' : 'unread' }}"
+                            <a class="dropdown-item notification-item {{ $notification->is_read ? '' : 'unread' }}"
                                href="javascript:void(0)"
                                onclick="markAsRead({{ $notification->pk }})">
 
-                                <div class="flex-grow-1">
-                                    <div class="fw-semibold small">
-                                        {{ $notification->title ?? 'Notification' }}
-                                    </div>
-                                    <div class="text-muted small mt-1">
-                                        {{ Str::limit($notification->message ?? '', 60) }}
-                                    </div>
-                                    <div class="text-muted mt-1" style="font-size: 11px;">
-                                        {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
-                                    </div>
+                                <div class="notification-title">
+                                    {{ $notification->title ?? 'Notification' }}
+                                </div>
+                                <div class="notification-message mt-1">
+                                    {{ Str::limit($notification->message ?? '', 100) }}
+                                </div>
+                                <div class="notification-time mt-2">
+                                    {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
                                 </div>
                             </a>
                         </li>
@@ -187,25 +191,38 @@
     <!-- User Profile Dropdown -->
     <div class="dropdown header-profile-dropdown">
         <button type="button" class="btn p-0 border-0 bg-transparent d-none d-lg-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false">
-            <div class="rounded-circle bg-primary-subtle text-primary d-flex align-items-center justify-content-center" style="width:36px;height:36px;font-size:0.875rem;font-weight:600;">
-                {{ strtoupper(substr(Auth::user()->first_name ?? Auth::user()->name ?? 'U', 0, 1)) }}{{ strtoupper(substr(Auth::user()->last_name ?? '', 0, 1)) }}
-            </div>
-            <div class="lh-sm text-start">
-                <div class="fw-semibold small text-dark">{{ trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) ?: (Auth::user()->name ?? 'User') }}</div>
-                <div class="text-body-secondary" style="font-size:11px;">{{ Auth::user()->getRoleNames()->implode(', ') ?: 'User' }}</div>
-            </div>
-            <i class="bi bi-chevron-down text-body-secondary" style="font-size:12px;"></i>
+            <span class="rounded-circle bg-light d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0" style="width:38px; height:38px; border: 2px solid #e5e7eb;">
+                <i class="material-icons material-symbols-rounded text-secondary" style="font-size:22px;">person</i>
+            </span>
+            <span class="lh-sm text-start d-none d-lg-block">
+                <span class="d-block fw-semibold text-dark text-truncate" style="font-size: 0.8125rem; max-width:170px;">{{ trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) ?: (Auth::user()->name ?? 'User') }}</span>
+                <span class="d-block text-body-secondary text-truncate" style="font-size:0.6875rem; max-width:170px;">{{ Auth::user()->getRoleNames()->implode(', ') ?: 'Employee' }}</span>
+            </span>
+            <i class="bi bi-chevron-down text-body-secondary" style="font-size:11px;"></i>
         </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2" style="min-width: 200px;">
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2 mt-2" style="min-width: 250px;">
+            <!-- User identity card -->
+            <li class="px-1 pt-1 pb-2">
+                <div class="d-flex align-items-center gap-2 p-2 rounded-3 bg-primary-subtle">
+                    <span class="rounded-circle bg-white border border-primary-subtle d-flex align-items-center justify-content-center flex-shrink-0 overflow-hidden" style="width:44px; height:44px;">
+                        <i class="material-icons material-symbols-rounded text-primary" style="font-size:26px;">person</i>
+                    </span>
+                    <div class="lh-sm overflow-hidden">
+                        <div class="fw-semibold text-primary-emphasis text-truncate" style="font-size:0.875rem;">{{ trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) ?: (Auth::user()->name ?? 'User') }}</div>
+                        <div class="text-body-secondary text-truncate" style="font-size:0.75rem;">{{ Auth::user()->getRoleNames()->implode(', ') ?: 'Employee' }}</div>
+                    </div>
+                </div>
+            </li>
+            <li><hr class="dropdown-divider my-2"></li>
             <li>
-                <a class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2 px-3" href="{{ route('member.profile.edit', Auth::user()->user_id ?? 0) }}">
-                    <i class="bi bi-person-gear" style="font-size:16px;"></i>
+                <a class="dropdown-item d-flex align-items-center gap-3 rounded-2 py-2 px-3" href="{{ route('member.profile.edit', Auth::user()->user_id ?? 0) }}">
+                    <i class="bi bi-pencil text-body-secondary" style="font-size:16px;"></i>
                     <span>Edit Profile</span>
                 </a>
             </li>
             <li>
-                <a class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2 px-3" href="{{ route('admin.password.change_password') }}">
-                    <i class="bi bi-key" style="font-size:16px;"></i>
+                <a class="dropdown-item d-flex align-items-center gap-3 rounded-2 py-2 px-3" href="{{ route('admin.password.change_password') }}">
+                    <i class="bi bi-arrow-counterclockwise text-body-secondary" style="font-size:16px;"></i>
                     <span>Change Password</span>
                 </a>
             </li>
@@ -213,9 +230,9 @@
             <li>
                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
-                    <button type="submit" class="dropdown-item d-flex align-items-center gap-2 rounded-2 py-2 px-3 text-danger">
+                    <button type="submit" class="dropdown-item d-flex align-items-center gap-3 rounded-2 py-2 px-3 text-danger">
                         <i class="bi bi-box-arrow-right" style="font-size:16px;"></i>
-                        <span>Logout</span>
+                        <span>Log out</span>
                     </button>
                 </form>
             </li>
@@ -343,17 +360,17 @@
                     <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close"></button>
                 </div>
                 <div class="offcanvas-body p-0 overflow-y-auto" style="max-height: calc(70vh - 60px);">
-                    <div id="notificationListMobile">
+                    <div id="notificationListMobile" class="p-2">
                         @php
                         $notificationsMobile = notification()->getNotifications(Auth::user()->user_id ?? 0, 10, false);
                         @endphp
                         @if($notificationsMobile->count() > 0)
                         @foreach($notificationsMobile as $notification)
-                        <a class="d-block px-3 py-3 border-bottom text-decoration-none text-dark {{ $notification->is_read ? '' : 'bg-light' }}"
+                        <a class="notification-item text-decoration-none {{ $notification->is_read ? '' : 'unread' }}"
                             href="javascript:void(0)" onclick="markAsRead({{ $notification->pk }})">
-                            <div class="fw-semibold small">{{ $notification->title ?? 'Notification' }}</div>
-                            <div class="text-muted small mt-1">{{ Str::limit($notification->message ?? '', 80) }}</div>
-                            <div class="text-muted" style="font-size: 10px; margin-top: 4px;">
+                            <div class="notification-title">{{ $notification->title ?? 'Notification' }}</div>
+                            <div class="notification-message mt-1">{{ Str::limit($notification->message ?? '', 100) }}</div>
+                            <div class="notification-time mt-2">
                                 {{ \Carbon\Carbon::parse($notification->created_at)->diffForHumans() }}
                             </div>
                         </a>
@@ -369,15 +386,16 @@
             </div>
 
             <style>
-                .notification-btn:hover {
-    background-color: #f3f4f6 !important;
-}
+/* ============================================
+   HEADER STYLES - Pixel-perfect reference match
+   ============================================ */
 
+/* Notification Button - bordered square icon container */
 .notification-btn {
-    width: 40px;
-    height: 40px;
+    width: 38px;
+    height: 38px;
     border-radius: 8px !important;
-    border: 1px solid #d1d5db !important;
+    border: 1.5px solid #d1d5db !important;
     background: #fff !important;
     color: #374151 !important;
     box-shadow: none !important;
@@ -385,130 +403,218 @@
     align-items: center;
     justify-content: center;
     padding: 0 !important;
+    transition: background-color 0.15s ease, border-color 0.15s ease;
 }
-
+.notification-btn:hover {
+    background-color: #f9fafb !important;
+    border-color: #9ca3af !important;
+}
 .notification-badge {
     font-size: 9px;
-    padding: 3px 5px;
+    padding: 2px 5px;
+    line-height: 1;
 }
-
 .notification-dropdown {
     width: 360px;
-    max-height: 420px;
+    max-height: 460px;
     overflow: hidden;
 }
-
 .notification-list {
-    max-height: 360px;
+    max-height: 400px;
     overflow-y: auto;
+    padding: 10px 12px 12px;
 }
-
+/* Card-style notification item (reference design) */
 .notification-item {
-    border-left: 3px solid transparent;
-    transition: background-color 0.2s ease;
+    display: block;
+    white-space: normal;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px !important;
+    margin-bottom: 10px;
+    background: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
 }
-
-.notification-item.unread {
-    background-color: var(--bs-light);
-    border-left-color: var(--bs-primary);
+.notification-item:last-child {
+    margin-bottom: 0;
 }
-
 .notification-item:hover {
-    background-color: rgba(0, 0, 0, 0.03);
+    background-color: #fff;
+    border-color: #c7d2fe;
+    box-shadow: 0 2px 10px rgba(49, 46, 129, 0.08);
+}
+.notification-item.unread {
+    background-color: #f5f8ff;
+    border-color: #c7d2fe;
+}
+.notification-title {
+    color: #312e81;
+    font-weight: 600;
+    font-size: 0.9375rem;
+    line-height: 1.3;
+}
+.notification-message {
+    color: #6b7280;
+    font-size: 0.8125rem;
+    line-height: 1.45;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+.notification-time {
+    color: #9ca3af;
+    font-size: 0.75rem;
 }
 
-                /* Skip link visibility */
+/* Skip to content link */
 .skip-link {
     position: absolute;
     top: -40px;
     left: 10px;
-    background: #0d6efd;
+    background: #004a93;
     color: #fff;
-    padding: 6px 12px;
-    z-index: 1000;
+    padding: 6px 14px;
+    z-index: 9999;
     border-radius: 4px;
+    font-size: 0.8125rem;
 }
 .skip-link:focus { top: 10px; }
 :focus-visible { outline: 3px solid #ffbf47; outline-offset: 2px; }
 
-/* Header - Match reference design */
+/* =========================
+   TOP BAR - Dark navy strip
+   ========================= */
 .header-top-bar {
-    background: #0f1d35;
-    height: 36px;
+    background: #0c1a2e;
+    height: 34px;
     border: none;
+    display: flex;
+    align-items: center;
 }
-.header-flag-icon { height: 16px; border-radius: 2px; }
+.header-top-bar > div {
+    height: 100%;
+    align-items: center;
+}
+.header-flag-icon {
+    height: 14px;
+    border-radius: 1px;
+    object-fit: contain;
+}
 .header-utility-nav .header-utility-sep {
     width: 1px;
-    height: 14px;
-    background: rgba(255,255,255,0.3);
-    margin: 0 6px;
+    height: 13px;
+    background: rgba(255,255,255,0.28);
+    margin: 0 8px;
     display: inline-block;
 }
-.header-font-btn { text-decoration: none !important; font-size: 0.75rem; }
+.header-font-btn {
+    text-decoration: none !important;
+    font-size: 0.75rem;
+    opacity: 0.9;
+    transition: opacity 0.15s;
+}
+.header-font-btn:hover { opacity: 1; }
 .header-lang-dropdown {
-    display: flex;
+    display: inline-flex;
     align-items: center;
     gap: 4px;
     padding: 0;
 }
-.header-globe-icon { font-size: 14px !important; color: #fff !important; opacity: 0.85; }
+.header-globe-icon {
+    font-size: 15px !important;
+    color: #fff !important;
+    opacity: 0.85;
+}
 .header-lang-select {
     background: transparent !important;
     border: none !important;
     color: #fff !important;
     font-size: 0.75rem;
     padding: 0 2px;
-    min-width: 64px;
+    min-width: 60px;
+    cursor: pointer;
 }
-.header-lang-select option { background: #0f1d35; color: #fff; }
+.header-lang-select:focus { outline: none; box-shadow: none; }
+.header-lang-select option { background: #0c1a2e; color: #fff; }
 
-/* Main nav bar - white background */
+/* =============================
+   MAIN NAV BAR - White bg strip
+   ============================= */
+.header-bottom-bar.with-vertical .navbar {
+    background: #fff !important;
+    min-height: 87px;
+    padding-top: 0;
+    padding-bottom: 0;
+}
 .with-vertical .navbar { background: #fff !important; min-height: 87px; }
-.header-brand { gap: 10px !important; padding-left: 0.5rem; }
-.header-logo-emblem { height: 48px; object-fit: contain; }
-.header-logo { height: 40px; object-fit: contain; }
+
+/* Brand / Logo area */
+.header-brand {
+    gap: 10px !important;
+    padding-left: 0;
+    flex-shrink: 0;
+}
+.header-logo-emblem {
+    height: 42px;
+    object-fit: contain;
+}
+.header-logo {
+    height: 32px;
+    object-fit: contain;
+}
 @media (min-width: 992px) {
     .header-brand { gap: 12px !important; }
-    .header-logo-emblem { height: 44px !important; }
-    .header-logo { height: 36px !important; }
-}
-.header-app-name {
-    font-size: 1.25rem;
-    font-weight: 700;
-    color: #004a93;
+    .header-logo-emblem { height: 46px !important; }
+    .header-logo { height: 34px !important; }
 }
 
-/* Nav container - pill style matching reference */
+/* ==================================
+   NAV PILLS - Grey container + pills
+   ================================== */
 .header-main-nav {
-    background: #eef1f5 !important;
+    background: #e8ecf1 !important;
     border-radius: 10px;
-    height: 60px;
+    height: auto;
+    min-height: 42px;
     border: none;
-    padding: 14px !important;
-    gap: 2px !important;
+    padding: 5px 8px !important;
+    gap: 4px !important;
+    margin: 0 auto;
 }
 .header-nav-link {
     color: #4b5563 !important;
-    border-radius: 8px;
+    border-radius: 7px;
     text-decoration: none !important;
     font-size: 0.8125rem;
     font-weight: 500;
-    padding: 6px 16px !important;
+    padding: 7px 16px !important;
     border: none;
     transition: all 0.15s ease;
     white-space: nowrap;
+    line-height: 1.4;
 }
 .header-nav-link:hover {
     color: #1f2937 !important;
-    background: rgba(255,255,255,0.6);
+    background: rgba(255,255,255,0.65);
 }
 .header-nav-link.active {
     color: #fff !important;
-    background: #004a93 !important;
+    background: #163a5f !important;
     font-weight: 500;
-    box-shadow: 0 1px 3px rgba(0, 74, 147, 0.3);
+    box-shadow: 0 1px 4px rgba(22, 58, 95, 0.25);
 }
+.header-nav-link i {
+    display: none;
+}
+
+/* More chevron indicator */
+.header-nav-more {
+    color: #6b7280 !important;
+    cursor: default;
+    padding: 4px 6px !important;
+}
+
 .header-search-btn {
     background: transparent !important;
     border: none !important;
@@ -518,21 +624,22 @@
 }
 .header-search-btn:hover { color: #004a93 !important; }
 
-/* Right side */
-.header-right-actions { margin-right: 0.75rem; }
-.header-icon-sm { font-size: 22px !important; }
-.header-logout-icon { font-size: 20px !important; }
-.header-last-login { font-size: 0.8125rem; }
-
-/* Divider before logout */
-.header-logout-divider {
-    width: 1px;
-    height: 28px;
-    background: rgba(0, 0, 0, 0.08);
-    flex-shrink: 0;
+/* =====================
+   RIGHT SIDE - Actions
+   ===================== */
+.header-right-actions {
+    margin-right: 0.5rem;
+    gap: 12px !important;
 }
 
-/* Profile dropdown - open on hover */
+/* Profile dropdown */
+.header-profile-dropdown {
+    position: relative;
+}
+.header-profile-dropdown > button {
+    gap: 10px;
+    cursor: pointer;
+}
 .header-profile-dropdown:hover > .dropdown-menu {
     display: block;
     margin-top: 0;
@@ -543,6 +650,11 @@
     left: auto !important;
     transform: none !important;
     position: absolute !important;
+    border: 1px solid #e5e7eb;
+}
+.header-profile-dropdown .dropdown-item {
+    font-size: 0.8125rem;
+    transition: background-color 0.12s ease;
 }
 .header-profile-dropdown .dropdown-item:hover {
     background: #f3f4f6;
@@ -551,7 +663,15 @@
     background: #fef2f2;
 }
 
-/* Logout button - enhanced */
+/* Divider before profile */
+.header-logout-divider {
+    width: 1px;
+    height: 28px;
+    background: rgba(0, 0, 0, 0.08);
+    flex-shrink: 0;
+}
+
+/* Legacy logout button (unused in new design but kept for compat) */
 .header-logout-btn {
     gap: 3px;
     min-width: 52px;
@@ -559,18 +679,15 @@
     border-radius: 10px;
     color: #6c757d !important;
     border: 1px solid transparent;
-    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease, transform 0.15s ease;
+    transition: color 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
 }
 .header-logout-btn:hover {
     color: #004a93 !important;
-    background-color: rgba(0, 74, 147, 0.08) !important;
-    border-color: rgba(0, 74, 147, 0.12);
-}
-.header-logout-btn:active {
-    transform: scale(0.97);
+    background-color: rgba(0, 74, 147, 0.06) !important;
+    border-color: rgba(0, 74, 147, 0.1);
 }
 
-/* Notification dropdown: end-align on large screens, start-align on smaller for proper view */
+/* Notification dropdown alignment */
 .dropdown-menu-end-lg[data-bs-popper] {
     left: 0;
     right: auto;

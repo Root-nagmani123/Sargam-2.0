@@ -146,11 +146,7 @@
         persistTabState(target, categoryId, null);
 
         if (categoryId && typeof global.loadSidebarGroupsForCategory === 'function') {
-            global.loadSidebarGroupsForCategory(categoryId, function () {
-                if (typeof global.clearSidebarGroupSelection === 'function') {
-                    global.clearSidebarGroupSelection();
-                }
-            });
+            global.loadSidebarGroupsForCategory(categoryId, openFirstGroupForActiveSidebar);
         }
     }
 
@@ -180,6 +176,25 @@
             }
         }
         global.loadSidebarMenusForGroup(savedGroup);
+    }
+
+    // After a tab's groups load, open its first mini-nav group (and its menu).
+    // Falls back to clearing the panel only when the tab has no groups.
+    function openFirstGroupForActiveSidebar() {
+        var firstLink = document.querySelector('#sidebar-groups .sidebar-group-link');
+        if (!firstLink) {
+            if (typeof global.clearSidebarGroupSelection === 'function') {
+                global.clearSidebarGroupSelection();
+            }
+            return;
+        }
+        var groupId = firstLink.getAttribute('data-id');
+        var groupName = firstLink.getAttribute('data-name');
+        if (typeof global.loadSidebarMenusForGroup === 'function') {
+            global.loadSidebarMenusForGroup(groupId, groupName);
+        } else if (typeof global.selectSidebarGroupVisual === 'function') {
+            global.selectSidebarGroupVisual(groupId);
+        }
     }
 
     function initSidebarLinkMemory() {

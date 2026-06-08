@@ -16,6 +16,22 @@ class SidebarNavResolver
         $routeName = $routeName ?? (request()->route()?->getName() ?? '');
 
         if ($this->isDashboardRoute($routeName, $path)) {
+            // Resolve the actual menu behind the dashboard route (e.g. "Dashboard"
+            // under the "General" group) so the mini-nav group is marked selected
+            // and the menu item is marked active. Fall back to the Home category
+            // when the route has no registered menu (e.g. calendar with no menu).
+            $menu = $this->findMenuForRequest($path, $routeName);
+            if (! $menu && $routeName !== '') {
+                $menu = $this->findMenuForRouteName($routeName);
+            }
+            if ($menu) {
+                $result = $this->resultFromMenu($menu);
+                // Dashboard-style routes must stay under the Home tab.
+                if ($result['nav_tab'] === self::HOME_TAB) {
+                    return $result;
+                }
+            }
+
             return $this->resultForCategorySlug('home');
         }
 
@@ -299,6 +315,8 @@ class SidebarNavResolver
             request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
             request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
             request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
+            request()->routeIs('roles.*') || request()->routeIs('users.*') ||
+            str_starts_with($path, 'roles') || str_starts_with($path, 'users') ||
             str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
             str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
             str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||

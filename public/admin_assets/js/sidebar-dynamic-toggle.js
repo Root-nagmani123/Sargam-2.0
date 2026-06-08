@@ -55,11 +55,11 @@
             );
         }
         if (els.icon) {
-            els.icon.textContent = expanded ? 'keyboard_arrow_left' : 'keyboard_arrow_right';
+            els.icon.textContent = expanded ? 'left_panel_close' : 'right_panel_open';
             els.icon.classList.toggle('rotated', expanded);
         }
         if (els.label) {
-            els.label.textContent = expanded ? 'Collapse' : 'Expand';
+            els.label.textContent = expanded ? 'Close' : 'Open';
         }
         if (els.menu) {
             els.menu.classList.toggle('close', !expanded);

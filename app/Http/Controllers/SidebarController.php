@@ -140,18 +140,15 @@ class SidebarController extends Controller
                 $ariaExpanded = $childActive ? 'true' : 'false';
 
                 $html .= '
-                <li class="sidebar-item" style="background:#4077ad;
-                    border-radius:30px 0 0 30px;
-                    width:100%;
-                    box-shadow:-2px 3px rgba(251,248,248,0.1);
-                    min-width:250px;">
+                <li class="sidebar-item">
 
                     <a class="'.$parentLinkClass.' d-flex justify-content-between align-items-center"
                         data-bs-toggle="collapse"
                         href="#'.$collapseId.'"
                         aria-expanded="'.$ariaExpanded.'">
+                        <i class="material-icons material-symbols-rounded">'.e($this->menuIcon($menu)).'</i>
                         <span class="hide-menu fw-bold">'.e($menu->name).'</span>
-                        <i class="material-icons">keyboard_arrow_down</i>
+                        <i class="material-icons">chevron_right</i>
                     </a>
                 </li>
                 <ul class="'.$collapseClass.' list-unstyled ps-3" id="'.$collapseId.'">';
@@ -175,6 +172,7 @@ class SidebarController extends Controller
                     $html .= '
                 <li class="sidebar-item">
                     <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.($menu->target == 1 ? '_blank' : '_self').'">
+                        <i class="material-icons material-symbols-rounded">'.e($this->menuIcon($menu)).'</i>
                         <span class="hide-menu">'.e($menu->name).'</span>
                     </a>
                 </li>';
@@ -183,6 +181,16 @@ class SidebarController extends Controller
         }
 
         return $html ?: $this->renderNoActiveMenuMessage();
+    }
+
+    /**
+     * Material Symbols icon for a menu row, with a neutral fallback when unset.
+     */
+    protected function menuIcon($menu): string
+    {
+        $icon = trim((string) ($menu->icon ?? ''));
+
+        return $icon !== '' ? $icon : 'label';
     }
 
     protected function renderNoActiveMenuMessage(): string

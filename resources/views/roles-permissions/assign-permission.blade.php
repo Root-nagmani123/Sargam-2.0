@@ -25,7 +25,7 @@
             </div>
             <div class="card-body">
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table" id="permissionTable">
                         <thead>
                             <tr>
                                 <th>Category</th>
@@ -226,7 +226,7 @@
     $(document).on('change', '.col-toggle', function () {
         let colIndex = $(this).data('col');
         let isVisible = $(this).is(':checked');
-        $('table.table-bordered th:nth-child(' + (colIndex + 1) + '), table.table-bordered td:nth-child(' + (colIndex + 1) + ')').toggle(isVisible);
+        $('#permissionTable th:nth-child(' + (colIndex + 1) + '), #permissionTable td:nth-child(' + (colIndex + 1) + ')').toggle(isVisible);
     });
 
     $(document).on('change', '.permission-toggle', function () {

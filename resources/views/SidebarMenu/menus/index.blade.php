@@ -25,6 +25,42 @@
             overflow-x: auto;
         }
     }
+    /* Icon picker */
+    .icon-picker-panel {
+        position: absolute;
+        z-index: 1085;
+        left: .75rem;
+        right: .75rem;
+        top: 100%;
+        margin-top: 2px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, .12);
+        padding: 10px;
+        max-height: 300px;
+        overflow: auto;
+    }
+    .icon-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 6px;
+    }
+    .icon-picker-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 4px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        text-align: center;
+    }
+    .icon-picker-cell:hover { background: #f3f4f6; }
+    .icon-picker-cell.active { background: #dbeafe; border-color: #93c5fd; }
+    .icon-picker-cell .material-symbols-rounded { font-size: 22px; color: #374151; line-height: 1; }
+    .icon-picker-cell small { font-size: 9px; line-height: 1.15; color: #6b7280; word-break: break-word; max-width: 100%; }
 </style>
 <div class="container-fluid py-3 sidebar-menus-page">
     <x-breadcrum title="Sidebar Menus" />
@@ -128,9 +164,18 @@
                             <label class="form-label" for="permission_name">Permission Name <span class="text-danger">*</span></label>
                             <input type="text" class="form-control" name="permission_name" id="permission_name" placeholder="Enter menu permission name" value="{{old('permission_name')}}">
                         </div>
-                        <div class="col-6 form-group mb-2">
+                        <div class="col-6 form-group mb-2 position-relative">
                             <label class="form-label" for="icon">Icon</label>
-                            <input type="text" class="form-control" name="icon" id="icon" placeholder="e.g. bi bi-house" value="{{old('icon')}}">
+                            <div class="input-group">
+                                <span class="input-group-text p-0 justify-content-center" style="width:42px;">
+                                    <i class="material-icons material-symbols-rounded" id="iconPreview" style="font-size:20px;color:#374151;">label</i>
+                                </span>
+                                <input type="text" class="form-control" name="icon" id="icon" placeholder="Click to search &amp; pick an icon" value="{{old('icon')}}" autocomplete="off">
+                            </div>
+                            <div class="icon-picker-panel d-none" id="iconPickerPanel">
+                                <div class="icon-picker-grid" id="iconPickerGrid"></div>
+                                <div class="small text-muted mt-2" id="iconPickerMeta"></div>
+                            </div>
                         </div>
                         <div class="col-6 form-group mb-2">
                             <label class="form-label" for="order">Order</label>
@@ -162,6 +207,7 @@
 </div>
 @endsection
 @section('script')
+<script src="{{ asset('admin_assets/js/material-symbols-list.js') }}"></script>
 <script>
     let manualEdit = false;
 
@@ -493,5 +539,86 @@
             }
         });
     });
+    // ----- Material Symbols icon picker -----
+    (function () {
+        var ICONS = window.MATERIAL_SYMBOLS || [];
+        var MAX_RENDER = 200;
+        var $input, $preview, $panel, $grid, $meta;
+
+        function updateIconPreview() {
+            var v = ($input.val() || '').trim();
+            $preview.text(v || 'label');
+        }
+
+        function renderGrid(term) {
+            term = (term || '').toLowerCase().trim();
+            var matches = term
+                ? ICONS.filter(function (n) { return n.indexOf(term) !== -1; })
+                : ICONS;
+            var shown = matches.slice(0, MAX_RENDER);
+            var current = ($input.val() || '').trim();
+            var frag = document.createDocumentFragment();
+            shown.forEach(function (name) {
+                var cell = document.createElement('div');
+                cell.className = 'icon-picker-cell' + (name === current ? ' active' : '');
+                cell.setAttribute('data-icon', name);
+                cell.title = name;
+                cell.innerHTML = '<i class="material-icons material-symbols-rounded">' + name + '</i><small>' + name + '</small>';
+                frag.appendChild(cell);
+            });
+            $grid.empty();
+            $grid[0].appendChild(frag);
+            if (!matches.length) {
+                $meta.text(term ? ('No icons match "' + term + '".') : 'No icons available.');
+            } else if (matches.length > shown.length) {
+                $meta.text('Showing ' + shown.length + ' of ' + matches.length + ' — type to refine.');
+            } else {
+                $meta.text(matches.length + ' icon' + (matches.length === 1 ? '' : 's') + '.');
+            }
+        }
+
+        function openPanel() {
+            renderGrid($input.val());
+            $panel.removeClass('d-none');
+        }
+        function closePanel() {
+            $panel.addClass('d-none');
+        }
+
+        $(function () {
+            $input = $('#icon');
+            $preview = $('#iconPreview');
+            $panel = $('#iconPickerPanel');
+            $grid = $('#iconPickerGrid');
+            $meta = $('#iconPickerMeta');
+            if (!$input.length || !$panel.length) return;
+
+            $input.on('focus click', openPanel);
+            $input.on('input', function () {
+                updateIconPreview();
+                renderGrid($input.val());
+                $panel.removeClass('d-none');
+            });
+
+            $grid.on('click', '.icon-picker-cell', function () {
+                $input.val(this.getAttribute('data-icon'));
+                updateIconPreview();
+                closePanel();
+            });
+
+            // Close when clicking/tabbing outside the icon field or panel
+            $(document).on('mousedown', function (e) {
+                if (!$(e.target).closest('#iconPickerPanel, #icon').length) {
+                    closePanel();
+                }
+            });
+
+            // Keep preview in sync whenever the modal opens (add reset & edit prefill)
+            $('#MenuGroupModal').on('shown.bs.modal', function () {
+                updateIconPreview();
+                closePanel();
+            });
+        });
+    })();
 </script>
 @endsection

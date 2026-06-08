@@ -294,7 +294,18 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn('Sidebar tab content not found for target:', targetId);
             return;
         }
-        
+
+        // Dynamic single-pane sidebar: one #sidebar-setup pane serves every
+        // category (its groups/menus swap via AJAX, not by pane-swapping). The
+        // legacy per-tab panes (#sidebar-communications, #sidebar-home, …) no
+        // longer exist, so the old mapping below would deactivate the only pane
+        // and hide the whole sidebar. Keep the dynamic pane active for all tabs.
+        const dynamicPane = sidebarTabContent.querySelector('.tab-pane[data-sidebar-layout="dynamic"]');
+        if (dynamicPane) {
+            dynamicPane.classList.add('show', 'active');
+            return;
+        }
+
         const allSidebarPanes = sidebarTabContent.querySelectorAll('.tab-pane');
         allSidebarPanes.forEach(function(pane) {
             pane.classList.remove('show', 'active');
@@ -357,12 +368,14 @@ document.addEventListener('DOMContentLoaded', function() {
             // Find and activate the corresponding header tab
             const headerTab = document.querySelector('.navbar-nav a[href="' + activeTabId + '"]');
             if (headerTab) {
-                // Remove active from all tabs
-                document.querySelectorAll('.navbar-nav [data-bs-toggle="tab"]').forEach(function(tab) {
+                // Remove active from ALL category tabs (they use .sidebar-category-link /
+                // data-sargam-category-tab, not data-bs-toggle="tab") so only the tab whose
+                // content pane is shown stays selected — no double-highlight.
+                document.querySelectorAll('.sidebar-category-link').forEach(function(tab) {
                     tab.classList.remove('active');
                     tab.setAttribute('aria-selected', 'false');
                 });
-                
+
                 // Activate the correct header tab
                 headerTab.classList.add('active');
                 headerTab.setAttribute('aria-selected', 'true');
