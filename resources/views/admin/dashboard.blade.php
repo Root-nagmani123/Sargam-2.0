@@ -277,7 +277,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         </div>
         @endif
         @if(!hasRole('Security Card') && !hasRole('Admin Security'))
-        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3">
+        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3 mb-3">
             <div class="col">
                 <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
@@ -305,23 +305,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">Upcoming Courses</p>
                                 @php $v = (int) $upcomingCourses; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-
-            <div class="col">
-                <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-amber">
-                                <i class="bi bi-megaphone"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Upcoming Events</p>
-                                @php $v = 2; @endphp
                                 <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>

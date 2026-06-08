@@ -99,7 +99,7 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse($students as $index => $student)
+                    @foreach($students as $index => $student)
                     <tr>
                         <td>{{ $index + 1 }}</td>
                         <td>
@@ -124,11 +124,7 @@
                         <td>{{ $student->course_name ?: '-' }}</td>
                         <td>{{ $student->cadre_name ?: '-' }}</td>
                     </tr>
-                    @empty
-                    <tr>
-                        <td colspan="8" class="text-center text-muted py-5">No records found</td>
-                    </tr>
-                    @endforelse
+                    @endforeach
                 </tbody>
             </table>
         </div>

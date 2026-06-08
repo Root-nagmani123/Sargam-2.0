@@ -87,7 +87,7 @@
 @endpush
 
 @section('content')
-<div class="container-fluid notice-form-page py-1">
+<div class="container-fluid notice-form-page">
     <x-breadcrum title="Notice List" />
     <x-session_message />
 
@@ -111,13 +111,7 @@
         </div>
         @endif
 
-        <div class="card-body p-4 p-lg-5">
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-4 pb-3 border-bottom border-light-subtle">
-                <span class="badge rounded-1 bg-primary-subtle text-primary fw-semibold text-uppercase px-2 py-2">
-                    <i class="bi bi-megaphone me-1" aria-hidden="true"></i>Notice
-                </span>
-                <h4 class="card-title mb-0 fw-semibold text-dark">Create Notice notification</h4>
-            </div>
+        <div class="card-body p-3">
 
             <form method="POST" action="{{ route('admin.notice.store') }}" enctype="multipart/form-data" class="notice-form">
                 @csrf
