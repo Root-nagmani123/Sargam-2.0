@@ -55,7 +55,6 @@ class EstateHacApprovedDataTable extends DataTable
         $canSeeHacApproved = $user && (hasRole('HAC Person') || isEstateHacAuthority());
 
         $authorityPersonalScope = $r->input('scope') === 'self'
-            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
             && isEstateHacAuthority();
 
         $empScope = ['t' => 'all'];
