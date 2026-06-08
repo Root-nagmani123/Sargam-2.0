@@ -7,7 +7,8 @@ use App\Models\CoursesMaster;
 use App\Models\CourseTeamMaster;
 use Illuminate\Http\Request;
 use App\Http\Requests\ProgrammeRequest;
-use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster, UserRoleMaster};
+use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster};
+use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use App\DataTables\CourseMasterDataTable;
@@ -102,7 +103,7 @@ class CourseController extends Controller
             'Discipline' => 'Discipline',
             'Club Society' => 'Club Society'
         ];
-        $supportingSectionList = UserRoleMaster::pluck('user_role_display_name', 'pk')->toArray();
+        $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
         return view('admin.programme.create', compact('facultyList', 'roleOptions', 'supportingSectionList'));
     }
 
@@ -136,7 +137,7 @@ class CourseController extends Controller
                 'Discipline' => 'Discipline',
                 'Club Society' => 'Club Society'
             ];
-            $supportingSectionList = UserRoleMaster::pluck('user_role_display_name', 'pk')->toArray();
+            $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
             $selectedSupportingSection = $courseMasterObj->user_role_master_pk ?? '';
             
             return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));

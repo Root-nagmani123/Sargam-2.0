@@ -174,7 +174,9 @@
                                 formLabelClass="form-label"
                                 formSelectClass="searchable-dropdown"
                                 value="{{ $selectedSupportingSection ?? '' }}"
-                                :options="$supportingSectionList" />
+                                :options="$supportingSectionList"
+                                required="true"
+                                labelRequired="true" />
                         </div>
                         <div class="col-md-12">
                             <div class="d-flex flex-wrap align-items-center justify-content-between mb-2 gap-2">

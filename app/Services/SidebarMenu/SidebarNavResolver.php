@@ -309,6 +309,11 @@ class SidebarNavResolver
      */
     protected function legacyFallback(string $path, string $routeName): ?array
     {
+        // Profile edit belongs in the home/general tab, not setup
+        if (request()->routeIs('member.profile.*') || request()->routeIs('member.profile.edit')) {
+            return $this->resultForCategorySlug('home');
+        }
+
         $slug = null;
 
         if (

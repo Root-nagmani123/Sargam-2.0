@@ -2,7 +2,7 @@
 
 @section('title', 'Student Medical Exemption - Sargam | Lal Bahadur')
 
-@section($sidebarContentSection ?? 'content')
+@section('setup_content')
 <style>
 .btn-group[role="group"] .btn {
     transition: all 0.3s ease-in-out;
