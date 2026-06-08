@@ -242,6 +242,9 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
+            ->where('faculty_type', 1)
+            ->whereNotNull('employee_master_pk')
+            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
             ->orderBy('full_name')
             ->get(['pk', 'full_name', 'faculty_code']);
 

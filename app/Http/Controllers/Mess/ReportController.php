@@ -2092,7 +2092,7 @@ class ReportController extends Controller
                 ->get()
                 ->groupBy('client_type');
             $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
-            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+            $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->where('faculty_type', 1)->whereNotNull('employee_master_pk')->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))->orderBy('full_name')->get(['pk', 'full_name']);
             $employees = $this->academyStaffEmployees($officersMessDept);
             $messStaff = $officersMessDept
                 ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))
@@ -2185,7 +2185,7 @@ class ReportController extends Controller
             ->groupBy('client_type');
 
         $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
-        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->orderBy('full_name')->get(['pk', 'full_name']);
+        $faculties = FacultyMaster::whereNotNull('full_name')->where('full_name', '!=', '')->where('faculty_type', 1)->whereNotNull('employee_master_pk')->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))->orderBy('full_name')->get(['pk', 'full_name']);
         $employees = $this->academyStaffEmployees($officersMessDept);
         $messStaff = $officersMessDept
             ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn ($q) => $q->where('status', 1))

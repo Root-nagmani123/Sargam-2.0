@@ -117,12 +117,9 @@ class KitchenIssueController extends Controller
 
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
-            ->when(Schema::hasColumn('employee_master', 'status'), function ($query) {
-                $query->where(function ($sub) {
-                    $sub->whereNull('employee_master_pk')
-                        ->orWhereIn('employee_master_pk', EmployeeMaster::active()->select('pk'));
-                });
-            })
+            ->where('faculty_type', 1)
+            ->whereNotNull('employee_master_pk')
+            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
             ->orderBy('full_name')
             ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
             ->map(function ($f) {
@@ -1253,12 +1250,9 @@ class KitchenIssueController extends Controller
             ->groupBy('client_type');
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
-            ->when(Schema::hasColumn('employee_master', 'status'), function ($query) {
-                $query->where(function ($sub) {
-                    $sub->whereNull('employee_master_pk')
-                        ->orWhereIn('employee_master_pk', EmployeeMaster::active()->select('pk'));
-                });
-            })
+            ->where('faculty_type', 1)
+            ->whereNotNull('employee_master_pk')
+            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
             ->orderBy('full_name')
             ->get(['pk', 'full_name', 'faculty_code'])
             ->map(function ($f) {
