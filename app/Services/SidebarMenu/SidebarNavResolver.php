@@ -15,26 +15,11 @@ class SidebarNavResolver
         $path = $path ?? request()->path();
         $routeName = $routeName ?? (request()->route()?->getName() ?? '');
 
-        if ($this->isDashboardRoute($routeName, $path)) {
-            // Resolve the actual menu behind the dashboard route (e.g. "Dashboard"
-            // under the "General" group) so the mini-nav group is marked selected
-            // and the menu item is marked active. Fall back to the Home category
-            // when the route has no registered menu (e.g. calendar with no menu).
-            $menu = $this->findMenuForRequest($path, $routeName);
-            if (! $menu && $routeName !== '') {
-                $menu = $this->findMenuForRouteName($routeName);
-            }
-            if ($menu) {
-                $result = $this->resultFromMenu($menu);
-                // Dashboard-style routes must stay under the Home tab.
-                if ($result['nav_tab'] === self::HOME_TAB) {
-                    return $result;
-                }
-            }
-
-            return $this->resultForCategorySlug('home');
-        }
-
+        // Fully dynamic, RBAC-driven resolution. The header tab, mini-nav category
+        // and active menu are ALL derived from the matched menu's own category_id /
+        // group_id in the database — never from hardcoded route/name assumptions.
+        // This means relocating a menu to a different tab/category in the Menu
+        // manager is reflected here automatically, with no code changes.
         $requestCategoryId = request()->get('category');
         if ($requestCategoryId) {
             $category = SidebarCategory::where('is_active', 1)->find($requestCategoryId);
@@ -73,15 +58,6 @@ class SidebarNavResolver
         $slug = is_string($category) ? $category : ($category->slug ?? 'home');
 
         return $slug === 'home' ? self::HOME_TAB : '#tab-' . $slug;
-    }
-
-    protected function isDashboardRoute(string $routeName, string $path): bool
-    {
-        return request()->routeIs('admin.dashboard')
-            || request()->routeIs('admin.dashboard.*')
-            || request()->routeIs('calendar.index')
-            || $this->normalizePath($path) === 'admin/dashboard'
-            || $this->normalizePath($path) === 'dashboard';
     }
 
     protected function findMenuForRequest(string $path, string $routeName): ?Menu
@@ -193,16 +169,19 @@ class SidebarNavResolver
             return true;
         }
 
-        if (str_ends_with($normalizedPath, '/' . $menuPath) || str_ends_with($normalizedPath, $menuPath)) {
-            return true;
-        }
-
+        // Match only on full path-segment boundaries. Without this, a non-boundary
+        // suffix/substring match (e.g. menu path "state" vs route "admin/estate",
+        // or "attendance" vs "...user_attendance") would resolve the wrong menu,
+        // and therefore the wrong header tab / category.
         if (str_starts_with($normalizedPath, $menuPath . '/')) {
             return true;
         }
 
-        return str_contains($normalizedPath, '/' . $menuPath . '/')
-            || str_contains($normalizedPath, '/' . $menuPath);
+        if (str_ends_with($normalizedPath, '/' . $menuPath)) {
+            return true;
+        }
+
+        return str_contains($normalizedPath, '/' . $menuPath . '/');
     }
 
     protected function routeNamesMatch(string $currentRoute, string $menuRoute): bool

@@ -66,27 +66,16 @@
       0 => 'Laravel\\Ui\\UiServiceProvider',
     ),
   ),
-  'laravellux/html' => 
+  'laravelcollective/html' => 
   array (
-    'aliases' => 
-    array (
-      'Form' => 'Collective\\Html\\FormFacade',
-      'Html' => 'Collective\\Html\\HtmlFacade',
-    ),
     'providers' => 
     array (
       0 => 'Collective\\Html\\HtmlServiceProvider',
     ),
-  ),
-  'livewire/livewire' => 
-  array (
     'aliases' => 
     array (
-      'Livewire' => 'Livewire\\Livewire',
-    ),
-    'providers' => 
-    array (
-      0 => 'Livewire\\LivewireServiceProvider',
+      'Form' => 'Collective\\Html\\FormFacade',
+      'Html' => 'Collective\\Html\\HtmlFacade',
     ),
   ),
   'maatwebsite/excel' => 
@@ -155,13 +144,6 @@
     'providers' => 
     array (
       0 => 'Yajra\\DataTables\\ButtonsServiceProvider',
-    ),
-  ),
-  'yajra/laravel-datatables-export' => 
-  array (
-    'providers' => 
-    array (
-      0 => 'Yajra\\DataTables\\ExportServiceProvider',
     ),
   ),
   'yajra/laravel-datatables-fractal' => 
