@@ -62,7 +62,7 @@
                     <div class="col-12 col-xl-6">
                         <div class="d-flex flex-column flex-sm-row flex-wrap gap-2 align-items-stretch align-items-sm-center justify-content-xl-end">
                             <div class="btn-group shadow-sm" role="group" aria-label="Filter actions">
-                                <button type="submit" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 px-3">
+                                <button type="submit" name="refresh" value="1" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 px-3">
                                     <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
                                     <span>Apply Filters</span>
                                 </button>
@@ -98,6 +98,13 @@
         <!-- Report Heading -->
         <div class="report-header text-center mb-4 pb-3 border-bottom border-body-secondary border-opacity-25">
             <h4 class="fw-bold text-uppercase mb-3 fs-5 text-body-emphasis">Stock Balance as of Till Date</h4>
+            @if(config('app.debug') && isset($reportTimingMs))
+                <p class="small text-body-secondary mb-2 no-print">
+                    Server: {{ $reportTimingMs }} ms
+                    @if(isset($reportCacheStatus)) · cache {{ $reportCacheStatus }} @endif
+                    @if(isset($reportLineCount)) · {{ $reportLineCount }} item(s) @endif
+                </p>
+            @endif
             <div class="d-flex flex-wrap justify-content-center gap-2 gap-md-3">
                 <span class="badge text-bg-body-secondary text-body-emphasis fw-normal rounded-pill px-3 py-2 border border-body-secondary border-opacity-50">
                     <span class="material-symbols-rounded icon-16 align-text-bottom me-1">event</span>
@@ -115,7 +122,7 @@
             <div class="card-header bg-light d-flex justify-content-between align-items-center py-2 flex-shrink-0">
                 <span class="fw-semibold text-dark">Stock Balance Details</span>
                 <span class="text-muted small">
-                    Total items: {{ count($reportData) }}
+                    Total items: {{ $reportLineCount ?? ($reportPage->total() ?? 0) }}
                 </span>
             </div>
             <div class="stock-balance-table-split flex-grow-1 d-flex flex-column min-h-0">
@@ -155,15 +162,9 @@
                             <col class="sb-col-amt" />
                         </colgroup>
                         <tbody>
-                            @php
-                                $totalAmount = 0;
-                            @endphp
-                            @forelse($reportData as $index => $item)
-                                @php
-                                    $totalAmount += $item['amount'];
-                                @endphp
+                            @forelse(($reportPage ?? collect()) as $index => $item)
                                 <tr>
-                                    <td class="text-center mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['index' => $index])</td>
+                                    <td class="text-center mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['paginator' => $reportPage ?? null, 'index' => $index])</td>
                                     <td>{{ $item['item_code'] ?? '—' }}</td>
                                     <td>{{ $item['item_name'] }}</td>
                                     <td class="text-end">{{ number_format($item['remaining_qty'], 2) }}</td>
@@ -176,16 +177,21 @@
                                     <td colspan="7" class="text-center text-muted py-4">No stock balance found</td>
                                 </tr>
                             @endforelse
-                            @if(count($reportData) > 0)
+                            @if(($reportLineCount ?? 0) > 0)
                                 <tr class="table-light fw-bold">
                                     <td colspan="6" class="text-end">Total Amount:</td>
-                                    <td class="text-end">₹{{ number_format($totalAmount, 2) }}</td>
+                                    <td class="text-end">₹{{ number_format(($reportTotalAmount ?? 0), 2) }}</td>
                                 </tr>
                             @endif
                         </tbody>
                     </table>
                 </div>
             </div>
+            @if(isset($reportPage) && $reportPage->hasPages())
+                <div class="px-3 py-3 border-top no-print">
+                    {{ $reportPage->appends(request()->query())->links('pagination::bootstrap-5') }}
+                </div>
+            @endif
         </div>
     </div>
 </div>

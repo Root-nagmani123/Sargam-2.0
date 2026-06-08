@@ -86,7 +86,7 @@
                     </div>
                 </div>
                 <div class="d-flex flex-wrap align-items-center gap-2 pt-3 mt-3 border-top border-light-subtle">
-                    <button type="submit" class="btn btn-primary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">
+                    <button type="submit" name="refresh" value="1" class="btn btn-primary btn-sm rounded-1 d-inline-flex align-items-center gap-1 px-3">
                         <span class="material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">filter_list</span>
                         <span>Apply filters</span>
                     </button>
@@ -131,6 +131,17 @@
                                 {{ date('d-F-Y', strtotime($fromDate)) }} to {{ date('d-F-Y', strtotime($toDate)) }}
                             </span>
                         </div>
+                        @if(config('app.debug') && isset($reportTimingMs))
+                            <p class="small text-body-secondary mb-2 no-print" id="stock-purchase-timing-hint">
+                                Server: {{ $reportTimingMs }} ms
+                                @if(isset($reportCacheStatus))
+                                    · cache {{ $reportCacheStatus }}
+                                @endif
+                                @if(isset($reportLineCount))
+                                    · {{ $reportLineCount }} line(s)
+                                @endif
+                            </p>
+                        @endif
                         <div class="d-flex flex-column flex-sm-row flex-wrap align-items-center justify-content-center gap-2">
                             <span class="badge rounded-1 bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-normal px-3 py-2 shadow-sm text-wrap text-start" style="max-width: min(100%, 42rem);">
                                 <span class="material-symbols-rounded align-middle me-1" style="font-size:1rem;" aria-hidden="true">person</span>
@@ -143,151 +154,105 @@
                         </div>
                     </div>
 
-                    <!-- Table: grouped by bill -->
-                    <div class="table-responsive rounded-3 border border-light-subtle shadow-sm bg-white stock-purchase-table-wrapper" role="region" aria-label="Stock purchase table" tabindex="0">
-                        <table class="table table-bordered align-middle mb-0 stock-purchase-table" style="width:100%;">
-                            <thead class="stock-purchase-thead">
-                                <tr>
-                                    @include('admin.mess.reports.partials.report-sno-th', ['class' => 'spr-th'])
-                                    <th class="spr-th">Item</th>
-                                    <th class="spr-th">Item Code</th>
-                                    <th class="spr-th text-end">Unit</th>
-                                    <th class="spr-th text-end">Quantity</th>
-                                    <th class="spr-th text-end">Rate</th>
-                                    <th class="spr-th text-end">Tax %</th>
-                                    <th class="spr-th text-end">Tax Amount</th>
-                                    <th class="spr-th text-end">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @php $grandTotalAmount = 0; $sprReportLineNo = 0; @endphp
-                                @forelse($purchaseOrdersByVendor as $vendorGroup)
-                                    <tr class="vendor-section-header-row">
-                                        <td colspan="9" class="vendor-section-header small fw-semibold">
-                                            <span class="d-inline-flex align-items-center gap-1">
-                                                <span class="material-symbols-rounded" style="font-size:1rem;opacity:0.7;" aria-hidden="true">person</span>
-                                                VENDOR : {{ $vendorGroup['vendor_name'] }}
-                                            </span>
-                                        </td>
-                                    </tr>
-                                    @php $vendorSectionTotal = 0; @endphp
-                                    @foreach($vendorGroup['orders'] as $order)
-                                        @php
-                                            $billSubtotal = 0;
-                                            $billTaxTotal = 0;
-                                        @endphp
-                                        <tr class="bill-header-row">
-                                            <td colspan="9" class="bill-header small fw-semibold text-white">
-                                                <span class="d-inline-flex align-items-center gap-1">
-                                                    <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">receipt</span>
-                                                    {{ $order->stockPurchaseReportBillLabel() }}
-                                                </span>
-                                            </td>
-                                        </tr>
-                                        @foreach($order->items as $item)
-                                            @php
-                                                $sprReportLineNo++;
-                                                $qty = $item->quantity ?? 0;
-                                                $rate = $item->unit_price ?? 0;
-                                                $taxPercent = $item->tax_percent ?? 0;
-                                                $subtotal = $qty * $rate;
-                                                $taxAmount = round($subtotal * ($taxPercent / 100), 2);
-                                                $total = $subtotal + $taxAmount;
-                                                $billSubtotal += $subtotal;
-                                                $billTaxTotal += $taxAmount;
-                                                $grandTotalAmount += $total;
-                                            @endphp
-                                            <tr class="spr-item-row">
-                                                <td class="text-center text-body-secondary small mess-report-sno-cell">@include('admin.mess.reports.partials.report-serial-number', ['start' => $sprReportLineNo, 'index' => 0])</td>
-                                                <td class="fw-medium">{{ $item->itemSubcategory->item_name ?? $item->itemSubcategory->subcategory_name ?? $item->itemSubcategory->name ?? 'N/A' }}</td>
-                                                <td class="text-body-secondary">{{ $item->itemSubcategory->item_code ?? '—' }}</td>
-                                                <td class="text-end text-body-secondary">{{ $item->unit ?? '—' }}</td>
-                                                <td class="text-end spr-num">{{ number_format($qty, 2) }}</td>
-                                                <td class="text-end spr-num">₹{{ number_format($rate, 1) }}</td>
-                                                <td class="text-end spr-num">{{ number_format($taxPercent, 2) }}%</td>
-                                                <td class="text-end spr-num">₹{{ number_format($taxAmount, 2) }}</td>
-                                                <td class="text-end spr-num fw-semibold">₹{{ number_format($total, 2) }}</td>
-                                            </tr>
-                                        @endforeach
-                                        @php
-                                            $billTotal = $billSubtotal + $billTaxTotal;
-                                            $vendorSectionTotal += $billTotal;
-                                        @endphp
-                                        <tr class="bill-total-row fw-semibold">
-                                            <td colspan="8" class="text-end fw-bold small">Bill Total:</td>
-                                            <td class="text-end fw-bold spr-num">₹{{ number_format($billTotal, 2) }}</td>
-                                        </tr>
-                                    @endforeach
-                                    <tr class="vendor-total-row fw-semibold">
-                                        <td colspan="8" class="text-end small">
-                                            <span class="d-inline-flex align-items-center gap-1">
-                                                <span class="material-symbols-rounded" style="font-size:0.875rem;" aria-hidden="true">functions</span>
-                                                Vendor Total ({{ $vendorGroup['vendor_name'] }}):
-                                            </span>
-                                        </td>
-                                        <td class="text-end spr-num">₹{{ number_format($vendorSectionTotal, 2) }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="9" class="p-0 border-0">
-                                            <div class="spr-empty-state text-center py-5 px-3">
-                                                <span class="material-symbols-rounded d-block mx-auto mb-2" style="font-size:2.25rem;color:#94a3b8;" aria-hidden="true">shopping_cart_off</span>
-                                                <h6 class="fw-semibold text-body-secondary mb-2">No purchase details found</h6>
-                                                <p class="small text-body-tertiary mb-3">No records match the selected period, vendor, and store filters.</p>
-                                                <span class="badge bg-body-secondary text-body-emphasis rounded-1 px-3 py-2 fw-normal">
-                                                    <span class="material-symbols-rounded align-middle me-1" style="font-size:0.875rem;" aria-hidden="true">lightbulb</span>
-                                                    Try adjusting date range or filter criteria
-                                                </span>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                @endforelse
-                                @if($grandTotalAmount > 0)
-                                    <tr class="grand-total-row fw-bold">
-                                        <td colspan="8" class="text-end">
-                                            <span class="d-inline-flex align-items-center gap-1">
-                                                <span class="material-symbols-rounded" style="font-size:1rem;" aria-hidden="true">payments</span>
-                                                Grand Total:
-                                            </span>
-                                        </td>
-                                        <td class="text-end spr-num">₹{{ number_format($grandTotalAmount, 2) }}</td>
-                                    </tr>
-                                @endif
-                            </tbody>
-                        </table>
+                    @if(isset($reportLineCount) && $reportLineCount > 0)
+                        <p class="small text-body-secondary mb-2 no-print">
+                            Showing page {{ $reportPage->currentPage() }} of {{ $reportPage->lastPage() }}
+                            ({{ $reportPage->count() }} of {{ $reportLineCount }} lines).
+                            Use PDF/Excel for full export; print uses current page only.
+                        </p>
+                    @endif
+                    <div id="stock-purchase-table-wrap">
+                        @include('admin.mess.reports.partials.stock-purchase-details-table', [
+                            'purchaseDetailLines' => $purchaseDetailLines,
+                            'reportPage' => $reportPage,
+                            'reportGrandTotalAmount' => $reportGrandTotalAmount,
+                            'reportLineCount' => $reportLineCount,
+                        ])
                     </div>
                 </div>
             </div>
 
     </div>
 
-    {{-- Tom Select for vendor & store dropdowns (shared with other mess screens) --}}
+    {{-- Tom Select for vendor & store dropdowns (deferred so table paints first) --}}
     <link href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js" defer></script>
     <script>
         document.addEventListener('DOMContentLoaded', function () {
-            if (typeof window.TomSelect === 'undefined') return;
+            @if(isset($reportTimingMs))
+            console.info(
+                '[Stock Purchase Details] server {{ $reportTimingMs }} ms'
+                @if(isset($reportCacheStatus))
+                + ', cache {{ $reportCacheStatus }}'
+                @endif
+                @if(isset($reportLineCount))
+                + ', {{ $reportLineCount }} lines total'
+                @endif
+            );
+            @endif
 
-            document
-                .querySelectorAll('.stock-purchase-report select.choices-select')
-                .forEach(function (el) {
+            var tableWrap = document.getElementById('stock-purchase-table-wrap');
+            if (tableWrap) {
+                function ajaxLoad(url) {
+                    if (!url) return;
+                    var targetUrl = url;
+                    if (!/[?&]ajax=1(?:&|$)/.test(url)) {
+                        var sep = url.indexOf('?') === -1 ? '?' : '&';
+                        targetUrl = url + sep + 'ajax=1';
+                    }
+                    tableWrap.style.opacity = '0.55';
+                    fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(function (r) {
+                            var ms = r.headers.get('X-Stock-Purchase-Details-Ms');
+                            var cache = r.headers.get('X-Stock-Purchase-Details-Cache');
+                            if (ms) {
+                                console.info('[Stock Purchase Details] page ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
+                            }
+                            return r.text();
+                        })
+                        .then(function (html) {
+                            tableWrap.innerHTML = html;
+                            tableWrap.style.opacity = '';
+                            hookPagination();
+                        })
+                        .catch(function (e) {
+                            tableWrap.style.opacity = '';
+                            console.error('Stock purchase pagination failed', e);
+                        });
+                }
+
+                function hookPagination() {
+                    tableWrap.querySelectorAll('.pagination a').forEach(function (a) {
+                        a.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            ajaxLoad(this.href);
+                        });
+                    });
+                }
+
+                hookPagination();
+            }
+
+            function initTomSelect() {
+                if (typeof window.TomSelect === 'undefined') return;
+                document.querySelectorAll('.stock-purchase-report select.choices-select').forEach(function (el) {
                     if (el.dataset.tomselectInitialized === 'true') return;
-
-                    var placeholder = el.getAttribute('data-placeholder') || 'Select';
-
                     new TomSelect(el, {
-                        placeholder: placeholder,
+                        placeholder: el.getAttribute('data-placeholder') || 'Select',
                         maxItems: null,
                         maxOptions: 500,
                         plugins: ['remove_button', 'dropdown_input'],
-                        sortField: {
-                            field: 'text',
-                            direction: 'asc'
-                        }
+                        sortField: { field: 'text', direction: 'asc' }
                     });
-
                     el.dataset.tomselectInitialized = 'true';
                 });
+            }
+
+            if ('requestIdleCallback' in window) {
+                requestIdleCallback(initTomSelect, { timeout: 1500 });
+            } else {
+                setTimeout(initTomSelect, 100);
+            }
         });
     </script>
 <script>

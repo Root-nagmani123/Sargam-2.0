@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use App\Models\KitchenIssueMaster;
 use App\Services\Mess\AvailableQuantityService;
@@ -20,6 +21,7 @@ use App\Models\DepartmentMaster;
 use App\Models\CourseMaster;
 use App\Models\StudentMaster;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -30,6 +32,16 @@ use Carbon\Carbon;
 
 class KitchenIssueController extends Controller
 {
+    private const SELLING_VOUCHER_DT_LIST_EPOCH = 'selling_voucher_dt_list_epoch';
+
+    /**
+     * Invalidate Redis-backed Selling Voucher DataTables JSON after listing mutations.
+     */
+    public static function bumpSellingVoucherListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::SELLING_VOUCHER_DT_LIST_EPOCH, 'KitchenIssueController@sellingVouchersDatatable');
+    }
+
     /**
      * Historical mess_client_types.id values still stored on kitchen_issue_master rows
      * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
@@ -105,6 +117,9 @@ class KitchenIssueController extends Controller
 
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
+            ->where('faculty_type', 1)
+            ->whereNotNull('employee_master_pk')
+            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
             ->orderBy('full_name')
             ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
             ->map(function ($f) {
@@ -132,7 +147,7 @@ class KitchenIssueController extends Controller
             return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
         };
 
-        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+        $employees = EmployeeMaster::active()
             ->when($officersMessDept, function ($q) use ($officersMessDept) {
                 $q->where(function ($sub) use ($officersMessDept) {
                     $sub->whereNull('department_master_pk')
@@ -156,7 +171,7 @@ class KitchenIssueController extends Controller
             ->filter(fn($e) => $e->full_name !== '—')
             ->values();
         $messStaff = $officersMessDept
-            ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ? EmployeeMaster::active()
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
                 ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
@@ -188,12 +203,20 @@ class KitchenIssueController extends Controller
 
         // When the user filtered by buyer only, restore type/category for the filter UI from the latest voucher.
         if ($selectedBuyerName !== '' && $selectedClientType === '') {
-            $inferred = KitchenIssueMaster::query()
-                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
-                ->where(function ($q) use ($selectedBuyerName) {
+            $clientIdForInference = $this->resolveClientIdForBuyerFilter($selectedBuyerName, '');
+            $inferredQuery = KitchenIssueMaster::query()
+                ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER);
+
+            if ($clientIdForInference !== null && $clientIdForInference > 0) {
+                $inferredQuery->where('client_id', $clientIdForInference);
+            } else {
+                $inferredQuery->where(function ($q) use ($selectedBuyerName) {
                     $q->where('client_name', $selectedBuyerName)
                         ->orWhere('client_name', 'LIKE', $selectedBuyerName.' (%');
-                })
+                });
+            }
+
+            $inferred = $inferredQuery
                 ->orderByDesc('issue_date')
                 ->orderByDesc('pk')
                 ->first(['client_type', 'client_type_pk']);
@@ -203,6 +226,11 @@ class KitchenIssueController extends Controller
                 $selectedClientTypePk = (string) ($inferred->client_type_pk ?? '');
                 $selectedTypeSlug = $typeSlugMap[$selectedClientType] ?? '';
             }
+        }
+
+        $resolvedBuyerClientId = $this->resolveClientIdForBuyerFilter($selectedBuyerName, $selectedTypeSlug);
+        if ($resolvedBuyerClientId !== null && $resolvedBuyerClientId > 0) {
+            $selectedBuyerName = (string) $resolvedBuyerClientId;
         }
 
         $filterClientTypePkOptions = collect();
@@ -224,16 +252,20 @@ class KitchenIssueController extends Controller
                 ->values();
         }
 
+        $filterEmployeeBuyerOptions = $this->employeeBuyerFilterOptions($employees);
+        $filterFacultyBuyerOptions = $this->facultyBuyerFilterOptions($faculties);
+        $filterMessStaffBuyerOptions = $this->employeeBuyerFilterOptions($messStaff);
+
         $filterBuyerNames = collect();
         if ($selectedTypeSlug === 'employee' && $selectedClientTypePk !== '') {
             $selectedEmployeeBucket = strtolower(trim((string) $filterClientTypePkOptions
                 ->firstWhere('value', $selectedClientTypePk)['text'] ?? ''));
             if ($selectedEmployeeBucket === 'academy staff') {
-                $filterBuyerNames = $employees->pluck('full_name_with_department')->filter()->values();
+                $filterBuyerNames = collect($filterEmployeeBuyerOptions);
             } elseif ($selectedEmployeeBucket === 'faculty') {
-                $filterBuyerNames = $faculties->pluck('full_name')->filter()->values();
+                $filterBuyerNames = collect($filterFacultyBuyerOptions);
             } elseif ($selectedEmployeeBucket === 'mess staff') {
-                $filterBuyerNames = $messStaff->pluck('full_name_with_department')->filter()->values();
+                $filterBuyerNames = collect($filterMessStaffBuyerOptions);
             }
         } elseif ($selectedTypeSlug === 'ot' && $selectedClientTypePk !== '') {
             $filterBuyerNames = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
@@ -285,8 +317,22 @@ class KitchenIssueController extends Controller
                 ->values();
         }
 
-        if ($selectedBuyerName !== '' && ! $filterBuyerNames->contains($selectedBuyerName)) {
-            $filterBuyerNames = $filterBuyerNames->prepend($selectedBuyerName)->values();
+        if ($selectedBuyerName !== '' && ! $filterBuyerNames->contains(function ($item) use ($selectedBuyerName) {
+            $value = is_array($item) ? (string) ($item['value'] ?? '') : (string) $item;
+
+            return $value === (string) $selectedBuyerName;
+        })) {
+            $label = $selectedBuyerName;
+            if (ctype_digit($selectedBuyerName)) {
+                $resolvedLabel = $this->resolveEmployeeBuyerNameForFilter((int) $selectedBuyerName, (int) $selectedClientTypePk);
+                if ($resolvedLabel !== '') {
+                    $label = $resolvedLabel;
+                }
+            }
+            $filterBuyerNames = $filterBuyerNames->prepend([
+                'value' => $selectedBuyerName,
+                'text' => $label,
+            ])->values();
         }
 
         if ($selectedClientTypePk !== '' && $selectedClientType !== '') {
@@ -322,14 +368,90 @@ class KitchenIssueController extends Controller
             'selectedClientTypePk',
             'selectedBuyerName',
             'filterClientTypePkOptions',
-            'filterBuyerNames'
+            'filterBuyerNames',
+            'filterEmployeeBuyerOptions',
+            'filterFacultyBuyerOptions',
+            'filterMessStaffBuyerOptions'
         ));
     }
 
     /**
-     * Server-side DataTables JSON for Selling Voucher listing (one row per item line).
+     * @param  \Illuminate\Support\Collection<int, object>  $employees
+     * @return list<array{value: string, text: string}>
      */
-    public function sellingVouchersDatatable(Request $request)
+    private function employeeBuyerFilterOptions($employees): array
+    {
+        return $employees->map(function ($employee) {
+            $value = (string) ($employee->pk ?? '');
+            $text = (string) ($employee->full_name_with_department ?? $employee->full_name ?? '');
+            if ($value === '' || $text === '') {
+                return null;
+            }
+
+            return ['value' => $value, 'text' => $text];
+        })->filter()->values()->all();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, object>  $faculties
+     * @return list<array{value: string, text: string}>
+     */
+    private function facultyBuyerFilterOptions($faculties): array
+    {
+        return $faculties->map(function ($faculty) {
+            $value = (string) ($faculty->pk ?? '');
+            $text = (string) ($faculty->full_name ?? '');
+            if ($value === '' || $text === '') {
+                return null;
+            }
+
+            return ['value' => $value, 'text' => $text];
+        })->filter()->values()->all();
+    }
+
+    /**
+     * Server-side DataTables JSON for Selling Voucher listing (one row per item line).
+     * Cached via Redis ({@see DataTableRedisCache}); tune with SELLING_VOUCHER_DATATABLE_CACHE_* in .env.
+     */
+    public function sellingVouchersDatatable(Request $request): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $request,
+            'selling_voucher_dt:v1:',
+            self::SELLING_VOUCHER_DT_LIST_EPOCH,
+            [
+                'enabled' => 'SELLING_VOUCHER_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'SELLING_VOUCHER_DATATABLE_CACHE_SECONDS',
+            ],
+            'KitchenIssueController@sellingVouchersDatatable',
+            fn () => $this->buildSellingVouchersDatatableResponse($request),
+            $this->sellingVoucherDatatableFilterFingerprint($request)
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sellingVoucherDatatableFilterFingerprint(Request $request): array
+    {
+        $store = $request->input('store');
+        $status = $request->input('status');
+
+        return [
+            'store' => is_array($store) ? array_values($store) : (($store !== null && $store !== '') ? [$store] : []),
+            'status' => is_array($status) ? array_values($status) : (($status !== null && $status !== '') ? [$status] : []),
+            'payment_type' => $request->input('payment_type'),
+            'client_type' => $request->input('client_type'),
+            'client_type_pk' => $request->input('client_type_pk'),
+            'buyer_name' => trim((string) $request->input('buyer_name', '')),
+            'return_status' => strtolower(trim((string) $request->input('return_status', ''))),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+            'can_delete' => function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin')),
+        ];
+    }
+
+    private function buildSellingVouchersDatatableResponse(Request $request): JsonResponse
     {
         $draw = (int) $request->input('draw', 1);
         $start = max(0, (int) $request->input('start', 0));
@@ -551,7 +673,7 @@ class KitchenIssueController extends Controller
                 $q->where('kim.client_type_pk', $clientTypePk);
             }
         }
-        $this->applySellingVoucherBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
+        $this->applySellingVoucherBuyerNameFilter($q, $request);
 
         // Date filter: default last 30 days when blank; skip default when user searches or targets a buyer/category.
         if (! $request->filled('start_date') && ! $request->filled('end_date')) {
@@ -621,19 +743,232 @@ class KitchenIssueController extends Controller
     }
 
     /**
-     * Match buyer names saved with optional department suffix, e.g. "Name (Dept)".
+     * Match buyer by client_id when available; otherwise fall back to client_name patterns.
      */
-    private function applySellingVoucherBuyerNameFilter(Builder $q, string $buyerName): void
+    private function applySellingVoucherBuyerNameFilter(Builder $q, Request $request): void
     {
-        $buyerName = trim($buyerName);
+        $buyerName = trim((string) $request->input('buyer_name', ''));
         if ($buyerName === '') {
             return;
         }
 
+        $clientTypeSlug = $this->sellingVoucherClientTypeSlugFromRequest($request);
+        $clientTypePk = (int) $request->input('client_type_pk', 0);
+
+        if (in_array($clientTypeSlug, [ClientType::TYPE_OT, ClientType::TYPE_COURSE], true)) {
+            if (ctype_digit($buyerName)) {
+                $q->where('kim.client_id', (int) $buyerName);
+            } else {
+                $q->where(function ($bq) use ($buyerName) {
+                    $this->applyKitchenIssueBuyerNamePatternFilter($bq, $buyerName);
+                });
+            }
+
+            return;
+        }
+
+        $clientId = $this->resolveClientIdForBuyerFilter($buyerName, $clientTypeSlug);
+        if ($clientId !== null && $clientId > 0) {
+            $nameVariants = $this->buyerNameVariantsForClientFilter($buyerName, $clientId, $clientTypePk);
+
+            $q->where(function ($bq) use ($clientId, $nameVariants) {
+                $bq->where('kim.client_id', $clientId);
+
+                if ($nameVariants !== []) {
+                    $bq->orWhere(function ($fallback) use ($nameVariants) {
+                        $fallback->where(function ($nullId) {
+                            $nullId->whereNull('kim.client_id')->orWhere('kim.client_id', '<=', 0);
+                        });
+                        $fallback->where(function ($nameQ) use ($nameVariants) {
+                            foreach ($nameVariants as $variant) {
+                                $nameQ->orWhere(function ($nq) use ($variant) {
+                                    $this->applyKitchenIssueBuyerNamePatternFilter($nq, $variant);
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
+            return;
+        }
+
         $q->where(function ($bq) use ($buyerName) {
-            $bq->where('kim.client_name', $buyerName)
-                ->orWhere('kim.client_name', 'LIKE', $buyerName.' (%');
+            $this->applyKitchenIssueBuyerNamePatternFilter($bq, $buyerName);
         });
+    }
+
+    private function applyKitchenIssueBuyerNamePatternFilter(Builder $q, string $buyerName): void
+    {
+        $q->where('kim.client_name', $buyerName)
+            ->orWhere('kim.client_name', 'LIKE', $buyerName.' (%');
+    }
+
+    private function sellingVoucherClientTypeSlugFromRequest(Request $request): string
+    {
+        $map = [
+            (string) KitchenIssueMaster::CLIENT_EMPLOYEE => ClientType::TYPE_EMPLOYEE,
+            (string) KitchenIssueMaster::CLIENT_OT => ClientType::TYPE_OT,
+            (string) KitchenIssueMaster::CLIENT_COURSE => ClientType::TYPE_COURSE,
+            (string) KitchenIssueMaster::CLIENT_SECTION => ClientType::TYPE_SECTION,
+            (string) KitchenIssueMaster::CLIENT_OTHER => ClientType::TYPE_OTHER,
+        ];
+
+        return $map[(string) $request->input('client_type', '')] ?? '';
+    }
+
+    private function resolveClientIdForBuyerFilter(string $buyerName, string $clientTypeSlug): ?int
+    {
+        $buyerName = trim($buyerName);
+        if ($buyerName === '') {
+            return null;
+        }
+
+        if (ctype_digit($buyerName)) {
+            return (int) $buyerName;
+        }
+
+        $baseName = trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerName));
+
+        $existingClientIdQuery = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->whereNotNull('client_id')
+            ->where('client_id', '>', 0)
+            ->where(function ($nameQ) use ($buyerName, $baseName) {
+                $nameQ->where('client_name', $buyerName)
+                    ->orWhere('client_name', 'LIKE', $buyerName.' (%');
+                if ($baseName !== '' && $baseName !== $buyerName) {
+                    $nameQ->orWhere('client_name', $baseName)
+                        ->orWhere('client_name', 'LIKE', $baseName.' (%');
+                }
+            });
+
+        if ($clientTypeSlug !== '') {
+            $clientTypeMap = [
+                ClientType::TYPE_EMPLOYEE => KitchenIssueMaster::CLIENT_EMPLOYEE,
+                ClientType::TYPE_OT => KitchenIssueMaster::CLIENT_OT,
+                ClientType::TYPE_COURSE => KitchenIssueMaster::CLIENT_COURSE,
+                ClientType::TYPE_SECTION => KitchenIssueMaster::CLIENT_SECTION,
+                ClientType::TYPE_OTHER => KitchenIssueMaster::CLIENT_OTHER,
+            ];
+            if (isset($clientTypeMap[$clientTypeSlug])) {
+                $existingClientIdQuery->where('client_type', $clientTypeMap[$clientTypeSlug]);
+            }
+        }
+
+        $existingClientId = $existingClientIdQuery->value('client_id');
+        if ($existingClientId !== null && (int) $existingClientId > 0) {
+            return (int) $existingClientId;
+        }
+
+        if ($clientTypeSlug !== '' && ! in_array($clientTypeSlug, [ClientType::TYPE_EMPLOYEE, ''], true)) {
+            return null;
+        }
+
+        $employeePk = $this->findEmployeePkByDisplayName($buyerName, $baseName);
+        if ($employeePk !== null && $employeePk > 0) {
+            return $employeePk;
+        }
+
+        $facultyPk = FacultyMaster::query()
+            ->where(function ($q) use ($buyerName, $baseName) {
+                $q->where('full_name', $buyerName);
+                if ($baseName !== '' && $baseName !== $buyerName) {
+                    $q->orWhere('full_name', $baseName);
+                }
+            })
+            ->value('pk');
+
+        return ($facultyPk !== null && (int) $facultyPk > 0) ? (int) $facultyPk : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buyerNameVariantsForClientFilter(string $buyerName, int $clientId, int $clientTypePk): array
+    {
+        $variants = array_values(array_unique(array_filter([
+            trim($buyerName),
+            trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerName)),
+            trim($this->resolveEmployeeBuyerNameForFilter($clientId, $clientTypePk)),
+        ], fn ($name) => $name !== '')));
+
+        $historicalNames = KitchenIssueMaster::query()
+            ->where('kitchen_issue_type', KitchenIssueMaster::TYPE_SELLING_VOUCHER)
+            ->where('client_id', $clientId)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()
+            ->values()
+            ->all();
+
+        return array_values(array_unique(array_merge($variants, $historicalNames)));
+    }
+
+    private function findEmployeePkByDisplayName(string $buyerName, string $baseName): ?int
+    {
+        $nameForMatch = trim($baseName !== '' ? $baseName : $buyerName);
+        if ($nameForMatch === '') {
+            return null;
+        }
+
+        $pk = EmployeeMaster::query()
+            ->whereRaw(
+                "TRIM(CONCAT(COALESCE(first_name,''), ' ', COALESCE(middle_name,''), ' ', COALESCE(last_name,''))) = ?",
+                [$nameForMatch]
+            )
+            ->value('pk');
+
+        return ($pk !== null && (int) $pk > 0) ? (int) $pk : null;
+    }
+
+    private function resolveEmployeeBuyerNameForFilter(int $employeePk, int $clientTypePk): string
+    {
+        if ($employeePk <= 0) {
+            return '';
+        }
+
+        $categoryName = '';
+        if ($clientTypePk > 0) {
+            $categoryName = strtolower(trim((string) ClientType::query()
+                ->where('id', $clientTypePk)
+                ->where('client_type', ClientType::TYPE_EMPLOYEE)
+                ->value('client_name')));
+        }
+
+        if ($categoryName === 'faculty') {
+            return trim((string) FacultyMaster::query()
+                ->where('pk', $employeePk)
+                ->value('full_name'));
+        }
+
+        $employee = EmployeeMaster::query()
+            ->select('first_name', 'middle_name', 'last_name', 'department_master_pk')
+            ->where('pk', $employeePk)
+            ->first();
+
+        if (! $employee) {
+            return '';
+        }
+
+        $fullName = trim(($employee->first_name ?? '').' '.($employee->middle_name ?? '').' '.($employee->last_name ?? ''));
+        if ($fullName === '') {
+            return '';
+        }
+
+        if (in_array($categoryName, ['academy staff', 'mess staff'], true)) {
+            $departmentName = trim((string) DepartmentMaster::query()
+                ->where('pk', $employee->department_master_pk)
+                ->value('department_name'));
+            if ($departmentName !== '') {
+                return $fullName.' ('.$departmentName.')';
+            }
+        }
+
+        return $fullName;
     }
 
     private function applySellingVoucherItemSearch(Builder $q, string $search): void
@@ -915,6 +1250,9 @@ class KitchenIssueController extends Controller
             ->groupBy('client_type');
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
+            ->where('faculty_type', 1)
+            ->whereNotNull('employee_master_pk')
+            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
             ->orderBy('full_name')
             ->get(['pk', 'full_name', 'faculty_code'])
             ->map(function ($f) {
@@ -934,7 +1272,7 @@ class KitchenIssueController extends Controller
             return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
         };
 
-        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+        $employees = EmployeeMaster::active()
             ->orderBy('first_name')->orderBy('last_name')
             ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
             ->map(function ($e) use ($buildEmployeeLabel) {
@@ -951,7 +1289,7 @@ class KitchenIssueController extends Controller
 
         $officersMessDept = DepartmentMaster::where('department_name', 'Officers Mess')->first();
         $messStaff = $officersMessDept
-            ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ? EmployeeMaster::active()
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
                 ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
@@ -1000,7 +1338,7 @@ class KitchenIssueController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
-            'client_id' => 'nullable|integer',
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
@@ -1051,6 +1389,12 @@ class KitchenIssueController extends Controller
             ];
             $clientType = $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE;
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
+            
+            // For Employee (type 1) and OT (type 2), store the actual pk (employee_master.pk or student_master.pk)
+            $clientId = null;
+            if (in_array($request->client_type_slug, ['employee', 'ot']) && $request->filled('client_id')) {
+                $clientId = (int) $request->client_id;
+            }
 
             // Always create a fresh Selling Voucher entry.
             // Earlier logic tried to "reuse" an existing pending voucher for the same
@@ -1062,7 +1406,7 @@ class KitchenIssueController extends Controller
                 'payment_type' => $request->payment_type,
                 'client_type' => $clientType,
                 'client_type_pk' => $clientTypePk,
-                'client_id' => $request->client_id,
+                'client_id' => $clientId,
                 'name_id' => $request->name_id,
                 'client_name' => $request->client_name,
                 'issue_date' => $request->issue_date,
@@ -1115,6 +1459,7 @@ class KitchenIssueController extends Controller
             }
 
             DB::commit();
+            self::bumpSellingVoucherListingCacheEpoch();
 
             // Modal / fetch: return JSON so the form can reset without full page reload (header + respond_json flag)
             $returnJson = $request->ajax()
@@ -1375,7 +1720,7 @@ class KitchenIssueController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
-            'client_id' => 'nullable|integer',
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
@@ -1435,13 +1780,19 @@ class KitchenIssueController extends Controller
                 'other' => KitchenIssueMaster::CLIENT_OTHER,
             ];
 
+            // For Employee (type 1) and OT (type 2), store the actual pk (employee_master.pk or student_master.pk)
+            $clientId = null;
+            if (in_array($request->client_type_slug, ['employee', 'ot']) && $request->filled('client_id')) {
+                $clientId = (int) $request->client_id;
+            }
+
             $kitchenIssue->update([
                 'store_id' => $storeId,
                 'store_type' => $storeType,
                 'payment_type' => $request->payment_type,
                 'client_type' => $clientTypeMap[$request->client_type_slug] ?? KitchenIssueMaster::CLIENT_EMPLOYEE,
                 'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
-                'client_id' => $request->client_id,
+                'client_id' => $clientId,
                 'name_id' => $request->name_id,
                 'client_name' => $request->client_name,
                 'issue_date' => $request->issue_date,
@@ -1505,6 +1856,7 @@ class KitchenIssueController extends Controller
             }
 
             DB::commit();
+            self::bumpSellingVoucherListingCacheEpoch();
 
             return redirect()->route('admin.mess.material-management.index')
                            ->with('success', 'Selling Voucher updated successfully');
@@ -1528,6 +1880,7 @@ class KitchenIssueController extends Controller
         try {
             $kitchenIssue->items()->delete();
             $kitchenIssue->delete();
+            self::bumpSellingVoucherListingCacheEpoch();
 
             return redirect()->route('admin.mess.material-management.index')
                            ->with('success', 'Selling Voucher deleted successfully');
@@ -1628,6 +1981,8 @@ class KitchenIssueController extends Controller
                 ]);
             }
             DB::commit();
+            self::bumpSellingVoucherListingCacheEpoch();
+
             return redirect()->route('admin.mess.material-management.index')
                 ->with('success', 'Return updated successfully.');
         } catch (\Exception $e) {
@@ -1684,6 +2039,7 @@ class KitchenIssueController extends Controller
                 'status' => KitchenIssueMaster::STATUS_PROCESSING,
                 'modified_by' => Auth::id(),
             ]);
+            self::bumpSellingVoucherListingCacheEpoch();
 
             return back()->with('success', 'Material Management sent for approval successfully');
         } catch (\Exception $e) {
