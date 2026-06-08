@@ -1141,6 +1141,14 @@
             loadSidebarMenusForGroup(groupId, groupName);
         });
 
+        // Automatically pass scope parameter from URL to all DataTables ajax requests
+        $(document).on('preXhr.dt', function(e, settings, data) {
+            var urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('scope')) {
+                data.scope = urlParams.get('scope') || "";
+            }
+        });
+
         $(function () {
             var categoryId = window.SARGAM_ACTIVE_CATEGORY_ID;
             var groupId = window.SARGAM_ACTIVE_GROUP_ID;

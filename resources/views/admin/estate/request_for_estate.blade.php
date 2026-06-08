@@ -4,13 +4,13 @@
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+        && (isEstateAuthority());
     $requestForEstateEmployeesListUrl = route('admin.estate.request-for-estate.employees');
     if (request('scope') === 'self') {
         $requestForEstateEmployeesListUrl .= (str_contains($requestForEstateEmployeesListUrl, '?') ? '&' : '?') . 'scope=self';
     }
 @endphp
-@section($estateSelfHomeTab ? 'content' : 'content')
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
    <x-breadcrum title="Request For Estate" />
    <x-estate-workflow-stepper current="request-for-estate" />
@@ -34,8 +34,8 @@
             <div id="request-for-estate-card-body">
             @php
                 $showUserActionHelp = request('scope') === 'self' || ! (
-                    hasRole('Estate') ||
-                    hasRole('Admin') ||
+                    hasRole('Estate Admin') ||
+                    hasRole('Super Admin') ||
                     hasRole('Super Admin')
                 );
             @endphp
@@ -286,7 +286,7 @@
 @push('scripts')
     <script>
         window.requestEstateSelfEmployeePk = @json($selfEmployeePk ?? null);
-        window.requestEstateCanChooseEligibilityOnAdd = @json(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        window.requestEstateCanChooseEligibilityOnAdd = @json(isEstateAuthority());
         window.requestEstateLockEligibilityOnSelfScopeAdd = @json(request('scope') === 'self');
     </script>
     {!! $dataTable->scripts() !!}

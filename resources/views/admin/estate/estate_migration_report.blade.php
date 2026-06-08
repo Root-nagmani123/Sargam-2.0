@@ -2,7 +2,7 @@
 
 @section('title', 'Estate Migration Report (1998–2026) - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Estate Migration Report (1998–2026)"></x-breadcrum>
 

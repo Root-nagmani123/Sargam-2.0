@@ -132,7 +132,7 @@ class EstatePossessionOtherDataTable extends DataTable
             }
         }
 
-        $canDelete = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+        $canDelete = isEstateAuthority();
 
         return [
             'start' => (int) $r->input('start', 0),
@@ -218,7 +218,7 @@ class EstatePossessionOtherDataTable extends DataTable
             ->orderColumn('possession_date_oth', fn ($query, $order) => $query->orderBy('estate_possession_other.possession_date_oth', $order))
             ->addColumn('actions', function ($row) {
                 $editUrl = route('admin.estate.possession-view', ['id' => $row->pk]);
-                $canDelete = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+                $canDelete = isEstateAuthority();
                 $deleteUrl = route('admin.estate.possession-delete', ['id' => $row->pk]);
 
                 $html = '<div class="d-inline-flex align-items-center gap-2" role="group">';
