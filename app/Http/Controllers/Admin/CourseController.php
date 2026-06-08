@@ -103,17 +103,18 @@ class CourseController extends Controller
             'Discipline' => 'Discipline',
             'Club Society' => 'Club Society'
         ];
-        $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
-        // Pre-select the current user's own role as supporting section (non-admin users)
-        $selectedSupportingSection = '';
-        if (! (hasRole('Admin') || hasRole('SuperAdmin'))) {
-            $userRoleId = \Illuminate\Support\Facades\DB::table('model_has_roles')
+        $isSuperAdmin = hasRole('SuperAdmin');
+        if ($isSuperAdmin) {
+            $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
+            $selectedSupportingSection = old('supportingsection', '');
+        } else {
+            $userRoleIds = \Illuminate\Support\Facades\DB::table('model_has_roles')
                 ->where('model_id', \Illuminate\Support\Facades\Auth::user()->pk)
                 ->where('model_type', \App\Models\User::class)
-                ->value('role_id');
-            $selectedSupportingSection = old('supportingsection', $userRoleId ?? '');
-        } else {
-            $selectedSupportingSection = old('supportingsection', '');
+                ->pluck('role_id')
+                ->toArray();
+            $supportingSectionList = Role::whereIn('id', $userRoleIds)->orderBy('name')->pluck('name', 'id')->toArray();
+            $selectedSupportingSection = old('supportingsection', count($userRoleIds) === 1 ? $userRoleIds[0] : '');
         }
         return view('admin.programme.create', compact('facultyList', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
     }
@@ -148,7 +149,17 @@ class CourseController extends Controller
                 'Discipline' => 'Discipline',
                 'Club Society' => 'Club Society'
             ];
-            $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
+            $isSuperAdmin = hasRole('SuperAdmin');
+            if ($isSuperAdmin) {
+                $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
+            } else {
+                $userRoleIds = \Illuminate\Support\Facades\DB::table('model_has_roles')
+                    ->where('model_id', \Illuminate\Support\Facades\Auth::user()->pk)
+                    ->where('model_type', \App\Models\User::class)
+                    ->pluck('role_id')
+                    ->toArray();
+                $supportingSectionList = Role::whereIn('id', $userRoleIds)->orderBy('name')->pluck('name', 'id')->toArray();
+            }
             $selectedSupportingSection = $courseMasterObj->user_role_master_pk ?? '';
             
             return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
