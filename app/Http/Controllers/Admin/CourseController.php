@@ -104,7 +104,18 @@ class CourseController extends Controller
             'Club Society' => 'Club Society'
         ];
         $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
-        return view('admin.programme.create', compact('facultyList', 'roleOptions', 'supportingSectionList'));
+        // Pre-select the current user's own role as supporting section (non-admin users)
+        $selectedSupportingSection = '';
+        if (! (hasRole('Admin') || hasRole('SuperAdmin'))) {
+            $userRoleId = \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->where('model_id', \Illuminate\Support\Facades\Auth::user()->pk)
+                ->where('model_type', \App\Models\User::class)
+                ->value('role_id');
+            $selectedSupportingSection = old('supportingsection', $userRoleId ?? '');
+        } else {
+            $selectedSupportingSection = old('supportingsection', '');
+        }
+        return view('admin.programme.create', compact('facultyList', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
     }
 
     public function edit(string $id)
@@ -166,7 +177,7 @@ class CourseController extends Controller
             DB::rollBack();
 
             \Log::error('Course creation error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Something went wrong. Please try again.');
+            return redirect()->back()->withInput()->with('error', 'Something went wrong. Please try again.');
         }
     } 
 
