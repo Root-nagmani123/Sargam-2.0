@@ -330,6 +330,9 @@ Route::middleware(['auth', 'ensure.role'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
+        Route::get('profile/edit', function () {
+            return redirect()->route('member.profile.edit', Auth::user()->user_id);
+        })->name('profile.edit.self');
         Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
         Route::get('show/{id}', 'show')->name('show');
         Route::get('/step/{step}', 'loadStep')->name('load-step');

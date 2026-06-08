@@ -587,15 +587,27 @@ function get_Role_by_course()
         return [];
     }
 
-    $sessionRoles = Session::get('user_roles', []);
-    if (empty($sessionRoles)) {
+    // Admin / SuperAdmin see all courses — no restriction
+    if (hasRole('Admin') || hasRole('SuperAdmin')) {
         return [];
     }
-    $cacheKey = 'role_by_course_' . $user->user_id;
-    $role_course = Cache::remember($cacheKey, 600, function () use ($user, $sessionRoles) {
+
+    // Get Spatie role IDs assigned to this user
+    $userRoleIds = DB::table('model_has_roles')
+        ->where('model_id', $user->pk)
+        ->where('model_type', \App\Models\User::class)
+        ->pluck('role_id')
+        ->toArray();
+
+    if (empty($userRoleIds)) {
+        return [];
+    }
+
+    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds));
+    $role_course = Cache::remember($cacheKey, 600, function () use ($userRoleIds) {
         return DB::table('course_master as cm')
-            ->join('user_role_master as urm', 'cm.user_role_master_pk', '=', 'urm.pk')
-            ->whereIn('urm.user_role_name', $sessionRoles)
+            ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
+            ->whereIn('r.id', $userRoleIds)
             ->pluck('cm.pk')
             ->toArray();
     });
