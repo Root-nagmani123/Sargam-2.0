@@ -1676,9 +1676,6 @@ document.addEventListener('DOMContentLoaded', function() {
                                 <i class="bi bi-box-arrow-right me-1"></i> Log out
                             </button>
                         </form>
-                        <button type="button" class="btn btn-primary rounded-3 px-4 py-2 fw-medium" data-bs-dismiss="modal">
-                            <i class="bi bi-check2 me-1"></i> Got it
-                        </button>
                     </div>
                 </div>
             </div>
