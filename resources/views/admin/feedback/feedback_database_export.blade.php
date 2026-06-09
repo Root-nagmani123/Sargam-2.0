@@ -196,6 +196,7 @@
         }
 
         .text-center { text-align: center; }
+        .no-wrap { white-space: nowrap; }
 
         .report-footer {
             border-top: 1px solid #004a93;
@@ -247,6 +248,21 @@
     $rows = $rows ?? [];
     $filters = $filters ?? [];
     $record_count = $record_count ?? count($rows);
+    $visibleKeys = $visible_keys ?? ['s_no','faculty_name','course_name','faculty_address','topic','content_pct','presentation_pct','participants','session_date','comments'];
+    $columnHeaders = [
+        's_no' => '#',
+        'faculty_name' => 'Faculty',
+        'course_name' => 'Course',
+        'faculty_address' => 'Faculty address',
+        'topic' => 'Topic',
+        'content_pct' => 'Content %',
+        'presentation_pct' => 'Pres. %',
+        'participants' => 'Participants',
+        'session_date' => 'Session date',
+        'comments' => 'Comments',
+    ];
+    $centerCols = ['s_no','content_pct','presentation_pct','participants','session_date'];
+    $nlCols = ['faculty_address','comments'];
 @endphp
 
 @if ($isPrint)
@@ -291,31 +307,23 @@
 <table class="data-table">
     <thead>
         <tr>
-            <th class="text-center" style="width:3%">#</th>
-            <th style="width:11%">Faculty</th>
-            <th style="width:11%">Course</th>
-            <th style="width:14%">Faculty address</th>
-            <th style="width:14%">Topic</th>
-            <th class="text-center" style="width:6%">Content %</th>
-            <th class="text-center" style="width:6%">Pres. %</th>
-            <th class="text-center" style="width:6%">Participants</th>
-            <th class="text-center" style="width:7%">Session date</th>
-            <th style="width:22%">Comments</th>
+            @foreach ($visibleKeys as $key)
+                <th class="{{ in_array($key, $centerCols) ? 'text-center' : '' }} {{ $key === 's_no' ? 'no-wrap' : '' }}" @if($key === 's_no') style="width:22px;min-width:22px;" @endif>{{ $columnHeaders[$key] ?? $key }}</th>
+            @endforeach
         </tr>
     </thead>
     <tbody>
         @foreach ($rows as $r)
         <tr>
-            <td class="text-center">{{ $r['s_no'] }}</td>
-            <td>{{ $r['faculty_name'] }}</td>
-            <td>{{ $r['course_name'] }}</td>
-            <td>{!! nl2br(e($r['faculty_address'])) !!}</td>
-            <td>{{ $r['topic'] }}</td>
-            <td class="text-center">{{ $r['content_pct'] }}</td>
-            <td class="text-center">{{ $r['presentation_pct'] }}</td>
-            <td class="text-center">{{ $r['participants'] }}</td>
-            <td class="text-center">{{ $r['session_date'] }}</td>
-            <td>{!! nl2br(e($r['comments'])) !!}</td>
+            @foreach ($visibleKeys as $key)
+                <td class="{{ in_array($key, $centerCols) ? 'text-center' : '' }} {{ $key === 's_no' ? 'no-wrap' : '' }}">
+                    @if (in_array($key, $nlCols))
+                        {!! nl2br(e($r[$key] ?? '—')) !!}
+                    @else
+                        {{ $r[$key] ?? '—' }}
+                    @endif
+                </td>
+            @endforeach
         </tr>
         @endforeach
     </tbody>
