@@ -3,6 +3,7 @@
 @section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Course Repository')
 
 @section('content')
+
 <!-- Main Content -->
 <!-- Title Section with Back Button -->
 <div class="container-fluid">
@@ -42,9 +43,7 @@
 </div>
 <div class="d-flex" id="main-content">
     <!-- Left Sidebar -->
-    <aside class="course-sidebar-wrapper">
-        <x-course-sidebar />
-    </aside>
+   
 
     <!-- Main Content -->
     <main class="flex-grow-1">
@@ -120,7 +119,7 @@
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle">
-                            <thead style="background-color: #dc3545; color: white;">
+                            <thead class="table-light">
                                 <tr>
                                     <th class="text-center fw-bold">S.No.</th>
                                     <th class="fw-bold">Document Name</th>
@@ -139,8 +138,7 @@
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>
                                         <span
-                                            class="material-icons material-symbols-rounded text-danger me-2">picture_as_pdf</span>
-                                        <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                            class="material-icons material-symbols-rounded text-danger">picture_as_pdf</span>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}
                                     </td>
                                     <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
                                     <td>
@@ -191,10 +189,8 @@
                                         </small>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
-                                            class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
-                                            <span class="material-icons material-symbols-rounded me-1">download</span>
-                                            Download
+                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}" onclick="event.stopPropagation();" style="background-color: #e7f1ff00; border:0;padding:0;">
+                                            <span class="material-icons material-symbols-rounded">download</span>
                                         </a>
                                     </td>
                                 </tr>

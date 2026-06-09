@@ -1,7 +1,6 @@
 @extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
-
 @section('content')
 <div class="container-fluid">
      @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))
@@ -10,36 +9,50 @@
     @endif
 
     {{-- Student Information Header --}}
-    <div class="card shadow mb-4" style="border-left: 4px solid #004a93;">
-        <div class="card-body">
-            <div class="row g-3">
+    <div class="card border-0 shadow-sm rounded-4 mb-4 overflow-hidden" style="border-left: 4px solid #004a93 !important;">
+        <div class="card-body p-4">
+            <div class="row g-4">
                 <div class="col-md-4">
-                    <strong>Course Name:</strong>
-                    <span class="text-primary">
-                        {{ $course->course_name ?? 'N/A' }}
-                    </span>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 flex-shrink-0" style="width:44px;height:44px;">
+                            <i class="bi bi-mortarboard-fill fs-5"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <div class="text-muted text-uppercase small fw-semibold mb-1" style="letter-spacing:.03em;">Course Name</div>
+                            <div class="fw-semibold text-body text-break">{{ $course->course_name ?? 'N/A' }}</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-4">
-                    <strong>Student Name:</strong>
-                    <span class="text-primary">
-                        {{ $student->display_name ?? 'N/A' }}
-                    </span>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 flex-shrink-0" style="width:44px;height:44px;">
+                            <i class="bi bi-person-badge-fill fs-5"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <div class="text-muted text-uppercase small fw-semibold mb-1" style="letter-spacing:.03em;">Student Name</div>
+                            <div class="fw-semibold text-body text-break">{{ $student->display_name ?? 'N/A' }}</div>
+                        </div>
+                    </div>
                 </div>
                 <div class="col-md-4">
-                    <strong>OT Code:</strong>
-                    <span class="text-primary">
-                        {{ $student->generated_OT_code ?? 'N/A' }}
-                    </span>
+                    <div class="d-flex align-items-center gap-3">
+                        <span class="d-inline-flex align-items-center justify-content-center bg-primary-subtle text-primary rounded-3 flex-shrink-0" style="width:44px;height:44px;">
+                            <i class="bi bi-upc-scan fs-5"></i>
+                        </span>
+                        <div class="min-w-0">
+                            <div class="text-muted text-uppercase small fw-semibold mb-1" style="letter-spacing:.03em;">OT Code</div>
+                            <div class="fw-semibold text-body text-break">{{ $student->generated_OT_code ?? 'N/A' }}</div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
 
     {{-- Filter Form --}}
-    <div class="card shadow-lg mb-4 border-0 rounded-4">
-        <div class="card-header bg-primary text-white p-3 rounded-top-4">
-            <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
-                <i class="bi bi-funnel-fill me-2"></i> Attendance Filters
+    <div class="card shadow-lg mb-4">
+        <div class="card-header p-3">
+            <h5 class="mb-0 fw-bold d-flex align-items-center">Attendance Filters
             </h5>
         </div>
         <div class="card-body p-4">
@@ -59,14 +72,12 @@
                             <button type="button"
                                 class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'active' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
                                 id="filterActive"
-                                aria-pressed="{{ ($archiveMode ?? 'active') === 'active' ? 'true' : 'false' }}">
-                                <i class="bi bi-check-circle me-1"></i> Active 
+                                aria-pressed="{{ ($archiveMode ?? 'active') === 'active' ? 'true' : 'false' }}">Active 
                             </button>
                             <button type="button"
                                 class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'archive' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
                                 id="filterArchive"
-                                aria-pressed="{{ ($archiveMode ?? 'active') === 'archive' ? 'true' : 'false' }}">
-                                <i class="bi bi-archive me-1"></i> Archive 
+                                aria-pressed="{{ ($archiveMode ?? 'active') === 'archive' ? 'true' : 'false' }}">Archive 
                             </button>
                         </div>
                     </div>
@@ -78,8 +89,7 @@
                     {{-- Course Filter - Only show in Archive mode --}}
                     @if(($archiveMode ?? 'active') === 'archive')
                     <div class="col-lg-4 col-md-6">
-                        <label for="filter_course" class="form-label fw-semibold">
-                            <i class="bi bi-book me-1 text-primary"></i> Course:
+                        <label for="filter_course" class="form-label fw-semibold">Course:
                         </label>
                         <select class="form-select form-select-lg select2" id="filter_course"
                             name="filter_course" aria-label="Filter by Course">
@@ -95,17 +105,15 @@
                     @endif
                     
                     <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-5' : 'col-lg-6' }} col-md-6">
-                        <label for="filter_date" class="form-label fw-semibold">
-                            <i class="bi bi-calendar-date me-1 text-primary"></i> Date:
+                        <label for="filter_date" class="form-label fw-semibold"> Date:
                         </label>
-                        <input type="date" class="form-control form-control-lg" id="filter_date" name="filter_date"
+                        <input type="date" class="form-control" id="filter_date" name="filter_date"
                             value="{{ $filterDate ?? date('Y-m-d') }}" max="{{ date('Y-m-d') }}" aria-label="Filter by Date">
                     </div>
                     <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-5' : 'col-lg-4' }} col-md-6">
-                        <label for="filter_status" class="form-label fw-semibold">
-                            <i class="bi bi-check-circle me-1 text-primary"></i> Attendance Status:
+                        <label for="filter_status" class="form-label fw-semibold">Attendance Status:
                         </label>
-                        <select class="form-select form-select-lg select2" id="filter_status"
+                        <select class="form-select select2" id="filter_status"
                             name="filter_status" aria-label="Filter by Attendance Status">
                             <option value="">-- All Status --</option>
                             <option value="Present" {{ $filterStatus == 'Present' ? 'selected' : '' }}>Present</option>
@@ -115,11 +123,9 @@
                         </select>
                     </div>
                     <div class="col-lg-2 col-md-12 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100 fw-bold btn-lg me-2" id="applyFilters">
-                            <i class="bi bi-search"></i> Apply
+                        <button type="submit" class="btn btn-primary w-100 fw-bold me-2" id="applyFilters">Apply
                         </button>
-                        <button type="button" class="btn btn-outline-secondary w-100 btn-lg" id="clearFilters">
-                            <i class="bi bi-x-circle"></i> Clear
+                        <button type="button" class="btn btn-outline-secondary w-100" id="clearFilters">Clear
                         </button>
                     </div>
                 </div>
@@ -188,33 +194,38 @@
     </script>
 
     {{-- Attendance Details Table --}}
-    <div class="card shadow-sm rounded-4 overflow-hidden">
-        <div class="card-header bg-white border-bottom py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0 fw-semibold">Attendance Details</h4>
+    <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
+        <div class="card-header bg-white border-bottom py-3 px-4">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <h4 class="mb-0 fw-semibold d-flex align-items-center">
+                    <i class="bi bi-calendar2-check text-primary me-2"></i> Attendance Details
+                </h4>
+                <span class="badge rounded-pill bg-primary-subtle text-primary fw-semibold px-3 py-2">
+                    {{ count($attendanceRecords) }} {{ Str::plural('record', count($attendanceRecords)) }}
+                </span>
             </div>
         </div>
         <div class="card-body p-0">
             @if(count($attendanceRecords) > 0)
             <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 border-light">
-                    <thead>
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light text-uppercase small text-secondary">
                         <tr>
-                            <th class="text-nowrap">Date & Time</th>
-                            <th>Venue</th>
-                            <th>Group</th>
-                            <th>Topic</th>
-                            <th>Faculty</th>
-                            <th class="text-center text-nowrap">Attendance Status</th>
-                            <th class="text-center text-nowrap">Duty Type (MDO/Escort)</th>
-                            <th class="text-center">Exemption</th>
-                            <th class="text-center">Doc / Comment</th>
+                            <th class="text-nowrap py-3 px-4">Date &amp; Time</th>
+                            <th class="py-3">Venue</th>
+                            <th class="py-3">Group</th>
+                            <th class="py-3">Topic</th>
+                            <th class="py-3">Faculty</th>
+                            <th class="text-center text-nowrap py-3">Attendance Status</th>
+                            <th class="text-center text-nowrap py-3">Duty Type (MDO/Escort)</th>
+                            <th class="text-center py-3">Exemption</th>
+                            <th class="text-center py-3 px-4">Doc / Comment</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($attendanceRecords as $record)
                         <tr>
-                            <td class="fw-semibold text-nowrap">
+                            <td class="fw-semibold text-nowrap px-4">
                                 <div class="d-flex flex-column">
                                     <span>{{ $record['date'] }}</span>
                                     <small class="text-muted">{{ $record['session_time'] }}</small>
@@ -244,7 +255,7 @@
                                 $icon = 'bi-question-circle-fill';
                                 }
                                 @endphp
-                                <span class="badge bg-{{ $color }} fw-bold py-2 px-3">
+                                <span class="badge rounded-pill bg-{{ $color }}-subtle text-{{ $color }}-emphasis border border-{{ $color }}-subtle fw-semibold py-2 px-3">
                                     <i class="bi {{ $icon }} me-1"></i> {{ $status }}
                                 </span>
                             </td>
@@ -252,7 +263,7 @@
                             <td class="text-center">
                                 @if($record['duty_type'])
                                 <span
-                                    class="badge bg-info-subtle text-info fw-semibold">{{ $record['duty_type'] }}</span>
+                                    class="badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold py-2 px-3">{{ $record['duty_type'] }}</span>
                                 @else
                                 <span class="text-muted small">-</span>
                                 @endif
@@ -261,13 +272,13 @@
                             <td class="text-center">
                                 @if($record['exemption_type'])
                                 <span
-                                    class="badge bg-primary-subtle text-primary fw-semibold">{{ $record['exemption_type'] }}</span>
+                                    class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold py-2 px-3">{{ $record['exemption_type'] }}</span>
                                 @else
                                 <span class="text-muted small">-</span>
                                 @endif
                             </td>
 
-                            <td class="text-center text-nowrap">
+                            <td class="text-center text-nowrap px-4">
                                 @if($record['exemption_document'])
                                 <a href="{{ asset('storage/' . $record['exemption_document']) }}" target="_blank"
                                     class="btn btn-sm btn-outline-primary me-2" title="View Document"
@@ -299,8 +310,10 @@
                 </table>
             </div>
             @else
-            <div class="alert alert-info text-center m-4" role="alert">
-                <i class="bi bi-info-circle me-2"></i> No attendance records found for the selected filters.
+            <div class="text-center text-muted py-5 px-4">
+                <i class="bi bi-calendar-x display-5 d-block mb-3 text-secondary opacity-50"></i>
+                <h6 class="fw-semibold mb-1">No attendance records found</h6>
+                <p class="mb-0 small">Try adjusting the date, status, or view mode filters above.</p>
             </div>
             @endif
         </div>

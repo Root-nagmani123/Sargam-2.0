@@ -1,425 +1,30 @@
-<!DOCTYPE html>
-<html lang="en" class="admin-force-light" style="height: 100%;">
-
-<head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Feedback Form - Sargam | Lal Bahadur Shastri National Academy of Administration</title>
-    <link rel="stylesheet" href="https://bootstrapdemos.adminmart.com/matdash/dist/assets/css/styles.css">
-    <!-- Favicon icon-->
-    <link rel="shortcut icon" type="image/ico" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
-    <!-- jQuery -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-    <!-- jQuery Validation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-validate/1.19.5/jquery.validate.min.js"></script>
-
-    <!-- jQuery Steps -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.min.css" />
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery-steps/1.1.0/jquery.steps.min.js"></script>
-    <!-- Favicon -->
-    <link rel="shortcut icon" type="image/x-icon" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/css/bootstrap.min.css" rel="stylesheet" crossorigin="anonymous">
-    <!-- Icon library (Bootstrap Icons or Lucide) -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
-    <link href="{{ asset('admin_assets/css/accesibility-style_v1.css') }}?v={{ @filemtime(public_path('admin_assets/css/accesibility-style_v1.css')) ?: time() }}" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    @include('components.fonts-sargam')
-    <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
-    <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
-    <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
-
-    <style>
-        .star-rating {
-            display: inline-flex;
-            justify-content: flex-start;
-        }
-
-        .star-rating input[type="radio"] {
-            display: none;
-        }
-
-        .star-rating label {
-            font-size: 1.5rem;
-            color: #ccc;
-            cursor: pointer;
-        }
-
-        .star-rating input[type="radio"]:checked~label {
-            color: #af2910;
-        }
-
-        .star-rating label:hover,
-        .star-rating label:hover~label {
-            color: #af2910;
-        }
-
-        /* Star Rating Style */
-        .star-rating {
-            position: relative;
-            display: inline-flex;
-        }
-
-        .star-rating input {
-            display: none;
-        }
-
-        .star-rating label {
-            font-size: 1.25rem;
-            color: transparent;
-            cursor: pointer;
-            transition: color 0.2s ease-in-out;
-            padding: 0 1px;
-            -webkit-text-stroke: 2px #af2910;
-            text-stroke: 2px #af2910;
-        }
-
-        .star-rating input:not(:checked)~label {
-            color: transparent;
-            -webkit-text-stroke: 2px #af2910;
-            text-stroke: 2px #af2910;
-        }
-
-        .table td,
-        .table th {
-            vertical-align: middle;
-        }
-
-        /* Tab Styles */
-        .nav-tabs .nav-link {
-            color: #495057;
-            font-weight: 500;
-            border: 1px solid transparent;
-            border-radius: 0.375rem 0.375rem 0 0;
-            padding: 0.75rem 1.5rem;
-        }
-
-        .nav-tabs .nav-link.active {
-            color: #0d6efd;
-            background-color: #fff;
-            border-color: #dee2e6 #dee2e6 #fff;
-        }
-
-        .nav-tabs .nav-link:hover {
-            border-color: #e9ecef #e9ecef #dee2e6;
-        }
-
-        .tab-content {
-            border: 1px solid #dee2e6;
-            border-top: none;
-            border-radius: 0 0 0.375rem 0.375rem;
-            padding: 1.5rem;
-        }
-
-        .star-rating-display {
-            font-size: 1.25rem;
-        }
-
-        .remarks-text {
-            font-size: 0.875rem;
-            line-height: 1.4;
-        }
-
-        .tab-content {
-            min-height: 400px;
-        }
-
-        /* Bulk Submit Button */
-        .bulk-feedback-submit-btn {
-            display: inline-flex;
-            padding: 10px 24px;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-
-            border-radius: 8px;
-            background: var(--Surface-Action, #004A93);
-            /* solid primary */
-            border: 1px solid var(--Surface-Action, #004A93);
-
-            color: #ffffff;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-        }
-
-        .bulk-feedback-submit-btn:hover {
-            background: var(--Surface-Action-Hover, #004384);
-            border-color: var(--Surface-Action-Hover, #004384);
-        }
-
-        /* Individual Submit Button */
-        /* Individual Submit Button Default */
-        .individual-feedback-submit-btn {
-            display: inline-flex;
-            padding: 10px 24px;
-            justify-content: center;
-            align-items: center;
-            gap: 8px;
-
-            border-radius: 8px;
-            /* fixed typo */
-            border: 1px solid var(--Surface-Action, #004A93);
-            background: #ffffff;
-            /* default background */
-
-            color: var(--Surface-Action, #004A93);
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            transition: all 0.2s ease-in-out;
-        }
-
-        /* Hover State */
-        .individual-feedback-submit-btn:hover {
-            border-color: var(--Surface-Action-Hover, #004384);
-            background: var(--Information-50, #ECEDF8);
-        }
-
-        #table-loader {
-            display: none;
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.7);
-            justify-content: center;
-            align-items: center;
-            z-index: 10;
-            display: flex;
-        }
-
-        .spinner {
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% {
-                transform: rotate(0deg);
-            }
-
-            100% {
-                transform: rotate(360deg);
-            }
-        }
-
-        .rating-legend {
-            font-size: 0.875rem;
-        }
-
-        .rating-legend .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            padding: 6px 10px;
-            border-radius: 20px;
-            background: #f8f9fa;
-            border: 1px solid #e5e7eb;
-        }
-
-        .rating-legend .stars {
-            color: #af2910;
-            letter-spacing: 1px;
-            font-size: 0.95rem;
-        }
-
-        .rating-legend .text {
-            color: #374151;
-            font-weight: 500;
-        }
-
-        /* Mobile: Session Feedback */
-        .session-feedback-main {
-            max-width: 100%;
-        }
-
-        .feedback-table-wrap {
-            position: relative;
-            -webkit-overflow-scrolling: touch;
-            overflow-x: auto;
-        }
-
-        .feedback-sessions-table {
-            min-width: 720px;
-        }
-
-        .feedback-nav-tabs {
-            flex-wrap: nowrap;
-            overflow-x: auto;
-            overflow-y: hidden;
-            -webkit-overflow-scrolling: touch;
-            gap: 0.25rem;
-            scrollbar-width: thin;
-        }
-
-        .feedback-nav-tabs .nav-item {
-            flex: 1 1 auto;
-            min-width: min(100%, 11rem);
-        }
-
-        .feedback-nav-tabs .nav-link {
-            white-space: nowrap;
-            font-size: 0.875rem;
-            padding: 0.5rem 0.65rem;
-        }
-
-        @media (max-width: 767.98px) {
-            .session-feedback-header .navbar-brand img {
-                height: 44px !important;
-                width: auto !important;
-            }
-
-            .session-feedback-header .navbar .vr {
-                display: none;
-            }
-
-            .session-feedback-header .container-fluid {
-                padding-left: 0.5rem;
-                padding-right: 0.5rem;
-            }
-
-            .session-feedback-card .card-header {
-                padding-left: 0.75rem !important;
-                padding-right: 0.75rem !important;
-            }
-
-            .session-feedback-card .tab-content {
-                padding: 0.75rem !important;
-                min-height: 280px;
-            }
-
-            .session-feedback-card #date-filter {
-                max-width: 100% !important;
-            }
-
-            .session-feedback-card .col-md-6.text-end {
-                text-align: start !important;
-                margin-top: 0.5rem;
-            }
-
-            .rating-legend {
-                gap: 0.5rem !important;
-            }
-
-            .rating-legend .legend-item {
-                font-size: 0.8rem;
-                padding: 4px 8px;
-            }
-
-            .star-rating label {
-                font-size: 1.35rem;
-                padding: 0 3px;
-            }
-
-            .individual-feedback-submit-btn,
-            .bulk-feedback-submit-btn {
-                width: 100%;
-                max-width: 100%;
-                justify-content: center;
-            }
-
-            .session-feedback-card .text-end.mt-3 {
-                text-align: center !important;
-                padding-left: 0.75rem;
-                padding-right: 0.75rem;
-            }
-
-            .session-feedback-card .me-4 {
-                margin-right: 0 !important;
-            }
-        }
-    </style>
-</head>
-<x-session_message />
-
-<body class="admin-force-light" style="min-height: 100vh; display: flex; flex-direction: column;">
-    <!-- Top Blue Bar (Govt of India) -->
-    <div class="top-header d-flex justify-content-between align-items-center d-none d-md-block py-2"
-        style="background-color: #004a93;">
-        <div class="container-fluid">
-            <div class="row">
-                <div class="col-md-3 d-flex align-items-center">
-                    <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/800px-Flag_of_India.svg.png"
-                        alt="GoI Logo" height="30">
-                    <span class="ms-2 text-white" style="font-size: 14px;">Government of India</span>
-                </div>
-                <div class="col-md-9 text-end d-flex justify-content-end align-items-center">
-                    <ul class="nav justify-content-end align-items-center">
-                        <li class="nav-item"><a href="#content" class="text-white text-decoration-none"
-                                style=" font-size: 12px;">Skip to Main Content</a></li>
-                        <span class="text-muted me-3 ms-3">|</span>
-                        <li class="nav-item"><a class="text-decoration-none" id="uw-widget-custom-trigger"
-                                contenteditable="false" style="cursor: pointer;"><img
-                                    src="{{ asset('images/accessible.png') }}" alt="" width="20">
-                                <span class="text-white ms-1" style=" font-size: 12px;">
-                                    More
-                                </span>
-                            </a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Sticky Header -->
-    <div class="header sticky-top bg-white shadow-sm session-feedback-header">
-        <div class="container-fluid py-2 py-md-3">
-            <nav class="navbar navbar-expand-lg">
-                <div class="container-fluid px-0">
-                    <a class="navbar-brand me-2" href="#">
-                        <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-                            alt="Logo 1" height="80">
-                    </a>
-                    <span class="vr mx-2 d-none d-md-inline"></span>
-                    <a class="navbar-brand" href="#">
-                        <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="Logo 2" height="80">
-                    </a>
-
-                    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav"
-                        aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-
-                    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
-                        <ul class="navbar-nav align-items-center">
-                            <li class="nav-item">
-                                <a class="nav-link ms-4 me-4" href="https://www.lbsnaa.gov.in/menu/about-lbsnaa"
-                                    target="_blank">About Us</a>
-                            </li>
-                            <li class="nav-item">
-                                <a class="nav-link ms-4 me-4" href="https://www.lbsnaa.gov.in/footer_menu/contact-us"
-                                    target="_blank">Contact</a>
-                            </li>
-                        </ul>
-                    </div>
-                </div>
-            </nav>
-        </div>
-    </div>
-
+@extends('admin.layouts.timetable')
+@section('title', 'Student Feedback - Sargam')
+@section('content')
+<link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
     <!-- Main Content -->
-    <div class="container-fluid session-feedback-main px-2 px-md-3 my-3 my-md-5">
+    <div class="container-fluid session-feedback-main">
         <div class="card border-0 shadow-sm rounded-4 session-feedback-card">
-            <div class="card-header text-center rounded-top-4 mb-2" style="background-color: #591512;">
+            <div class="card-header text-center rounded-top-4 mb-2" style="background-color: #004a93;">
                 <h4 class="mb-0 text-white fw-bold">Session Feedbacks</h4>
             </div>
 
             <!-- Date Filter -->
             <div class="card-header bg-light border-bottom-0 px-4 py-3">
-                <div class="row align-items-center">
+                <div class="row align-items-end g-3">
                     <div class="col-md-6">
-                        <label for="date-filter" class="form-label mb-0 fw-semibold">
-                            <i class="bi bi-calendar-event me-2"></i>Filter by Date:
+                        <label for="date-filter" class="form-label fw-semibold text-secondary mb-2">
+                            <i class="bi bi-calendar-event me-2"></i>Filter by Date
                         </label>
-                        <input type="date" class="form-control  mt-2" id="date-filter"
-                            style="max-width: 200px;">
+                        <div class="input-group shadow-sm rounded-3" style="max-width: 240px;">
+                            <span class="input-group-text bg-white border-end-0 text-primary">
+                                <i class="bi bi-funnel"></i>
+                            </span>
+                            <input type="date" class="form-control border-start-0 ps-2" id="date-filter">
+                        </div>
                     </div>
-                    <div class="col-md-6 text-end">
-                        <button type="button" class="btn btn-sm btn-outline-secondary" id="clear-date-filter"
+                    <div class="col-md-6 text-md-end">
+                        <button type="button" class="btn btn-sm btn-outline-secondary rounded-pill px-3" id="clear-date-filter"
                             style="display: none;">
                             <i class="bi bi-x-circle me-1"></i>Clear Filter
                         </button>
@@ -433,18 +38,16 @@
                     <li class="nav-item" role="presentation">
                         <button class="nav-link active" id="pending-tab" data-bs-toggle="tab"
                             data-bs-target="#pending-tab-pane" type="button" role="tab"
-                            aria-controls="pending-tab-pane" aria-selected="true">
-                            <i class="bi bi-clock me-2"></i>Pending Feedback
-                            <span class="badge bg-danger ms-2" id="pending-count">{{ $pendingData->count() }}</span>
+                            aria-controls="pending-tab-pane" aria-selected="true">Pending Feedback
+                            <span class="badge rounded-pill ms-2" id="pending-count" style="background:#004a93;">{{ $pendingData->count() }}</span>
                         </button>
                     </li>
                     <li class="nav-item" role="presentation">
                         <button class="nav-link" id="submitted-tab" data-bs-toggle="tab"
                             data-bs-target="#submitted-tab-pane" type="button" role="tab"
-                            aria-controls="submitted-tab-pane" aria-selected="false">
-                            <i class="bi bi-check-circle me-2"></i>Submitted Feedback
-                            <span class="badge bg-success ms-2"
-                                id="submitted-count">{{ $submittedData->count() }}</span>
+                            aria-controls="submitted-tab-pane" aria-selected="false">Submitted Feedback
+                            <span class="badge rounded-pill ms-2"
+                                id="submitted-count" style="background:#004a93;">{{ $submittedData->count() }}</span>
                         </button>
                     </li>
                 </ul>
@@ -461,7 +64,7 @@
                             @csrf
                             <div class="card-body mb-4 p-0">
                                 <div class="table-responsive feedback-table-wrap">
-                                    <div class="rating-legend d-flex flex-wrap gap-3 align-items-center mt-2 mb-3">
+                                    <div class="rating-legend d-flex flex-wrap gap-3 align-items-center mt-2 mb-3 bg-light border rounded-3 px-3 py-2 mx-2 mx-md-3">
                                         <span class="legend-item">
                                             <span class="stars">★★★★★</span>
                                             <span class="text">Excellent</span>
@@ -483,105 +86,149 @@
                                             <span class="text">Below Average</span>
                                         </span>
                                     </div>
-                                    <table class="table rounded feedback-sessions-table">
-                                        <thead class="bg-danger text-white">
+                                    <style>
+                                        #pending-tab-pane .modal .star-rating { display: inline-flex; flex-direction: row-reverse; }
+                                        #pending-tab-pane .modal .star-rating input { position: absolute; opacity: 0; width: 0; height: 0; }
+                                        #pending-tab-pane .modal .star-rating label {
+                                            font-size: 2rem; line-height: 1; cursor: pointer; padding: 0 .15rem;
+                                            color: #dee2e6; transition: color .15s ease; margin: 0;
+                                        }
+                                        #pending-tab-pane .modal .star-rating label:hover,
+                                        #pending-tab-pane .modal .star-rating label:hover ~ label,
+                                        #pending-tab-pane .modal .star-rating input:checked ~ label { color: #f5b301; }
+                                        #pending-tab-pane .give-feedback-btn { transition: all .15s ease; }
+                                        #pending-tab-pane .give-feedback-btn:hover { transform: translateY(-1px); box-shadow: 0 .25rem .5rem rgba(0,74,147,.15); }
+                                    </style>
+                                    <table class="table text-nowrap">
+                                        <thead>
                                             <tr>
-                                                <th class="text-center text-white">S.No.</th>
-                                                <th class="text-center text-white">Date &amp; Time</th>
-                                                <th class="text-center text-white">Topic Detail</th>
-                                                <th class="text-center text-white">Faculty Name</th>
-                                                <th class="text-center text-white">Q. How did you like the Content?
-                                                </th>
-                                                <th class="text-center text-white">Q. How did you like the
-                                                    Presentation?</th>
-                                                <th class="text-center text-white" style="width: 20%">Remarks</th>
-                                                <th class="text-center text-white">Action</th>
+                                                <th>S.No.</th>
+                                                <th>Date &amp; Time</th>
+                                                <th>Topic Detail</th>
+                                                <th>Faculty Name</th>
+                                                <th>Action</th>
                                             </tr>
                                         </thead>
                                         <tbody id="pending-feedback-body">
                                             @php $pendingIndex = 0; @endphp
                                             @foreach ($pendingData as $feedback)
                                                 @if ($feedback->feedback_checkbox == 1)
-                                                    <tr class="text-center"
-                                                        data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
-                                                        <td class="text-center">{{ ++$pendingIndex }}</td>
-                                                        <td>
+                                                    <tr data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
+                                                        <td class="text-center fw-semibold">{{ ++$pendingIndex }}</td>
+                                                        <td class="text-center text-nowrap">
                                                             {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
                                                             <br>
                                                             <small
                                                                 class="text-muted">{{ $feedback->class_session }}</small>
                                                         </td>
-                                                        <td>{{ $feedback->subject_topic }}</td>
+                                                        <td class="fw-medium">{{ $feedback->subject_topic }}</td>
                                                         <td>{{ $feedback->faculty_name }}</td>
 
-                                                        {{-- Content Rating --}}
-                                                        <td>
-                                                            @if ($feedback->Ratting_checkbox == 1)
-                                                                <div
-                                                                    class="star-rating d-inline-flex flex-row-reverse">
-                                                                    @for ($i = 5; $i >= 1; $i--)
-                                                                        <input type="radio"
-                                                                            id="content-{{ $i }}-{{ $loop->index }}"
-                                                                            name="content[{{ $loop->index }}]"
-                                                                            value="{{ $i }}"
-                                                                            {{ old('content.' . $loop->index) == $i ? 'checked' : '' }}>
-                                                                        <label
-                                                                            for="content-{{ $i }}-{{ $loop->index }}">&#9733;</label>
-                                                                    @endfor
-                                                                </div>
-                                                            @endif
-                                                        </td>
-
-                                                        {{-- Presentation Rating --}}
-                                                        <td>
-                                                            @if ($feedback->Ratting_checkbox == 1)
-                                                                <div
-                                                                    class="star-rating d-inline-flex flex-row-reverse">
-                                                                    @for ($i = 5; $i >= 1; $i--)
-                                                                        <input type="radio"
-                                                                            id="presentation-{{ $i }}-{{ $loop->index }}"
-                                                                            name="presentation[{{ $loop->index }}]"
-                                                                            value="{{ $i }}"
-                                                                            {{ old('presentation.' . $loop->index) == $i ? 'checked' : '' }}>
-                                                                        <label
-                                                                            for="presentation-{{ $i }}-{{ $loop->index }}">&#9733;</label>
-                                                                    @endfor
-                                                                </div>
-                                                            @endif
-                                                        </td>
-
-                                                        {{-- Remarks --}}
-                                                        <td style="min-width: 180px;">
-                                                            @if ($feedback->Remark_checkbox == 1)
-                                                                <textarea class="form-control " name="remarks[{{ $loop->index }}]" rows="2"
-                                                                    placeholder="Enter remarks...">{{ old('remarks.' . $loop->index) }}</textarea>
-                                                            @endif
-                                                        </td>
+                                                        {{-- Action: opens per-row Add Feedback modal --}}
                                                         <td>
                                                             <button type="button"
-                                                                onclick="submitIndividual({{ $loop->index }})"
-                                                                class="individual-feedback-submit-btn">
-                                                                Submit
+                                                                class="btn btn-outline-primary btn-sm fw-semibold give-feedback-btn"
+                                                                data-bs-toggle="modal"
+                                                                data-bs-target="#feedbackModal{{ $loop->index }}">
+                                                                <i class="bi bi-chat-square-text me-1"></i> Give Feedback
                                                             </button>
-                                                        </td>
 
-                                                        <!-- Hidden Inputs -->
-                                                        <input type="hidden"
-                                                            name="timetable_pk[{{ $loop->index }}]"
-                                                            value="{{ $feedback->timetable_pk . '_' . $feedback->faculty_pk }}">
-                                                        <input type="hidden" name="faculty_pk[{{ $loop->index }}]"
-                                                            value="{{ $feedback->faculty_pk }}">
-                                                        <input type="hidden"
-                                                            name="original_timetable_pk[{{ $loop->index }}]"
-                                                            value="{{ $feedback->timetable_pk }}">
-                                                        <input type="hidden" name="topic_name[{{ $loop->index }}]"
-                                                            value="{{ $feedback->subject_topic }}">
-                                                        <input type="hidden"
-                                                            name="Ratting_checkbox[{{ $loop->index }}]"
-                                                            value="{{ $feedback->Ratting_checkbox }}">
-                                                        <input type="hidden"
-                                                            name="Remark_checkbox[{{ $loop->index }}]"
-                                                            value="{{ $feedback->Remark_checkbox }}">
+                                                            <!-- Hidden Inputs -->
+                                                            <input type="hidden"
+                                                                name="timetable_pk[{{ $loop->index }}]"
+                                                                value="{{ $feedback->timetable_pk . '_' . $feedback->faculty_pk }}">
+                                                            <input type="hidden" name="faculty_pk[{{ $loop->index }}]"
+                                                                value="{{ $feedback->faculty_pk }}">
+                                                            <input type="hidden"
+                                                                name="original_timetable_pk[{{ $loop->index }}]"
+                                                                value="{{ $feedback->timetable_pk }}">
+                                                            <input type="hidden" name="topic_name[{{ $loop->index }}]"
+                                                                value="{{ $feedback->subject_topic }}">
+                                                            <input type="hidden"
+                                                                name="Ratting_checkbox[{{ $loop->index }}]"
+                                                                value="{{ $feedback->Ratting_checkbox }}">
+                                                            <input type="hidden"
+                                                                name="Remark_checkbox[{{ $loop->index }}]"
+                                                                value="{{ $feedback->Remark_checkbox }}">
+
+                                                            {{-- Add Feedback Modal --}}
+                                                            <div class="modal fade text-start" id="feedbackModal{{ $loop->index }}"
+                                                                tabindex="-1"
+                                                                aria-labelledby="feedbackModalLabel{{ $loop->index }}"
+                                                                aria-hidden="true">
+                                                                <div class="modal-dialog modal-dialog-centered">
+                                                                    <div class="modal-content border-0 rounded-4 shadow">
+                                                                        <div class="modal-header border-bottom">
+                                                                            <h5 class="modal-title fw-bold"
+                                                                                id="feedbackModalLabel{{ $loop->index }}">
+                                                                                Add Feedback
+                                                                            </h5>
+                                                                            <button type="button" class="btn-close"
+                                                                                data-bs-dismiss="modal"
+                                                                                aria-label="Close"></button>
+                                                                        </div>
+                                                                        <div class="modal-body p-4">
+                                                                            <p class="text-muted small mb-4">
+                                                                                <i class="bi bi-mortarboard me-1"></i>{{ $feedback->subject_topic }}
+                                                                                <span class="mx-1">&middot;</span>
+                                                                                <i class="bi bi-person-video3 me-1"></i>{{ $feedback->faculty_name }}
+                                                                            </p>
+
+                                                                            @if ($feedback->Ratting_checkbox == 1)
+                                                                                {{-- Content Rating --}}
+                                                                                <div class="mb-4">
+                                                                                    <label class="form-label fw-semibold mb-2">How did you like the content?</label>
+                                                                                    <div class="star-rating d-inline-flex flex-row-reverse">
+                                                                                        @for ($i = 5; $i >= 1; $i--)
+                                                                                            <input type="radio"
+                                                                                                id="content-{{ $i }}-{{ $loop->index }}"
+                                                                                                name="content[{{ $loop->index }}]"
+                                                                                                value="{{ $i }}"
+                                                                                                {{ old('content.' . $loop->index) == $i ? 'checked' : '' }}>
+                                                                                            <label for="content-{{ $i }}-{{ $loop->index }}">&#9733;</label>
+                                                                                        @endfor
+                                                                                    </div>
+                                                                                </div>
+
+                                                                                {{-- Presentation Rating --}}
+                                                                                <div class="mb-4">
+                                                                                    <label class="form-label fw-semibold mb-2">How did you like the presentation?</label>
+                                                                                    <div class="star-rating d-inline-flex flex-row-reverse">
+                                                                                        @for ($i = 5; $i >= 1; $i--)
+                                                                                            <input type="radio"
+                                                                                                id="presentation-{{ $i }}-{{ $loop->index }}"
+                                                                                                name="presentation[{{ $loop->index }}]"
+                                                                                                value="{{ $i }}"
+                                                                                                {{ old('presentation.' . $loop->index) == $i ? 'checked' : '' }}>
+                                                                                            <label for="presentation-{{ $i }}-{{ $loop->index }}">&#9733;</label>
+                                                                                        @endfor
+                                                                                    </div>
+                                                                                </div>
+                                                                            @endif
+
+                                                                            @if ($feedback->Remark_checkbox == 1)
+                                                                                {{-- Remarks --}}
+                                                                                <div class="mb-1">
+                                                                                    <label class="form-label fw-semibold mb-2">Remarks</label>
+                                                                                    <textarea class="form-control" name="remarks[{{ $loop->index }}]" rows="3"
+                                                                                        placeholder="eg. Lorem Ipsum dolor sit">{{ old('remarks.' . $loop->index) }}</textarea>
+                                                                                </div>
+                                                                            @endif
+                                                                        </div>
+                                                                        <div class="modal-footer border-top-0 pt-0">
+                                                                            <button type="button"
+                                                                                class="btn btn-outline-primary px-4"
+                                                                                data-bs-dismiss="modal">Cancel</button>
+                                                                            <button type="button"
+                                                                                class="btn btn-primary px-4 individual-feedback-submit-btn"
+                                                                                onclick="submitIndividual({{ $loop->index }})">
+                                                                                Add Feedback
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </td>
                                                     </tr>
                                                 @endif
                                             @endforeach
@@ -611,16 +258,18 @@
                                 </div>
                             </div>
                             <div class="text-end mt-3 mb-4 me-4">
-                                <button type="submit" class="bulk-feedback-submit-btn">
+                                <button type="submit" class="btn btn-primary">
                                     Submit All Feedback
                                 </button>
                             </div>
                         </form>
                     @else
-                        <div class="text-center py-5">
-                            <i class="bi bi-check-circle text-success" style="font-size: 3rem;"></i>
-                            <h5 class="mt-3">No pending feedback</h5>
-                            <p class="text-muted">All feedback has been submitted.</p>
+                        <div class="text-center py-5 px-3">
+                            <span class="d-inline-flex align-items-center justify-content-center bg-success-subtle text-success rounded-circle mb-3" style="width:72px;height:72px;">
+                                <i class="bi bi-check-circle-fill" style="font-size: 2.25rem;"></i>
+                            </span>
+                            <h5 class="fw-semibold mb-1">No pending feedback</h5>
+                            <p class="text-muted mb-0">All feedback has been submitted.</p>
                         </div>
                     @endif
                 </div>
@@ -629,27 +278,27 @@
                 <div class="tab-pane fade" id="submitted-tab-pane" role="tabpanel" aria-labelledby="submitted-tab"
                     tabindex="0">
                     <div class="card-body mb-4 p-0">
-                        <div class="table-responsive feedback-table-wrap">
-                            <table class="table rounded-3 overflow-hidden align-middle mb-0 table-bordered feedback-sessions-table">
-                                <thead class="bg-success text-white">
+                        <div class="table-responsive">
+                            <table class="table text-wrap">
+                                <thead>
                                     <tr>
-                                        <th class="text-center text-white">S.No.</th>
-                                        <th class="text-center text-white">Date &amp; Time</th>
-                                        <th class="text-center text-white">Topic Detail</th>
-                                        <th class="text-center text-white">Faculty Name</th>
-                                        <th class="text-center text-white">Content Rating</th>
-                                        <th class="text-center text-white">Presentation Rating</th>
-                                        <th class="text-center text-white">Remarks</th>
-                                        <th class="text-center text-white">Submitted On</th>
+                                        <th>S.No.</th>
+                                        <th width="15%">Date &amp; Time</th>
+                                        <th>Topic Detail</th>
+                                        <th>Faculty Name</th>
+                                        <th>Content Rating</th>
+                                        <th>Presentation Rating</th>
+                                        <th>Remarks</th>
+                                        <th width="15%">Submitted On</th>
                                     </tr>
                                 </thead>
                                 <tbody id="submitted-feedback-body">
                                     @if ($submittedData->count() > 0)
                                         @php $submittedIndex = 0; @endphp
                                         @foreach ($submittedData as $feedback)
-                                            <tr class="text-center"
+                                            <tr
                                                 data-feedback-date="{{ \Carbon\Carbon::parse($feedback->from_date)->format('Y-m-d') }}">
-                                                <td class="text-center">{{ ++$submittedIndex }}</td>
+                                                <td>{{ ++$submittedIndex }}</td>
                                                 <td>
                                                     {{ \Carbon\Carbon::parse($feedback->from_date)->format('d-m-Y') }}
                                                     <br>
@@ -737,37 +386,6 @@
             </div>
         </div>
     </div>
-
-    <!-- Footer -->
-    <footer class="mt-auto text-white py-3" style="background-color: #004a93;">
-        <div class="container px-3">
-            <div class="row g-2 text-center text-md-start">
-                <div class="col-md-8">
-                    <p class="mb-0" style="font-size: 14px;">&copy; {{ date('Y') }} Lal Bahadur Shastri
-                        National Academy
-                        of Administration, Mussoorie, Uttarakhand</p>
-                </div>
-                <div class="col-md-4 text-md-end">
-                    <ul class="list-unstyled d-flex justify-content-center justify-content-md-end mb-0 flex-wrap gap-2">
-                        <li>
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px;">Privacy Policy</a>
-                        </li>
-                        <li>
-                            <a href="#" class="text-white text-decoration-none"
-                                style="font-size: 14px;">Need Help</a>
-                        </li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
-
-    <!-- Accessibility Widget -->
-    <script src="https://cdn.ux4g.gov.in/tools/accessibility-widget.js" async></script>
 
     <!-- JavaScript for Tab Functionality -->
     <script>
@@ -1012,7 +630,4 @@
         }, 100);
     }
 </script>
-
-</body>
-
-</html>
+@endsection
