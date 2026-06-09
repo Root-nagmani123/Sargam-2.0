@@ -9257,19 +9257,17 @@ class EstateController extends Controller
 
             $b->total_consumed_unit = (int) ($b->meter_one_consume_unit ?? 0) + (int) ($b->meter_two_consume_unit ?? 0);
 
-            // Fallback: when reading has 0/null water or licence, use estate_house_master (Define House) values
-            $billWater = (float) ($b->water_charges ?? 0);
-            $billLicence = (float) ($b->licence_fees ?? 0);
-            if ($billWater <= 0 && isset($b->ehm_water_charge) && ($b->ehm_water_charge !== null && $b->ehm_water_charge !== '')) {
+            // Use estate_house_master (Define House) values if set (allows updates from Define House to reflect on bills)
+            if (isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
                 $b->water_charges = (float) $b->ehm_water_charge;
             }
-            if ($billLicence <= 0 && isset($b->ehm_licence_fee) && ($b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '')) {
+            if (isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
                 $b->licence_fees = (float) $b->ehm_licence_fee;
             }
 
             // Fallback for electricity: when still 0/null, use house master electric charge
             $billElectric = (float) ($b->electricty_charges ?? 0);
-            if ($billElectric <= 0 && isset($b->ehm_electric_charge) && ($b->ehm_electric_charge !== null && $b->ehm_electric_charge !== '')) {
+            if ($billElectric <= 0 && isset($b->ehm_electric_charge) && $b->ehm_electric_charge !== null && $b->ehm_electric_charge !== '') {
                 $b->electricty_charges = (float) $b->ehm_electric_charge;
             }
 
@@ -9832,6 +9830,7 @@ class EstateController extends Controller
                 ->join('estate_possession_other as epo', 'emro.estate_possession_other_pk', '=', 'epo.pk')
                 ->join('estate_other_req as eor', 'epo.estate_other_req_pk', '=', 'eor.pk')
                 ->leftJoin('estate_unit_sub_type_master as eust', 'epo.estate_unit_sub_type_master_pk', '=', 'eust.pk')
+                ->leftJoin('estate_house_master as ehm', 'epo.estate_house_master_pk', '=', 'ehm.pk')
                 ->select(
                     'emro.pk',
                     'emro.bill_no',
@@ -9855,9 +9854,9 @@ class EstateController extends Controller
                     DB::raw('NULL as meter_two_consume_unit'),
                     ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'epo.estate_unit_type_master_pk as unit_type_pk'),
                     'epo.estate_unit_sub_type_master_pk as unit_sub_type_pk',
-                    DB::raw('NULL as ehm_water_charge'),
-                    DB::raw('NULL as ehm_electric_charge'),
-                    DB::raw('NULL as ehm_licence_fee'),
+                    'ehm.water_charge as ehm_water_charge',
+                    'ehm.electric_charge as ehm_electric_charge',
+                    'ehm.licence_fee as ehm_licence_fee',
                     'eor.emp_name',
                     DB::raw('NULL as employee_id'),
                     DB::raw("COALESCE(NULLIF(TRIM(eor.designation), ''), NULLIF(TRIM(eor.section), ''), '—') as emp_designation"),
@@ -9941,18 +9940,18 @@ class EstateController extends Controller
             $bill->meter_one_consume_unit = $u1 > 0 ? $u1 : (($curr1 > 0 || $prev1 > 0) ? 0 : null);
             $bill->meter_two_consume_unit = $u2 > 0 ? $u2 : (($curr2 > 0 || $prev2 > 0) ? 0 : null);
 
-            // 2) Fallback: when emrd has 0/null, use estate_house_master (via epd.estate_house_master_pk) for electricity, water, licence
+            // Use estate_house_master (Define House) values if set (allows updates from Define House to reflect on bills)
+            if (isset($bill->ehm_water_charge) && $bill->ehm_water_charge !== null && $bill->ehm_water_charge !== '') {
+                $bill->water_charges = (float) $bill->ehm_water_charge;
+            }
+            if (isset($bill->ehm_licence_fee) && $bill->ehm_licence_fee !== null && $bill->ehm_licence_fee !== '') {
+                $bill->licence_fees = (float) $bill->ehm_licence_fee;
+            }
+
+            // Fallback for electricity: when still 0/null, use house master electric charge
             $billElectric = (float) ($bill->electricty_charges ?? 0);
-            $billWater = (float) ($bill->water_charges ?? 0);
-            $billLicence = (float) ($bill->licence_fees ?? 0);
-            if ($billElectric <= 0 && property_exists($bill, 'ehm_electric_charge')) {
-                $bill->electricty_charges = (float) ($bill->ehm_electric_charge ?? 0);
-            }
-            if ($billWater <= 0 && property_exists($bill, 'ehm_water_charge')) {
-                $bill->water_charges = (float) ($bill->ehm_water_charge ?? 0);
-            }
-            if ($billLicence <= 0 && property_exists($bill, 'ehm_licence_fee')) {
-                $bill->licence_fees = (float) ($bill->ehm_licence_fee ?? 0);
+            if ($billElectric <= 0 && isset($bill->ehm_electric_charge) && $bill->ehm_electric_charge !== null && $bill->ehm_electric_charge !== '') {
+                $bill->electricty_charges = (float) $bill->ehm_electric_charge;
             }
 
             $bill->grand_total = (float) ($bill->electricty_charges ?? 0) + (float) ($bill->water_charges ?? 0) + (float) ($bill->licence_fees ?? 0);
@@ -10104,6 +10103,7 @@ class EstateController extends Controller
                     ($hasUnitTypeOnSubType ? 'eust.estate_unit_type_master_pk as unit_type_pk' : 'epo.estate_unit_type_master_pk as unit_type_pk'),
                     'epo.estate_unit_sub_type_master_pk as unit_sub_type_pk',
                     'ehm.water_charge as ehm_water_charge',
+                    'ehm.electric_charge as ehm_electric_charge',
                     'ehm.licence_fee as ehm_licence_fee',
                     'eor.emp_name',
                     DB::raw("COALESCE(NULLIF(TRIM(eor.designation), ''), NULLIF(TRIM(eor.section), ''), '—') as emp_designation"),
@@ -10130,14 +10130,19 @@ class EstateController extends Controller
                 $b->meter_one_consume_unit = ($u1 > 0 || $curr1 > 0 || $prev1 > 0) ? $u1 : null;
                 $b->meter_two_consume_unit = ($u2 > 0 || $curr2 > 0 || $prev2 > 0) ? $u2 : null;
 
-                $billWater = (float) ($b->water_charges ?? 0);
-                $billLicence = (float) ($b->licence_fees ?? 0);
-                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
+                if (isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
                     $b->water_charges = (float) $b->ehm_water_charge;
                 }
-                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
+                if (isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
                     $b->licence_fees = (float) $b->ehm_licence_fee;
                 }
+
+                // Fallback for electricity: when still 0/null, use house master electric charge
+                $billElectric = (float) ($b->electricty_charges ?? 0);
+                if ($billElectric <= 0 && isset($b->ehm_electric_charge) && $b->ehm_electric_charge !== null && $b->ehm_electric_charge !== '') {
+                    $b->electricty_charges = (float) $b->ehm_electric_charge;
+                }
+
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
 
@@ -10173,6 +10178,7 @@ class EstateController extends Controller
                 DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                 'eust.unit_sub_type',
                 'ehm.water_charge as ehm_water_charge',
+                'ehm.electric_charge as ehm_electric_charge',
                 'ehm.licence_fee as ehm_licence_fee',
             ];
             if ($hasEpdReading2) {
@@ -10254,14 +10260,19 @@ class EstateController extends Controller
                     $b->meter_two_consume_unit = $u2;
                 }
 
-                $billWater = (float) ($b->water_charges ?? 0);
-                $billLicence = (float) ($b->licence_fees ?? 0);
-                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
+                if (isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
                     $b->water_charges = (float) $b->ehm_water_charge;
                 }
-                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
+                if (isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
                     $b->licence_fees = (float) $b->ehm_licence_fee;
                 }
+
+                // Fallback for electricity: when still 0/null, use house master electric charge
+                $billElectric = (float) ($b->electricty_charges ?? 0);
+                if ($billElectric <= 0 && isset($b->ehm_electric_charge) && $b->ehm_electric_charge !== null && $b->ehm_electric_charge !== '') {
+                    $b->electricty_charges = (float) $b->ehm_electric_charge;
+                }
+
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
         }
@@ -10309,6 +10320,7 @@ class EstateController extends Controller
                 DB::raw("COALESCE(NULLIF(TRIM(d_emp.designation_name), ''), NULLIF(TRIM(ehrd.emp_designation), '')) as emp_designation"),
                 'eust.unit_sub_type',
                 'ehm.water_charge as ehm_water_charge',
+                'ehm.electric_charge as ehm_electric_charge',
                 'ehm.licence_fee as ehm_licence_fee',
             ];
             if ($hasEpdReading2) {
@@ -10380,14 +10392,19 @@ class EstateController extends Controller
                     $b->meter_two_consume_unit = $u2;
                 }
 
-                $billWater = (float) ($b->water_charges ?? 0);
-                $billLicence = (float) ($b->licence_fees ?? 0);
-                if ($billWater <= 0 && isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
+                if (isset($b->ehm_water_charge) && $b->ehm_water_charge !== null && $b->ehm_water_charge !== '') {
                     $b->water_charges = (float) $b->ehm_water_charge;
                 }
-                if ($billLicence <= 0 && isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
+                if (isset($b->ehm_licence_fee) && $b->ehm_licence_fee !== null && $b->ehm_licence_fee !== '') {
                     $b->licence_fees = (float) $b->ehm_licence_fee;
                 }
+
+                // Fallback for electricity: when still 0/null, use house master electric charge
+                $billElectric = (float) ($b->electricty_charges ?? 0);
+                if ($billElectric <= 0 && isset($b->ehm_electric_charge) && $b->ehm_electric_charge !== null && $b->ehm_electric_charge !== '') {
+                    $b->electricty_charges = (float) $b->ehm_electric_charge;
+                }
+
                 $b->grand_total = (float) ($b->electricty_charges ?? 0) + (float) ($b->water_charges ?? 0) + (float) ($b->licence_fees ?? 0);
             }
         }
