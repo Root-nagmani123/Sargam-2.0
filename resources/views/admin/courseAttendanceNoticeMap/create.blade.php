@@ -301,8 +301,6 @@
                     $.each(response.students, function(i, student) {
                         select.append('<option value="' + student.pk + '">' + student.display_name + '</option>');
                     });
-                    // Auto-select all students
-                    select.find('option').prop('selected', true);
                 } else {
                     select.append('<option value="" disabled>No defaulter students found</option>');
                 }
