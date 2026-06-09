@@ -85,7 +85,7 @@ class MenuRouteMatcher
         if (str_contains($menuRoute, '.') && !str_contains($menuRoute, '/')) {
             if (Route::has($menuRoute)) {
                 try {
-                    return route($menuRoute);
+                    return $this->withMenuParam(route($menuRoute), $menuId);
                 } catch (\Throwable) {
                     return route('admin.navigation.error', [
                         'reason' => 'invalid_route',
@@ -102,6 +102,22 @@ class MenuRouteMatcher
 
         $path = ltrim($menuRoute, '/');
 
-        return url($path);
+        return $this->withMenuParam(url($path), $menuId);
+    }
+
+    /**
+     * Tag an internal menu URL with its menu id so the active-state resolver can
+     * tell apart different menu items that share the same route. Active-link
+     * matching falls back to path comparison, so the extra param is harmless.
+     */
+    protected function withMenuParam(string $url, ?int $menuId): string
+    {
+        if (!$menuId) {
+            return $url;
+        }
+
+        $separator = str_contains($url, '?') ? '&' : '?';
+
+        return $url . $separator . 'menu=' . $menuId;
     }
 }

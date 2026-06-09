@@ -20,6 +20,19 @@ class SidebarNavResolver
         // group_id in the database — never from hardcoded route/name assumptions.
         // This means relocating a menu to a different tab/category in the Menu
         // manager is reflected here automatically, with no code changes.
+
+        // Exact menu id carried by the sidebar link (?menu=ID). This disambiguates
+        // routes shared by more than one menu (e.g. two different menu items that
+        // both point to "calendar"), so the menu the user actually clicked — and
+        // its tab/group — is selected, not just the first menu that matches the URL.
+        $requestMenuId = request()->get('menu');
+        if ($requestMenuId) {
+            $menu = Menu::where('is_active', 1)->find($requestMenuId);
+            if ($menu) {
+                return $this->resultFromMenu($menu);
+            }
+        }
+
         $requestCategoryId = request()->get('category');
         if ($requestCategoryId) {
             $category = SidebarCategory::where('is_active', 1)->find($requestCategoryId);
@@ -46,7 +59,11 @@ class SidebarNavResolver
             return $legacy;
         }
 
-        return $this->resultFromFirstCategory();
+        // Nothing matched a menu/category, so there is no breadcrumb trail to show.
+        // In that case fall back to the Home tab rather than the first ordered
+        // category — an unmapped page should land on Home, not arbitrarily
+        // highlight whichever category happens to sort first.
+        return $this->resultForHome();
     }
 
     public function categoryToNavTab(SidebarCategory|string|null $category): string
@@ -217,29 +234,55 @@ class SidebarNavResolver
 
     protected function resultFromMenu(Menu $menu): array
     {
+        // The mini-nav group, category and header tab are anchored to the menu's
+        // TOP-LEVEL ancestor, because the sidebar renders a sub-menu under its
+        // parent's group. Reading the matched (child) row's own group_id/category_id
+        // would pick the wrong group whenever a child row's group/category has drifted
+        // from its parent's — so we always resolve them from the ancestor that is
+        // actually displayed directly under the mini-nav group.
+        $anchor = $this->topLevelAncestor($menu);
+
         $category = null;
-        if ($menu->category_id) {
-            $category = SidebarCategory::where('is_active', 1)->find($menu->category_id);
+        if ($anchor->category_id) {
+            $category = SidebarCategory::where('is_active', 1)->find($anchor->category_id);
         }
-        if (!$category && $menu->relationLoaded('group') && $menu->group) {
-            $category = $menu->group->category ?? null;
-        }
-        if (!$category && $menu->group_id) {
-            $menu->loadMissing('group.category');
-            $category = $menu->group?->category;
+        if (!$category && $anchor->group_id) {
+            $anchor->loadMissing('group.category');
+            $category = $anchor->group?->category;
         }
 
         if (!$category) {
-            return $this->resultFromFirstCategory();
+            // The menu matched but its category is missing/inactive, so we can't
+            // build a real breadcrumb trail. Default to the Home tab rather than
+            // arbitrarily highlighting the first ordered category.
+            return $this->resultForHome();
         }
 
         return [
             'nav_tab' => $this->categoryToNavTab($category),
             'category_id' => $category->id,
             'category_slug' => $category->slug,
-            'group_id' => $menu->group_id,
+            'group_id' => $anchor->group_id,
             'menu_id' => $menu->id,
         ];
+    }
+
+    /**
+     * Walk up the parent chain to the top-level menu (the row rendered directly
+     * under a mini-nav group). Returns the menu itself when it has no parent.
+     */
+    protected function topLevelAncestor(Menu $menu): Menu
+    {
+        $guard = 0;
+        while ($menu->parent_id && $guard++ < 20) {
+            $menu->loadMissing('parent');
+            if (!$menu->parent) {
+                break;
+            }
+            $menu = $menu->parent;
+        }
+
+        return $menu;
     }
 
     protected function resultFromCategory(SidebarCategory $category): array
@@ -268,19 +311,21 @@ class SidebarNavResolver
             ];
     }
 
-    protected function resultFromFirstCategory(): array
+    /**
+     * Home-tab result with an empty trail. Used when nothing resolves, so the
+     * Home tab is selected and the breadcrumb falls back to its default.
+     */
+    protected function resultForHome(): array
     {
-        $category = SidebarCategory::where('is_active', 1)->orderBy('order')->first();
+        $home = SidebarCategory::where('is_active', 1)->where('slug', 'home')->first();
 
-        return $category
-            ? $this->resultFromCategory($category)
-            : [
-                'nav_tab' => self::HOME_TAB,
-                'category_id' => null,
-                'category_slug' => 'home',
-                'group_id' => null,
-                'menu_id' => null,
-            ];
+        return [
+            'nav_tab' => self::HOME_TAB,
+            'category_id' => $home?->id,
+            'category_slug' => 'home',
+            'group_id' => null,
+            'menu_id' => null,
+        ];
     }
 
   /**
