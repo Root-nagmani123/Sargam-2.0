@@ -2,14 +2,34 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 use App\Models\Mess\Store;
 
 class StoreController extends Controller
 {
+    private const LIST_CACHE_EPOCH_KEY = 'mess_store_master_list_epoch';
+
+    public static function bumpListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'StoreController');
+    }
+
     public function index()
     {
-        $stores = Store::orderByDesc('id')->get();
+        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
+        $cacheKey = 'mess_store_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
+
+        $stores = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_STORE_MASTER_LIST_CACHE_ENABLED',
+                'seconds' => 'MESS_STORE_MASTER_LIST_CACHE_SECONDS',
+            ],
+            'StoreController@index',
+            fn () => Store::orderByDesc('id')->get()
+        );
+
         return view('mess.stores.index', compact('stores'));
     }
 
@@ -26,6 +46,8 @@ class StoreController extends Controller
             'store_code' => $this->generateStoreCode(),
         ]));
 
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.stores.index')->with('success', 'Store added successfully');
     }
 
@@ -41,6 +63,9 @@ class StoreController extends Controller
         $data  = $this->validatedData($request, $store);
 
         $store->update($data);
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.stores.index')->with('success', 'Store updated successfully');
     }
 
@@ -48,6 +73,9 @@ class StoreController extends Controller
     {
         $store = Store::findOrFail($id);
         $store->delete();
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.stores.index')->with('success', 'Store deleted successfully');
     }
 

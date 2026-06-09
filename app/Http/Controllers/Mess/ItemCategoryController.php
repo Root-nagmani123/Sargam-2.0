@@ -2,6 +2,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\Rule;
@@ -9,11 +10,43 @@ use App\Models\Mess\ItemCategory;
 
 class ItemCategoryController extends Controller
 {
+    private const LIST_CACHE_EPOCH_KEY = 'mess_item_category_master_list_epoch';
+
+    public static function bumpListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'ItemCategoryController');
+        ItemSubcategoryController::bumpListCacheEpoch();
+    }
+
     public function index(Request $request)
+    {
+        $categoryTypeFilter = $request->get('category_type');
+        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
+        $cacheKey = 'mess_item_category_master_list:v1:' . md5(json_encode([
+            'epoch' => $epoch,
+            'category_type' => $categoryTypeFilter,
+        ]));
+
+        $itemcategories = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_ITEM_CATEGORY_MASTER_LIST_CACHE_ENABLED',
+                'seconds' => 'MESS_ITEM_CATEGORY_MASTER_LIST_CACHE_SECONDS',
+            ],
+            'ItemCategoryController@index',
+            fn () => $this->loadItemCategoriesForIndex($categoryTypeFilter)
+        );
+
+        return view('mess.itemcategories.index', compact('itemcategories', 'categoryTypeFilter'));
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, ItemCategory>
+     */
+    private function loadItemCategoriesForIndex(mixed $categoryTypeFilter)
     {
         $query = ItemCategory::query();
 
-        $categoryTypeFilter = $request->get('category_type');
         if ($categoryTypeFilter !== null && $categoryTypeFilter !== '') {
             $validTypes = array_keys(ItemCategory::categoryTypes());
             if (in_array($categoryTypeFilter, $validTypes, true) && Schema::hasColumn('mess_item_categories', 'category_type')) {
@@ -21,8 +54,7 @@ class ItemCategoryController extends Controller
             }
         }
 
-        $itemcategories = $query->orderByDesc('id')->get();
-        return view('mess.itemcategories.index', compact('itemcategories', 'categoryTypeFilter'));
+        return $query->orderByDesc('id')->get();
     }
 
     public function create()
@@ -35,6 +67,8 @@ class ItemCategoryController extends Controller
         $data = $this->validatedData($request);
 
         ItemCategory::create($data);
+
+        self::bumpListCacheEpoch();
 
         return redirect()->route('admin.mess.itemcategories.index')->with('success', 'Item Category added successfully');
     }
@@ -51,6 +85,9 @@ class ItemCategoryController extends Controller
         $data = $this->validatedData($request, $itemcategory);
 
         $itemcategory->update($data);
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.itemcategories.index')->with('success', 'Item Category updated successfully');
     }
 
@@ -60,6 +97,9 @@ class ItemCategoryController extends Controller
 
         $itemcategory = ItemCategory::findOrFail($id);
         $itemcategory->delete();
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.itemcategories.index')->with('success', 'Item Category deleted successfully');
     }
 

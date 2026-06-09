@@ -3,14 +3,34 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 use App\Models\Mess\SubStore;
 
 class SubStoreController extends Controller
 {
+    private const LIST_CACHE_EPOCH_KEY = 'mess_sub_store_master_list_epoch';
+
+    public static function bumpListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'SubStoreController');
+    }
+
     public function index()
     {
-        $subStores = SubStore::orderByDesc('id')->get();
+        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
+        $cacheKey = 'mess_sub_store_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
+
+        $subStores = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_SUB_STORE_MASTER_LIST_CACHE_ENABLED',
+                'seconds' => 'MESS_SUB_STORE_MASTER_LIST_CACHE_SECONDS',
+            ],
+            'SubStoreController@index',
+            fn () => SubStore::orderByDesc('id')->get()
+        );
+
         return view('mess.sub-stores.index', compact('subStores'));
     }
 
@@ -24,6 +44,8 @@ class SubStoreController extends Controller
         $data = $this->validatedData($request);
 
         SubStore::create($data);
+
+        self::bumpListCacheEpoch();
 
         return redirect()->route('admin.mess.sub-stores.index')->with('success', 'Sub Store added successfully');
     }
@@ -40,6 +62,9 @@ class SubStoreController extends Controller
         $data = $this->validatedData($request, $subStore);
 
         $subStore->update($data);
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.sub-stores.index')->with('success', 'Sub Store updated successfully');
     }
 
@@ -47,6 +72,9 @@ class SubStoreController extends Controller
     {
         $subStore = SubStore::findOrFail($id);
         $subStore->delete();
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.sub-stores.index')->with('success', 'Sub Store deleted successfully');
     }
 
