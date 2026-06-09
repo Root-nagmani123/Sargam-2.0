@@ -98,9 +98,6 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
 
         // Route::resource('permissions', PermissionController::class);
-        Route::get('users/export/{format}', [UserController::class, 'export'])
-            ->whereIn('format', ['csv', 'xlsx', 'pdf'])
-            ->name('users.export');
         Route::resource('users', UserController::class);
         Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
         Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
@@ -112,7 +109,6 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
-    Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
@@ -1068,10 +1064,6 @@ Route::middleware(['auth'])->group(function () {
         return view('admin.feedback.faculty_view', compact('programs', 'currentProgram'));
     })->name('admin.feedback.faculty_view');
 
-    Route::get('/feedback_details', function () {
-        return view('admin.feedback.feedback_details');
-    })->name('admin.feedback.feedback_details');
-
     //  dashboard page route
 
     //   Route::get('/active-course', function () { DashboardController:}})->name('admin.dashboard.active_course');
@@ -1147,6 +1139,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/database/courses', [FeedbackController::class, 'getDatabaseCourses'])->name('admin.feedback.database.courses');
         Route::get('/database/data', [FeedbackController::class, 'getDatabaseData'])->name('admin.feedback.database.data');
         Route::get('/database/topics', [FeedbackController::class, 'getTopicsForCourse'])->name('admin.feedback.database.topics');
+        Route::get('/database/faculties', [FeedbackController::class, 'getDatabaseFaculties'])->name('admin.feedback.database.faculties');
         Route::get('/database/export', [FeedbackController::class, 'exportDatabase'])->name('admin.feedback.database.export');
         Route::get('/database/print', [FeedbackController::class, 'printFeedbackDatabase'])->name('admin.feedback.database.print');
         Route::get('/database/export-pdf', [FeedbackController::class, 'exportFeedbackDatabasePdf'])->name('admin.feedback.database.export.pdf');

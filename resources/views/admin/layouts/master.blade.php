@@ -562,13 +562,7 @@
                 str_starts_with($path, 'admin/employee-idcard') ||
                 str_starts_with($path, 'admin/duplicate-idcard') ||
                 str_starts_with($path, 'admin/family-idcard') ||
-                str_starts_with($path, 'security/') ||
-                request()->routeIs('admin.dashboard.feed') ||
-                request()->routeIs('admin.notice.create') ||
-                request()->routeIs('admin.notice.index') ||
-                request()->routeIs('admin.notice.edit') ||
-                request()->routeIs('member.profile.edit') ||
-                str_starts_with($path, 'member/profile/edit')
+                str_starts_with($path, 'security/')
             ) {
                 $activeNavTab = '#home';
             } elseif (
@@ -604,14 +598,13 @@
             }
         @endphp
         @include('admin.layouts.header')
-        <link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}?v=7">
         <div class="page-wrapper">
 
             @include('admin.layouts.sidebar')
             <div class="body-wrapper">
                 <main id="main-content" tabindex="-1" role="main">
                 @if(request()->routeIs('admin.mess.*'))
-                    <div class="container-fluid pt-0">
+                    <div class="container-fluid px-3 px-lg-4 pt-0">
                         <div class="mess-dt-stale-hint alert alert-warning border-0 shadow-sm rounded-3 mb-3 align-items-center justify-content-between flex-wrap gap-2 no-print" role="status">
                             <span class="small mb-0">Table data may be outdated after a long idle period. Click refresh or apply filters again.</span>
                             <button type="button" class="btn btn-sm btn-warning" id="messDtStaleRefreshBtn">Refresh data</button>
@@ -653,7 +646,6 @@
     @include('admin.layouts.footer')
      <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
-    <script src="{{ asset('admin_assets/js/sidebar-panel-accordion.js') }}?v=2"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <!-- SweetAlert2 -->
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
@@ -767,7 +759,7 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         // Set all icon instances to expand (collapsed state)
         icons.forEach(function(icon) {
-            icon.textContent = "left_panel_open";
+            icon.textContent = "keyboard_double_arrow_right";
             icon.classList.remove("rotated");
         });
         console.log('Set all icons to non-rotated (collapsed state)');
@@ -781,8 +773,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
         // Set all icon instances to rotated (expanded state)
         icons.forEach(function(icon) {
-            icon.textContent = "left_panel_close";
-            icon.classList.remove("rotated");
+            icon.textContent = "keyboard_double_arrow_right";
+            icon.classList.add("rotated");
         });
         console.log('Set all icons to rotated (expanded state)');
         // After initial expanded state, adjust DataTables to new layout
@@ -793,12 +785,12 @@ document.addEventListener("DOMContentLoaded", function () {
     function syncIconWithSidebar(type) {
         const allIcons = document.querySelectorAll("#sidebarToggleIcon");
         allIcons.forEach(function(icon) {
+            icon.textContent = "keyboard_double_arrow_right";
             if (type === "full") {
-                icon.textContent = "left_panel_close";
+                icon.classList.add("rotated");
             } else {
-                icon.textContent = "left_panel_open";
+                icon.classList.remove("rotated");
             }
-            icon.classList.remove("rotated");
         });
         console.log('Synced', allIcons.length, 'icon(s) to type:', type);
     }

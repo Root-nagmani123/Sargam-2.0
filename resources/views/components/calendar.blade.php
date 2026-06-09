@@ -9,217 +9,252 @@
 @php
     $firstOfMonth = \Carbon\Carbon::create($year, $month, 1);
     $daysInMonth = $firstOfMonth->daysInMonth;
-    $startWeekDay = $firstOfMonth->dayOfWeekIso;
+    $startWeekDay = $firstOfMonth->dayOfWeekIso; // 1=Mon, 7=Sun
     $prevMonth = $firstOfMonth->copy()->subMonth();
     $nextMonth = $firstOfMonth->copy()->addMonth();
     $selected = $selected ? \Carbon\Carbon::parse($selected) : null;
+@endphp
 
-    $monthHolidays = [];
-    $holidayCounts = ['gazetted' => 0, 'restricted' => 0, 'optional' => 0];
-    $holidayDatesByType = ['gazetted' => [], 'restricted' => [], 'optional' => []];
+<style>
+    .calendar-table thead th {
+        background: none !important;
+        border: none !important;
+        box-shadow: none !important;
+        padding: 10px 5px !important;
+        font-weight: 600 !important;
+        color: #666 !important;
+        border-bottom: 2px solid #e0e0e0 !important;
+    }
+    
+    .calendar-cell {
+        position: relative;
+        padding: 8px 4px;
+        vertical-align: top;
+        height: 80px;
+    }
+    
+    .calendar-cell .day-number {
+        font-weight: 600;
+        display: block;
+        margin-bottom: 4px;
+    }
+    
+    .calendar-cell.has-event {
+        background-color: #f8f9fa;
+    }
+    
+    .calendar-cell.is-selected {
+        background-color: #e7f3ff;
+        border: 2px solid #0d6efd;
+    }
 
-    foreach ($events as $dateKey => $dayEvents) {
-        $eventDate = \Carbon\Carbon::parse($dateKey);
-        if ((int) $eventDate->year !== (int) $year || (int) $eventDate->month !== (int) $month) {
-            continue;
+    /* Blink current date */
+    @keyframes calendar-today-blink {
+        0%,
+        45% {
+            opacity: 1;
         }
-        foreach ($dayEvents as $event) {
-            if (($event['type'] ?? '') !== 'holiday') {
-                continue;
-            }
-            $type = $event['holiday_type'] ?? 'gazetted';
-            if (!isset($holidayCounts[$type])) {
-                $holidayCounts[$type] = 0;
-                $holidayDatesByType[$type] = [];
-            }
-            $monthHolidays[] = [
-                'date' => $eventDate,
-                'title' => $event['title'] ?? 'Holiday',
-                'holiday_type' => $type,
-                'description' => $event['description'] ?? '',
-            ];
-            if (!in_array($dateKey, $holidayDatesByType[$type], true)) {
-                $holidayDatesByType[$type][] = $dateKey;
-                $holidayCounts[$type]++;
-            }
+        55%,
+        100% {
+            opacity: 0.25;
         }
     }
 
-    usort($monthHolidays, fn ($a, $b) => $a['date']->timestamp <=> $b['date']->timestamp);
+    .calendar-cell.is-today {
+        background-color: rgba(255, 193, 7, 0.14);
+        border: 2px solid rgba(255, 193, 7, 0.55);
+    }
 
-    $holidayPriority = ['gazetted' => 3, 'restricted' => 2, 'optional' => 1];
+    .calendar-cell.is-today .day-number {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 1.75rem;
+        height: 1.75rem;
+        border-radius: 999px;
+        background: rgba(255, 193, 7, 0.35);
+        animation: calendar-today-blink 1s linear infinite;
+    }
+    
+    .holiday-badge {
+        font-size: 0.65rem;
+        padding: 2px 4px;
+        border-radius: 3px;
+        display: block;
+        margin-bottom: 2px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.2;
+    }
+    
+    .holiday-gazetted {
+        background-color: #dc3545;
+        color: #fff;
+    }
+    
+    .holiday-restricted {
+        background-color: #ffc107;
+        color: #000;
+    }
+    
+    .holiday-optional {
+        background-color: #17a2b8;
+        color: #fff;
+    }
 
-    $calendarRows = 6;
+    .holiday-badge.birthday-badge {
+        background: linear-gradient(135deg, #e91e63, #ff6090);
+        color: #fff;
+        font-weight: 600;
+        animation: birthday-pulse 1.5s ease-in-out infinite;
+    }
+    @keyframes birthday-pulse {
+        0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(233, 30, 99, 0.4); }
+        50% { transform: scale(1.05); box-shadow: 0 0 6px 2px rgba(233, 30, 99, 0.25); }
+    }
+    .calendar-cell.is-birthday {
+        background-color: rgba(233, 30, 99, 0.08);
+        border: 2px solid rgba(233, 30, 99, 0.4);
+    }
+    
+    .calendar-legend {
+        display: flex;
+        gap: 15px;
+        margin-top: 10px;
+        font-size: 0.85rem;
+    }
+    
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .legend-color {
+        width: 12px;
+        height: 12px;
+        border-radius: 2px;
+    }
+</style>
+
+<div class="calendar-component" data-year="{{ $year }}" data-month="{{ $month }}">
+<div class="d-flex align-items-center mb-3">
+<select class="form-select form-select-sm calendar-year" aria-label="Select Year">
+@foreach(range(now()->year - 5, now()->year + 5) as $y)
+<option value="{{ $y }}" {{ $y == $year ? 'selected' : '' }}>{{ $y }}</option>
+@endforeach
+</select>
+
+<select class="form-select form-select-sm calendar-month ms-2" aria-label="Select Month">
+@foreach(range(1,12) as $m)
+<option value="{{ $m }}" {{ $m == $month ? 'selected' : '' }}>{{ \Carbon\Carbon::create()->month($m)->format('M') }}</option>
+@endforeach
+</select>
+
+
+<div class="btn-group btn-group-sm ms-auto" role="group" aria-label="View type">
+<button type="button" class="btn btn-outline-secondary view-btn" data-view="month">Month</button>
+<button type="button" class="btn btn-secondary view-btn active" data-view="year">Year</button>
+</div>
+</div>
+
+
+<div class="calendar-wrap">
+<table class="table calendar-table mb-0" role="grid" aria-label="Calendar {{ $firstOfMonth->format('F Y') }}">
+<thead>
+<tr>
+@foreach(['Mon','Tue','Wed','Thu','Fri','Sat','Sun'] as $w)
+<th scope="col">{{ $w }}</th>
+@endforeach
+</tr>
+</thead>
+<tbody>
+@php
+$day = 1;
+$printed = 0;
+$prevDays = $prevMonth->daysInMonth - ($startWeekDay - 2); // number of prev-mth days to show (if startWeekDay>1)
+// We will render weeks until we've printed all days
+$cells = [];
 @endphp
 
-<div class="calendar-component" data-theme="{{ $theme }}" data-year="{{ $year }}" data-month="{{ $month }}">
-    <div class="calendar-nav-bar" role="navigation" aria-label="Calendar navigation">
-        <div class="calendar-nav-bar__side calendar-nav-bar__side--start">
-            <button type="button" class="calendar-nav-btn calendar-nav-year-prev" aria-label="Previous year">
-                <span class="calendar-nav-btn__icon" aria-hidden="true">&lt;&lt;</span>
-            </button>
-            <button type="button" class="calendar-nav-btn calendar-nav-month-prev" aria-label="Previous month">
-                <span class="calendar-nav-btn__icon" aria-hidden="true">&lt;</span>
-            </button>
-        </div>
 
-        <div class="calendar-month-year-label" aria-live="polite">
-            {{ $firstOfMonth->format('M Y') }}
-        </div>
+@for($r = 0; $r < 6; $r++)
+<tr>
+@for($c = 1; $c <= 7; $c++)
+@php
+$cellIndex = $r*7 + $c;
+// compute corresponding calendar day
+$globalDayIndex = $cellIndex - ($startWeekDay - 1);
+@endphp
 
-        <div class="calendar-nav-bar__side calendar-nav-bar__side--end">
-            <button type="button" class="calendar-nav-btn calendar-nav-month-next" aria-label="Next month">
-                <span class="calendar-nav-btn__icon" aria-hidden="true">&gt;</span>
-            </button>
-            <button type="button" class="calendar-nav-btn calendar-nav-year-next" aria-label="Next year">
-                <span class="calendar-nav-btn__icon" aria-hidden="true">&gt;&gt;</span>
-            </button>
-        </div>
 
-        <select class="calendar-year visually-hidden" aria-hidden="true" tabindex="-1">
-            @foreach(range(now()->year - 5, now()->year + 5) as $y)
-            <option value="{{ $y }}" {{ $y == $year ? 'selected' : '' }}>{{ $y }}</option>
-            @endforeach
-        </select>
-        <select class="calendar-month visually-hidden" aria-hidden="true" tabindex="-1">
-            @foreach(range(1, 12) as $m)
-            <option value="{{ $m }}" {{ $m == $month ? 'selected' : '' }}>{{ $m }}</option>
-            @endforeach
-        </select>
-    </div>
+@if($globalDayIndex < 1)
+{{-- previous month day --}}
+@php $d = $prevMonth->copy()->day($prevMonth->daysInMonth + $globalDayIndex); @endphp
+<td class="text-muted" aria-hidden="true">{{ $d->day }}</td>
+@elseif($globalDayIndex > $daysInMonth)
+{{-- next month day --}}
+@php $d = $nextMonth->copy()->day($globalDayIndex - $daysInMonth); @endphp
+<td class="text-muted" aria-hidden="true">{{ $d->day }}</td>
+@else
+@php $d = \Carbon\Carbon::create($year, $month, $globalDayIndex); @endphp
+@php $iso = $d->toDateString(); @endphp
 
-    <div class="calendar-wrap">
-        <div class="calendar-grid" role="grid" aria-label="Calendar {{ $firstOfMonth->format('F Y') }}">
-            @foreach(['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $w)
-            <div class="calendar-grid__weekday" role="columnheader">{{ $w }}</div>
-            @endforeach
 
-            @for($r = 0; $r < $calendarRows; $r++)
-                @for($c = 1; $c <= 7; $c++)
-                @php
-                $cellIndex = $r * 7 + $c;
-                $globalDayIndex = $cellIndex - ($startWeekDay - 1);
-                @endphp
+@php
+$isSelected = $selected && $selected->toDateString() === $iso;
+$isToday = $d->isToday();
+$hasEvent = array_key_exists($iso, $events);
+$isBirthday = $hasEvent && collect($events[$iso])->contains('type', 'birthday');
+@endphp
 
-                @if($globalDayIndex < 1)
-                @php $d = $prevMonth->copy()->day($prevMonth->daysInMonth + $globalDayIndex); @endphp
-                <div class="calendar-grid__slot" role="gridcell">
-                    <div class="calendar-cell calendar-day-other" aria-hidden="true">
-                        <span class="day-number">{{ $d->day }}</span>
-                    </div>
-                </div>
-                @elseif($globalDayIndex > $daysInMonth)
-                @php $d = $nextMonth->copy()->day($globalDayIndex - $daysInMonth); @endphp
-                <div class="calendar-grid__slot" role="gridcell">
-                    <div class="calendar-cell calendar-day-other" aria-hidden="true">
-                        <span class="day-number">{{ $d->day }}</span>
-                    </div>
-                </div>
-                @else
-                @php
-                $d = \Carbon\Carbon::create($year, $month, $globalDayIndex);
-                $iso = $d->toDateString();
-                $isSelected = $selected && $selected->toDateString() === $iso;
-                $isToday = $d->isToday();
-                $hasEvent = array_key_exists($iso, $events);
-                $isBirthday = $hasEvent && collect($events[$iso])->contains(fn ($e) => ($e['type'] ?? '') === 'birthday');
-                $dayHolidayType = null;
-                if ($hasEvent) {
-                    $best = 0;
-                    foreach ($events[$iso] as $event) {
-                        if (($event['type'] ?? '') !== 'holiday') {
-                            continue;
-                        }
-                        $type = $event['holiday_type'] ?? 'gazetted';
-                        $score = $holidayPriority[$type] ?? 0;
-                        if ($score > $best) {
-                            $best = $score;
-                            $dayHolidayType = $type;
-                        }
-                    }
-                }
-                $cellTitle = '';
-                if ($hasEvent) {
-                    $cellTitle = collect($events[$iso])->map(function ($event) {
-                        return ($event['title'] ?? '') . (($event['description'] ?? '') !== '' ? ' — ' . $event['description'] : '');
-                    })->implode('; ');
-                }
-                @endphp
-                <div class="calendar-grid__slot" role="gridcell">
-                    <div tabindex="0" role="button"
-                        class="calendar-cell{{ $isSelected ? ' is-selected' : '' }}{{ $isToday ? ' is-today' : '' }}{{ $hasEvent ? ' has-event' : '' }}{{ $isBirthday ? ' is-birthday' : '' }}{{ $dayHolidayType ? ' is-holiday-' . $dayHolidayType : '' }}"
-                        data-date="{{ $iso }}"
-                        @if($cellTitle !== '') title="{{ $cellTitle }}" @endif
-                        aria-pressed="{{ $isSelected ? 'true' : 'false' }}"
-                        aria-current="{{ $isToday ? 'date' : 'false' }}">
-                        <span class="day-number">{{ $d->day }}</span>
-                        <span class="calendar-cell-events visually-hidden">
-                            @if($hasEvent)
-                                @foreach($events[$iso] as $event)
-                                    @if(($event['type'] ?? '') === 'birthday')
-                                    Birthday: {{ $event['title'] ?? '' }}.
-                                    @elseif(($event['type'] ?? '') === 'holiday')
-                                    {{ $event['title'] ?? 'Holiday' }}.
-                                    @endif
-                                @endforeach
-                            @endif
-                        </span>
-                    </div>
-                </div>
-                @endif
-                @endfor
-            @endfor
-        </div>
-    </div>
 
-    <div class="calendar-legend-row">
-        <ul class="calendar-legend list-unstyled mb-0">
-            <li class="calendar-legend-item">
-                <span class="calendar-legend-dot calendar-legend-dot--gazetted" aria-hidden="true"></span>
-                <span>Gazetted Holiday: {{ str_pad((string) $holidayCounts['gazetted'], 2, '0', STR_PAD_LEFT) }}</span>
-            </li>
-            <li class="calendar-legend-item">
-                <span class="calendar-legend-dot calendar-legend-dot--restricted" aria-hidden="true"></span>
-                <span>Restricted Holiday: {{ str_pad((string) $holidayCounts['restricted'], 2, '0', STR_PAD_LEFT) }}</span>
-            </li>
-            <li class="calendar-legend-item">
-                <span class="calendar-legend-dot calendar-legend-dot--optional" aria-hidden="true"></span>
-                <span>Optional Holiday: {{ str_pad((string) $holidayCounts['optional'], 2, '0', STR_PAD_LEFT) }}</span>
-            </li>
-        </ul>
-        <button type="button" class="calendar-holidays-toggle" aria-expanded="false"
-            aria-controls="calendar-holidays-panel">
-            Show holidays this month
-        </button>
-    </div>
-
-    <div class="calendar-holidays-panel" id="calendar-holidays-panel" hidden>
-        <h6 class="calendar-holidays-panel__title">
-            Holidays in {{ $firstOfMonth->format('F Y') }}
-        </h6>
-
-        <div class="calendar-holiday-filters" role="tablist" aria-label="Filter holidays">
-            <button type="button" class="calendar-holiday-filter active" data-filter="gazetted"
-                role="tab" aria-selected="true">Gazetted Holiday</button>
-            <button type="button" class="calendar-holiday-filter" data-filter="restricted"
-                role="tab" aria-selected="false">Restricted Holiday</button>
-            <button type="button" class="calendar-holiday-filter" data-filter="optional"
-                role="tab" aria-selected="false">Optional Holiday</button>
-        </div>
-
-        @if(empty($monthHolidays))
-        <p class="text-body-secondary small mb-0">No holidays scheduled for this month.</p>
-        @else
-        <ul class="calendar-holiday-list list-unstyled mb-0">
-            @foreach($monthHolidays as $holiday)
-            <li class="calendar-holiday-list__item" data-holiday-type="{{ $holiday['holiday_type'] }}">
-                <span class="calendar-holiday-date calendar-holiday-date--{{ $holiday['holiday_type'] }}">
-                    {{ $holiday['date']->format('d M') }}
-                </span>
-                <span class="calendar-holiday-name">{{ $holiday['title'] }}</span>
-            </li>
-            @endforeach
-        </ul>
+<td tabindex="0" role="button" class="calendar-cell {{ $isSelected ? 'is-selected' : '' }} {{ $isToday ? 'is-today' : '' }} {{ $hasEvent ? 'has-event' : '' }} {{ $isBirthday ? 'is-birthday' : '' }}" data-date="{{ $iso }}" aria-pressed="{{ $isSelected ? 'true' : 'false' }}" aria-current="{{ $isToday ? 'date' : 'false' }}">
+<span class="day-number">{{ $d->day }}</span>
+@if($hasEvent)
+    @foreach($events[$iso] as $event)
+        @if(isset($event['type']) && $event['type'] === 'birthday')
+            <span class="holiday-badge birthday-badge" 
+                  title="{{ $event['title'] }} - {{ $event['description'] ?? '' }}">
+                🎂 {{ Str::limit($event['title'], 15) }}
+            </span>
+        @elseif(isset($event['type']) && $event['type'] === 'holiday')
+            <span class="holiday-badge holiday-{{ $event['holiday_type'] }}" 
+                  title="{{ $event['title'] }} - {{ $event['description'] ?? '' }}">
+                {{ Str::limit($event['title'], 15) }}
+            </span>
         @endif
+    @endforeach
+    <span class="visually-hidden">, has events</span>
+@endif
+</td>
+@endif
+@endfor
+</tr>
+@endfor
+</tbody>
+</table>
+</div>
+
+<!-- Legend -->
+<div class="calendar-legend">
+    <div class="legend-item">
+        <span class="legend-color" style="background-color: #D47176 
+;"></span>
+        <span>Gazetted Holiday</span>
     </div>
+    <div class="legend-item">
+        <span class="legend-color" style="background-color: #FBC272;"></span>
+        <span>Restricted Holiday</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-color" style="background-color: #17a2b8;"></span>
+        <span>Optional Holiday</span>
+    </div>
+    <div class="legend-item">
+        <span class="legend-color" style="background: linear-gradient(135deg, #e91e63, #ff6090);"></span>
+        <span>🎂 My Birthday</span>
+    </div>
+</div>
 </div>

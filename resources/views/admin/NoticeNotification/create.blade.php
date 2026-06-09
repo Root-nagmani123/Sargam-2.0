@@ -2,229 +2,93 @@
 
 @section('title', 'Create Notice notification')
 
-@push('styles')
-<link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
-<style>
-    .notice-form-card {
-        border-left: 4px solid #004a93;
-    }
-
-    .notice-form-card .form-label {
-        font-size: 0.875rem;
-        font-weight: 600;
-        color: #1e293b;
-        margin-bottom: 0.375rem;
-    }
-
-    .notice-form-card .form-control,
-    .notice-form-card .form-select {
-        border-color: #cbd5e1;
-        border-radius: 0.375rem;
-        padding: 0.5rem 0.75rem;
-        font-size: 0.875rem;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .notice-form-card .form-control:focus,
-    .notice-form-card .form-select:focus {
-        border-color: #004a93;
-        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.12);
-    }
-
-    .notice-form-card .form-control::placeholder {
-        color: #94a3b8;
-    }
-
-    .notice-form-card .form-control:disabled {
-        background-color: #f8fafc;
-        cursor: not-allowed;
-    }
-
-    .notice-form-card .note-editor.note-frame {
-        border-color: #cbd5e1;
-        border-radius: 0.375rem;
-        overflow: hidden;
-    }
-
-    .notice-form-card .note-toolbar {
-        background: #f8fafc;
-        border-bottom-color: #e2e8f0;
-    }
-
-    .notice-form-card .note-editing-area {
-        min-height: 180px;
-    }
-
-    .notice-form-actions .btn {
-        min-width: 6.5rem;
-        font-weight: 500;
-        border-radius: 0.375rem;
-        padding: 0.5rem 1.25rem;
-    }
-
-    .notice-form-actions .btn-primary {
-        background-color: #004a93;
-        border-color: #004a93;
-    }
-
-    .notice-form-actions .btn-primary:hover,
-    .notice-form-actions .btn-primary:focus {
-        background-color: #003d7a;
-        border-color: #003d7a;
-    }
-
-    .notice-form-actions .btn-outline-primary {
-        color: #004a93;
-        border-color: #004a93;
-    }
-
-    .notice-form-actions .btn-outline-primary:hover {
-        background-color: #004a93;
-        border-color: #004a93;
-        color: #fff;
-    }
-</style>
-@endpush
-
 @section('content')
-<div class="container-fluid notice-form-page py-1">
+
+
+<div class="container-fluid">
     <x-breadcrum title="Notice List" />
     <x-session_message />
-
-    <div class="card notice-form-card border-0 shadow-sm rounded-3">
+    <div class="card" style="border-left: 4px solid #004a93;">
         @if ($errors->any())
-        <div class="card-body pb-0">
-            <div class="alert alert-danger alert-dismissible fade show mb-0" role="alert">
-                <div class="d-flex align-items-start gap-2">
-                    <i class="bi bi-exclamation-triangle-fill flex-shrink-0 mt-1" aria-hidden="true"></i>
-                    <div>
-                        <strong class="d-block mb-1">Please correct the following:</strong>
-                        <ul class="mb-0 ps-3 small">
-                            @foreach ($errors->all() as $error)
-                            <li>{{ $error }}</li>
-                            @endforeach
-                        </ul>
-                    </div>
-                </div>
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-            </div>
+        <div class="alert alert-danger">
+            <ul>
+                @foreach ($errors->all() as $error)
+                <li>{{ $error }}</li>
+                @endforeach
+            </ul>
         </div>
         @endif
 
-        <div class="card-body p-4 p-lg-5">
-            <div class="d-flex flex-wrap align-items-center gap-2 mb-4 pb-3 border-bottom border-light-subtle">
-                <span class="badge rounded-1 bg-primary-subtle text-primary fw-semibold text-uppercase px-2 py-2">
-                    <i class="bi bi-megaphone me-1" aria-hidden="true"></i>Notice
-                </span>
-                <h4 class="card-title mb-0 fw-semibold text-dark">Create Notice notification</h4>
-            </div>
 
-            <form method="POST" action="{{ route('admin.notice.store') }}" enctype="multipart/form-data" class="notice-form">
+        <div class="card-body">
+            <h4 class="card-title mb-3">Create Notice notification</h4>
+            <hr>
+            <form method="POST" action="{{ route('admin.notice.store') }}" enctype="multipart/form-data">
                 @csrf
-                <div class="row g-3 g-lg-4">
-                    {{-- Row 1: Title | Type | Sub Type --}}
-                    <div class="col-md-6 col-lg-4">
-                        <label class="form-label" for="notice_title">
-                            Notice Title <span class="text-danger" aria-hidden="true">*</span>
-                        </label>
-                        <input type="text"
-                            name="notice_title"
-                            id="notice_title"
-                            class="form-control"
-                            value="{{ old('notice_title') }}"
-                            placeholder="eg. Notice 01">
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <label class="form-label" for="notice_type">
-                            Notice Type <span class="text-danger" aria-hidden="true">*</span>
-                        </label>
-                        <select name="notice_type" id="notice_type" class="form-control">
-                            <option value="">Select the notice type</option>
-                            @foreach($types as $t)
-                            <option value="{{ $t }}" {{ old('notice_type') == $t ? 'selected' : '' }}>{{ $t }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-6 col-lg-4">
-                        <label class="form-label" for="noticeSubType">Notice Sub Type</label>
-                        <select id="noticeSubType" class="form-control" disabled aria-label="Notice sub type">
-                            <option value="">Select the sub type</option>
-                        </select>
-                    </div>
-
-                    {{-- Row 2: Description (rich text) --}}
+                <div class="row">
                     <div class="col-12">
-                        <label class="form-label" for="editor">
-                            Description <span class="text-danger" aria-hidden="true">*</span>
-                        </label>
-                        <textarea id="editor" name="description" class="form-control">{{ old('description') }}</textarea>
-                    </div>
-
-                    {{-- Row 3: Display | Expiry --}}
-                    <div class="col-md-6">
-                        <label class="form-label" for="display_date">
-                            Display Date <span class="text-danger" aria-hidden="true">*</span>
-                        </label>
-                        <input type="date"
-                            name="display_date"
-                            id="display_date"
-                            class="form-control"
-                            value="{{ old('display_date') }}">
-                    </div>
-                    <div class="col-md-6">
-                        <label class="form-label" for="expiry_date">
-                            Expiry Date <span class="text-danger" aria-hidden="true">*</span>
-                        </label>
-                        <input type="date"
-                            name="expiry_date"
-                            id="expiry_date"
-                            class="form-control"
-                            value="{{ old('expiry_date') }}">
-                    </div>
-
-                    {{-- Row 4: Document | Target Audience --}}
-                    <div class="col-md-6">
-                        <label class="form-label" for="document">
-                            Document
-                        </label>
-                        <input type="file"
-                            name="document"
-                            id="document"
-                            class="form-control">
-                        <div class="form-text text-muted small">
-                            <i class="bi bi-info-circle me-1" aria-hidden="true"></i>Optional — JPG, PNG, or PDF (max 5 MB).
+                        <div class="mb-3">
+                            <label class="form-label">Notice Title <span class="text-danger">*</span></label>
+                            <input type="text" name="notice_title" class="form-control" value="{{ old('notice_title') }}">
                         </div>
                     </div>
-                    <div class="col-md-6">
-                        <label class="form-label" for="targetAudience">
-                            Target Audience <span class="text-danger" aria-hidden="true">*</span>
-                        </label>
-                        <select name="target_audience" id="targetAudience" class="form-control">
-                            <option value="">Select the target audience</option>
-                            @foreach($target as $t)
-                            <option value="{{ $t }}" {{ old('target_audience') == $t ? 'selected' : '' }}>{{ $t }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    {{-- Conditional: Course --}}
-                    <div class="col-md-6 d-none" id="courseBox">
-                        <label class="form-label" for="courseSelect">Select Course</label>
-                        <select name="course_master_pk" id="courseSelect" class="form-control">
-                            <option value="">Select Course</option>
-                        </select>
-                    </div>
-
-                    {{-- Actions --}}
                     <div class="col-12">
-                        <div class="notice-form-actions d-flex flex-wrap justify-content-end gap-2 pt-3 mt-2 border-top border-light-subtle">
-                            <a href="{{ route('admin.notice.index') }}" class="btn btn-outline-primary">
-                                Cancel
-                            </a>
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-check-lg me-1" aria-hidden="true"></i>Save
-                            </button>
+                        <div class="mb-3">
+                            <label class="form-label">Description <span class="text-danger">*</span></label>
+                            <textarea id="editor" name="description" class="form-control">{{ old('description') }}</textarea>
                         </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Notice Type <span class="text-danger">*</span></label>
+                            <select name="notice_type" class="form-control">
+                                <option value="">Select Notice Type</option>
+                                @foreach($types as $t)
+                                <option value="{{ $t }}" {{ old('notice_type') == $t ? 'selected' : '' }}>{{ $t }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Display Date <span class="text-danger">*</span></label>
+                            <input type="date" name="display_date" class="form-control" value="{{ old('display_date') }}">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Expiry Date <span class="text-danger">*</span></label>
+                            <input type="date" name="expiry_date" class="form-control" value="{{ old('expiry_date') }}">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Upload Document</label>
+                            <input type="file" name="document" class="form-control">
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3">
+                            <label class="form-label">Target Audience <span class="text-danger">*</span></label>
+                            <select name="target_audience" id="targetAudience" class="form-control">
+                                <option value="">Select Target Audience</option>
+                                @foreach($target as $t)
+                                <option value="{{ $t }}" {{ old('target_audience') == $t ? 'selected' : '' }}>{{ $t }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="mb-3 d-none" id="courseBox">
+                            <label class="form-label">Select Course</label>
+                            <select name="course_master_pk" id="courseSelect" class="form-control">
+                                <option value="">Select Course</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex justify-content-end gap-2">
+                        <button class="btn btn-primary">Save</button>
+                        <a href="{{ route('admin.notice.index') }}" class="btn btn-secondary">Cancel</a>
                     </div>
                 </div>
             </form>
@@ -232,40 +96,16 @@
     </div>
 </div>
 @endsection
-
 @section('scripts')
+<link href="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.css" rel="stylesheet">
+
 <script src="https://cdnjs.cloudflare.com/ajax/libs/summernote/0.8.18/summernote-lite.min.js"></script>
+
 
 <script>
     $(document).ready(function() {
-        var noticeSubTypesMap = {
-            'Office order': ['General Order', 'Circular', 'Directive', 'Memorandum'],
-            'Office notice': ['General Notice', 'Administrative Notice', 'Holiday Notice'],
-            'Course notice': ['Academic Notice', 'Schedule Notice', 'Examination Notice'],
-            'Personal': ['Individual', 'Confidential'],
-            'Service related': ['Transfer', 'Posting', 'Promotion', 'Retirement']
-        };
-
-        function refreshNoticeSubType() {
-            var type = $('#notice_type').val();
-            var $sub = $('#noticeSubType');
-            $sub.empty().append('<option value="">Select the sub type</option>');
-            if (type && noticeSubTypesMap[type]) {
-                noticeSubTypesMap[type].forEach(function(label) {
-                    $sub.append($('<option></option>').val(label).text(label));
-                });
-                $sub.prop('disabled', false);
-            } else {
-                $sub.prop('disabled', true);
-            }
-        }
-
-        $('#notice_type').on('change', refreshNoticeSubType);
-        refreshNoticeSubType();
-
         $('#editor').summernote({
             height: 200,
-            placeholder: 'Write here...',
             toolbar: [
                 ['style', ['style']],
                 ['font', ['bold', 'italic', 'underline', 'clear']],
