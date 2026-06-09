@@ -5,6 +5,28 @@
 
 @section('title', 'Faculty Feedback with Comments Admin View - Sargam | Lal Bahadur')
 
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<style>
+/* Choices.js — match Bootstrap form-select height & border */
+#programSelect + .choices .choices__inner {
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    font-size: 0.875rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    background-color: #fff;
+}
+#programSelect + .choices .choices__input {
+    font-size: 0.875rem;
+}
+/* Remove Bootstrap's background-image arrow so only Choices.js arrow shows */
+#programSelect.form-select {
+    background-image: none;
+}
+</style>
+@endpush
+
 @section('setup_content')
 <style>
 :root {
@@ -181,7 +203,7 @@ body {
 
                         <div class="mb-3">
                             <label class="form-label">Program Name</label>
-                            <select class="form-select" name="program_id" id="programSelect">
+                            <select name="program_id" id="programSelect">
                                 <option value="">All Programs</option>
                                 @php
                                 $programs = $programs ?? collect([]);
@@ -503,11 +525,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const selectedTypes = Array.from(facultyTypeCheckboxes)
             .filter(cb => cb.checked)
             .map(cb => cb.value);
-
-        if (selectedTypes.length === 0) {
-            suggestionsList.style.display = 'none';
-            return;
-        }
+        // If no type selected, search across all types (pass empty array = no type filter)
 
         const searchTerm = facultySearch.value.trim();
 
@@ -582,13 +600,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Toggle suggestions dropdown
     facultySearch.addEventListener('focus', function() {
-        const selectedTypes = Array.from(facultyTypeCheckboxes)
-            .filter(cb => cb.checked)
-            .map(cb => cb.value);
-
-        if (selectedTypes.length > 0) {
-            updateFacultySuggestions();
-        }
+        updateFacultySuggestions();
     });
 
     facultySearch.addEventListener('input', updateFacultySuggestions);
@@ -636,6 +648,12 @@ document.addEventListener('DOMContentLoaded', function() {
         suggestionsList.style.display = 'none';
 
         // Reset program dropdown to show all programs
+        // Destroy Choices instance first, then reset
+        if (programSelect._choicesInstance) {
+            programSelect._choicesInstance.destroy();
+            programSelect._choicesInstance = null;
+            delete programSelect.dataset.choicesInitialized;
+        }
         programSelect.innerHTML = '<option value="">Loading programs...</option>';
         programSelect.disabled = true;
 
@@ -646,9 +664,9 @@ document.addEventListener('DOMContentLoaded', function() {
         goToPage(1);
     });
 
-    // Auto-load on filter change
+    // Auto-load on filter change (date inputs only — program_id handled by Choices change event)
     const filterInputs = document.querySelectorAll(
-        '#filterForm select[name="program_id"], #filterForm input[type="date"]');
+        '#filterForm input[type="date"]');
     filterInputs.forEach(input => {
         input.addEventListener('change', function() {
             goToPage(1); // Reset to page 1 when filters change
@@ -704,16 +722,27 @@ function loadFeedbackData(page = 1) {
             const newProgramSelect = doc.getElementById('programSelect');
             if (newProgramSelect) {
                 const currentProgramId = programSelect.value;
+
+                // Destroy existing Choices instance before mutating the element
+                if (programSelect._choicesInstance) {
+                    programSelect._choicesInstance.destroy();
+                    programSelect._choicesInstance = null;
+                    delete programSelect.dataset.choicesInitialized;
+                }
+
                 programSelect.innerHTML = newProgramSelect.innerHTML;
+
                 // Try to preserve the selected program
                 if (currentProgramId) {
-                    const optionExists = Array.from(programSelect.options).some(opt => opt.value ===
-                        currentProgramId);
+                    const optionExists = Array.from(programSelect.options).some(opt => opt.value === currentProgramId);
                     if (optionExists) {
                         programSelect.value = currentProgramId;
                     }
                 }
                 programSelect.disabled = false;
+
+                // Reinitialize Choices
+                initProgramChoices();
             }
 
             // Update content
@@ -892,4 +921,48 @@ function printReport() {
     window.open(printUrl, '_blank');
 }
 </script>
+
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+function initProgramChoices() {
+    const el = document.getElementById('programSelect');
+    if (!el || typeof window.Choices === 'undefined') return;
+
+    const instance = new Choices(el, {
+        shouldSort: false,
+        searchEnabled: true,
+        searchResultLimit: 100,
+        searchPlaceholderValue: 'Search programs...',
+        itemSelectText: '',
+        allowHTML: false,
+        classNames: {
+            containerInner: ['choices__inner', 'shadow-sm'],
+            input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+            inputCloned: ['choices__input--cloned'],
+            listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+            item: ['choices__item', 'dropdown-item', 'rounded-0'],
+            itemSelectable: ['choices__item--selectable'],
+            itemDisabled: ['choices__item--disabled', 'disabled'],
+            itemChoice: ['choices__item--choice'],
+            placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+            highlightedState: ['is-highlighted', 'active'],
+            notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+        }
+    });
+
+    el._choicesInstance = instance;
+
+    // When Choices changes the value, trigger filter reload
+    el.addEventListener('change', function() {
+        goToPage(1);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    initProgramChoices();
+});
+</script>
+@endpush
+
 @endsection

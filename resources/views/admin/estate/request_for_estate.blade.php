@@ -505,6 +505,12 @@
             e.preventDefault();
             var selVal = getSelectVal(document.getElementById('modal_employee_pk'));
             $('#request_employee_pk').val(selVal || '0');
+            var eligVal = getSelectVal(document.getElementById('modal_eligibility_type_pk'));
+            if (!eligibilityLocked) {
+                $('#modal_eligibility_type_pk_hidden').val(eligVal || '');
+            } else {
+                $('#modal_eligibility_type_pk_hidden').val(eligVal || $('#modal_eligibility_type_pk_hidden').val() || '');
+            }
             var $form = $(this);
             var $errors = $('#addEditRequestEstateFormErrors');
             var $btn = $('#btnSubmitRequestEstate');
@@ -520,7 +526,8 @@
                 success: function(res) {
                     if (addEditModal) addEditModal.hide();
                     if (res.success && res.message) {
-                        $('#requestForEstateTable').DataTable().ajax.reload(null, false);
+                        var isNew = !$('#request_estate_id').val();
+                        $('#requestForEstateTable').DataTable().ajax.reload(null, isNew);
                         var alertHtml = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2"></i><span class="flex-grow-1">' + res.message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
                         $('#request-for-estate-card-body').find('.alert-success').remove();
                         $('#request-for-estate-card-body').prepend(alertHtml);

@@ -3,11 +3,10 @@
 namespace App\DataTables;
 
 use App\Models\EstateHomeRequestDetails;
-use App\Support\RedisBackedCache;
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as QueryBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -15,86 +14,38 @@ use Yajra\DataTables\Services\DataTable;
 
 class EstateRequestPutInHacDataTable extends DataTable
 {
-    /**
-     * Server-side JSON (ESTATE_UPDATE_METER_READING_CACHE_*). Keys: estate_pih:v1:…
-     */
-    public function ajax(): JsonResponse
+    public const LISTING_CACHE_EPOCH_KEY = 'estate_pih_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
     {
-        $draw = (int) $this->request()->input('draw', 0);
-        $fingerprint = $this->putInHacDataTableCacheFingerprint();
-        $cacheKey = 'estate_pih:v1:' . md5(json_encode($fingerprint));
-
-        $payload = $this->rememberEstateListingCache($cacheKey, function () {
-            $resp = parent::ajax();
-            $data = $resp->getData(true);
-            if (! is_array($data)) {
-                return ['__passthrough' => true, 'body' => $resp->getContent()];
-            }
-            unset($data['draw']);
-
-            return $data;
-        });
-
-        if (isset($payload['__passthrough']) && $payload['__passthrough']) {
-            $decoded = json_decode((string) ($payload['body'] ?? ''), true);
-
-            return is_array($decoded)
-                ? new JsonResponse(array_merge($decoded, ['draw' => $draw]))
-                : parent::ajax();
-        }
-
-        $payload['draw'] = $draw;
-
-        return new JsonResponse($payload);
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'EstateRequestPutInHacDataTable');
     }
 
     /**
-     * @template T
-     *
-     * @param  callable(): T  $callback
-     * @return T
+     * Server-side JSON (.env: ESTATE_UPDATE_METER_READING_CACHE_*).
      */
-    private function rememberEstateListingCache(string $cacheKey, callable $callback)
+    public function ajax(): JsonResponse
     {
-        $enabled = ! in_array(strtolower((string) env('ESTATE_UPDATE_METER_READING_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
-        $ttl = max(30, (int) env('ESTATE_UPDATE_METER_READING_CACHE_SECONDS', 300));
-        $storeName = RedisBackedCache::estateUpdateMeterReadingStoreName();
-        $repository = RedisBackedCache::repositoryForStore($storeName);
-        if (! $enabled) {
-            return $callback();
-        }
-        try {
-            return $repository->remember($cacheKey, $ttl, $callback);
-        } catch (\Throwable $e) {
-            Log::warning('Put in HAC DataTable: cache store failed, using DB only.', [
-                'store' => $storeName,
-                'message' => $e->getMessage(),
-            ]);
-
-            return $callback();
-        }
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'estate_pih:v1:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'ESTATE_UPDATE_METER_READING_CACHE_ENABLED',
+                'seconds' => 'ESTATE_UPDATE_METER_READING_CACHE_SECONDS',
+            ],
+            'EstateRequestPutInHacDataTable',
+            fn () => parent::ajax(),
+            $this->putInHacListingCacheExtra()
+        );
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function putInHacDataTableCacheFingerprint(): array
+    private function putInHacListingCacheExtra(): array
     {
         $r = $this->request();
-        $columns = $r->input('columns', []);
-        $colSearch = [];
-        if (is_array($columns)) {
-            foreach ($columns as $c) {
-                if (! is_array($c)) {
-                    continue;
-                }
-                $colSearch[] = [
-                    'data' => $c['data'] ?? '',
-                    'sv' => trim((string) data_get($c, 'search.value', '')),
-                ];
-            }
-        }
-
         $user = Auth::user();
         $canPutInHac = $user && (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
 
@@ -109,11 +60,6 @@ class EstateRequestPutInHacDataTable extends DataTable
         }
 
         return [
-            'start' => (int) $r->input('start', 0),
-            'len' => $r->input('length', 10),
-            'q' => trim((string) data_get($r->all(), 'search.value', '')),
-            'order' => $r->input('order', []),
-            'cols' => $colSearch,
             'scope' => (string) $r->input('scope', ''),
             'emp' => $empScope,
             'can' => $canPutInHac ? 1 : 0,
@@ -208,8 +154,15 @@ class EstateRequestPutInHacDataTable extends DataTable
                 'estate_home_request_details.remarks',
                 'estate_home_request_details.hac_status',
             ])
-            ->where('estate_home_request_details.hac_status', 0)
-            ->where('estate_home_request_details.change_status', 0)
+            ->where(function ($query) {
+                $query->where('estate_home_request_details.hac_status', 0)
+                    ->orWhereNull('estate_home_request_details.hac_status');
+            })
+            ->where(function ($query) {
+                $query->where('estate_home_request_details.change_status', 0)
+                    ->orWhereNull('estate_home_request_details.change_status');
+            })
+            ->where('estate_home_request_details.status', '!=', 2)
             ->orderBy('estate_home_request_details.pk', 'desc');
 
         // Home ?scope=self: only this user's requests (same as Request For Estate self view).

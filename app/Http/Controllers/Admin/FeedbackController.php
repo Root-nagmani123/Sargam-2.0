@@ -39,7 +39,7 @@ class FeedbackController extends Controller
         $this->middleware('auth');
     }
 
-    public function database(Request $request)
+    public function database(Request $request, \App\DataTables\FeedbackDatabaseDataTable $dataTable)
     {
         try {
             $courseType = $request->get('course_type', 'current');
@@ -55,7 +55,7 @@ class FeedbackController extends Controller
                 ->orderBy('full_name')
                 ->get();
 
-            return view('admin.feedback.feedback_database', compact('courses', 'faculties', 'courseType'));
+            return $dataTable->render('admin.feedback.feedback_database', compact('courses', 'faculties', 'courseType'));
         } catch (\Exception $e) {
             \Log::error('Error in FeedbackController@database: ' . $e->getMessage());
 
@@ -112,23 +112,41 @@ class FeedbackController extends Controller
 
                 DB::raw('COUNT(DISTINCT tf.student_master_pk) as participant_count'),
                 DB::raw('DATE(t.START_DATE) as session_date'),
-                DB::raw('GROUP_CONCAT(DISTINCT tf.remark SEPARATOR " | ") as all_comments'),
+                DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark ELSE NULL END SEPARATOR " | ") as all_comments'),
 
                 't.pk as timetable_pk'
             ])
             ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
-            ->join('faculty_master as f', 't.faculty_master', '=', 'f.pk')
+            ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-            ->where('t.course_master_pk', $request->course_id)
-            ->where('t.START_DATE', '>=', Carbon::now()->subYears(2));
+            ->where('tf.is_submitted', 1)
+            ->whereNotNull('tf.content')
+            ->whereNotNull('tf.presentation')
+            ->where('tf.content', '!=', '')
+            ->where('tf.presentation', '!=', '');
 
-        /* 🔍 Filters */
-        if ($request->search_param === 'faculty' && $request->filled('faculty_id')) {
+        // Filter by course if specified
+        if ($request->filled('course_id')) {
+            $query->where('t.course_master_pk', $request->course_id);
+        }
+
+        /* 🔍 Filters - all apply simultaneously */
+        if ($request->filled('faculty_id')) {
             $query->where('f.pk', $request->faculty_id);
         }
 
-        if ($request->search_param === 'topic' && $request->filled('topic_value')) {
+        if ($request->filled('topic_value')) {
             $query->where('t.subject_topic', 'like', "%{$request->topic_value}%");
+        }
+
+        if ($request->filled('search_term')) {
+            $s = $request->search_term;
+            $query->where(function ($q) use ($s) {
+                $q->where('f.full_name', 'LIKE', "%{$s}%")
+                  ->orWhere('c.course_name', 'LIKE', "%{$s}%")
+                  ->orWhere('t.subject_topic', 'LIKE', "%{$s}%")
+                  ->orWhere('f.email_id', 'LIKE', "%{$s}%");
+            });
         }
 
         $query->groupBy(
@@ -140,8 +158,28 @@ class FeedbackController extends Controller
             't.subject_topic',
             't.START_DATE',
             't.pk'
-        )
-            ->orderBy('t.START_DATE', 'DESC');
+        );
+
+        // Conditional filter (content/presentation with comparison operator)
+        if ($request->filled('cond_field') && $request->filled('cond_operator') && $request->filled('cond_value')) {
+            $allowedFields = ['content', 'presentation'];
+            $allowedOperators = ['>=', '<=', '>', '<', '='];
+            $field = $request->cond_field;
+            $operator = $request->cond_operator;
+            $value = (float) $request->cond_value;
+
+            if (in_array($field, $allowedFields) && in_array($operator, $allowedOperators)) {
+                $query->havingRaw("ROUND(AVG(tf.{$field}) * 20, 2) {$operator} ?", [$value]);
+            }
+        }
+
+        $query->orderBy('t.START_DATE', 'ASC')
+            ->orderByRaw("
+              COALESCE(
+                  TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', 1)), '%h:%i %p')),
+                  86400
+              ) ASC
+          ");
 
         return $query;
     }
@@ -150,17 +188,24 @@ class FeedbackController extends Controller
     public function getDatabaseData(Request $request)
     {
         try {
+            DB::statement("SET SESSION group_concat_max_len = 1000000;");
+
             /* ---------------- Validation ---------------- */
             $validated = $request->validate([
-                'course_id'    => 'required|integer',
-                'search_param' => 'nullable|string|in:all,faculty,topic',
+                'course_id'    => 'nullable|integer',
+                'search_param' => 'nullable|string|in:all,faculty,topic,conditional',
                 'faculty_id'   => 'nullable|integer',
                 'topic_value'  => 'nullable|string',
+                'cond_field'   => 'nullable|string|in:content,presentation',
+                'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
+                'cond_value'   => 'nullable|numeric|min:0|max:100',
                 'per_page'     => 'nullable|integer',
                 'page'         => 'nullable|integer',
             ]);
 
-            $this->assertFacultyReportCourseAccess($request, (int) $validated['course_id']);
+            if (!empty($validated['course_id'])) {
+                $this->assertFacultyReportCourseAccess($request, (int) $validated['course_id']);
+            }
 
             /* ---------------- Base Query ---------------- */
             $query = $this->baseDatabaseQuery($request);
@@ -213,6 +258,41 @@ class FeedbackController extends Controller
     }
 
 
+    public function getDatabaseFaculties(Request $request)
+    {
+        try {
+            $request->validate(['course_id' => 'nullable|integer']);
+
+            if ($request->filled('course_id')) {
+                $this->assertFacultyReportCourseAccess($request, (int) $request->course_id);
+            }
+
+            $facultyQuery = DB::table('topic_feedback as tf')
+                ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+                ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
+                ->where('tf.is_submitted', 1)
+                ->whereNotNull('tf.content')
+                ->whereNotNull('tf.presentation')
+                ->where('tf.content', '!=', '')
+                ->where('tf.presentation', '!=', '');
+
+            if ($request->filled('course_id')) {
+                $facultyQuery->where('t.course_master_pk', $request->course_id);
+            }
+
+            $faculties = $facultyQuery
+                ->select('f.pk', 'f.full_name')
+                ->distinct()
+                ->orderBy('f.full_name')
+                ->get();
+
+            return response()->json(['success' => true, 'faculties' => $faculties]);
+        } catch (\Exception $e) {
+            \Log::error('getDatabaseFaculties: ' . $e->getMessage());
+            return response()->json(['success' => false, 'faculties' => []], 500);
+        }
+    }
+
     public function getTopicsForCourse(Request $request)
     {
         try {
@@ -244,11 +324,13 @@ class FeedbackController extends Controller
     {
         try {
             $validated = $request->validate([
-                'course_id'    => 'required|integer',
+                'course_id'    => 'nullable|integer',
                 'export_type'  => 'required|in:excel,csv,pdf',
-                'search_param' => 'nullable|string|in:all,faculty,topic',
                 'faculty_id'   => 'nullable|integer',
                 'topic_value'  => 'nullable|string',
+                'cond_field'   => 'nullable|string|in:content,presentation',
+                'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
+                'cond_value'   => 'nullable|numeric|min:0|max:100',
             ]);
 
             $data = $this->baseDatabaseQuery($request)->get();
@@ -297,22 +379,40 @@ class FeedbackController extends Controller
     private function buildFeedbackDatabaseExportContext(Request $request): array
     {
         $request->validate([
-            'course_id'    => 'required|integer',
-            'search_param' => 'nullable|string|in:all,faculty,topic',
+            'course_id'    => 'nullable|integer',
             'faculty_id'   => 'nullable|integer',
             'topic_value'  => 'nullable|string',
+            'search_term'  => 'nullable|string|max:200',
+            'cond_field'   => 'nullable|string|in:content,presentation',
+            'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
+            'cond_value'   => 'nullable|numeric|min:0|max:100',
         ]);
+
+        DB::statement("SET SESSION group_concat_max_len = 1000000;");
 
         $data = $this->baseDatabaseQuery($request)->get();
 
-        $program = DB::table('course_master')->where('pk', $request->course_id)->value('course_name') ?? '—';
+        $program = $request->filled('course_id')
+            ? (DB::table('course_master')->where('pk', $request->course_id)->value('course_name') ?? '—')
+            : 'All Programs';
 
         $scope = 'All records';
-        if ($request->search_param === 'faculty' && $request->filled('faculty_id')) {
+        $scopeParts = [];
+        if ($request->filled('faculty_id')) {
             $fname = DB::table('faculty_master')->where('pk', $request->faculty_id)->value('full_name');
-            $scope = 'Faculty: ' . ($fname ?? '—');
-        } elseif ($request->search_param === 'topic' && $request->filled('topic_value')) {
-            $scope = 'Topic contains: ' . $request->topic_value;
+            $scopeParts[] = 'Faculty: ' . ($fname ?? '—');
+        }
+        if ($request->filled('topic_value')) {
+            $scopeParts[] = 'Topic: ' . $request->topic_value;
+        }
+        if ($request->filled('search_term')) {
+            $scopeParts[] = 'Search: "' . $request->search_term . '"';
+        }
+        if ($request->filled('cond_field') && $request->filled('cond_value')) {
+            $scopeParts[] = ucfirst($request->cond_field) . ' ' . ($request->cond_operator ?? '>=') . ' ' . $request->cond_value . '%';
+        }
+        if (!empty($scopeParts)) {
+            $scope = implode(' | ', $scopeParts);
         }
 
         $rows = [];
@@ -333,8 +433,30 @@ class FeedbackController extends Controller
             ];
         }
 
+        // Determine visible columns based on request
+        // Column indices: 0=S.No, 1=Faculty, 2=Course, 3=Address, 4=Topic, 5=Content, 6=Presentation, 7=Participants, 8=Date, 9=Comments
+        $allColumnKeys = ['s_no', 'faculty_name', 'course_name', 'faculty_address', 'topic', 'content_pct', 'presentation_pct', 'participants', 'session_date', 'comments'];
+        $visibleKeys = $allColumnKeys; // default: all visible
+
+        if ($request->filled('visible_columns')) {
+            $visibleIndices = array_map('intval', explode(',', $request->visible_columns));
+            $visibleKeys = [];
+            foreach ($visibleIndices as $idx) {
+                if (isset($allColumnKeys[$idx])) {
+                    $visibleKeys[] = $allColumnKeys[$idx];
+                }
+            }
+        }
+
+        // Filter rows to only visible columns
+        $filteredRows = array_map(function ($row) use ($visibleKeys) {
+            return array_intersect_key($row, array_flip($visibleKeys));
+        }, $rows);
+
         return [
-            'rows' => $rows,
+            'rows' => $filteredRows,
+            'all_rows' => $rows,
+            'visible_keys' => $visibleKeys,
             'filters' => [
                 'program' => $program,
                 'scope' => $scope,
@@ -403,7 +525,8 @@ class FeedbackController extends Controller
                     $ctx['rows'],
                     $ctx['filters'],
                     $ctx['export_date'],
-                    $ctx['record_count']
+                    $ctx['record_count'],
+                    $ctx['visible_keys']
                 ),
                 'feedback_database_' . now()->format('Y-m-d_H-i') . '.xlsx'
             );
@@ -597,6 +720,15 @@ class FeedbackController extends Controller
                     ->orWhereDate('cm.end_date', '>=', Carbon::today());
             });
         }
+
+        // Order by date then by actual start time extracted from class_session
+        $query->orderBy('tt.START_DATE', 'asc')
+            ->orderByRaw("
+              COALESCE(
+                  TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(tt.class_session, ' - ', 1)), '%h:%i %p')),
+                  86400
+              ) ASC
+          ");
 
         // Execute query
         $feedbackData = $query->get();
@@ -985,6 +1117,15 @@ class FeedbackController extends Controller
             });
         }
 
+        // Order by date then by actual start time extracted from class_session
+        $query->orderBy('tt.START_DATE', 'asc')
+            ->orderByRaw("
+              COALESCE(
+                  TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(tt.class_session, ' - ', 1)), '%h:%i %p')),
+                  86400
+              ) ASC
+          ");
+
         // Execute query
         $feedbackData = $query->get();
 
@@ -1147,6 +1288,15 @@ class FeedbackController extends Controller
             } else {
                 $query->where(fn($q) => $q->whereNull('cm.end_date')->orWhereDate('cm.end_date', '>=', Carbon::today()));
             }
+
+            // Order by date then by actual start time extracted from class_session
+            $query->orderBy('tt.START_DATE', 'asc')
+                ->orderByRaw("
+                  COALESCE(
+                      TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(tt.class_session, ' - ', 1)), '%h:%i %p')),
+                      86400
+                  ) ASC
+              ");
 
             $feedbackData = $query->get();
 
@@ -1437,9 +1587,9 @@ class FeedbackController extends Controller
                 ELSE NULL 
              END SEPARATOR "|||") as remarks')
             );
-        $query->where('tf.is_submitted', 1);
-        $this->applyFeedbackReportCourseScope($query);
-
+        $query->where('tf.is_submitted', 1)
+              ->whereNotNull('tf.content')
+              ->whereNotNull('tf.presentation');
         // Group by - ADD class_session to group by
         $query->groupBy('tf.topic_name', 'cm.pk', 'cm.course_name', 'cm.active_inactive', 'cm.end_date', 'fm.full_name', 'fm.faculty_type', 'tf.faculty_pk', 'tt.START_DATE', 'tt.END_DATE', 'tt.class_session', 'tf.timetable_pk');
 
@@ -1476,16 +1626,13 @@ class FeedbackController extends Controller
                 ->whereDate('cm.end_date', '>=', Carbon::today());
         }
 
-        // ADD ORDER BY for date and session time - UPDATED
+        // Order by date then by actual start time extracted from class_session
         $query->orderBy('tt.START_DATE', 'asc')
             ->orderByRaw("
-              CASE 
-                  WHEN tt.class_session LIKE '%AM%' THEN 1
-                  WHEN tt.class_session LIKE '%PM%' THEN 2
-                  WHEN tt.class_session REGEXP '^[0-9]' THEN 3
-                  ELSE 4
-              END,
-              tt.class_session ASC
+              COALESCE(
+                  TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(tt.class_session, ' - ', 1)), '%h:%i %p')),
+                  86400
+              ) ASC
           ");
 
         // Increase GROUP_CONCAT max length BEFORE getting data
@@ -1703,33 +1850,24 @@ class FeedbackController extends Controller
         // Ensure selectedTypes is always an array
         if (is_string($selectedTypes)) {
             $selectedTypes = [$selectedTypes];
-        } elseif (empty($selectedTypes)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'No faculty type selected',
-                'faculties' => []
-            ]);
         }
 
-        // Validate and clean faculty types (only allow 1 and 2)
-        $validTypes = array_filter($selectedTypes, function ($type) {
-            return in_array($type, ['1', '2']); // Only Internal and Guest
-        });
-
-        if (empty($validTypes)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid faculty type selected',
-                'faculties' => []
-            ]);
-        }
+        // Validate: keep only allowed values
+        $validTypes = array_values(array_filter((array) $selectedTypes, fn($t) => in_array($t, ['1', '2'], true)));
 
         // Build query
         $query = DB::table('faculty_master')
             ->select('full_name', 'faculty_type')
-            ->whereIn('faculty_type', $validTypes)
             ->whereNotNull('full_name')
             ->where('full_name', '!=', '');
+
+        // Only apply type filter when specific types are requested
+        if (!empty($validTypes)) {
+            $query->whereIn('faculty_type', $validTypes);
+        } else {
+            // No type filter — search across Guest (2) and Internal (1)
+            $query->whereIn('faculty_type', ['1', '2']);
+        }
 
         if (!empty($searchTerm)) {
             $query->where('full_name', 'LIKE', '%' . $searchTerm . '%');
@@ -1809,7 +1947,9 @@ class FeedbackController extends Controller
                     ELSE NULL 
                  END SEPARATOR "|||") as remarks')
             )
-            ->where('tf.is_submitted', 1);
+            ->where('tf.is_submitted', 1)
+            ->whereNotNull('tf.content')
+            ->whereNotNull('tf.presentation');
 
         $this->applyFeedbackReportCourseScope($query);
 
@@ -1847,13 +1987,10 @@ class FeedbackController extends Controller
         }
         $query->orderBy('tt.START_DATE', 'asc')
             ->orderByRaw("
-              CASE 
-                  WHEN tt.class_session LIKE '%AM%' THEN 1
-                  WHEN tt.class_session LIKE '%PM%' THEN 2
-                  WHEN tt.class_session REGEXP '^[0-9]' THEN 3
-                  ELSE 4
-              END,
-              tt.class_session ASC
+              COALESCE(
+                  TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(tt.class_session, ' - ', 1)), '%h:%i %p')),
+                  86400
+              ) ASC
           ");
 
         DB::statement("SET SESSION group_concat_max_len = 1000000;");
@@ -2093,7 +2230,9 @@ class FeedbackController extends Controller
                     DB::raw('COUNT(DISTINCT tf.student_master_pk) as participants'),
                     DB::raw('GROUP_CONCAT(DISTINCT CASE WHEN tf.remark IS NOT NULL AND TRIM(tf.remark) != "" THEN tf.remark ELSE NULL END SEPARATOR "|||") as remarks')
                 )
-                ->where('tf.is_submitted', 1);
+                ->where('tf.is_submitted', 1)
+                ->whereNotNull('tf.content')
+                ->whereNotNull('tf.presentation');
 
             $this->applyFeedbackReportCourseScope($query);
 
@@ -2124,7 +2263,13 @@ class FeedbackController extends Controller
                 $query->where('cm.active_inactive', 1)
                     ->whereDate('cm.end_date', '>=', Carbon::today());
             }
-            $query->orderBy('tt.START_DATE', 'asc');
+            $query->orderBy('tt.START_DATE', 'asc')
+                ->orderByRaw("
+                  COALESCE(
+                      TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(tt.class_session, ' - ', 1)), '%h:%i %p')),
+                      86400
+                  ) ASC
+              ");
 
             DB::statement("SET SESSION group_concat_max_len = 1000000;");
             $feedbackData = $query->get();
@@ -2885,13 +3030,19 @@ class FeedbackController extends Controller
                     'tf.presentation',
                     'tf.remark',
                     'tf.created_date as feedback_date',
-                    DB::raw("COALESCE(sm.display_name, 
-                    CONCAT(
+                    DB::raw("CONCAT(
                         COALESCE(sm.first_name, ''),
-                        ' ',
-                        COALESCE(sm.last_name, '')
-                    )
-                ) as ot_name"),
+                        CASE 
+                            WHEN sm.middle_name IS NOT NULL AND sm.middle_name != '' 
+                            THEN CONCAT(' ', sm.middle_name) 
+                            ELSE '' 
+                        END,
+                        CASE 
+                            WHEN sm.last_name IS NOT NULL AND sm.last_name != '' 
+                            THEN CONCAT(' ', sm.last_name) 
+                            ELSE '' 
+                        END
+                    ) as ot_name"),
                     DB::raw("COALESCE(sm.generated_OT_code) as ot_code"),
                     'cm.course_name as program_name',
                     'cm.active_inactive as program_status',
@@ -2943,10 +3094,19 @@ class FeedbackController extends Controller
                     ->whereDate('cm.end_date', '>=', Carbon::today());
             }
 
+            // Apply faculty role restriction (same as feedbackDetails display)
+            if (
+                ! $this->isFacultySessionFeedbackReport()
+                && (hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+            ) {
+                $facultyPk = (Auth::user()->user_id);
+                $query->where('fm.employee_master_pk', $facultyPk);
+            }
+
             // Order by
             $query->orderBy('tt.START_DATE', 'DESC')
                 ->orderBy('fm.full_name')
-                ->orderByRaw("COALESCE(sm.display_name, CONCAT(COALESCE(sm.first_name, ''), ' ', COALESCE(sm.last_name, '')))");
+                ->orderByRaw("CONCAT(COALESCE(sm.first_name, ''), ' ', COALESCE(sm.last_name, ''))");
 
             // Get all data for export (no pagination)
             $feedbackData = $query->get();
@@ -3457,26 +3617,40 @@ class FeedbackController extends Controller
 
     /**
      * Base join for pending-feedback-by-student (one row per student × session with attendance).
+     *
+     * Deduplication strategy (mirrors student-side logic):
+     *   - smcm: joined as a DISTINCT subquery → prevents inflation from multiple enrollment rows
+     *   - csa:  joined via whereExists → prevents inflation from duplicate attendance records
+     *   - tf:   uses COUNT(DISTINCT faculty_pk) → accurately counts unique faculty feedbacks submitted
+     *   - session filter: uses TIMESTAMP(END_DATE, session_end_time) <= NOW(IST) → only fully-ended sessions
      */
     private function buildPendingStudentsGroupedBaseQuery(Request $request): \Illuminate\Database\Query\Builder
     {
+        // Count distinct faculty PKs submitted per student per session — prevents over-count from duplicate topic_feedback rows
         $feedbackSub = DB::raw("(
-            SELECT timetable_pk, student_master_pk, COUNT(*) as submitted_count
+            SELECT timetable_pk, student_master_pk, COUNT(DISTINCT faculty_pk) as submitted_count
             FROM topic_feedback
             WHERE is_submitted = 1
             GROUP BY timetable_pk, student_master_pk
         ) as tf");
 
+        // Deduplicated enrollment: one row per (course, student) regardless of duplicate smcm entries
+        $smcmSub = DB::raw("(
+            SELECT DISTINCT course_master_pk, student_master_pk
+            FROM student_master_course__map
+            WHERE active_inactive = 1
+        ) as smcm");
+
         $query = DB::table('timetable as t')
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-            ->join('student_master_course__map as smcm', function ($join) {
-                $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                    ->where('smcm.active_inactive', 1);
-            })
+            ->join($smcmSub, 'smcm.course_master_pk', '=', 't.course_master_pk')
             ->join('student_master as sm', 'sm.pk', '=', 'smcm.student_master_pk')
-            ->join('course_student_attendance as csa', function ($join) {
-                $join->on('csa.timetable_pk', '=', 't.pk')
-                    ->on('csa.Student_master_pk', '=', 'sm.pk')
+            // Attendance check via EXISTS — avoids row multiplication from duplicate csa records
+            ->whereExists(function ($sub) {
+                $sub->select(DB::raw(1))
+                    ->from('course_student_attendance as csa')
+                    ->whereColumn('csa.timetable_pk', 't.pk')
+                    ->whereColumn('csa.Student_master_pk', 'sm.pk')
                     ->where('csa.status', '1');
             })
             ->leftJoin($feedbackSub, function ($join) {
@@ -3484,7 +3658,16 @@ class FeedbackController extends Controller
                     ->on('tf.student_master_pk', '=', 'sm.pk');
             })
             ->where('t.feedback_checkbox', 1)
-            ->where('t.START_DATE', '<=', now());
+            // Mirror student page: only include sessions whose end time has passed (IST)
+            ->whereRaw("
+                TIMESTAMP(
+                    t.END_DATE,
+                    STR_TO_DATE(
+                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
+                        '%h:%i %p'
+                    )
+                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+            ");
 
         $this->applyFeedbackReportCourseScope($query, 'c.pk');
 

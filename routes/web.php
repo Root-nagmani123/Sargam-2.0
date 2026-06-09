@@ -304,6 +304,7 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update-validate-step/{step}/{id}', 'updateValidateStep');
         Route::post('/store', 'store')->name('store');
         Route::post('update', 'update')->name('update');
+        Route::post('{id}/toggle-status', 'toggleStatus')->name('toggle-status');
         Route::get('excel-export', 'excelExport')->name('excel.export');
         Route::delete('delete/{id}', 'destroy')->name('destroy');
     });
@@ -1063,10 +1064,6 @@ Route::middleware(['auth'])->group(function () {
         return view('admin.feedback.faculty_view', compact('programs', 'currentProgram'));
     })->name('admin.feedback.faculty_view');
 
-    Route::get('/feedback_details', function () {
-        return view('admin.feedback.feedback_details');
-    })->name('admin.feedback.feedback_details');
-
     //  dashboard page route
 
     //   Route::get('/active-course', function () { DashboardController:}})->name('admin.dashboard.active_course');
@@ -1142,6 +1139,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/database/courses', [FeedbackController::class, 'getDatabaseCourses'])->name('admin.feedback.database.courses');
         Route::get('/database/data', [FeedbackController::class, 'getDatabaseData'])->name('admin.feedback.database.data');
         Route::get('/database/topics', [FeedbackController::class, 'getTopicsForCourse'])->name('admin.feedback.database.topics');
+        Route::get('/database/faculties', [FeedbackController::class, 'getDatabaseFaculties'])->name('admin.feedback.database.faculties');
         Route::get('/database/export', [FeedbackController::class, 'exportDatabase'])->name('admin.feedback.database.export');
         Route::get('/database/print', [FeedbackController::class, 'printFeedbackDatabase'])->name('admin.feedback.database.print');
         Route::get('/database/export-pdf', [FeedbackController::class, 'exportFeedbackDatabasePdf'])->name('admin.feedback.database.export.pdf');
