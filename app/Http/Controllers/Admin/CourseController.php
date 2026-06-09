@@ -58,11 +58,13 @@ class CourseController extends Controller
     public function getCoursesByStatus(Request $request)
     {
         $status = $request->input('status', 'active');
+        $data_course_id = get_Role_by_course();
         $currentDate = Carbon::now()->format('Y-m-d');
         $epoch = DataTableRedisCache::readListEpoch(CourseMasterDataTable::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'programme_get_courses_by_status:v1:' . md5(json_encode([
             'epoch' => $epoch,
             'status' => $status,
+            'data_course_id' => $data_course_id,
             'date' => $currentDate,
         ]));
 
@@ -73,15 +75,21 @@ class CourseController extends Controller
                 'seconds' => 'PROGRAMME_DATATABLE_CACHE_SECONDS',
             ],
             'CourseController@getCoursesByStatus',
-            function () use ($status, $currentDate) {
+            function () use ($status, $currentDate, $data_course_id) {
                 if ($status === 'active') {
-                    $courses = CourseMaster::where('end_date', '>=', $currentDate)
-                        ->orderBy('course_name')
+                    $q = CourseMaster::where('end_date', '>=', $currentDate);
+                    if (! empty($data_course_id)) {
+                        $q->whereIn('pk', $data_course_id);
+                    }
+                    $courses = $q->orderBy('course_name')
                         ->pluck('course_name', 'pk')
                         ->toArray();
                 } else {
-                    $courses = CourseMaster::where('end_date', '<', $currentDate)
-                        ->orderBy('course_name')
+                    $q = CourseMaster::where('end_date', '<', $currentDate);
+                    if (! empty($data_course_id)) {
+                        $q->whereIn('pk', $data_course_id);
+                    }
+                    $courses = $q->orderBy('course_name')
                         ->pluck('course_name', 'pk')
                         ->toArray();
                 }

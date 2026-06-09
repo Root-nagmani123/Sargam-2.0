@@ -306,6 +306,11 @@ function hasRole($role)
     $user = Auth::user();
     if (!$user) return false;
 
+    // Backward-compatible alias: old code may use "SuperAdmin" while DB role is "Super Admin".
+    if ($role === 'SuperAdmin' || $role === 'Super Admin') {
+        return $user->hasRole('Super Admin') || $user->hasRole('SuperAdmin');
+    }
+
     // Spatie already has hasRole() method
     return $user->hasRole($role);
 }
@@ -587,8 +592,8 @@ function get_Role_by_course()
         return [];
     }
 
-    // Admin / SuperAdmin see all courses — no restriction
-    if (hasRole('Admin') || hasRole('SuperAdmin')) {
+    // Admin / Super Admin see all courses — no restriction
+    if (hasRole('Admin') || hasRole('Super Admin')) {
         return [];
     }
 
@@ -600,7 +605,8 @@ function get_Role_by_course()
         ->toArray();
 
     if (empty($userRoleIds)) {
-        return [];
+        // Non-admin user without assigned roles should see no course-scoped data.
+        return [-1];
     }
 
     $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds));
@@ -611,6 +617,11 @@ function get_Role_by_course()
             ->pluck('cm.pk')
             ->toArray();
     });
+    if (empty($role_course)) {
+        // Non-admin user with roles but no mapped courses should see no data.
+        return [-1];
+    }
+
     return $role_course;
 }
 
