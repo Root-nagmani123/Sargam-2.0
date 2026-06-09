@@ -103,7 +103,8 @@ class CourseController extends Controller
             'Discipline' => 'Discipline',
             'Club Society' => 'Club Society'
         ];
-        $isSuperAdmin = hasRole('SuperAdmin');
+        
+        $isSuperAdmin = hasRole('Super Admin');
         if ($isSuperAdmin) {
             $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
             $selectedSupportingSection = old('supportingsection', '');
@@ -149,7 +150,7 @@ class CourseController extends Controller
                 'Discipline' => 'Discipline',
                 'Club Society' => 'Club Society'
             ];
-            $isSuperAdmin = hasRole('SuperAdmin');
+            $isSuperAdmin = hasRole('Super Admin');
             if ($isSuperAdmin) {
                 $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
             } else {
