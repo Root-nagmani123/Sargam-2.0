@@ -457,8 +457,17 @@ $notices = get_notice_notification_by_role();
 $hour = (int) date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
 $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
+
+// A user effectively has no access when they hold no role AND no permissions
+// (== empty sidebar / "No groups found"). When that is the case we render
+// nothing but the "No Role Assigned" modal — the dashboard must not show in
+// the background.
+$sargamNoRoleUser = Auth::check()
+    && Auth::user()->getRoleNames()->isEmpty()
+    && Auth::user()->getAllPermissions()->isEmpty();
 @endphp
 
+@unless($sargamNoRoleUser)
 <div class="container-fluid">
     @if($isMyBirthday ?? false)
     {{-- Birthday Banner with Confetti --}}
@@ -1203,6 +1212,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
     </div>
 </div>
+@endunless
 
 @push('scripts')
 <script>
@@ -1647,14 +1657,6 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 @endpush
 
-@php
-    // Show the "no role assigned" notice when the user effectively has no access:
-    // no role AND no permissions (== empty sidebar / "No groups found"). This also
-    // covers students/employees whose account was never granted a role.
-    $sargamNoRoleUser = Auth::check()
-        && Auth::user()->getRoleNames()->isEmpty()
-        && Auth::user()->getAllPermissions()->isEmpty();
-@endphp
 @if($sargamNoRoleUser)
     <!-- No role assigned notice -->
     <div class="modal fade" id="noRoleModal" tabindex="-1" aria-labelledby="noRoleModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">

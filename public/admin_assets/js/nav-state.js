@@ -333,8 +333,17 @@
     }
 
     function pathMatchesLink(menuPath, current) {
-        if (!menuPath || !current) return false;
-        return normalizePath(menuPath) === normalizePath(current);
+        var mp = normalizePath(menuPath);
+        var cur = normalizePath(current);
+        if (!mp || !cur) return false;
+        // Exact page, or a child page nested under this menu (Create/Edit/View/
+        // Show/History/…). Child URLs are path-segment descendants of the index
+        // URL (users → users/create, users/15/edit, notice → notice/view/25), so
+        // the parent Index/List link stays highlighted across all its children.
+        // The trailing slash enforces a segment boundary so "subject" never
+        // matches "subjects/..". markActiveSidebarLinks() keeps the longest
+        // (most specific) match, so a dedicated child menu still wins when present.
+        return mp === cur || cur.indexOf(mp + '/') === 0;
     }
 
     function markActiveSidebarLinks() {
