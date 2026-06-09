@@ -10,8 +10,6 @@
         \Log::error('Calendar view: courseMaster is empty or not set');
     }
 @endphp
-
-<link rel="stylesheet" href="{{ asset('admin_assets/css/styles.css') }}">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <link rel="stylesheet" href="{{ asset('css/calendar-admin.css') }}?v={{ @filemtime(public_path('css/calendar-admin.css')) ?: time() }}">
 <link rel="stylesheet" href="{{ asset('css/cal-event-pill.css') }}">
@@ -34,6 +32,28 @@
             <span>Add Event</span>
         </a>
         @endif
+
+        {{-- Whole-week timetable export (always visible) — exports the week currently in view --}}
+        <div class="btn-group btn-group-sm ms-2" role="group" aria-label="Weekly timetable export">
+            <button type="button" id="btnToolbarWeekPdf" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm fw-semibold text-nowrap" title="Download the whole week's timetable as PDF">
+                <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                <span>Weekly PDF</span>
+            </button>
+            <button type="button" id="btnToolbarWeekPrint" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm fw-semibold text-nowrap" title="Print the whole week's timetable">
+                <i class="bi bi-printer" aria-hidden="true"></i>
+                <span>Print</span>
+            </button>
+            <button type="button" id="btnToolbarWeekInfo" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm fw-semibold text-nowrap" title="Course information &amp; faculty for the week (PDF)">
+                <i class="bi bi-people" aria-hidden="true"></i>
+                <span>Info Sheet</span>
+            </button>
+            @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+            <button type="button" id="btnEditWeekInfo" class="btn btn-outline-secondary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm fw-semibold text-nowrap" title="Edit info-sheet details (Director, Participants Profile, Mention of the Week)">
+                <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                <span>Edit Info</span>
+            </button>
+            @endif
+        </div>
     </x-breadcrum>
 
     <div class="course-header cal-course-context d-none" aria-live="polite">
@@ -52,7 +72,7 @@
                     <h2 id="controlPanelHeading" class="visually-hidden">Calendar filters and navigation</h2>
 
                     {{-- Reference: Filters | Course Name | Reset Filters — left; month nav + view toggles — right --}}
-                    <div class="cal-portal-toolbar-row programme-dt-toolbar d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center justify-content-between gap-3 mb-4 w-100">
+                    <div class="cal-portal-toolbar-row programme-dt-toolbar d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center justify-content-between gap-3 mb-4 w-100" style="z-index: 0;">
                         <div class="d-flex flex-wrap align-items-center gap-3 cal-filters-group">
                             <span class="programme-dt-filters-label mb-0">Filters</span>
                             <div class="programme-dt-filter-select" id="courseFilterWrap">
@@ -69,7 +89,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <button type="button" class="btn programme-dt-btn-reset flex-shrink-0" id="btnResetCalendarFilters">
+                            <button type="button" class="btn programme-dt-btn-reset flex-shrink-0 ms-3" id="btnResetCalendarFilters">
                                 Reset Filters
                             </button>
                         </div>
@@ -185,6 +205,19 @@
                                                     Week <span id="currentWeekNumber" class="fw-bold">—</span>
                                                 </span>
                                             </div>
+
+                                            {{-- Whole-week timetable: download / print PDF --}}
+                                            <div class="btn-group btn-group-sm mt-2" role="group" aria-label="Timetable export">
+                                                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-1" id="btnWeekTimetablePdf" title="Download the whole week as a PDF">
+                                                    <i class="bi bi-download"></i><span>Download</span>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-1" id="btnWeekTimetablePrint" title="Print the whole week timetable">
+                                                    <i class="bi bi-printer"></i><span>Print</span>
+                                                </button>
+                                                <button type="button" class="btn btn-outline-secondary d-inline-flex align-items-center gap-1" id="btnWeekInfoPdf" title="Course information & faculty for the week (PDF)">
+                                                    <i class="bi bi-people"></i><span>Info Sheet</span>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -237,6 +270,9 @@
 @include('admin.calendar.partials.events_details')
 @include('admin.calendar.partials.event_hover_card')
 @include('admin.calendar.partials.confirmation')
+@if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+@include('admin.calendar.partials.weekly_info_editor')
+@endif
 
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
@@ -253,7 +289,12 @@ const CalendarConfig = {
         update: '/calendar/event-update/',
         delete: '/calendar/event-delete/',
         groupTypes: "{{ route('calendar.get.group.types') }}",
-        subjectNames: "{{ route('calendar.get.subject.name') }}"
+        subjectNames: "{{ route('calendar.get.subject.name') }}",
+        eventCard: "{{ route('calendar.event.card', ['id' => 'EVENT_ID']) }}",
+        weeklyTimetablePdf: "{{ route('calendar.weekly-timetable.pdf') }}",
+        weeklyInfoPdf: "{{ route('calendar.weekly-info.pdf') }}",
+        weeklyInfoMeta: "{{ route('calendar.weekly-info.meta') }}",
+        weeklyInfoSave: "{{ route('calendar.weekly-info.save') }}"
     },
     colors: [
         '#4e73df', '#1cc88a', '#36b9cc', '#f6c23e',
@@ -1013,6 +1054,12 @@ class CalendarManager {
         if (deleteBtn) deleteBtn.dataset.id = data.id;
         if (modalEdit) modalEdit.dataset.id = data.id;
         if (modalDelete) modalDelete.dataset.id = data.id;
+
+        // Event Card (PDF preview) link
+        const hoverViewCardBtn = document.getElementById('calHoverViewCardBtn');
+        if (hoverViewCardBtn && data.id) {
+            hoverViewCardBtn.href = CalendarConfig.api.eventCard.replace('EVENT_ID', data.id);
+        }
     }
 
     positionEventHoverCard(anchorEl) {
@@ -1184,6 +1231,12 @@ class CalendarManager {
         if (editBtn) editBtn.dataset.id = data.id;
         if (deleteBtn) deleteBtn.dataset.id = data.id;
 
+        // Event Card (PDF preview) link
+        const viewCardBtn = document.getElementById('viewEventCardBtn');
+        if (viewCardBtn && data.id) {
+            viewCardBtn.href = CalendarConfig.api.eventCard.replace('EVENT_ID', data.id);
+        }
+
         // Show modal
         const modal = new bootstrap.Modal(document.getElementById('eventDetails'));
         modal.show();
@@ -1268,6 +1321,16 @@ class CalendarManager {
         document.getElementById('prevWeekBtn')?.addEventListener('click', () => this.navigateWeek(-1));
         document.getElementById('nextWeekBtn')?.addEventListener('click', () => this.navigateWeek(1));
         document.getElementById('currentWeekBtn')?.addEventListener('click', () => this.navigateWeek(0));
+
+        // Whole-week timetable PDF (download / print) — list-view panel + main toolbar
+        document.getElementById('btnWeekTimetablePdf')?.addEventListener('click', () => this.openWeeklyTimetablePdf(true));
+        document.getElementById('btnWeekTimetablePrint')?.addEventListener('click', () => this.openWeeklyTimetablePdf(false));
+        document.getElementById('btnToolbarWeekPdf')?.addEventListener('click', () => this.openWeeklyTimetablePdf(true));
+        document.getElementById('btnToolbarWeekPrint')?.addEventListener('click', () => this.openWeeklyTimetablePdf(false));
+        document.getElementById('btnToolbarWeekInfo')?.addEventListener('click', () => this.openWeeklyInfoPdf(false));
+        document.getElementById('btnWeekInfoPdf')?.addEventListener('click', () => this.openWeeklyInfoPdf(false));
+        document.getElementById('btnEditWeekInfo')?.addEventListener('click', () => this.openWeeklyInfoEditor());
+        document.getElementById('weeklyInfoForm')?.addEventListener('submit', (e) => this.saveWeeklyInfo(e));
 
         // Form submission
         document.getElementById('eventForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
@@ -2171,6 +2234,134 @@ async setInternalFaculty(internalFacultyIds) {
 
             return eventDateObj >= startDateObj && eventDateObj <= endDateObj;
         });
+    }
+
+    /** Format a Date as YYYY-MM-DD (local). */
+    toYmd(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
+
+    /** Monday of the week containing the given date. */
+    mondayOf(date) {
+        const dayOfWeek = date.getDay(); // 0=Sun..6=Sat
+        const diff = date.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
+        return new Date(date.getFullYear(), date.getMonth(), diff);
+    }
+
+    /** Monday (YYYY-MM-DD) of the week currently shown in the list view. */
+    currentListWeekStartYmd() {
+        const weekStart = this.mondayOf(new Date());
+        weekStart.setDate(weekStart.getDate() + (this.listViewWeekOffset * 7));
+        return this.toYmd(weekStart);
+    }
+
+    /**
+     * Resolve the week to export: the list-view week when that view is open,
+     * otherwise the week containing the calendar's currently displayed date.
+     */
+    resolveExportWeekStartYmd() {
+        const listViewEl = document.getElementById('eventListView');
+        if (listViewEl && !listViewEl.classList.contains('d-none')) {
+            return this.currentListWeekStartYmd();
+        }
+        if (this.calendar && typeof this.calendar.getDate === 'function') {
+            return this.toYmd(this.mondayOf(this.calendar.getDate()));
+        }
+        return this.toYmd(this.mondayOf(new Date()));
+    }
+
+    /** Build week_start + course_id (+ download) params for the current view. */
+    weeklyExportParams(download) {
+        const params = new URLSearchParams();
+        params.append('week_start', this.resolveExportWeekStartYmd());
+        if (this.selectedCourseId) {
+            params.append('course_id', this.selectedCourseId);
+        }
+        if (download) {
+            params.append('download', '1');
+        }
+        return params;
+    }
+
+    /** Open the whole-week timetable PDF for the current week + course filter. */
+    openWeeklyTimetablePdf(download) {
+        window.open(`${CalendarConfig.api.weeklyTimetablePdf}?${this.weeklyExportParams(download).toString()}`, '_blank', 'noopener');
+    }
+
+    /** Open the Course Information / Faculty-for-the-week PDF for the current week + course filter. */
+    openWeeklyInfoPdf(download) {
+        window.open(`${CalendarConfig.api.weeklyInfoPdf}?${this.weeklyExportParams(download).toString()}`, '_blank', 'noopener');
+    }
+
+    /** Open the info-sheet editor modal, prefilled for the current course + week. */
+    async openWeeklyInfoEditor() {
+        if (!this.selectedCourseId) {
+            this.showNotification('Please select a course first to edit its info-sheet details.', 'warning');
+            return;
+        }
+        const weekStart = this.resolveExportWeekStartYmd();
+        const alertEl = document.getElementById('weeklyInfoAlert');
+        alertEl?.classList.add('d-none');
+
+        try {
+            const url = `${CalendarConfig.api.weeklyInfoMeta}?course_id=${this.selectedCourseId}&week_start=${weekStart}`;
+            const res = await fetch(url, { headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' } });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.error || 'Failed to load details.');
+            }
+
+            document.getElementById('wi_course_id').value = data.course_id;
+            document.getElementById('wi_week_start').value = data.week_start;
+            document.getElementById('wi_director').value = data.director_name || '';
+            document.getElementById('wi_joint_director').value = data.joint_director_name || '';
+            document.getElementById('wi_participants_profile').value = data.participants_profile || '';
+            document.getElementById('wi_mention_of_week').value = data.mention_of_week || '';
+
+            const course = (this.courses || []).find(c => c.pk == data.course_id);
+            document.getElementById('weeklyInfoContext').textContent =
+                `${course ? course.course_name + ' — ' : ''}Week starting ${data.week_start}`;
+
+            new bootstrap.Modal(document.getElementById('weeklyInfoModal')).show();
+        } catch (err) {
+            this.showNotification(err.message || 'Failed to load info-sheet details.', 'danger');
+        }
+    }
+
+    /** Persist info-sheet details. */
+    async saveWeeklyInfo(e) {
+        e.preventDefault();
+        const form = document.getElementById('weeklyInfoForm');
+        const alertEl = document.getElementById('weeklyInfoAlert');
+        const saveBtn = document.getElementById('wiSaveBtn');
+        alertEl.classList.add('d-none');
+        saveBtn.disabled = true;
+
+        try {
+            const res = await fetch(CalendarConfig.api.weeklyInfoSave, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
+                },
+                body: JSON.stringify(Object.fromEntries(new FormData(form).entries()))
+            });
+            const data = await res.json();
+            if (!res.ok) {
+                throw new Error(data.message || (data.errors ? Object.values(data.errors).flat().join(' ') : 'Save failed.'));
+            }
+            bootstrap.Modal.getInstance(document.getElementById('weeklyInfoModal'))?.hide();
+            this.showNotification('Info-sheet details saved.', 'success');
+        } catch (err) {
+            alertEl.textContent = err.message || 'Save failed.';
+            alertEl.className = 'alert alert-danger';
+        } finally {
+            saveBtn.disabled = false;
+        }
     }
 
     async loadListView() {
