@@ -122,6 +122,11 @@ class User extends Authenticatable
             $query->where('e.status', 1);
         }
 
+        // Only filter by user credential active status if the column exists
+        if (\Illuminate\Support\Facades\Schema::hasColumn('user_credentials', 'Active_inactive')) {
+            $query->where('uc.Active_inactive', 1);
+        }
+
         $query->select(
                 'e.pk as employee_pk',
                 DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name"),

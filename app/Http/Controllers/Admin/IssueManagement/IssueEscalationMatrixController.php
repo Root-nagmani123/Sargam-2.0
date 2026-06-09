@@ -177,6 +177,31 @@ class IssueEscalationMatrixController extends Controller
         $categories = $hydrated['categories'];
         $employees = $this->getEmployeesForDropdown();
 
+        // Ensure any currently mapped inactive employee appears in the dropdown list to avoid empty/incorrect selection
+        $mappedEmployeeIds = [];
+        foreach ($matrix as $row) {
+            foreach (['level1', 'level2', 'level3'] as $lvl) {
+                if (isset($row[$lvl]) && $row[$lvl] && $row[$lvl]->employee_master_pk) {
+                    $mappedEmployeeIds[] = (int) $row[$lvl]->employee_master_pk;
+                }
+            }
+        }
+        $mappedEmployeeIds = array_unique($mappedEmployeeIds);
+        if (!empty($mappedEmployeeIds)) {
+            $existingEmployeePks = $employees->pluck('employee_pk')->map(fn($v) => (int)$v)->all();
+            $missingPks = array_diff($mappedEmployeeIds, $existingEmployeePks);
+            if (!empty($missingPks)) {
+                $missingEmployees = DB::table('employee_master as e')
+                    ->whereIn('e.pk', $missingPks)
+                    ->select(
+                        'e.pk as employee_pk',
+                        DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name")
+                    )
+                    ->get();
+                $employees = $employees->concat($missingEmployees);
+            }
+        }
+
         return view('admin.issue_management.escalation_matrix.index', compact('matrix', 'categories', 'employees'));
     }
 
@@ -260,12 +285,29 @@ class IssueEscalationMatrixController extends Controller
 
     private function getEmployeesForDropdown()
     {
-        return DB::table('employee_master as e')
-            ->select(
+        $query = DB::table('employee_master as e')
+            ->join('user_credentials as uc', function ($join) {
+                $join->on('uc.user_id', '=', 'e.pk');
+                if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'pk_old')) {
+                    $join->orOn('uc.user_id', '=', 'e.pk_old');
+                }
+            })
+            ->where('uc.user_category', '!=', 'S');
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('employee_master', 'status')) {
+            $query->where('e.status', 1);
+        }
+
+        if (\Illuminate\Support\Facades\Schema::hasColumn('user_credentials', 'Active_inactive')) {
+            $query->where('uc.Active_inactive', 1);
+        }
+
+        return $query->select(
                 'e.pk as employee_pk',
                 DB::raw("TRIM(CONCAT(COALESCE(e.first_name, ''), ' ', COALESCE(e.middle_name, ''), ' ', COALESCE(e.last_name, ''))) as employee_name")
             )
             ->orderBy('e.first_name')
+            ->groupBy('e.pk', 'e.first_name', 'e.middle_name', 'e.last_name')
             ->get();
     }
 }
