@@ -2129,7 +2129,7 @@ public function store_memo_status(Request $request)
         'course_master_pk'                => 'required|integer',
         'course_master_name'             => 'required|string',
         'memo_count'                      => 'required|integer',
-        'date_memo_notice'               => 'required|date|after_or_equal:today',
+        'date_memo_notice'               => 'required|date',
         'venue'                          => 'required|integer',
         'meeting_time'                   => 'required|date_format:H:i',
         'Remark'                         => 'nullable|string',
