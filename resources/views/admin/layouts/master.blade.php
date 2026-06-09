@@ -1163,7 +1163,34 @@
                     loadSidebarMenusForGroup(groupId);
                     return;
                 }
-                clearSidebarGroupSelection();
+
+                // No specific group resolved for this page. This happens on child
+                // pages whose URL isn't itself a menu and doesn't sit under the
+                // parent menu's path (e.g. Assign Permission at /roles/{id} while
+                // the "Roles" menu points at admin/roles). Keep the sidebar
+                // populated instead of blank: prefer the group the user last had
+                // open on this tab (continuity from the listing page they came
+                // from), otherwise fall back to the first group in the category.
+                var fallbackGroupId = null;
+                if (window.SargamNavState && window.SargamNavState.getLastVisitedGroupId) {
+                    fallbackGroupId = window.SargamNavState.getLastVisitedGroupId(routeTab || '#tab-setup');
+                }
+
+                var $fallback = fallbackGroupId
+                    ? $('#sidebar-groups .sidebar-group-link[data-id="' + fallbackGroupId + '"]')
+                    : $();
+                if (!$fallback.length) {
+                    $fallback = $('#sidebar-groups .sidebar-group-link').first();
+                    fallbackGroupId = $fallback.data('id');
+                }
+
+                if ($fallback.length && fallbackGroupId) {
+                    window.SARGAM_ACTIVE_GROUP_ID = fallbackGroupId;
+                    selectSidebarGroupVisual(fallbackGroupId);
+                    loadSidebarMenusForGroup(fallbackGroupId, $fallback.data('name'));
+                } else {
+                    clearSidebarGroupSelection();
+                }
             });
 
             ensureDynamicSidebarNavVisible();
