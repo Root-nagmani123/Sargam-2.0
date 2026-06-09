@@ -1338,7 +1338,7 @@ class KitchenIssueController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
-            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'nullable', 'integer'],
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
@@ -1720,7 +1720,7 @@ class KitchenIssueController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
-            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'nullable', 'integer'],
             'name_id' => 'nullable|integer',
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'issue_date' => 'required|date',
