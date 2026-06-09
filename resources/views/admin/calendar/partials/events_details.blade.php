@@ -27,48 +27,19 @@
                             <span id="eventDate"></span>
                         </p>
                     </div>
-                </div>
-            </div>
-            <div class="modal-body">
-                <div class="event-details">
-                    <h4 class="h6 mb-3" id="eventTopic"></h4>
-
-                    <div class="row g-3">
-                        <div class="col-md-6">
-                            <div class="detail-item">
-                                <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Faculty:</strong>
-                                <span id="eventfaculty" class="ms-1"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d`etail-item">
-                                <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Session:</strong>
-                                <span id="eventclasssession" class="ms-1"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="d`etail-item">
-                                <i class="bi bi-person-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Group name:</strong>
-                                <span id="eventgroupname" class="ms-1"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="detail-item">
-                                <i class="bi bi-geo-alt-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Venue:</strong>
-                                <span id="eventVanue" class="ms-1"></span>
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="detail-item">
-                                <i class="bi bi-geo-alt-fill text-primary me-2" aria-hidden="true"></i>
-                                <strong>Internal Faculty:</strong>
-                                <span id="internal_faculty_name_show" class="ms-1"></span>
-                            </div>
-                        </div>
+                    <div class="d-flex gap-2 flex-shrink-0 align-items-start">
+                        <a id="viewEventCardBtn" href="#" target="_blank" rel="noopener" class="btn cal-event-action-btn" title="View / Download Event Card PDF" aria-label="View event card">
+                            <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
+                        </a>
+                        @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+                        <button type="button" class="btn cal-event-action-btn cal-event-action-btn--danger" id="deleteEventBtn" title="Delete event" aria-label="Delete event">
+                            <i class="bi bi-trash" aria-hidden="true"></i>
+                        </button>
+                        <button type="button" class="btn cal-event-action-btn cal-event-action-btn--edit" id="editEventBtn" title="Edit event" aria-label="Edit event">
+                            <i class="bi bi-pencil" aria-hidden="true"></i>
+                        </button>
+                        @endif
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
                 </div>
             </div>

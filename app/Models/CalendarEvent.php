@@ -39,11 +39,20 @@ class CalendarEvent extends Model
         'active_inactive',
         'created_date',
         'modified_date',
+        // Optional presentation fields used by the printable Event Card
+        'event_banner',
+        'event_category',
+        'organizer',
+        'contact_info',
+        'qr_code_data',
+        'event_description',
+        'custom_fields',
     ];
 
       protected $casts = [
         'START_DATE' => 'date:Y-m-d',
         'END_DATE' => 'date:Y-m-d',
+        'custom_fields' => 'array',
     ];
 
     // ---------- RELATIONSHIPS ----------

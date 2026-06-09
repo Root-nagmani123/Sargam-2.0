@@ -467,6 +467,10 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/full-calendar-details', [CalendarController::class, 'fullCalendarDetails'])->name('event.calendar-details');
         Route::get('/single-calendar-details', [CalendarController::class, 'SingleCalendarDetails'])->name('event.Singlecalendar-details');
 
+        // Event Card — printable / downloadable PDF representation
+        Route::get('/event-card/{id}', [CalendarController::class, 'eventCard'])->name('event.card');
+        Route::get('/event-card/{id}/pdf', [CalendarController::class, 'eventCardPdf'])->name('event.card.pdf');
+
         Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
         Route::post('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
         Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
@@ -482,6 +486,12 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/single-calendar-details', [CalendarController::class, 'otSingleCalendarDetails'])->name('event.Singlecalendar-details');
             Route::get('/download', [CalendarController::class, 'otDownloadPdf'])->name('download');
         });
+        // Whole-week timetable — printable / downloadable PDF
+        Route::get('/weekly-timetable/pdf', [CalendarController::class, 'weeklyTimetablePdf'])->name('weekly-timetable.pdf');
+        // Course Information + Resource Persons (Faculty for the Week) — printable / downloadable PDF
+        Route::get('/weekly-info/pdf', [CalendarController::class, 'weeklyInfoPdf'])->name('weekly-info.pdf');
+        Route::get('/weekly-info/meta', [CalendarController::class, 'weeklyInfoMeta'])->name('weekly-info.meta');
+        Route::post('/weekly-info/save', [CalendarController::class, 'saveWeeklyInfo'])->name('weekly-info.save');
     });
 
     // Timetable Report
