@@ -91,22 +91,22 @@
                                             <tr>
                                                 <td class="text-center cru-col-sno">{{ $loop->iteration }}</td>
                                                 <td class="cru-col-course">
-                                                    @if($document->detail && $document->detail->course)
-                                                        {{ $document->detail->course->course_name }}
+                                                    @if($document->course)
+                                                        {{ $document->course->course_name }}
                                                     @else
                                                         NA
                                                     @endif
                                                 </td>
                                                 <td class="cru-col-subject">
-                                                    @if($document->detail && $document->detail->subject)
-                                                        {{ $document->detail->subject->subject_name }}
+                                                    @if($document)
+                                                        {{ $document->subject_display_name }}
                                                     @else
                                                         NA
                                                     @endif
                                                 </td>
                                                 <td class="cru-col-topic">
-                                                    @if($document->detail && $document->detail->topic)
-                                                        {{ $document->detail->topic->subject_topic }}
+                                                    @if($document)
+                                                        {{ $document->topic_display_name }}
                                                     @else
                                                         NA
                                                     @endif

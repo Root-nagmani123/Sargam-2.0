@@ -16,6 +16,7 @@ use App\Models\Timetable;
 use Illuminate\Http\Request; 
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 use Exception;
 
  
@@ -43,7 +44,7 @@ class CourseRepositoryController extends Controller
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
                     ->paginate($perPage)
-                    ->withQueryString();
+                    ->appends($request->query());
                    
             
                                 $documents_count_array = [];
@@ -76,7 +77,7 @@ class CourseRepositoryController extends Controller
                     ->with(['children', 'documents'])
                     ->orderBy('created_date', 'desc')
                     ->paginate($perPage)
-                    ->withQueryString();
+                    ->appends($request->query());
                     $documents_count_array = [];
 
                     foreach ($repositories as $child) {
@@ -164,11 +165,23 @@ class CourseRepositoryController extends Controller
                 'ancestors' => $ancestors,
                 'documents_count_array' => $documents_count_array,
                 // Data for dynamic dropdowns
-                'activeCourses' => CourseMaster::where('active_inactive', 1)->get(),
-                'archivedCourses' => CourseMaster::where('active_inactive', 0)->get(),
+                'activeCourses' => CourseMaster::where('active_inactive', 1)
+                    ->where(function ($q) {
+                        $q->whereNull('end_date')->orWhereDate('end_date', '>=', now()->toDateString());
+                    })
+                    ->orderBy('course_name')
+                    ->get(),
+                'archivedCourses' => CourseMaster::where(function ($q) {
+                        $q->where('active_inactive', 0)
+                          ->orWhere(function ($sq) {
+                              $sq->whereNotNull('end_date')->whereDate('end_date', '<', now()->toDateString());
+                          });
+                    })
+                    ->orderBy('course_name')
+                    ->get(),
                 'subjects' => SubjectMaster::where('active_inactive', 1)->get(),
                 'topics' => CourseRepositorySubtopic::all(),
-                'authors' => FacultyMaster::select('pk','full_name')->get(),
+                'authors' => FacultyMaster::select('pk','full_name')->whereNotNull('full_name')->orderBy('full_name')->get(),
                 'sectors' => SectorMaster::active()->get(),
                 'ministries' => MinistryMaster::active()->get(),
             ]);
@@ -315,8 +328,8 @@ class CourseRepositoryController extends Controller
             // Handle image upload
             if ($request->hasFile('category_image')) {
                 // Delete old image if exists
-                if (filled($repository->category_image) && \Storage::disk('public')->exists($repository->category_image)) {
-                    \Storage::disk('public')->delete($repository->category_image);
+                if (filled($repository->category_image) && Storage::disk('public')->exists($repository->category_image)) {
+                    Storage::disk('public')->delete($repository->category_image);
                 }
                 
                 // Store new image
@@ -364,13 +377,35 @@ class CourseRepositoryController extends Controller
     {
         try {
             $repository = CourseRepositoryMaster::findOrFail($pk);
+
+            $hasActiveChildren = CourseRepositoryMaster::where('parent_type', $repository->pk)
+                ->where('del_folder_status', 1)
+                ->exists();
+
+            $hasActiveDocuments = CourseRepositoryDetail::where('course_repository_master_pk', $repository->pk)
+                ->whereHas('documents', function ($q) {
+                    $q->where('del_type', 1);
+                })
+                ->exists();
+
+            if ($hasActiveChildren || $hasActiveDocuments) {
+                $message = 'Cannot delete category/sub-category until it has no active sub-categories and no active documents.';
+                if (request()->ajax() || request()->wantsJson()) {
+                    return response()->json(['success' => false, 'message' => $message], 422);
+                }
+                return redirect()->back()->with('error', $message);
+            }
             
             $repository->update([
                 'del_folder_status' => 0,
                 'del_folder_date' => now(),
                 'delete_by' => auth()->id(),
             ]);
-            
+
+            if (request()->ajax() || request()->wantsJson()) {
+                return response()->json(['success' => true, 'message' => 'Repository deleted successfully']);
+            }
+
             return redirect()->route('course-repository.index')
                 ->with('success', 'Repository deleted successfully');
         } catch (Exception $e) {
@@ -409,6 +444,31 @@ class CourseRepositoryController extends Controller
             
             // Get the category
             $category = $validated['category'];
+
+            $courseMasterPk = null;
+            $subjectPk = null;
+            $topicPk = null;
+            $authorValue = null;
+            $metadata = ['category' => $category];
+
+            if ($category === 'Course') {
+                $courseMasterPk = !empty($validated['course_name']) ? (int) $validated['course_name'] : null;
+                $subjectPk = !empty($validated['subject_name']) && is_numeric($validated['subject_name'])
+                    ? (int) $validated['subject_name']
+                    : null;
+                $topicPk = !empty($validated['timetable_name']) && is_numeric($validated['timetable_name'])
+                    ? (int) $validated['timetable_name']
+                    : null;
+                $authorValue = !empty($validated['author_name']) ? trim((string) $validated['author_name']) : null;
+            } elseif ($category === 'Other') {
+                $courseMasterPk = !empty($validated['course_name']) && is_numeric($validated['course_name'])
+                    ? (int) $validated['course_name']
+                    : null;
+                $authorValue = !empty($validated['author_name']) ? trim((string) $validated['author_name']) : null;
+                $metadata['other_subject'] = trim((string) ($validated['subject_name'] ?? ''));
+                $metadata['other_topic'] = trim((string) ($validated['timetable_name'] ?? ''));
+                $metadata['other_author'] = trim((string) ($validated['author_name'] ?? ''));
+            }
             
             // Get parent course_repository_master to fetch its type
             $parent = CourseRepositoryMaster::findOrFail($pk);
@@ -420,14 +480,17 @@ class CourseRepositoryController extends Controller
             $details = CourseRepositoryDetail::create([
                 'course_repository_master_pk' => $pk,
                 'course_repository_type' =>$parent->parent_type,
-                'course_master_pk' => $validated['course_name'] ?? null,
-                'subject_pk' => $validated['subject_name'] ?? null,
-                'topic_pk' => $validated['timetable_name'] ?? null,
+                'course_master_pk' => $courseMasterPk,
+                'subject_pk' => $subjectPk,
+                'topic_pk' => $topicPk,
                 'session_date' => $validated['session_date'] ?? null,
-                'author_name' => $validated['author_name'] ?? null,
+                'author_name' => $authorValue,
                 'sector_master_pk' => $validated['sector_master'] ?? null,
                 'ministry_master_pk' => $validated['ministry_master'] ?? null,
                 'keyword' => $validated['keywords'] ?? null,
+                'detail_document' => !empty(array_filter($metadata, fn($v) => $v !== null && $v !== ''))
+                    ? json_encode($metadata)
+                    : null,
                 'videolink' => $validated['video_link'] ?? null,
                 'created_date' => now(),
                 'created_by' => auth()->id(),
@@ -540,7 +603,7 @@ class CourseRepositoryController extends Controller
             // Get original filename without timestamp prefix
             $originalName = preg_replace('/^\d+_[a-f0-9]+_/', '', $document->upload_document);
             
-            return Storage::disk('public')->download($relativePath, $originalName);
+            return response()->download(storage_path('app/public/' . $relativePath), $originalName);
         } catch (Exception $e) {
             Log::error('Error downloading document: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Download failed: ' . $e->getMessage());
@@ -591,6 +654,26 @@ class CourseRepositoryController extends Controller
             $prefixedCandidates[] = preg_replace('#^Course Repository/#', 'course_repository/', $normalizedCandidate);
         }
         $candidates = array_values(array_unique(array_filter($prefixedCandidates)));
+
+        if (!empty($document->upload_document)) {
+            $fileName = ltrim(str_replace('\\', '/', (string) $document->upload_document), '/');
+            $candidates[] = $fileName;
+            $candidates[] = 'course_repository/' . $fileName;
+            $candidates[] = 'course-repository/' . $fileName;
+            $candidates[] = 'Course Repository/' . $fileName;
+
+            if ($document->course_repository_master_pk) {
+                $master = CourseRepositoryMaster::find($document->course_repository_master_pk);
+                if ($master) {
+                    $folderPath = trim($this->buildFolderPath($master), '/');
+                    if ($folderPath !== '') {
+                        $candidates[] = $folderPath . '/' . $fileName;
+                    }
+                }
+            }
+        }
+
+        $candidates = array_values(array_unique(array_filter($candidates)));
 
         foreach ($candidates as $candidate) {
             if (!is_string($candidate) || trim($candidate) === '') {
@@ -650,7 +733,7 @@ class CourseRepositoryController extends Controller
     public function getCourses()
     {
         try {
-            $courses = CourseMaster::where('course_active_inactive', 1)
+            $courses = CourseMaster::where('active_inactive', 1)
                 ->select('pk', 'course_name')
                 ->orderBy('course_name')
                 ->get();
@@ -793,11 +876,49 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'data' => []]);
             }
 
-            // Get distinct faculty/authors for this topic from course_repository_details
-            $authors = FacultyMaster::distinct()
-                ->join('timetable', 'faculty_master.pk', '=', 'timetable.faculty_master')
-                ->where('timetable.pk', $topicPk)
-                ->select('faculty_master.pk', 'faculty_master.full_name')
+            $facultyIds = [];
+
+            $facultyRawValues = Timetable::where('pk', $topicPk)
+                ->pluck('faculty_master');
+
+            foreach ($facultyRawValues as $raw) {
+                $raw = trim((string) $raw);
+                if ($raw === '') {
+                    continue;
+                }
+
+                $decoded = json_decode($raw, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    foreach ($decoded as $id) {
+                        if (is_numeric($id)) {
+                            $facultyIds[] = (int) $id;
+                        }
+                    }
+                    continue;
+                }
+
+                if (strpos($raw, ',') !== false) {
+                    foreach (explode(',', $raw) as $part) {
+                        $part = trim($part);
+                        if (is_numeric($part)) {
+                            $facultyIds[] = (int) $part;
+                        }
+                    }
+                    continue;
+                }
+
+                if (is_numeric($raw)) {
+                    $facultyIds[] = (int) $raw;
+                }
+            }
+
+            $facultyIds = array_values(array_unique(array_filter($facultyIds)));
+
+            $authors = FacultyMaster::query()
+                ->whereIn('pk', $facultyIds)
+                ->whereNotNull('full_name')
+                ->select('pk', 'full_name')
+                ->orderBy('full_name')
                 ->get();
 
             return response()->json(['success' => true, 'data' => $authors]);
@@ -820,7 +941,7 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'data' => []]);
             }
 
-            $groups = \DB::table('timetable as t')
+            $groups = DB::table('timetable as t')
                 ->join('subject_master as sm', 't.subject_master_pk', '=', 'sm.pk')
                 ->where('t.course_master_pk', $coursePk)
                 ->where('t.active_inactive', 1)
@@ -853,7 +974,7 @@ class CourseRepositoryController extends Controller
                 return response()->json(['success' => false, 'data' => []]);
             }
 
-            $timetables = \DB::table('timetable as t')
+            $timetables = DB::table('timetable as t')
                 ->leftJoin('faculty_master as fm', 't.faculty_master', '=', 'fm.pk')
                 ->where('t.subject_master_pk', $subjectPk)
                 ->where('t.course_master_pk', $coursePk)
@@ -949,7 +1070,9 @@ class CourseRepositoryController extends Controller
 
             // Get root repositories (main course categories)
             $query = CourseRepositoryMaster::where('del_folder_status', 1)
-                ->whereNull('parent_type')
+                ->where(function ($q) {
+                    $q->whereNull('parent_type')->orWhere('parent_type', 0);
+                })
                 ->with(['children', 'documents']);
 
             // Apply filters if provided
@@ -982,8 +1105,10 @@ class CourseRepositoryController extends Controller
         try {
             // Get Foundation Course repositories
             $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
-                ->where('course_repository_name', 'like', 'Foundation Course%')
-                ->whereNull('parent_type')
+                ->where(function ($q) {
+                    $q->where('course_repository_name', 'like', 'Foundation Course%')
+                        ->orWhere('course_repository_name', 'like', 'FC-%');
+                })
                 ->with(['children', 'documents'])
                 ->orderBy('created_date', 'desc')
                 ->get();
@@ -1132,15 +1257,14 @@ class CourseRepositoryController extends Controller
     public function documentDetails($documentId)
     {
         try {
-            $document = CourseRepositoryDetail::with(['author', 'subject', 'course', 'topic'])
-                ->findOrFail($documentId);
+            $document = $this->resolveDetailFromIdentifier((int) $documentId);
 
             return response()->json([
                 'success' => true,
                 'document' => [
-                    'author' => $document->author ? $document->author->full_name : 'N/A',
-                    'subject' => $document->subject ? $document->subject->subject_name : 'N/A',
-                    'topic' => $document->topic ? $document->topic->subject_topic : 'N/A',
+                    'author' => $document->author_display_name ?? 'N/A',
+                    'subject' => $document->subject_display_name ?? 'N/A',
+                    'topic' => $document->topic_display_name ?? 'N/A',
                     'keyword' => $document->keyword ?? 'N/A',
                 ],
             ]);
@@ -1156,8 +1280,7 @@ class CourseRepositoryController extends Controller
     public function documentView($documentId)
     {
         try {
-            $document = CourseRepositoryDetail::with(['documents', 'author', 'subject'])
-                ->findOrFail($documentId);
+            $document = $this->resolveDetailFromIdentifier((int) $documentId);
 
             $pdfDocument = $document->documents->first();
             if (!$pdfDocument) {
@@ -1166,7 +1289,7 @@ class CourseRepositoryController extends Controller
 
             $pdfRelativePath = $this->resolveDocumentRelativePath($pdfDocument);
             $pdfViewUrl = $pdfRelativePath
-                ? Storage::disk('public')->url($pdfRelativePath)
+                ? asset('storage/' . ltrim($pdfRelativePath, '/'))
                 : $pdfDocument->public_file_url;
 
             return view('admin.course-repository.user.document-view', [
@@ -1186,8 +1309,7 @@ class CourseRepositoryController extends Controller
     public function documentVideo($documentId)
     {
         try {
-            $document = CourseRepositoryDetail::with(['documents', 'author'])
-                ->findOrFail($documentId);
+            $document = $this->resolveDetailFromIdentifier((int) $documentId);
 
             return view('admin.course-repository.user.document-video', [
                 'document' => $document,
@@ -1249,7 +1371,7 @@ class CourseRepositoryController extends Controller
             }
 
             $documents = $documentsQuery
-                ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author'])
+                ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author', 'detail.sector', 'detail.ministry'])
                 ->orderBy('pk', 'desc')
                 ->get();
 
@@ -1308,13 +1430,66 @@ class CourseRepositoryController extends Controller
                 ->get(['pk', 'ministry_name']);
         }
 
+        $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
+        $faculties = FacultyMaster::select('pk', 'full_name')
+            ->whereNotNull('full_name')
+            ->orderBy('full_name')
+            ->get();
+
+        $extraSubjectMap = [];
+        $extraFacultyMap = [];
+        $otherDetails = CourseRepositoryDetail::query()
+            ->whereIn('type', ['OT', 'IN'])
+            ->where('status', 1)
+            ->get(['subject_pk', 'author_name', 'detail_document']);
+
+        foreach ($otherDetails as $detail) {
+            $meta = [];
+            if (!empty($detail->detail_document)) {
+                $decoded = json_decode((string) $detail->detail_document, true);
+                if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                    $meta = $decoded;
+                }
+            }
+
+            $subjectText = trim((string) ($meta['other_subject'] ?? ''));
+            if ($subjectText === '' && !empty($detail->subject_pk) && !is_numeric((string) $detail->subject_pk)) {
+                $subjectText = trim((string) $detail->subject_pk);
+            }
+            if ($subjectText !== '') {
+                $extraSubjectMap[$subjectText] = true;
+            }
+
+            $authorText = trim((string) ($meta['other_author'] ?? ''));
+            if ($authorText === '' && !empty($detail->author_name)) {
+                $authorRaw = trim((string) $detail->author_name);
+                if (!is_numeric($authorRaw)) {
+                    $authorText = $authorRaw;
+                }
+            }
+            if ($authorText !== '') {
+                $extraFacultyMap[$authorText] = true;
+            }
+        }
+
+        foreach (array_keys($extraSubjectMap) as $subjectText) {
+            $subjects->push((object) [
+                'pk' => 'ot_subj::' . $subjectText,
+                'subject_name' => $subjectText,
+            ]);
+        }
+
+        foreach (array_keys($extraFacultyMap) as $facultyText) {
+            $faculties->push((object) [
+                'pk' => 'ot_fac::' . $facultyText,
+                'full_name' => $facultyText,
+            ]);
+        }
+
         return [
             'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
-            'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
-            'faculties' => FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get(),
+            'subjects' => $subjects,
+            'faculties' => $faculties,
             'sectors' => SectorMaster::active()->get(),
             'ministries' => $ministries,
             'filters' => $filters,
@@ -1341,13 +1516,29 @@ class CourseRepositoryController extends Controller
             $detailQuery->where('course_master_pk', $filters['course']);
         }
         if (!empty($filters['subject'])) {
-            $detailQuery->where('subject_pk', $filters['subject']);
+            if (is_string($filters['subject']) && str_starts_with($filters['subject'], 'ot_subj::')) {
+                $subjectText = substr($filters['subject'], strlen('ot_subj::'));
+                $detailQuery->where(function ($q) use ($subjectText) {
+                    $q->where('subject_pk', $subjectText)
+                        ->orWhere('detail_document', 'like', '%' . $subjectText . '%');
+                });
+            } else {
+                $detailQuery->where('subject_pk', $filters['subject']);
+            }
         }
         if (!empty($filters['date'])) {
             $detailQuery->whereDate('session_date', $filters['date']);
         }
         if (!empty($filters['faculty'])) {
-            $detailQuery->where('author_name', $filters['faculty']);
+            if (is_string($filters['faculty']) && str_starts_with($filters['faculty'], 'ot_fac::')) {
+                $facultyText = substr($filters['faculty'], strlen('ot_fac::'));
+                $detailQuery->where(function ($q) use ($facultyText) {
+                    $q->where('author_name', $facultyText)
+                        ->orWhere('detail_document', 'like', '%' . $facultyText . '%');
+                });
+            } else {
+                $detailQuery->where('author_name', $filters['faculty']);
+            }
         }
         if (!empty($filters['sector'])) {
             $detailQuery->where('sector_master_pk', $filters['sector']);
@@ -1355,5 +1546,24 @@ class CourseRepositoryController extends Controller
         if (!empty($filters['ministry'])) {
             $detailQuery->where('ministry_master_pk', $filters['ministry']);
         }
+    }
+
+    private function resolveDetailFromIdentifier(int $identifier): CourseRepositoryDetail
+    {
+        $detail = CourseRepositoryDetail::with(['documents', 'author', 'subject', 'course', 'topic'])
+            ->find($identifier);
+
+        if ($detail) {
+            return $detail;
+        }
+
+        $document = CourseRepositoryDocument::with(['detail.documents', 'detail.author', 'detail.subject', 'detail.course', 'detail.topic'])
+            ->findOrFail($identifier);
+
+        if (!$document->detail) {
+            abort(404, 'Document detail not found');
+        }
+
+        return $document->detail;
     }
 }

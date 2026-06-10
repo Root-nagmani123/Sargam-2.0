@@ -92,6 +92,14 @@
                                 <span>Apply Filters</span>
                             </button>
                         </div>
+                        <div class="col-6 col-md-4 col-lg-auto cru-filter-col">
+                            <label class="form-label small fw-semibold text-secondary mb-1 d-none d-lg-block">&nbsp;</label>
+                            <a href="{{ route('admin.course-repository.user.index') }}"
+                               class="btn btn-outline-secondary btn-sm w-100 fw-semibold d-inline-flex align-items-center justify-content-center gap-2">
+                                <i class="bi bi-x-circle" aria-hidden="true"></i>
+                                <span>Clear Filters</span>
+                            </a>
+                        </div>
                     </div>
                 </form>
             </div>

@@ -152,7 +152,6 @@
                         @include('admin.course-repository.partials.cr-design-file', [
                             'inputId' => 'modal_category_image',
                             'inputName' => 'category_image',
-                            'required' => true,
                             'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
                         ])
                         <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
@@ -547,9 +546,31 @@ document.addEventListener('DOMContentLoaded', function() {
                         Swal.fire({ icon: 'error', title: 'Error', text: 'Security token missing. Please refresh the page.' });
                         return;
                     }
-                    form.innerHTML = '<input type="hidden" name="_token" value="' + csrfToken + '"><input type="hidden" name="_method" value="DELETE">';
-                    document.body.appendChild(form);
-                    form.submit();
+                    var fData2 = new FormData();
+                    fData2.append('_token', csrfToken);
+                    fData2.append('_method', 'DELETE');
+
+                    fetch(window.getCourseRepoDestroyUrl(pk), {
+                        method: 'POST',
+                        body: fData2,
+                        headers: {
+                            'Accept': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        }
+                    })
+                    .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
+                    .then(function(delResult) {
+                        if (delResult.ok && delResult.data && delResult.data.success) {
+                            Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Category deleted.', showConfirmButton: false, timer: 1200 })
+                                .then(function() { location.reload(); });
+                        } else {
+                            var msg = (delResult.data && delResult.data.message) ? delResult.data.message : 'Cannot delete this category.';
+                            Swal.fire({ icon: 'warning', title: 'Cannot Delete', text: msg });
+                        }
+                    })
+                    .catch(function() {
+                        Swal.fire({ icon: 'error', title: 'Error', text: 'Delete request failed. Please try again.' });
+                    });
                 }
             });
         });

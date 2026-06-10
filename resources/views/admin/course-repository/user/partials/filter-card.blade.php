@@ -77,8 +77,6 @@
                 <select class="form-select form-select-sm js-cru-filter-choice js-cru-filter-sector"
                         id="filter_sector"
                         name="sector"
-                        required
-                        aria-required="true"
                         data-placeholder="Sector *">
                     <option value="">Sector *</option>
                     @foreach($sectors as $sector)
@@ -94,8 +92,6 @@
                 <select class="form-select form-select-sm js-cru-filter-choice js-cru-filter-ministry"
                         id="filter_ministry"
                         name="ministry"
-                        required
-                        aria-required="true"
                         data-placeholder="Ministry *"
                         @if(empty($filters['sector'])) disabled @endif>
                     <option value="">Ministry *</option>
@@ -111,7 +107,7 @@
                 <button type="button"
                         class="btn btn-outline-danger btn-sm w-100 fw-normal px-3"
                         id="cruFilterReset">
-                    Reset Filters
+                    Clear Filters
                 </button>
             </div>
 

@@ -401,7 +401,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         @include('admin.course-repository.partials.cr-design-file', [
                             'inputId' => 'category_image_create',
                             'inputName' => 'category_image',
-                            'required' => true,
                             'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
                         ])
                         <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
@@ -1479,7 +1478,35 @@ document.addEventListener('DOMContentLoaded', function() {
                         form.appendChild(csrfInput);
                         form.appendChild(methodInput);
                         document.body.appendChild(form);
-                        form.submit();
+
+                        var csrfEl2 = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
+                        var csrfToken2 = csrfEl2 ? (csrfEl2.getAttribute('content') || csrfEl2.value) : null;
+
+                        var fData = new FormData();
+                        fData.append('_token', csrfToken2 || '');
+                        fData.append('_method', 'DELETE');
+
+                        fetch('/course-repository/' + pk, {
+                            method: 'POST',
+                            body: fData,
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            }
+                        })
+                        .then(function(r) { return r.json().then(function(d) { return { ok: r.ok, status: r.status, data: d }; }); })
+                        .then(function(result2) {
+                            if (result2.ok && result2.data && result2.data.success) {
+                                Swal.fire({ icon: 'success', title: 'Deleted!', text: 'Category deleted.', showConfirmButton: false, timer: 1200 })
+                                    .then(function() { location.reload(); });
+                            } else {
+                                var msg = (result2.data && result2.data.message) ? result2.data.message : 'Cannot delete this category.';
+                                Swal.fire({ icon: 'warning', title: 'Cannot Delete', text: msg });
+                            }
+                        })
+                        .catch(function() {
+                            Swal.fire({ icon: 'error', title: 'Error', text: 'Delete request failed.' });
+                        });
                     }
                 });
             } else {
@@ -2723,33 +2750,41 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Find the selected timetable in the response
                     const selectedTimetable = response.data.find(t => t.pk == timetablePk);
                     if (selectedTimetable) {
-                        // Format date as dd-mm-yyyy for display
-                        const dateFormatted = selectedTimetable.START_DATE ?
-                            new Date(selectedTimetable.START_DATE).toLocaleDateString(
-                                'en-GB', {
-                                    day: '2-digit',
-                                    month: '2-digit',
-                                    year: 'numeric'
-                                }).replace(/\//g, '-') :
-                            '';
+                        const rawDate = selectedTimetable.START_DATE ? String(selectedTimetable.START_DATE).substring(0, 10) : '';
 
-                        // Populate session date using jQuery for better compatibility
+                        // Populate session date as YYYY-MM-DD (compatible with date input and backend).
                         $sessionDate.empty().append(
-                            $('<option></option>').val(dateFormatted).text(
-                                dateFormatted)
-                        ).val(dateFormatted);
+                            $('<option></option>').val(rawDate).text(rawDate)
+                        ).val(rawDate);
 
-                        // Populate author/faculty name if exists
-                        if (selectedTimetable.faculty_name && selectedTimetable.faculty_name
-                            .trim()) {
-                            $authorName.empty().append(
-                                $('<option></option>').val(selectedTimetable.pk).text(
-                                    selectedTimetable.faculty_name)
-                            ).val(selectedTimetable.pk);
-                        } else {
-                            // If no faculty name, show empty option
-                            $authorName.html('<option value="">-- Select --</option>');
-                        }
+                        // Populate author dropdown via dedicated endpoint so multi-faculty topics are supported.
+                        $.ajax({
+                            url: "{{ route('course-repository.authors-by-topic') }}",
+                            type: "GET",
+                            data: {
+                                topic_pk: timetablePk
+                            },
+                            headers: {
+                                'Accept': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            success: function(authResp) {
+                                $authorName.html('<option value="">-- Select --</option>');
+                                if (authResp && authResp.success && Array.isArray(authResp.data) && authResp.data.length > 0) {
+                                    authResp.data.forEach(function(author) {
+                                        $authorName.append(
+                                            $('<option></option>').val(author.pk).text(author.full_name)
+                                        );
+                                    });
+                                    if (authResp.data.length === 1) {
+                                        $authorName.val(String(authResp.data[0].pk));
+                                    }
+                                }
+                            },
+                            error: function() {
+                                $authorName.html('<option value="">-- Select --</option>');
+                            }
+                        });
 
                         // Auto-update keywords after loading date and author
                         setTimeout(function() {

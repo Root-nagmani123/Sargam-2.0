@@ -59,15 +59,15 @@
                         @endif
                     </td>
                     <td class="cru-col-subject">
-                        @if($doc->detail && $doc->detail->subject)
-                            {{ Str::limit($doc->detail->subject->subject_name, 25) }}
+                        @if($doc->detail)
+                            {{ Str::limit($doc->detail->subject_display_name, 25) }}
                         @else
                             NA
                         @endif
                     </td>
                     <td class="cru-col-topic">
-                        @if($doc->detail && $doc->detail->topic)
-                            {{ Str::limit($doc->detail->topic->subject_topic, 20) }}
+                        @if($doc->detail)
+                            {{ Str::limit($doc->detail->topic_display_name, 20) }}
                         @else
                             NA
                         @endif
@@ -80,10 +80,8 @@
                         @endif
                     </td>
                     <td class="cru-col-author">
-                        @if($doc->detail && $doc->detail->author)
-                            {{ Str::limit($doc->detail->author->full_name, 20) }}
-                        @elseif($doc->detail && $doc->detail->author_name)
-                            {{ Str::limit($doc->detail->author_name, 20) }}
+                        @if($doc->detail)
+                            {{ Str::limit($doc->detail->author_display_name, 20) }}
                         @else
                             NA
                         @endif

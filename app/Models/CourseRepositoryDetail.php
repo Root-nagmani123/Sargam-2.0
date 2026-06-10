@@ -151,4 +151,73 @@ class CourseRepositoryDetail extends Model
 
         return $url;
     }
+
+    public function getMetadataAttribute(): array
+    {
+        $raw = trim((string) ($this->detail_document ?? ''));
+        if ($raw === '') {
+            return [];
+        }
+
+        $decoded = json_decode($raw, true);
+        if (json_last_error() !== JSON_ERROR_NONE || !is_array($decoded)) {
+            return [];
+        }
+
+        return $decoded;
+    }
+
+    public function getSubjectDisplayNameAttribute(): string
+    {
+        if ($this->relationLoaded('subject') && $this->subject && !empty($this->subject->subject_name)) {
+            return (string) $this->subject->subject_name;
+        }
+
+        $metaSubject = trim((string) ($this->metadata['other_subject'] ?? ''));
+        if ($metaSubject !== '') {
+            return $metaSubject;
+        }
+
+        $raw = trim((string) ($this->subject_pk ?? ''));
+        return ($raw !== '' && !is_numeric($raw)) ? $raw : 'N/A';
+    }
+
+    public function getTopicDisplayNameAttribute(): string
+    {
+        if ($this->relationLoaded('topic') && $this->topic && !empty($this->topic->subject_topic)) {
+            return (string) $this->topic->subject_topic;
+        }
+
+        $metaTopic = trim((string) ($this->metadata['other_topic'] ?? ''));
+        if ($metaTopic !== '') {
+            return $metaTopic;
+        }
+
+        $raw = trim((string) ($this->topic_pk ?? ''));
+        return ($raw !== '' && !is_numeric($raw)) ? $raw : 'N/A';
+    }
+
+    public function getAuthorDisplayNameAttribute(): string
+    {
+        if ($this->relationLoaded('author') && $this->author && !empty($this->author->full_name)) {
+            return (string) $this->author->full_name;
+        }
+
+        $metaAuthor = trim((string) ($this->metadata['other_author'] ?? ''));
+        if ($metaAuthor !== '') {
+            return $metaAuthor;
+        }
+
+        $raw = trim((string) ($this->author_name ?? ''));
+        if ($raw === '') {
+            return 'N/A';
+        }
+
+        if (is_numeric($raw)) {
+            $faculty = FacultyMaster::select('full_name')->find((int) $raw);
+            return $faculty && !empty($faculty->full_name) ? (string) $faculty->full_name : 'N/A';
+        }
+
+        return $raw;
+    }
 }
