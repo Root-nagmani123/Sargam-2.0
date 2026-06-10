@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class EmployeeMaster extends Model
 {
@@ -164,5 +165,14 @@ class EmployeeMaster extends Model
         }
 
         return EmployeeRoleMapping::where('user_credentials_pk',  $userCredential->pk)->pluck('user_role_master_pk');
+    }
+
+
+        /**
+     * Get the appellation associated with this employee
+     */
+    public function appellationMaster(): BelongsTo
+    {
+        return $this->belongsTo(AppellationMaster::class, 'appellation', 'pk');
     }
 }
