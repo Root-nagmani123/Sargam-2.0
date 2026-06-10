@@ -712,16 +712,28 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                 <div class="modal-body">
                     <form action="{{ route('memo.notice.management.store_memo_status') }}" method="POST">
                         @csrf
+                        <input type="hidden" name="memo_form_submit" value="1">
+
+                        @if(old('memo_form_submit') && $errors->any())
+                        <div class="alert alert-danger" role="alert">
+                            <ul class="mb-0 ps-3">
+                                @foreach ($errors->all() as $error)
+                                <li>{{ $error }}</li>
+                                @endforeach
+                            </ul>
+                        </div>
+                        @endif
+
                         <div class="row g-3">
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="course_master_name" class="form-label">Course</label>
 
                                 <input type="text" id="course_master_name" class="form-control"
-                                    name="course_master_name" readonly>
-                                <input type="hidden" id="course_master_pk" name="course_master_pk">
-                                <input type="hidden" id="student_notice_status_pk" name="student_notice_status_pk">
-                                <input type="hidden" id="memo_count" name="memo_count">
-                                <input type="hidden" id="student_pk" name="student_pk">
+                                    name="course_master_name" value="{{ old('course_master_name') }}" readonly>
+                                <input type="hidden" id="course_master_pk" name="course_master_pk" value="{{ old('course_master_pk') }}">
+                                <input type="hidden" id="student_notice_status_pk" name="student_notice_status_pk" value="{{ old('student_notice_status_pk') }}">
+                                <input type="hidden" id="memo_count" name="memo_count" value="{{ old('memo_count') }}">
+                                <input type="hidden" id="student_pk" name="student_pk" value="{{ old('student_pk') }}">
                                 @error('course_master_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -730,7 +742,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="date_memo_notice" class="form-label">Date</label>
                                 <input type="date" class="form-control" id="date_memo_notice" name="date_memo_notice"
-                                    required readonly>
+                                    value="{{ old('date_memo_notice') }}" required readonly>
                                 @error('date_memo_notice')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -741,7 +753,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                         class="text-danger">*</span></label>
 
                                 <input type="text" id="subject_master_id" class="form-control" name="subject_master_id"
-                                    readonly>
+                                    value="{{ old('subject_master_id') }}" readonly>
 
                                 @error('subject_master_id')
                                 <span class="text-danger">{{ $message }}</span>
@@ -751,7 +763,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="topic_id" class="form-label">Topic</label>
 
-                                <input type="text" id="topic_id" class="form-control" name="topic_id" readonly>
+                                <input type="text" id="topic_id" class="form-control" name="topic_id" value="{{ old('topic_id') }}" readonly>
 
                                 @error('topic_id')
                                 <span class="text-danger">{{ $message }}</span>
@@ -762,7 +774,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="session_name" class="form-label">Session</label>
-                                <input type="text" id="class_session_master_pk" class="form-control" readonly>
+                                <input type="text" id="class_session_master_pk" class="form-control" value="{{ old('class_session_master_pk') }}" readonly>
                                 @error('session_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -770,14 +782,14 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="faculty_name" class="form-label">Faculty Name</label>
-                                <input type="text" id="faculty_name" class="form-control" readonly>
+                                <input type="text" id="faculty_name" class="form-control" value="{{ old('faculty_name') }}" readonly>
                                 @error('faculty_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="student_name" class="form-label">Student Name</label>
-                                <input type="text" id="student_name" class="form-control" readonly>
+                                <input type="text" id="student_name" class="form-control" value="{{ old('student_name') }}" readonly>
                                 @error('student_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -786,10 +798,10 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
-                                <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-select">
+                                <select name="memo_type_master_pk" id="memo_type_master_pk" class="form-select @error('memo_type_master_pk') is-invalid @enderror">
                                     <option value="">Select Memo Type</option>
                                     @foreach ($memo_master as $master)
-                                    <option value="{{ $master->pk }}">{{ $master->memo_type_name }}</option>
+                                    <option value="{{ $master->pk }}" {{ old('memo_type_master_pk') == $master->pk ? 'selected' : '' }}>{{ $master->memo_type_name }}</option>
                                     @endforeach
                                 </select>
                                 @error('memo_type_master_pk')
@@ -798,7 +810,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_number" class="form-label">Memo Number</label>
-                                <input type="text" id="memo_number" name="memo_number" class="form-control" readonly>
+                                <input type="text" id="memo_number" name="memo_number" class="form-control" value="{{ old('memo_number') }}" readonly>
                                 @error('memo_number')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -807,10 +819,10 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
 
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="venue" class="form-label">Venue</label>
-                                <select name="venue" id="venue" class="form-select">
+                                <select name="venue" id="venue" class="form-select @error('venue') is-invalid @enderror">
                                     <option value="">Select Venue</option>
                                     @foreach ($venue as $v)
-                                    <option value="{{ $v->venue_id }}">{{ $v->venue_name }}</option>
+                                    <option value="{{ $v->venue_id }}" {{ old('venue') == $v->venue_id ? 'selected' : '' }}>{{ $v->venue_name }}</option>
                                     @endforeach
                                 </select>
                                 @error('venue')
@@ -826,7 +838,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             </div>
                             <div class="col-12 col-md-3 mb-3">
                                 <label for="meeting_time" class="form-label">Meeting Time</label>
-                                <input type="time" id="meeting_time" name="meeting_time" class="form-control">
+                                <input type="time" id="meeting_time" name="meeting_time" class="form-control @error('meeting_time') is-invalid @enderror" value="{{ old('meeting_time') }}">
                                 @error('meeting_time')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -834,7 +846,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                             <div class="col-12 mb-3">
                                 <label for="textarea" class="form-label">Message (If Any)</label>
                                 <textarea class="form-control" id="textarea" name="Remark" rows="3"
-                                    placeholder="Enter remarks..."></textarea>
+                                    placeholder="Enter remarks...">{{ old('Remark') }}</textarea>
                                 @error('Remark')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -1098,6 +1110,17 @@ $(document).ready(function() {
         $(this).find('form')[0].reset();
         setModalMode('generate'); // Reset to default mode
     });
+
+    @if(old('memo_form_submit') && $errors->any())
+    setModalMode('generate');
+    const memoModalEl = document.getElementById('memo_generate');
+    if (memoModalEl) {
+        const memoModal = new bootstrap.Modal(memoModalEl);
+        memoModal.show();
+    }
+    syncMemoChoicesById('memo_type_master_pk');
+    syncMemoChoicesById('venue');
+    @endif
 });
 </script>
 @endpush

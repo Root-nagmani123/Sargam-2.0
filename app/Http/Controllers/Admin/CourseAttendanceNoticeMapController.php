@@ -85,12 +85,12 @@ class CourseAttendanceNoticeMapController extends Controller
         }
     }
 
-    // Apply date range filter for notices
+    // Apply date range filter by session date
     if ($fromDateFilter) {
-        $noticesQuery->where('sns.date_', '>=', $fromDateFilter);
+        $noticesQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
     }
     if ($toDateFilter) {
-        $noticesQuery->where('sns.date_', '<=', $toDateFilter);
+        $noticesQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
     }
 
     $notices = $noticesQuery->get();
@@ -142,12 +142,12 @@ class CourseAttendanceNoticeMapController extends Controller
             }
         }
 
-        // Apply date range filter for memos
+        // Apply date range filter by session date
         if ($fromDateFilter) {
-            $memoQuery->where('student_memo_status.date', '>=', $fromDateFilter);
+            $memoQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
         }
         if ($toDateFilter) {
-            $memoQuery->where('student_memo_status.date', '<=', $toDateFilter);
+            $memoQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
         }
 
         $memos = $memoQuery->get();
@@ -240,13 +240,13 @@ class CourseAttendanceNoticeMapController extends Controller
             });
         }
 
-        // Apply date range filter to collection
+        // Apply date range filter to collection (prefer session date)
         if ($fromDateFilter || $toDateFilter) {
             $memos = $memos->filter(function($item) use ($fromDateFilter, $toDateFilter) {
-                if (!isset($item->date_)) {
+                $itemDate = $item->session_date ?? $item->date_ ?? null;
+                if (!$itemDate) {
                     return false;
                 }
-                $itemDate = $item->date_;
                 if ($fromDateFilter && $itemDate < $fromDateFilter) {
                     return false;
                 }
@@ -329,6 +329,7 @@ $noticeCount = $memos->groupBy(function($item) {
                 'sm.display_name as student_name',
                 'sm.pk as student_id',
                 't.subject_topic as topic_name',
+                't.START_DATE as session_date',
                 'cm.course_name',
                 DB::raw('"Notice" as type_notice_memo')
             );
@@ -352,12 +353,12 @@ $noticeCount = $memos->groupBy(function($item) {
             }
         }
 
-        // Apply date range filter for notices
+        // Apply date range filter by session date
         if ($fromDateFilter) {
-            $noticesQuery->where('sns.date_', '>=', $fromDateFilter);
+            $noticesQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
         }
         if ($toDateFilter) {
-            $noticesQuery->where('sns.date_', '<=', $toDateFilter);
+            $noticesQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
         }
 
         $notices = $noticesQuery->get();
@@ -393,6 +394,7 @@ $noticeCount = $memos->groupBy(function($item) {
                     'sm.display_name as student_name',
                     'sm.pk as student_id',
                     't.subject_topic as topic_name',
+                    't.START_DATE as session_date',
                     'mcm.discussion_name',
                     'cm.course_name'
                 );
@@ -408,12 +410,12 @@ $noticeCount = $memos->groupBy(function($item) {
                 }
             }
 
-            // Apply date range filter for memos
+            // Apply date range filter by session date
             if ($fromDateFilter) {
-                $memoQuery->where('student_memo_status.date', '>=', $fromDateFilter);
+                $memoQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
             }
             if ($toDateFilter) {
-                $memoQuery->where('student_memo_status.date', '<=', $toDateFilter);
+                $memoQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
             }
 
             $memos = $memoQuery->get();
@@ -430,10 +432,10 @@ $noticeCount = $memos->groupBy(function($item) {
                         ->where('student_memo_status.student_notice_status_pk', $notice->notice_id);
                     
                     if ($fromDateFilter) {
-                        $memoDataQuery->where('student_memo_status.date', '>=', $fromDateFilter);
+                        $memoDataQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
                     }
                     if ($toDateFilter) {
-                        $memoDataQuery->where('student_memo_status.date', '<=', $toDateFilter);
+                        $memoDataQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
                     }
                     
                     $memoData = $memoDataQuery->select(
@@ -457,6 +459,7 @@ $noticeCount = $memos->groupBy(function($item) {
                             'sm.display_name as student_name',
                             'sm.pk as student_id',
                             't.subject_topic as topic_name',
+                            't.START_DATE as session_date',
                             'mcm.discussion_name',
                             'cm.course_name'
                         )
@@ -509,13 +512,13 @@ $noticeCount = $memos->groupBy(function($item) {
                 });
             }
 
-            // Apply date range filter to collection
+            // Apply date range filter to collection (prefer session date)
             if ($fromDateFilter || $toDateFilter) {
                 $memos = $memos->filter(function($item) use ($fromDateFilter, $toDateFilter) {
-                    if (!isset($item->date_)) {
+                    $itemDate = $item->session_date ?? $item->date_ ?? null;
+                    if (!$itemDate) {
                         return false;
                     }
-                    $itemDate = $item->date_;
                     if ($fromDateFilter && $itemDate < $fromDateFilter) {
                         return false;
                     }
