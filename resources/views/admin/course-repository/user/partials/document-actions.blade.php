@@ -1,5 +1,5 @@
 @php
-    $detailPk = $detailPk ?? ($doc?->course_repository_details_pk ?? null);
+    $detailPk = $detailPk ?? ($detail?->pk ?? $doc?->course_repository_details_pk ?? $doc?->detail?->pk ?? null);
     $detail = $detail ?? ($doc?->detail ?? null);
     $fileDoc = $fileDoc ?? ($doc ?? null);
     $videoLink = trim((string) ($detail->videolink ?? ''));
@@ -29,8 +29,10 @@
         @endif
     @endif
 
-    @if($hasVideo && $detailPk)
-        <a href="{{ route('admin.course-repository.user.document-video', $detailPk) }}"
+    @if($hasVideo)
+        @php $videoDetailPk = $detailPk ?? $detail?->pk; @endphp
+        @if($videoDetailPk)
+        <a href="{{ route('admin.course-repository.user.document-video', $videoDetailPk) }}"
            class="btn btn-link btn-sm text-danger p-0 cru-btn-video"
            title="View video"
            aria-label="View video">
@@ -45,6 +47,17 @@
            aria-label="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}">
             <i class="bi bi-download fs-5" aria-hidden="true"></i>
         </a>
+        @else
+        <a href="{{ $videoLink }}"
+           class="btn btn-link btn-sm text-danger p-0 cru-btn-video-download"
+           @if($isDirectVideoFile) download @endif
+           target="_blank"
+           rel="noopener noreferrer"
+           title="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}"
+           aria-label="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}">
+            <i class="bi bi-download fs-5" aria-hidden="true"></i>
+        </a>
+        @endif
     @endif
 
     @if($hasFileDownload)
@@ -52,7 +65,7 @@
            class="btn btn-link btn-sm text-primary p-0 cru-btn-download"
            title="Download file"
            aria-label="Download file">
-            <i class="bi bi-file-earmark-arrow-down fs-5" aria-hidden="true"></i>
+            <i class="bi bi-download fs-5 fw-bold" aria-hidden="true"></i>
         </a>
     @endif
 </div>

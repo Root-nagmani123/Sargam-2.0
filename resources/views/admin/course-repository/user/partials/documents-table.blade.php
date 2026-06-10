@@ -1,5 +1,6 @@
 @php
     $documents = $documents ?? collect();
+    $documentsAsDetails = $documentsAsDetails ?? false;
     $totalCount = $documents->count();
     $cruTableId = 'cruDocumentsTable';
     $cruColumnStorageKey = 'cru-user-documents-columns';
@@ -15,22 +16,39 @@
         ['key' => 'action', 'label' => 'Action', 'locked' => true],
     ];
 @endphp
-<div class="card cru-table-card border-0 shadow-sm rounded-4 overflow-hidden" data-cru-table-card="{{ $cruTableId }}">
-    @if($totalCount > 0)
-    <div class="cru-table-toolbar d-flex flex-wrap align-items-center justify-content-between gap-2 px-3 px-md-4 py-3 border-bottom bg-white">
-        <p class="small text-muted mb-0 d-none d-sm-block">
-            <i class="bi bi-table me-1" aria-hidden="true"></i>Manage visible columns
-        </p>
-        @include('admin.course-repository.user.partials.table-column-toggle', [
-            'cruTableId' => $cruTableId,
-            'cruColumnStorageKey' => $cruColumnStorageKey,
-            'cruColumns' => $cruColumns,
-        ])
-    </div>
-    @endif
+@php
+    // The inline column show/hide control lives in the filter toolbar, so the
+    // toolbar (and Columns button) only appears when there is a documents table.
+    // Skip it when the parent already rendered a sub-category filter card
+    // (children present) to avoid duplicate filter form IDs.
+    $cruHasChildren = !empty($childCount) && $childCount > 0;
+    $cruShowFilterToolbar = $totalCount > 0
+        && !$cruHasChildren
+        && isset($courses) && isset($subjects) && isset($faculties);
+@endphp
+
+{{-- Filter toolbar with inline column show/hide — only rendered when a table exists --}}
+@if($cruShowFilterToolbar)
+    @include('admin.course-repository.user.partials.filter-card', [
+        'route' => route('admin.course-repository.user.show', $repository->pk),
+        'courses' => $courses,
+        'subjects' => $subjects,
+        'faculties' => $faculties,
+        'sectors' => $sectors ?? collect(),
+        'ministries' => $ministries ?? collect(),
+        'filters' => $filters ?? [],
+        'columnToggle' => [
+            'tableId' => $cruTableId,
+            'storageKey' => $cruColumnStorageKey,
+            'columns' => $cruColumns,
+        ],
+    ])
+@endif
+
+<div class="card cru-table-card border-0 shadow-sm rounded-4" data-cru-table-card="{{ $cruTableId }}">
     <div class="table-responsive">
         <table class="table mb-0 align-middle cru-table" id="{{ $cruTableId }}">
-            <thead class="table-light">
+            <thead>
                 <tr>
                     <th class="text-center text-nowrap cru-col-sno small text-uppercase" data-col="sno">S. No.</th>
                     <th class="cru-col-document_name small text-uppercase" data-col="document_name">Document Name</th>
@@ -40,56 +58,73 @@
                     <th class="cru-col-topic small text-uppercase" data-col="topic">Topic</th>
                     <th class="text-nowrap cru-col-session_date small text-uppercase" data-col="session_date">Session Date</th>
                     <th class="cru-col-author small text-uppercase" data-col="author">Author</th>
-                    <th class="text-center cru-col-action small text-uppercase" data-col="action">Action</th>
+                    <th class="text-center text-nowrap cru-col-action small text-uppercase" data-col="action">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse ($documents as $doc)
+                @php
+                    if ($documentsAsDetails) {
+                        $detail = $doc;
+                        $fileDoc = $doc->documents->first();
+                        $documentName = $fileDoc->upload_document ?? $detail->detail_document ?? 'N/A';
+                        $fileTitle = $fileDoc->file_title ?? 'N/A';
+                    } else {
+                        $detail = $doc->detail;
+                        $fileDoc = $doc;
+                        $documentName = $doc->upload_document ?? 'N/A';
+                        $fileTitle = $doc->file_title ?? 'N/A';
+                    }
+                @endphp
                 <tr>
                     <td class="text-center cru-col-sno">{{ $loop->iteration }}</td>
                     <td class="text-truncate cru-col-document_name" style="max-width: 12rem;">
-                        <span class="fw-semibold text-dark">{{ Str::limit($doc->upload_document ?? 'N/A', 40) }}</span>
+                        <span class="fw-semibold text-dark">{{ Str::limit($documentName, 40) }}</span>
                     </td>
-                    <td class="text-truncate cru-col-file_title" style="max-width: 10rem;">{{ Str::limit($doc->file_title ?? 'N/A', 35) }}</td>
+                    <td class="text-truncate cru-col-file_title" style="max-width: 10rem;">{{ Str::limit($fileTitle, 35) }}</td>
                     <td class="cru-col-course">
-                        @if($doc->detail && $doc->detail->course)
-                            {{ $doc->detail->course->course_name }}
+                        @if($detail && $detail->course)
+                            {{ $detail->course->course_name }}
                         @else
                             NA
                         @endif
                     </td>
                     <td class="cru-col-subject">
-                        @if($doc->detail && $doc->detail->subject)
-                            {{ Str::limit($doc->detail->subject->subject_name, 25) }}
+                        @if($detail && $detail->subject)
+                            {{ Str::limit($detail->subject->subject_name, 25) }}
                         @else
                             NA
                         @endif
                     </td>
                     <td class="cru-col-topic">
-                        @if($doc->detail && $doc->detail->topic)
-                            {{ Str::limit($doc->detail->topic->subject_topic, 20) }}
+                        @if($detail && $detail->topic)
+                            {{ Str::limit($detail->topic->subject_topic, 20) }}
                         @else
                             NA
                         @endif
                     </td>
                     <td class="text-nowrap cru-col-session_date">
-                        @if($doc->detail && $doc->detail->session_date)
-                            {{ $doc->detail->session_date->format('d/m/Y') }}
+                        @if($detail && $detail->session_date)
+                            {{ $detail->session_date->format('d/m/Y') }}
                         @else
                             NA
                         @endif
                     </td>
                     <td class="cru-col-author">
-                        @if($doc->detail && $doc->detail->author)
-                            {{ Str::limit($doc->detail->author->full_name, 20) }}
-                        @elseif($doc->detail && $doc->detail->author_name)
-                            {{ Str::limit($doc->detail->author_name, 20) }}
+                        @if($detail && $detail->author)
+                            {{ Str::limit($detail->author->full_name, 20) }}
+                        @elseif($detail && $detail->author_name)
+                            {{ Str::limit($detail->author_name, 20) }}
                         @else
                             NA
                         @endif
                     </td>
                     <td class="text-center cru-col-action">
-                        @include('admin.course-repository.user.partials.document-actions', ['doc' => $doc])
+                        @include('admin.course-repository.user.partials.document-actions', [
+                            'detailPk' => $detail?->pk,
+                            'detail' => $detail,
+                            'fileDoc' => $fileDoc,
+                        ])
                     </td>
                 </tr>
                 @empty

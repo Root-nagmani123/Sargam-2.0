@@ -63,6 +63,8 @@
         applyState(state);
 
         document.querySelectorAll('.cru-col-toggle-checkbox[data-table="' + tableId + '"]').forEach(function (cb) {
+            if (cb.dataset.cruColBound) return; // persistent checkboxes survive AJAX swaps — bind once
+            cb.dataset.cruColBound = '1';
             cb.addEventListener('change', function () {
                 var col = this.getAttribute('data-col');
                 var next = loadState();
@@ -80,6 +82,8 @@
         });
 
         document.querySelectorAll('.cru-col-toggle-reset[data-table="' + tableId + '"]').forEach(function (btn) {
+            if (btn.dataset.cruColResetBound) return;
+            btn.dataset.cruColResetBound = '1';
             btn.addEventListener('click', function () {
                 try { localStorage.removeItem(storageKey); } catch (e) { /* ignore */ }
                 applyState(defaults());
@@ -92,5 +96,7 @@
     } else {
         init();
     }
+    // Re-apply after an AJAX results swap (cru:results-updated).
+    document.addEventListener('cru:results-updated', init);
 })();
 </script>

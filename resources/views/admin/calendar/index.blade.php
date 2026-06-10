@@ -2217,7 +2217,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
             </div>
 
             <!-- Course Filter -->
-            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;">
+            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;z-index: 0;">
                 <label for="courseFilter" class="form-label mb-0 fw-semibold text-secondary small">Filter by Course</label>
                 <select
                     class="form-select js-calendar-course-choice"

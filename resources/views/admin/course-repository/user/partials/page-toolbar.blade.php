@@ -3,9 +3,9 @@
 @endphp
 @if($showViewToggle)
 <div class="cru-toolbar d-flex justify-content-end mb-0">
-    <div class="cru-view-toggle cru-view-toggle-pill d-inline-flex align-items-center p-1 rounded-pill border bg-light" role="group" aria-label="Repository view mode">
+    <div class="cru-view-toggle cru-view-toggle-pill d-inline-flex align-items-center p-1 rounded-1 border bg-light" role="group" aria-label="Repository view mode">
         <button type="button"
-                class="btn btn-sm border-0 rounded-pill cru-view-toggle-btn d-inline-flex align-items-center gap-1"
+                class="btn btn-sm border-0 rounded-1 cru-view-toggle-btn d-inline-flex align-items-center gap-1"
                 data-cru-view="grid"
                 aria-pressed="false"
                 title="Grid list view">
@@ -13,7 +13,7 @@
             <span>Grid</span>
         </button>
         <button type="button"
-                class="btn btn-sm border-0 rounded-pill cru-view-toggle-btn d-inline-flex align-items-center gap-1 active"
+                class="btn btn-sm border-0 rounded-1 cru-view-toggle-btn d-inline-flex align-items-center gap-1 active"
                 data-cru-view="card"
                 aria-pressed="true"
                 title="Card view">

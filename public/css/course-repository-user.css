@@ -14,12 +14,6 @@
     --cru-transition: 0.2s ease;
 }
 
-.cru-page {
-    --bs-primary: var(--cru-primary);
-    --bs-primary-rgb: 0, 74, 147;
-    background-color: #f4f6f8;
-}
-
 .cru-panel {
     overflow: visible;
 }
@@ -102,9 +96,33 @@
     white-space: nowrap;
 }
 
+.cru-filter-lead {
+    font-size: 0.875rem;
+    white-space: nowrap;
+}
+
+.cru-filter-lead .bi {
+    color: var(--cru-primary);
+}
+
 /* Filters */
 .filter-card .cru-filter-row > [class*="col-"] {
     min-width: 0;
+}
+
+.filter-card .cru-filter-row .cru-filter-col.col-lg {
+    flex: 1 1 0;
+    min-width: 0;
+    max-width: 100%;
+}
+
+.cru-col-action {
+    min-width: 7rem;
+    white-space: nowrap;
+}
+
+.cru-table-actions {
+    flex-wrap: nowrap;
 }
 
 .filter-card .form-control,
@@ -131,6 +149,7 @@
 .filter-card.choices-bs-scope .choices .choices__inner {
     display: block;
     width: 100% !important;
+    overflow: hidden;
 }
 
 #cruFilterCard.choices-bs-scope .choices__list--single,
@@ -178,6 +197,36 @@
 .cru-btn-search-icon:hover {
     background-color: #f8f9fa;
     border-color: #adb5bd;
+}
+
+/* Brief dim while filters are applied via AJAX (no full page reload) */
+.cru-ajax-loading .course-cards-grid,
+.cru-ajax-loading .cru-table-card,
+.cru-ajax-loading .cru-view-grid,
+.cru-ajax-loading .cru-view-cards {
+    opacity: 0.55;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+}
+
+/* Filter heading chip */
+.cru-filter-heading-icon {
+    width: 1.9rem;
+    height: 1.9rem;
+    font-size: 0.9rem;
+}
+
+/* Free-text search input */
+.cru-search-group .input-group-text,
+.cru-search-group .form-control {
+    border-color: var(--cru-border);
+}
+.cru-search-group .form-control:focus {
+    box-shadow: none;
+}
+.cru-search-group:focus-within {
+    border-radius: var(--cru-radius);
+    box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.12);
 }
 
 /* Category cards */
@@ -368,6 +417,80 @@
 
 .cru-col-hidden {
     display: none !important;
+}
+
+/* Column show/hide control is only relevant when a table is on screen.
+   On pages with a card/grid view switch, hide it while in card view. */
+.cru-view-mode-card .cru-column-toggle {
+    display: none !important;
+}
+
+/* Column Visibility modal */
+.cru-colvis-trigger {
+    color: #495057;
+    border-radius: var(--cru-radius) !important;
+}
+
+.cru-colvis-trigger:hover {
+    background-color: #f1f3f5;
+    border-color: #adb5bd;
+    color: var(--cru-primary);
+}
+
+.cru-colvis-modal .modal-title {
+    font-size: 1.25rem;
+    color: #1f2937;
+}
+
+.cru-colvis-divider {
+    border: 0;
+    border-top: 1px solid var(--cru-border);
+    opacity: 1;
+}
+
+.cru-colvis-chip {
+    border: 1px solid var(--cru-border);
+    border-radius: var(--cru-radius);
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    background-color: #fff;
+    font-size: 0.9375rem;
+    color: #344054;
+    transition: border-color var(--cru-transition), box-shadow var(--cru-transition), background-color var(--cru-transition);
+    user-select: none;
+}
+
+.cru-colvis-chip:hover {
+    border-color: var(--cru-primary-light);
+    box-shadow: 0 2px 6px rgba(0, 40, 80, 0.06);
+}
+
+.cru-colvis-chip .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+
+.cru-colvis-chip .form-check-input:checked {
+    background-color: var(--cru-primary);
+    border-color: var(--cru-primary);
+}
+
+.cru-colvis-chip:has(.form-check-input:checked) {
+    border-color: rgba(0, 74, 147, 0.45);
+    background-color: rgba(0, 74, 147, 0.04);
+}
+
+.cru-colvis-chip-locked {
+    cursor: not-allowed;
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.cru-colvis-chip-locked .form-check-input {
+    cursor: not-allowed;
+    opacity: 0.65;
 }
 
 .cru-table-footer {

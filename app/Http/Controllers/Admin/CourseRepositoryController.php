@@ -220,8 +220,9 @@ class CourseRepositoryController extends Controller
                 'full_path' => 'nullable|string|max:255',
                 'course_repository_details' => 'nullable|string|max:1000',
                 'category_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'category_attachment' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,xls,xlsx|max:5120',
             ]);
-            
+
             $validated['created_date'] = now();
             $validated['created_by'] = auth()->id();
             $validated['status'] = 1;
@@ -239,7 +240,15 @@ class CourseRepositoryController extends Controller
                 $image->storeAs('course-repository/categories', $imageName, 'public');
                 $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
-            
+
+            // Handle attachment upload
+            if ($request->hasFile('category_attachment')) {
+                $attachment = $request->file('category_attachment');
+                $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                $attachment->storeAs('course-repository/attachments', $attachmentName, 'public');
+                $validated['category_attachment'] = 'course-repository/attachments/' . $attachmentName;
+            }
+
             $repository = CourseRepositoryMaster::create($validated);
             
             // Check if AJAX request
@@ -307,8 +316,9 @@ class CourseRepositoryController extends Controller
                 'full_path' => 'nullable|string|max:255',
                 'course_repository_details' => 'nullable|string|max:1000',
                 'category_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'category_attachment' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,xls,xlsx|max:5120',
             ]);
-            
+
             $validated['modify_date'] = now();
             $validated['modify_by'] = auth()->id();
             
@@ -325,7 +335,21 @@ class CourseRepositoryController extends Controller
                 $image->storeAs('course-repository/categories', $imageName, 'public');
                 $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
-            
+
+            // Handle attachment upload
+            if ($request->hasFile('category_attachment')) {
+                // Delete old attachment if exists
+                if (filled($repository->category_attachment) && \Storage::disk('public')->exists($repository->category_attachment)) {
+                    \Storage::disk('public')->delete($repository->category_attachment);
+                }
+
+                // Store new attachment
+                $attachment = $request->file('category_attachment');
+                $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                $attachment->storeAs('course-repository/attachments', $attachmentName, 'public');
+                $validated['category_attachment'] = 'course-repository/attachments/' . $attachmentName;
+            }
+
             $repository->update($validated);
             
             // Check if AJAX request
@@ -1230,26 +1254,30 @@ class CourseRepositoryController extends Controller
                 $documents_count_array[$child->pk] = $documents_count;
             }
           
-            // Get all documents linked through details with course_repository_details_pk
-            // Also include documents directly linked to master via course_repository_master_pk
-            $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
-                ->where(function($query) use ($pk) {
-                    $query->where('course_repository_master_pk', $pk)
-                        ->orWhereIn('course_repository_details_pk', 
-                            CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
-                        );
-                });
+            // List repository details (each may have files and/or a video link)
+            $documentsQuery = CourseRepositoryDetail::where('course_repository_master_pk', $pk)
+                ->whereHas('documents', function ($query) {
+                    $query->where('del_type', 1);
+                })
+                ->with([
+                    'documents' => function ($query) {
+                        $query->where('del_type', 1)->orderBy('pk', 'desc');
+                    },
+                    'course',
+                    'subject',
+                    'topic',
+                    'author',
+                ]);
 
             $filters = $this->getFilters($request);
 
             if ($this->hasActiveUserFilters($filters)) {
-                $documentsQuery->whereHas('detail', function ($detailQuery) use ($filters) {
-                    $this->applyUserDetailFilters($detailQuery, $filters);
+                $documentsQuery->where(function ($query) use ($filters) {
+                    $this->applyUserDetailFilters($query, $filters);
                 });
             }
 
             $documents = $documentsQuery
-                ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author'])
                 ->orderBy('pk', 'desc')
                 ->get();
 
@@ -1289,6 +1317,7 @@ class CourseRepositoryController extends Controller
             'faculty' => $request->query('faculty'),
             'sector' => $request->query('sector'),
             'ministry' => $request->query('ministry'),
+            'search' => $request->query('search'),
         ];
     }
 
@@ -1329,7 +1358,8 @@ class CourseRepositoryController extends Controller
             || !empty($filters['week'])
             || !empty($filters['faculty'])
             || !empty($filters['sector'])
-            || !empty($filters['ministry']);
+            || !empty($filters['ministry'])
+            || !empty($filters['search']);
     }
 
     /**
@@ -1354,6 +1384,24 @@ class CourseRepositoryController extends Controller
         }
         if (!empty($filters['ministry'])) {
             $detailQuery->where('ministry_master_pk', $filters['ministry']);
+        }
+        if (!empty($filters['search'])) {
+            $term = '%' . $filters['search'] . '%';
+            $detailQuery->where(function ($q) use ($term) {
+                $q->where('keyword', 'like', $term)
+                    ->orWhereHas('course', function ($c) use ($term) {
+                        $c->where('course_name', 'like', $term);
+                    })
+                    ->orWhereHas('subject', function ($s) use ($term) {
+                        $s->where('subject_name', 'like', $term);
+                    })
+                    ->orWhereHas('topic', function ($t) use ($term) {
+                        $t->where('subject_topic', 'like', $term);
+                    })
+                    ->orWhereHas('author', function ($a) use ($term) {
+                        $a->where('full_name', 'like', $term);
+                    });
+            });
         }
     }
 }

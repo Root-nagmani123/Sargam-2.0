@@ -18,6 +18,7 @@ class CourseRepositoryMaster extends Model
         'full_path',
         'course_repository_details',
         'category_image',
+        'category_attachment',
         'created_date',
         'modify_date',
         'created_by',

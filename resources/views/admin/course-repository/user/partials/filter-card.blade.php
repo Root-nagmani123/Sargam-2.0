@@ -3,127 +3,367 @@
 @php
     $sectors = $sectors ?? collect();
     $ministries = $ministries ?? collect();
+    // Optional: when a documents table is present, its column show/hide control
+    // is rendered inline in this toolbar. Hidden entirely when no table exists.
+    $columnToggle = $columnToggle ?? null;
 @endphp
 
 <!-- Filter Card Partial -->
-<div class="card filter-card mb-4 choices-bs-scope" id="cruFilterCard">
-    <div class="card-body p-4">
+<div class="card filter-card border-0 shadow-sm rounded-4 mb-4 choices-bs-scope" id="cruFilterCard">
+    <div class="card-body p-3 p-md-4">
         <form method="GET" action="{{ $route }}" id="filterForm" novalidate>
-            <div class="row g-2 g-md-3 align-items-center cru-filter-row">
-            <div class="col-6 col-md-4 col-lg cru-filter-col">
-                <label for="filter_date" class="visually-hidden">Date</label>
-                <div class="input-group input-group-sm cru-input-group">
-                    <input type="date"
-                           class="form-control"
-                           id="filter_date"
-                           name="date"
-                           value="{{ $filters['date'] ?? '' }}"
-                           placeholder="Date">
-                    <span class="input-group-text bg-white">
-                        <i class="bi bi-calendar3 text-muted" aria-hidden="true"></i>
-                    </span>
+            @php
+                $cruHasMoreFilters = !empty($filters['faculty']) || !empty($filters['sector']) || !empty($filters['ministry']);
+                $cruHasSearch = !empty($filters['search']);
+            @endphp
+
+            <div class="cru-filter-row cru-filter-toolbar d-flex flex-wrap align-items-center gap-2">
+                <span class="cru-filter-lead text-secondary d-none d-md-inline-flex align-items-center gap-1 me-1">
+                    <span>Filters</span>
+                </span>
+
+                {{-- Date --}}
+                <div class="cru-filter-col cru-filter-pill cru-filter-pill-date">
+                    <label for="filter_date" class="visually-hidden">Date</label>
+                    <div class="input-group input-group-sm cru-input-group">
+                        <input type="date"
+                               class="form-control"
+                               id="filter_date"
+                               name="date"
+                               value="{{ $filters['date'] ?? '' }}"
+                               placeholder="Date">
+                    </div>
                 </div>
-            </div>
 
-            <div class="col-6 col-md-4 col-lg cru-filter-col">
-                <label for="filter_course" class="visually-hidden">Course</label>
-                <select class="form-select form-select-sm js-cru-filter-choice" id="filter_course" name="course" data-placeholder="Course">
-                    <option value="">Course</option>
-                    @foreach($courses as $course)
-                        <option value="{{ $course->pk }}" {{ ($filters['course'] ?? '') == $course->pk ? 'selected' : '' }}>
-                            {{ $course->course_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+                {{-- Course --}}
+                <div class="cru-filter-col cru-filter-pill">
+                    <label for="filter_course" class="visually-hidden">Course</label>
+                    <select class="form-select form-select-sm js-cru-filter-choice" id="filter_course" name="course" data-placeholder="Course">
+                        <option value="">Course</option>
+                        @foreach($courses as $course)
+                            <option value="{{ $course->pk }}" {{ ($filters['course'] ?? '') == $course->pk ? 'selected' : '' }}>
+                                {{ $course->course_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
-            <div class="col-6 col-md-4 col-lg cru-filter-col">
-                <label for="filter_subject" class="visually-hidden">Subject</label>
-                <select class="form-select form-select-sm js-cru-filter-choice" id="filter_subject" name="subject" data-placeholder="Subject">
-                    <option value="">Subject</option>
-                    @foreach($subjects as $subject)
-                        <option value="{{ $subject->pk }}" {{ ($filters['subject'] ?? '') == $subject->pk ? 'selected' : '' }}>
-                            {{ $subject->subject_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
+                {{-- Subject --}}
+                <div class="cru-filter-col cru-filter-pill cru-filter-pill-wide">
+                    <label for="filter_subject" class="visually-hidden">Subject</label>
+                    <select class="form-select form-select-sm js-cru-filter-choice" id="filter_subject" name="subject" data-placeholder="Subject">
+                        <option value="">Subject</option>
+                        @foreach($subjects as $subject)
+                            <option value="{{ $subject->pk }}" {{ ($filters['subject'] ?? '') == $subject->pk ? 'selected' : '' }}>
+                                {{ $subject->subject_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                </div>
 
-            <div class="col-6 col-md-4 col-lg cru-filter-col">
-                <label for="filter_week" class="visually-hidden">Week</label>
-                <select class="form-select form-select-sm js-cru-filter-choice" id="filter_week" name="week" data-placeholder="Week">
-                    <option value="">Week</option>
-                    @for($i = 1; $i <= 52; $i++)
-                        <option value="{{ $i }}" {{ ($filters['week'] ?? '') == $i ? 'selected' : '' }}>
-                            Week {{ $i }}
-                        </option>
-                    @endfor
-                </select>
-            </div>
+                {{-- Week --}}
+                <div class="cru-filter-col cru-filter-pill cru-filter-pill-sm">
+                    <label for="filter_week" class="visually-hidden">Week</label>
+                    <select class="form-select form-select-sm js-cru-filter-choice" id="filter_week" name="week" data-placeholder="Week">
+                        <option value="">Week</option>
+                        @for($i = 1; $i <= 52; $i++)
+                            <option value="{{ $i }}" {{ ($filters['week'] ?? '') == $i ? 'selected' : '' }}>
+                                Week {{ $i }}
+                            </option>
+                        @endfor
+                    </select>
+                </div>
 
-            <div class="col-6 col-md-4 col-lg cru-filter-col">
-                <label for="filter_faculty" class="visually-hidden">Faculty</label>
-                <select class="form-select form-select-sm js-cru-filter-choice" id="filter_faculty" name="faculty" data-placeholder="Faculty">
-                    <option value="">Faculty</option>
-                    @foreach($faculties as $faculty)
-                        <option value="{{ $faculty->pk }}" {{ ($filters['faculty'] ?? '') == $faculty->pk ? 'selected' : '' }}>
-                            {{ $faculty->full_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-            <div class="col-6 col-md-4 col-lg cru-filter-col">
-                <label for="filter_sector" class="visually-hidden">Sector (required)</label>
-                <select class="form-select form-select-sm js-cru-filter-choice js-cru-filter-sector"
-                        id="filter_sector"
-                        name="sector"
-                        required
-                        aria-required="true"
-                        data-placeholder="Sector *">
-                    <option value="">Sector *</option>
-                    @foreach($sectors as $sector)
-                        <option value="{{ $sector->pk }}" {{ ($filters['sector'] ?? '') == $sector->pk ? 'selected' : '' }}>
-                            {{ $sector->sector_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-6 col-md-4 col-lg cru-filter-col">
-                <label for="filter_ministry" class="visually-hidden">Ministry (required)</label>
-                <select class="form-select form-select-sm js-cru-filter-choice js-cru-filter-ministry"
-                        id="filter_ministry"
-                        name="ministry"
-                        required
-                        aria-required="true"
-                        data-placeholder="Ministry *"
-                        @if(empty($filters['sector'])) disabled @endif>
-                    <option value="">Ministry *</option>
-                    @foreach($ministries as $ministry)
-                        <option value="{{ $ministry->pk }}" {{ ($filters['ministry'] ?? '') == $ministry->pk ? 'selected' : '' }}>
-                            {{ $ministry->ministry_name }}
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-
-            <div class="col-6 col-md-auto cru-filter-col">
+                {{-- Reset --}}
                 <button type="button"
-                        class="btn btn-outline-danger btn-sm w-100 fw-normal px-3"
+                        class="btn btn-outline-danger btn-sm fw-semibold px-3 cru-reset-btn"
                         id="cruFilterReset">
                     Reset Filters
                 </button>
-            </div>
 
-            <div class="col-6 col-md-auto ms-md-auto cru-filter-col d-none" aria-hidden="true">
-                <button type="submit" class="btn btn-light border btn-sm cru-btn-search-icon w-100" tabindex="-1">
-                    <i class="bi bi-search" aria-hidden="true"></i>
-                </button>
+                {{-- Overflow filters (Faculty / Sector / Ministry) --}}
+                <div class="cru-more-filters position-relative">
+                    <button type="button"
+                            class="btn btn-link btn-sm text-decoration-none fw-semibold p-0 cru-more-filters-toggle"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#cruMoreFilters"
+                            aria-expanded="{{ $cruHasMoreFilters ? 'true' : 'false' }}"
+                            aria-controls="cruMoreFilters">
+                        +3 Filters
+                    </button>
+                    <div class="collapse cru-more-filters-panel {{ $cruHasMoreFilters ? 'show' : '' }}" id="cruMoreFilters">
+                        <div class="card cru-more-filters-card border-0 shadow rounded-4">
+                            <div class="card-body p-3">
+                                <div class="d-flex align-items-center justify-content-between mb-1">
+                                    <span class="fw-semibold text-dark">Filters</span>
+                                </div>
+                                <hr class="cru-colvis-divider my-2">
+
+                                {{-- Faculty --}}
+                                <div class="cru-filter-col mb-2">
+                                    <select class="form-select form-select-sm js-cru-filter-choice" id="filter_faculty" name="faculty" data-placeholder="Faculty">
+                                        <option value="">Faculty</option>
+                                        @foreach($faculties as $faculty)
+                                            <option value="{{ $faculty->pk }}" {{ ($filters['faculty'] ?? '') == $faculty->pk ? 'selected' : '' }}>
+                                                {{ $faculty->full_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                {{-- Sector --}}
+                                <div class="cru-filter-col mb-2">
+                                    <select class="form-select form-select-sm js-cru-filter-choice js-cru-filter-sector"
+                                            id="filter_sector"
+                                            name="sector"
+                                            required
+                                            aria-required="true"
+                                            data-placeholder="Sector *">
+                                        <option value="">Sector *</option>
+                                        @foreach($sectors as $sector)
+                                            <option value="{{ $sector->pk }}" {{ ($filters['sector'] ?? '') == $sector->pk ? 'selected' : '' }}>
+                                                {{ $sector->sector_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+
+                                {{-- Ministry --}}
+                                <div class="cru-filter-col mb-0">
+                                    <select class="form-select form-select-sm js-cru-filter-choice js-cru-filter-ministry"
+                                            id="filter_ministry"
+                                            name="ministry"
+                                            required
+                                            aria-required="true"
+                                            data-placeholder="Ministry *"
+                                            @if(empty($filters['sector'])) disabled @endif>
+                                        <option value="">Ministry *</option>
+                                        @foreach($ministries as $ministry)
+                                            <option value="{{ $ministry->pk }}" {{ ($filters['ministry'] ?? '') == $ministry->pk ? 'selected' : '' }}>
+                                                {{ $ministry->ministry_name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {{-- Right side: column show/hide (only when a table is present) + free-text search --}}
+                <div class="cru-toolbar-right d-flex align-items-center gap-2 ms-md-auto">
+                    @if(!empty($columnToggle) && !empty($columnToggle['columns']))
+                        @include('admin.course-repository.user.partials.table-column-toggle', [
+                            'cruTableId' => $columnToggle['tableId'],
+                            'cruColumnStorageKey' => $columnToggle['storageKey'],
+                            'cruColumns' => $columnToggle['columns'],
+                        ])
+                    @endif
+                    <div class="collapse collapse-horizontal cru-search-collapse {{ $cruHasSearch ? 'show' : '' }}" id="cruSearchCollapse">
+                        <label for="filter_search" class="visually-hidden">Search documents</label>
+                        <div class="input-group input-group-sm cru-search-group">
+                            <span class="input-group-text bg-white border-end-0 text-muted">
+                                <i class="bi bi-search" aria-hidden="true"></i>
+                            </span>
+                            <input type="search"
+                                   class="form-control border-start-0 ps-0"
+                                   id="filter_search"
+                                   name="search"
+                                   value="{{ $filters['search'] ?? '' }}"
+                                   placeholder="Search by keyword, topic, author…"
+                                   autocomplete="off"
+                                   aria-label="Search documents">
+                        </div>
+                    </div>
+                    <button type="button"
+                            class="btn btn-light border btn-sm cru-btn-search-icon"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#cruSearchCollapse"
+                            aria-expanded="{{ $cruHasSearch ? 'true' : 'false' }}"
+                            aria-controls="cruSearchCollapse"
+                            aria-label="Toggle search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </button>
+                </div>
             </div>
-        </div>
     </form>
     </div>
 </div>
+
+@push('styles')
+<style>
+    #cruFilterCard.filter-card .cru-filter-row {
+        --cru-filter-control-h: 2rem;
+    }
+
+    #cruFilterCard.filter-card .cru-filter-col {
+        min-width: 0;
+        max-width: 100%;
+    }
+
+    #cruFilterCard.filter-card .cru-filter-col .choices,
+    #cruFilterCard.filter-card .cru-filter-col .input-group,
+    #cruFilterCard.filter-card .cru-filter-col .form-control,
+    #cruFilterCard.filter-card .cru-filter-col .form-select {
+        width: 100%;
+        max-width: 100%;
+    }
+
+    #cruFilterCard.filter-card .choices .choices__inner {
+        display: flex !important;
+        align-items: center !important;
+        width: 100% !important;
+        min-height: var(--cru-filter-control-h) !important;
+        height: var(--cru-filter-control-h) !important;
+        max-height: var(--cru-filter-control-h) !important;
+        padding: 0.25rem 2rem 0.25rem 0.5rem !important;
+        font-size: 0.875rem !important;
+        overflow: hidden !important;
+        box-sizing: border-box !important;
+    }
+
+    #cruFilterCard.filter-card .choices__list--single {
+        display: block;
+        width: 100%;
+        min-width: 0;
+        padding: 0 !important;
+    }
+
+    #cruFilterCard.filter-card .choices__list--single .choices__item {
+        overflow: hidden !important;
+        text-overflow: ellipsis !important;
+        white-space: nowrap !important;
+        display: block !important;
+        width: 100% !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+        line-height: 1.25rem !important;
+    }
+
+    #cruFilterCard.filter-card .input-group .form-control {
+        min-height: var(--cru-filter-control-h);
+        height: var(--cru-filter-control-h);
+    }
+
+    @media (min-width: 992px) {
+        #cruFilterCard.filter-card .cru-filter-row .cru-filter-col.col-lg {
+            flex: 1 1 0;
+            min-width: 0;
+            max-width: 100%;
+        }
+    }
+
+    /* ---- Compact pill toolbar (reference design) ---- */
+    #cruFilterCard.filter-card .cru-filter-toolbar {
+        row-gap: 0.5rem;
+    }
+
+    #cruFilterCard.filter-card .cru-filter-lead {
+        font-size: 0.875rem;
+    }
+
+    #cruFilterCard.filter-card .cru-filter-lead .bi {
+        color: var(--cru-primary);
+    }
+
+    #cruFilterCard.filter-card .cru-filter-toolbar .cru-filter-pill {
+        flex: 0 0 auto;
+        width: 9.5rem;
+    }
+
+    #cruFilterCard.filter-card .cru-filter-toolbar .cru-filter-pill-date {
+        width: 9.5rem;
+    }
+
+    #cruFilterCard.filter-card .cru-filter-toolbar .cru-filter-pill-wide {
+        width: 11rem;
+    }
+
+    #cruFilterCard.filter-card .cru-filter-toolbar .cru-filter-pill-sm {
+        width: 7.5rem;
+    }
+
+    #cruFilterCard.filter-card .cru-reset-btn {
+        flex: 0 0 auto;
+        border-radius: var(--cru-radius);
+        white-space: nowrap;
+    }
+
+    #cruFilterCard.filter-card .cru-more-filters-toggle {
+        flex: 0 0 auto;
+        color: var(--cru-primary);
+        white-space: nowrap;
+    }
+
+    #cruFilterCard.filter-card .cru-more-filters-toggle:hover {
+        color: var(--cru-primary-hover);
+        text-decoration: underline !important;
+    }
+
+    /* Floating overflow panel (image 2) */
+    #cruFilterCard.filter-card .cru-more-filters-panel {
+        position: absolute;
+        top: calc(100% + 0.5rem);
+        left: 0;
+        z-index: 1056;
+        min-width: 17rem;
+    }
+
+    #cruFilterCard.filter-card .cru-more-filters-card {
+        border: 1px solid var(--cru-border) !important;
+    }
+
+    /* Right-aligned search */
+    #cruFilterCard.filter-card .cru-toolbar-right {
+        flex: 0 0 auto;
+    }
+
+    #cruFilterCard.filter-card .cru-search-collapse .cru-search-group {
+        width: 16rem;
+        max-width: 60vw;
+        border: 1px solid var(--cru-border);
+        border-radius: var(--cru-radius);
+        overflow: hidden;
+    }
+
+    #cruFilterCard.filter-card .cru-search-collapse .cru-search-group .input-group-text,
+    #cruFilterCard.filter-card .cru-search-collapse .cru-search-group .form-control {
+        border: 0;
+    }
+
+    #cruFilterCard.filter-card .cru-btn-search-icon {
+        flex: 0 0 auto;
+        min-width: 2.25rem;
+        border-radius: var(--cru-radius) !important;
+        color: #495057;
+    }
+
+    @media (max-width: 575.98px) {
+        #cruFilterCard.filter-card .cru-filter-toolbar .cru-filter-pill,
+        #cruFilterCard.filter-card .cru-filter-toolbar .cru-filter-pill-date,
+        #cruFilterCard.filter-card .cru-filter-toolbar .cru-filter-pill-wide,
+        #cruFilterCard.filter-card .cru-filter-toolbar .cru-filter-pill-sm {
+            flex: 1 1 calc(50% - 0.5rem);
+            width: auto;
+            min-width: 0;
+        }
+
+        #cruFilterCard.filter-card .cru-more-filters-panel {
+            left: auto;
+            right: 0;
+        }
+
+        #cruFilterCard.filter-card .cru-toolbar-right {
+            flex: 1 1 100%;
+        }
+
+        #cruFilterCard.filter-card .cru-search-collapse .cru-search-group {
+            width: 100%;
+            max-width: none;
+        }
+    }
+</style>
+@endpush
 
 @push('scripts')
 <script>
@@ -192,6 +432,87 @@
         }
     }
 
+    // AJAX filtering is enabled only on the card-listing pages (which expose
+    // #courseCardsGrid). Document-table pages fall back to a normal submit so
+    // their table-specific scripts keep working.
+    function cruAjaxEnabled() {
+        return !!document.getElementById('courseCardsGrid')
+            && typeof window.fetch === 'function'
+            && typeof DOMParser !== 'undefined';
+    }
+
+    function buildFilterUrl() {
+        var form = document.getElementById('filterForm');
+        var action = (form && form.getAttribute('action')) || window.location.pathname;
+        if (!form) return action;
+        var params = new URLSearchParams();
+        new FormData(form).forEach(function (value, key) {
+            if (value !== '' && value != null) params.append(key, value);
+        });
+        var qs = params.toString();
+        return qs ? action + '?' + qs : action;
+    }
+
+    // Swap only the results region — filter controls (and Choices instances) stay untouched.
+    function swapFilterResults(html) {
+        var doc = new DOMParser().parseFromString(html, 'text/html');
+        var curResults = document.getElementById('cruFilterResults');
+        var newResults = doc.getElementById('cruFilterResults');
+        if (curResults && newResults) {
+            curResults.innerHTML = newResults.innerHTML;
+            return true;
+        }
+
+        var newMain = doc.getElementById('cru-user-main') || doc.getElementById('main-content');
+        var curMain = document.getElementById('cru-user-main') || document.getElementById('main-content');
+        if (!newMain || !curMain) return false;
+
+        var curCard = curMain.querySelector('#cruFilterCard');
+        var newCard = newMain.querySelector('#cruFilterCard');
+        if (!curCard || !newCard) return false;
+
+        var newNodes = [];
+        for (var n = newCard.nextSibling; n; n = n.nextSibling) newNodes.push(n);
+
+        while (curCard.nextSibling) {
+            curCard.parentNode.removeChild(curCard.nextSibling);
+        }
+        newNodes.forEach(function (node) {
+            curCard.parentNode.appendChild(document.importNode(node, true));
+        });
+        return true;
+    }
+
+    function cruLoadResults(url, push) {
+        var main = document.getElementById('cru-user-main') || document.getElementById('main-content');
+        if (main) main.classList.add('cru-ajax-loading');
+
+        fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' },
+            credentials: 'same-origin'
+        })
+            .then(function (res) {
+                if (!res.ok) throw new Error('Request failed');
+                return res.text();
+            })
+            .then(function (html) {
+                if (!swapFilterResults(html)) {
+                    window.location.assign(url);
+                    return;
+                }
+                if (push && window.history && typeof window.history.pushState === 'function') {
+                    try { window.history.pushState({ cruFilter: true }, '', url); } catch (e) { /* ignore */ }
+                }
+                document.dispatchEvent(new CustomEvent('cru:results-updated'));
+            })
+            .catch(function () {
+                window.location.assign(url);
+            })
+            .finally(function () {
+                if (main) main.classList.remove('cru-ajax-loading');
+            });
+    }
+
     function applyCruFilters() {
         if (suppressAutoApply) return;
         var form = document.getElementById('filterForm');
@@ -199,7 +520,9 @@
 
         clearTimeout(applyTimer);
         applyTimer = setTimeout(function () {
-            if (typeof form.requestSubmit === 'function') {
+            if (cruAjaxEnabled()) {
+                cruLoadResults(buildFilterUrl(), true);
+            } else if (typeof form.requestSubmit === 'function') {
                 form.requestSubmit();
             } else {
                 form.submit();
@@ -222,6 +545,9 @@
         var dateEl = document.getElementById('filter_date');
         if (dateEl) dateEl.value = '';
 
+        var searchEl = document.getElementById('filter_search');
+        if (searchEl) searchEl.value = '';
+
         preservedMinistry = '';
         form.querySelectorAll('select.js-cru-filter-choice').forEach(function (el) {
             if (el.id === 'filter_ministry') return;
@@ -231,8 +557,23 @@
 
         suppressAutoApply = false;
         form.dispatchEvent(new CustomEvent('cru:filters-reset', { bubbles: true }));
-        applyCruFilters();
+
+        var baseUrl = form.getAttribute('action') || window.location.pathname;
+        if (cruAjaxEnabled()) {
+            // Clear filters AND refresh to the unfiltered list — without a page reload.
+            cruLoadResults(baseUrl, true);
+        } else if (window.history && typeof window.history.replaceState === 'function') {
+            // No-AJAX pages: clear the controls and keep the URL in sync, no reload.
+            window.history.replaceState({}, '', baseUrl);
+        }
     }
+
+    // Back/forward navigation between AJAX filter states — re-fetch without a full reload.
+    window.addEventListener('popstate', function () {
+        if (cruAjaxEnabled()) {
+            cruLoadResults(window.location.href, false);
+        }
+    });
 
     function setMinistryOptions(ministries, selectedPk, enabled) {
         var ministryEl = document.getElementById('filter_ministry');
@@ -339,6 +680,12 @@
                 dateEl.addEventListener('change', applyCruFilters);
             }
 
+            var searchEl = document.getElementById('filter_search');
+            if (searchEl) {
+                // applyCruFilters is debounced, so typing won't spam requests.
+                searchEl.addEventListener('input', applyCruFilters);
+            }
+
             form.querySelectorAll('select.js-cru-filter-choice').forEach(function (el) {
                 if (el.id === 'filter_sector' || el.id === 'filter_ministry') return;
                 el.addEventListener('change', applyCruFilters);
@@ -348,6 +695,15 @@
                 ministryEl.dataset.cruAutoApplyBound = '1';
                 ministryEl.addEventListener('change', applyCruFilters);
             }
+
+            // Native submit (Enter / hidden search button) → AJAX too, no reload.
+            form.addEventListener('submit', function (e) {
+                if (cruAjaxEnabled()) {
+                    e.preventDefault();
+                    clearTimeout(applyTimer);
+                    cruLoadResults(buildFilterUrl(), true);
+                }
+            });
         }
 
         var resetBtn = document.getElementById('cruFilterReset');

@@ -2,16 +2,20 @@
     $listItems = $items ?? collect();
     $nameColumnLabel = $nameColumnLabel ?? 'Course Name';
     $listRouteMode = $listRouteMode ?? 'auto';
+    $cruListTableId = $listTableId ?? 'cruRepoListTable';
+    // Optional column show/hide support (driven by the shared filter toolbar's Columns control).
+    $cruListColumns = $cruColumns ?? null;
+    $cruListColumnStorageKey = $cruColumnStorageKey ?? ('cru-repo-list-' . $cruListTableId);
 @endphp
 <div class="cru-view-grid d-none">
     <div class="card border-0 shadow-sm rounded-4 overflow-hidden">
         <div class="table-responsive">
-            <table class="table table-hover align-middle mb-0 cru-repo-list-table" id="{{ $listTableId ?? 'cruRepoListTable' }}">
+            <table class="table table-hover align-middle mb-0 cru-repo-list-table" id="{{ $cruListTableId }}">
                 <thead class="table-light">
                     <tr>
-                        <th scope="col" class="ps-3 ps-md-4 py-3 text-secondary small fw-semibold border-0">S. No.</th>
-                        <th scope="col" class="py-3 text-secondary small fw-semibold border-0">{{ $nameColumnLabel }}</th>
-                        <th scope="col" class="text-end pe-3 pe-md-4 py-3 text-secondary small fw-semibold border-0">Sub Categories</th>
+                        <th scope="col" data-col="sno" class="cru-col-sno ps-3 ps-md-4 py-3 text-secondary small fw-semibold border-0">S. No.</th>
+                        <th scope="col" data-col="name" class="cru-col-name py-3 text-secondary small fw-semibold border-0">{{ $nameColumnLabel }}</th>
+                        <th scope="col" data-col="subcount" class="cru-col-subcount text-end pe-3 pe-md-4 py-3 text-secondary small fw-semibold border-0">Sub Categories</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -29,9 +33,9 @@
                             $subCount = $item->children->count() ?? 0;
                         @endphp
                         <tr>
-                            <td class="ps-3 ps-md-4 text-muted">{{ $loop->iteration }}</td>
-                            <td class="fw-semibold text-dark">{{ $displayName }}</td>
-                            <td class="text-end pe-3 pe-md-4">
+                            <td data-col="sno" class="cru-col-sno ps-3 ps-md-4 text-muted">{{ $loop->iteration }}</td>
+                            <td data-col="name" class="cru-col-name fw-semibold text-dark">{{ $displayName }}</td>
+                            <td data-col="subcount" class="cru-col-subcount text-end pe-3 pe-md-4">
                                 <a href="{{ $routeUrl }}" class="cru-subcategory-link">
                                     {{ $subCount }} {{ Str::plural('Sub-Category', $subCount) }}
                                 </a>
@@ -43,3 +47,13 @@
         </div>
     </div>
 </div>
+
+@if(!empty($cruListColumns))
+@push('scripts')
+@include('admin.course-repository.user.partials.column-toggle-script', [
+    'cruTableId' => $cruListTableId,
+    'cruColumnStorageKey' => $cruListColumnStorageKey,
+    'cruColumns' => $cruListColumns,
+])
+@endpush
+@endif
