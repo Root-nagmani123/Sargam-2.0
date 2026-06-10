@@ -7,20 +7,25 @@
 <link rel="stylesheet" href="{{ asset('css/course-repository-admin.css') }}">
 <div class="container-fluid cr-admin pb-3">
     <!-- Breadcrumb -->
-<x-breadcrum title="Course Repository">
-        <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal" aria-label="Add new category"
-            class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-2 fw-semibold text-nowrap shadow-sm">
-            <i class="bi bi-folder-plus" aria-hidden="true"></i>
-            <span>Add Category</span>
-        </a>
+    <x-breadcrum title="Course Repository">
     </x-breadcrum>
 
     <div class="card border-0 cr-admin-card overflow-hidden">
         <div class="card-body p-3 p-md-4">
-
+            <div class="d-flex justify-content-end mb-3">
+                <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal"
+                    aria-label="Add new category"
+                    class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
+                    <i class="bi bi-plus" aria-hidden="true"></i>
+                    <span>Add Category</span>
+                </a>
+            </div>
+            <hr class="my-2">
+            
             @if ($repositories->isEmpty())
             <div class="text-center py-5 px-3 cr-admin-empty">
-                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
+                <div
+                    class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
                     <i class="bi bi-folder2-open display-6 text-secondary" aria-hidden="true"></i>
                 </div>
                 <p class="text-secondary mb-2 fw-semibold">No categories yet</p>
@@ -35,94 +40,89 @@
                 <table id="crCategoriesTable" class="table datatable" data-export="false">
                     <thead>
                         <tr>
-                        <th>S. No.</th>
-                        <th>Category</th>
-                        <th>Sub-Category</th>
-                        <th>Attachment</th>
-                        <th>Action</th>
-                    </tr>
+                            <th>S. No.</th>
+                            <th>Category</th>
+                            <th>Sub-Category</th>
+                            <th>Attachment</th>
+                            <th>Action</th>
+                        </tr>
                     </thead>
-                     <tbody>
-                    @foreach($repositories as $key => $repo)
+                    <tbody>
+                        @foreach($repositories as $key => $repo)
 
-                    @php
+                        @php
                         $subCount = $repo->children->count();
                         $docCount = $repo->getDocumentCount();
-                    @endphp
+                        @endphp
 
-                    <tr class="border-bottom">
-                        <td class="ps-4 fw-medium">
-                            {{ $repositories->firstItem() + $key }}
-                        </td>
+                        <tr class="border-bottom">
+                            <td class="ps-4 fw-medium">
+                                {{ $repositories->firstItem() + $key }}
+                            </td>
 
-                        <td>
-                            <div class="d-flex align-items-center gap-3">
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
 
-                                @if(filled($repo->category_image) && \Storage::disk('public')->exists($repo->category_image))
+                                    @if(filled($repo->category_image) &&
+                                    \Storage::disk('public')->exists($repo->category_image))
                                     <img src="{{ asset('storage/' . $repo->category_image) }}"
-                                        class="rounded-circle object-fit-cover"
-                                        width="40"
-                                        height="40"
-                                        alt="">
-                                @else
+                                        class="rounded-circle object-fit-cover" width="40" height="40" alt="">
+                                    @else
                                     <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
                                         style="width:40px;height:40px;">
                                         <i class="bi bi-image text-muted"></i>
                                     </div>
-                                @endif
+                                    @endif
 
-                                <div>
-                                    <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                        class="text-decoration-none text-dark fw-medium">
-                                        {{ $repo->course_repository_name }}
-                                    </a>
+                                    <div>
+                                        <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                            class="text-decoration-none text-dark fw-medium">
+                                            {{ $repo->course_repository_name }}
+                                        </a>
+                                    </div>
+
                                 </div>
+                            </td>
 
-                            </div>
-                        </td>
-
-                        <td>
-                            <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                class="text-decoration-none small fw-medium {{ $subCount == 0 ? 'text-secondary' : '' }}">
-                                {{ $subCount }} Sub-Category
-                            </a>
-                        </td>
-
-                        <td>
-                            <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                class="text-decoration-none small fw-medium {{ $docCount == 0 ? 'text-secondary' : '' }}">
-                                See {{ str_pad($docCount, 2, '0', STR_PAD_LEFT) }} Attachment
-                            </a>
-                        </td>
-
-                        <td class="text-center">
-                            <div class="d-inline-flex align-items-center">
-
-                                <a href="javascript:void(0)"
-                                    class="btn btn-sm btn-light edit-repo bg-transparent border-0 p-0"
-                                    data-pk="{{ $repo->pk }}"
-                                    data-name="{{ $repo->course_repository_name }}"
-                                    data-details="{{ $repo->course_repository_details }}"
-                                    data-image="{{ $repo->category_image }}"
-                                    title="Edit">
-
-                                    <i class="bi bi-pencil text-primary"></i>
+                            <td>
+                                <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                    class="text-decoration-none small fw-medium {{ $subCount == 0 ? 'text-secondary' : '' }}">
+                                    {{ $subCount }} Sub-Category
                                 </a>
+                            </td>
 
-                                <a href="javascript:void(0)"
-                                    class="btn btn-sm btn-light delete-repo bg-transparent border-0 p-0"
-                                    data-pk="{{ $repo->pk }}"
-                                    title="Delete">
-
-                                    <i class="bi bi-trash text-danger"></i>
+                            <td>
+                                <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                    class="text-decoration-none small fw-medium {{ $docCount == 0 ? 'text-secondary' : '' }}">
+                                    See {{ str_pad($docCount, 2, '0', STR_PAD_LEFT) }} Attachment
                                 </a>
+                            </td>
 
-                            </div>
-                        </td>
-                    </tr>
+                            <td class="text-center">
+                                <div class="d-inline-flex align-items-center">
 
-                    @endforeach
-                </tbody>
+                                    <a href="javascript:void(0)"
+                                        class="btn btn-sm btn-light edit-repo bg-transparent border-0 p-0"
+                                        data-pk="{{ $repo->pk }}" data-name="{{ $repo->course_repository_name }}"
+                                        data-details="{{ $repo->course_repository_details }}"
+                                        data-image="{{ $repo->category_image }}" title="Edit">
+
+                                        <i class="bi bi-pencil text-primary"></i>
+                                    </a>
+
+                                    <a href="javascript:void(0)"
+                                        class="btn btn-sm btn-light delete-repo bg-transparent border-0 p-0"
+                                        data-pk="{{ $repo->pk }}" title="Delete">
+
+                                        <i class="bi bi-trash text-danger"></i>
+                                    </a>
+
+                                </div>
+                            </td>
+                        </tr>
+
+                        @endforeach
+                    </tbody>
                 </table>
             </div>
             <script>
@@ -140,21 +140,45 @@
                 var MODAL_ID = 'cruColVisModal-' + TABLE_ID;
 
                 // DataTables column index → label. locked columns stay always visible.
-                var COLUMNS = [
-                    { idx: 0, label: 'S. No.', locked: true },
-                    { idx: 1, label: 'Image' },
-                    { idx: 2, label: 'Category' },
-                    { idx: 3, label: 'Sub-Category' },
-                    { idx: 4, label: 'Attachment' },
-                    { idx: 5, label: 'Actions', locked: true }
+                var COLUMNS = [{
+                        idx: 0,
+                        label: 'S. No.',
+                        locked: true
+                    },
+                    {
+                        idx: 1,
+                        label: 'Image'
+                    },
+                    {
+                        idx: 2,
+                        label: 'Category'
+                    },
+                    {
+                        idx: 3,
+                        label: 'Sub-Category'
+                    },
+                    {
+                        idx: 4,
+                        label: 'Attachment'
+                    },
+                    {
+                        idx: 5,
+                        label: 'Actions',
+                        locked: true
+                    }
                 ];
-                var TOGGLEABLE = COLUMNS.filter(function (c) { return !c.locked; });
+                var TOGGLEABLE = COLUMNS.filter(function(c) {
+                    return !c.locked;
+                });
 
                 function defaults() {
                     var s = {};
-                    TOGGLEABLE.forEach(function (c) { s[c.idx] = true; });
+                    TOGGLEABLE.forEach(function(c) {
+                        s[c.idx] = true;
+                    });
                     return s;
                 }
+
                 function loadState() {
                     try {
                         var raw = localStorage.getItem(STORAGE_KEY);
@@ -162,28 +186,36 @@
                         var parsed = JSON.parse(raw);
                         if (!parsed || typeof parsed !== 'object') return defaults();
                         var base = defaults();
-                        Object.keys(base).forEach(function (k) {
+                        Object.keys(base).forEach(function(k) {
                             if (typeof parsed[k] === 'boolean') base[k] = parsed[k];
                         });
                         return base;
-                    } catch (e) { return defaults(); }
+                    } catch (e) {
+                        return defaults();
+                    }
                 }
+
                 function saveState(state) {
-                    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {}
+                    try {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                    } catch (e) {}
                 }
 
                 function chips() {
-                    var locked = COLUMNS.filter(function (c) { return c.locked; }).map(function (c) {
+                    var locked = COLUMNS.filter(function(c) {
+                        return c.locked;
+                    }).map(function(c) {
                         return '<div class="col">' +
                             '<label class="cru-colvis-chip cru-colvis-chip-locked d-flex align-items-center gap-2 mb-0" title="Always visible">' +
                             '<input type="checkbox" class="form-check-input m-0" checked disabled>' +
                             '<span class="text-truncate">' + c.label + '</span>' +
                             '</label></div>';
                     }).join('');
-                    var toggleable = TOGGLEABLE.map(function (c) {
+                    var toggleable = TOGGLEABLE.map(function(c) {
                         return '<div class="col">' +
                             '<label class="cru-colvis-chip d-flex align-items-center gap-2 mb-0">' +
-                            '<input type="checkbox" class="form-check-input m-0 cru-col-toggle-checkbox" data-col="' + c.idx + '" checked>' +
+                            '<input type="checkbox" class="form-check-input m-0 cru-col-toggle-checkbox" data-col="' +
+                            c.idx + '" checked>' +
                             '<span class="text-truncate">' + c.label + '</span>' +
                             '</label></div>';
                     }).join('');
@@ -193,28 +225,30 @@
                 function buildModal() {
                     if (document.getElementById(MODAL_ID)) return;
                     var html =
-                    '<div class="modal fade cru-colvis-modal" id="' + MODAL_ID + '" tabindex="-1" aria-labelledby="' + MODAL_ID + '-label" aria-hidden="true">' +
-                      '<div class="modal-dialog modal-dialog-centered modal-lg">' +
+                        '<div class="modal fade cru-colvis-modal" id="' + MODAL_ID +
+                        '" tabindex="-1" aria-labelledby="' + MODAL_ID + '-label" aria-hidden="true">' +
+                        '<div class="modal-dialog modal-dialog-centered modal-lg">' +
                         '<div class="modal-content border-0 rounded-4 shadow">' +
-                          '<div class="modal-header border-0 pb-2 px-4 pt-4">' +
-                            '<h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="' + MODAL_ID + '-label">' +
-                              '<i class="bi bi-sliders2 text-primary" aria-hidden="true"></i> Column Visibility' +
-                            '</h5>' +
-                            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
-                          '</div>' +
-                          '<hr class="cru-colvis-divider mx-4 my-0">' +
-                          '<div class="modal-body px-4 py-4">' +
-                            '<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">' + chips() + '</div>' +
-                          '</div>' +
-                          '<div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">' +
-                            '<button type="button" class="btn btn-link btn-sm text-decoration-none p-0 d-inline-flex align-items-center gap-1 cru-col-toggle-reset">' +
-                              '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset to default' +
-                            '</button>' +
-                            '<button type="button" class="btn btn-outline-primary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Close</button>' +
-                          '</div>' +
+                        '<div class="modal-header border-0 pb-2 px-4 pt-4">' +
+                        '<h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="' + MODAL_ID +
+                        '-label">' +
+                        '<i class="bi bi-sliders2 text-primary" aria-hidden="true"></i> Column Visibility' +
+                        '</h5>' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
                         '</div>' +
-                      '</div>' +
-                    '</div>';
+                        '<hr class="cru-colvis-divider mx-4 my-0">' +
+                        '<div class="modal-body px-4 py-4">' +
+                        '<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">' + chips() + '</div>' +
+                        '</div>' +
+                        '<div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">' +
+                        '<button type="button" class="btn btn-link btn-sm text-decoration-none p-0 d-inline-flex align-items-center gap-1 cru-col-toggle-reset">' +
+                        '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset to default' +
+                        '</button>' +
+                        '<button type="button" class="btn btn-outline-primary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Close</button>' +
+                        '</div>' +
+                        '</div>' +
+                        '</div>' +
+                        '</div>';
                     document.body.insertAdjacentHTML('beforeend', html);
                 }
 
@@ -233,11 +267,11 @@
                     // Trigger button placed after the search input.
                     var trigger =
                         '<span class="cru-column-toggle d-inline-flex align-items-center ms-2">' +
-                            '<button type="button" class="btn btn-light border btn-sm d-inline-flex align-items-center gap-2 fw-semibold cru-colvis-trigger" ' +
-                                'data-bs-toggle="modal" data-bs-target="#' + MODAL_ID + '" title="Show / hide columns">' +
-                                '<i class="bi bi-layout-three-columns" aria-hidden="true"></i>' +
-                                '<span class="d-none d-sm-inline">Columns</span>' +
-                            '</button>' +
+                        '<button type="button" class="btn btn-light border btn-sm d-inline-flex align-items-center gap-2 fw-semibold cru-colvis-trigger" ' +
+                        'data-bs-toggle="modal" data-bs-target="#' + MODAL_ID + '" title="Show / hide columns">' +
+                        '<i class="bi bi-layout-three-columns" aria-hidden="true"></i>' +
+                        '<span class="d-none d-sm-inline">Columns</span>' +
+                        '</button>' +
                         '</span>';
                     var filter = wrapper.querySelector('.dataTables_filter');
                     var searchInput = filter ? filter.querySelector('input') : null;
@@ -248,11 +282,13 @@
                     } else {
                         wrapper.insertAdjacentHTML('afterbegin', trigger);
                     }
+
                     function applyState(state) {
-                        TOGGLEABLE.forEach(function (c) {
+                        TOGGLEABLE.forEach(function(c) {
                             var vis = state[c.idx] !== false;
                             api.column(c.idx).visible(vis, false);
-                            var cb = document.querySelector('.cru-col-toggle-checkbox[data-col="' + c.idx + '"]');
+                            var cb = document.querySelector('.cru-col-toggle-checkbox[data-col="' + c.idx +
+                                '"]');
                             if (cb) cb.checked = vis;
                         });
                         api.columns.adjust();
@@ -260,14 +296,19 @@
 
                     applyState(loadState());
 
-                    document.querySelectorAll('.cru-col-toggle-checkbox').forEach(function (cb) {
-                        cb.addEventListener('change', function () {
+                    document.querySelectorAll('.cru-col-toggle-checkbox').forEach(function(cb) {
+                        cb.addEventListener('change', function() {
                             var idx = parseInt(this.getAttribute('data-col'), 10);
                             var next = loadState();
                             // Keep at least one toggleable column visible.
                             if (!this.checked) {
-                                var visibleCount = TOGGLEABLE.filter(function (c) { return next[c.idx] !== false; }).length;
-                                if (visibleCount <= 1) { this.checked = true; return; }
+                                var visibleCount = TOGGLEABLE.filter(function(c) {
+                                    return next[c.idx] !== false;
+                                }).length;
+                                if (visibleCount <= 1) {
+                                    this.checked = true;
+                                    return;
+                                }
                             }
                             next[idx] = this.checked;
                             api.column(idx).visible(this.checked);
@@ -277,8 +318,10 @@
 
                     var resetBtn = document.querySelector('.cru-col-toggle-reset');
                     if (resetBtn) {
-                        resetBtn.addEventListener('click', function () {
-                            try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+                        resetBtn.addEventListener('click', function() {
+                            try {
+                                localStorage.removeItem(STORAGE_KEY);
+                            } catch (e) {}
                             applyState(defaults());
                         });
                     }
@@ -310,7 +353,10 @@
                     var lengthWrap = wrapper.querySelector('.dataTables_length');
                     var select = lengthWrap ? lengthWrap.querySelector('select') : null;
                     var info = wrapper.querySelector('.dataTables_info');
-                    if (!select || !info) { wrapper.classList.add('cr-footer-ready'); return true; }
+                    if (!select || !info) {
+                        wrapper.classList.add('cr-footer-ready');
+                        return true;
+                    }
 
                     // Hide the default top "Show N entries" control.
                     lengthWrap.classList.add('d-none');
@@ -324,7 +370,8 @@
                     function render() {
                         var total = api.page.info().recordsTotal;
                         info.innerHTML = '';
-                        info.classList.add('cr-footer-info', 'd-flex', 'align-items-center', 'justify-content-md-end', 'gap-2', 'flex-wrap');
+                        info.classList.add('cr-footer-info', 'd-flex', 'align-items-center',
+                            'justify-content-md-end', 'gap-2', 'flex-wrap');
                         var pre = document.createElement('span');
                         pre.textContent = 'Showing';
                         var post = document.createElement('span');
@@ -336,7 +383,7 @@
                     }
 
                     render();
-                    api.on('draw', function () {
+                    api.on('draw', function() {
                         if (select.parentNode !== info) render();
                     });
 
@@ -357,7 +404,8 @@
 </div>
 
 <!-- Create Category Modal -->
-<div class="modal fade cr-design-modal" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
+<div class="modal fade cr-design-modal" id="createModal" tabindex="-1" aria-labelledby="createModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
         <div class="modal-content">
 
@@ -383,27 +431,26 @@
                         <label for="modal_course_repository_name" class="form-label">
                             Category Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control"
-                            id="modal_course_repository_name" name="course_repository_name"
-                            placeholder="eg. E-Office" required>
+                        <input type="text" class="form-control" id="modal_course_repository_name"
+                            name="course_repository_name" placeholder="eg. E-Office" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="modal_course_repository_details" class="form-label">
                             Description <span class="text-muted fw-normal">(Optional)</span>
                         </label>
-                        <textarea class="form-control"
-                            id="modal_course_repository_details" name="course_repository_details" rows="3"
-                            placeholder="eg. Lorem ipsum dolor sit amet"></textarea>
+                        <textarea class="form-control" id="modal_course_repository_details"
+                            name="course_repository_details" rows="3"
+                            placeholder="Add a description"></textarea>
                     </div>
 
                     <div class="mb-0">
                         <label class="form-label d-block">Attachment</label>
                         @include('admin.course-repository.partials.cr-design-file', [
-                            'inputId' => 'modal_category_image',
-                            'inputName' => 'category_image',
-                            'required' => true,
-                            'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
+                        'inputId' => 'modal_category_image',
+                        'inputName' => 'category_image',
+                        'required' => true,
+                        'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
                         ])
                         <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
                         <div class="mt-2">
@@ -424,7 +471,8 @@
     </div>
 </div>
 <!-- Edit Category Modal -->
-<div class="modal fade cr-design-modal" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+<div class="modal fade cr-design-modal" id="editModal" tabindex="-1" aria-labelledby="editModalLabel"
+    aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
         <div class="modal-content">
 
@@ -450,18 +498,17 @@
                         <label for="edit_course_repository_name" class="form-label">
                             Category Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control"
-                            id="edit_course_repository_name" name="course_repository_name"
-                            placeholder="eg. E-Office" required>
+                        <input type="text" class="form-control" id="edit_course_repository_name"
+                            name="course_repository_name" placeholder="eg. E-Office" required>
                     </div>
 
                     <div class="mb-3">
                         <label for="edit_course_repository_details" class="form-label">
                             Description <span class="text-muted fw-normal">(Optional)</span>
                         </label>
-                        <textarea class="form-control"
-                            id="edit_course_repository_details" name="course_repository_details" rows="3"
-                            placeholder="eg. Lorem ipsum dolor sit amet"></textarea>
+                        <textarea class="form-control" id="edit_course_repository_details"
+                            name="course_repository_details" rows="3"
+                            placeholder="Add a description"></textarea>
                     </div>
 
                     <div class="mb-0">
@@ -475,9 +522,9 @@
                         </div>
 
                         @include('admin.course-repository.partials.cr-design-file', [
-                            'inputId' => 'edit_category_image',
-                            'inputName' => 'category_image',
-                            'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
+                        'inputId' => 'edit_category_image',
+                        'inputName' => 'category_image',
+                        'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
                         ])
                         <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
 
@@ -501,8 +548,8 @@
 </div>
 
 <!-- Upload Modal -->
-<div class="modal fade cr-design-modal" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true"
-    data-bs-backdrop="static">
+<div class="modal fade cr-design-modal" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel"
+    aria-hidden="true" data-bs-backdrop="static">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable cr-design-modal-sm">
         <div class="modal-content">
 
@@ -527,8 +574,8 @@
                         <label for="file_title" class="form-label">
                             File Title <span class="text-muted fw-normal">(Optional)</span>
                         </label>
-                        <input type="text" class="form-control" id="file_title"
-                            name="file_title" placeholder="eg. Week-01">
+                        <input type="text" class="form-control" id="file_title" name="file_title"
+                            placeholder="eg. Week-01">
                     </div>
 
                     <div class="mb-0">
@@ -536,12 +583,13 @@
                             Document Upload <span class="text-danger">*</span>
                         </label>
                         @include('admin.course-repository.partials.cr-design-file', [
-                            'inputId' => 'file',
-                            'inputName' => 'file',
-                            'required' => true,
-                            'accept' => '*/*',
+                        'inputId' => 'file',
+                        'inputName' => 'file',
+                        'required' => true,
+                        'accept' => '*/*',
                         ])
-                        <div class="form-text small text-muted mt-1">PDF, DOC, DOCX, XLS, XLSX, images, etc. (Max 100 MB)</div>
+                        <div class="form-text small text-muted mt-1">PDF, DOC, DOCX, XLS, XLSX, images, etc. (Max 100
+                            MB)</div>
                     </div>
 
                 </div>
@@ -568,8 +616,12 @@
     // Use Laravel-generated URLs so prefix (e.g. /admin) is correct
     var courseRepoUpdateUrlTemplate = "{{ route('course-repository.update', ['pk' => '___PK___']) }}";
     var courseRepoDestroyUrlTemplate = "{{ route('course-repository.destroy', ['pk' => '___PK___']) }}";
-    window.getCourseRepoUpdateUrl = function(pk) { return courseRepoUpdateUrlTemplate.replace('___PK___', pk); };
-    window.getCourseRepoDestroyUrl = function(pk) { return courseRepoDestroyUrlTemplate.replace('___PK___', pk); };
+    window.getCourseRepoUpdateUrl = function(pk) {
+        return courseRepoUpdateUrlTemplate.replace('___PK___', pk);
+    };
+    window.getCourseRepoDestroyUrl = function(pk) {
+        return courseRepoDestroyUrlTemplate.replace('___PK___', pk);
+    };
 })();
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -724,9 +776,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     try {
                         data = text ? JSON.parse(text) : {};
                     } catch (e) {
-                        return { ok: response.ok, status: response.status, message: text || 'Server error' };
+                        return {
+                            ok: response.ok,
+                            status: response.status,
+                            message: text || 'Server error'
+                        };
                     }
-                    return { ok: response.ok, status: response.status, data: data, raw: text };
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                        data: data,
+                        raw: text
+                    };
                 });
             })
             .then(function(result) {
@@ -746,7 +807,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.data) {
                     if (result.data.message) errMsg = result.data.message;
                     if (result.data.errors && typeof result.data.errors === 'object') {
-                        var first = Object.keys(result.data.errors).map(function(k) { return result.data.errors[k][0]; })[0];
+                        var first = Object.keys(result.data.errors).map(function(k) {
+                            return result.data.errors[k][0];
+                        })[0];
                         if (first) errMsg = first;
                     }
                 } else if (result.status === 419) {
@@ -756,7 +819,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (result.message && result.message.length < 200) {
                     errMsg = result.message;
                 }
-                Swal.fire({ icon: 'error', title: 'Error!', text: errMsg });
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: errMsg
+                });
                 submitBtn.disabled = false;
                 submitBtn.innerHTML =
                     '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
@@ -795,12 +862,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     form.method = 'POST';
                     form.action = window.getCourseRepoDestroyUrl(pk);
 
-                    var csrfToken = (document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content')) || (document.querySelector('[name="_token"]') && document.querySelector('[name="_token"]').value);
+                    var csrfToken = (document.querySelector(
+                        'meta[name="csrf-token"]') && document.querySelector(
+                            'meta[name="csrf-token"]').getAttribute('content')) || (
+                        document.querySelector('[name="_token"]') && document
+                        .querySelector('[name="_token"]').value);
                     if (!csrfToken) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Security token missing. Please refresh the page.' });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Security token missing. Please refresh the page.'
+                        });
                         return;
                     }
-                    form.innerHTML = '<input type="hidden" name="_token" value="' + csrfToken + '"><input type="hidden" name="_method" value="DELETE">';
+                    form.innerHTML = '<input type="hidden" name="_token" value="' +
+                        csrfToken +
+                        '"><input type="hidden" name="_method" value="DELETE">';
                     document.body.appendChild(form);
                     form.submit();
                 }

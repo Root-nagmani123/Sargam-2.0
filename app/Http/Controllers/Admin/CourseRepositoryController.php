@@ -539,6 +539,162 @@ class CourseRepositoryController extends Controller
     }
 
     /**
+     * Return a single document plus its shared detail metadata, so the edit
+     * modal (a reuse of the upload form) can be pre-populated.
+     * GET /course-repository/document/{pk}/edit-data
+     */
+    public function getDocument($pk)
+    {
+        try {
+            $document = CourseRepositoryDocument::with([
+                'detail',
+                'detail.course',
+                'detail.subject',
+                'detail.topic',
+                'detail.author',
+                'detail.sector',
+                'detail.ministry',
+            ])->findOrFail($pk);
+            $detail = $document->detail;
+
+            // Map stored detail type back to the upload form's category labels
+            $typeMap = ['CO' => 'Course', 'OT' => 'Other', 'IN' => 'Institutional'];
+            $category = $detail ? ($typeMap[$detail->type] ?? 'Course') : 'Course';
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'pk' => $document->pk,
+                    'file_title' => $document->file_title,
+                    'upload_document' => $document->upload_document,
+                    'category' => $category,
+                    'detail' => $detail ? [
+                        'course_master_pk' => $detail->course_master_pk,
+                        'course_name' => optional($detail->course)->course_name,
+                        'subject_pk' => $detail->subject_pk,
+                        'subject_name' => optional($detail->subject)->subject_name,
+                        'topic_pk' => $detail->topic_pk,
+                        'topic_name' => optional($detail->topic)->subject_topic
+                            ?? optional($detail->topic)->course_repo_topic,
+                        'session_date' => $detail->session_date
+                            ? $detail->session_date->format('Y-m-d')
+                            : null,
+                        'author_name' => $detail->author_name,
+                        'author_label' => optional($detail->author)->full_name,
+                        'sector_master_pk' => $detail->sector_master_pk,
+                        'sector_name' => optional($detail->sector)->sector_name,
+                        'ministry_master_pk' => $detail->ministry_master_pk,
+                        'ministry_name' => optional($detail->ministry)->ministry_name,
+                        'keyword' => $detail->keyword,
+                        'videolink' => $detail->videolink,
+                    ] : null,
+                ],
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error fetching document for edit: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not load document',
+            ], 500);
+        }
+    }
+
+    /**
+     * Update a document's title/file and its shared detail metadata.
+     * POST /course-repository/document/{pk}/update
+     */
+    public function updateDocument($pk, Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'category' => 'nullable|string|in:Course,Other,Institutional',
+                'file_title' => 'nullable|string|max:5000',
+                'document_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10120', // Max 10MB
+                'course_name' => 'nullable|string',
+                'subject_name' => 'nullable|string',
+                'timetable_name' => 'nullable|string',
+                'session_date' => 'nullable|string',
+                'author_name' => 'nullable|string',
+                'sector_master' => 'nullable|numeric',
+                'ministry_master' => 'nullable|numeric',
+                'keywords' => 'nullable|string|max:4000',
+                'video_link' => 'nullable|string|max:2000',
+            ]);
+
+            $document = CourseRepositoryDocument::findOrFail($pk);
+
+            // ---- Document-level fields (title + optional file replacement) ----
+            $document->file_title = $validated['file_title'] ?? $document->file_title;
+
+            if ($request->hasFile('document_file')) {
+                $file = $request->file('document_file');
+                if ($file->isValid()) {
+                    // Store in the same hierarchical folder used at upload time
+                    $parent = CourseRepositoryMaster::find($document->course_repository_master_pk);
+                    $storageFolder = $parent
+                        ? trim($this->buildFolderPath($parent), '/')
+                        : 'course_repository';
+
+                    $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                    $filePath = $file->storeAs($storageFolder, $fileName, 'public');
+
+                    // Remove the old physical file if we can resolve it
+                    $oldRelative = $this->resolveDocumentRelativePath($document);
+                    if ($oldRelative && Storage::disk('public')->exists($oldRelative)) {
+                        Storage::disk('public')->delete($oldRelative);
+                    }
+
+                    $document->upload_document = $fileName;
+                    $document->full_path = $filePath;
+                }
+            }
+
+            $document->save();
+
+            // ---- Shared detail-level metadata ----
+            $detail = $document->detail;
+            if ($detail) {
+                $category = $validated['category'] ?? null;
+                $typeMap = ['Course' => 'CO', 'Other' => 'OT', 'Institutional' => 'IN'];
+
+                $detail->course_master_pk = $validated['course_name'] ?? $detail->course_master_pk;
+                $detail->subject_pk = $validated['subject_name'] ?? $detail->subject_pk;
+                $detail->topic_pk = $validated['timetable_name'] ?? $detail->topic_pk;
+                $detail->session_date = $validated['session_date'] ?? $detail->session_date;
+                $detail->author_name = $validated['author_name'] ?? $detail->author_name;
+                $detail->sector_master_pk = $validated['sector_master'] ?? $detail->sector_master_pk;
+                $detail->ministry_master_pk = $validated['ministry_master'] ?? $detail->ministry_master_pk;
+                $detail->keyword = $validated['keywords'] ?? $detail->keyword;
+                $detail->videolink = $validated['video_link'] ?? $detail->videolink;
+                if ($category && isset($typeMap[$category])) {
+                    $detail->type = $typeMap[$category];
+                }
+                $detail->modify_by = auth()->id();
+                $detail->modify_date = now();
+                $detail->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document updated successfully',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error in updateDocument: ' . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (Exception $e) {
+            Log::error('Error updating document: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Update failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Download document
      * GET /course-repository/document/{pk}/download
      */

@@ -365,6 +365,9 @@ document.addEventListener('DOMContentLoaded', function() {
                                 </td>
                                 <td class="text-center cru-col-daction">
                                     <div class="d-inline-flex gap-1" role="group" aria-label="Document actions">
+                                        <a href="javascript:void(0)" class="cr-admin-icon-btn edit-doc"
+                                            data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Edit"
+                                            aria-label="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                                         <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
                                             class="cr-admin-icon-btn" data-bs-toggle="tooltip" title="Download"
                                             aria-label="Download">
@@ -552,7 +555,13 @@ document.addEventListener('DOMContentLoaded', function() {
             </div>
             <form id="uploadForm" method="POST" action="javascript:void(0);" enctype="multipart/form-data" novalidate>
                 @csrf
+                <input type="hidden" name="upload_edit_pk" id="upload_edit_pk" value="">
                 <div id="uploadFormErrors" class="alert alert-danger d-none mx-3 mt-3 mb-0" role="alert"></div>
+                <div id="uploadEditNotice" class="alert alert-info d-none mx-3 mt-3 mb-0 py-2 small" role="status">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Editing existing document. Current file: <span id="uploadEditCurrentFile" class="fw-semibold"></span>.
+                    Choose a new file only if you want to replace it.
+                </div>
                 <div class="modal-body">
                     <div class="mb-3">
                         <label class="form-label d-block">Document Type <span class="text-danger">*</span></label>
@@ -1501,6 +1510,16 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             return;
         }
 
+        // Edit mode: when the modal was opened from a document's Edit button, send an
+        // update instead of creating new records. submit() returns true once it takes over.
+        if (window.crDocEdit && window.crDocEdit.isEditing()) {
+            if (window.crDocEdit.submit(form, {
+                    showError: showUploadError
+                })) {
+                return;
+            }
+        }
+
         if (selectedCategory === 'Course') {
             var course_name = formData.get('course_name');
             var subject_name = formData.get('subject_name');
@@ -1752,6 +1771,357 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
     }
 });
 
+// ===== DOCUMENT EDIT MODE — reuses the Upload modal so the form looks identical to "Add" =====
+window.crDocEdit = (function() {
+    'use strict';
+
+    function $id(id) {
+        return document.getElementById(id);
+    }
+
+    function wait(ms) {
+        return new Promise(function(resolve) {
+            setTimeout(resolve, ms);
+        });
+    }
+
+    function fireChange(el) {
+        if (el) el.dispatchEvent(new Event('change', {
+            bubbles: true
+        }));
+    }
+
+    // Set a <select> value, injecting a labeled option if it isn't present.
+    function setSelectValue(selectId, value, label) {
+        var sel = $id(selectId);
+        if (!sel || value === null || value === undefined || value === '') return sel;
+        value = String(value);
+        var present = false;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (String(sel.options[i].value) === value) {
+                present = true;
+                break;
+            }
+        }
+        if (!present) {
+            var opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = label || value;
+            sel.appendChild(opt);
+        }
+        sel.value = value;
+        return sel;
+    }
+
+    // Wait for an async-loaded option to appear, then select it (and fire change so the
+    // next cascade level loads). Falls back to injecting a labeled option after timeout.
+    function selectWhenReady(selectId, value, label, timeoutMs) {
+        return new Promise(function(resolve) {
+            if (value === null || value === undefined || value === '') {
+                resolve(false);
+                return;
+            }
+            value = String(value);
+            var start = (window.performance && performance.now) ? performance.now() : Date.now();
+            (function check() {
+                var sel = $id(selectId);
+                if (sel) {
+                    for (var i = 0; i < sel.options.length; i++) {
+                        if (String(sel.options[i].value) === value) {
+                            sel.value = value;
+                            fireChange(sel);
+                            resolve(true);
+                            return;
+                        }
+                    }
+                }
+                var now = (window.performance && performance.now) ? performance.now() : Date.now();
+                if (now - start > (timeoutMs || 3500)) {
+                    var s = setSelectValue(selectId, value, label);
+                    fireChange(s);
+                    resolve(false);
+                    return;
+                }
+                setTimeout(check, 80);
+            })();
+        });
+    }
+
+    function setVal(id, value) {
+        var el = $id(id);
+        if (el) el.value = (value === null || value === undefined) ? '' : value;
+    }
+
+    // Pre-fill the Course-category section (cascading dropdowns).
+    function prefillCourse(d) {
+        var courseSel = setSelectValue('course_name', d.course_master_pk, d.course_name);
+        fireChange(courseSel); // -> loads subjects
+        return Promise.resolve()
+            .then(function() {
+                return selectWhenReady('subject_name', d.subject_pk, d.subject_name);
+            }) // -> loads topics
+            .then(function() {
+                return selectWhenReady('timetable_name', d.topic_pk, d.topic_name);
+            }) // -> loads session/author
+            .then(function() {
+                return wait(450);
+            }) // let session/author auto-fill settle, then override with saved values
+            .then(function() {
+                setVal('session_date', d.session_date);
+                setSelectValue('author_name', d.author_name, d.author_label);
+                var sectorSel = setSelectValue('sector_master', d.sector_master_pk, d.sector_name);
+                fireChange(sectorSel); // -> loads ministries
+                return selectWhenReady('ministry_master', d.ministry_master_pk, d.ministry_name);
+            })
+            .then(function() {
+                // keywords + video LAST — cascade change handlers overwrite keywords
+                setVal('keywords_course', d.keyword);
+                setVal('video_link_course', d.videolink);
+                setVal('session_date', d.session_date);
+            });
+    }
+
+    // Pre-fill the Other-category section (mostly free-text inputs).
+    function prefillOther(d) {
+        setSelectValue('course_name_other', d.course_master_pk, d.course_name);
+        setVal('major_subject_other', d.subject_pk);
+        setVal('topic_name_other', d.topic_pk);
+        setVal('session_date_other', d.session_date);
+        setVal('author_name_other', d.author_name);
+        var sectorSel = setSelectValue('sector_master_other', d.sector_master_pk, d.sector_name);
+        fireChange(sectorSel); // -> loads ministries (Other)
+        return selectWhenReady('ministry_master_other', d.ministry_master_pk, d.ministry_name)
+            .then(function() {
+                setVal('keywords_other', d.keyword);
+                setVal('video_link_other', d.videolink);
+            });
+    }
+
+    // Pre-fill the Institutional-category section.
+    function prefillInstitutional(d) {
+        setVal('Key_words_institutional', d.keyword);
+        var sectorSel = setSelectValue('sector_master_institutional', d.sector_master_pk, d.sector_name);
+        fireChange(sectorSel);
+        return selectWhenReady('ministry_master_institutional', d.ministry_master_pk, d.ministry_name);
+    }
+
+    // Put the document title into the first attachment row of the active category.
+    function setTitleRow(category, fileTitle) {
+        var name = category === 'Other' ? 'attachment_titles_other[]' : 'attachment_titles[]';
+        var titleInput = document.querySelector('#uploadForm input[name="' + name + '"]');
+        if (titleInput) titleInput.value = fileTitle || '';
+    }
+
+    function selectCategory(category) {
+        var map = {
+            Course: 'category_course',
+            Other: 'category_other',
+            Institutional: 'category_institutional'
+        };
+        var radio = $id(map[category] || 'category_course');
+        if (radio) {
+            radio.checked = true;
+            fireChange(radio); // toggles which category-fields section is visible
+        }
+    }
+
+    function setEditChrome(on, currentFile) {
+        var title = $id('uploadModalLabel');
+        if (title) title.textContent = on ? 'Edit Document' : 'Upload Document';
+        var btn = $id('uploadBtn');
+        if (btn) btn.textContent = on ? 'Update Document' : 'Add Document';
+        var notice = $id('uploadEditNotice');
+        if (notice) notice.classList.toggle('d-none', !on);
+        var cur = $id('uploadEditCurrentFile');
+        if (cur) cur.textContent = currentFile || '';
+    }
+
+    // Reset the upload modal back to "create" mode.
+    function reset() {
+        var pkEl = $id('upload_edit_pk');
+        if (pkEl) pkEl.value = '';
+        setEditChrome(false, '');
+        var form = $id('uploadForm');
+        if (form) delete form.dataset.currentFileTitle;
+    }
+
+    // Populate the upload modal from the document's data and open it in edit mode.
+    function enter(data) {
+        var form = $id('uploadForm');
+        if (form) {
+            try {
+                form.reset();
+            } catch (e) {}
+            form.dataset.currentFileTitle = data.file_title || '';
+        }
+        var pkEl = $id('upload_edit_pk');
+        if (pkEl) pkEl.value = data.pk;
+
+        var category = data.category || 'Course';
+        selectCategory(category);
+        setEditChrome(true, data.upload_document || '');
+        setTitleRow(category, data.file_title);
+
+        var d = data.detail || {};
+        var done;
+        if (category === 'Other') done = prefillOther(d);
+        else if (category === 'Institutional') done = prefillInstitutional(d);
+        else done = prefillCourse(d);
+
+        var modalEl = $id('uploadModal');
+        if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show();
+        }
+        return done;
+    }
+
+    function isEditing() {
+        var pkEl = $id('upload_edit_pk');
+        return !!(pkEl && pkEl.value);
+    }
+
+    // Build the update payload from the upload form and POST it. Returns true if it handled submit.
+    function submit(form, helpers) {
+        var pkEl = $id('upload_edit_pk');
+        var pk = pkEl ? pkEl.value : '';
+        if (!pk) return false; // not in edit mode — let the normal upload flow run
+
+        helpers = helpers || {};
+        var showError = helpers.showError || function(m) {
+            alert(m);
+        };
+        var category = (document.querySelector('input[name="category"]:checked') || {}).value || 'Course';
+
+        var fd = new FormData();
+        fd.append('_token', (form.querySelector('[name="_token"]') || {}).value || '');
+        fd.append('category', category);
+
+        // Map per-category fields to the controller's expected names
+        var fileTitle, fileInput;
+        if (category === 'Course') {
+            fd.append('course_name', (($id('course_name') || {}).value) || '');
+            fd.append('subject_name', (($id('subject_name') || {}).value) || '');
+            fd.append('timetable_name', (($id('timetable_name') || {}).value) || '');
+            fd.append('session_date', (($id('session_date') || {}).value) || '');
+            fd.append('author_name', (($id('author_name') || {}).value) || '');
+            fd.append('sector_master', (($id('sector_master') || {}).value) || '');
+            fd.append('ministry_master', (($id('ministry_master') || {}).value) || '');
+            fd.append('keywords', (($id('keywords_course') || {}).value) || '');
+            fd.append('video_link', (($id('video_link_course') || {}).value) || '');
+            var t1 = document.querySelector('#uploadForm input[name="attachment_titles[]"]');
+            fileTitle = t1 ? t1.value : '';
+            fileInput = document.querySelector('#uploadForm input[name="attachments[]"]');
+        } else if (category === 'Other') {
+            fd.append('course_name', (($id('course_name_other') || {}).value) || '');
+            fd.append('subject_name', (($id('major_subject_other') || {}).value) || '');
+            fd.append('timetable_name', (($id('topic_name_other') || {}).value) || '');
+            fd.append('session_date', (($id('session_date_other') || {}).value) || '');
+            fd.append('author_name', (($id('author_name_other') || {}).value) || '');
+            fd.append('sector_master', (($id('sector_master_other') || {}).value) || '');
+            fd.append('ministry_master', (($id('ministry_master_other') || {}).value) || '');
+            fd.append('keywords', (($id('keywords_other') || {}).value) || '');
+            fd.append('video_link', (($id('video_link_other') || {}).value) || '');
+            var t2 = document.querySelector('#uploadForm input[name="attachment_titles_other[]"]');
+            fileTitle = t2 ? t2.value : '';
+            fileInput = document.querySelector('#uploadForm input[name="attachments_other[]"]');
+        } else {
+            fd.append('keywords', (($id('Key_words_institutional') || {}).value) || '');
+            fd.append('sector_master', (($id('sector_master_institutional') || {}).value) || '');
+            fd.append('ministry_master', (($id('ministry_master_institutional') || {}).value) || '');
+            fileTitle = (form.dataset.currentFileTitle || ''); // institutional has no title field
+            fileInput = document.querySelector('#uploadForm input[name="attachments_institutional[]"]');
+        }
+
+        // Keep the existing title if the row was cleared
+        if (!fileTitle && form.dataset.currentFileTitle) fileTitle = form.dataset.currentFileTitle;
+        fd.append('file_title', fileTitle || '');
+
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            fd.append('document_file', fileInput.files[0]);
+        }
+
+        var csrfEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
+        var csrfToken = csrfEl ? (csrfEl.getAttribute('content') || csrfEl.value) : null;
+
+        var submitBtn = $id('uploadBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.dataset.originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+        }
+        var restoreBtn = function() {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = submitBtn.dataset.originalText || 'Update Document';
+            }
+        };
+
+        fetch('/course-repository/document/' + pk + '/update', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken || '',
+                    'Accept': 'application/json'
+                },
+                body: fd
+            })
+            .then(function(r) {
+                return r.json().then(function(data) {
+                    return {
+                        ok: r.ok,
+                        data: data
+                    };
+                });
+            })
+            .then(function(result) {
+                if (result.ok && result.data && result.data.success) {
+                    var modalEl = $id('uploadModal');
+                    if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                        var inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    }
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated!',
+                            text: 'Document has been updated.',
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(function() {
+                            location.reload();
+                        });
+                    } else {
+                        location.reload();
+                    }
+                    return;
+                }
+                restoreBtn();
+                var errMsg = (result.data && result.data.error) || 'Update failed';
+                if (result.data && result.data.errors && typeof result.data.errors === 'object') {
+                    var parts = [];
+                    Object.keys(result.data.errors).forEach(function(field) {
+                        var val = result.data.errors[field];
+                        parts.push(Array.isArray(val) ? val.join(' ') : val);
+                    });
+                    if (parts.length) errMsg = parts.join(' | ');
+                }
+                showError(errMsg);
+            })
+            .catch(function() {
+                restoreBtn();
+                showError('Network error. Please try again.');
+            });
+
+        return true; // handled
+    }
+
+    return {
+        enter: enter,
+        reset: reset,
+        submit: submit,
+        isEditing: isEditing
+    };
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     // ===== EDIT/DELETE BUTTONS - Register first so they work even if other code throws =====
     document.addEventListener('click', function(e) {
@@ -1786,7 +2156,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     currentAttachment.href = '/storage/' + attachment;
                     currentAttachmentContainer.style.display = 'block';
                 } else if (currentAttachmentContainer) currentAttachmentContainer.style.display =
-                'none';
+                    'none';
 
                 // Reset the edit file-input labels so a stale filename isn't shown
                 ['category_image_edit', 'category_attachment_edit'].forEach(function(id) {
@@ -1804,6 +2174,58 @@ document.addEventListener('DOMContentLoaded', function() {
             } catch (err) {
                 console.warn('Edit error:', err);
             }
+            return;
+        }
+        const editDocBtn = e.target.closest('.edit-doc');
+        if (editDocBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const pk = editDocBtn.getAttribute('data-pk');
+            if (!pk || !window.crDocEdit) return;
+
+            // Reset any stale error and fetch the document + its detail, then open the
+            // Upload modal pre-filled in edit mode (identical form to "Add Document").
+            const errEl = document.getElementById('uploadFormErrors');
+            if (errEl) {
+                errEl.classList.add('d-none');
+                errEl.innerHTML = '';
+            }
+
+            fetch('/course-repository/document/' + pk + '/edit-data', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(r) {
+                    return r.json();
+                })
+                .then(function(res) {
+                    if (res && res.success && res.data) {
+                        window.crDocEdit.enter(res.data);
+                    } else {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: (res && res.error) || 'Could not load document'
+                            });
+                        } else {
+                            alert((res && res.error) || 'Could not load document');
+                        }
+                    }
+                })
+                .catch(function() {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Could not load document'
+                        });
+                    } else {
+                        alert('Could not load document');
+                    }
+                });
             return;
         }
         const deleteRepoBtn = e.target.closest('.delete-repo');
@@ -3217,6 +3639,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen for upload modal show event to trigger keywords update
     const uploadModalElement = document.getElementById('uploadModal');
     if (uploadModalElement) {
+        // Opened via an "Upload Documents" button (has relatedTarget) -> force create mode.
+        // Programmatic .show() from the document Edit flow has no relatedTarget, so edit
+        // mode and its pre-filled values are preserved.
+        uploadModalElement.addEventListener('show.bs.modal', function(ev) {
+            if (ev.relatedTarget && window.crDocEdit) {
+                window.crDocEdit.reset();
+                const f = document.getElementById('uploadForm');
+                if (f) {
+                    try {
+                        f.reset();
+                    } catch (e) {}
+                }
+            }
+        });
         uploadModalElement.addEventListener('shown.bs.modal', function() {
             const errEl = document.getElementById('uploadFormErrors');
             if (errEl) {
