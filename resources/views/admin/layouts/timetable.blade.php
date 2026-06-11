@@ -85,7 +85,7 @@
     </div>
 </div>
     <!-- Sticky Brand Header -->
-    <div class="header sticky-top bg-white shadow-sm border-bottom">
+    <div class="header sticky-top bg-white shadow-sm border-bottom mb-3">
         <div class="container-fluid p-0 px-2">
             <nav class="navbar navbar-expand-lg navbar-light p-0">
                 <a class="navbar-brand d-flex align-items-center gap-2 gap-md-3 me-2 p-0" href="#">
