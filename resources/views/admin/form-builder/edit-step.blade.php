@@ -106,8 +106,8 @@
         </div>
     </div>
 
-    {{-- FIELDS SECTION --}}
-    @if($step->step_slug !== 'step3')
+    {{-- FIELDS SECTION (flat fields — not step 3 groups or documents checklist) --}}
+    @if(! $step->usesFieldGroups() && ! $step->isDocumentsStep())
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h6 class="mb-0 text-uppercase small fw-bold text-muted" id="fcFieldsCountLabel">Fields ({{ $step->fields->count() }})</h6>
@@ -143,7 +143,7 @@
     @endif
 
     {{-- DOCUMENT CHECKLIST SECTION (Documents step) --}}
-    @if($step->step_slug === 'documents')
+    @if($step->isDocumentsStep())
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h6 class="mb-0 text-uppercase small fw-bold text-muted">Document Checklist ({{ $docMasters->count() }})</h6>
@@ -210,8 +210,8 @@
     </div>
     @endif
 
-    {{-- GROUPS SECTION (Step 3) --}}
-    @if($step->step_slug === 'step3')
+    {{-- GROUPS SECTION (Step 3 / Other Details) --}}
+    @if($step->usesFieldGroups())
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h6 class="mb-0 text-uppercase small fw-bold text-muted">Field Groups / Tabs ({{ $step->fieldGroups->count() }})</h6>
