@@ -1,6 +1,17 @@
 @extends('admin.layouts.master')
 @section('title', 'Preview: ' . $step->step_name)
 
+@push('styles')
+<style>
+    #fcFbPreviewGroupTabContent > .tab-pane:not(.show.active) {
+        display: none !important;
+    }
+    #fcFbPreviewGroupTabContent > .tab-pane.show.active {
+        display: block !important;
+    }
+</style>
+@endpush
+
 @section('setup_content')
 <div class="container py-4">
     <div class="d-flex align-items-center mb-4">
@@ -61,9 +72,9 @@
                         </li>
                     @endforeach
                 </ul>
-                <div class="tab-content">
+                <div class="tab-content" id="fcFbPreviewGroupTabContent">
                     @foreach($groups as $gi => $group)
-                        <div class="tab-pane {{ $gi === 0 ? 'show active' : '' }}" id="preview-grp-{{ $group->id }}">
+                        <div class="tab-pane fade {{ $gi === 0 ? 'show active' : '' }}" id="preview-grp-{{ $group->id }}">
                             <div class="border rounded p-3 mb-2 bg-light">
                                 <small class="text-muted">Table: <code>{{ $group->target_table }}</code> | Mode: <code>{{ $group->save_mode }}</code> | Rows: {{ $group->min_rows }}-{{ $group->max_rows }}</small>
                             </div>
