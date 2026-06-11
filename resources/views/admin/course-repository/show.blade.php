@@ -422,7 +422,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="mb-3">
                         <label for="course_repository_details" class="form-label">Description</label>
                         <textarea class="form-control" id="course_repository_details" name="course_repository_details"
-                            rows="3" placeholder="eg. Lorem ipsum dolor sit amet"></textarea>
+                            rows="3" placeholder="Add description"></textarea>
                     </div>
 
                     <div class="mb-3">
