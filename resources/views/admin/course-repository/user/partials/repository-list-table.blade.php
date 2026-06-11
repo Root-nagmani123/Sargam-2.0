@@ -15,6 +15,7 @@
                     <tr>
                         <th scope="col" data-col="sno" class="cru-col-sno ps-3 ps-md-4 py-3 text-secondary small fw-semibold border-0">S. No.</th>
                         <th scope="col" data-col="name" class="cru-col-name py-3 text-secondary small fw-semibold border-0">{{ $nameColumnLabel }}</th>
+                        <th scope="col" data-col="documents" class="cru-col-documents text-end pe-3 pe-md-4 py-3 text-secondary small fw-semibold border-0">Attachments</th>
                         <th scope="col" data-col="subcount" class="cru-col-subcount text-end pe-3 pe-md-4 py-3 text-secondary small fw-semibold border-0">Sub Categories</th>
                     </tr>
                 </thead>
@@ -31,10 +32,16 @@
                                 $routeUrl = route('admin.course-repository.user.show', $item->pk);
                             }
                             $subCount = $item->children->count() ?? 0;
+                            $attachmentCount = $item->documents->count() ?? 0;
                         @endphp
                         <tr>
                             <td data-col="sno" class="cru-col-sno ps-3 ps-md-4 text-muted">{{ $loop->iteration }}</td>
                             <td data-col="name" class="cru-col-name fw-semibold text-dark">{{ $displayName }}</td>
+                            <td data-col="documents" class="cru-col-documents text-end pe-3 pe-md-4">
+                                <a href="{{ $routeUrl }}" class="cru-document-link">
+                                    {{ $attachmentCount }} {{ Str::plural('Attachment', $attachmentCount) }}
+                                </a>
+                            </td>
                             <td data-col="subcount" class="cru-col-subcount text-end pe-3 pe-md-4">
                                 <a href="{{ $routeUrl }}" class="cru-subcategory-link">
                                     {{ $subCount }} {{ Str::plural('Sub-Category', $subCount) }}
