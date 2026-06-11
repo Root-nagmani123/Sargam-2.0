@@ -56,7 +56,7 @@ class LoginController extends Controller
         $loginData = $request->only('username'); // , 'password'
 
         $user = User::where('user_name', $request->username)->first();
-        
+
         if( $user ) {
             Auth::login($user);
             // logger('Redirecting to: ' . url()->previous());
@@ -85,6 +85,16 @@ class LoginController extends Controller
                 return redirect()->back()->with('error', 'Invalid username or password.');
             }
 
+
+            // Check if employee is inactive (status = 2)
+        if ($user->user_category === 'E') {
+            $employee = DB::table('employee_master')->where('pk', $user->user_id)->first();
+            if ($employee && $employee->status == 2) {
+                return redirect()->back()->with('error', 'Your account is inactive. Please contact the administrator.');
+            }
+        }
+
+
             Auth::login($user);
         }
 
@@ -95,6 +105,15 @@ class LoginController extends Controller
             if (!$user) {
                 return redirect()->back()->with('error', 'Invalid username or password.');
             }
+
+            // Check if employee is inactive (status = 2)
+            if ($user->user_category === 'E') {
+                $employee = DB::table('employee_master')->where('pk', $user->user_id)->first();
+                if ($employee && $employee->status == 2) {
+                    return redirect()->back()->with('error', 'Your account is inactive. Please contact the administrator.');
+                }
+            }
+
 
             if ($user->user_category === 'S') {
 
@@ -186,7 +205,7 @@ class LoginController extends Controller
 
  public function authenticate_bkp_22_jan(Request $request)
 {
-   
+
     $this->validateLogin($request);
 
     $username = $request->input('username');
@@ -243,11 +262,11 @@ class LoginController extends Controller
                     $roles = $user->roles()->pluck('user_role_name')->toArray();
 
                     }
-               
+
                     Session::put('user_roles', $roles);
 
                     return redirect()->intended($this->redirectTo)->cookie(cookie()->make('fresh_login', 'true', 0));
-               
+
                  }else if(Adldap::auth()->attempt($username, $password)){
                 $user = User::where('user_name', $username)->first();
                 if ($user) {
@@ -263,7 +282,7 @@ class LoginController extends Controller
                     $roles = $user->roles()->pluck('user_role_name')->toArray();
 
                     }
-               
+
                     Session::put('user_roles', $roles);
 
                     return redirect()->intended($this->redirectTo)->cookie(cookie()->make('fresh_login', 'true', 0));
@@ -286,7 +305,7 @@ class LoginController extends Controller
 }
     public function authenticate_bkp_0202(Request $request)
 {
-   
+
     $this->validateLogin($request);
 
     $username = $request->input('username');
@@ -354,7 +373,7 @@ class LoginController extends Controller
                     $roles = $user->roles()->pluck('user_role_name')->toArray();
 
                     }
-               
+
                     Session::put('user_roles', $roles);
 
                     return redirect()->intended($this->redirectTo)->cookie(cookie()->make('fresh_login', 'true', 0));
@@ -376,5 +395,5 @@ class LoginController extends Controller
             'password' => 'required|string',
         ]);
     }
-    
+
 }

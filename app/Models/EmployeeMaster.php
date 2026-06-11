@@ -31,6 +31,18 @@ class EmployeeMaster extends Model
     }
 
     /**
+     * Active employees only (employee_master.status = 1). No-op when status column is absent.
+     */
+    public function scopeActive(Builder $query): Builder
+    {
+        if (Schema::hasColumn($this->getTable(), 'status')) {
+            return $query->where($this->getTable() . '.status', 1);
+        }
+
+        return $query;
+    }
+
+    /**
      * Scope: match employee by pk OR pk_old.
      */
     public function scopeWhereIdOrPkOld(Builder $query, $id): Builder
