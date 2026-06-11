@@ -12,7 +12,7 @@
                 <h4 class="card-title mb-3">Edit Memo / Notice</h4>
                 <hr>
 
-                <form action="{{ route('admin.memo-notice.update', $template->pk) }}" method="POST">
+                <form action="{{ route('admin.memo-notice.update', $template->pk) }}" method="POST" enctype="multipart/form-data">
                     @csrf
 
                     <div class="row">
@@ -68,6 +68,22 @@
                             <textarea name="content" id="content" class="form-control" required>
                             {{ old('content', $template->content) }}
                         </textarea>
+                        </div>
+
+                        <!-- Signature Image -->
+                        <div class="col-md-6">
+                            <label class="form-label">Signature Image <small class="text-muted">(jpeg/png/gif, max 2MB)</small></label>
+                            @if($template->signature_image)
+                                <div class="mb-2 d-flex align-items-center gap-3">
+                                    <img src="{{ Storage::url($template->signature_image) }}" alt="Current Signature" style="max-height:60px;border:1px solid #dee2e6;padding:4px;border-radius:4px;">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" name="remove_signature" value="1" id="removeSignature">
+                                        <label class="form-check-label text-danger" for="removeSignature">Remove signature</label>
+                                    </div>
+                                </div>
+                            @endif
+                            <input type="file" name="signature_image" class="form-control" accept="image/jpeg,image/png,image/gif">
+                            <small class="text-muted">Upload a new image to replace the existing signature.</small>
                         </div>
 
                     </div>

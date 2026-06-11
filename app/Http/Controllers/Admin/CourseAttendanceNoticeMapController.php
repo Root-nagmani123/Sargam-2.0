@@ -734,6 +734,7 @@ $memo_conclusion_master = collect(); // default empty collection
         'mnt.content',
         'mnt.director_name',
         'mnt.director_designation',
+        'mnt.signature_image',
         'sns.conclusion_type_pk',
         'sns.conclusion_remark',
         'sns.mark_of_deduction',
@@ -786,6 +787,7 @@ $memo_conclusion_master = collect(); // default empty collection
         'mnt.content',
         'mnt.director_name',
         'mnt.director_designation',
+        'mnt.signature_image',
         'sms.memo_conclusion_master_pk as conclusion_type_pk',
         'sms.conclusion_remark',
         'sms.mark_of_deduction',
@@ -1617,6 +1619,7 @@ if (!$id || !is_numeric($id)) {
                 'mnt.content',
                 'mnt.director_name',
                 'mnt.director_designation',
+                'mnt.signature_image',
                 'sns.conclusion_type_pk',
                 'sns.conclusion_remark',
                 'sns.mark_of_deduction',
@@ -1625,7 +1628,7 @@ if (!$id || !is_numeric($id)) {
             ->first();
 
     } elseif ($type == 'memo') {
-        
+
         $memoNotice = DB::table('memo_message_student_decip_incharge as mmsdi')
             ->leftjoin('student_memo_status as sms', 'mmsdi.student_memo_status_pk', '=', 'sms.pk')
             ->leftjoin('student_master as sm', 'sms.student_pk', '=', 'sm.pk')
@@ -1667,6 +1670,7 @@ if (!$id || !is_numeric($id)) {
                 'mnt.content',
                 'mnt.director_name',
                 'mnt.director_designation',
+                'mnt.signature_image',
                 'sms.memo_conclusion_master_pk as conclusion_type_pk',
                 'sms.conclusion_remark',
                 'sms.mark_of_deduction',
@@ -1736,8 +1740,29 @@ public function memo_notice_conversation_student(Request $request)
         'created_date' => now('UTC'),
     ]);
 
-    // Redirect back with appropriate message
+    // Notify admin users that the OT has replied
     if ($inserted) {
+        try {
+            $memoTypeLabel = ucfirst($type);
+            $adminCredentials = DB::table('user_credentials')
+                ->whereIn('user_category', ['F', 'A'])
+                ->limit(20)
+                ->pluck('pk')
+                ->toArray();
+            if (!empty($adminCredentials)) {
+                app(NotificationService::class)->createMultiple(
+                    $adminCredentials,
+                    'memo_notice',
+                    'Memo/Notice',
+                    $validated['memo_notice_id'],
+                    "OT Replied to {$memoTypeLabel}",
+                    "A participant has replied to the {$memoTypeLabel}. Please review."
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('OT reply notification failed: ' . $e->getMessage());
+        }
+
         return redirect()->back()->with('success', ucfirst($type) . ' message created successfully.');
     }
 

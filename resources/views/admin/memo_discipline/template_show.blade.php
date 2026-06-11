@@ -65,7 +65,12 @@
             <p><strong>{{ $memo->student->display_name ?? 'Student Name' }}, {{ $memo->student->generated_OT_code ?? 'OT Code' }}</strong><br>
                 Remarks: Show Cause Memo for {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
 
-            <p class="text-end"><strong>{{ $memo->template->director_name ?? 'Director Name' }}</strong><br>{{ $memo->template->director_designation ?? 'Director Designation' }}</p>
+            <div class="text-end">
+                @if(!empty($memo->template->signature_image))
+                    <img src="{{ Storage::url($memo->template->signature_image) }}" alt="Signature" style="max-height:60px;display:block;margin-left:auto;margin-bottom:4px;">
+                @endif
+                <strong>{{ $memo->template->director_name ?? 'Director Name' }}</strong><br>{{ $memo->template->director_designation ?? 'Director Designation' }}
+            </div>
 
             <!-- Exemption Table -->
            

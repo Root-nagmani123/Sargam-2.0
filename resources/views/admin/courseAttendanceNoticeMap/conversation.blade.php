@@ -62,7 +62,12 @@
                 Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
             </p>
 
-            <p class="text-end"><strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}</p>
+            <div class="text-end">
+                @if(!empty($template_details->signature_image))
+                    <img src="{{ Storage::url($template_details->signature_image) }}" alt="Signature" style="max-height:60px;display:block;margin-left:auto;margin-bottom:4px;">
+                @endif
+                <strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}
+            </div>
 
             <!-- Exemption Table -->
             <div class="table-responsive mb-4">
