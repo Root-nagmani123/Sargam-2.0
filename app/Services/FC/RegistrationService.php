@@ -299,7 +299,7 @@ class RegistrationService
         $out = collect();
 
         foreach ($steps as $step) {
-            if ($step->step_slug === 'documents') {
+            if ($step->isDocumentsStep()) {
                 continue;
             }
 

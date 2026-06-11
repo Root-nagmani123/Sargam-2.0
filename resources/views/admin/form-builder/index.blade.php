@@ -37,13 +37,13 @@
                         <div class="d-flex gap-3 mb-3">
                             <div class="text-center">
                                 <div class="fw-bold text-primary" style="font-size:1.3rem;">
-                                    @if($step->step_slug === 'documents')
+                                    @if($step->isDocumentsStep())
                                         {{ $docMasterCount }}
                                     @else
                                         {{ $step->fields_count }}
                                     @endif
                                 </div>
-                                <small class="text-muted">{{ $step->step_slug === 'documents' ? 'Documents' : 'Fields' }}</small>
+                                <small class="text-muted">{{ $step->isDocumentsStep() ? 'Documents' : 'Fields' }}</small>
                             </div>
                             @if($step->field_groups_count > 0)
                                 <div class="text-center">
