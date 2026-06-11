@@ -457,6 +457,34 @@ class MemoDisciplineController extends Controller
         compact('memo','memo_conclusion_master')
     );
 }
-    
+
+public function getNewMessages(Request $request, $id)
+{
+    $lastPk = (int) $request->query('last_pk', 0);
+
+    $messages = DB::table('discipline_message_student_decip_incharge')
+        ->where('discipline_memo_status_pk', $id)
+        ->where('pk', '>', $lastPk)
+        ->orderBy('pk', 'asc')
+        ->get();
+
+    $messages = $messages->map(function ($msg) {
+        if ($msg->role_type === 'f') {
+            $user = DB::table('users')->find($msg->created_by);
+            $msg->display_name = $user->name ?? 'Admin';
+        } elseif ($msg->role_type === 's') {
+            $student = DB::table('student_master')->where('pk', $msg->created_by)->first();
+            $msg->display_name = $student->display_name ?? 'Student';
+        } else {
+            $msg->display_name = 'Unknown';
+        }
+        $msg->formatted_date = $msg->created_date
+            ? \Carbon\Carbon::parse($msg->created_date)->format('d-m-Y h:i A')
+            : '';
+        return $msg;
+    });
+
+    return response()->json($messages);
+}
 
 }

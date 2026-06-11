@@ -94,7 +94,7 @@
             <!-- Conversation Section -->
             <h6 class="fw-bold">Conversation</h6>
             <div class="table-responsive mb-4">
-                <table class="table">
+                <table class="table" id="conversationTable">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -104,26 +104,15 @@
                             <th>Document</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="conversationBody">
                         @forelse ($memoNotice as $row)
-                        <tr>
-                            <td class="{{ $loop->first ? ' ' : '' }}">
-                                {{ $row->display_name ?? 'N/A' }}
-                            </td>
-
-                            <td class="{{ $loop->first ? '' : '' }}">
-                                {{ $row->student_decip_incharge_msg }}
-                            </td>
-
+                        <tr data-pk="{{ $row->pk }}">
+                            <td>{{ $row->display_name ?? 'N/A' }}</td>
+                            <td>{{ $row->student_decip_incharge_msg }}</td>
+                            <td>{{ \Carbon\Carbon::parse($row->created_date ?? 'now', 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A') }}</td>
                             <td>
-                                {{ \Carbon\Carbon::parse($row->created_date ?? 'now', 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A') }}
-                            </td>
-
-                            <td>
-                                {{-- Add delete button here if needed --}}
                                 @if($row->notice_status == 1)
-                                <form
-                                    action="{{ route('memo.notice.management.noticedeleteMessage', ['id' => $row->pk, 'type' =>  $type ]) }}"
+                                <form action="{{ route('memo.notice.management.noticedeleteMessage', ['id' => $row->pk, 'type' => $type]) }}"
                                     method="POST" onsubmit="return confirm('Are you sure?')">
                                     @csrf
                                     @method('DELETE')
@@ -133,22 +122,17 @@
                                 <span class="text-muted">N/A</span>
                                 @endif
                             </td>
-
                             <td>
                                 @if ($row->doc_upload)
                                 <a href="{{ asset('storage/' . $row->doc_upload) }}" target="_blank">View</a>
-                                @else
-                                ---
+                                @else ---
                                 @endif
                             </td>
                         </tr>
                         @empty
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">No conversation found.</td>
-                        </tr>
+                        <tr id="emptyRow"><td colspan="5" class="text-center text-muted">No conversation found.</td></tr>
                         @endforelse
                     </tbody>
-
                 </table>
             </div>
 
@@ -312,6 +296,61 @@
     @endsection
     @section('scripts')
 <script>
+/* ── Real-time chat polling ── */
+(function () {
+    var pollUrl  = "{{ route('memo.notice.management.getNewMessages', [$id, $type]) }}";
+    var body     = document.getElementById('conversationBody');
+    var lastPk   = 0;
+
+    // Seed lastPk from currently rendered rows
+    body.querySelectorAll('tr[data-pk]').forEach(function (r) {
+        var pk = parseInt(r.getAttribute('data-pk'), 10);
+        if (pk > lastPk) lastPk = pk;
+    });
+
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function appendMessage(msg) {
+        var emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) emptyRow.remove();
+
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-pk', msg.pk);
+
+        var docCell = msg.doc_upload
+            ? '<a href="/storage/' + escHtml(msg.doc_upload) + '" target="_blank">View</a>'
+            : '---';
+
+        tr.innerHTML =
+            '<td>' + escHtml(msg.display_name || 'N/A') + '</td>' +
+            '<td>' + escHtml(msg.student_decip_incharge_msg || '') + '</td>' +
+            '<td>' + escHtml(msg.formatted_date || '') + '</td>' +
+            '<td><span class="text-muted">N/A</span></td>' +
+            '<td>' + docCell + '</td>';
+
+        body.appendChild(tr);
+        if (lastPk < msg.pk) lastPk = msg.pk;
+    }
+
+    function poll() {
+        fetch(pollUrl + '?last_pk=' + lastPk, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (msgs) {
+            msgs.forEach(appendMessage);
+        })
+        .catch(function () {}); // silent on network error
+    }
+
+    setInterval(poll, 4000);
+})();
+/* ── end polling ── */
+
 document.addEventListener('DOMContentLoaded', function () {
 
     const status = document.getElementById('status');

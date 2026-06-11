@@ -801,6 +801,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
             Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
+            Route::get('/messages/{id}/{type}', 'getNewMessages')->name('getNewMessages');
         });
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
@@ -842,6 +843,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
 
 
         Route::get('/memo-discipline-show/{id}', [MemoDisciplineController::class, 'memo_show'])->name('memo.show');
+        Route::get('/messages/{id}', [MemoDisciplineController::class, 'getNewMessages'])->name('getNewMessages');
     });
 
 

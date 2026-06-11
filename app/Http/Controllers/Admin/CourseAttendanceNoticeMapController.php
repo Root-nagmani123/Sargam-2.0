@@ -607,38 +607,49 @@ public function getTemplateByCourse(Request $request)
 public function getSubjectByCourse(Request $request)
 {
     $courseId = $request->course_id;
-    $subjects = DB::table('timetable as t')
+    $date     = $request->date; // optional — filter by timetable date
+
+    $query = DB::table('timetable as t')
         ->join('subject_master as s', 't.subject_master_pk', '=', 's.pk')
         ->select('s.pk as subject_id', 's.subject_name')
         ->where('t.course_master_pk', $courseId)
-        ->where('s.active_inactive', 1)
-        ->groupBy('s.pk', 's.subject_name',)
-        ->get();
-   if ($subjects->isEmpty()) {
-    return '<option value="">No subjects found</option>';
-}
+        ->where('s.active_inactive', 1);
 
-$html = '<option value="">Select Subject</option>';
-foreach ($subjects as $subject) {
-    $html .= '<option value="' . $subject->subject_id . '">' . e($subject->subject_name) . '</option>';
-}
+    if ($date) {
+        $query->whereDate('t.START_DATE', $date);
+    }
 
-return $html;
+    $subjects = $query->groupBy('s.pk', 's.subject_name')->get();
+
+    if ($subjects->isEmpty()) {
+        return '<option value="">No subjects found for selected date</option>';
+    }
+
+    $html = '<option value="">Select Subject</option>';
+    foreach ($subjects as $subject) {
+        $html .= '<option value="' . $subject->subject_id . '">' . e($subject->subject_name) . '</option>';
+    }
+    return $html;
 }
 function getTopicBysubject(Request $request)
 {
-    $courseId = $request->course_id;
-$subjectId = $request->subject_master_id;
+    $courseId  = $request->course_id;
+    $subjectId = $request->subject_master_id;
+    $date      = $request->date; // optional — filter by timetable date
 
-$topics = DB::table('timetable as t')
-  ->where('t.course_master_pk', $courseId)
-    ->where('t.subject_master_pk', $subjectId)
-    ->select(
-        't.pk','t.subject_topic'
-    )
-    ->get();
+    $query = DB::table('timetable as t')
+        ->where('t.course_master_pk', $courseId)
+        ->where('t.subject_master_pk', $subjectId)
+        ->select('t.pk', 't.subject_topic');
+
+    if ($date) {
+        $query->whereDate('t.START_DATE', $date);
+    }
+
+    $topics = $query->get();
+
     if ($topics->isEmpty()) {
-        return '<option value="">No topics found</option>';
+        return '<option value="">No topics found for selected date</option>';
     }
     $html = '<option value="">Select Topic</option>';
     foreach ($topics as $topic) {
@@ -1143,6 +1154,45 @@ function store_memo_notice_bkp(Request $request){
         return redirect()->back()->with('error', 'Failed to create Memo/Notice. Please try again.');
     }
 }
+public function getNewMessages(Request $request, $id, $type)
+{
+    $lastPk = (int) $request->query('last_pk', 0);
+
+    if ($type === 'memo') {
+        $table = 'memo_message_student_decip_incharge';
+        $fk    = 'student_memo_status_pk';
+    } else {
+        $table = 'notice_message_student_decip_incharge';
+        $fk    = 'student_notice_status_pk';
+    }
+
+    $messages = DB::table($table)
+        ->where($fk, $id)
+        ->where('pk', '>', $lastPk)
+        ->orderBy('pk', 'asc')
+        ->get();
+
+    // Resolve display names
+    $messages = $messages->map(function ($msg) {
+        if ($msg->role_type === 'f') {
+            $user = DB::table('users')->where('id', $msg->created_by)->first();
+            $msg->display_name = $user->name ?? 'Admin';
+        } elseif ($msg->role_type === 's') {
+            $student = DB::table('student_master')->where('pk', $msg->created_by)->first();
+            $msg->display_name = $student->display_name ?? 'Student';
+        } else {
+            $msg->display_name = 'Unknown';
+        }
+        // Format date for display
+        $msg->formatted_date = $msg->created_date
+            ? \Carbon\Carbon::parse($msg->created_date, 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A')
+            : '';
+        return $msg;
+    });
+
+    return response()->json($messages);
+}
+
 public function deleteMemoNotice($id)
 {
     try {

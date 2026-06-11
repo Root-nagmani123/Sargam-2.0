@@ -162,35 +162,67 @@
     document.addEventListener('DOMContentLoaded', function () {
     const today = new Date().toISOString().split('T')[0];
     const dateInput = document.getElementById('date_memo_notice');
-    dateInput.value = today;         // Set today's date
-    dateInput.max = today;           // Prevent future dates
+    dateInput.value = today;
+    dateInput.max = today;
+    // If course is already selected (e.g. old() repopulate), load subjects for today
+    var courseId = document.getElementById('courseSelect').value;
+    if (courseId) {
+        loadSubjectsByDate();
+    }
 });
 
-    $('#courseSelect').on('change', function() {
-        var courseId = $(this).val();
+    function loadSubjectsByDate() {
+        var courseId = $('#courseSelect').val();
+        var date     = $('#date_memo_notice').val();
 
-        if (courseId) {
+        if (courseId && date) {
             $.ajax({
-             url: "{{ route('memo.notice.management.getSubjectByCourse') }}",
-
+                url: "{{ route('memo.notice.management.getSubjectByCourse') }}",
+                type: "GET",
+                data: { course_id: courseId, date: date },
+                success: function (response) {
+                    $('#subject_master_id').html(response);
+                    $('#topic_id').html('<option value="">Select Topic</option>');
+                    $('#venue_name, #session_name, #faculty_name').val('');
+                    $('#venue_id, #faculty_master_pk, #class_session_master_pk').val('');
+                },
+                error: function () {
+                    $('#subject_master_id').html('<option>Error loading subjects</option>');
+                }
+            });
+        } else if (courseId) {
+            // Fallback: load all subjects for course when no date is set yet
+            $.ajax({
+                url: "{{ route('memo.notice.management.getSubjectByCourse') }}",
                 type: "GET",
                 data: { course_id: courseId },
                 success: function (response) {
-                $('#subject_master_id').html(response);
-            },
-            error: function () {
-                $('#subject_master_id').html('<option>Error loading subjects</option>');
-            }
+                    $('#subject_master_id').html(response);
+                    $('#topic_id').html('<option value="">Select Topic</option>');
+                },
+                error: function () {
+                    $('#subject_master_id').html('<option>Error loading subjects</option>');
+                }
             });
         } else {
-             $('#subject_master_id').html('<option value="">Select Subject</option>');
+            $('#subject_master_id').html('<option value="">Select Subject</option>');
+            $('#topic_id').html('<option value="">Select Topic</option>');
         }
+    }
+
+    $('#courseSelect').on('change', function() {
+        var courseId = $(this).val();
+        loadSubjectsByDate();
         // Reset template preview when course changes
         $('#template-preview-wrapper, #template-not-found').hide();
-        // Auto-load Notice template for selected course
         if (courseId) {
             loadTemplatePreview(courseId, 'Notice');
         }
+    });
+
+    // Re-load subjects when date changes (if course already selected)
+    $('#date_memo_notice').on('change', function() {
+        loadSubjectsByDate();
     });
 
     function loadTemplatePreview(courseId, type) {
@@ -236,7 +268,8 @@
     });
    $('#subject_master_id').on('change', function() {
     var subject_master_id = $(this).val();
-    var courseId = $('#courseSelect').val(); // Fix: use selector, not variable
+    var courseId = $('#courseSelect').val();
+    var date     = $('#date_memo_notice').val();
 
     if (subject_master_id && courseId) {
         $.ajax({
@@ -244,7 +277,8 @@
             type: "GET",
             data: {
                 subject_master_id: subject_master_id,
-                course_id: courseId
+                course_id: courseId,
+                date: date
             },
             success: function (response) {
                 $('#topic_id').html(response);

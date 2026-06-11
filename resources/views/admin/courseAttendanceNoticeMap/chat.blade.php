@@ -60,7 +60,7 @@
                 <h6 class="fw-bold">Conversation</h6>
 
                 <div class="table-responsive mb-4">
-                    <table class="table">
+                    <table class="table" id="chatConversationTable">
                         <thead>
                             <tr>
                                 <th>Name</th>
@@ -70,10 +70,9 @@
                                 <th>Document</th>
                             </tr>
                         </thead>
-
-                        <tbody>
+                        <tbody id="chatConversationBody">
                             @forelse ($memoNotice as $row)
-                            <tr>
+                            <tr data-pk="{{ $row->pk }}">
                                 <td>{{ $row->display_name ?? 'N/A' }}</td>
                                 <td>{{ $row->student_decip_incharge_msg }}</td>
                                 <td>{{ \Carbon\Carbon::parse($row->created_date ?? 'now', 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A') }}</td>
@@ -81,18 +80,14 @@
                                 <td>
                                     @if ($row->doc_upload)
                                     <a href="{{ asset('storage/' . $row->doc_upload) }}" target="_blank">View</a>
-                                    @else
-                                    ---
+                                    @else ---
                                     @endif
                                 </td>
                             </tr>
                             @empty
-                            <tr>
-                                <td colspan="5" class="text-center text-muted">No conversation found.</td>
-                            </tr>
+                            <tr id="chatEmptyRow"><td colspan="5" class="text-center text-muted">No conversation found.</td></tr>
                             @endforelse
                         </tbody>
-
                     </table>
                 </div>
 
@@ -178,4 +173,57 @@
             </div>
 </div>
 
+@endsection
+@section('scripts')
+<script>
+(function () {
+    var pollUrl = "{{ route('memo.notice.management.getNewMessages', [$id, $type]) }}";
+    var body    = document.getElementById('chatConversationBody');
+    var lastPk  = 0;
+
+    body.querySelectorAll('tr[data-pk]').forEach(function (r) {
+        var pk = parseInt(r.getAttribute('data-pk'), 10);
+        if (pk > lastPk) lastPk = pk;
+    });
+
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function appendMessage(msg) {
+        var emptyRow = document.getElementById('chatEmptyRow');
+        if (emptyRow) emptyRow.remove();
+
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-pk', msg.pk);
+
+        var docCell = msg.doc_upload
+            ? '<a href="/storage/' + escHtml(msg.doc_upload) + '" target="_blank">View</a>'
+            : '---';
+
+        tr.innerHTML =
+            '<td>' + escHtml(msg.display_name || 'N/A') + '</td>' +
+            '<td>' + escHtml(msg.student_decip_incharge_msg || '') + '</td>' +
+            '<td>' + escHtml(msg.formatted_date || '') + '</td>' +
+            '<td>---</td>' +
+            '<td>' + docCell + '</td>';
+
+        body.appendChild(tr);
+        if (lastPk < msg.pk) lastPk = msg.pk;
+    }
+
+    function poll() {
+        fetch(pollUrl + '?last_pk=' + lastPk, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (msgs) { msgs.forEach(appendMessage); })
+        .catch(function () {});
+    }
+
+    setInterval(poll, 4000);
+})();
+</script>
 @endsection
