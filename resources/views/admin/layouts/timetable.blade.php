@@ -5,7 +5,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     
-   <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
+   <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
    <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
     <!-- Favicon icon-->
     <link rel="shortcut icon" type="image/ico" href="{{ asset('admin_assets/images/logos/favicon.ico') }}">
@@ -26,7 +26,6 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     @include('components.fonts-sargam')
     <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
-    <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
 </head>
 <x-session_message />
@@ -37,7 +36,7 @@
 <div class="govt-header">
     <!-- Top Accessibility / Government of India Strip -->
     <div class="govt-header-top text-white py-2">
-        <div class="container-lg p-0">
+        <div class="container-fluid p-0 px-2">
             <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
                 <!-- Brand: Flag + Government of India -->
                 <a href="https://www.india.gov.in/" target="_blank" rel="noopener"
@@ -86,8 +85,8 @@
     </div>
 </div>
     <!-- Sticky Brand Header -->
-    <div class="header sticky-top bg-white shadow-sm border-bottom mb-4">
-        <div class="container-lg py-2 px-3">
+    <div class="header sticky-top bg-white shadow-sm border-bottom">
+        <div class="container-fluid p-0 px-2">
             <nav class="navbar navbar-expand-lg navbar-light p-0">
                 <a class="navbar-brand d-flex align-items-center gap-2 gap-md-3 me-2 p-0" href="#">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
@@ -118,7 +117,7 @@
 
     <!-- Main Content (OT student pages use @section('content'); calendar uses @section('setup_content')) -->
     <main id="main-content" class="flex-grow-1">
-                   <div class="container-lg">
+                   <div class="container-fluid p-0 px-2">
                      @yield('content')
                     @yield('setup_content')
                    </div>
@@ -255,22 +254,6 @@
         }
     </style>
     <style id="admin-timetable-light-last-resort">
-        html.admin-force-light,
-        body.admin-force-light,
-        html.admin-force-light .fc-event-card,
-        html.admin-force-light .list-event-card,
-        html.admin-force-light .timeline-event-card,
-        html.admin-force-light .card,
-        html.admin-force-light .dropdown-menu,
-        html.admin-force-light .modal-content,
-        html.admin-force-light .table,
-        html.admin-force-light .form-control,
-        html.admin-force-light .form-select {
-            color-scheme: only light !important;
-            background-color: #fff !important;
-            color: #212529 !important;
-            border-color: #dee2e6 !important;
-        }
 
         html.admin-force-light .list-event-card .meta,
         html.admin-force-light .fc-event-card .meta-item,
