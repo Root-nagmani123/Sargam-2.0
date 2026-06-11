@@ -433,6 +433,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
+
+        // Dedicated OT (Officer Trainee / Student-OT) calendar with its own data flow
+        Route::prefix('ot')->name('ot.')->group(function () {
+            Route::get('/', [CalendarController::class, 'otIndex'])->name('index');
+            Route::get('/full-calendar-details', [CalendarController::class, 'otFullCalendarDetails'])->name('event.calendar-details');
+            Route::get('/single-calendar-details', [CalendarController::class, 'otSingleCalendarDetails'])->name('event.Singlecalendar-details');
+            Route::get('/download', [CalendarController::class, 'otDownloadPdf'])->name('download');
+        });
     });
 
     // Timetable Report
