@@ -445,16 +445,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         </div>
                     </div>
 
-                    <div class="mb-0">
-                        <label class="form-label">Attachment</label>
-                        @include('admin.course-repository.partials.cr-design-file', [
-                        'inputId' => 'category_attachment_create',
-                        'inputName' => 'category_attachment',
-                        'accept' => '.jpeg,.png,.jpg,.gif,.pdf,.doc,.docx,.xls,.xlsx',
-                        ])
-                        <div class="form-text small text-muted mt-1">JPG, PNG, GIF, PDF, DOC, XLS (Max 5MB)</div>
-                    </div>
-
                 </div>
 
                 <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end gap-2">

@@ -424,8 +424,20 @@
     border-radius: var(--cr-design-radius);
 }
 
+/* The <form> wraps the error alert, body and footer, so it must drive the
+   scrollable layout: fill the remaining height, let the body scroll, and keep
+   the footer pinned so the dialog end is always reachable even with an error. */
+#uploadModal #uploadForm {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
 #uploadModal .modal-body {
-    max-height: calc(100vh - 10rem);
+    flex: 1 1 auto;
+    min-height: 0;
     overflow-y: auto;
 }
 

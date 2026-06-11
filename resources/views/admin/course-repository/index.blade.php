@@ -412,9 +412,6 @@
             <!-- Modal Header - Blue Gradient -->
             <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
                 <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="createModalLabel">
-                    <span class="header-icon-circle">
-                        <span class="material-icons material-symbols-rounded">add_circle</span>
-                    </span>
                     Create New Category
                 </h5>
                 <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
@@ -445,7 +442,7 @@
                     </div>
 
                     <div class="mb-0">
-                        <label class="form-label d-block">Attachment</label>
+                        <label class="form-label d-block">Thumbnail Image</label>
                         @include('admin.course-repository.partials.cr-design-file', [
                         'inputId' => 'modal_category_image',
                         'inputName' => 'category_image',
