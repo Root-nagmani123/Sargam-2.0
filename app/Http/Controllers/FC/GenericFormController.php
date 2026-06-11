@@ -87,15 +87,15 @@ class GenericFormController extends Controller
 
         // Legacy FC registration only: separate 14-document checklist. Other forms use dynamic file fields on the step.
         if ($this->registrationFlow->usesLegacyDocumentChecklist($form)
-            && ($step->step_slug ?? '') === 'documents') {
+            && $step->isDocumentsStep()) {
             return redirect()->route('fc-reg.registration.documents');
         }
 
         $fields   = $step->activeFields;
         $groups   = $step->activeFieldGroups()->with('activeGroupFields')->get()->values();
 
-        // If step has groups (like step3 pattern), use groups view
-        if ($groups->isNotEmpty()) {
+        // Other Details / step 3: tabbed field groups (same detection as form-builder editor)
+        if ($step->usesFieldGroups()) {
             $existingRows   = [];
             $groupLookups   = [];
             $completedGroups = [];
@@ -163,7 +163,7 @@ class GenericFormController extends Controller
         }
 
         if ($this->registrationFlow->usesLegacyDocumentChecklist($form)
-            && ($step->step_slug ?? '') === 'documents') {
+            && $step->isDocumentsStep()) {
             return redirect()->route('fc-reg.registration.documents');
         }
 
