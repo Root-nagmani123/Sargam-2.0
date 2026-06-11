@@ -139,7 +139,7 @@
                         </div>
                     </div>
                 @endif
-                @if(($form->form_slug ?? '') === 'fc-registration' && isset($registrationProgress, $fcRegistrationMeta) && $step->step_slug === 'documents')
+                @if(($form->form_slug ?? '') === 'fc-registration' && isset($registrationProgress, $fcRegistrationMeta) && $step->isDocumentsStep())
                     @php
                         $declarationDone = $registrationProgress['steps']['confirmed'] ?? false;
                         $docsProgress = $registrationProgress['steps']['documents'] ?? false;

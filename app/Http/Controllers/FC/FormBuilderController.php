@@ -41,7 +41,7 @@ class FormBuilderController extends Controller
         ]);
 
         $docMasters = collect();
-        if ($step->step_slug === 'documents') {
+        if ($step->isDocumentsStep()) {
             $docMasters = FcJoiningRelatedDocumentsMaster::orderBy('display_order')->get();
         }
 
@@ -213,9 +213,11 @@ class FormBuilderController extends Controller
 
     public function preview(FcFormStep $step)
     {
-        $fields  = $step->activeFields;
+        $fields  = $step->usesFieldGroups() ? collect() : $step->activeFields;
         $lookups = $this->formService->getLookupData($fields);
-        $groups  = $step->activeFieldGroups()->with('activeGroupFields')->get();
+        $groups  = $step->usesFieldGroups()
+            ? $step->activeFieldGroups()->with('activeGroupFields')->get()
+            : collect();
 
         $groupLookups = [];
         foreach ($groups as $group) {
@@ -223,7 +225,7 @@ class FormBuilderController extends Controller
         }
 
         $docMasters = collect();
-        if ($step->step_slug === 'documents') {
+        if ($step->isDocumentsStep()) {
             $docMasters = FcJoiningRelatedDocumentsMaster::where('is_active', 1)->orderBy('display_order')->get();
         }
 
