@@ -165,6 +165,7 @@ class FormManagementController extends Controller
         // Clone steps from source form
         if ($sourceFormId) {
             $sourceSteps = FcFormStep::where('form_id', $sourceFormId)
+                ->with(['fields', 'fieldGroups.groupFields'])
                 ->orderBy('step_number')
                 ->get();
 
