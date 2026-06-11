@@ -13,6 +13,30 @@
     .fc-fb-actions .btn { flex-shrink: 0; }
     .fc-fb-actions__form { display: inline-flex; margin: 0; padding: 0; }
     .fc-field-form-section .border { border-color: var(--bs-border-color) !important; }
+    /* Nested group tabs: global .tab-content>.tab-pane {display:none} hides pane bodies (fields table). */
+    #fcFbGroupTabContent {
+        display: grid;
+        grid-template-columns: 1fr;
+    }
+    #fcFbGroupTabContent > .tab-pane {
+        grid-row: 1;
+        grid-column: 1;
+        margin: 0;
+        padding: 0;
+    }
+    #fcFbGroupTabContent > .tab-pane:not(.show.active) {
+        display: none !important;
+        visibility: hidden !important;
+        height: 0 !important;
+        overflow: hidden !important;
+        pointer-events: none;
+    }
+    #fcFbGroupTabContent > .tab-pane.show.active {
+        display: block !important;
+        visibility: visible !important;
+        height: auto !important;
+        opacity: 1;
+    }
 </style>
 @endpush
 
@@ -219,12 +243,23 @@
                 <i class="bi bi-plus-circle me-1"></i>Add Group
             </button>
         </div>
-        <div class="card-body">
+        <div class="card-body fc-fb-step-groups">
+            <p class="small text-muted mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                Select a group tab below. Fields for that group appear under <strong>Group settings</strong>.
+            </p>
             {{-- Group tabs --}}
-            <ul class="nav nav-tabs mb-3 flex-wrap" role="tablist">
+            <ul class="nav nav-tabs mb-3 flex-wrap" id="fcFbGroupTabs" role="tablist">
                 @foreach($step->fieldGroups as $gi => $group)
-                    <li class="nav-item">
-                        <a class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }}" data-bs-toggle="tab" href="#grp-{{ $group->id }}">
+                    <li class="nav-item" role="presentation">
+                        <a class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }}"
+                           id="fc-fb-grp-tab-{{ $group->id }}"
+                           data-bs-toggle="tab"
+                           data-bs-target="#grp-{{ $group->id }}"
+                           href="#grp-{{ $group->id }}"
+                           role="tab"
+                           aria-controls="grp-{{ $group->id }}"
+                           aria-selected="{{ $gi === 0 ? 'true' : 'false' }}">
                             {{ $group->group_label }}
                             <span class="badge bg-secondary ms-1">{{ $group->groupFields->count() }}</span>
                             @if(! $group->is_active)
@@ -235,9 +270,12 @@
                 @endforeach
             </ul>
 
-            <div class="tab-content">
+            <div class="tab-content" id="fcFbGroupTabContent">
                 @foreach($step->fieldGroups as $gi => $group)
-                    <div class="tab-pane {{ $gi === 0 ? 'show active' : '' }}" id="grp-{{ $group->id }}">
+                    <div class="tab-pane fade {{ $gi === 0 ? 'show active' : '' }}"
+                         id="grp-{{ $group->id }}"
+                         role="tabpanel"
+                         aria-labelledby="fc-fb-grp-tab-{{ $group->id }}">
                         {{-- Group settings --}}
                         <div class="border rounded p-3 mb-3 bg-light">
                             <form method="POST" action="{{ route('fc-reg.admin.form-builder.group.update', $group) }}" class="row g-2 align-items-end">
@@ -273,15 +311,20 @@
                                 </div>
                                 <div class="col-md-2 d-flex gap-1">
                                     <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                                    <form method="POST" action="{{ route('fc-reg.admin.form-builder.group.delete', $group) }}" onsubmit="return confirm('Delete this group and all its fields?')">
-                                        @csrf @method('DELETE')
-                                        <button class="btn btn-sm btn-outline-danger"><i class="bi bi-trash"></i></button>
-                                    </form>
                                 </div>
                             </form>
+                            <div class="text-end mt-2">
+                                <form method="POST" action="{{ route('fc-reg.admin.form-builder.group.delete', $group) }}" class="d-inline" onsubmit="return confirm('Delete this group and all its fields?')">
+                                    @csrf @method('DELETE')
+                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete Group</button>
+                                </form>
+                            </div>
                         </div>
 
                         {{-- Group fields table --}}
+                        <h6 class="text-uppercase small fw-bold text-muted mb-2">
+                            Fields in this group ({{ $group->groupFields->count() }})
+                        </h6>
                         <div class="d-flex justify-content-end mb-2">
                             <button class="btn btn-sm btn-outline-primary" onclick="openAddGroupFieldModal({{ $group->id }})">
                                 <i class="bi bi-plus-circle me-1"></i>Add Field
@@ -295,7 +338,7 @@
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    @foreach($group->groupFields as $gf)
+                                    @forelse($group->groupFields as $gf)
                                         <tr>
                                             <td class="text-muted small">{{ $gf->display_order }}</td>
                                             <td class="fw-semibold small">{{ $gf->label }}</td>
@@ -306,7 +349,7 @@
                                             <td>{!! $gf->is_active ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' !!}</td>
                                             <td class="fc-fb-actions-col">
                                                 <div class="fc-fb-actions">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1" onclick="editGroupField({{ json_encode($gf) }})" title="Edit">
+                                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 btn-edit-group-field" data-field='@json($gf)' title="Edit">
                                                         <i class="bi bi-pencil"></i>
                                                     </button>
                                                     @if($gf->is_active)
@@ -323,7 +366,13 @@
                                                 </div>
                                             </td>
                                         </tr>
-                                    @endforeach
+                                    @empty
+                                        <tr>
+                                            <td colspan="8" class="text-center text-muted small py-4">
+                                                No fields in this group yet. Use <strong>Add Field</strong> above.
+                                            </td>
+                                        </tr>
+                                    @endforelse
                                 </tbody>
                             </table>
                         </div>
@@ -934,6 +983,23 @@ function moveDocMaster(docId, direction) {
         headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
         body: JSON.stringify({ order: ids })
     }).then(() => location.reload());
+}
+
+document.querySelectorAll('.btn-edit-group-field').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        try {
+            editGroupField(JSON.parse(this.getAttribute('data-field') || '{}'));
+        } catch (e) {
+            console.error('Could not open group field editor', e);
+        }
+    });
+});
+
+var groupTabList = document.getElementById('fcFbGroupTabs');
+if (groupTabList && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
+    groupTabList.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(el) {
+        bootstrap.Tab.getOrCreateInstance(el);
+    });
 }
 </script>
 @endpush
