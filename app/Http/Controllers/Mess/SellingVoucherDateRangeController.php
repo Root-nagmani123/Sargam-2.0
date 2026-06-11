@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use App\Support\DataTableSearchHelper;
 use App\Models\Mess\SellingVoucherDateRangeReport;
 use App\Models\Mess\SellingVoucherDateRangeReportItem;
@@ -19,6 +20,7 @@ use App\Models\StudentMaster;
 use App\Models\KitchenIssueMaster;
 use Carbon\Carbon;
 use Illuminate\Database\Query\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
@@ -31,6 +33,16 @@ use Illuminate\Support\MessageBag;
  */
 class SellingVoucherDateRangeController extends Controller
 {
+    private const SV_DATE_RANGE_DT_LIST_EPOCH = 'selling_voucher_date_range_dt_list_epoch';
+
+    /**
+     * Invalidate Redis-backed Selling Voucher (Date Range) DataTables JSON after listing mutations.
+     */
+    public static function bumpSellingVoucherDateRangeListingCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::SV_DATE_RANGE_DT_LIST_EPOCH, 'SellingVoucherDateRangeController@datatable');
+    }
+
     /**
      * Historical mess_client_types.id values still stored on sv_date_range_reports rows
      * after employee categories were re-seeded (Academy Staff=3, Mess Staff=4, Faculty=5).
@@ -84,6 +96,9 @@ class SellingVoucherDateRangeController extends Controller
 
         $faculties = FacultyMaster::whereNotNull('full_name')
             ->where('full_name', '!=', '')
+            ->where('faculty_type', 1)
+            ->whereNotNull('employee_master_pk')
+            ->whereIn('employee_master_pk', EmployeeMaster::active()->select('pk'))
             ->orderBy('full_name')
             ->get(['pk', 'full_name', 'faculty_code', 'employee_master_pk'])
             ->map(function ($f) {
@@ -111,7 +126,7 @@ class SellingVoucherDateRangeController extends Controller
             return $departmentName !== '' ? ($fullName . ' (' . $departmentName . ')') : $fullName;
         };
 
-        $employees = EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+        $employees = EmployeeMaster::active()
             ->when($officersMessDept, function ($q) use ($officersMessDept) {
                 $q->where(function ($sub) use ($officersMessDept) {
                     $sub->whereNull('department_master_pk')
@@ -147,7 +162,7 @@ class SellingVoucherDateRangeController extends Controller
             }
         });
         $messStaff = $officersMessDept
-            ? EmployeeMaster::when(Schema::hasColumn('employee_master', 'status'), fn($q) => $q->where('status', 1))
+            ? EmployeeMaster::active()
                 ->where('department_master_pk', $officersMessDept->pk)
                 ->orderBy('first_name')->orderBy('last_name')
                 ->get(['pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk'])
@@ -167,6 +182,10 @@ class SellingVoucherDateRangeController extends Controller
         $selectedClientType = (string) $request->input('client_type', '');
         $selectedClientTypePk = (string) $request->input('client_type_pk', '');
         $selectedBuyerName = trim((string) $request->input('buyer_name', ''));
+        $resolvedBuyerClientId = $this->resolveClientIdForBuyerFilter($selectedBuyerName, $selectedClientType);
+        if ($resolvedBuyerClientId !== null && $resolvedBuyerClientId > 0) {
+            $selectedBuyerName = (string) $resolvedBuyerClientId;
+        }
 
         $filterClientTypePkOptions = collect();
         if (in_array($selectedClientType, ['ot', 'course'], true)) {
@@ -187,16 +206,20 @@ class SellingVoucherDateRangeController extends Controller
                 ->values();
         }
 
+        $filterEmployeeBuyerOptions = $this->employeeBuyerFilterOptions($employees);
+        $filterFacultyBuyerOptions = $this->facultyBuyerFilterOptions($faculties);
+        $filterMessStaffBuyerOptions = $this->employeeBuyerFilterOptions($messStaff);
+
         $filterBuyerNames = collect();
         if ($selectedClientType === 'employee' && $selectedClientTypePk !== '') {
             $selectedEmployeeBucket = strtolower(trim((string) $filterClientTypePkOptions
                 ->firstWhere('value', $selectedClientTypePk)['text'] ?? ''));
             if ($selectedEmployeeBucket === 'academy staff') {
-                $filterBuyerNames = $employees->pluck('full_name')->filter()->values();
+                $filterBuyerNames = collect($filterEmployeeBuyerOptions);
             } elseif ($selectedEmployeeBucket === 'faculty') {
-                $filterBuyerNames = $faculties->pluck('full_name')->filter()->values();
+                $filterBuyerNames = collect($filterFacultyBuyerOptions);
             } elseif ($selectedEmployeeBucket === 'mess staff') {
-                $filterBuyerNames = $messStaff->pluck('full_name')->filter()->values();
+                $filterBuyerNames = collect($filterMessStaffBuyerOptions);
             }
         } elseif ($selectedClientType === 'ot' && $selectedClientTypePk !== '') {
             $filterBuyerNames = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
@@ -242,14 +265,98 @@ class SellingVoucherDateRangeController extends Controller
             'selectedClientTypePk',
             'selectedBuyerName',
             'filterClientTypePkOptions',
-            'filterBuyerNames'
+            'filterBuyerNames',
+            'filterEmployeeBuyerOptions',
+            'filterFacultyBuyerOptions',
+            'filterMessStaffBuyerOptions'
         ));
     }
 
     /**
-     * Server-side DataTables JSON for Selling Voucher with Date Range listing (one row per item line).
+     * @param  \Illuminate\Support\Collection<int, object>  $employees
+     * @return list<array{value: string, text: string}>
      */
-    public function datatable(Request $request)
+    private function employeeBuyerFilterOptions($employees): array
+    {
+        return $employees->map(function ($employee) {
+            $value = (string) ($employee->pk ?? '');
+            $text = (string) ($employee->full_name_with_department ?? $employee->full_name ?? '');
+            if ($value === '' || $text === '') {
+                return null;
+            }
+
+            return ['value' => $value, 'text' => $text];
+        })->filter()->values()->all();
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, object>  $faculties
+     * @return list<array{value: string, text: string}>
+     */
+    private function facultyBuyerFilterOptions($faculties): array
+    {
+        return $faculties->map(function ($faculty) {
+            $value = (string) ($faculty->pk ?? '');
+            $text = (string) ($faculty->full_name ?? '');
+            if ($value === '' || $text === '') {
+                return null;
+            }
+
+            return ['value' => $value, 'text' => $text];
+        })->filter()->values()->all();
+    }
+
+    /**
+     * Server-side DataTables JSON for Selling Voucher with Date Range listing (one row per item line).
+     * Cached via Redis ({@see DataTableRedisCache}); tune with SELLING_VOUCHER_DATE_RANGE_DATATABLE_CACHE_* in .env.
+     */
+    public function datatable(Request $request): JsonResponse
+    {
+        return DataTableRedisCache::serveCachedAjax(
+            $request,
+            'sv_date_range_dt:v1:',
+            self::SV_DATE_RANGE_DT_LIST_EPOCH,
+            [
+                'enabled' => 'SELLING_VOUCHER_DATE_RANGE_DATATABLE_CACHE_ENABLED',
+                'seconds' => 'SELLING_VOUCHER_DATE_RANGE_DATATABLE_CACHE_SECONDS',
+            ],
+            'SellingVoucherDateRangeController@datatable',
+            fn () => $this->buildSellingVoucherDateRangeDatatableResponse($request),
+            $this->sellingVoucherDateRangeDatatableFilterFingerprint($request)
+        );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function sellingVoucherDateRangeDatatableFilterFingerprint(Request $request): array
+    {
+        $store = collect((array) $request->input('store', []))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (string) $value)
+            ->values()
+            ->all();
+
+        $status = collect((array) $request->input('status', []))
+            ->filter(fn ($value) => $value !== null && $value !== '')
+            ->map(fn ($value) => (string) $value)
+            ->values()
+            ->all();
+
+        return [
+            'store' => $store,
+            'status' => $status,
+            'client_type' => $request->input('client_type'),
+            'client_type_pk' => $request->input('client_type_pk'),
+            'buyer_name' => trim((string) $request->input('buyer_name', '')),
+            'return_status' => strtolower(trim((string) $request->input('return_status', ''))),
+            'start_date' => $request->input('start_date'),
+            'end_date' => $request->input('end_date'),
+            'can_delete' => function_exists('hasRole') && (hasRole('Admin') || hasRole('Mess-Admin')),
+        ];
+    }
+
+    private function buildSellingVoucherDateRangeDatatableResponse(Request $request): JsonResponse
     {
         $draw = (int) $request->input('draw', 1);
         $start = max(0, (int) $request->input('start', 0));
@@ -438,6 +545,7 @@ class SellingVoucherDateRangeController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'nullable', 'integer'],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'remarks' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',
@@ -502,6 +610,9 @@ class SellingVoucherDateRangeController extends Controller
 
             $issueDate = now()->toDateString();
             $clientTypePk = $request->filled('client_type_pk') ? (int) $request->client_type_pk : null;
+            $clientId = (in_array((string) $request->client_type_slug, ['employee', 'ot'], true) && $request->filled('client_id'))
+                ? (int) $request->client_id
+                : null;
             $clientName = trim((string) $request->client_name) ?: null;
 
             // One bill per person: reuse existing unpaid report for same buyer (same store + client)
@@ -510,11 +621,17 @@ class SellingVoucherDateRangeController extends Controller
                 ->where('store_type', $storeType)
                 ->where('client_type_slug', $request->client_type_slug)
                 ->where('status', '!=', SellingVoucherDateRangeReport::STATUS_APPROVED)
-                ->where(function ($q) use ($clientTypePk, $clientName) {
+                ->where(function ($q) use ($clientTypePk, $clientId, $clientName) {
                     if ($clientTypePk !== null) {
                         $q->where('client_type_pk', $clientTypePk);
                     } else {
                         $q->whereNull('client_type_pk');
+                    }
+
+                    if ($clientId !== null) {
+                        $q->where('client_id', $clientId);
+                    } else {
+                        $q->whereNull('client_id');
                     }
 
                     if ($clientName !== null) {
@@ -540,6 +657,7 @@ class SellingVoucherDateRangeController extends Controller
                     'order_by' => $request->order_by,
                     'client_type_slug' => $request->client_type_slug,
                     'client_type_pk' => $clientTypePk,
+                    'client_id' => $clientId,
                     'client_name' => $request->client_name,
                     'payment_type' => (int) $request->payment_type,
                     'issue_date' => $issueDate,
@@ -591,6 +709,7 @@ class SellingVoucherDateRangeController extends Controller
             $report->increment('total_amount', $grandTotal);
 
             DB::commit();
+            self::bumpSellingVoucherDateRangeListingCacheEpoch();
 
             // AJAX request: return JSON so frontend can keep modal open without full page reload
             if ($request->ajax() || $request->wantsJson()) {
@@ -723,6 +842,7 @@ class SellingVoucherDateRangeController extends Controller
                 'order_by' => $report->order_by,
                 'client_type_slug' => $clientTypeSlug,
                 'client_type_pk' => $report->client_type_pk,
+                'client_id' => $report->client_id,
                 'client_name' => $report->client_name,
                 'payment_type' => (int) $report->payment_type,
                 'issue_date' => $report->issue_date ? $report->issue_date->format('Y-m-d') : '',
@@ -782,6 +902,7 @@ class SellingVoucherDateRangeController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'nullable', 'integer'],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'remarks' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',
@@ -848,6 +969,9 @@ class SellingVoucherDateRangeController extends Controller
                 ?: ($report->issue_date
                     ? $report->issue_date->format('Y-m-d')
                     : ($report->date_from ? $report->date_from->format('Y-m-d') : now()->toDateString()));
+            $clientId = (in_array((string) $request->client_type_slug, ['employee', 'ot'], true) && $request->filled('client_id'))
+                ? (int) $request->client_id
+                : null;
             $report->update([
                 'date_from' => $issueDate,
                 'date_to' => $issueDate,
@@ -860,6 +984,7 @@ class SellingVoucherDateRangeController extends Controller
                 'order_by' => $request->order_by,
                 'client_type_slug' => $request->client_type_slug,
                 'client_type_pk' => $request->filled('client_type_pk') ? (int) $request->client_type_pk : null,
+                'client_id' => $clientId,
                 'client_name' => $request->client_name,
                 'payment_type' => (int) $request->payment_type,
                 'issue_date' => $issueDate,
@@ -909,6 +1034,7 @@ class SellingVoucherDateRangeController extends Controller
             $report->update(['total_amount' => $grandTotal]);
 
             DB::commit();
+            self::bumpSellingVoucherDateRangeListingCacheEpoch();
 
             return redirect()->route('admin.mess.selling-voucher-date-range.index')
                 ->with('success', 'Date Range Report updated successfully.');
@@ -924,6 +1050,8 @@ class SellingVoucherDateRangeController extends Controller
         $report = SellingVoucherDateRangeReport::findOrFail($id);
         $report->items()->delete();
         $report->delete();
+        self::bumpSellingVoucherDateRangeListingCacheEpoch();
+
         return redirect()->route('admin.mess.selling-voucher-date-range.index')
             ->with('success', 'Date Range Report deleted successfully.');
     }
@@ -1020,12 +1148,14 @@ class SellingVoucherDateRangeController extends Controller
                 ]);
             }
             DB::commit();
+            self::bumpSellingVoucherDateRangeListingCacheEpoch();
 
             if ($request->wantsJson() || $request->ajax()) {
                 return response()->json([
                     'success' => true,
                     'message' => 'Return updated successfully.',
                     'client_name' => trim((string) ($report->client_name ?? '')),
+                    'client_id' => $report->client_id,
                     'client_type_slug' => (string) ($report->client_type_slug ?? ''),
                 ]);
             }
@@ -1034,7 +1164,9 @@ class SellingVoucherDateRangeController extends Controller
                 $request->only(['status', 'store', 'client_type', 'client_type_pk', 'start_date', 'end_date', 'return_status']),
                 fn ($value) => $value !== null && $value !== '' && $value !== []
             );
-            $redirectParams['buyer_name'] = trim((string) ($report->client_name ?? ''));
+            $redirectParams['buyer_name'] = ($report->client_id !== null && (int) $report->client_id > 0)
+                ? (string) (int) $report->client_id
+                : trim((string) ($report->client_name ?? ''));
             $redirectParams['return_status'] = 'returned';
 
             return redirect()->route('admin.mess.selling-voucher-date-range.index', $redirectParams)
@@ -1193,7 +1325,7 @@ class SellingVoucherDateRangeController extends Controller
                 $q->where('sv.client_type_pk', $clientTypePk);
             }
         }
-        $this->applySellingVoucherDateRangeBuyerNameFilter($q, (string) $request->input('buyer_name', ''));
+        $this->applySellingVoucherDateRangeBuyerNameFilter($q, $request);
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
             $q->whereBetween('sv.date_from', [$request->start_date, $request->end_date]);
@@ -1241,19 +1373,220 @@ class SellingVoucherDateRangeController extends Controller
     }
 
     /**
-     * Match buyer names saved with optional department suffix, e.g. "Name (Dept)".
+     * Match buyer by client_id when available; otherwise fall back to client_name patterns.
      */
-    private function applySellingVoucherDateRangeBuyerNameFilter(Builder $q, string $buyerName): void
+    private function applySellingVoucherDateRangeBuyerNameFilter(Builder $q, Request $request): void
     {
-        $buyerName = trim($buyerName);
+        $buyerName = trim((string) $request->input('buyer_name', ''));
         if ($buyerName === '') {
             return;
         }
 
+        $clientTypeSlug = strtolower(trim((string) $request->input('client_type', '')));
+        $clientTypePk = (int) $request->input('client_type_pk', 0);
+
+        if (in_array($clientTypeSlug, [ClientType::TYPE_OT, ClientType::TYPE_COURSE], true)) {
+            if (ctype_digit($buyerName)) {
+                $q->where('sv.client_id', (int) $buyerName);
+            } else {
+                $q->where(function ($bq) use ($buyerName) {
+                    $this->applyBuyerNamePatternFilter($bq, $buyerName);
+                });
+            }
+
+            return;
+        }
+
+        $clientId = $this->resolveClientIdForBuyerFilter($buyerName, $clientTypeSlug);
+        if ($clientId !== null && $clientId > 0) {
+            $nameVariants = $this->buyerNameVariantsForClientFilter($buyerName, $clientId, $clientTypePk);
+
+            $q->where(function ($bq) use ($clientId, $nameVariants) {
+                $bq->where('sv.client_id', $clientId);
+
+                if ($nameVariants !== []) {
+                    $bq->orWhere(function ($fallback) use ($nameVariants) {
+                        $fallback->where(function ($nullId) {
+                            $nullId->whereNull('sv.client_id')->orWhere('sv.client_id', '<=', 0);
+                        });
+                        $fallback->where(function ($nameQ) use ($nameVariants) {
+                            foreach ($nameVariants as $variant) {
+                                $nameQ->orWhere(function ($nq) use ($variant) {
+                                    $this->applyBuyerNamePatternFilter($nq, $variant);
+                                });
+                            }
+                        });
+                    });
+                }
+            });
+
+            return;
+        }
+
         $q->where(function ($bq) use ($buyerName) {
-            $bq->where('sv.client_name', $buyerName)
-                ->orWhere('sv.client_name', 'LIKE', $buyerName.' (%');
+            $this->applyBuyerNamePatternFilter($bq, $buyerName);
         });
+    }
+
+    private function applyBuyerNamePatternFilter(Builder $q, string $buyerName): void
+    {
+        $q->where('sv.client_name', $buyerName)
+            ->orWhere('sv.client_name', 'LIKE', $buyerName.' (%');
+    }
+
+    private function resolveClientIdForBuyerFilter(string $buyerName, string $clientTypeSlug): ?int
+    {
+        $buyerName = trim($buyerName);
+        if ($buyerName === '') {
+            return null;
+        }
+
+        if (ctype_digit($buyerName)) {
+            return (int) $buyerName;
+        }
+
+        $baseName = trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerName));
+
+        $existingClientIdQuery = SellingVoucherDateRangeReport::query()
+            ->whereNotNull('client_id')
+            ->where('client_id', '>', 0)
+            ->where(function ($nameQ) use ($buyerName, $baseName) {
+                $nameQ->where('client_name', $buyerName)
+                    ->orWhere('client_name', 'LIKE', $buyerName.' (%');
+                if ($baseName !== '' && $baseName !== $buyerName) {
+                    $nameQ->orWhere('client_name', $baseName)
+                        ->orWhere('client_name', 'LIKE', $baseName.' (%');
+                }
+            });
+
+        if ($clientTypeSlug !== '' && in_array($clientTypeSlug, array_keys(ClientType::clientTypes()), true)) {
+            $existingClientIdQuery->where('client_type_slug', $clientTypeSlug);
+        }
+
+        $existingClientId = $existingClientIdQuery->value('client_id');
+        if ($existingClientId !== null && (int) $existingClientId > 0) {
+            return (int) $existingClientId;
+        }
+
+        if ($clientTypeSlug !== '' && ! in_array($clientTypeSlug, [ClientType::TYPE_EMPLOYEE, ''], true)) {
+            return null;
+        }
+
+        $employeePk = $this->findEmployeePkByDisplayName($buyerName, $baseName);
+        if ($employeePk !== null && $employeePk > 0) {
+            return $employeePk;
+        }
+
+        $facultyPk = FacultyMaster::query()
+            ->where(function ($q) use ($buyerName, $baseName) {
+                $q->where('full_name', $buyerName);
+                if ($baseName !== '' && $baseName !== $buyerName) {
+                    $q->orWhere('full_name', $baseName);
+                }
+            })
+            ->value('pk');
+
+        return ($facultyPk !== null && (int) $facultyPk > 0) ? (int) $facultyPk : null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function buyerNameVariantsForClientFilter(string $buyerName, int $clientId, int $clientTypePk): array
+    {
+        $variants = array_values(array_unique(array_filter([
+            trim($buyerName),
+            trim((string) preg_replace('/\s*\([^)]+\)\s*$/', '', $buyerName)),
+            trim($this->resolveEmployeeBuyerNameForFilter($clientId, $clientTypePk)),
+        ], fn ($name) => $name !== '')));
+
+        $historicalNames = SellingVoucherDateRangeReport::query()
+            ->where('client_id', $clientId)
+            ->whereNotNull('client_name')
+            ->where('client_name', '!=', '')
+            ->distinct()
+            ->pluck('client_name')
+            ->map(fn ($name) => trim((string) $name))
+            ->filter()
+            ->values()
+            ->all();
+
+        return array_values(array_unique(array_merge($variants, $historicalNames)));
+    }
+
+    private function findEmployeePkByDisplayName(string $buyerName, string $baseName): ?int
+    {
+        $candidates = array_values(array_unique(array_filter([trim($buyerName), trim($baseName)])));
+
+        foreach ($candidates as $candidate) {
+            $employee = EmployeeMaster::query()
+                ->select('pk', 'first_name', 'middle_name', 'last_name', 'department_master_pk')
+                ->get()
+                ->first(function ($row) use ($candidate) {
+                    $fullName = trim(($row->first_name ?? '').' '.($row->middle_name ?? '').' '.($row->last_name ?? ''));
+                    if ($fullName === $candidate) {
+                        return true;
+                    }
+
+                    $departmentName = trim((string) DepartmentMaster::query()
+                        ->where('pk', $row->department_master_pk)
+                        ->value('department_name'));
+
+                    return $departmentName !== '' && ($fullName.' ('.$departmentName.')') === $candidate;
+                });
+
+            if ($employee) {
+                return (int) $employee->pk;
+            }
+        }
+
+        return null;
+    }
+
+    private function resolveEmployeeBuyerNameForFilter(int $employeePk, int $clientTypePk): string
+    {
+        if ($employeePk <= 0) {
+            return '';
+        }
+
+        $categoryName = '';
+        if ($clientTypePk > 0) {
+            $categoryName = strtolower(trim((string) ClientType::query()
+                ->where('id', $clientTypePk)
+                ->where('client_type', ClientType::TYPE_EMPLOYEE)
+                ->value('client_name')));
+        }
+
+        if ($categoryName === 'faculty') {
+            return trim((string) FacultyMaster::query()
+                ->where('pk', $employeePk)
+                ->value('full_name'));
+        }
+
+        $employee = EmployeeMaster::query()
+            ->select('first_name', 'middle_name', 'last_name', 'department_master_pk')
+            ->where('pk', $employeePk)
+            ->first();
+
+        if (!$employee) {
+            return '';
+        }
+
+        $fullName = trim(($employee->first_name ?? '').' '.($employee->middle_name ?? '').' '.($employee->last_name ?? ''));
+        if ($fullName === '') {
+            return '';
+        }
+
+        if (in_array($categoryName, ['academy staff', 'mess staff'], true)) {
+            $departmentName = trim((string) DepartmentMaster::query()
+                ->where('pk', $employee->department_master_pk)
+                ->value('department_name'));
+            if ($departmentName !== '') {
+                return $fullName.' ('.$departmentName.')';
+            }
+        }
+
+        return $fullName;
     }
 
     private function applySellingVoucherDateRangeItemSearch(Builder $q, string $search): void

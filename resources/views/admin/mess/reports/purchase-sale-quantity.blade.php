@@ -103,7 +103,6 @@
         </div>
         <div class="card-body pt-2 pb-3 px-4">
             <form id="purchaseSaleQuantityFilterForm" method="GET" action="{{ route('admin.mess.reports.purchase-sale-quantity') }}">
-                <input type="hidden" name="refresh" value="1">
                 <div class="row g-3">
                     <div class="col-12 col-sm-6 col-md-6 col-lg-2">
                         <label class="form-label fw-medium small text-uppercase text-body-secondary mb-1">From Date</label>
@@ -183,7 +182,7 @@
         </div>
         <div class="card-footer bg-body-tertiary bg-opacity-50 border-top py-3 px-4 d-flex flex-wrap gap-2 align-items-center justify-content-between">
             <div class="d-flex flex-wrap gap-2">
-                <button type="submit" form="purchaseSaleQuantityFilterForm"
+                <button type="submit" form="purchaseSaleQuantityFilterForm" name="refresh" value="1"
                         class="btn btn-primary rounded-1 px-4 d-inline-flex align-items-center gap-1 shadow-sm">
                     <span class="material-symbols-rounded" style="font-size: 1.1rem;">filter_list</span>
                     <span>Apply Filters</span>

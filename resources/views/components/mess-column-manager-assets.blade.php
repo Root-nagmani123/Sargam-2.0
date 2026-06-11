@@ -17,6 +17,6 @@
 @push('scripts')
 @include('components.mess-datatable-search-helpers')
 <script src="https://cdn.datatables.net/colreorder/1.7.0/js/dataTables.colReorder.min.js"></script>
-<script src="{{ asset('admin_assets/js/mess-column-manager.js') }}"></script>
+<script src="{{ asset('admin_assets/js/mess-column-manager.js') }}?v=3"></script>
 @endpush
 @endonce

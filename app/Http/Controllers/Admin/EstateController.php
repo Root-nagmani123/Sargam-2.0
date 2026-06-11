@@ -403,7 +403,7 @@ class EstateController extends Controller
      */
     public function putInHacAction(Request $request)
     {
-        if (! (hasRole('HAC Person') || (hasRole('Estate') || hasRole('Super Admin')))) {
+        if (! (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
             abort(403, 'You do not have permission to put requests in HAC.');
         }
 
@@ -415,6 +415,11 @@ class EstateController extends Controller
         $updated = EstateHomeRequestDetails::whereIn('pk', $request->ids)
             ->where('hac_status', 0)
             ->update(['hac_status' => 1, 'f_status' => 1]);
+
+        if ($updated > 0) {
+            EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
+            EstateHacApprovedDataTable::bumpListingCacheEpoch();
+        }
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -747,14 +752,31 @@ class EstateController extends Controller
             'change_status' => (int) ($request->input('change_status', 0)),
         ];
 
+        if (! $isEdit) {
+            // New requests must enter the Put In HAC queue (ignore any posted workflow flags).
+            $data['status'] = 0;
+            $data['app_status'] = 0;
+            $data['hac_status'] = 0;
+            $data['f_status'] = 0;
+            $data['change_status'] = 0;
+        } else {
+            // Edit modal does not post workflow fields; preserve existing HAC / change flags.
+            $workflow = EstateHomeRequestDetails::findOrFail($request->id);
+            $data['app_status'] = (int) ($workflow->app_status ?? 0);
+            $data['hac_status'] = (int) ($workflow->hac_status ?? 0);
+            $data['f_status'] = (int) ($workflow->f_status ?? 0);
+            $data['change_status'] = (int) ($workflow->change_status ?? 0);
+        }
+
         if ($user && ! $isEstateAuthority) {
             $data['employee_pk'] = !empty($selfEmployeeIds) ? (int) reset($selfEmployeeIds) : 0;
         } else {
             $data['employee_pk'] = (int) ($request->input('employee_pk', 0));
         }
 
-        // Non–Estate/Admin/Super Admin users cannot choose eligibility; force payroll-derived value when available.
-        if ($user && ! $isEstateAuthority && (int) ($data['employee_pk'] ?? 0) > 0) {
+        // Match UI: only Estate / Admin / Super Admin may choose eligibility; others use payroll-derived value.
+        $canChooseEligibility = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        if ($user && ! $canChooseEligibility && (int) ($data['employee_pk'] ?? 0) > 0) {
             $resolvedElig = $this->resolveEstateEligibilityTypePkForEmployeeMasterPk((int) $data['employee_pk']);
             if ($resolvedElig > 0) {
                 $data['eligibility_type_pk'] = $resolvedElig;
@@ -832,6 +854,10 @@ class EstateController extends Controller
             $record = EstateHomeRequestDetails::findOrFail($request->id);
             $record->update($data);
             $message = 'Estate request updated successfully.';
+            EstateRequestForEstateDataTable::bumpListingCacheEpoch();
+            if ((int) ($record->hac_status ?? 0) === 0 && (int) ($record->change_status ?? 0) === 0) {
+                EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
+            }
         } else {
             $data['employee_pk'] = $data['employee_pk'] ?: 0;
             $record = EstateHomeRequestDetails::create($data);
@@ -902,6 +928,8 @@ class EstateController extends Controller
                     Log::error('Failed to send estate request approver notifications: ' . $e->getMessage());
                 }
             }
+            EstateRequestForEstateDataTable::bumpListingCacheEpoch();
+            EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
         }
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -1510,6 +1538,8 @@ class EstateController extends Controller
         }
 
         $record->delete();
+        EstateRequestForEstateDataTable::bumpListingCacheEpoch();
+        EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Estate request deleted successfully.']);
         }
