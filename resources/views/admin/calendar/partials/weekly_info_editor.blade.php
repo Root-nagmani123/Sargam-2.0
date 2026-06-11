@@ -3,7 +3,7 @@
     <div class="modal-dialog modal-dialog-centered modal-lg">
         <div class="modal-content border-0 shadow-lg">
             <div class="modal-header">
-                <h5 class="modal-title" id="weeklyInfoModalTitle">
+                <h5 class="modal-title text-primary" id="weeklyInfoModalTitle">
                     <i class="bi bi-people me-2"></i>Info-Sheet Details
                 </h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>

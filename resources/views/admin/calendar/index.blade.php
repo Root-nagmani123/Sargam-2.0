@@ -34,7 +34,7 @@
         @endif
 
         {{-- Whole-week timetable export (always visible) — exports the week currently in view --}}
-        <div class="btn-group btn-group-sm ms-2" role="group" aria-label="Weekly timetable export">
+        <div class="btn-group btn-group-sm ms-2 gap-2" role="group" aria-label="Weekly timetable export">
             <button type="button" id="btnToolbarWeekPdf" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm fw-semibold text-nowrap" title="Download the whole week's timetable as PDF">
                 <i class="bi bi-file-earmark-pdf" aria-hidden="true"></i>
                 <span>Weekly PDF</span>
