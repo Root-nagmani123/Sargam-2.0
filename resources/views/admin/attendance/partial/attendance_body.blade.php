@@ -16,7 +16,7 @@
             <td>{{ optional($item->classSession)->start_time . ' - ' . optional($item->classSession)->end_time }}</td>
             <td>{{ optional($item->venue)->venue_name ?? 'N/A' }}</td>
             <td>{{ $item->subject_topic ?? 'N/A' }}</td>
-            <td>{{ optional($item->faculty)->full_name ?? 'N/A' }}</td>
+            <td>{{ get_timetable_faculty_names($item) }}</td>
             <td><a href="#">Mark Attendance</a></td>
         </tr>
     @endforeach

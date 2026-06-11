@@ -649,22 +649,23 @@ $topics = DB::table('timetable as t')
 public function gettimetableDetailsBytopic(Request $request)
 {
     $topicId = $request->topic_id;
-    $query = DB::table('timetable as t')
+    $timetable = DB::table('timetable as t')
         ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
-        ->leftJoin('faculty_master as f', DB::raw("f.pk"), '=', DB::raw("JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]'))"))
         ->where('t.pk', $topicId)
         ->select(
             't.*',
-            'f.full_name as faculty_name',
-            DB::raw("JSON_UNQUOTE(JSON_EXTRACT(t.faculty_master, '$[0]')) as faculty_master_first_pk"),
             'v.venue_name',
             't.class_session as shift_name'
-        );
-    $timetable = $query->first();
+        )
+        ->first();
 
-    // faculty_master_first_pk expose karo so JS can pick it up as faculty_master PK
     if ($timetable) {
-        $timetable->faculty_master = $timetable->faculty_master_first_pk;
+        $facultyIds = get_timetable_faculty_ids($timetable);
+        $timetable->faculty_name = get_timetable_faculty_names($timetable, 'N/A');
+
+        if (empty($timetable->faculty_master) && !empty($facultyIds)) {
+            $timetable->faculty_master = json_encode($facultyIds);
+        }
     }
 
     return response()->json($timetable);
