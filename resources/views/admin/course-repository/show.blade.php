@@ -1450,6 +1450,7 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 </script>
 
+@include('admin.course-repository.partials.single-click-links')
 @endsection
 
 <script>

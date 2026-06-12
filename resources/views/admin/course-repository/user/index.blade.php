@@ -74,4 +74,5 @@
 </div>
 
 @include('admin.course-repository.user.partials.assets')
+@include('admin.course-repository.partials.single-click-links')
 @endsection
