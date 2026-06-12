@@ -8,6 +8,7 @@ class AppellationMaster extends Model
 {
     protected $table = 'appellation_master';
     protected $primaryKey = 'pk';
+    public $timestamps = false;
 
     // Allow mass assignment
     protected $fillable = [
