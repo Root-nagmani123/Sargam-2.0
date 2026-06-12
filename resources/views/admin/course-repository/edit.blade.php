@@ -2,7 +2,7 @@
 
 @section('title', 'Course Repositories Edit | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid"> 
     <x-breadcrum title="Edit Category" />
     <div class="datatables">

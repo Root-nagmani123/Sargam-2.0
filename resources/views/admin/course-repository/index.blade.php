@@ -2,7 +2,7 @@
 
 @section('title', 'Course Repositories | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <style>
     /* Chevron-style divider */
     .breadcrumb-divider-chevron {

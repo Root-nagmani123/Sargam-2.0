@@ -189,9 +189,9 @@
                                 </li>
                             @endif
 
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('course-repository.index') }}">
+                            {{-- <li class="sidebar-item"><a class="sidebar-link" href="{{ route('course-repository.index') }}">
                                     <span class="hide-menu">Course Repository</span>
-                                </a></li>
+                                </a></li> --}}
                             @endif
 
                         </ul>

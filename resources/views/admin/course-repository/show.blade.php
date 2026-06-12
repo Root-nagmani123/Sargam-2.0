@@ -104,7 +104,7 @@
 
 @section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <style>
 .upload-zone {
     display: block;

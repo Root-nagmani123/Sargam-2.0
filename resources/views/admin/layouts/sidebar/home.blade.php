@@ -73,6 +73,15 @@
                                                 </a>
                                             </li>
                                             @endif
+                                            <li class="mini-nav-item {{ request()->is('course-repository*') ? 'selected' : '' }}" id="mini-12">
+                                                <a href="javascript:void(0)"
+                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
+                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">auto_stories</i>
+                                                    </span>
+                                                    <span class="mini-nav-title sidebar-google-label">Course Repository</span>
+                                                </a>
+                                            </li>
                                             @if(canSeeSecurityHomeSidebar())
                                             <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
@@ -122,6 +131,7 @@
                     @if(canSeeSecurityHomeSidebar())
                     <x-menu.setup_security_management />
                     @endif
+                    <x-menu.setup_course_repository />
                     @if((! hasRole('Student-OT') && ! $isContractualEmployee) || hasRole('Super Admin'))
                     <x-menu.setup_issue_management />
                     @endif
