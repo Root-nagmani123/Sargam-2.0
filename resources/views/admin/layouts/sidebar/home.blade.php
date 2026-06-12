@@ -383,6 +383,17 @@ document.addEventListener('DOMContentLoaded', function() {
         // Note: Mini-nav click handling is done globally by sidebar-navigation-fixed.js
         // No need to add event listeners here to avoid duplicate handlers
 
+        // Map URL path to mini-nav id (most reliable, route-aware)
+        function getMiniIdFromPath() {
+            var path = window.location.pathname;
+            if (/^\/security(\/|$)/.test(path)) return 'mini-9';
+            if (/^\/admin\/estate(\/|$)/.test(path) || /^\/estate(\/|$)/.test(path)) return 'mini-11';
+            if (/^\/admin\/mess(\/|$)/.test(path)) return 'setup-mini-9';
+            if (/^\/course-repository(\/|$)/.test(path)) return 'mini-12';
+            if (/^\/admin\/issue(\/|$)/.test(path)) return 'mini-10';
+            return null;
+        }
+
         // Function to restore sidebar menu visibility
         function restoreSidebarMenu() {
             // Always remove selected from all mini-nav-items first
@@ -390,6 +401,15 @@ document.addEventListener('DOMContentLoaded', function() {
                 navItem.classList.remove('selected');
             });
 
+            // 1. Use URL path as primary source of truth
+            var urlMiniId = getMiniIdFromPath();
+            if (urlMiniId && document.getElementById(urlMiniId)) {
+                showSidebarMenu(urlMiniId);
+                setTimeout(expandActiveMenus, 100);
+                return;
+            }
+
+            // 2. Fall back to active sidebar link
             let activeMiniId = null;
             sidebarMenus.forEach(function(nav) {
                 const activeLink = nav.querySelector('.sidebar-link.active');

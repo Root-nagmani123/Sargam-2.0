@@ -58,6 +58,12 @@
                             @endif
                             @if (isSecurityAdminUser())
                                 <li class="sidebar-item">
+                                    <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval2') ? 'active' : '' }}"
+                                       href="{{ route('admin.security.employee_idcard_approval.approval2') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Approval II - ID Card</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
                                     <a class="sidebar-link {{ request()->routeIs('admin.security.employee_idcard_approval.approval3') ? 'active' : '' }}"
                                        href="{{ route('admin.security.employee_idcard_approval.approval3') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Id Card Approval</span>
