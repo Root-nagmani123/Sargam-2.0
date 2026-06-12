@@ -341,6 +341,7 @@ function isSidebarPrivilegedUser(): bool
 function is_faculty_portal_user(): bool
 {
     $user = Auth::user();
+    // print_r($user);die;
     if (! $user) {
         return false;
     }
@@ -349,7 +350,7 @@ function is_faculty_portal_user(): bool
         return true;
     }
 
-    return hasRole('Internal Faculty') || hasRole('Guest Faculty');
+    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty');
 }
 
 /**
