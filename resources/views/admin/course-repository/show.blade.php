@@ -4,11 +4,36 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet"
     href="{{ asset('css/course-repository-admin.css') }}?v={{ @filemtime(public_path('css/course-repository-admin.css')) ?: time() }}">
+<style>
+    /* Course Name dropdown (Choices.js): keep the control at the column width and
+       let long course names wrap onto a second line inside the open menu instead
+       of overflowing. */
+    .cr-course-choices .choices,
+    .cr-course-choices .choices__inner,
+    .cr-course-choices .choices__list--dropdown {
+        width: 100%;
+        max-width: 100%;
+    }
+    .cr-course-choices .choices__list--dropdown .choices__item,
+    .cr-course-choices .choices__list[aria-expanded] .choices__item {
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.3;
+    }
+    /* Selected value stays on one line (ellipsis) so the closed field height is stable. */
+    .cr-course-choices .choices__list--single .choices__item {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+</style>
 @endpush
 
 @section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Lal Bahadur')
 
 @section('setup_content')
+@include('admin.partials.choices-bootstrap5')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var el = document.getElementById('category_image_create');
@@ -603,11 +628,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                 <!-- Row 1: Course Name & Major Subject Name -->
                                 <div class="row g-3 mb-3">
-                                    <div class="col-md-6">
+                                    <div class="col-md-6 choices-bs-scope cr-course-choices">
                                         <label for="course_name" class="form-label">
                                             Course Name <span class="text-danger">*</span>
                                         </label>
-                                        <select class="form-select" id="course_name" name="course_name" required>
+                                        <select class="form-select form-select-sm" id="course_name" name="course_name" required data-no-choices>
                                             <option value="" selected>Select</option>
                                             @foreach(($activeCourses ?? []) as $course)
                                             <option value="{{ $course->pk }}" data-status="active">
@@ -1782,6 +1807,52 @@ window.crDocEdit = (function() {
         }));
     }
 
+    // ===== Course Name -> Choices.js (searchable, fixed width, wraps long names) =====
+    // Choices owns the rendered dropdown, so the native data-status show/hide trick no
+    // longer works; we keep a canonical snapshot of every course and rebuild the
+    // Choices list (filtered by Active/Archived) on demand instead.
+    var courseChoices = null;
+    var courseOptionsAll = []; // [{ value, label, status }]
+
+    function getCheckedCourseStatus() {
+        var checked = document.querySelector('input[name="course_status"]:checked');
+        return checked ? checked.value : 'active';
+    }
+
+    // Rebuild the Course Name choices to only those matching `status`.
+    // When `keepValue` is passed, that course is re-selected after the rebuild.
+    function applyCourseStatusChoices(status, keepValue) {
+        if (!courseChoices) return;
+        var list = [{ value: '', label: 'Select', placeholder: true, selected: !keepValue }];
+        courseOptionsAll.forEach(function (o) {
+            if (o.status === status) {
+                list.push({ value: o.value, label: o.label });
+            }
+        });
+        courseChoices.setChoices(list, 'value', 'label', true); // replace existing
+        if (keepValue !== undefined && keepValue !== null && keepValue !== '') {
+            try { courseChoices.setChoiceByValue(String(keepValue)); } catch (e) { /* ignore */ }
+        }
+    }
+
+    // Used by the edit/prefill flow: make sure the saved course is present and selected,
+    // syncing the Active/Archived radio so the visible list matches.
+    function syncCourseChoiceForEdit(pk, label) {
+        if (!courseChoices || pk === null || pk === undefined || pk === '') return;
+        pk = String(pk);
+        var found = null;
+        for (var i = 0; i < courseOptionsAll.length; i++) {
+            if (String(courseOptionsAll[i].value) === pk) { found = courseOptionsAll[i]; break; }
+        }
+        var status = found ? found.status : getCheckedCourseStatus();
+        if (!found) {
+            courseOptionsAll.push({ value: pk, label: label || pk, status: status });
+        }
+        var radio = document.querySelector('input[name="course_status"][value="' + status + '"]');
+        if (radio && !radio.checked) radio.checked = true;
+        applyCourseStatusChoices(status, pk);
+    }
+
     // Set a <select> value, injecting a labeled option if it isn't present.
     function setSelectValue(selectId, value, label) {
         var sel = $id(selectId);
@@ -1846,6 +1917,7 @@ window.crDocEdit = (function() {
     // Pre-fill the Course-category section (cascading dropdowns).
     function prefillCourse(d) {
         var courseSel = setSelectValue('course_name', d.course_master_pk, d.course_name);
+        syncCourseChoiceForEdit(d.course_master_pk, d.course_name); // keep Choices UI in sync
         fireChange(courseSel); // -> loads subjects
         return Promise.resolve()
             .then(function() {
@@ -2480,25 +2552,61 @@ document.addEventListener('DOMContentLoaded', function() {
     const courseStatusRadios = document.querySelectorAll('input[name="course_status"]');
     const courseSelect = document.getElementById('course_name');
 
+    // Turn the Course Name select into a searchable Choices dropdown. We snapshot
+    // every option (incl. archived) up front, then drive the visible list from that
+    // snapshot so the Active/Archived filter and edit-prefill keep working.
+    if (courseSelect && typeof Choices !== 'undefined' && !courseChoices) {
+        Array.prototype.forEach.call(courseSelect.options, function (opt) {
+            if (opt.value === '') return; // skip the placeholder option
+            courseOptionsAll.push({
+                value: opt.value,
+                label: (opt.textContent || '').trim(),
+                status: opt.getAttribute('data-status') || 'active'
+            });
+        });
+        try {
+            courseChoices = new Choices(courseSelect, {
+                searchEnabled: true,
+                shouldSort: false,
+                allowHTML: false,
+                itemSelectText: '',
+                placeholder: true,
+                placeholderValue: 'Select',
+                searchPlaceholderValue: 'Search…',
+                position: 'bottom'
+            });
+            // Start filtered to the currently selected status (Active by default).
+            applyCourseStatusChoices(getCheckedCourseStatus());
+        } catch (e) {
+            console.warn('Course Name Choices init failed', e);
+            courseChoices = null;
+        }
+    }
+
     if (courseStatusRadios.length > 0 && courseSelect) {
         courseStatusRadios.forEach(radio => {
             radio.addEventListener('change', function() {
                 const status = this.value;
-                const options = courseSelect.querySelectorAll('option');
 
-                options.forEach(option => {
-                    if (option.value === '') {
-                        // Always show the empty/select option
-                        option.style.display = 'block';
-                    } else {
-                        const optionStatus = option.getAttribute('data-status');
-                        option.style.display = (optionStatus === status) ? 'block' :
-                            'none';
-                    }
-                });
+                if (courseChoices) {
+                    // Rebuild the Choices list for this status and clear the selection.
+                    applyCourseStatusChoices(status);
+                } else {
+                    const options = courseSelect.querySelectorAll('option');
+                    options.forEach(option => {
+                        if (option.value === '') {
+                            // Always show the empty/select option
+                            option.style.display = 'block';
+                        } else {
+                            const optionStatus = option.getAttribute('data-status');
+                            option.style.display = (optionStatus === status) ? 'block' :
+                                'none';
+                        }
+                    });
+                    // Reset course selection when filter changes
+                    courseSelect.value = '';
+                }
 
-                // Reset course selection when filter changes
-                courseSelect.value = '';
                 // Reset dependent dropdowns
                 resetSubjectDropdown();
                 resetTopicDropdown();

@@ -38,7 +38,7 @@
                 {{-- Course --}}
                 <div class="cru-filter-col cru-filter-pill">
                     <label for="filter_course" class="visually-hidden">Course</label>
-                    <select class="form-select form-select-sm js-cru-filter-choice" id="filter_course" name="course" data-placeholder="Course">
+                    <select class="form-select form-select-sm" id="filter_course" name="course" data-placeholder="Course">
                         <option value="">Course</option>
                         @foreach($courses as $course)
                             <option value="{{ $course->pk }}" {{ ($filters['course'] ?? '') == $course->pk ? 'selected' : '' }}>
@@ -51,7 +51,7 @@
                 {{-- Subject --}}
                 <div class="cru-filter-col cru-filter-pill cru-filter-pill-wide">
                     <label for="filter_subject" class="visually-hidden">Subject</label>
-                    <select class="form-select form-select-sm js-cru-filter-choice" id="filter_subject" name="subject" data-placeholder="Subject">
+                    <select class="form-select form-select-sm" id="filter_subject" name="subject" data-placeholder="Subject">
                         <option value="">Subject</option>
                         @foreach($subjects as $subject)
                             <option value="{{ $subject->pk }}" {{ ($filters['subject'] ?? '') == $subject->pk ? 'selected' : '' }}>
@@ -64,7 +64,7 @@
                 {{-- Week --}}
                 <div class="cru-filter-col cru-filter-pill cru-filter-pill-sm">
                     <label for="filter_week" class="visually-hidden">Week</label>
-                    <select class="form-select form-select-sm js-cru-filter-choice" id="filter_week" name="week" data-placeholder="Week">
+                    <select class="form-select form-select-sm" id="filter_week" name="week" data-placeholder="Week">
                         <option value="">Week</option>
                         @for($i = 1; $i <= 52; $i++)
                             <option value="{{ $i }}" {{ ($filters['week'] ?? '') == $i ? 'selected' : '' }}>
@@ -263,6 +263,21 @@
         height: auto !important;
         margin: 0 !important;
         padding: 0 !important;
+        line-height: 1.25rem !important;
+    }
+
+    /* Open dropdown menu keeps the field width; long option names (e.g. course
+       names longer than the field) wrap to a second line instead of clipping. */
+    #cruFilterCard.filter-card .choices__list--dropdown,
+    #cruFilterCard.filter-card .choices__list[aria-expanded] {
+        width: 100% !important;
+    }
+
+    #cruFilterCard.filter-card .choices__list--dropdown .choices__item,
+    #cruFilterCard.filter-card .choices__list[aria-expanded] .choices__item {
+        white-space: normal !important;
+        overflow-wrap: anywhere !important;
+        word-break: break-word !important;
         line-height: 1.25rem !important;
     }
 
