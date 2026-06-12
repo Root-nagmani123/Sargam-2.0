@@ -1,0 +1,70 @@
+/* ============================================================
+   Sargam 2.0 — Design Tokens (single source of truth)
+   Load this FIRST, before custom.css and page CSS.
+   Govt of India / LBSNAA — Ruler/Sage archetype: navy + gold.
+   ============================================================ */
+
+:root {
+    /* Light only — no !important, no universal selector needed.
+       Combined with <html data-bs-theme="light"> this fully
+       locks the app to light mode without overriding Bootstrap. */
+    color-scheme: light;
+
+    /* ── Brand (navy) ── */
+    --sg-brand-900: #003366;
+    --sg-brand-700: #004a93;   /* primary institutional navy */
+    --sg-brand-500: #1565c0;
+    --sg-brand-300: #4c8ec5;
+
+    /* ── Accent / semantic ── */
+    --sg-accent-gold: #e1b12c;
+    --sg-success: #12b76a;
+    --sg-danger: #b30000;
+    --sg-warning: #e1b12c;
+
+    /* ── Ink (text) ── */
+    --sg-ink-900: #1f3f66;
+    --sg-ink-700: #344054;
+    --sg-ink-500: #5b6b80;
+    --sg-ink-300: #9aa9bd;
+
+    /* ── Surface ── */
+    --sg-surface: #ffffff;
+    --sg-bg: #f8fafc;
+    --sg-border: #dee2e6;
+
+    /* ── Spacing scale (4px base) ── */
+    --sg-space-1: 0.25rem;
+    --sg-space-2: 0.5rem;
+    --sg-space-3: 1rem;
+    --sg-space-4: 1.5rem;
+    --sg-space-5: 2rem;
+
+    /* ── Radius ── */
+    --sg-radius-sm: 6px;
+    --sg-radius-md: 10px;
+    --sg-radius-lg: 14px;
+    --sg-radius-pill: 999px;
+
+    /* ── Typography ── */
+    --sg-font-body: "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;
+    --sg-font-heading: "Montserrat", "Noto Sans", "Noto Sans Devanagari", system-ui, sans-serif;
+
+    /* ── Elevation ── */
+    --sg-shadow-sm: 0 1px 2px rgba(13, 110, 253, 0.08);
+    --sg-shadow-md: 0 6px 18px rgba(0, 0, 0, 0.12);
+    --sg-shadow-lg: 0 6px 20px rgba(0, 0, 0, 0.15);
+}
+
+/* Respect user motion preference globally (vestibular safety).
+   Page-level animations should still honor this; this is a backstop. */
+@media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+    }
+}

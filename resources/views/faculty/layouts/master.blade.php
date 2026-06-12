@@ -3,7 +3,7 @@
 
 <head>
     @include('admin.layouts.pre_header')
-    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }}</title>
+    <title>@yield('title') {{ config('app.title_suffix') }}</title>
     @section('css')
     <style>
     .nav-item .tab-item .active {

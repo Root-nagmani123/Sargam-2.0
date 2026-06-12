@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Support\FeedbackReportRouteRegistry;
+use App\Support\HtmlSanitizer;
 use App\Services\NotificationService;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -31,6 +33,12 @@ class AppServiceProvider extends ServiceProvider
     public function boot()
     {
         Paginator::useBootstrap();
+
+        // @clean($html) — echoes sanitised rich text. Use instead of {!! $html !!}
+        // for any user/DB-authored HTML (notice descriptions, chat templates).
+        Blade::directive('clean', function ($expression) {
+            return "<?php echo \App\Support\HtmlSanitizer::clean($expression); ?>";
+        });
 
         View::composer([
             'admin.feedback.feedback_details',

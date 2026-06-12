@@ -1,7 +1,7 @@
 /* Custom CSS for Sargam 2.0 Application */
 /* Typography: Noto Sans + Noto Sans Devanagari (body/UI); Montserrat (headings) — GIGW-friendly bilingual stack */
-
-@import url("https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css");
+/* NOTE: bootstrap-icons is loaded via <link> in admin/layouts/pre_header.blade.php
+   (a render-blocking @import here serialised the download — moved to a parallel <link>). */
 
 :root {
     --bs-font-sans-serif: "Noto Sans", "Noto Sans Devanagari", system-ui, -apple-system, "Segoe UI", sans-serif;

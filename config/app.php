@@ -19,6 +19,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Title Suffix
+    |--------------------------------------------------------------------------
+    |
+    | Appended after the per-page <title>. Read via config('app.title_suffix')
+    | so it survives `config:cache` (calling env() directly in views returns
+    | null once the config is cached).
+    |
+    */
+
+    'title_suffix' => env('APP_TITLE_SUFFIX', ''),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

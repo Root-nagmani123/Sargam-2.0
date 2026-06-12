@@ -13,24 +13,26 @@
 <link rel="shortcut icon" type="image/ico" href="{{asset('admin_assets/images/logos/favicon.ico')}}">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
 <x-fonts-sargam />
-<!-- Core Css -->
+<!-- Bootstrap Icons (moved out of custom.css @import so it downloads in parallel, not serialised) -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<!-- Core theme (base) -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
-<link rel="stylesheet" href="{{asset('css/custom.css')}}">
-<link rel="stylesheet" href="{{ asset('css/admin-header.css') }}?v={{ @filemtime(public_path('css/admin-header.css')) ?: time() }}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
-<!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
 
+<!-- DataTables (vendor) -->
 <link rel="stylesheet" href="{{asset('admin_assets/libs/datatables.net-bs5/css/dataTables.bootstrap5.min.css')}}">
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
-<!-- Unified Spacing System -->
-<link rel="stylesheet" href="{{asset('css/spacing-system.css')}}?v={{ @filemtime(public_path('css/spacing-system.css')) ?: time() }}">
-<!-- Breadcrumb Component CSS -->
-<link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
-<!-- Sidebar Menu Enhanced CSS -->
-<link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
+
+{{-- Global app bundle (built by Mix from tokens + custom + admin-header + spacing
+     + breadcrumb + sidebar-menu-enhanced). One minified request instead of six.
+     Loads AFTER the base theme so the project's own styles remain authoritative.
+     Edit the source files in public/css then run `npm run dev` to rebuild. --}}
+<link rel="stylesheet" href="{{ asset('css/app-global.css') }}?v={{ @filemtime(public_path('css/app-global.css')) ?: time() }}">
+
 <link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}?v=7">
 <style>
 .material-symbols-rounded {
@@ -41,58 +43,13 @@
   'opsz' 24
 }
 
-/* Force light mode - prevent dark mode styles */
-html[data-bs-theme="dark"],
-html:not([data-bs-theme])[data-bs-theme="dark"],
-html {
-  color-scheme: light !important;
-  --bs-body-bg: #fff !important;
-  --bs-body-color: #212529 !important;
-  --bs-emphasis-color: #000 !important;
-  --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
-  --bs-secondary-bg: #e9ecef !important;
-  --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
-  --bs-tertiary-bg: #f8f9fa !important;
-  --bs-border-color: #dee2e6 !important;
-  --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
-}
-
-/* Prevent Bootstrap dark mode CSS variables from being applied */
-[data-bs-theme="dark"] {
-  color-scheme: light !important;
-}
-</style>
-
-<!-- FINAL OVERRIDE: Force light mode after ALL CSS loads -->
-<style id="final-light-mode-override">
-/* This MUST be the last style block to override everything */
-* {
-  color-scheme: light !important;
-}
-
-html,
-html[data-bs-theme],
-html[data-bs-theme="light"],
-html[data-bs-theme="dark"],
-body,
-body[data-bs-theme],
-body[data-bs-theme="light"],
-body[data-bs-theme="dark"] {
-  color-scheme: light !important;
-  --bs-body-bg: #fff !important;
-  --bs-body-color: #212529 !important;
-  --bs-emphasis-color: #000 !important;
-  --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
-  --bs-secondary-bg: #e9ecef !important;
-  --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
-  --bs-tertiary-bg: #f8f9fa !important;
-  --bs-border-color: #dee2e6 !important;
-  --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
-  --bs-link-color: #0d6efd !important;
-  --bs-link-hover-color: #0a58ca !important;
-  --bs-heading-color: inherit !important;
-  background-color: #fff !important;
-  color: #212529 !important;
+/* Light-only lock. App always renders <html data-bs-theme="light">, so
+   Bootstrap's [data-bs-theme="dark"] rules never match. We only need to
+   neutralise any prefers-color-scheme: dark leakage — no universal
+   selector, no !important war. (See public/css/tokens.css for color-scheme.) */
+:root[data-bs-theme="dark"] {
+  --bs-body-bg: #fff;
+  --bs-body-color: #212529;
 }
 </style>
 

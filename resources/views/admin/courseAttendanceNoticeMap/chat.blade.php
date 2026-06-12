@@ -58,7 +58,7 @@
                     <li>Reply to this Memo online through this <a href="#">conversation</a></li>
                     <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
                 </ul>
-                <p>{!! $template_details->content ?? '' !!}</p>
+                <p>@clean($template_details->content ?? '')</p>
             </div>
 
             <p><strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>

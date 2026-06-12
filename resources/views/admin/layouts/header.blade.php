@@ -11,7 +11,7 @@
 
     <!-- Left: Government Identity -->
     <div class="d-flex align-items-center gap-2 text-nowrap header-govt-wrap">
-        <span class="header-flag-wrap d-inline-flex align-items-center justify-content-center rounded-2 bg-white border border-light-subtle">
+        <span class="header-flag-wrap d-inline-flex align-items-center justify-content-center">
             <img src="https://upload.wikimedia.org/wikipedia/en/thumb/4/41/Flag_of_India.svg/330px-Flag_of_India.svg.png"
                 alt="Flag of India" class="header-flag-icon">
         </span>

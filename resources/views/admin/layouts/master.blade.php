@@ -2,20 +2,10 @@
 <html lang="en" dir="ltr" data-bs-theme="light" data-color-theme="Blue_Theme" data-layout="vertical">
 
 <head>
-    <!-- Set initial theme from localStorage before paint (avoids flash) -->
-    <script>
-        (function() {
-            'use strict';
-            try {
-                var saved = localStorage.getItem('bsTheme');
-                if (saved === 'dark' || saved === 'light') {
-                    document.documentElement.setAttribute('data-bs-theme', saved);
-                }
-            } catch (e) {}
-        })();
-    </script>
+    {{-- App is light-only; data-bs-theme="light" is set on <html>. No theme
+         script needed — tokens.css + the light lock in pre_header handle it. --}}
     @include('admin.layouts.pre_header')
-    <title>@yield('title') {{ env('APP_TITLE_SUFFIX') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
+    <title>@yield('title') {{ config('app.title_suffix') }} - Sargam 2.0 | Lal Bahadur Shastri National Academy of Administration</title>
     @section('css')
     <style>
     .nav-item .tab-item .active {
@@ -755,8 +745,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // Initialize collapsed state on page load
     const sidebarType = body.getAttribute("data-sidebartype");
-    console.log('Initial sidebar type:', sidebarType);
-    console.log('Icon elements found:', icons.length);
 
     if (sidebarType === "mini-sidebar") {
         // Sidebar should be collapsed - ensure main-wrapper doesn't have show-sidebar
@@ -770,7 +758,6 @@ document.addEventListener("DOMContentLoaded", function () {
             icon.textContent = "left_panel_open";
             icon.classList.remove("rotated");
         });
-        console.log('Set all icons to non-rotated (collapsed state)');
         // After initial collapse state, adjust DataTables to new layout
         setTimeout(adjustAllDataTables, 300);
     } else {
@@ -784,7 +771,6 @@ document.addEventListener("DOMContentLoaded", function () {
             icon.textContent = "left_panel_close";
             icon.classList.remove("rotated");
         });
-        console.log('Set all icons to rotated (expanded state)');
         // After initial expanded state, adjust DataTables to new layout
         setTimeout(adjustAllDataTables, 300);
     }
@@ -800,7 +786,6 @@ document.addEventListener("DOMContentLoaded", function () {
             }
             icon.classList.remove("rotated");
         });
-        console.log('Synced', allIcons.length, 'icon(s) to type:', type);
     }
 
     const observer = new MutationObserver(function(mutations) {
@@ -815,27 +800,6 @@ document.addEventListener("DOMContentLoaded", function () {
     observer.observe(body, { attributes: true, attributeFilter: ['data-sidebartype'] });
 });
 </script>
-
-  <!-- Final safeguard: Force light mode on window load -->
-  <script>
-    window.addEventListener('load', function() {
-      // Force light mode one final time after everything loads
-      document.documentElement.setAttribute('data-bs-theme', 'light');
-      document.documentElement.style.colorScheme = 'light';
-      document.documentElement.style.setProperty('--bs-body-bg', '#fff', 'important');
-      document.documentElement.style.setProperty('--bs-body-color', '#212529', 'important');
-
-      // Remove any dark mode classes
-      document.documentElement.classList.remove('dark');
-      if (document.body) {
-        document.body.classList.remove('dark');
-        document.body.style.colorScheme = 'light';
-      }
-
-      // Force reflow to apply styles
-      document.documentElement.offsetHeight;
-    });
-  </script>
 
   <script>
     // Admin Mess: Tab on dropdown should act like Enter (Select2-friendly)

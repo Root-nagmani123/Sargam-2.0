@@ -100,7 +100,7 @@
 
 /* Header - Match reference design */
 .header-top-bar {
-    background: #071a3b;
+    background: #101828;
     min-height: 38px;
     border: none;
 }
@@ -116,7 +116,6 @@
     width: 24px;
     height: 14px;
     overflow: hidden;
-    border-radius: 3px !important;
 }
 .header-flag-icon {
     width: 100%;
