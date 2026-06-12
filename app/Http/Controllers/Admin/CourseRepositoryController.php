@@ -959,9 +959,9 @@ class CourseRepositoryController extends Controller
                 // Filter repositories that have documents matching the criteria
                 $query->whereHas('documents', function($q) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
                     $q->where('del_type', 1);
-                    
-                    if ($coursePk || $subjectPk || $date || $facultyPk) {
-                        $q->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
+
+                    if ($coursePk || $subjectPk || $date || $week || $facultyPk) {
+                        $q->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
                             if ($coursePk) {
                                 $detailQuery->where('course_master_pk', $coursePk);
                             }
@@ -970,6 +970,9 @@ class CourseRepositoryController extends Controller
                             }
                             if ($date) {
                                 $detailQuery->whereDate('session_date', $date);
+                            }
+                            if ($week) {
+                                $detailQuery->whereRaw('WEEK(session_date, 3) = ?', [$week]);
                             }
                             if ($facultyPk) {
                                 $detailQuery->where('author_name', $facultyPk);
@@ -1310,10 +1313,11 @@ class CourseRepositoryController extends Controller
             $date = $request->query('date');
             $coursePk = $request->query('course');
             $subjectPk = $request->query('subject');
+            $week = $request->query('week');
             $facultyPk = $request->query('faculty');
 
-            if ($date || $coursePk || $subjectPk || $facultyPk) {
-                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $facultyPk) {
+            if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
+                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
                     if ($coursePk) {
                         $detailQuery->where('course_master_pk', $coursePk);
                     }
@@ -1322,6 +1326,9 @@ class CourseRepositoryController extends Controller
                     }
                     if ($date) {
                         $detailQuery->whereDate('session_date', $date);
+                    }
+                    if ($week) {
+                        $detailQuery->whereRaw('WEEK(session_date, 3) = ?', [$week]);
                     }
                     if ($facultyPk) {
                         $detailQuery->where('author_name', $facultyPk);
@@ -1359,7 +1366,7 @@ class CourseRepositoryController extends Controller
                     'date' => $date,
                     'course' => $coursePk,
                     'subject' => $subjectPk,
-                    'week' => $request->query('week'),
+                    'week' => $week,
                     'faculty' => $facultyPk,
                 ],
             ]);

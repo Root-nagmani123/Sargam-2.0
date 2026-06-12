@@ -19,11 +19,7 @@ class CalendarController extends Controller
 {
     public function index(Request $request)
     {
-        \Log::info('CalendarController index: User authenticated via middleware', [
-            'user' => auth()->user()->user_name,
-            'user_id' => auth()->id(),
-            'session_id' => session()->getId()
-        ]);
+        
 
         $data_course_id = get_Role_by_course();
 
@@ -93,7 +89,7 @@ class CalendarController extends Controller
             ? Carbon::parse($request->week_start)->startOfWeek()
             : Carbon::now()->startOfWeek();
 
-        // We'll consider monday-friday display (5 days) but fetch full week for safety
+        // We'll consider monday-sunday display (7 days) but fetch full week for safety
         $weekEnd = $weekStart->copy()->endOfWeek();
 
         // Build time slots (example: 09:00 - 18:00 hourly). Adjust as needed.

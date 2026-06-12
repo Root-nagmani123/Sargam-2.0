@@ -135,6 +135,7 @@
                             </thead>
                             <tbody>
                                 @foreach ($documents as $index => $doc)
+                                @php $fileUrl = $doc->public_file_url; @endphp
                               <tr class="{{ $loop->odd ? 'table-light' : '' }}">
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>
@@ -191,11 +192,22 @@
                                         </small>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
-                                            class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
-                                            <span class="material-icons material-symbols-rounded me-1">download</span>
-                                            Download
-                                        </a>
+                                        <div class="btn-group" role="group">
+                                            @if($fileUrl)
+                                                <a href="{{ $fileUrl }}" target="_blank"
+                                                    class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation();">
+                                                    <span class="material-icons material-symbols-rounded me-1" style="font-size:16px;">visibility</span>
+                                                    View
+                                                </a>
+                                                <a href="{{ $fileUrl }}" download="{{ $doc->upload_document }}"
+                                                    class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                                                    <span class="material-icons material-symbols-rounded me-1" style="font-size:16px;">download</span>
+                                                    Download
+                                                </a>
+                                            @else
+                                                <span class="text-muted small">N/A</span>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach
