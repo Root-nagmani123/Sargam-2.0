@@ -96,12 +96,111 @@ $documentCount = $documents->count();
             </div>
             @endif
 
-            @if($documentCount > 0)
-
-            @include('admin.course-repository.user.partials.documents-table', [
-            'documents' => $documents,
-            'documentsAsDetails' => true,
-            ])
+            <!-- Documents Section -->
+            @if($documents->count() > 0)
+            <div class="card shadow-sm">
+                <div class="card-header bg-light">
+                    <h5 class="mb-0 fw-bold">Documents ({{ $documents->count() }})</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0 align-middle">
+                            <thead style="background-color: #dc3545; color: white;">
+                                <tr>
+                                    <th class="text-center fw-bold">S.No.</th>
+                                    <th class="fw-bold">Document Name</th>
+                                    <th class="fw-bold">File Title</th>
+                                    <th class="fw-bold">Course</th>
+                                    <th class="fw-bold">Subject</th>
+                                    <th class="fw-bold">Topic</th>
+                                    <th class="fw-bold">Session Date</th>
+                                    <th class="fw-bold">Author</th>
+                                    <th class="text-center fw-bold">Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($documents as $index => $doc)
+                                @php $fileUrl = $doc->public_file_url; @endphp
+                              <tr class="{{ $loop->odd ? 'table-light' : '' }}">
+                                    <td class="text-center">{{ $loop->iteration }}</td>
+                                    <td>
+                                        <span
+                                            class="material-icons material-symbols-rounded text-danger me-2">picture_as_pdf</span>
+                                        <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                    </td>
+                                    <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->course)
+                                            {{ $doc->detail->course->course_name }}
+                                            @else
+                                            N/A
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->subject)
+                                            {{ Str::limit($doc->detail->subject->subject_name, 20) }}
+                                            @else
+                                            N/A
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->topic)
+                                            {{ Str::limit($doc->detail->topic->subject_topic, 15) }}
+                                            @else
+                                            N/A
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->session_date)
+                                            {{ $doc->detail->session_date->format('d-m-Y') }}
+                                            @else
+                                            N/A
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td>
+                                        <small>
+                                            @if($doc->detail && $doc->detail->author)
+                                            {{ Str::limit($doc->detail->author->full_name, 15) }}
+                                            @elseif($doc->detail && $doc->detail->author_name)
+                                            {{ Str::limit($doc->detail->author_name, 15) }}
+                                            @else
+                                            N/A
+                                            @endif
+                                        </small>
+                                    </td>
+                                    <td class="text-center">
+                                        <div class="btn-group" role="group">
+                                            @if($fileUrl)
+                                                <a href="{{ $fileUrl }}" target="_blank"
+                                                    class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation();">
+                                                    <span class="material-icons material-symbols-rounded me-1" style="font-size:16px;">visibility</span>
+                                                    View
+                                                </a>
+                                                <a href="{{ $fileUrl }}" download="{{ $doc->upload_document }}"
+                                                    class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
+                                                    <span class="material-icons material-symbols-rounded me-1" style="font-size:16px;">download</span>
+                                                    Download
+                                                </a>
+                                            @else
+                                                <span class="text-muted small">N/A</span>
+                                            @endif
+                                        </div>
+                                    </td>
+                                </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
             @endif
             @endif
         </div>

@@ -1133,11 +1133,28 @@ class CourseRepositoryController extends Controller
                 ->with(['children', 'documents']);
 
             // Apply filters if provided
-            if ($this->hasActiveUserFilters($filters)) {
-                $query->whereHas('documents', function ($q) use ($filters) {
-                    $q->where('del_type', 1)
-                        ->whereHas('detail', function ($detailQuery) use ($filters) {
-                            $this->applyUserDetailFilters($detailQuery, $filters);
+            if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
+                // Filter repositories that have documents matching the criteria
+                $query->whereHas('documents', function($q) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
+                    $q->where('del_type', 1);
+
+                    if ($coursePk || $subjectPk || $date || $week || $facultyPk) {
+                        $q->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
+                            if ($coursePk) {
+                                $detailQuery->where('course_master_pk', $coursePk);
+                            }
+                            if ($subjectPk) {
+                                $detailQuery->where('subject_pk', $subjectPk);
+                            }
+                            if ($date) {
+                                $detailQuery->whereDate('session_date', $date);
+                            }
+                            if ($week) {
+                                $detailQuery->whereRaw('WEEK(session_date, 3) = ?', [$week]);
+                            }
+                            if ($facultyPk) {
+                                $detailQuery->where('author_name', $facultyPk);
+                            }
                         });
                 });
             }
@@ -1425,11 +1442,30 @@ class CourseRepositoryController extends Controller
                     'author',
                 ]);
 
-            $filters = $this->getFilters($request);
+            // Apply filters if provided
+            $date = $request->query('date');
+            $coursePk = $request->query('course');
+            $subjectPk = $request->query('subject');
+            $week = $request->query('week');
+            $facultyPk = $request->query('faculty');
 
-            if ($this->hasActiveUserFilters($filters)) {
-                $documentsQuery->where(function ($query) use ($filters) {
-                    $this->applyUserDetailFilters($query, $filters);
+            if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
+                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
+                    if ($coursePk) {
+                        $detailQuery->where('course_master_pk', $coursePk);
+                    }
+                    if ($subjectPk) {
+                        $detailQuery->where('subject_pk', $subjectPk);
+                    }
+                    if ($date) {
+                        $detailQuery->whereDate('session_date', $date);
+                    }
+                    if ($week) {
+                        $detailQuery->whereRaw('WEEK(session_date, 3) = ?', [$week]);
+                    }
+                    if ($facultyPk) {
+                        $detailQuery->where('author_name', $facultyPk);
+                    }
                 });
             }
 
@@ -1445,15 +1481,22 @@ class CourseRepositoryController extends Controller
                 $current = $current->parent;
             }
            
-            return view('admin.course-repository.user.show', array_merge(
-                $this->getUserFilterViewData($request),
-                [
-                    'repository' => $repository,
-                    'documents' => $documents,
-                    'ancestors' => $ancestors,
-                    'documents_count_array' => $documents_count_array,
-                ]
-            ));
+            return view('admin.course-repository.user.show', [
+                'repository' => $repository,
+                'documents' => $documents,
+                'ancestors' => $ancestors,
+                'documents_count_array' => $documents_count_array,
+                'courses' => $courses,
+                'subjects' => $subjects,
+                'faculties' => $faculties,
+                'filters' => [
+                    'date' => $date,
+                    'course' => $coursePk,
+                    'subject' => $subjectPk,
+                    'week' => $week,
+                    'faculty' => $facultyPk,
+                ],
+            ]);
         } catch (Exception $e) {
             Log::error('Error in course repository user show: ' . $e->getMessage());
             return redirect()->route('admin.course-repository.user.index')->with('error', 'Repository not found');
