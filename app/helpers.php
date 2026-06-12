@@ -610,7 +610,8 @@ function canSeeMessSelfServiceSetup(): bool
         || hasRole('Internal Faculty')
         || hasRole('Training-Induction')
         || hasRole('Training-MCTP')
-        || hasRole('IST');
+        || hasRole('IST')
+        || hasRole('Employee');
 }
 
 function get_Role_by_course()
