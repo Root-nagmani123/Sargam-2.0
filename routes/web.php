@@ -1102,6 +1102,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::get('course-repository/document/{pk}/edit-data', [CourseRepositoryController::class, 'getDocument'])->name('course-repository.document.edit-data');
+    Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
     Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
 

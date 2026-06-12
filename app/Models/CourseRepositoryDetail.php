@@ -124,4 +124,31 @@ class CourseRepositoryDetail extends Model
     {
         return $query->where('status', 1);
     }
+
+    /**
+     * iframe-friendly URL for stored video links (YouTube, Vimeo, or direct URL).
+     */
+    public function getVideoEmbedUrlAttribute(): ?string
+    {
+        return self::toVideoEmbedUrl($this->videolink);
+    }
+
+    public static function toVideoEmbedUrl(?string $url): ?string
+    {
+        if ($url === null || trim($url) === '') {
+            return null;
+        }
+
+        $url = trim($url);
+
+        if (preg_match('#(?:youtube\.com/watch\?(?:.*&)?v=|youtu\.be/|youtube\.com/embed/)([a-zA-Z0-9_-]{11})#i', $url, $matches)) {
+            return 'https://www.youtube.com/embed/' . $matches[1];
+        }
+
+        if (preg_match('#vimeo\.com/(?:video/)?(\d+)#i', $url, $matches)) {
+            return 'https://player.vimeo.com/video/' . $matches[1];
+        }
+
+        return $url;
+    }
 }

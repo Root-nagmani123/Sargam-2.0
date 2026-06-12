@@ -80,6 +80,7 @@
         if (typeof Choices === 'undefined' || !root) return;
         root.querySelectorAll('select.form-select, select.form-control').forEach(function (el) {
             if (el.getAttribute('data-no-choices') !== null) return;
+            if (el.classList.contains('js-cru-filter-choice')) return;
             if (el.classList.contains('select2-hidden-accessible')) return;
             if (el.classList.contains('tomselected')) return;
             if (/select2/i.test(el.className || '')) return;

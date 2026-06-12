@@ -32,11 +32,7 @@
                                         <!-- Section Title with Proper Semantic Markup -->
                                         <h2 class="section-title text-white m-0"
                                             style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
-                                            @php
-                                            $roles = session('user_roles', []);
-
-                                            @endphp
-                                            {{ !empty($roles) ? implode(', ', $roles) : '' }}
+                                            Academic
                                         </h2>
                                     </div>
                                 </div>
