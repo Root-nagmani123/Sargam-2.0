@@ -120,7 +120,13 @@ $documentCount = $documents->count();
                             </thead>
                             <tbody>
                                 @foreach ($documents as $index => $doc)
-                                @php $fileUrl = $doc->public_file_url; @endphp
+                                @php
+                                    $fileUrl = $doc->public_file_url;
+                                    $videoLink = trim((string) ($doc->detail->videolink ?? ''));
+                                    $hasVideo = $videoLink !== '';
+                                    $videoDetailPk = $doc->detail->pk ?? null;
+                                    $isDirectVideoFile = $hasVideo && preg_match('/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i', $videoLink);
+                                @endphp
                               <tr class="{{ $loop->odd ? 'table-light' : '' }}">
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>
@@ -177,19 +183,36 @@ $documentCount = $documents->count();
                                         </small>
                                     </td>
                                     <td class="text-center">
-                                        <div class="btn-group" role="group">
+                                        <div class="d-inline-flex align-items-center justify-content-center gap-2">
                                             @if($fileUrl)
                                                 <a href="{{ $fileUrl }}" target="_blank"
-                                                    class="btn btn-sm btn-outline-secondary" onclick="event.stopPropagation();">
-                                                    <span class="material-icons material-symbols-rounded me-1" style="font-size:16px;">visibility</span>
-                                                    View
+                                                    class="btn btn-link btn-sm text-primary p-0" onclick="event.stopPropagation();"
+                                                    title="View document" aria-label="View document">
+                                                    <i class="bi bi-eye fs-5" aria-hidden="true"></i>
                                                 </a>
                                                 <a href="{{ $fileUrl }}" download="{{ $doc->upload_document }}"
-                                                    class="btn btn-sm btn-outline-primary" onclick="event.stopPropagation();">
-                                                    <span class="material-icons material-symbols-rounded me-1" style="font-size:16px;">download</span>
-                                                    Download
+                                                    class="btn btn-link btn-sm text-primary p-0" onclick="event.stopPropagation();"
+                                                    title="Download document" aria-label="Download document">
+                                                    <i class="bi bi-download fs-5" aria-hidden="true"></i>
                                                 </a>
-                                            @else
+                                            @endif
+                                            @if($hasVideo)
+                                                @if($videoDetailPk)
+                                                <a href="{{ route('admin.course-repository.user.document-video', $videoDetailPk) }}"
+                                                    class="btn btn-link btn-sm text-danger p-0" onclick="event.stopPropagation();"
+                                                    title="View video" aria-label="View video">
+                                                    <i class="bi bi-play-btn fs-5" aria-hidden="true"></i>
+                                                </a>
+                                                @endif
+                                                <a href="{{ $videoLink }}" target="_blank" rel="noopener noreferrer"
+                                                    @if($isDirectVideoFile) download @endif
+                                                    class="btn btn-link btn-sm text-danger p-0" onclick="event.stopPropagation();"
+                                                    title="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}"
+                                                    aria-label="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}">
+                                                    <i class="bi bi-download fs-5" aria-hidden="true"></i>
+                                                </a>
+                                            @endif
+                                            @if(!$fileUrl && !$hasVideo)
                                                 <span class="text-muted small">N/A</span>
                                             @endif
                                         </div>

@@ -209,33 +209,59 @@
         max-width: 100%;
     }
 
+    /* Lock the whole Choices control to one row so it never grows after a
+       value is selected (placeholder, selected, focused and open states all
+       resolve to the same height). */
+    #cruFilterCard.filter-card .choices,
+    #cruFilterCard.filter-card .choices[data-type*="select-one"] {
+        height: var(--cru-filter-control-h) !important;
+        min-height: var(--cru-filter-control-h) !important;
+        margin-bottom: 0 !important;
+    }
+
     #cruFilterCard.filter-card .choices .choices__inner {
         display: flex !important;
+        flex-wrap: nowrap !important;
         align-items: center !important;
         width: 100% !important;
         min-height: var(--cru-filter-control-h) !important;
         height: var(--cru-filter-control-h) !important;
         max-height: var(--cru-filter-control-h) !important;
-        padding: 0.25rem 2rem 0.25rem 0.5rem !important;
+        padding: 0 2rem 0 0.5rem !important;
         font-size: 0.875rem !important;
+        line-height: 1.25rem !important;
         overflow: hidden !important;
         box-sizing: border-box !important;
     }
 
     #cruFilterCard.filter-card .choices__list--single {
-        display: block;
-        width: 100%;
-        min-width: 0;
+        display: flex !important;
+        align-items: center !important;
+        flex: 1 1 auto !important;
+        width: 100% !important;
+        min-width: 0 !important;
+        height: 100% !important;
         padding: 0 !important;
     }
 
-    #cruFilterCard.filter-card .choices__list--single .choices__item {
+    #cruFilterCard.filter-card .choices__list--single .choices__item,
+    #cruFilterCard.filter-card .choices__list--single .choices__placeholder {
         overflow: hidden !important;
         text-overflow: ellipsis !important;
         white-space: nowrap !important;
         display: block !important;
         width: 100% !important;
         max-width: 100% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        line-height: 1.25rem !important;
+    }
+
+    /* The inline search field Choices injects for single-selects must not add a
+       second line (the usual cause of the height jump after selection). */
+    #cruFilterCard.filter-card .choices[data-type*="select-one"] .choices__inner .choices__input {
+        height: auto !important;
+        margin: 0 !important;
         padding: 0 !important;
         line-height: 1.25rem !important;
     }
