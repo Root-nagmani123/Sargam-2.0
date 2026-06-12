@@ -1126,6 +1126,11 @@ class CourseRepositoryController extends Controller
     {
         try {
             $filters = $this->getFilters($request);
+            $date      = $filters['date'];
+            $coursePk  = $filters['course'];
+            $subjectPk = $filters['subject'];
+            $week      = $filters['week'];
+            $facultyPk = $filters['faculty'];
 
             // Get root repositories (main course categories)
             $query = CourseRepositoryMaster::where('del_folder_status', 1)
@@ -1156,6 +1161,7 @@ class CourseRepositoryController extends Controller
                                 $detailQuery->where('author_name', $facultyPk);
                             }
                         });
+                    }
                 });
             }
             
