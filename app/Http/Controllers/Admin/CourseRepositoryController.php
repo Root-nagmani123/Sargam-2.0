@@ -1486,23 +1486,16 @@ class CourseRepositoryController extends Controller
                 array_unshift($ancestors, $current->parent);
                 $current = $current->parent;
             }
-           
-            return view('admin.course-repository.user.show', [
-                'repository' => $repository,
-                'documents' => $documents,
-                'ancestors' => $ancestors,
-                'documents_count_array' => $documents_count_array,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => [
-                    'date' => $date,
-                    'course' => $coursePk,
-                    'subject' => $subjectPk,
-                    'week' => $week,
-                    'faculty' => $facultyPk,
-                ],
-            ]);
+
+            return view('admin.course-repository.user.show', array_merge(
+                $this->getUserFilterViewData($request),
+                [
+                    'repository' => $repository,
+                    'documents' => $documents,
+                    'ancestors' => $ancestors,
+                    'documents_count_array' => $documents_count_array,
+                ]
+            ));
         } catch (Exception $e) {
             Log::error('Error in course repository user show: ' . $e->getMessage());
             return redirect()->route('admin.course-repository.user.index')->with('error', 'Repository not found');
