@@ -3,21 +3,35 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 use App\Models\Mess\SubStore;
 
 class SubStoreController extends Controller
 {
-    public function index(Request $request)
+    private const LIST_CACHE_EPOCH_KEY = 'mess_sub_store_master_list_epoch';
+
+    public static function bumpListCacheEpoch(): void
     {
-        $subStores = SubStore::orderByDesc('id')->get();
-        $editSubStore = null;
+        DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'SubStoreController');
+    }
 
-        if ($request->filled('id') && $request->query('open') === 'edit') {
-            $editSubStore = SubStore::find($request->query('id'));
-        }
+    public function index()
+    {
+        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
+        $cacheKey = 'mess_sub_store_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
 
-        return view('mess.sub-stores.index', compact('subStores', 'editSubStore'));
+        $subStores = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_SUB_STORE_MASTER_LIST_CACHE_ENABLED',
+                'seconds' => 'MESS_SUB_STORE_MASTER_LIST_CACHE_SECONDS',
+            ],
+            'SubStoreController@index',
+            fn () => SubStore::orderByDesc('id')->get()
+        );
+
+        return view('mess.sub-stores.index', compact('subStores'));
     }
 
     public function create()
@@ -30,6 +44,8 @@ class SubStoreController extends Controller
         $data = $this->validatedData($request);
 
         SubStore::create($data);
+
+        self::bumpListCacheEpoch();
 
         return redirect()->route('admin.mess.sub-stores.index')->with('success', 'Sub Store added successfully');
     }
@@ -45,6 +61,9 @@ class SubStoreController extends Controller
         $data = $this->validatedData($request, $subStore);
 
         $subStore->update($data);
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.sub-stores.index')->with('success', 'Sub Store updated successfully');
     }
 
@@ -52,6 +71,9 @@ class SubStoreController extends Controller
     {
         $subStore = SubStore::findOrFail($id);
         $subStore->delete();
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.sub-stores.index')->with('success', 'Sub Store deleted successfully');
     }
 

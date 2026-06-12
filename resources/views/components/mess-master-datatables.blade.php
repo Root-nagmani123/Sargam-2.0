@@ -38,6 +38,7 @@
     $serverSideColumnDefs = isset($serverSideColumnDefs) && is_array($serverSideColumnDefs) ? $serverSideColumnDefs : [];
     $dom = $dom ?? '<"row align-items-center mb-2"<"col-sm-12 col-md-6"l><"col-sm-12 col-md-6"f>>rt<"row align-items-center mt-2"<"col-sm-12 col-md-5"i><"col-sm-12 col-md-7"p>>';
     $columnManager = isset($columnManager) ? (bool) $columnManager : true;
+    $colReorder = isset($colReorder) ? (bool) $colReorder : true;
     $columnManagerTitle = $columnManagerTitle ?? 'Manage Columns';
     $columnManagerLocked = isset($columnManagerLocked) ? (array) $columnManagerLocked : [];
     $ajaxJsonCallback = isset($ajaxJsonCallback) ? (string) $ajaxJsonCallback : '';
@@ -133,28 +134,52 @@ document.addEventListener('DOMContentLoaded', function() {
     window.messMasterDataTableAjaxUrlByTable = window.messMasterDataTableAjaxUrlByTable || {};
     window.messMasterDataTableAjaxUrlByTable['{{ $tableId }}'] = sellingVouchersServerDtUrl;
 
+    window.messMasterDtPendingAjax = window.messMasterDtPendingAjax || {};
+
     function messMasterDtAjax(data, callback) {
+        var url = sellingVouchersServerDtUrl();
+        var dedupeKey = url + '|' + JSON.stringify(data || {});
+        var pending = window.messMasterDtPendingAjax[dedupeKey];
+        if (pending) {
+            pending.callbacks.push(callback);
+            return;
+        }
+
+        pending = { callbacks: [callback] };
+        window.messMasterDtPendingAjax[dedupeKey] = pending;
+
         $.ajax({
-            url: sellingVouchersServerDtUrl(),
+            url: url,
             type: 'GET',
             data: data,
             dataType: 'json',
             cache: false,
             headers: { 'X-Requested-With': 'XMLHttpRequest' }
         }).done(function(json) {
-            callback(json);
+            var bucket = window.messMasterDtPendingAjax[dedupeKey];
+            delete window.messMasterDtPendingAjax[dedupeKey];
+            if (bucket) {
+                bucket.callbacks.forEach(function(cb) {
+                    try { cb(json); } catch (e) {}
+                });
+            }
         }).fail(function(xhr) {
+            var bucket = window.messMasterDtPendingAjax[dedupeKey];
+            delete window.messMasterDtPendingAjax[dedupeKey];
             if (xhr && (xhr.status === 401 || xhr.status === 419 || xhr.status === 403)) {
                 window.alert('Your session may have expired. The page will reload so you can sign in again.');
                 window.location.reload();
                 return;
             }
-            callback({
+            var errorPayload = {
                 draw: data.draw,
                 recordsTotal: 0,
                 recordsFiltered: 0,
                 data: [],
                 error: 'Could not load table data. Try refreshing the page.'
+            };
+            (bucket ? bucket.callbacks : [callback]).forEach(function(cb) {
+                try { cb(errorPayload); } catch (e) {}
             });
         });
     }
@@ -172,7 +197,7 @@ document.addEventListener('DOMContentLoaded', function() {
         search: { smart: {{ $searchSmart ? 'true' : 'false' }} },
         responsive: {{ $responsive ? 'true' : 'false' }},
         scrollX: {{ $scrollX ? 'true' : 'false' }},
-        @if($columnManager)
+        @if($columnManager && $colReorder)
         colReorder: { realtime: false, fixedColumnsRight: {{ count($actionColumnIndices) > 0 ? 1 : 0 }} },
         @endif
         dom: {!! json_encode($dom) !!},
@@ -285,7 +310,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 mode: 'datatable',
                 dtApi: dtApi,
                 $table: $table,
-                colReorder: true,
+                colReorder: {!! $colReorder ? 'true' : 'false' !!},
                 lockedColumns: {!! json_encode($columnManagerLocked) !!},
                 skipColumns: {!! json_encode($actionColumnIndices) !!}
             });

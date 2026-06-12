@@ -1,174 +1,5 @@
 @extends('admin.layouts.master')
 @section('title', 'Subcategory Item Master')
-@push('styles')
-<link rel="stylesheet"
-    href="{{ asset('css/mess-master-admin.css') }}?v={{ @filemtime(public_path('css/mess-master-admin.css')) ?: time() }}">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-<style>
-/* ===== FILTER BAR ===== */
-.isc-filter-bar {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 16px 0;
-    gap: 1rem;
-}
-.isc-filter-left {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-}
-.isc-filter-label {
-    font-size: 14px;
-    font-weight: 500;
-    color: #555;
-    white-space: nowrap;
-}
-.isc-filter-select {
-    appearance: none;
-    padding: 8px 32px 8px 14px;
-    border: 1px solid #d0d0d0;
-    border-radius: 6px;
-    font-size: 14px;
-    color: #333;
-    background: #fff url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath d='M3 5l3 3 3-3' stroke='%23666' stroke-width='1.5' fill='none'/%3E%3C/svg%3E") no-repeat right 10px center;
-    cursor: pointer;
-    min-width: 160px;
-    outline: none;
-}
-.isc-filter-select:focus {
-    border-color: #1565c0;
-}
-.isc-reset-btn {
-    font-size: 14px;
-    font-weight: 500;
-    color: #d32f2f;
-    text-decoration: none;
-    border: 1.5px solid #d32f2f;
-    padding: 7px 16px;
-    border-radius: 6px;
-    background: #fff;
-    cursor: pointer;
-    white-space: nowrap;
-    display: inline-block;
-    line-height: 1.4;
-}
-.isc-reset-btn:hover {
-    background: #ffebee;
-    color: #c62828;
-}
-.isc-filter-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-/* ===== TABLE ===== */
-.isc-table-wrap {
-    border-top: 1px solid #eee;
-}
-#itemSubcategoriesTable {
-    border-collapse: collapse;
-}
-#itemSubcategoriesTable thead th {
-    font-size: 12px;
-    font-weight: 500;
-    color: #888;
-    text-transform: none;
-    padding: 14px 16px;
-    border-bottom: 1px solid #eee;
-    background: #fafafa;
-    white-space: nowrap;
-    border-top: none;
-}
-#itemSubcategoriesTable tbody td {
-    font-size: 14px;
-    color: #333;
-    padding: 18px 16px;
-    border-bottom: 1px solid #f0f0f0;
-    vertical-align: middle;
-}
-#itemSubcategoriesTable tbody tr:last-child td {
-    border-bottom: none;
-}
-#itemSubcategoriesTable tbody tr:hover {
-    background: #f8f9fa;
-}
-
-/* ===== PAGINATION ===== */
-#itemSubcategoriesTable_wrapper .dataTables_paginate .paginate_button,
-#itemSubcategoriesTable_wrapper .dataTables_paginate .page-item,
-#itemSubcategoriesTable_wrapper .dataTables_paginate .page-link {
-    transition: none !important;
-}
-.isc-dt-footer {
-    border-top: 1px solid #eee;
-    padding: 12px 16px;
-}
-
-/* Choices.js + Bootstrap for filter category select */
-.itemsubcategories-filter-form .choices__inner {
-    min-height: 31px;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    border-radius: var(--bs-border-radius, 0.375rem);
-    border: 1px solid var(--bs-border-color);
-    background-color: var(--bs-body-bg);
-}
-.itemsubcategories-filter-form .choices__list--single .choices__item {
-    padding: 2px 0;
-}
-.itemsubcategories-filter-form .choices.is-focused .choices__inner,
-.itemsubcategories-filter-form .choices.is-open .choices__inner {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-.itemsubcategories-filter-form .choices__list--dropdown .choices__item--selectable.is-highlighted,
-.itemsubcategories-filter-form .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-    background-color: var(--bs-primary);
-    color: #fff;
-}
-
-/* Choices.js + Bootstrap for create/edit modal selects */
-#createItemSubcategoryModal .choices__inner,
-#editItemSubcategoryModal .choices__inner {
-    min-height: 31px;
-    padding: 0.25rem 0.5rem;
-    font-size: 0.875rem;
-    border-radius: var(--bs-border-radius, 0.375rem);
-    border: 1px solid var(--bs-border-color);
-    background-color: var(--bs-body-bg);
-}
-#createItemSubcategoryModal .choices__list--single .choices__item,
-#editItemSubcategoryModal .choices__list--single .choices__item {
-    padding: 2px 0;
-}
-#createItemSubcategoryModal .choices.is-focused .choices__inner,
-#createItemSubcategoryModal .choices.is-open .choices__inner,
-#editItemSubcategoryModal .choices.is-focused .choices__inner,
-#editItemSubcategoryModal .choices.is-open .choices__inner {
-    border-color: #86b7fe;
-    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-}
-#createItemSubcategoryModal .choices__list--dropdown .choices__item--selectable.is-highlighted,
-#createItemSubcategoryModal .choices__list[aria-expanded] .choices__item--selectable.is-highlighted,
-#editItemSubcategoryModal .choices__list--dropdown .choices__item--selectable.is-highlighted,
-#editItemSubcategoryModal .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-    background-color: var(--bs-primary);
-    color: #fff;
-}
-
-@media (max-width: 768px) {
-    .isc-filter-bar {
-        flex-direction: column;
-        align-items: flex-start;
-    }
-    .isc-filter-right {
-        width: 100%;
-    }
-}
-</style>
-@endpush
 @section('content')
 @php
 $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
@@ -212,85 +43,32 @@ $openEditModal = request('open') === 'edit' || ($errors->any() && old('_method')
                     <div id="messColManagerMount-itemSubcategoriesTable" class="flex-shrink-0"></div>
                     <div id="iscDtSearch" class="programme-dt-search" data-dt-search-for="itemSubcategoriesTable"></div>
                 </div>
-            </div>
+            </form>
 
-            <div class="programme-dt-panel">
-                <div class="isc-table-wrap">
-                <div class="table-responsive mess-dt-scroll">
-                    <table id="itemSubcategoriesTable"
-                        class="table table-hover align-middle mb-0 w-100 programme-dt-table border-0">
-                        <thead>
-                            <tr>
-                                <th scope="col">S. No.</th>
-                                <th scope="col">Category</th>
-                                <th scope="col">Item Name</th>
-                                <th scope="col">Item Code</th>
-                                <th scope="col">Unit Measurement</th>
-                                <th scope="col">Alert Qty</th>
-                                <th scope="col">Status</th>
-                                <th scope="col">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @forelse($itemsubcategories as $index => $itemsubcategory)
-                            <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                <td>{{ $index + 1 }}</td>
-                                <td>{{ $itemsubcategory->category ? $itemsubcategory->category->category_name : '-' }}
-                                </td>
-                                <td><span class="mess-row-title">{{ $itemsubcategory->item_name }}</span></td>
-                                <td>{{ $itemsubcategory->item_code ?? '-' }}</td>
-                                <td>{{ $itemsubcategory->unit_measurement ?? '-' }}</td>
-                                <td>{{ isset($itemsubcategory->alert_quantity) && $itemsubcategory->alert_quantity !== null && $itemsubcategory->alert_quantity !== '' ? number_format($itemsubcategory->alert_quantity, 2) : '-' }}
-                                </td>
-                                <td>
-                                    <span
-                                        class="badge rounded-pill programme-status-badge mess-status-badge programme-status-badge--{{ $isItemSubcategoryActive($itemsubcategory) ? 'active' : 'inactive' }}">
-                                        {{ $isItemSubcategoryActive($itemsubcategory) ? 'Active' : 'Inactive' }}
-                                    </span>
-                                </td>
-                                <td>
-                                    @include('components.mess-master-action-cell', [
-                                    'entityLabel' => 'item',
-                                    'recordId' => $itemsubcategory->id,
-                                    'isActive' => $isItemSubcategoryActive($itemsubcategory),
-                                    'canDelete' => $canDeleteItemSubcategory,
-                                    'destroyUrl' => route('admin.mess.itemsubcategories.destroy', $itemsubcategory->id),
-                                    'toggleTable' => 'mess_item_subcategories',
-                                    'editClass' => 'btn-edit-itemsubcategory',
-                                    'editAttributes' => [
-                                    'data-id' => $itemsubcategory->id,
-                                    'data-category-id' => $itemsubcategory->category_id ?? '',
-                                    'data-item-name' => e($itemsubcategory->item_name),
-                                    'data-item-code' => e($itemsubcategory->item_code ?? ''),
-                                    'data-unit-measurement' => e($itemsubcategory->unit_measurement ?? ''),
-                                    'data-alert-quantity' => $itemsubcategory->alert_quantity ?? '',
-                                    'data-description' => e($itemsubcategory->description ?? ''),
-                                    'data-status' => e($itemsubcategory->status ?? 'active'),
-                                    ],
-                                    ])
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="8" class="mess-empty-state text-center">
-                                    <i class="bi bi-box display-4 text-secondary opacity-50 d-block mb-3"
-                                        aria-hidden="true"></i>
-                                    <h5 class="fw-semibold text-dark mb-1">No Items Found</h5>
-                                    <p class="text-secondary mb-0">Add a subcategory item to get started.</p>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+            @if(session('success'))
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ session('success') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
+            @endif
 
-                <div id="iscDtFooter"
-                    class="programme-dt-footer mess-dt-footer isc-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
-                    data-dt-footer-for="itemSubcategoriesTable"></div>
-                </div>
+            <div class="table-responsive">
+                <table id="itemSubcategoriesTable" class="table align-middle mb-0">
+                    <thead>
+                        <tr>
+                            <th>Category</th>
+                            <th>Item Name</th>
+                            <th>Item Code</th>
+                            <th>Unit Measurement</th>
+                            <th>Alert Qty</th>
+                            <th>Status</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody></tbody>
+                </table>
             </div>
         </div>
-    </div>
 </div>
 
 {{-- Tom Select CSS --}}
@@ -452,12 +230,13 @@ $openEditModal = request('open') === 'edit' || ($errors->any() && old('_method')
 </div>
 
 @include('components.mess-master-datatables', [
-'tableId' => 'itemSubcategoriesTable',
-'searchPlaceholder' => 'Search',
-'orderColumn' => 2,
-'actionColumnIndex' => 7,
-'infoLabel' => 'items',
-'pageLength' => 10,
+    'tableId' => 'itemSubcategoriesTable',
+    'searchPlaceholder' => 'Search items...',
+    'orderColumn' => 1,
+    'actionColumnIndex' => 6,
+    'infoLabel' => 'subcategory items',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.itemsubcategories.index'),
 ])
 @push('scripts')
 <script src="{{ asset('js/mess-master-list.js') }}?v={{ @filemtime(public_path('js/mess-master-list.js')) ?: time() }}">
@@ -718,40 +497,19 @@ $openEditModal = request('open') === 'edit' || ($errors->any() && old('_method')
             });
         }
 
-        var editModal = document.getElementById('editItemSubcategoryModal');
-        if (editModal) {
-            editModal.addEventListener('hidden.bs.modal', function() {
-                ['edit_item_name_error', 'edit_unit_measurement_error'].forEach(function(id) {
-                    var el = document.getElementById(id);
-                    if (el) el.textContent = '';
-                });
-                ['edit_item_name', 'edit_unit_measurement'].forEach(function(id) {
-                    var el = document.getElementById(id);
-                    if (el) el.classList.remove('is-invalid');
-                });
+    var editModal = document.getElementById('editItemSubcategoryModal');
+    if (editModal) {
+        editModal.addEventListener('hidden.bs.modal', function() {
+            ['edit_item_name_error', 'edit_unit_measurement_error'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.textContent = '';
             });
-        }
-
-        // Initialize Choices.js on create & edit modal selects
-        var choicesInstances = {};
-
-        function createChoicesInstance(selectEl, key) {
-            if (!window.Choices || !selectEl) return null;
-            if (choicesInstances[key]) {
-                choicesInstances[key].destroy();
-            }
-            choicesInstances[key] = new Choices(selectEl, {
-                searchEnabled: true,
-                itemSelectText: '',
-                shouldSort: false
+            ['edit_item_name', 'edit_unit_measurement'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) el.classList.remove('is-invalid');
             });
-            return choicesInstances[key];
-        }
-
-        // Initial setup for filter + create modal selects
-        createChoicesInstance(document.getElementById('filter_category_id'), 'filterCategory');
-        createChoicesInstance(document.getElementById('create_category_id'), 'createCategory');
-        createChoicesInstance(document.getElementById('create_status'), 'createStatus');
+        });
+    }
 
         document.addEventListener('click', function(e) {
             var btn = e.target.closest('.btn-edit-itemsubcategory');

@@ -2,21 +2,35 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 use App\Models\Mess\Store;
 
 class StoreController extends Controller
 {
-    public function index(Request $request)
+    private const LIST_CACHE_EPOCH_KEY = 'mess_store_master_list_epoch';
+
+    public static function bumpListCacheEpoch(): void
     {
-        $stores = Store::orderByDesc('id')->get();
-        $editStore = null;
+        DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'StoreController');
+    }
 
-        if ($request->filled('id') && in_array($request->query('open'), ['edit', 'str_edit'], true)) {
-            $editStore = Store::find($request->query('id'));
-        }
+    public function index()
+    {
+        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
+        $cacheKey = 'mess_store_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
 
-        return view('mess.stores.index', compact('stores', 'editStore'));
+        $stores = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_STORE_MASTER_LIST_CACHE_ENABLED',
+                'seconds' => 'MESS_STORE_MASTER_LIST_CACHE_SECONDS',
+            ],
+            'StoreController@index',
+            fn () => Store::orderByDesc('id')->get()
+        );
+
+        return view('mess.stores.index', compact('stores'));
     }
 
     public function create()
@@ -32,6 +46,8 @@ class StoreController extends Controller
             'store_code' => $this->generateStoreCode(),
         ]));
 
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.stores.index')->with('success', 'Store added successfully');
     }
 
@@ -46,6 +62,9 @@ class StoreController extends Controller
         $data  = $this->validatedData($request, $store);
 
         $store->update($data);
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.stores.index')->with('success', 'Store updated successfully');
     }
 
@@ -53,6 +72,9 @@ class StoreController extends Controller
     {
         $store = Store::findOrFail($id);
         $store->delete();
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.stores.index')->with('success', 'Store deleted successfully');
     }
 

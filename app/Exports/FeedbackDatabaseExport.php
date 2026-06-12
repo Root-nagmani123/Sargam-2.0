@@ -33,14 +33,30 @@ class FeedbackDatabaseExport implements
 
     protected int $recordCount;
 
+    protected array $visibleKeys;
+
     protected int $headerRows = 5;
 
-    public function __construct(array $rows, array $filters, string $exportDate, int $recordCount)
+    protected static array $allHeadings = [
+        's_no' => 'S.No.',
+        'faculty_name' => 'Faculty Name',
+        'course_name' => 'Course Name',
+        'faculty_address' => 'Faculty Address',
+        'topic' => 'Topic',
+        'content_pct' => 'Content (%)',
+        'presentation_pct' => 'Presentation (%)',
+        'participants' => 'Participants',
+        'session_date' => 'Session Date',
+        'comments' => 'Comments',
+    ];
+
+    public function __construct(array $rows, array $filters, string $exportDate, int $recordCount, array $visibleKeys = [])
     {
         $this->rows = $rows;
         $this->filters = $filters;
         $this->exportDate = $exportDate;
         $this->recordCount = $recordCount;
+        $this->visibleKeys = !empty($visibleKeys) ? $visibleKeys : array_keys(self::$allHeadings);
     }
 
     public function title(): string
@@ -55,44 +71,30 @@ class FeedbackDatabaseExport implements
 
     public function headings(): array
     {
-        return [
-            'S.No.',
-            'Faculty Name',
-            'Course Name',
-            'Faculty Address',
-            'Topic',
-            'Content (%)',
-            'Presentation (%)',
-            'Participants',
-            'Session Date',
-            'Comments',
-        ];
+        $headings = [];
+        foreach ($this->visibleKeys as $key) {
+            $headings[] = self::$allHeadings[$key] ?? $key;
+        }
+        return $headings;
     }
 
     public function array(): array
     {
         $out = [];
         foreach ($this->rows as $r) {
-            $out[] = [
-                $r['s_no'],
-                $r['faculty_name'],
-                $r['course_name'],
-                $r['faculty_address'],
-                $r['topic'],
-                $r['content_pct'],
-                $r['presentation_pct'],
-                $r['participants'],
-                $r['session_date'],
-                $r['comments'],
-            ];
+            $row = [];
+            foreach ($this->visibleKeys as $key) {
+                $row[] = $r[$key] ?? '';
+            }
+            $out[] = $row;
         }
-
         return $out;
     }
 
     public function styles(Worksheet $sheet)
     {
-        $lastCol = 'J';
+        $colCount = count($this->visibleKeys);
+        $lastCol = chr(64 + $colCount); // A=1, B=2, ...
         $dataStart = $this->headerRows + 1;
         $dataRowStart = $dataStart + 1;
         $lastRow = $sheet->getHighestRow();
@@ -121,11 +123,15 @@ class FeedbackDatabaseExport implements
             ]);
         }
 
-        $centerCols = ['A', 'F', 'G', 'H', 'I'];
-        foreach ($centerCols as $col) {
-            if ($lastRow >= $dataStart) {
-                $sheet->getStyle("{$col}{$dataStart}:{$col}{$lastRow}")
-                    ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+        // Center columns that need centering
+        $centerKeys = ['s_no', 'content_pct', 'presentation_pct', 'participants', 'session_date'];
+        foreach ($this->visibleKeys as $i => $key) {
+            if (in_array($key, $centerKeys)) {
+                $col = chr(65 + $i);
+                if ($lastRow >= $dataStart) {
+                    $sheet->getStyle("{$col}{$dataStart}:{$col}{$lastRow}")
+                        ->getAlignment()->setHorizontal(Alignment::HORIZONTAL_CENTER);
+                }
             }
         }
 
@@ -141,8 +147,9 @@ class FeedbackDatabaseExport implements
                 $sheet = $event->sheet->getDelegate();
                 $prog = $this->filters['program'] ?? '—';
                 $scope = $this->filters['scope'] ?? 'All records';
+                $lastCol = chr(64 + count($this->visibleKeys));
 
-                $sheet->mergeCells('A1:J1');
+                $sheet->mergeCells("A1:{$lastCol}1");
                 $sheet->setCellValue('A1', 'LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION');
                 $sheet->getStyle('A1')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '003366']],
@@ -150,7 +157,7 @@ class FeedbackDatabaseExport implements
                 ]);
                 $sheet->getRowDimension(1)->setRowHeight(28);
 
-                $sheet->mergeCells('A2:J2');
+                $sheet->mergeCells("A2:{$lastCol}2");
                 $sheet->setCellValue('A2', 'FACULTY FEEDBACK DATABASE REPORT');
                 $sheet->getStyle('A2')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '004A93']],
@@ -158,7 +165,7 @@ class FeedbackDatabaseExport implements
                 ]);
                 $sheet->getRowDimension(2)->setRowHeight(22);
 
-                $sheet->mergeCells('A3:J3');
+                $sheet->mergeCells("A3:{$lastCol}3");
                 $filterText = 'Program: ' . $prog . '  |  Scope: ' . $scope
                     . '  |  Generated: ' . $this->exportDate;
                 $sheet->setCellValue('A3', $filterText);
@@ -167,7 +174,7 @@ class FeedbackDatabaseExport implements
                     'alignment' => ['horizontal' => Alignment::HORIZONTAL_CENTER],
                 ]);
 
-                $sheet->mergeCells('A4:J4');
+                $sheet->mergeCells("A4:{$lastCol}4");
                 $sheet->setCellValue('A4', 'Total records: ' . $this->recordCount);
                 $sheet->getStyle('A4')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '003366']],
@@ -177,7 +184,7 @@ class FeedbackDatabaseExport implements
 
                 $sheet->getRowDimension(5)->setRowHeight(6);
 
-                $sheet->getStyle('A1:J4')->applyFromArray([
+                $sheet->getStyle("A1:{$lastCol}4")->applyFromArray([
                     'borders' => [
                         'outline' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '003366']],
                     ],

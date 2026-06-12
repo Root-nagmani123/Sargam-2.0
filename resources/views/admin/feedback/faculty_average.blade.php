@@ -3,10 +3,32 @@
 @endphp
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty Feedback Average')
+@section('title', 'Faculty Feedback Average - Sargam | Lal Bahadur')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<style>
+/* Choices.js — program & faculty dropdowns */
+#avgProgramSelect + .choices .choices__inner,
+#avgFacultySelect + .choices .choices__inner {
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid #d0d7de;
+    border-radius: var(--bs-border-radius, 0.375rem);
+    background-color: #fff;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+#avgProgramSelect + .choices .choices__inner:focus-within,
+#avgFacultySelect + .choices .choices__inner:focus-within {
+    border-color: #0b4f8a;
+    box-shadow: 0 0 0 0.2rem rgba(11,79,138,.12);
+}
+#avgProgramSelect + .choices .choices__input,
+#avgFacultySelect + .choices .choices__input {
+    font-size: 0.85rem;
+}
+</style>
 @endpush
 
 @section('setup_content')
@@ -52,36 +74,36 @@
                             </li>
                         </ul>
                     </div>
-                </div>
-            </div>
+                    <div class="card-body">
+                        <form method="GET" action="{{ $fr['average'] }}" id="filterForm">
+                            <fieldset class="mb-3">
+                                <legend class="fs-6 fw-semibold">Course Status</legend>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="course_type" value="current"
+                                        id="current" {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="current">Current Courses</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="radio" name="course_type" value="archived"
+                                        id="archived" {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
+                                    <label class="form-check-label" for="archived">Archived Courses</label>
+                                </div>
+                            </fieldset>
 
-            <div class="export-btn-group d-none" aria-hidden="true">
-                <a href="{{ $fr['average_export_excel'] }}?{{ http_build_query(array_filter(['course_type' => $courseType ?? 'current', 'program_name' => $currentProgram ?? '', 'faculty_name' => $currentFaculty ?? '', 'from_date' => $fromDate ?? '', 'to_date' => $toDate ?? ''])) }}"
-                    class="export-excel-link" target="_blank">Excel</a>
-                <a href="{{ $fr['average_export_pdf'] }}?{{ http_build_query(array_filter(['course_type' => $courseType ?? 'current', 'program_name' => $currentProgram ?? '', 'faculty_name' => $currentFaculty ?? '', 'from_date' => $fromDate ?? '', 'to_date' => $toDate ?? ''])) }}"
-                    target="_blank">PDF</a>
-            </div>
-
-            <div class="card faa-dt-card border-0 shadow-sm rounded-3">
-                <div class="card-body p-3 p-md-4">
-                    <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar faa-filters-row w-100">
-                        <div class="d-flex flex-wrap align-items-center gap-3">
-                            <span class="programme-dt-filters-label">Filters</span>
-
-                            <div class="programme-dt-filter-select">
-                                <label for="faaProgramSelect" class="visually-hidden">Program Name</label>
-                                <select class="form-select faa-filter-select" name="program_name" id="faaProgramSelect" aria-label="Program name">
-                                    <option value="">Program Name</option>
+                            <div class="mb-3">
+                                <label class="form-label">Program Name</label>
+                                <select name="program_name" id="avgProgramSelect">
+                                    <option value="">All Programs</option>
                                     @foreach ($programs as $key => $program)
                                         <option value="{{ $key }}" {{ $currentProgram == $key ? 'selected' : '' }}>{{ $program }}</option>
                                     @endforeach
                                 </select>
                             </div>
 
-                            <div class="programme-dt-filter-select">
-                                <label for="faaFacultySelect" class="visually-hidden">Faculty Name</label>
-                                <select class="form-select faa-filter-select" name="faculty_name" id="faaFacultySelect" aria-label="Faculty name">
-                                    <option value="">Faculty Name</option>
+                            <div class="mb-3">
+                                <label class="form-label">Faculty Name</label>
+                                <select name="faculty_name" id="avgFacultySelect">
+                                    <option value="">All Faculty</option>
                                     @foreach ($faculties as $key => $faculty)
                                         <option value="{{ $key }}" {{ $currentFaculty == $key ? 'selected' : '' }}>{{ $faculty }}</option>
                                     @endforeach
@@ -490,20 +512,22 @@
                     const doc = parser.parseFromString(html, 'text/html');
 
                     const newProgramSelect = doc.querySelector('select[name="program_name"]');
-                    const programSelect = document.getElementById('faaProgramSelect');
-                    if (newProgramSelect && programSelect) {
-                        const currentProgram = programSelect.value;
-                        programSelect.innerHTML = newProgramSelect.innerHTML;
-                        if (currentProgram && Array.from(programSelect.options).some(function(opt) {
-                            return opt.value === currentProgram;
-                        })) {
-                            programSelect.value = currentProgram;
-                        } else {
-                            programSelect.value = '';
+                    if (newProgramSelect) {
+                        const currentProgramSelect = document.querySelector('select[name="program_name"]');
+                        const currentVal = currentProgramSelect.value;
+                        // Destroy Choices instance before touching innerHTML
+                        if (currentProgramSelect._choicesInstance) {
+                            currentProgramSelect._choicesInstance.destroy();
+                            currentProgramSelect._choicesInstance = null;
                         }
-                        faaUpdateFilterSelectStyles();
+                        currentProgramSelect.innerHTML = newProgramSelect.innerHTML;
+                        // Restore previously selected value if still present
+                        if (currentVal) { currentProgramSelect.value = currentVal; }
+                        // Reinitialise Choices.js
+                        initAvgProgramChoices();
                     }
 
+                    // Extract the table content from the response
                     const newTableContainer = doc.querySelector('#tableContainer');
                     const newProgramTitle = doc.querySelector('.faa-program-title-wrap h6, .text-center h6');
 
@@ -553,12 +577,15 @@
                     const parser = new DOMParser();
                     const doc = parser.parseFromString(html, 'text/html');
                     const newProgramSelect = doc.querySelector('select[name="program_name"]');
-                    const programSelect = document.getElementById('faaProgramSelect');
 
-                    if (newProgramSelect && programSelect) {
-                        programSelect.innerHTML = newProgramSelect.innerHTML;
-                        programSelect.value = '';
-                        faaUpdateFilterSelectStyles();
+                    if (newProgramSelect) {
+                        const currentProgramSelect = document.querySelector('select[name="program_name"]');
+                        if (currentProgramSelect._choicesInstance) {
+                            currentProgramSelect._choicesInstance.destroy();
+                            currentProgramSelect._choicesInstance = null;
+                        }
+                        currentProgramSelect.innerHTML = newProgramSelect.innerHTML;
+                        initAvgProgramChoices();
                     }
                 })
                 .catch(error => console.error('Error loading programs:', error));
@@ -679,4 +706,50 @@
             setTimeout(updateExportLinks, 300);
         });
     </script>
+@push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+<script>
+function makeChoicesConfig(placeholder) {
+    return {
+        shouldSort: false,
+        searchEnabled: true,
+        searchResultLimit: 100,
+        searchPlaceholderValue: placeholder,
+        itemSelectText: '',
+        allowHTML: false,
+        classNames: {
+            containerInner: ['choices__inner', 'shadow-sm'],
+            input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+            inputCloned: ['choices__input--cloned'],
+            listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+            item: ['choices__item', 'dropdown-item', 'rounded-0'],
+            itemSelectable: ['choices__item--selectable'],
+            itemDisabled: ['choices__item--disabled', 'disabled'],
+            itemChoice: ['choices__item--choice'],
+            placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+            highlightedState: ['is-highlighted', 'active'],
+            notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+        }
+    };
+}
+function initAvgProgramChoices() {
+    const el = document.getElementById('avgProgramSelect');
+    if (!el || typeof window.Choices === 'undefined') return;
+    if (el._choicesInstance) { el._choicesInstance.destroy(); el._choicesInstance = null; }
+    el._choicesInstance = new Choices(el, makeChoicesConfig('Search programs...'));
+    el.addEventListener('change', function() { setTimeout(updateExportLinks, 100); });
+}
+function initAvgFacultyChoices() {
+    const el = document.getElementById('avgFacultySelect');
+    if (!el || typeof window.Choices === 'undefined') return;
+    if (el._choicesInstance) { el._choicesInstance.destroy(); el._choicesInstance = null; }
+    el._choicesInstance = new Choices(el, makeChoicesConfig('Search faculty...'));
+    el.addEventListener('change', function() { setTimeout(updateExportLinks, 100); });
+}
+document.addEventListener('DOMContentLoaded', function() {
+    initAvgProgramChoices();
+    initAvgFacultyChoices();
+});
+</script>
+@endpush
 @endsection

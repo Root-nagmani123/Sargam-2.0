@@ -3,14 +3,228 @@
 @endphp
 @extends('admin.layouts.master')
 
-@section('title', 'Faculty Feedback with Comments All Details')
+@section('title', 'Faculty Feedback with Comments All Details - Sargam | Lal Bahadur')
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
+<style>
+#programSelect + .choices .choices__inner {
+    min-height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 2.25rem 0.375rem 0.75rem;
+    font-size: 0.85rem;
+    border: 1px solid #d0d7de;
+    border-radius: var(--bs-border-radius, 0.375rem);
+    background-color: #fff;
+    transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+}
+#programSelect + .choices .choices__inner:focus-within {
+    border-color: #af2910;
+    box-shadow: 0 0 0 0.2rem rgba(175,41,16,.12);
+}
+#programSelect + .choices .choices__input {
+    font-size: 0.85rem;
+}
+</style>
 @endpush
 
 @section('setup_content')
+    <style>
+        :root {
+            --fb-brand: #af2910;
+            --fb-brand-rgb: 175, 41, 16;
+            --fb-border: #d0d7de;
+        }
+
+        /* ── Filter Card ── */
+        .filter-card {
+            border: 0;
+            border-radius: var(--bs-border-radius-lg);
+            box-shadow: 0 1px 4px rgba(0,0,0,.06);
+            overflow: visible;
+        }
+
+        .filter-card .card-header {
+            background: var(--fb-brand);
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.875rem;
+            padding: 0.7rem 1rem;
+            border: 0;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .filter-card .card-body {
+            padding: 1.1rem 1rem;
+        }
+
+        .filter-card .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--bs-secondary-color);
+            margin-bottom: 0.25rem;
+        }
+
+        .filter-card .form-select,
+        .filter-card .form-control {
+            font-size: 0.85rem;
+            border-color: var(--fb-border);
+            transition: border-color .15s ease-in-out, box-shadow .15s ease-in-out;
+        }
+
+        .filter-card .form-select:focus,
+        .filter-card .form-control:focus {
+            border-color: var(--fb-brand);
+            box-shadow: 0 0 0 0.2rem rgba(var(--fb-brand-rgb), .12);
+        }
+
+        .feedback-page-title {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--fb-brand);
+        }
+
+
+        .rating-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 1.85rem;
+            height: 1.85rem;
+            padding: 0 0.35rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: var(--bs-border-radius);
+        }
+
+        .rating-5 { background-color: var(--bs-success); color: #fff; }
+        .rating-4 { background-color: #20c997; color: #fff; }
+        .rating-3 { background-color: var(--bs-warning); color: var(--bs-dark); }
+        .rating-2 { background-color: #fd7e14; color: #fff; }
+        .rating-1 { background-color: var(--bs-danger); color: #fff; }
+
+        .faculty-type-badge {
+            font-size: 0.7rem;
+            font-weight: 500;
+            padding: 0.2rem 0.5rem;
+            border-radius: 50rem;
+            background: var(--bs-secondary-bg);
+            color: var(--bs-secondary-color);
+            border: 1px solid var(--bs-border-color);
+        }
+
+        .session-badge {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 0.25rem 0.55rem;
+            border-radius: 50rem;
+            background: var(--bs-primary-bg-subtle);
+            color: var(--bs-primary-text-emphasis);
+            border: 1px solid rgba(var(--bs-primary-rgb), 0.25);
+        }
+
+        .suggestions-container { position: relative; }
+
+        .suggestions-list {
+            position: absolute;
+            top: calc(100% + 0.25rem);
+            left: 0;
+            right: 0;
+            background: var(--bs-body-bg);
+            border: 1px solid var(--bs-border-color);
+            border-radius: var(--bs-border-radius-lg);
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 1080;
+            display: none;
+            box-shadow: var(--bs-box-shadow);
+        }
+
+        .suggestion-item {
+            padding: 0.5rem 0.85rem;
+            cursor: pointer;
+            border-bottom: 1px solid var(--bs-border-color-translucent);
+            transition: background-color 0.12s ease;
+        }
+
+        .suggestion-item:hover,
+        .suggestion-item:focus-visible {
+            background-color: var(--bs-tertiary-bg);
+        }
+
+        .suggestion-item:last-child { border-bottom: none; }
+
+        #loadingSpinner {
+            position: fixed;
+            inset: 0;
+            z-index: 1090;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0, 0, 0, 0.06);
+            backdrop-filter: blur(2px);
+        }
+
+        #loadingSpinner.feedback-loading-visible {
+            display: flex !important;
+        }
+
+        #loadingSpinner .feedback-loading-inner {
+            background: var(--bs-body-bg);
+            padding: 1.5rem 2rem;
+            border-radius: var(--bs-border-radius-xl);
+            box-shadow: var(--bs-box-shadow-lg);
+            border: 1px solid var(--bs-border-color-translucent);
+            max-width: 90vw;
+        }
+
+        .feedback-pagination .page-link {
+            font-size: 0.82rem;
+            color: var(--fb-brand);
+            border-color: var(--fb-border);
+            min-width: 2rem;
+            text-align: center;
+            border-radius: 0.375rem !important;
+            margin: 0 0.1rem;
+        }
+
+        .feedback-pagination .page-item.active .page-link {
+            background-color: var(--fb-brand);
+            border-color: var(--fb-brand);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        .feedback-pagination .page-item.disabled .page-link {
+            color: #adb5bd;
+            border-color: var(--fb-border);
+            background-color: #f8f9fa;
+        }
+
+        .feedback-pagination .page-link:hover:not(.active) {
+            background-color: rgba(175,41,16,.08);
+            color: var(--fb-brand);
+        }
+
+        .feedback-session-card {
+            border-left: 4px solid rgba(var(--fb-brand-rgb), 0.85);
+        }
+
+        .empty-state i {
+            font-size: 3rem;
+            opacity: 0.35;
+        }
+
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+        }
+    </style>
+
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
     <div class="container-fluid fdt-master-page py-3 px-3 px-lg-4">
@@ -26,78 +240,61 @@
                 <p class="mb-0 fw-medium text-secondary small">Loading feedback data…</p>
             </div>
         </div>
-        <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3 mb-4 no-print">
-            <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white shadow-sm mb-0 fdt-status-tabs" role="group" aria-label="Course status">
-                <li class="nav-item" role="presentation">
-                    <input class="btn-check course-type-radio" type="radio" name="course_type" value="current" id="current"
-                        {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
-                    <label class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill mb-0" for="current">Active</label>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <input class="btn-check course-type-radio" type="radio" name="course_type" value="archived" id="archived"
-                        {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
-                    <label class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill mb-0" for="archived">Archived</label>
-                </li>
-            </ul>
-            <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
-                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" onclick="printFeedbackDetails()" title="Print report">
-                    <i class="bi bi-printer" aria-hidden="true"></i><span>Print</span>
-                </button>
-                <button type="button" class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" onclick="exportToPDF()" title="Download PDF">
-                    <i class="bi bi-download" aria-hidden="true"></i><span>Download</span>
-                </button>
-                <div class="dropdown">
-                    <button type="button" class="btn btn-outline-secondary btn-sm rounded-1 px-2 py-2" data-bs-toggle="dropdown" aria-label="More actions">
-                        <i class="bi bi-three-dots-vertical" aria-hidden="true"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 py-2">
-                        <li><button type="button" class="dropdown-item rounded-1 mx-2 py-2" onclick="exportToExcel()"><i class="bi bi-file-earmark-spreadsheet me-2 text-primary"></i>Export Excel</button></li>
-                        @if (empty($hidePendingFeedbackAdminLink))
-                        <li><a class="dropdown-item rounded-1 mx-2 py-2" href="{{ route('admin.feedback.pending.students') }}"><i class="bi bi-hourglass-split me-2 text-primary"></i>Pending feedback</a></li>
-                        @endif
-                    </ul>
-                </div>
+
+        <div class="card filter-card mb-3 no-print">
+            <div class="card-header">
+                <i class="fas fa-sliders-h"></i> Feedback Details
             </div>
-        </div>
-
-        <div class="card fdt-dt-card border-0 shadow-sm rounded-3">
-            <div class="card-body p-3 p-md-4">
-                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar fdt-filters-row no-print w-100">
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-                        <span class="programme-dt-filters-label">Filters</span>
-
-                        <div class="programme-dt-filter-select">
-                            <label for="programSelect" class="visually-hidden">Program Name</label>
-                            <select class="form-select" id="programSelect" name="program_id" aria-label="Program name">
-                                <option value="">Program Name</option>
-                                @foreach ($programs as $key => $program)
-                                    <option value="{{ $key }}" {{ $currentProgram == $key ? 'selected' : '' }}>{{ $program }}</option>
-                                @endforeach
-                            </select>
+            <div class="card-body">
+                <div class="row g-3 align-items-end">
+                    <div class="col-12 col-sm-6 col-lg-auto">
+                        <label class="form-label d-block">Course status</label>
+                        <div class="btn-group flex-wrap" role="group" aria-label="Course status">
+                            <input class="btn-check course-type-radio" type="radio" name="course_type" value="current" id="current"
+                                {{ ($courseType ?? 'current') == 'current' ? 'checked' : '' }}>
+                            <label class="btn btn-outline-danger btn-sm px-3" for="current">
+                                <i class="fas fa-play-circle me-1 opacity-75"></i>Current
+                            </label>
+                            <input class="btn-check course-type-radio" type="radio" name="course_type" value="archived" id="archived"
+                                {{ ($courseType ?? 'current') == 'archived' ? 'checked' : '' }}>
+                            <label class="btn btn-outline-secondary btn-sm px-3" for="archived">
+                                <i class="fas fa-archive me-1 opacity-75"></i>Archived
+                            </label>
                         </div>
+                    </div>
 
-                        <div class="programme-dt-filter-select fdt-period-filter position-relative">
-                            <input type="hidden" id="fromDate" name="from_date" value="{{ $fromDate ?? '' }}">
-                            <input type="hidden" id="toDate" name="to_date" value="{{ $toDate ?? '' }}">
-                            <label for="fdt_time_period_picker" class="visually-hidden">Time Period</label>
-                            <input type="text"
-                                id="fdt_time_period_picker"
-                                class="form-control fdt-time-period-input"
-                                placeholder="Time Period"
-                                value=""
-                                readonly
-                                autocomplete="off"
-                                aria-label="Filter by time period">
-                            <i class="bi bi-chevron-down fdt-filter-chevron" aria-hidden="true"></i>
-                        </div>
+                    <div class="col-12 col-md-6 col-xl-3">
+                        <label for="programSelect" class="form-label">Program name</label>
+                        <select class="form-select" id="programSelect" name="program_id">
+                            <option value="">All Programs</option>
+                            @foreach ($programs as $key => $program)
+                                <option value="{{ $key }}" {{ $currentProgram == $key ? 'selected' : '' }}>
+                                    {{ $program }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
 
-                        @if (!hasRole('Internal Faculty') && !hasRole('Guest Faculty'))
-                        <div class="dropdown programme-dt-filter-select position-relative">
-                            <button type="button" class="btn fdt-filter-select-btn w-100 text-truncate" data-bs-toggle="dropdown" data-bs-auto-close="outside" id="fdtFacultyTypeToggle" aria-expanded="false">Faculty Type</button>
-                            <i class="bi bi-chevron-down fdt-filter-chevron" aria-hidden="true"></i>
-                            <div class="dropdown-menu shadow-sm border-0 rounded-3 p-3 fdt-faculty-type-menu">
-                                <div class="form-check mb-2">
-                                    <input class="form-check-input faculty-type-checkbox" type="checkbox" name="faculty_type[]" value="2" id="faculty_type_guest" {{ in_array('2', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <label for="fromDate" class="form-label">From date</label>
+                        <input type="date" id="fromDate" class="form-control" name="from_date"
+                            value="{{ $fromDate ?? '' }}" />
+                    </div>
+
+                    <div class="col-6 col-md-3 col-xl-2">
+                        <label for="toDate" class="form-label">To date</label>
+                        <input type="date" id="toDate" class="form-control" name="to_date"
+                            value="{{ $toDate ?? '' }}" />
+                    </div>
+
+                    @if (!hasRole('Internal Faculty') && !hasRole('Guest Faculty'))
+                        <div class="col-12 col-md-6 col-xl-auto">
+                            <label class="form-label d-block">Faculty type</label>
+                            <div class="d-flex flex-wrap gap-3">
+                                <div class="form-check">
+                                    <input class="form-check-input faculty-type-checkbox" type="checkbox"
+                                        name="faculty_type[]" value="2" id="faculty_type_guest"
+                                        {{ in_array('2', $selectedFacultyTypes ?? []) ? 'checked' : '' }}>
                                     <label class="form-check-label" for="faculty_type_guest">Guest</label>
                                 </div>
                                 <div class="form-check mb-0">
@@ -107,11 +304,12 @@
                             </div>
                         </div>
 
-                        <div class="programme-dt-filter-select fdt-faculty-filter {{ empty($selectedFacultyTypes) ? 'd-none' : '' }}" id="fdtFacultyFilterWrap">
-                            <label for="facultySearch" class="visually-hidden">Faculty Name</label>
-                            <select class="form-select" id="facultySearch" name="faculty_name" aria-label="Faculty name">
-                                <option value="">Faculty Name</option>
-                                @if (!empty($selectedFacultyTypes) && $facultySuggestions->isNotEmpty())
+                        <div class="col-12 col-md-6 col-xl suggestions-container">
+                            <label for="facultySearch" class="form-label">Faculty name</label>
+                            <input type="text" id="facultySearch" class="form-control" name="faculty_name"
+                                value="{{ $currentFaculty ?? '' }}" placeholder="Search by name…" autocomplete="off" />
+                            <div class="suggestions-list shadow" id="facultySuggestions">
+                                @if ($facultySuggestions->isNotEmpty())
                                     @foreach ($facultySuggestions as $faculty)
                                         <option value="{{ $faculty->full_name }}" {{ ($currentFaculty ?? '') === $faculty->full_name ? 'selected' : '' }}>{{ $faculty->full_name }}</option>
                                     @endforeach
@@ -123,40 +321,34 @@
                         <button type="button" class="btn programme-dt-btn-reset flex-shrink-0" id="resetButton">Reset Filters</button>
                     </div>
 
-                    <div class="fdt-table-search ms-xl-auto flex-shrink-0">
-                        <label for="fdtTableSearch" class="programme-dt-search fdt-table-search-bar d-none d-xl-block mb-0">
-                            <span class="visually-hidden">Search table</span>
-                            <input type="search"
-                                id="fdtTableSearch"
-                                name="table_search"
-                                class="form-control shadow-none"
-                                placeholder="Search"
-                                value=""
-                                autocomplete="off"
-                                aria-label="Search table">
-                        </label>
-                        <div class="dropdown d-xl-none fdt-search-slot">
-                            <button type="button"
-                                class="btn fdt-search-trigger"
-                                id="fdtSearchTrigger"
-                                data-bs-toggle="dropdown"
-                                data-bs-auto-close="outside"
-                                aria-expanded="false"
-                                aria-label="Search table">
-                                <i class="bi bi-search" aria-hidden="true"></i>
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-3 p-3 fdt-table-search-menu">
-                                <label for="fdtTableSearchMobile" class="form-label small text-secondary mb-2">Search</label>
-                                <input type="search"
-                                    id="fdtTableSearchMobile"
-                                    class="form-control shadow-none"
-                                    placeholder="Search table..."
-                                    autocomplete="off"
-                                    aria-label="Search table">
-                            </div>
-                        </div>
-                    </div>
+            </div>
+            <div class="card-footer bg-body-tertiary border-top py-3 px-3 d-flex flex-wrap gap-2 align-items-center justify-content-end">
+                <div class="btn-group rounded-1" role="group" aria-label="Print or download PDF">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-3 d-inline-flex align-items-center justify-content-center gap-1 rounded-0 rounded-start-1" onclick="printFeedbackDetails()" title="Print report or choose Save as PDF in print dialog">
+                        <span class="material-symbols-rounded" style="font-size: 1.1rem;">print</span>
+                        <span>Print</span>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger rounded-1 px-3 d-inline-flex align-items-center justify-content-center gap-1 rounded-0 rounded-end-1" onclick="exportToPDF()" title="Download PDF">
+                        <span class="material-symbols-rounded" style="font-size: 1.1rem;">picture_as_pdf</span>
+                        <span>PDF</span>
+                    </button>
                 </div>
+                <button type="button" class="btn btn-success rounded-1 px-3 d-inline-flex align-items-center gap-1" onclick="exportToExcel()" title="Export to Excel">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">table_view</span>
+                    <span>Export Excel</span>
+                </button>
+                <button type="button" class="btn btn-outline-secondary rounded-1 px-3 d-inline-flex align-items-center gap-1" id="resetButton">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">refresh</span>
+                    <span>Reset filters</span>
+                </button>
+                @if (empty($hidePendingFeedbackAdminLink))
+                <a href="{{ route('admin.feedback.pending.students') }}" class="btn btn-warning text-dark rounded-1 d-inline-flex align-items-center gap-1 px-3">
+                    <span class="material-symbols-rounded" style="font-size: 1.1rem;">pending_actions</span>
+                    <span>Pending feedback (students)</span>
+                </a>
+                @endif
+            </div>
+        </div>
 
                 <span class="visually-hidden" id="feedbackRefreshTime">Data refreshed: {{ $refreshTime ?? now()->format('d-M-Y H:i') }}</span>
 
@@ -256,136 +448,8 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/scripts/choices.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-    <script>
-            function fdtGetChoiceValue(el) {
-                if (!el) {
-                    return '';
-                }
-                if (el._fdtChoices) {
-                    const val = el._fdtChoices.getValue(true);
-                    return Array.isArray(val) ? (val[0] || '') : (val || '');
-                }
-                return el.value || '';
-            }
-
-            function fdtGetSelectedFacultyTypes() {
-                return Array.from(document.querySelectorAll('.faculty-type-checkbox:checked')).map(function(cb) {
-                    return cb.value;
-                });
-            }
-
-            function fdtGetChoiceLabel(el, value) {
-                if (!el || !value) {
-                    return '';
-                }
-                const option = Array.from(el.options || []).find(opt => String(opt.value) === String(value));
-                return option ? option.text : value;
-            }
-
-            function fdtGetTableSearchValue() {
-                const tableSearch = document.getElementById('fdtTableSearch');
-                const tableSearchMobile = document.getElementById('fdtTableSearchMobile');
-                if (window.matchMedia('(min-width: 1200px)').matches && tableSearch) {
-                    return tableSearch.value.trim();
-                }
-                if (tableSearchMobile) {
-                    return tableSearchMobile.value.trim();
-                }
-                return tableSearch ? tableSearch.value.trim() : '';
-            }
-
-            function fdtCollectFilterParams() {
-                const params = new URLSearchParams();
-                const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content');
-                if (csrfToken) {
-                    params.append('_token', csrfToken);
-                }
-                params.append('program_id', fdtGetChoiceValue(document.getElementById('programSelect')) || '');
-                params.append('faculty_name', fdtGetChoiceValue(document.getElementById('facultySearch')) || '');
-                params.append('from_date', document.getElementById('fromDate')?.value || '');
-                params.append('to_date', document.getElementById('toDate')?.value || '');
-                const courseType = document.querySelector('input[name="course_type"]:checked');
-                if (courseType) {
-                    params.append('course_type', courseType.value);
-                }
-                fdtGetSelectedFacultyTypes().forEach(function(type) {
-                    params.append('faculty_type[]', type);
-                });
-                const tableSearchValue = fdtGetTableSearchValue();
-                if (tableSearchValue) {
-                    params.append('table_search', tableSearchValue);
-                }
-                return params;
-            }
-
-            function fdtEscapeHtml(text) {
-                if (text === undefined || text === null) {
-                    return '';
-                }
-                return String(text)
-                    .replace(/&/g, '&amp;')
-                    .replace(/</g, '&lt;')
-                    .replace(/>/g, '&gt;')
-                    .replace(/"/g, '&quot;');
-            }
-
-            function fdtFormatRating(value) {
-                const v = value !== undefined && value !== null ? value : '0';
-                return `<span class="fdt-rating"><span class="fdt-rating-value">${v}</span><span class="fdt-rating-max">/10</span></span>`;
-            }
-
-            function fdtBuildTableRows(groupedData, startSno) {
-                let rows = '';
-                let sno = startSno;
-
-                Object.entries(groupedData).forEach(function(entry) {
-                    const groupKey = entry[0];
-                    const group = entry[1];
-                    const programName = groupKey.split('|')[0];
-                    group.forEach(function(item) {
-                        sno += 1;
-                        rows += `
-                            <tr>
-                                <td class="text-secondary">${sno}</td>
-                                <td><span class="fdt-ot-code">${fdtEscapeHtml(item.ot_code || '')}</span></td>
-                                <td>${fdtEscapeHtml(item.ot_name || '')}</td>
-                                <td class="fdt-col-program">${fdtEscapeHtml(programName)}</td>
-                                <td class="text-center">${fdtFormatRating(item.content)}</td>
-                                <td class="text-center">${fdtFormatRating(item.presentation)}</td>
-                                <td>${item.remark ? `<div class="remark-text">${fdtEscapeHtml(item.remark)}</div>` : `<span class="text-muted">—</span>`}</td>
-                                <td class="text-secondary">${fdtEscapeHtml(item.feedback_date || '')}</td>
-                            </tr>`;
-                    });
-                });
-
-                return rows;
-            }
-
-            function fdtBuildPrintTableHtml(groupedData) {
-                return `
-                    <div class="programme-dt-panel fdt-table-panel">
-                        <div class="table-responsive">
-                            <table class="table table-hover align-middle mb-0 w-100 programme-dt-table fdt-feedback-table data-table">
-                                <thead>
-                                    <tr>
-                                        <th scope="col">S. No.</th>
-                                        <th scope="col">OT Code</th>
-                                        <th scope="col">OT Name</th>
-                                        <th scope="col">Program Name</th>
-                                        <th scope="col" class="text-center">Content</th>
-                                        <th scope="col" class="text-center">Presentation</th>
-                                        <th scope="col">Remarks</th>
-                                        <th scope="col">Feedback Date</th>
-                                    </tr>
-                                </thead>
-                                <tbody>${fdtBuildTableRows(groupedData, 0)}</tbody>
-                            </table>
-                        </div>
-                    </div>`;
-            }
-
+        <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+        <script>
             document.addEventListener('DOMContentLoaded', function() {
                 const loadingSpinner = document.getElementById('loadingSpinner');
                 const contentContainer = document.getElementById('contentContainer');
@@ -399,347 +463,52 @@
                 const fromDateEl = document.getElementById('fromDate');
                 const toDateEl = document.getElementById('toDate');
                 let currentPage = {{ $currentPage }};
-                let currentPerPage = {{ $perPage ?? 10 }};
-                let fdtTimePeriodPicker = null;
-                let fdtFacultyTypeChangeTimer = null;
-                let fdtTableSearchTimer = null;
+                let programChoices = null;
 
-                const fdtPageSizeOptions = [10, 25, 50, 100];
-
-                const fdtFacultyChoiceOpts = {
-                    searchEnabled: true,
-                    shouldSort: false,
-                    itemSelectText: '',
-                    allowHTML: false,
-                    placeholder: true,
-                    placeholderValue: 'Faculty Name',
-                    searchPlaceholderValue: 'Search faculty...',
-                    noResultsText: 'No results found',
-                    position: 'bottom',
-                    classNames: {
-                        containerOuter: ['choices', 'w-100', 'programme-dt-filter-select'],
-                        containerInner: ['choices__inner'],
-                        input: ['choices__input', 'form-control', 'border-0', 'shadow-none'],
-                        inputCloned: ['choices__input--cloned'],
-                        listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
-                        itemChoice: ['choices__item--choice'],
-                        placeholder: ['choices__placeholder']
-                    }
-                };
-
-                function destroyFdtChoice(el) {
-                    if (!el || !el._fdtChoices) {
-                        return;
-                    }
-                    try {
-                        el._fdtChoices.destroy();
-                    } catch (error) {
-                        /* noop */
-                    }
-                    el._fdtChoices = null;
-                }
-
-                function initFdtChoice(el, opts) {
-                    if (!el || typeof Choices === 'undefined') {
-                        return null;
-                    }
-                    destroyFdtChoice(el);
-                    const instance = new Choices(el, opts);
-                    el._fdtChoices = instance;
-                    return instance;
-                }
-
-                function setFdtChoiceValue(el, value) {
-                    if (!el) {
-                        return;
-                    }
-                    const val = value === undefined || value === null ? '' : String(value);
-                    if (el._fdtChoices) {
-                        el._fdtChoices.removeActiveItems();
-                        if (val) {
-                            el._fdtChoices.setChoiceByValue(val);
+                // Choices.js config
+                function makeChoicesConfig(placeholder) {
+                    return {
+                        shouldSort: false,
+                        searchEnabled: true,
+                        searchResultLimit: 100,
+                        searchPlaceholderValue: placeholder,
+                        itemSelectText: '',
+                        allowHTML: false,
+                        classNames: {
+                            containerInner: ['choices__inner', 'shadow-sm'],
+                            input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                            inputCloned: ['choices__input--cloned'],
+                            listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
+                            item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                            itemSelectable: ['choices__item--selectable'],
+                            itemDisabled: ['choices__item--disabled', 'disabled'],
+                            itemChoice: ['choices__item--choice'],
+                            placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
+                            highlightedState: ['is-highlighted', 'active'],
+                            notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
                         }
-                        return;
-                    }
-                    el.value = val;
+                    };
                 }
 
-                function setFdtMultiChoiceValues(el, values) {
-                    if (!el) {
-                        return;
-                    }
-                    const selected = values || [];
-                    if (el._fdtChoices) {
-                        el._fdtChoices.removeActiveItems();
-                        selected.forEach(value => el._fdtChoices.setChoiceByValue(String(value)));
-                        return;
-                    }
-                    Array.from(el.options || []).forEach(option => {
-                        option.selected = selected.includes(option.value);
-                    });
+                function initProgramChoices() {
+                    const el = document.getElementById('programSelect');
+                    if (!el || typeof window.Choices === 'undefined') return;
+                    if (programChoices) { programChoices.destroy(); programChoices = null; }
+                    programChoices = new Choices(el, makeChoicesConfig('Search programs...'));
                 }
 
-                function refreshFdtChoice(el, opts, selectedValue) {
-                    if (!el) {
-                        return;
-                    }
-                    const isMulti = el.multiple;
-                    initFdtChoice(el, opts);
-                    if (isMulti) {
-                        setFdtMultiChoiceValues(el, Array.isArray(selectedValue) ? selectedValue : []);
-                    } else {
-                        setFdtChoiceValue(el, selectedValue || '');
-                    }
-                }
-
-                function updateProgramSelectStyle() {
-                    if (!programSelect) {
-                        return;
-                    }
-                    programSelect.classList.toggle('fdt-filter-empty', !programSelect.value);
-                }
-
-                if (programSelect) {
-                    programSelect.addEventListener('change', updateProgramSelectStyle);
-                    updateProgramSelectStyle();
-                }
-
-                function initFacultySearchChoice() {
-                    if (!facultySearch || facultySearch._fdtChoices) {
-                        return;
-                    }
-                    initFdtChoice(facultySearch, fdtFacultyChoiceOpts);
-                }
-
-                function getTableSearchValue() {
-                    return fdtGetTableSearchValue();
-                }
-
-                function syncTableSearchInputs(source) {
-                    const value = source ? source.value : getTableSearchValue();
-                    if (tableSearch && tableSearch !== source) {
-                        tableSearch.value = value;
-                    }
-                    if (tableSearchMobile && tableSearchMobile !== source) {
-                        tableSearchMobile.value = value;
-                    }
-                }
-
-                function scheduleTableSearchReload() {
-                    clearTimeout(fdtTableSearchTimer);
-                    fdtTableSearchTimer = setTimeout(function() {
+                // Register change listener once (not inside initProgramChoices to avoid duplicates)
+                const _programEl = document.getElementById('programSelect');
+                if (_programEl) {
+                    _programEl.addEventListener('change', function() {
                         loadFeedbackData(1);
-                    }, 350);
-                }
-
-                if (getSelectedFacultyTypes().length > 0) {
-                    initFacultySearchChoice();
-                }
-
-                if (searchTrigger) {
-                    const searchDropdown = searchTrigger.closest('.dropdown');
-                    if (searchDropdown) {
-                        searchDropdown.addEventListener('shown.bs.dropdown', function() {
-                            syncTableSearchInputs(tableSearch);
-                            if (tableSearchMobile) {
-                                tableSearchMobile.focus();
-                            }
-                        });
-                    }
-                }
-
-                [tableSearch, tableSearchMobile].forEach(function(input) {
-                    if (!input) {
-                        return;
-                    }
-                    input.addEventListener('input', function() {
-                        syncTableSearchInputs(input);
-                        scheduleTableSearchReload();
-                    });
-                });
-
-                function updateFilterDropdownLabels() {
-                    const facultyToggle = document.getElementById('fdtFacultyTypeToggle');
-                    if (facultyToggle) {
-                        const selected = getSelectedFacultyTypes().map(function(value) {
-                            return value === '2' ? 'Guest' : 'Internal';
-                        });
-                        facultyToggle.textContent = selected.length ? selected.join(', ') : 'Faculty Type';
-                        facultyToggle.classList.toggle('fdt-filter-has-value', selected.length > 0);
-                    }
-                }
-
-                function updateFacultyFilterVisibility() {
-                    if (!facultyFilterWrap) {
-                        updateFilterDropdownLabels();
-                        return;
-                    }
-                    const hasTypes = getSelectedFacultyTypes().length > 0;
-                    facultyFilterWrap.classList.toggle('d-none', !hasTypes);
-                    if (!hasTypes && facultySearch) {
-                        facultySearch.innerHTML = '<option value="">Faculty Name</option>';
-                        refreshFdtChoice(facultySearch, fdtFacultyChoiceOpts, '');
-                    } else if (hasTypes) {
-                        initFacultySearchChoice();
-                    }
-                    updateFilterDropdownLabels();
-                }
-
-                function getCurrentPerPage() {
-                    const footerSelect = contentContainer.querySelector('.fdt-page-size-select');
-                    if (footerSelect) {
-                        currentPerPage = parseInt(footerSelect.value, 10) || currentPerPage;
-                    }
-                    return currentPerPage;
-                }
-
-                function buildPageSizeSelectHtml(selectedSize) {
-                    return fdtPageSizeOptions.map(function(size) {
-                        const selected = Number(selectedSize) === size ? ' selected' : '';
-                        return `<option value="${size}"${selected}>${size}</option>`;
-                    }).join('');
-                }
-
-                if (typeof flatpickr !== 'undefined') {
-                    const initialFrom = fromDateEl?.value || '';
-                    const initialTo = toDateEl?.value || '';
-                    const defaultDates = (initialFrom && initialTo) ? [initialFrom, initialTo] : [];
-
-                    fdtTimePeriodPicker = flatpickr('#fdt_time_period_picker', {
-                        mode: 'range',
-                        dateFormat: 'Y-m-d',
-                        altInput: true,
-                        altFormat: 'd/m/Y',
-                        showMonths: 2,
-                        static: false,
-                        locale: { rangeSeparator: ' - ' },
-                        defaultDate: defaultDates,
-                        onReady: function (_selectedDates, _dateStr, instance) {
-                            instance.calendarContainer.classList.add('fdt-flatpickr-theme');
-                        },
-                        onChange: function (selectedDates) {
-                            if (selectedDates.length === 2) {
-                                if (fromDateEl) {
-                                    fromDateEl.value = fdtTimePeriodPicker.formatDate(selectedDates[0], 'Y-m-d');
-                                }
-                                if (toDateEl) {
-                                    toDateEl.value = fdtTimePeriodPicker.formatDate(selectedDates[1], 'Y-m-d');
-                                }
-                                loadFeedbackData(1);
-                            } else if (selectedDates.length === 0) {
-                                if (fromDateEl) {
-                                    fromDateEl.value = '';
-                                }
-                                if (toDateEl) {
-                                    toDateEl.value = '';
-                                }
-                                loadFeedbackData(1);
-                            }
-                        }
                     });
                 }
 
-                function formatFdtRating(value) {
-                    return fdtFormatRating(value);
-                }
-
-                function buildFdtTableRows(groupedData, startSno) {
-                    return fdtBuildTableRows(groupedData, startSno);
-                }
-
-                function buildFdtTableHtml(groupedData, currentPageNum, perPage) {
-                    const startSno = (currentPageNum - 1) * perPage;
-                    return `
-                        <div class="programme-dt-panel fdt-table-panel">
-                            <div class="table-responsive">
-                                <table class="table table-hover align-middle mb-0 w-100 programme-dt-table fdt-feedback-table">
-                                    <thead>
-                                        <tr>
-                                            <th scope="col">S. No.</th>
-                                            <th scope="col">OT Code</th>
-                                            <th scope="col">OT Name</th>
-                                            <th scope="col">Program Name</th>
-                                            <th scope="col" class="text-center">Content</th>
-                                            <th scope="col" class="text-center">Presentation</th>
-                                            <th scope="col">Remarks</th>
-                                            <th scope="col">Feedback Date</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>${buildFdtTableRows(groupedData, startSno)}</tbody>
-                                </table>
-                            </div>
-                        </div>`;
-                }
-
-                function escapeHtml(text) {
-                    return fdtEscapeHtml(text);
-                }
-
-                function getTableSearchValue() {
-                    return fdtGetTableSearchValue();
-                }
-
-                function getSelectedFacultyTypes() {
-                    return fdtGetSelectedFacultyTypes();
-                }
-
-                function toggleFacultyDropdownVisibility() {
-                    updateFacultyFilterVisibility();
-                }
-
-                function populateFacultyDropdown(faculties, selectedName) {
-                    if (!facultySearch) {
-                        return;
-                    }
-                    const current = selectedName !== undefined ? selectedName : fdtGetChoiceValue(facultySearch);
-                    let options = '<option value="">Faculty Name</option>';
-                    faculties.forEach(function(faculty) {
-                        const name = faculty.full_name || faculty;
-                        const selected = current && current === name ? ' selected' : '';
-                        options += `<option value="${fdtEscapeHtml(name)}"${selected}>${fdtEscapeHtml(name)}</option>`;
-                    });
-                    facultySearch.innerHTML = options;
-                    refreshFdtChoice(facultySearch, fdtFacultyChoiceOpts, current);
-                }
-
-                function loadFacultyDropdown(preserveSelection) {
-                    const selectedTypes = getSelectedFacultyTypes();
-                    updateFacultyFilterVisibility();
-
-                    if (selectedTypes.length === 0) {
-                        return Promise.resolve();
-                    }
-
-                    const previousSelection = preserveSelection ? fdtGetChoiceValue(facultySearch) : '';
-                    const params = new URLSearchParams();
-                    selectedTypes.forEach(type => params.append('faculty_type[]', type));
-
-                    return fetch('{{ $fr['comments_suggestions'] }}?' + params.toString(), {
-                            method: 'GET',
-                            headers: {
-                                'X-Requested-With': 'XMLHttpRequest',
-                                'Accept': 'application/json'
-                            }
-                        })
-                        .then(response => response.json())
-                        .then(data => {
-                            if (data.success && data.faculties && data.faculties.length > 0) {
-                                populateFacultyDropdown(
-                                    data.faculties,
-                                    preserveSelection ? previousSelection : ''
-                                );
-                            } else {
-                                populateFacultyDropdown([], '');
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Error loading faculty list:', error);
-                        });
-                }
-
-                // Get all filter inputs
+                // Get all filter inputs (programSelect handled via Choices listener)
                 const filterInputs = [
-                    programSelect,
+                    document.getElementById('fromDate'),
+                    document.getElementById('toDate'),
                     ...document.querySelectorAll('.course-type-radio'),
                     facultySearch
                 ];
@@ -755,9 +524,18 @@
                     // Collect filter values
                     const params = fdtCollectFilterParams();
                     params.append('page', page);
-                    params.append('per_page', getCurrentPerPage());
 
-                    console.log('Loading data with params:', params.toString()); // Debug log
+                    // Course type
+                    const courseType = document.querySelector('input[name="course_type"]:checked');
+                    if (courseType) {
+                        params.append('course_type', courseType.value);
+                    }
+
+                    // Faculty type (checkboxes)
+                    const facultyTypeCheckboxes = document.querySelectorAll('.faculty-type-checkbox:checked');
+                    facultyTypeCheckboxes.forEach(cb => {
+                        params.append('faculty_type[]', cb.value);
+                    });
 
                     // Make AJAX request - GET with query parameters
                     fetch('{{ $fr['details'] }}?' + params.toString(), {
@@ -774,7 +552,6 @@
                             return response.json();
                         })
                         .then(data => {
-                            console.log('Data received:', data); // Debug log
                             if (data.success) {
                                 updateContent(data);
                                 updateFilters(data);
@@ -794,12 +571,94 @@
 
                 // Function to update content with new data
                 function updateContent(data) {
-                    const perPage = Number(data.perPage || currentPerPage || 10);
-                    currentPerPage = perPage;
-
                     if (data.groupedData && Object.keys(data.groupedData).length > 0) {
-                        let html = buildFdtTableHtml(data.groupedData, data.currentPage || 1, perPage);
-                        html += generateFooter(data.currentPage, data.totalPages, data.totalRecords, perPage);
+                        let html = '';
+
+                        // Global row counter — continues across groups on this page
+                        // e.g. page 3 starts at row 21, page 2 at row 11
+                        const perPage = 10;
+                        let rowCounter = (parseInt(data.currentPage, 10) - 1) * perPage;
+
+                        Object.entries(data.groupedData).forEach(([groupKey, group]) => {
+                            const [programName, facultyName, topicName] = groupKey.split('|');
+                            const firstRecord = group[0];
+                            // Capture counter start for this group before incrementing
+                            const groupStartRow = rowCounter;
+                            rowCounter += group.length;
+
+                            html += `
+                    <div class="session-header feedback-session-card card border-0 shadow-sm mb-4">
+                        <div class="card-body p-3 p-md-4">
+                            <div class="row g-3">
+                                <div class="col-md-4">
+                                    <div class="small text-uppercase text-muted fw-semibold mb-1">Course</div>
+                                    <div class="fw-semibold text-body">${programName}</div>
+                                    <div class="mt-2"><span class="session-badge">${firstRecord.course_status || 'Unknown'}</span></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-uppercase text-muted fw-semibold mb-1">Faculty</div>
+                                    <div class="fw-semibold text-body">${facultyName}</div>
+                                    <div class="mt-2"><span class="faculty-type-badge">${firstRecord.faculty_type || ''}</span></div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-uppercase text-muted fw-semibold mb-1">Topic</div>
+                                    <div class="fw-semibold text-body">${topicName}</div>
+                                    ${firstRecord.start_date ? `
+                                        <div class="small text-muted mt-2">
+                                            <i class="fas fa-clock me-1 opacity-75"></i>
+                                            <span class="fw-medium text-body-secondary">Session:</span>
+                                            ${firstRecord.start_date}
+                                            ${firstRecord.end_date ? `<span class="text-muted">– ${firstRecord.end_date}</span>` : ''}
+                                        </div>
+                                    ` : ''}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="table-responsive mb-4 rounded-3 border shadow-sm">
+                        <table class="table table-hover table-sm align-middle mb-0">
+                            <thead class="table-light">
+                                <tr class="small text-uppercase text-secondary">
+                                    <th scope="col" class="ps-3" style="width:4%">#</th>
+                                    <th scope="col" style="width:18%">OT name</th>
+                                    <th scope="col" style="width:10%">OT code</th>
+                                    <th scope="col" class="text-center" style="width:10%">Content</th>
+                                    <th scope="col" class="text-center" style="width:10%">Presentation</th>
+                                    <th scope="col" style="width:33%">Remarks</th>
+                                    <th scope="col" class="pe-3" style="width:15%">Feedback date</th>
+                                </tr>
+                            </thead>
+                            <tbody class="small">
+                                ${group.map((item, index) => `
+                                    <tr>
+                                        <td class="ps-3 text-body-secondary">${groupStartRow + index + 1}</td>
+                                        <td class="fw-medium">${item.ot_name || ''}</td>
+                                        <td><code class="small bg-body-secondary px-2 py-1 rounded">${item.ot_code || ''}</code></td>
+                                        <td class="text-center">
+                                            <span class="rating-badge rating-${item.content}">${item.content}</span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="rating-badge rating-${item.presentation}">${item.presentation}</span>
+                                        </td>
+                                        <td>
+                                            ${item.remark ? `<div class="remark-text">${item.remark}</div>` : `<span class="text-muted fst-italic">No remarks</span>`}
+                                        </td>
+                                        <td class="pe-3"><small class="text-body-secondary">${item.feedback_date || ''}</small></td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                    <hr class="my-4 text-secondary opacity-25">
+                `;
+                        });
+
+                        // Add pagination if needed
+                        if (data.totalRecords > 10) {
+                            html += generatePagination(data.currentPage, data.totalPages, data.totalRecords);
+                        }
+
                         contentContainer.innerHTML = html;
 
                         const refreshElement = document.getElementById('feedbackRefreshTime');
@@ -817,88 +676,100 @@
                     }
                 }
 
-                function generateFooter(currentPage, totalPages, totalRecords, perPage) {
-                    let pageItems = '';
-                    const showPagination = totalPages > 1;
+                // Function to generate pagination HTML
+                function generatePagination(currentPage, totalPages, totalRecords) {
+                    currentPage  = parseInt(currentPage,  10);
+                    totalPages   = parseInt(totalPages,   10);
+                    totalRecords = parseInt(totalRecords, 10);
 
-                    if (showPagination) {
-                        const addPage = (page, active) => {
-                            pageItems += `<li class="page-item ${active ? 'active' : ''}"><a class="page-link" href="javascript:void(0)" onclick="goToPage(${page})">${page}</a></li>`;
-                        };
-                        const addEllipsis = () => {
-                            pageItems += `<li class="page-item disabled"><span class="page-link">…</span></li>`;
-                        };
-
-                        if (totalPages <= 7) {
-                            for (let i = 1; i <= totalPages; i++) {
-                                addPage(i, i === currentPage);
-                            }
-                        } else {
-                            addPage(1, currentPage === 1);
-                            if (currentPage > 3) {
-                                addEllipsis();
-                            }
-                            const start = Math.max(2, currentPage - 1);
-                            const end = Math.min(totalPages - 1, currentPage + 1);
-                            for (let i = start; i <= end; i++) {
-                                addPage(i, i === currentPage);
-                            }
-                            if (currentPage < totalPages - 2) {
-                                addEllipsis();
-                            }
-                            addPage(totalPages, currentPage === totalPages);
+                    // Build the set of page numbers to display (with null = ellipsis)
+                    function pageNumbers(cur, total) {
+                        if (total <= 7) {
+                            return Array.from({ length: total }, (_, i) => i + 1);
                         }
+                        const delta  = 2;          // pages either side of current
+                        const left   = cur - delta;
+                        const right  = cur + delta;
+                        const pages  = [];
+
+                        // always show first page
+                        pages.push(1);
+
+                        // ellipsis after 1 if window doesn't start at 2
+                        if (left > 2) pages.push(null);
+
+                        for (let i = Math.max(2, left); i <= Math.min(total - 1, right); i++) {
+                            pages.push(i);
+                        }
+
+                        // ellipsis before last if window doesn't end at total-1
+                        if (right < total - 1) pages.push(null);
+
+                        // always show last page
+                        pages.push(total);
+
+                        return pages;
                     }
 
-                    const paginationHtml = showPagination ? `
-                <nav aria-label="Feedback pagination" class="programme-dt-pagination">
-                    <ul class="pagination feedback-pagination flex-wrap gap-1 mb-0">
-                        <li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous">
-                                <i class="bi bi-chevron-left" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                        ${pageItems}
-                        <li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
-                            <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next">
-                                <i class="bi bi-chevron-right" aria-hidden="true"></i>
-                            </a>
-                        </li>
-                    </ul>
-                </nav>` : '<div></div>';
+                    let items = '';
 
-                    return `
-            <div class="fdt-pagination-wrap programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3 px-3 px-md-4 py-3 border-top">
-                ${paginationHtml}
-                <div class="fdt-records-info programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto text-secondary small">
-                    <label class="d-inline-flex align-items-center gap-2 mb-0">
-                        <span>Showing</span>
-                        <select class="form-select form-select-sm fdt-page-size-select" aria-label="Items per page">
-                            ${buildPageSizeSelectHtml(perPage)}
-                        </select>
-                    </label>
-                    <span>of <strong class="text-body">${Number(totalRecords).toLocaleString()}</strong> items</span>
-                </div>
-            </div>`;
+                    // First + Prev
+                    items += `<li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(1)" aria-label="First"><i class="fas fa-angle-double-left"></i></a></li>`;
+                    items += `<li class="page-item ${currentPage == 1 ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage - 1})" aria-label="Previous"><i class="fas fa-angle-left"></i></a></li>`;
+
+                    // Numbered pages + ellipsis
+                    pageNumbers(currentPage, totalPages).forEach(function(p) {
+                        if (p === null) {
+                            items += `<li class="page-item disabled"><span class="page-link px-1 border-0 bg-transparent text-muted">…</span></li>`;
+                        } else {
+                            items += `<li class="page-item ${p == currentPage ? 'active' : ''}">
+                                <a class="page-link" href="javascript:void(0)" onclick="goToPage(${p})">${p}</a></li>`;
+                        }
+                    });
+
+                    // Next + Last
+                    items += `<li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${currentPage + 1})" aria-label="Next"><i class="fas fa-angle-right"></i></a></li>`;
+                    items += `<li class="page-item ${currentPage == totalPages ? 'disabled' : ''}">
+                        <a class="page-link" href="javascript:void(0)" onclick="goToPage(${totalPages})" aria-label="Last"><i class="fas fa-angle-double-right"></i></a></li>`;
+
+                    let pagination = `
+            <nav aria-label="Feedback pagination" class="pb-2">
+                <ul class="pagination feedback-pagination justify-content-center mb-0">
+                    ${items}
+                </ul>
+            </nav>
+            
+            <div class="text-center text-body-secondary mt-3">
+                <small class="badge rounded-pill text-bg-light border fw-normal px-3 py-2">
+                    Showing <strong class="text-body">${((currentPage - 1) * 10) + 1}</strong>
+                    – <strong class="text-body">${Math.min(currentPage * 10, totalRecords)}</strong>
+                    of <strong class="text-body">${totalRecords}</strong> records
+                </small>
+            </div>
+        `;
+
+                    return pagination;
                 }
 
                 // Function to update filters with new data
                 function updateFilters(data) {
-                    console.log('Updating filters with data:', data); // Debug log
-
-                    if (programSelect) {
-                        if (data.programs && Object.keys(data.programs).length > 0) {
-                            let options = '<option value="">Program Name</option>';
-                            Object.entries(data.programs).forEach(([key, value]) => {
-                                const selected = key == data.currentProgram ? 'selected' : '';
-                                options += `<option value="${key}" ${selected}>${value}</option>`;
-                            });
-                            programSelect.innerHTML = options;
-                        } else {
-                            programSelect.innerHTML = '<option value="">No programs available</option>';
-                        }
-                        programSelect.value = data.currentProgram || '';
-                        updateProgramSelectStyle();
+                    // Update program dropdown via Choices.js.
+                    // IMPORTANT: do NOT call setChoiceByValue here — it fires a native 'change' event
+                    // which would trigger loadFeedbackData(1) and reset the page back to 1 after every
+                    // AJAX response. Instead, embed selected:true in the choices array so setChoices
+                    // marks the correct option internally without dispatching any change event.
+                    if (programChoices && data.programs) {
+                        const currentProgram = data.currentProgram ? String(data.currentProgram) : '';
+                        const newChoices = [
+                            { value: '', label: 'All Programs', placeholder: true, selected: currentProgram === '' }
+                        ];
+                        Object.entries(data.programs).forEach(([key, value]) => {
+                            newChoices.push({ value: String(key), label: value, selected: String(key) === currentProgram });
+                        });
+                        programChoices.setChoices(newChoices, 'value', 'label', true);
                     }
 
                     if (data.selectedFacultyTypes && data.selectedFacultyTypes.length > 0) {
@@ -961,56 +832,30 @@
 
                 // Reset button
                 resetButton.addEventListener('click', function() {
-                    console.log('Resetting filters');
-                    document.querySelectorAll('input[type="checkbox"].faculty-type-checkbox').forEach(function(cb) {
-                        cb.checked = false;
+                    // Reset all filters
+                    document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+                    document.querySelectorAll('input[type="radio"]').forEach(rb => {
+                        if (rb.value === 'current') rb.checked = true;
                     });
-                    document.querySelectorAll('input[type="radio"]').forEach(function(rb) {
-                        if (rb.value === 'current') {
-                            rb.checked = true;
-                        }
-                    });
-                    setFdtChoiceValue(facultySearch, '');
-                    if (programSelect) {
-                        programSelect.value = '';
-                        updateProgramSelectStyle();
-                    }
-                    if (fromDateEl) {
-                        fromDateEl.value = '';
-                    }
-                    if (toDateEl) {
-                        toDateEl.value = '';
-                    }
-                    if (fdtTimePeriodPicker) {
-                        fdtTimePeriodPicker.clear();
-                    }
-                    if (tableSearch) {
-                        tableSearch.value = '';
-                    }
-                    if (tableSearchMobile) {
-                        tableSearchMobile.value = '';
-                    }
-                    updateFilterDropdownLabels();
-                    toggleFacultyDropdownVisibility();
+                    document.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
+                    if (programChoices) { programChoices.setChoiceByValue(''); }
+                    if (facultySearch) { facultySearch.value = ''; }
+                    if (suggestionsList) { suggestionsList.style.display = 'none'; }
+
+                    // Load data with reset filters
                     loadFeedbackData(1);
                 });
 
                 // Initialize with current page
                 window.goToPage = function(page) {
-                    console.log('Going to page:', page);
                     if (page >= 1) {
                         loadFeedbackData(page);
                     }
                 };
 
-                toggleFacultyDropdownVisibility();
-                updateFilterDropdownLabels();
-                const initFacultyPromise = getSelectedFacultyTypes().length > 0
-                    ? loadFacultyDropdown(true)
-                    : Promise.resolve();
-                initFacultyPromise.then(function() {
-                    loadFeedbackData(currentPage);
-                });
+                // Initial load
+                initProgramChoices();
+                loadFeedbackData(currentPage);
             });
 
             function printFeedbackDetailsEscapeHtml(s) {

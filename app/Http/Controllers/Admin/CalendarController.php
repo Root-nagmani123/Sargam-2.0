@@ -1480,7 +1480,7 @@ class CalendarController extends Controller
                         ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
                         ->where('tf.is_submitted', 1);
                 })
-                // Modified: Show past sessions OR today's sessions if end time has passed
+                // Show only sessions whose end time has passed
                 ->whereRaw("
                 TIMESTAMP(
                     t.END_DATE,
@@ -1488,7 +1488,7 @@ class CalendarController extends Controller
                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                         '%h:%i %p'
                     )
-                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+                ) <= NOW()
             ");
 
             if (hasRole('Student-OT')) {
@@ -1654,7 +1654,7 @@ class CalendarController extends Controller
                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                         '%h:%i %p'
                     )
-                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+                ) <= NOW()
             ");
 
             // ===== OT GROUP FILTER =====
