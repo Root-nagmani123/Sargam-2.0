@@ -2,7 +2,7 @@
 
 @section('title', 'Complaint Sub-Category - Sargam | Lal Bahadur')
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <x-breadcrum title="Complaint Sub-Category" />
     

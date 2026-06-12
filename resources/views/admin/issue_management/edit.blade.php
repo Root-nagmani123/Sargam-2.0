@@ -27,7 +27,7 @@
 </style>
 @endsection
 
-@section('setup_content')
+@section('content')
 <div class="container-fluid py-3">
     <x-breadcrum title="Edit Issue" />
     <div class="datatables">
