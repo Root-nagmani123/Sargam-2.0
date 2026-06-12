@@ -132,6 +132,38 @@
                                         <span class="hide-menu small small-sm-normal text-nowrap">City</span>
                                     </a></li>
                             </div>
+
+                            <!-- ADDRESS -->
+                            <li class="nav-small-cap fs-2 fw-bold py-2 text-white me-2 mb-2" style="background: #4077ad;
+                                border-radius: 30px 0px 0px 30px;
+                                width: 100%;
+                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
+                                min-width: 250px;">
+                                <a class="text-white d-flex justify-content-between align-items-center"
+                                    data-bs-toggle="collapse" href="#sidebarMenu" role="button" aria-expanded="false"
+                                    aria-controls="sidebarMenu">
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Sidebar</span>
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                </a>
+                            </li>
+                            <div class="collapse" id="sidebarMenu">
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="{{ route('sidebar.categories.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Category</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="{{ route('sidebar.menu-groups.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Menu Groups</span>
+                                    </a>
+                                </li>
+                                <li class="sidebar-item">
+                                    <a class="sidebar-link" href="{{ route('sidebar.menus.index') }}">
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Menus</span>
+                                    </a>
+                                </li>
+                            </div>
                         </ul>
                         @endif
 

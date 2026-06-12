@@ -7,7 +7,8 @@ use App\Models\CoursesMaster;
 use App\Models\CourseTeamMaster;
 use Illuminate\Http\Request;
 use App\Http\Requests\ProgrammeRequest;
-use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster, UserRoleMaster};
+use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster};
+use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
 use App\DataTables\CourseMasterDataTable;
@@ -57,11 +58,13 @@ class CourseController extends Controller
     public function getCoursesByStatus(Request $request)
     {
         $status = $request->input('status', 'active');
+        $data_course_id = get_Role_by_course();
         $currentDate = Carbon::now()->format('Y-m-d');
         $epoch = DataTableRedisCache::readListEpoch(CourseMasterDataTable::LISTING_CACHE_EPOCH_KEY);
         $cacheKey = 'programme_get_courses_by_status:v1:' . md5(json_encode([
             'epoch' => $epoch,
             'status' => $status,
+            'data_course_id' => $data_course_id,
             'date' => $currentDate,
         ]));
 
@@ -72,15 +75,21 @@ class CourseController extends Controller
                 'seconds' => 'PROGRAMME_DATATABLE_CACHE_SECONDS',
             ],
             'CourseController@getCoursesByStatus',
-            function () use ($status, $currentDate) {
+            function () use ($status, $currentDate, $data_course_id) {
                 if ($status === 'active') {
-                    $courses = CourseMaster::where('end_date', '>=', $currentDate)
-                        ->orderBy('course_name')
+                    $q = CourseMaster::where('end_date', '>=', $currentDate);
+                    if (! empty($data_course_id)) {
+                        $q->whereIn('pk', $data_course_id);
+                    }
+                    $courses = $q->orderBy('course_name')
                         ->pluck('course_name', 'pk')
                         ->toArray();
                 } else {
-                    $courses = CourseMaster::where('end_date', '<', $currentDate)
-                        ->orderBy('course_name')
+                    $q = CourseMaster::where('end_date', '<', $currentDate);
+                    if (! empty($data_course_id)) {
+                        $q->whereIn('pk', $data_course_id);
+                    }
+                    $courses = $q->orderBy('course_name')
                         ->pluck('course_name', 'pk')
                         ->toArray();
                 }
@@ -102,8 +111,21 @@ class CourseController extends Controller
             'Discipline' => 'Discipline',
             'Club Society' => 'Club Society'
         ];
-        $supportingSectionList = UserRoleMaster::pluck('user_role_display_name', 'pk')->toArray();
-        return view('admin.programme.create', compact('facultyList', 'roleOptions', 'supportingSectionList'));
+        
+        $isSuperAdmin = hasRole('Super Admin');
+        if ($isSuperAdmin) {
+            $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
+            $selectedSupportingSection = old('supportingsection', '');
+        } else {
+            $userRoleIds = \Illuminate\Support\Facades\DB::table('model_has_roles')
+                ->where('model_id', \Illuminate\Support\Facades\Auth::user()->pk)
+                ->where('model_type', \App\Models\User::class)
+                ->pluck('role_id')
+                ->toArray();
+            $supportingSectionList = Role::whereIn('id', $userRoleIds)->orderBy('name')->pluck('name', 'id')->toArray();
+            $selectedSupportingSection = old('supportingsection', count($userRoleIds) === 1 ? $userRoleIds[0] : '');
+        }
+        return view('admin.programme.create', compact('facultyList', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
     }
 
     public function edit(string $id)
@@ -136,7 +158,17 @@ class CourseController extends Controller
                 'Discipline' => 'Discipline',
                 'Club Society' => 'Club Society'
             ];
-            $supportingSectionList = UserRoleMaster::pluck('user_role_display_name', 'pk')->toArray();
+            $isSuperAdmin = hasRole('Super Admin');
+            if ($isSuperAdmin) {
+                $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
+            } else {
+                $userRoleIds = \Illuminate\Support\Facades\DB::table('model_has_roles')
+                    ->where('model_id', \Illuminate\Support\Facades\Auth::user()->pk)
+                    ->where('model_type', \App\Models\User::class)
+                    ->pluck('role_id')
+                    ->toArray();
+                $supportingSectionList = Role::whereIn('id', $userRoleIds)->orderBy('name')->pluck('name', 'id')->toArray();
+            }
             $selectedSupportingSection = $courseMasterObj->user_role_master_pk ?? '';
             
             return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
@@ -165,7 +197,7 @@ class CourseController extends Controller
             DB::rollBack();
 
             \Log::error('Course creation error: ' . $e->getMessage());
-            return redirect()->back()->with('error', 'Something went wrong. Please try again.');
+            return redirect()->back()->withInput()->with('error', 'Something went wrong. Please try again.');
         }
     } 
 

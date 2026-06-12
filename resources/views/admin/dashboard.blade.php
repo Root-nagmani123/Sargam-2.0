@@ -457,9 +457,18 @@ $notices = get_notice_notification_by_role();
 $hour = (int) date('G');
 $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
 $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
+
+// A user effectively has no access when they hold no role AND no permissions
+// (== empty sidebar / "No groups found"). When that is the case we render
+// nothing but the "No Role Assigned" modal — the dashboard must not show in
+// the background.
+$sargamNoRoleUser = Auth::check()
+    && Auth::user()->getRoleNames()->isEmpty()
+    && Auth::user()->getAllPermissions()->isEmpty();
 @endphp
 
-<div class="container-fluid px-3 px-lg-4">
+@unless($sargamNoRoleUser)
+<div class="container-fluid">
     @if($isMyBirthday ?? false)
     {{-- Birthday Banner with Confetti --}}
     <div class="birthday-banner-wrapper mb-3" id="birthday-banner">
@@ -1203,6 +1212,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
         </div>
     </div>
 </div>
+@endunless
 
 @push('scripts')
 <script>
@@ -1646,4 +1656,85 @@ document.addEventListener('DOMContentLoaded', function() {
 })();
 </script>
 @endpush
+
+@if($sargamNoRoleUser)
+    <!-- No role assigned notice -->
+    <div class="modal fade" id="noRoleModal" tabindex="-1" aria-labelledby="noRoleModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden" style="border-top: 4px solid #004a93 !important;">
+                <div class="modal-body text-center px-4 px-md-5 py-5">
+                    <div class="mx-auto mb-4 d-flex align-items-center justify-content-center rounded-circle bg-warning-subtle" style="width:88px; height:88px;">
+                        <i class="material-icons material-symbols-rounded text-warning-emphasis lh-1" style="font-size:2.5rem;">warning</i>
+                    </div>
+                    <h4 class="fw-bold text-body-emphasis mb-2" id="noRoleModalLabel">No Role Assigned</h4>
+                    <p class="text-body-secondary mb-4 mx-auto" style="max-width:25rem;">
+                        Your account doesn't have any role assigned yet, so you don't have access to any modules.
+                        Please contact your <span class="fw-semibold text-body">administrator</span> to get the appropriate access.
+                    </p>
+                    <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
+                        <form action="{{ route('logout') }}" method="POST" class="m-0 d-grid">
+                            @csrf
+                            <button type="submit" class="btn btn-outline-secondary rounded-3 px-4 py-2 fw-medium">
+                                <i class="bi bi-box-arrow-right me-1"></i> Log out
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @push('scripts')
+    <script>
+        (function () {
+            var el = document.getElementById('noRoleModal');
+            if (!el) return;
+
+            function showWithBootstrap() {
+                if (window.bootstrap && bootstrap.Modal) {
+                    bootstrap.Modal.getOrCreateInstance(el, { backdrop: 'static', keyboard: false }).show();
+                    return true;
+                }
+                return false;
+            }
+
+            // Fallback when Bootstrap JS is unavailable (e.g. CDN blocked).
+            function showManually() {
+                el.classList.add('show');
+                el.style.display = 'block';
+                el.removeAttribute('aria-hidden');
+                el.setAttribute('aria-modal', 'true');
+                document.body.classList.add('modal-open');
+                if (!document.getElementById('noRoleBackdrop')) {
+                    var bd = document.createElement('div');
+                    bd.className = 'modal-backdrop fade show';
+                    bd.id = 'noRoleBackdrop';
+                    document.body.appendChild(bd);
+                }
+                el.querySelectorAll('[data-bs-dismiss="modal"]').forEach(function (btn) {
+                    btn.addEventListener('click', function () {
+                        el.classList.remove('show');
+                        el.style.display = 'none';
+                        document.body.classList.remove('modal-open');
+                        var bd = document.getElementById('noRoleBackdrop');
+                        if (bd) { bd.remove(); }
+                    });
+                });
+            }
+
+            function init() {
+                if (showWithBootstrap()) return;
+                var tries = 0;
+                var iv = setInterval(function () {
+                    if (showWithBootstrap()) { clearInterval(iv); return; }
+                    if (++tries >= 20) { clearInterval(iv); showManually(); }
+                }, 250);
+            }
+
+            if (document.readyState === 'complete') { init(); }
+            else { window.addEventListener('load', init); }
+        })();
+    </script>
+    @endpush
+@endif
 @endsection

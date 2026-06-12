@@ -1,0 +1,624 @@
+@extends('admin.layouts.master')
+@section('title', 'Sidebar Menus')
+@section('setup_content')
+<style>
+    /* Flex children (page layout) need min-width:0 or wide DataTables cannot scroll */
+    .sidebar-menus-page .datatables,
+    .sidebar-menus-page .card,
+    .sidebar-menus-page .card-body {
+        min-width: 0;
+    }
+    /* Scroll the real DataTables container (injected as #id_wrapper), not the outer fragment */
+    .sidebar-menus-page #sidebar-menu-table_wrapper {
+        width: 100%;
+        max-width: 100%;
+        -webkit-overflow-scrolling: touch;
+    }
+    @media (max-width: 991.98px) {
+        .sidebar-menus-page #sidebar-menu-table_wrapper {
+            max-height: min(70dvh, 32rem);
+            overflow: auto !important;
+        }
+    }
+    @media (min-width: 992px) {
+        .sidebar-menus-page #sidebar-menu-table_wrapper {
+            overflow-x: auto;
+        }
+    }
+    /* Icon picker */
+    .icon-picker-panel {
+        position: absolute;
+        z-index: 1085;
+        left: .75rem;
+        right: .75rem;
+        top: 100%;
+        margin-top: 2px;
+        background: #fff;
+        border: 1px solid #e5e7eb;
+        border-radius: 8px;
+        box-shadow: 0 6px 24px rgba(0, 0, 0, .12);
+        padding: 10px;
+        max-height: 300px;
+        overflow: auto;
+    }
+    .icon-picker-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+        gap: 6px;
+    }
+    .icon-picker-cell {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 4px;
+        padding: 8px 4px;
+        border-radius: 8px;
+        cursor: pointer;
+        border: 1px solid transparent;
+        text-align: center;
+    }
+    .icon-picker-cell:hover { background: #f3f4f6; }
+    .icon-picker-cell.active { background: #dbeafe; border-color: #93c5fd; }
+    .icon-picker-cell .material-symbols-rounded { font-size: 22px; color: #374151; line-height: 1; }
+    .icon-picker-cell small { font-size: 9px; line-height: 1.15; color: #6b7280; word-break: break-word; max-width: 100%; }
+</style>
+<div class="container-fluid py-3 sidebar-menus-page">
+    <x-breadcrum title="Sidebar Menus" />
+    <x-session_message />
+    <section class="datatables" aria-labelledby="sidebar-menus-heading">
+        <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
+            <div class="card-body p-3 p-md-4">
+                <header class="row align-items-center g-3 mb-3 mb-md-4 pb-3 border-bottom border-light">
+                    <div class="col-12 col-md">
+                        <h2 id="sidebar-menus-heading" class="h5 mb-0 fw-semibold text-body">Sidebar Menus</h2>
+                        <p class="small text-secondary mb-0 mt-1 d-none d-md-block">
+                            Use the scrollable area below on phones and tablets to move through all rows and columns.
+                        </p>
+                    </div>
+                    <div class="col-12 col-md-auto">
+                        <a href="#" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2 w-100 w-md-auto px-4 py-2"
+                            onclick="MenuGroupModal(); return false;">
+                            <i class="material-symbols-rounded fs-5" aria-hidden="true">add</i>
+                            <span>Add Menu</span>
+                        </a>
+                    </div>
+                </header>
+                <p class="small text-secondary d-lg-none mb-2" role="note">
+                    Scroll inside the table area vertically and horizontally to see all rows and columns.
+                </p>
+                <div class="w-100 min-w-0" role="region" aria-label="Sidebar menus listing, scrollable on small screens">
+                    <x-data-table.table
+                        :columns="$columns"
+                        :filters="[]"
+                        ajax-route="{{ route('sidebar.menus.index') }}"
+                        id="sidebar-menu-table"
+                        table-class="table align-middle mb-0 text-nowrap"
+                        thead-class="table-light"
+                        :enable-responsive="false"
+                    />
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<div class="modal fade" id="MenuGroupModal" tabindex="-1" aria-labelledby="MenuGroupModalLabel" data-bs-backdrop="static" aria-modal="true" role="dialog">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content rounded-3 shadow">
+            <div class="modal-header border-0 pb-0">
+                <h5 class="modal-title fw-semibold" id="MenuGroupModalLabel">Add / Edit Sidebar Menu Group</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-3">
+                <form id="menuForm" action="" method="POST" >
+                    @csrf
+                    <input type="hidden" name="id" id="menuId">
+                    <div class="row">
+                        <div class="col-6 form-group mb-2">
+                                <label class="form-label" for="category_id">Category <span class="text-danger">*</span></label>
+                                <select class="form-select" name="category_id" id="category_id" onchange="getGroups(this.value)">
+                                    <option value="">Select Category</option>
+                                    @if(isset($categories) && $categories->count() > 0)
+                                    @forelse($categories as $category)
+                                        <option value="{{$category->id}}">{{$category->name}}</option>
+                                    @empty
+                                        <option value="">No Category Found</option>
+                                    @endforelse
+                                @else
+                                    <option value="">No Category Found</option>
+                                @endif
+                            </select>
+                        </div>
+                        <div class="col-6 form-group mb-2">
+                                <label class="form-label" for="group_id">Group <span class="text-danger">*</span></label>
+                                <select class="form-select sidebar-group-select" name="group_id" id="group_id" onchange="getMenus(this.value)">
+                                    <option value="">Select Group</option>
+                                    @if(isset($groups) && $groups->count() > 0)
+                                    @forelse($groups as $group)
+                                        <option value="{{$group->id}}">{{$group->name}}</option>
+                                    @empty
+                                        <option value="">No Group Found</option>
+                                    @endforelse
+                                @else
+                                    <option value="">No Group Found</option>
+                                @endif
+                            </select>
+                        </div>
+                        <div class="col-12 form-group mb-2">
+                            <label class="form-label" for="parent_id">Parent Menu </label><br>
+                            <small class="text-muted fs-2">(If you select this, this menu will be a sub-menu of the selected parent menu)</small>
+                            <select class="form-select sidebar-menu-select" name="parent_id" id="parent_id">
+                                <option value="">Select Parent Menu</option>
+                            </select>
+                        </div>
+                        <div class="col-12 form-group mb-2">
+                            <label class="form-label" for="name">Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="name" id="name" placeholder="Enter menu name" value="{{old('name')}}">
+                        </div>
+                        <div class="col-12 form-group mb-2">
+                            <label class="form-label" for="route">Url </label>
+                            <small class="text-muted fs-2">(If you select parent menu, leave this empty)</small>
+                            <input type="text" class="form-control" name="route" id="route" placeholder="Enter menu url" value="{{old('route')}}">
+                        </div>
+                        <div class="col-12 form-group mb-2">
+                            <label class="form-label" for="permission_name">Permission Name <span class="text-danger">*</span></label>
+                            <input type="text" class="form-control" name="permission_name" id="permission_name" placeholder="Enter menu permission name" value="{{old('permission_name')}}">
+                        </div>
+                        <div class="col-6 form-group mb-2 position-relative">
+                            <label class="form-label" for="icon">Icon</label>
+                            <div class="input-group">
+                                <span class="input-group-text p-0 justify-content-center" style="width:42px;">
+                                    <i class="material-icons material-symbols-rounded" id="iconPreview" style="font-size:20px;color:#374151;">label</i>
+                                </span>
+                                <input type="text" class="form-control" name="icon" id="icon" placeholder="Click to search &amp; pick an icon" value="{{old('icon')}}" autocomplete="off">
+                            </div>
+                            <div class="icon-picker-panel d-none" id="iconPickerPanel">
+                                <div class="icon-picker-grid" id="iconPickerGrid"></div>
+                                <div class="small text-muted mt-2" id="iconPickerMeta"></div>
+                            </div>
+                        </div>
+                        <div class="col-6 form-group mb-2">
+                            <label class="form-label" for="order">Order</label>
+                            <input type="number" class="form-control" name="order" id="order" placeholder="0" value="{{old('order')}}">
+                        </div>
+                        <div class="col-6 form-group mb-2">
+                            <label class="form-label" for="status">Status</label>
+                            <select class="form-select" name="is_active" id="is_active">
+                                <option value="1">Active</option>
+                                <option value="0">Inactive</option>
+                            </select>
+                        </div>
+                        <div class="col-6 form-group mb-2">
+                            <label class="form-label" for="target">Tab</label>
+                            <select class="form-select" name="target" id="target">
+                                <option value="0" selected>Same Tab</option>
+                                <option value="1">New Tab</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="d-flex gap-2 mt-4">
+                        <button type="submit" class="btn btn-success" id="SubmitMenuForm"><i class="bi bi-save me-2"></i>Save</button>
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+@endsection
+@section('script')
+<script src="{{ asset('admin_assets/js/material-symbols-list.js') }}"></script>
+<script>
+    let manualEdit = false;
+
+    $('#permission_name').on('keyup', function () {
+        manualEdit = true;
+    });
+
+    $('#name').on('keyup', function () {
+
+        if (manualEdit) return;
+
+        let name = $(this).val();
+
+        let permission = name
+            .toLowerCase()
+            .trim()
+            .replace(/-/g, '_')          
+            .replace(/[^a-z0-9_\s]/g, '')   
+            .replace(/\s+/g, '_');    
+
+        $('#permission_name').val(permission);
+    });
+
+    $(document).on('click', '.edit-btn', function () {
+        let data = $(this).data('item');
+        if (typeof data === 'string') {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                toastr.error('Could not load menu data for editing');
+                return;
+            }
+        }
+        MenuGroupModal(data);
+    });
+
+    function MenuGroupModal(data = null) {
+        $('input[name="_method"]').remove();
+        manualEdit = false;
+
+        if (data) {
+            $('#menuId').val(data.id);
+            $('#name').val(data.name);
+            $('#route').val(data.route ?? '');
+            $('#permission_name').val(data.permission_name);
+            manualEdit = true;
+            $('#icon').val(data.icon ?? '');
+            $('#order').val(data.order ?? '');
+            $('#is_active').val(data.is_active);
+            $('#target').val(data.target ?? 0);
+            $('#menuForm').attr('action', '/sidebar/menus/' + data.id);
+            $('#menuForm').append('<input type="hidden" name="_method" value="PUT">');
+            populateMenuFormDropdowns(data, function () {
+                $('#MenuGroupModal').modal('show');
+            });
+            return;
+        }
+
+        $('#menuForm')[0].reset();
+        $('#menuId').val('');
+        $('#menuForm').attr('action', '/sidebar/menus');
+        resetParentMenuSelect();
+        $('#MenuGroupModal').modal('show');
+    }
+
+    function resetParentMenuSelect() {
+        $('#parent_id').empty().append('<option value="">Select Parent Menu</option>');
+    }
+
+    function populateMenuFormDropdowns(data, done) {
+        const categoryId = data.category_id;
+        const groupId = data.group_id;
+        const parentId = data.parent_id ? String(data.parent_id) : '';
+
+        $('#category_id').val(categoryId || '');
+
+        if (!categoryId) {
+            $('#group_id').val(groupId || '');
+            loadParentMenus(groupId, data.id, parentId, done);
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('sidebar.getGroups', ':category_id') }}".replace(':category_id', categoryId),
+            type: 'GET',
+            data: { _token: "{{ csrf_token() }}" },
+            success: function (response) {
+                const $groupSelect = $('#group_id');
+                $groupSelect.empty().append('<option value="">Select Group</option>');
+                if (response.success) {
+                    response.groups.forEach(function (group) {
+                        $groupSelect.append('<option value="' + group.id + '">' + group.name + '</option>');
+                    });
+                }
+                $groupSelect.val(groupId || '');
+                loadParentMenus(groupId, data.id, parentId, done);
+            },
+            error: function () {
+                toastr.error('Could not load groups for this category');
+                if (typeof done === 'function') {
+                    done();
+                }
+            }
+        });
+    }
+
+    function loadParentMenus(groupId, excludeMenuId, selectedParentId, done) {
+        resetParentMenuSelect();
+
+        if (!groupId) {
+            if (typeof done === 'function') {
+                done();
+            }
+            return;
+        }
+
+        let url = "{{ route('sidebar.getMenus', ':group_id') }}".replace(':group_id', groupId);
+        if (excludeMenuId) {
+            url += '?exclude_id=' + encodeURIComponent(excludeMenuId);
+        }
+
+        $.ajax({
+            url: url,
+            type: 'GET',
+            data: { _token: "{{ csrf_token() }}" },
+            success: function (response) {
+                if (response.success && response.menus && response.menus.length > 0) {
+                    response.menus.forEach(function (menu) {
+                        $('#parent_id').append('<option value="' + menu.id + '">' + menu.name + '</option>');
+                    });
+                }
+                $('#parent_id').val(selectedParentId || '');
+                if (typeof done === 'function') {
+                    done();
+                }
+            },
+            error: function () {
+                toastr.error('Could not load parent menus');
+                if (typeof done === 'function') {
+                    done();
+                }
+            }
+        });
+    }
+
+    $(document).ready(function () {
+        $.validator.addMethod("nameRegex", function(value, element) {
+            return this.optional(element) || /^[A-Za-z .'-]+$/.test(value);
+        }, "Name can only contain letters, spaces, ., ' and -.");
+
+        // Slug validation (only lowercase, dash)
+        $.validator.addMethod("slugRegex", function(value, element) {
+            return this.optional(element) || /^[a-z0-9-]+$/.test(value);
+        }, "Slug can only contain lowercase letters, numbers and hyphens.");
+
+
+        $("#menuForm").validate({
+            ignore: ".ignore",
+            rules: {
+                group_id: {
+                    required: true,
+                },
+                name: {
+                    required: true,
+                    minlength: 2,
+                    maxlength: 100,
+                    // nameRegex: true,
+                },
+                route: {
+                    required: false,
+                    maxlength: 100,
+                },
+                permission_name: {
+                    required: false,
+                    minlength: 2,
+                    maxlength: 100,
+                },
+                icon: {
+                    maxlength: 100
+                },
+                order: {
+                    required: false,
+                    digits: true
+                },
+                is_active: {
+                    required: true
+                },
+                target: {
+                    required: true
+                }
+            },
+            messages: {
+                group_id: {
+                    required: "Please select group",
+                },
+                name: {
+                    required: "Please enter menu name",
+                    minlength: "Name must be at least 2 characters",
+                    maxlength: "Name must be less than 100 characters"
+                },
+                route: {
+                    required: "Route is required",
+                    maxlength: "Route must be less than 100 characters"
+                },
+                permission_name: {
+                    required: "Permission name is required",
+                    minlength: "Permission name must be at least 2 characters",
+                    maxlength: "Permission name must be less than 100 characters"
+                },
+                icon: {
+                    maxlength: "Icon must be less than 100 characters"
+                },
+                order: {
+                    required: "Order is required",
+                    digits: "Order must be a number"
+                },
+                is_active: {
+                    required: "Please select status"
+                },
+                target: {
+                    required: "Please select tab"
+                }
+            },
+            errorClass: "is-invalid",
+            validClass: "is-valid",
+            errorElement: "div",
+            highlight: function (element) {
+                $(element).addClass("is-invalid").removeClass("is-valid");
+            },
+            unhighlight: function (element) {
+                $(element).removeClass("is-invalid").addClass("is-valid");
+            },
+            errorPlacement: function (error, element) {
+                error.addClass("invalid-feedback");
+                element.closest(".form-group").append(error);
+            },
+            submitHandler: function (form) {
+                let btn = $("#SubmitMenuForm");
+                btn.prop("disabled", true);
+                btn.html('<i class="fa fa-spinner fa-spin"></i> Processing...');
+                form.submit();
+            }
+        });
+
+        $(document).on('change', '.sidebar-menu-status-toggle', function () {
+            let id = $(this).data('id');
+            let value = $(this).is(':checked') ? 1 : 0;
+            let column = $(this).data('column');
+            
+            $.ajax({
+                url: "{{ route('sidebar.menus.status', ':id') }}".replace(':id', id),
+                type: "GET",
+                data: {
+                    _token: "{{ csrf_token() }}",
+                    is_active: value
+                },
+                success: function (response) {
+                    if (response.success) {
+                        toastr.success(response.message);
+                    } else {
+                        toastr.error(response.message);
+                    }
+                },
+                error: function (xhr) {
+                    toastr.error('Something went wrong');
+                }
+            });
+        });
+    });
+
+    function getGroups(category_id)
+    {
+        if(category_id == ''){
+            $('.sidebar-group-select').empty();
+            $('.sidebar-group-select').append('<option value="">Select Group</option>');
+            return;
+        }
+        $.ajax({
+            url: "{{ route('sidebar.getGroups', ':category_id') }}".replace(':category_id', category_id),
+            type: "GET",
+            data: {
+                _token: "{{ csrf_token() }}"
+            },
+            success: function (response) {
+                $('.sidebar-group-select').empty();
+                if (response.success) {
+                    $('.sidebar-group-select').append('<option value="">Select Group</option>');
+                    response.groups.forEach(function (group) {
+                        $('.sidebar-group-select').append('<option value="' + group.id + '">' + group.name + '</option>');
+                    });
+                } else {
+                   $('.sidebar-group-select').append('<option value="">No Group Found</option>');
+                }
+            },
+            error: function (xhr) {
+                toastr.error('Something went wrong');
+            }
+        });
+    }
+
+    function getMenus(group_id)
+    {
+        const excludeMenuId = $('#menuId').val() || null;
+        loadParentMenus(group_id, excludeMenuId, '', null);
+    }
+
+    $(document).on('change', '.sidebar-menu-status-toggle', function () {
+        let id = $(this).data('id');
+        let value = $(this).is(':checked') ? 1 : 0;
+        let column = $(this).data('column');
+        
+        $.ajax({
+            url: "{{ route('sidebar.menus.status', ':id') }}".replace(':id', id),
+            type: "GET",
+            data: {
+                _token: "{{ csrf_token() }}",
+                is_active: value
+            },
+            success: function (response) {
+                if (response.success) {
+                    toastr.success(response.message);
+                } else {
+                    toastr.error(response.message);
+                }
+                $('#sidebar-menu-table').DataTable().ajax.reload();
+            },
+            error: function (xhr) {
+                toastr.error('Something went wrong');
+            }
+        });
+    });
+    // ----- Material Symbols icon picker -----
+    (function () {
+        var ICONS = window.MATERIAL_SYMBOLS || [];
+        var MAX_RENDER = 200;
+        var $input, $preview, $panel, $grid, $meta;
+
+        function updateIconPreview() {
+            var v = ($input.val() || '').trim();
+            $preview.text(v || 'label');
+        }
+
+        function renderGrid(term) {
+            term = (term || '').toLowerCase().trim();
+            var matches = term
+                ? ICONS.filter(function (n) { return n.indexOf(term) !== -1; })
+                : ICONS;
+            var shown = matches.slice(0, MAX_RENDER);
+            var current = ($input.val() || '').trim();
+            var frag = document.createDocumentFragment();
+            shown.forEach(function (name) {
+                var cell = document.createElement('div');
+                cell.className = 'icon-picker-cell' + (name === current ? ' active' : '');
+                cell.setAttribute('data-icon', name);
+                cell.title = name;
+                cell.innerHTML = '<i class="material-icons material-symbols-rounded">' + name + '</i><small>' + name + '</small>';
+                frag.appendChild(cell);
+            });
+            $grid.empty();
+            $grid[0].appendChild(frag);
+            if (!matches.length) {
+                $meta.text(term ? ('No icons match "' + term + '".') : 'No icons available.');
+            } else if (matches.length > shown.length) {
+                $meta.text('Showing ' + shown.length + ' of ' + matches.length + ' — type to refine.');
+            } else {
+                $meta.text(matches.length + ' icon' + (matches.length === 1 ? '' : 's') + '.');
+            }
+        }
+
+        function openPanel() {
+            renderGrid($input.val());
+            $panel.removeClass('d-none');
+        }
+        function closePanel() {
+            $panel.addClass('d-none');
+        }
+
+        $(function () {
+            $input = $('#icon');
+            $preview = $('#iconPreview');
+            $panel = $('#iconPickerPanel');
+            $grid = $('#iconPickerGrid');
+            $meta = $('#iconPickerMeta');
+            if (!$input.length || !$panel.length) return;
+
+            $input.on('focus click', openPanel);
+            $input.on('input', function () {
+                updateIconPreview();
+                renderGrid($input.val());
+                $panel.removeClass('d-none');
+            });
+
+            $grid.on('click', '.icon-picker-cell', function () {
+                $input.val(this.getAttribute('data-icon'));
+                updateIconPreview();
+                closePanel();
+            });
+
+            // Close when clicking/tabbing outside the icon field or panel
+            $(document).on('mousedown', function (e) {
+                if (!$(e.target).closest('#iconPickerPanel, #icon').length) {
+                    closePanel();
+                }
+            });
+
+            // Keep preview in sync whenever the modal opens (add reset & edit prefill)
+            $('#MenuGroupModal').on('shown.bs.modal', function () {
+                updateIconPreview();
+                closePanel();
+            });
+        });
+    })();
+</script>
+@endsection

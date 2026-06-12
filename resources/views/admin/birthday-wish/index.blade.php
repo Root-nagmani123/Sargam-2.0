@@ -58,7 +58,7 @@ $user = Auth::user();
 $senderName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
 @endphp
 
-<div class="container-fluid px-3 px-lg-4 birthday-wish-page">
+<div class="container-fluid birthday-wish-page">
     <x-breadcrum title="Birthday Wishes" />
 
     <div class="row g-4">
