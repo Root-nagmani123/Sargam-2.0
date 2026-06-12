@@ -35,15 +35,18 @@
                     @case('date')
                         <input type="{{ $gf->field_type }}" name="{{ $fieldName }}"
                                class="form-control form-control-sm @error($errorKey) is-invalid @enderror"
+                               @if($gf->is_required) data-required="1" @endif
                                value="{{ $fieldValue }}" placeholder="{{ $gf->placeholder ?? '' }}">
                         @break
                     @case('textarea')
                         <textarea name="{{ $fieldName }}"
                                   class="form-control form-control-sm @error($errorKey) is-invalid @enderror"
+                                  @if($gf->is_required) data-required="1" @endif
                                   rows="2" placeholder="{{ $gf->placeholder ?? '' }}">{{ $fieldValue }}</textarea>
                         @break
                     @case('select')
                         <select name="{{ $fieldName }}"
+                                @if($gf->is_required) data-required="1" @endif
                                 class="form-select form-select-sm {{ str_contains($gf->css_class ?? '', 'select2-field') ? 'select2-dynamic' : '' }} @error($errorKey) is-invalid @enderror">
                             <option value="">-- Select --</option>
                             @if(count($lookupItems) > 0)
