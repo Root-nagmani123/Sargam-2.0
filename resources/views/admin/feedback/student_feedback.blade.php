@@ -127,19 +127,11 @@
     /* Search control */
     .sf-filterbar .sf-search-input { width: 220px; }
 
-    /* Column Visibility panel */
-    .sf-columns-menu {
-        min-width: 420px; max-width: 92vw; padding: 0; border: 0;
-        border-radius: .9rem; box-shadow: 0 .75rem 2rem rgba(16,42,76,.20);
-    }
-    .sf-columns-menu .sf-cols-header {
-        font-weight: 600; font-size: 1.05rem; color: #1f2a37;
-        padding: 1rem 1.25rem .85rem; border-bottom: 1px solid #eef1f5;
-    }
-    .sf-columns-menu .sf-cols-grid {
-        display: flex; flex-wrap: wrap; gap: .65rem; padding: 1.1rem 1.25rem;
-    }
-    .sf-columns-menu .sf-col-chip {
+    /* Column Visibility modal */
+    .sf-cols-modal { border: 0; border-radius: 16px; box-shadow: 0 1.5rem 3rem rgba(16,42,76,.20); }
+    .sf-cols-modal .modal-title { color: #1f2a37; }
+    .sf-cols-grid { display: flex; flex-wrap: wrap; gap: .65rem; }
+    .sf-col-chip {
         display: inline-flex; align-items: center; gap: .55rem; margin: 0;
         flex: 0 0 calc((100% - 1.3rem) / 3);
         border: 1px solid #d6dee8; border-radius: .65rem;
@@ -148,15 +140,11 @@
         white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
         transition: background-color .12s ease, border-color .12s ease;
     }
-    .sf-columns-menu .sf-col-chip:hover { background: #f6f8fb; border-color: #c3d0de; }
-    .sf-columns-menu .sf-col-chip input { margin: 0; flex: 0 0 auto; }
-    .sf-columns-menu .sf-cols-footer {
-        display: flex; justify-content: flex-end;
-        padding: .85rem 1.25rem 1.1rem; border-top: 1px solid #eef1f5;
-    }
+    .sf-col-chip:hover { background: #f6f8fb; border-color: #c3d0de; }
+    .sf-col-chip input { margin: 0; flex: 0 0 auto; }
+    .sf-col-chip:has(input:checked) { border-color: #0d6efd; background: #f1f6fc; }
     @media (max-width: 575.98px) {
-        .sf-columns-menu { min-width: 280px; }
-        .sf-columns-menu .sf-col-chip { flex-basis: calc((100% - .65rem) / 2); }
+        .sf-col-chip { flex-basis: calc((100% - .65rem) / 2); }
     }
 
     /* Flatpickr brand theming (dual-month range) */
@@ -234,13 +222,10 @@
                     </button>
 
                     <div class="ms-auto d-flex align-items-center gap-2">
-                        <div class="dropdown" id="sf-columns-dropdown">
-                            <button type="button" class="btn btn-outline-secondary rounded-1 d-inline-flex align-items-center" style="border:1px solid #d6dee8; color:#6c757d;" id="sf-columns-btn"
-                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
-                                <i class="bi bi-layout-three-columns me-1"></i> Columns
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm sf-columns-menu" id="sf-columns-menu"></ul>
-                        </div>
+                        <button type="button" class="btn btn-outline-secondary rounded-1 d-inline-flex align-items-center" style="border:1px solid #d6dee8; color:#6c757d;" id="sf-columns-btn"
+                            data-bs-toggle="modal" data-bs-target="#sfColumnsModal">
+                            <i class="bi bi-layout-three-columns me-1"></i> Columns
+                        </button>
                         <input type="search" id="sf-search-input"
                             class="form-control rounded-1 sf-search-input d-none" placeholder="Search topic, faculty…">
                         <button type="button" id="sf-search-btn" class="sf-icon-btn" aria-label="Search">
@@ -838,14 +823,10 @@
             sfApplyFilters();
         });
 
-        // Columns: build the "Column Visibility" panel from the active table's headers
+        // Columns: build the "Column Visibility" modal from the active table's headers
         function sfBuildColumnsMenu() {
             const table = $('.tab-pane.active').find('table').first();
-            const $menu = $('#sf-columns-menu').empty();
-
-            $menu.append('<li class="sf-cols-header">Column Visibility</li>');
-
-            const $grid = $('<li><div class="sf-cols-grid"></div></li>').appendTo($menu).find('.sf-cols-grid');
+            const $grid = $('#sf-columns-grid').empty();
             table.find('thead th').each(function(i) {
                 const name = $.trim($(this).text()) || ('Column ' + (i + 1));
                 const visible = $(this).is(':visible');
@@ -855,14 +836,8 @@
                     (visible ? 'checked' : '') + '><span>' + name + '</span></label>'
                 );
             });
-
-            $menu.append(
-                '<li class="sf-cols-footer">' +
-                '<button type="button" class="btn btn-outline-primary rounded-1 px-4 sf-cols-close">Close</button>' +
-                '</li>'
-            );
         }
-        $('#sf-columns-dropdown').on('show.bs.dropdown', sfBuildColumnsMenu);
+        $('#sfColumnsModal').on('show.bs.modal', sfBuildColumnsMenu);
         $(document).on('change', '.sf-col-toggle', function() {
             const idx = parseInt($(this).data('col'), 10);
             const show = $(this).is(':checked');
@@ -870,11 +845,6 @@
             table.find('tr').each(function() {
                 $(this).children().eq(idx).toggle(show);
             });
-        });
-        // Close button dismisses the panel
-        $(document).on('click', '.sf-cols-close', function() {
-            const btn = document.getElementById('sf-columns-btn');
-            if (btn) bootstrap.Dropdown.getOrCreateInstance(btn).hide();
         });
 
         // Rows-per-page change → back to page 1
@@ -951,4 +921,23 @@
         }, 100);
     }
 </script>
+
+{{-- Column Visibility modal --}}
+<div class="modal fade" id="sfColumnsModal" tabindex="-1" aria-labelledby="sfColumnsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content sf-cols-modal">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="sfColumnsModalLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <hr class="mt-0 mb-0 mx-3">
+            <div class="modal-body">
+                <div class="sf-cols-grid" id="sf-columns-grid"></div>
+            </div>
+            <div class="modal-footer border-0 pt-2">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection

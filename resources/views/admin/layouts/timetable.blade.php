@@ -146,7 +146,7 @@
 
     <style id="timetable-layout-header">
         :root {
-            --govt-blue: #1c4f9c;
+            --govt-blue: #101828;
         }
 
         /* Top accessibility / Government of India strip */

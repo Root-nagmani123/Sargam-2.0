@@ -5,7 +5,7 @@
 
 /* CSS Custom Properties */
 :root {
-    --govt-blue-dark: #1e3a5f;
+    --govt-blue-dark: #101828;
     --govt-blue-light: #4a90e2;
     --card-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
     --card-shadow-hover: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -21,7 +21,7 @@
 }
 
 .govt-header-top {
-    background-color: var(--govt-blue-dark) !important;
+    background-color: #101828 !important;
     font-size: 0.875rem;
 }
 
