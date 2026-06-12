@@ -10,7 +10,7 @@
         @php
             $sections = [
                 'Personal Info' => [
-                    'Title' => App\Models\EmployeeMaster::title[$member->title] ?? '',
+                    'Appellation' => optional($member->appellationMaster)->appettation_name ?? '—',
                     'First Name' => $member->first_name,
                     'Middle Name' => $member->middle_name,
                     'Last Name' => $member->last_name,
