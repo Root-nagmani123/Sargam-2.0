@@ -2,6 +2,11 @@
 @section('title', $step->step_name)
 
 @section('setup_content')
+@isset($form)
+    {{-- Dynamic forms: single-page (no-tabs) layout, one AJAX Save & Continue --}}
+    @include('fc.registration.partials.dynamic-step-groups-single')
+@else
+{{-- Legacy hard-coded FC registration step 3: original tabbed layout (unchanged) --}}
 <div class="container py-2 fc-step3-page">
     @isset($form)
         <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
@@ -149,9 +154,11 @@
         </div>
     </div>
 </div>
+@endisset
 @endsection
 
 @push('styles')
+@empty($form)
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
 <style>
     .select2-container--default .select2-selection--single { height: 31px; padding: 2px 8px; font-size: 0.875rem; border: 1px solid #dee2e6; border-radius: 0.25rem; }
@@ -183,9 +190,11 @@
     }
     .fc-step3-page .repeatable-row { margin-bottom: 0.5rem; }
 </style>
+@endempty
 @endpush
 
 @push('scripts')
+@empty($form)
 <script src="{{ asset('admin_assets/libs/select2/dist/js/select2.full.min.js') }}"></script>
 <script>
 function addGroupRow(groupName, groupId, maxRows) {
@@ -285,4 +294,5 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
 });
 </script>
 @include('fc.registration.partials.group-tabs-activate-script')
+@endempty
 @endpush
