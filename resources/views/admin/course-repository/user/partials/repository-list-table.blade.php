@@ -32,7 +32,7 @@
                                 $routeUrl = route('admin.course-repository.user.show', $item->pk);
                             }
                             $subCount = $item->children->count() ?? 0;
-                            $attachmentCount = $item->documents->count() ?? 0;
+                            $attachmentCount = $item->getTotalDocumentCount();
                         @endphp
                         <tr>
                             <td data-col="sno" class="cru-col-sno ps-3 ps-md-4 text-muted">{{ $loop->iteration }}</td>

@@ -1433,30 +1433,26 @@ class CourseRepositoryController extends Controller
                 $documents_count_array[$child->pk] = $documents_count;
             }
           
-            // List repository details (each may have files and/or a video link)
-            $documentsQuery = CourseRepositoryDetail::where('course_repository_master_pk', $pk)
-                ->whereHas('documents', function ($query) {
-                    $query->where('del_type', 1);
-                })
-                ->with([
-                    'documents' => function ($query) {
-                        $query->where('del_type', 1)->orderBy('pk', 'desc');
-                    },
-                    'course',
-                    'subject',
-                    'topic',
-                    'author',
-                ]);
-
             // Apply filters if provided
-            $date = $request->query('date');
-            $coursePk = $request->query('course');
+            $date      = $request->query('date');
+            $coursePk  = $request->query('course');
             $subjectPk = $request->query('subject');
-            $week = $request->query('week');
+            $week      = $request->query('week');
             $facultyPk = $request->query('faculty');
 
+            // Query CourseRepositoryDocument so the view can access $doc->upload_document,
+            // $doc->file_title, $doc->detail->course, $doc->public_file_url, etc.
+            $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
+                ->where(function ($query) use ($pk) {
+                    $query->where('course_repository_master_pk', $pk)
+                        ->orWhereIn('course_repository_details_pk',
+                            CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
+                        );
+                })
+                ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author']);
+
             if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
-                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
+                $documentsQuery->whereHas('detail', function ($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
                     if ($coursePk) {
                         $detailQuery->where('course_master_pk', $coursePk);
                     }

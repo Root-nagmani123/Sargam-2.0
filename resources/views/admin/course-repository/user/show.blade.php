@@ -169,7 +169,7 @@ $documentCount = $documents->count();
                                         <small>
                                             @if($doc->detail && $doc->detail->author)
                                             {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                            @elseif($doc->detail && $doc->detail->author_name)
+                                            @elseif($doc->detail && $doc->detail->author_name && !is_numeric($doc->detail->author_name))
                                             {{ Str::limit($doc->detail->author_name, 15) }}
                                             @else
                                             N/A
