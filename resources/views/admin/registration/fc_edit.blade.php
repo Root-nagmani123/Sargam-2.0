@@ -313,7 +313,7 @@
             </div>
 
     </div>
-@section('scripts')
+@push('scripts')
     <script>
         // Track used options
         const usedOptions = new Set();
@@ -625,5 +625,5 @@
             }
         });
     </script>
-@endsection
+@endpush
 @endsection
