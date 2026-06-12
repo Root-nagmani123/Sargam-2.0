@@ -33,6 +33,16 @@
     .attendance-page .toolbar-control:focus { border-color: #0d4d92; box-shadow: 0 0 0 .2rem rgba(13, 77, 146, .12); }
     .attendance-page .btn-tool { border: 1px solid #d7dce5; background: #fff; color: #374151; border-radius: .6rem; font-weight: 600; font-size: .88rem; }
     .attendance-page .btn-tool:hover { background: #f1f4f9; }
+    /* Column Visibility modal */
+    .col-vis-modal { border: 0; border-radius: 16px; box-shadow: 0 1.5rem 3rem rgba(16, 24, 40, .2); }
+    .col-vis-modal .modal-title { color: #111827; }
+    .col-vis-chip { border: 1px solid #e2e6ee; border-radius: 10px; padding: .55rem .75rem; cursor: pointer; transition: border-color .15s ease, background .15s ease; color: #374151; }
+    .col-vis-chip:hover { border-color: #0d4d92; background: #f8fafc; }
+    .col-vis-chip:has(input:checked) { border-color: #0d4d92; background: #f1f6fc; }
+    /* Expandable table search */
+    .attendance-page #tableSearchInput { width: 0; min-width: 0; padding-left: 0; padding-right: 0; margin-right: 0; border-color: transparent; opacity: 0; overflow: hidden; transition: width .2s ease, opacity .2s ease, padding .2s ease, margin .2s ease; }
+    .attendance-page #tableSearchWrap.open #tableSearchInput { width: 200px; min-width: 200px; padding-left: .6rem; padding-right: .6rem; margin-right: .4rem; border: 1px solid #d7dce5; border-radius: .6rem; opacity: 1; }
+    .attendance-page #tableSearchInput:focus { border-color: #0d4d92; box-shadow: 0 0 0 .2rem rgba(13, 77, 146, .12); }
     .attendance-page .btn-reset { border: 1px solid #ef4444; background: #fff; color: #ef4444; border-radius: .6rem; font-weight: 600; font-size: .88rem; }
     .attendance-page .btn-reset:hover { background: #ef4444; color: #fff; }
 
@@ -171,33 +181,25 @@
                     </button>
 
                     <div class="ms-auto d-flex align-items-center gap-2">
-                        {{-- Columns toggle --}}
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-tool d-inline-flex align-items-center gap-2"
-                                type="button" id="columnsBtn" data-bs-toggle="dropdown" data-bs-auto-close="outside"
-                                aria-expanded="false">
-                                Columns <i class="bi bi-layout-three-columns"></i>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end shadow-sm p-2" style="min-width:210px;"
-                                aria-labelledby="columnsBtn">
-                                @php $columns = ['S. No.', 'Date & Time', 'Venue', 'Group', 'Topic', 'Faculty', 'Attendance Status', 'Duty Type', 'Exemption', 'Doc / Comment']; @endphp
-                                @foreach($columns as $i => $colName)
-                                <li>
-                                    <label class="dropdown-item d-flex align-items-center gap-2 rounded-2">
-                                        <input type="checkbox" class="form-check-input m-0 column-toggle"
-                                            data-col="{{ $i }}" checked>
-                                        <span class="small">{{ $colName }}</span>
-                                    </label>
-                                </li>
-                                @endforeach
-                            </ul>
-                        </div>
-
-                        {{-- Search / Apply --}}
-                        <button type="submit" class="btn btn-sm btn-tool d-inline-flex align-items-center"
-                            id="applyFilters" title="Apply filters" aria-label="Apply filters">
-                            <i class="bi bi-search"></i>
+                        {{-- Columns toggle (opens Column Visibility modal) --}}
+                        @php $columns = ['S. No.', 'Date & Time', 'Venue', 'Group', 'Topic', 'Faculty', 'Attendance Status', 'Duty Type', 'Exemption', 'Doc / Comment']; @endphp
+                        <button class="btn btn-sm btn-tool d-inline-flex align-items-center gap-2"
+                            type="button" id="columnsBtn" data-bs-toggle="modal"
+                            data-bs-target="#columnVisibilityModal">
+                            Columns <i class="bi bi-layout-three-columns"></i>
                         </button>
+
+                        {{-- Table search (client-side, expandable) --}}
+                        <div class="d-inline-flex align-items-center" id="tableSearchWrap">
+                            <input type="text" id="tableSearchInput" class="form-control form-control-sm"
+                                placeholder="Search records…" aria-label="Search attendance table"
+                                autocomplete="off">
+                            <button type="button" class="btn btn-sm btn-tool d-inline-flex align-items-center"
+                                id="tableSearchBtn" title="Search records" aria-label="Search records"
+                                aria-expanded="false">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -333,67 +335,71 @@
         @endif
     </div>
 
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('filterForm');
-        const archiveModeInput = document.getElementById('archive_mode_input');
-        const filterActive = document.getElementById('filterActive');
-        const filterArchive = document.getElementById('filterArchive');
-        const clearFilters = document.getElementById('clearFilters');
-        const applyFilters = document.getElementById('applyFilters');
-
-        // 1. Toggle Button Logic
-        function setArchiveMode(mode) {
-            archiveModeInput.value = mode;
-            form.submit();
-        }
-
-        filterActive.addEventListener('click', function() {
-            if (archiveModeInput.value !== 'active') {
-                setArchiveMode('active');
-            }
-        });
-
-        filterArchive.addEventListener('click', function() {
-            if (archiveModeInput.value !== 'archive') {
-                setArchiveMode('archive');
-            }
-        });
-
-        // 2. Clear Filters Logic
-        clearFilters.addEventListener('click', function() {
-            document.getElementById('filter_date').value = '';
-            const statusSelect = document.getElementById('filter_status');
-            if (statusSelect) statusSelect.value = '';
-
-            const courseSelect = document.getElementById('filter_course');
-            if (courseSelect) {
-                courseSelect.value = '';
-                if ($.fn.select2 && $(courseSelect).hasClass('select2-hidden-accessible')) {
-                    $(courseSelect).val('').trigger('change');
-                }
-            }
-
-            archiveModeInput.value = @json($archiveMode ?? 'active');
-            form.submit();
-        });
-
-        // 3. Apply Filters Logic (Ensure it explicitly submits the form)
-        applyFilters.addEventListener('click', function(e) {
-            e.preventDefault();
-            form.submit();
-        });
-    });
-    </script>
+    {{-- Column Visibility modal --}}
+    <div class="modal fade" id="columnVisibilityModal" tabindex="-1"
+        aria-labelledby="columnVisibilityLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content col-vis-modal">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="columnVisibilityLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <hr class="mt-0 mb-0 mx-3">
+                <div class="modal-body">
+                    <div class="row g-2">
+                        @foreach($columns as $i => $colName)
+                        <div class="col-12 col-sm-6 col-md-4">
+                            <label class="col-vis-chip d-flex align-items-center gap-2 mb-0">
+                                <input type="checkbox" class="form-check-input m-0 column-toggle"
+                                    data-col="{{ $i }}" checked>
+                                <span class="small text-truncate">{{ $colName }}</span>
+                            </label>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-2">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     {{-- Front-end enhancements: tooltips, client-side pagination, column toggle, CSV download --}}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Tooltips
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'));
-        tooltipTriggerList.map(function(tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl);
-        });
+        // Tooltips (guarded: a missing/blocked Bootstrap must not kill the rest of the script)
+        try {
+            if (window.bootstrap && bootstrap.Tooltip) {
+                [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+                    .forEach(function(el) { new bootstrap.Tooltip(el); });
+            }
+        } catch (e) { /* ignore tooltip init errors */ }
+
+        // ---- Expandable client-side search (wired before the table guard so the
+        //      icon always toggles, even when the current view has no records) ----
+        var applySearch = function() {};   // replaced with the real impl once a table exists
+        (function() {
+            var wrap = document.getElementById('tableSearchWrap');
+            var btn = document.getElementById('tableSearchBtn');
+            var input = document.getElementById('tableSearchInput');
+            if (!wrap || !btn || !input) return;
+            btn.addEventListener('click', function() {
+                var open = wrap.classList.toggle('open');
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (open) {
+                    input.focus();
+                } else if (input.value) {   // clear search on collapse
+                    input.value = '';
+                    applySearch('');
+                }
+            });
+            input.addEventListener('input', function() { applySearch(this.value); });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') e.preventDefault();   // keep it client-side
+                if (e.key === 'Escape') btn.click();         // collapse + clear
+            });
+        })();
 
         var table = document.getElementById('attendanceTable');
         if (!table) return;
@@ -404,20 +410,54 @@
         var perPageSelect = document.getElementById('perPageSelect');
         var pager = document.getElementById('tablePager');
         var totalItemsEl = document.getElementById('totalItems');
-        var total = rows.length;
         var perPage = parseInt(perPageSelect.value, 10) || 10;
         var currentPage = 1;
 
-        if (totalItemsEl) totalItemsEl.textContent = total;
+        // Pre-compute a lowercased text haystack per row for client-side search
+        var haystacks = rows.map(function(r) {
+            return (r.textContent || '').toLowerCase().replace(/\s+/g, ' ');
+        });
+        var query = '';
+
+        function getFiltered() {
+            if (!query) return rows;
+            return rows.filter(function(r, i) {
+                return haystacks[i].indexOf(query) !== -1;
+            });
+        }
 
         function renderRows() {
+            var data = getFiltered();
+            var total = data.length;
+            if (totalItemsEl) totalItemsEl.textContent = total;
+
             var pages = Math.max(1, Math.ceil(total / perPage));
             if (currentPage > pages) currentPage = pages;
             var start = (currentPage - 1) * perPage;
             var end = start + perPage;
-            rows.forEach(function(r, i) {
-                r.style.display = (i >= start && i < end) ? '' : 'none';
-            });
+
+            // Hide everything, then reveal the current page of the filtered set
+            rows.forEach(function(r) { r.style.display = 'none'; });
+            data.slice(start, end).forEach(function(r) { r.style.display = ''; });
+
+            // No-match placeholder row
+            var noRes = document.getElementById('noSearchResultRow');
+            if (total === 0) {
+                if (!noRes) {
+                    noRes = document.createElement('tr');
+                    noRes.id = 'noSearchResultRow';
+                    var td = document.createElement('td');
+                    td.colSpan = 10;
+                    td.className = 'text-center text-muted py-4';
+                    td.textContent = 'No records match your search.';
+                    noRes.appendChild(td);
+                    tbody.appendChild(noRes);
+                }
+                noRes.style.display = '';
+            } else if (noRes) {
+                noRes.style.display = 'none';
+            }
+
             buildPager(pages);
         }
 
@@ -473,6 +513,12 @@
                 renderRows();
             });
         }
+        // Connect the search box (wired above the table guard) to the renderer
+        applySearch = function(val) {
+            query = (val || '').trim().toLowerCase();
+            currentPage = 1;
+            renderRows();
+        };
         renderRows();
 
         // ---- Column show/hide toggle ----

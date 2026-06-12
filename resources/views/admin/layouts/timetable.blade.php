@@ -400,6 +400,9 @@
         }
     </script>
 
+    @stack('scripts')
+    @yield('scripts')
+
 </body>
 
 </html>
