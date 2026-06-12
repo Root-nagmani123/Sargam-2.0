@@ -39,7 +39,7 @@ class FeedbackController extends Controller
         $this->middleware('auth');
     }
 
-    public function database(Request $request)
+    public function database(Request $request, \App\DataTables\FeedbackDatabaseDataTable $dataTable)
     {
         try {
             $courseType = $request->get('course_type', 'current');
@@ -55,7 +55,7 @@ class FeedbackController extends Controller
                 ->orderBy('full_name')
                 ->get();
 
-            return view('admin.feedback.feedback_database', compact('courses', 'faculties', 'courseType'));
+            return $dataTable->render('admin.feedback.feedback_database', compact('courses', 'faculties', 'courseType'));
         } catch (\Exception $e) {
             \Log::error('Error in FeedbackController@database: ' . $e->getMessage());
 
@@ -119,20 +119,34 @@ class FeedbackController extends Controller
             ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
             ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
             ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-            ->where('t.course_master_pk', $request->course_id)
             ->where('tf.is_submitted', 1)
             ->whereNotNull('tf.content')
             ->whereNotNull('tf.presentation')
             ->where('tf.content', '!=', '')
             ->where('tf.presentation', '!=', '');
 
-        /* 🔍 Filters */
-        if ($request->search_param === 'faculty' && $request->filled('faculty_id')) {
+        // Filter by course if specified
+        if ($request->filled('course_id')) {
+            $query->where('t.course_master_pk', $request->course_id);
+        }
+
+        /* 🔍 Filters - all apply simultaneously */
+        if ($request->filled('faculty_id')) {
             $query->where('f.pk', $request->faculty_id);
         }
 
-        if ($request->search_param === 'topic' && $request->filled('topic_value')) {
+        if ($request->filled('topic_value')) {
             $query->where('t.subject_topic', 'like', "%{$request->topic_value}%");
+        }
+
+        if ($request->filled('search_term')) {
+            $s = $request->search_term;
+            $query->where(function ($q) use ($s) {
+                $q->where('f.full_name', 'LIKE', "%{$s}%")
+                  ->orWhere('c.course_name', 'LIKE', "%{$s}%")
+                  ->orWhere('t.subject_topic', 'LIKE', "%{$s}%")
+                  ->orWhere('f.email_id', 'LIKE', "%{$s}%");
+            });
         }
 
         $query->groupBy(
@@ -144,8 +158,22 @@ class FeedbackController extends Controller
             't.subject_topic',
             't.START_DATE',
             't.pk'
-        )
-            ->orderBy('t.START_DATE', 'ASC')
+        );
+
+        // Conditional filter (content/presentation with comparison operator)
+        if ($request->filled('cond_field') && $request->filled('cond_operator') && $request->filled('cond_value')) {
+            $allowedFields = ['content', 'presentation'];
+            $allowedOperators = ['>=', '<=', '>', '<', '='];
+            $field = $request->cond_field;
+            $operator = $request->cond_operator;
+            $value = (float) $request->cond_value;
+
+            if (in_array($field, $allowedFields) && in_array($operator, $allowedOperators)) {
+                $query->havingRaw("ROUND(AVG(tf.{$field}) * 20, 2) {$operator} ?", [$value]);
+            }
+        }
+
+        $query->orderBy('t.START_DATE', 'ASC')
             ->orderByRaw("
               COALESCE(
                   TIME_TO_SEC(STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', 1)), '%h:%i %p')),
@@ -164,15 +192,20 @@ class FeedbackController extends Controller
 
             /* ---------------- Validation ---------------- */
             $validated = $request->validate([
-                'course_id'    => 'required|integer',
-                'search_param' => 'nullable|string|in:all,faculty,topic',
+                'course_id'    => 'nullable|integer',
+                'search_param' => 'nullable|string|in:all,faculty,topic,conditional',
                 'faculty_id'   => 'nullable|integer',
                 'topic_value'  => 'nullable|string',
+                'cond_field'   => 'nullable|string|in:content,presentation',
+                'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
+                'cond_value'   => 'nullable|numeric|min:0|max:100',
                 'per_page'     => 'nullable|integer',
                 'page'         => 'nullable|integer',
             ]);
 
-            $this->assertFacultyReportCourseAccess($request, (int) $validated['course_id']);
+            if (!empty($validated['course_id'])) {
+                $this->assertFacultyReportCourseAccess($request, (int) $validated['course_id']);
+            }
 
             /* ---------------- Base Query ---------------- */
             $query = $this->baseDatabaseQuery($request);
@@ -228,19 +261,26 @@ class FeedbackController extends Controller
     public function getDatabaseFaculties(Request $request)
     {
         try {
-            $request->validate(['course_id' => 'required|integer']);
+            $request->validate(['course_id' => 'nullable|integer']);
 
-            $this->assertFacultyReportCourseAccess($request, (int) $request->course_id);
+            if ($request->filled('course_id')) {
+                $this->assertFacultyReportCourseAccess($request, (int) $request->course_id);
+            }
 
-            $faculties = DB::table('topic_feedback as tf')
+            $facultyQuery = DB::table('topic_feedback as tf')
                 ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
                 ->join('faculty_master as f', 'tf.faculty_pk', '=', 'f.pk')
-                ->where('t.course_master_pk', $request->course_id)
                 ->where('tf.is_submitted', 1)
                 ->whereNotNull('tf.content')
                 ->whereNotNull('tf.presentation')
                 ->where('tf.content', '!=', '')
-                ->where('tf.presentation', '!=', '')
+                ->where('tf.presentation', '!=', '');
+
+            if ($request->filled('course_id')) {
+                $facultyQuery->where('t.course_master_pk', $request->course_id);
+            }
+
+            $faculties = $facultyQuery
                 ->select('f.pk', 'f.full_name')
                 ->distinct()
                 ->orderBy('f.full_name')
@@ -284,11 +324,13 @@ class FeedbackController extends Controller
     {
         try {
             $validated = $request->validate([
-                'course_id'    => 'required|integer',
+                'course_id'    => 'nullable|integer',
                 'export_type'  => 'required|in:excel,csv,pdf',
-                'search_param' => 'nullable|string|in:all,faculty,topic',
                 'faculty_id'   => 'nullable|integer',
                 'topic_value'  => 'nullable|string',
+                'cond_field'   => 'nullable|string|in:content,presentation',
+                'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
+                'cond_value'   => 'nullable|numeric|min:0|max:100',
             ]);
 
             $data = $this->baseDatabaseQuery($request)->get();
@@ -337,24 +379,40 @@ class FeedbackController extends Controller
     private function buildFeedbackDatabaseExportContext(Request $request): array
     {
         $request->validate([
-            'course_id'    => 'required|integer',
-            'search_param' => 'nullable|string|in:all,faculty,topic',
+            'course_id'    => 'nullable|integer',
             'faculty_id'   => 'nullable|integer',
             'topic_value'  => 'nullable|string',
+            'search_term'  => 'nullable|string|max:200',
+            'cond_field'   => 'nullable|string|in:content,presentation',
+            'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
+            'cond_value'   => 'nullable|numeric|min:0|max:100',
         ]);
 
         DB::statement("SET SESSION group_concat_max_len = 1000000;");
 
         $data = $this->baseDatabaseQuery($request)->get();
 
-        $program = DB::table('course_master')->where('pk', $request->course_id)->value('course_name') ?? '—';
+        $program = $request->filled('course_id')
+            ? (DB::table('course_master')->where('pk', $request->course_id)->value('course_name') ?? '—')
+            : 'All Programs';
 
         $scope = 'All records';
-        if ($request->search_param === 'faculty' && $request->filled('faculty_id')) {
+        $scopeParts = [];
+        if ($request->filled('faculty_id')) {
             $fname = DB::table('faculty_master')->where('pk', $request->faculty_id)->value('full_name');
-            $scope = 'Faculty: ' . ($fname ?? '—');
-        } elseif ($request->search_param === 'topic' && $request->filled('topic_value')) {
-            $scope = 'Topic contains: ' . $request->topic_value;
+            $scopeParts[] = 'Faculty: ' . ($fname ?? '—');
+        }
+        if ($request->filled('topic_value')) {
+            $scopeParts[] = 'Topic: ' . $request->topic_value;
+        }
+        if ($request->filled('search_term')) {
+            $scopeParts[] = 'Search: "' . $request->search_term . '"';
+        }
+        if ($request->filled('cond_field') && $request->filled('cond_value')) {
+            $scopeParts[] = ucfirst($request->cond_field) . ' ' . ($request->cond_operator ?? '>=') . ' ' . $request->cond_value . '%';
+        }
+        if (!empty($scopeParts)) {
+            $scope = implode(' | ', $scopeParts);
         }
 
         $rows = [];
@@ -375,8 +433,30 @@ class FeedbackController extends Controller
             ];
         }
 
+        // Determine visible columns based on request
+        // Column indices: 0=S.No, 1=Faculty, 2=Course, 3=Address, 4=Topic, 5=Content, 6=Presentation, 7=Participants, 8=Date, 9=Comments
+        $allColumnKeys = ['s_no', 'faculty_name', 'course_name', 'faculty_address', 'topic', 'content_pct', 'presentation_pct', 'participants', 'session_date', 'comments'];
+        $visibleKeys = $allColumnKeys; // default: all visible
+
+        if ($request->filled('visible_columns')) {
+            $visibleIndices = array_map('intval', explode(',', $request->visible_columns));
+            $visibleKeys = [];
+            foreach ($visibleIndices as $idx) {
+                if (isset($allColumnKeys[$idx])) {
+                    $visibleKeys[] = $allColumnKeys[$idx];
+                }
+            }
+        }
+
+        // Filter rows to only visible columns
+        $filteredRows = array_map(function ($row) use ($visibleKeys) {
+            return array_intersect_key($row, array_flip($visibleKeys));
+        }, $rows);
+
         return [
-            'rows' => $rows,
+            'rows' => $filteredRows,
+            'all_rows' => $rows,
+            'visible_keys' => $visibleKeys,
             'filters' => [
                 'program' => $program,
                 'scope' => $scope,
@@ -445,7 +525,8 @@ class FeedbackController extends Controller
                     $ctx['rows'],
                     $ctx['filters'],
                     $ctx['export_date'],
-                    $ctx['record_count']
+                    $ctx['record_count'],
+                    $ctx['visible_keys']
                 ),
                 'feedback_database_' . now()->format('Y-m-d_H-i') . '.xlsx'
             );
@@ -1263,6 +1344,7 @@ class FeedbackController extends Controller
      */
     public function facultyPortalIndex(FacultyFeedbackReportService $reportService)
     {
+       
         $reportService->assertFacultyRole();
 
         $facultyPk = $reportService->resolveFacultyPk();

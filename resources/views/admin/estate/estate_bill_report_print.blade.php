@@ -2,7 +2,7 @@
 
 @section('title', 'Estate Bill Report for Print - Sargam')
 
-@section('content')
+@section('setup_content')
 <style>
 /* --- Screen: bill container --- */
 .estate-bill-print { max-width: 210mm; margin: 0 auto; background: #f1f5f9; padding: 24px 0; }

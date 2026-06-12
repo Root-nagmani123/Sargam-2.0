@@ -294,7 +294,18 @@ document.addEventListener('DOMContentLoaded', function() {
             console.warn('Sidebar tab content not found for target:', targetId);
             return;
         }
-        
+
+        // Dynamic single-pane sidebar: one #sidebar-setup pane serves every
+        // category (its groups/menus swap via AJAX, not by pane-swapping). The
+        // legacy per-tab panes (#sidebar-communications, #sidebar-home, …) no
+        // longer exist, so the old mapping below would deactivate the only pane
+        // and hide the whole sidebar. Keep the dynamic pane active for all tabs.
+        const dynamicPane = sidebarTabContent.querySelector('.tab-pane[data-sidebar-layout="dynamic"]');
+        if (dynamicPane) {
+            dynamicPane.classList.add('show', 'active');
+            return;
+        }
+
         const allSidebarPanes = sidebarTabContent.querySelectorAll('.tab-pane');
         allSidebarPanes.forEach(function(pane) {
             pane.classList.remove('show', 'active');
@@ -329,51 +340,42 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     
     function detectAndActivateCurrentTab() {
-        // Check which @section is being used on this page
         const bodyWrapper = document.querySelector('.body-wrapper');
         if (!bodyWrapper) return;
-        
-        // Find which tab-pane has actual content
-        const tabPanes = bodyWrapper.querySelectorAll('.tab-pane');
-        let activeTabId = null;
-        
-        tabPanes.forEach(function(pane) {
-            // Check if this pane has any content (not just whitespace)
+
+        // Which content pane actually holds the page content (the page's @section).
+        let contentTabId = null;
+        bodyWrapper.querySelectorAll('.tab-pane').forEach(function(pane) {
             if (pane.textContent.trim().length > 0 || pane.querySelector('*')) {
-                const paneId = pane.id;
-                console.log('Found content in tab pane:', paneId);
-                
-                // Activate this tab if it's not the home tab and has content
-                if (paneId !== 'home') {
-                    activeTabId = '#' + paneId;
+                if (pane.id !== 'home') {
+                    contentTabId = '#' + pane.id;
                 }
             }
         });
-        
-        // If we found a non-home tab with content, activate it
-        if (activeTabId) {
-            console.log('Auto-activating tab based on content:', activeTabId);
-            
-            // Find and activate the corresponding header tab
-            const headerTab = document.querySelector('.navbar-nav a[href="' + activeTabId + '"]');
-            if (headerTab) {
-                // Remove active from all tabs
-                document.querySelectorAll('.navbar-nav [data-bs-toggle="tab"]').forEach(function(tab) {
-                    tab.classList.remove('active');
-                    tab.setAttribute('aria-selected', 'false');
-                });
-                
-                // Activate the correct header tab
-                headerTab.classList.add('active');
-                headerTab.setAttribute('aria-selected', 'true');
-                
-                // Sync both content areas
-                syncBodyWrapperTab(activeTabId);
-                syncSidebarTab(activeTabId);
 
-                // Adjust tables after auto-activation
-                setTimeout(adjustAllDataTables, 150);
-            }
+        // The header tab to highlight comes from the RBAC resolver — the SAME source
+        // as the breadcrumb (window.SARGAM_ACTIVE_NAV_TAB). This keeps the active
+        // header tab in lock-step with the breadcrumb, even if a menu was relocated
+        // to a category whose content pane differs. Falls back to the content pane
+        // when the server value isn't available.
+        const tabToHighlight = (typeof window.SARGAM_ACTIVE_NAV_TAB === 'string' && window.SARGAM_ACTIVE_NAV_TAB)
+            ? window.SARGAM_ACTIVE_NAV_TAB
+            : contentTabId;
+
+        if (tabToHighlight) {
+            document.querySelectorAll('.sidebar-category-link').forEach(function(tab) {
+                var on = tab.getAttribute('href') === tabToHighlight;
+                tab.classList.toggle('active', on);
+                tab.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+        }
+
+        // Show whichever pane actually has content so the page never goes blank,
+        // even when the highlighted tab differs from the content's section.
+        if (contentTabId) {
+            syncBodyWrapperTab(contentTabId);
+            syncSidebarTab(contentTabId);
+            setTimeout(adjustAllDataTables, 150);
         }
     }
     

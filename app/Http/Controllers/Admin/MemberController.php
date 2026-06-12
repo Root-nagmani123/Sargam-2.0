@@ -15,6 +15,7 @@ use App\Http\Requests\Admin\Member\{
 use App\Models\{EmployeeMaster, EmployeeRoleMapping, UserCredential, City};
 use App\Exports\MemberExport;
 use Maatwebsite\Excel\Facades\Excel;
+use App\Models\AppellationMaster;
 class MemberController extends Controller
 {
     public function index(MemberDataTable $dataTable)
@@ -24,7 +25,11 @@ class MemberController extends Controller
 
     public function create()
     {
-        return view('admin.member.create');
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+
+        return view('admin.member.create', compact('appellationMasterList'));
     }
 
     private function validateEmpId(Request $request)
@@ -37,7 +42,6 @@ class MemberController extends Controller
     private function saveOrUpdateStep1Data(Request $request)
     {
         $data = [
-            'title' => $request->title,
             'first_name' => $request->first_name,
             'middle_name' => $request->middle_name,
             'last_name' => $request->last_name,
@@ -45,6 +49,7 @@ class MemberController extends Controller
             'marital_status' => $request->marital_status,
             'gender' => $request->gender,
             'caste_category_pk' => $request->caste_category,
+            'appellation' => $request->appellation,
             'height' => $request->height,
             'dob' => $request->date_of_birth,
         ];
@@ -390,29 +395,41 @@ class MemberController extends Controller
 
     public function loadStep($step)
     {
-        return view("admin.member.steps.step{$step}");
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+        return view("admin.member.steps.step{$step}", compact('appellationMasterList'));
     }
 
     public function show($id)
     {
-        $member = EmployeeMaster::findOrFail(decrypt($id));
+        $member = EmployeeMaster::with('appellationMaster')->findOrFail(decrypt($id));
         return view('admin.member.show', compact('member'));
     }
 
     public function edit($id) {
         $member = EmployeeMaster::findOrFail($id);
-        return view('admin.member.edit', compact('member'));
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+        return view('admin.member.edit', compact('member', 'appellationMasterList'));
     }
 
     public function editProfile($id) {
         $member = EmployeeMaster::findOrFail($id);
-        return view('admin.member.edit_profile', compact('member'));
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+        return view('admin.member.edit_profile', compact('member', 'appellationMasterList'));
     }
 
     function editStep($step, $id)
     {
         $member = EmployeeMaster::findOrFail($id);
-        return view("admin.member.edit_steps.step{$step}", compact('member'));
+        $appellationMasterList = AppellationMaster::where('active_inactive', 1)
+            ->pluck('appettation_name', 'pk')
+            ->toArray();
+        return view("admin.member.edit_steps.step{$step}", compact('member', 'appellationMasterList'));
     }
 
     public function updateValidateStep(Request $request, $step, $id)

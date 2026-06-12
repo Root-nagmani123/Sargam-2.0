@@ -66,16 +66,16 @@
       0 => 'Laravel\\Ui\\UiServiceProvider',
     ),
   ),
-  'laravellux/html' => 
+  'laravelcollective/html' => 
   array (
+    'providers' => 
+    array (
+      0 => 'Collective\\Html\\HtmlServiceProvider',
+    ),
     'aliases' => 
     array (
       'Form' => 'Collective\\Html\\FormFacade',
       'Html' => 'Collective\\Html\\HtmlFacade',
-    ),
-    'providers' => 
-    array (
-      0 => 'Collective\\Html\\HtmlServiceProvider',
     ),
   ),
   'maatwebsite/excel' => 

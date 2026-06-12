@@ -276,6 +276,46 @@ document.addEventListener('DOMContentLoaded', function () {
 
     if (form) {
         form.addEventListener('submit', function (event) {
+            // Validate supporting section (Choices.js hides native select, so can't use required attr)
+            const supportingSelect = form.querySelector('select[name="supportingsection"]');
+            if (supportingSelect && !supportingSelect.value) {
+                event.preventDefault();
+                // Highlight the Choices.js wrapper
+                const choicesWrapper = supportingSelect.closest('.choices') || supportingSelect.parentElement;
+                if (choicesWrapper) {
+                    choicesWrapper.classList.add('is-invalid');
+                }
+                // Show or update error message
+                let errSpan = form.querySelector('.supporting-section-error');
+                if (!errSpan) {
+                    errSpan = document.createElement('span');
+                    errSpan.className = 'text-danger small supporting-section-error';
+                    (choicesWrapper || supportingSelect).insertAdjacentElement('afterend', errSpan);
+                }
+                errSpan.textContent = 'The supporting section is required.';
+                (choicesWrapper || supportingSelect).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                return false;
+            }
+
+            // Validate each assistant coordinator select
+            const assistantSelects = form.querySelectorAll('select[name="assistantcoursecoordinator[]"]');
+            for (let i = 0; i < assistantSelects.length; i++) {
+                if (!assistantSelects[i].value) {
+                    event.preventDefault();
+                    const wrapper = assistantSelects[i].closest('.choices') || assistantSelects[i].parentElement;
+                    if (wrapper) wrapper.classList.add('is-invalid');
+                    let errSpan = wrapper ? wrapper.parentElement.querySelector('.assistant-coord-error') : null;
+                    if (!errSpan) {
+                        errSpan = document.createElement('span');
+                        errSpan.className = 'text-danger small assistant-coord-error';
+                        (wrapper || assistantSelects[i]).insertAdjacentElement('afterend', errSpan);
+                    }
+                    errSpan.textContent = 'Each assistant coordinator is required.';
+                    (wrapper || assistantSelects[i]).scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    return false;
+                }
+            }
+
             if (!validateDates()) {
                 event.preventDefault();
                 endDateInput.focus();
@@ -287,6 +327,27 @@ document.addEventListener('DOMContentLoaded', function () {
             return true;
         });
     }
+
+    // Clear supporting section error when user picks a value
+    const supportingSelectEl = document.querySelector('select[name="supportingsection"]');
+    if (supportingSelectEl) {
+        supportingSelectEl.addEventListener('change', function () {
+            const choicesWrapper = supportingSelectEl.closest('.choices') || supportingSelectEl.parentElement;
+            if (choicesWrapper) choicesWrapper.classList.remove('is-invalid');
+            const errSpan = document.querySelector('.supporting-section-error');
+            if (errSpan) errSpan.textContent = '';
+        });
+    }
+
+    // Clear assistant coordinator errors when user picks a value
+    document.addEventListener('change', function (event) {
+        if (event.target && event.target.matches('select[name="assistantcoursecoordinator[]"]')) {
+            const wrapper = event.target.closest('.choices') || event.target.parentElement;
+            if (wrapper) wrapper.classList.remove('is-invalid');
+            const errSpan = wrapper ? wrapper.parentElement.querySelector('.assistant-coord-error') : null;
+            if (errSpan) errSpan.textContent = '';
+        }
+    });
 
     updateEndDateMin();
 });

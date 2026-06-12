@@ -2,7 +2,11 @@
 
 @section('title', 'Update Meter No. - Sargam')
 
-@section('content')
+@php
+    $estateSelfHomeTab = request('scope') === 'self'
+        && (isEstateAuthority());
+@endphp
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 @php
     $qYear = request('bill_year');
     $qMonth = request('bill_month');
@@ -36,7 +40,7 @@
         <h2 class="mb-0">Update Meter No.</h2>
         <div class="d-flex flex-wrap gap-2 flex-shrink-0">
             @php
-                $canUpdateReadingAndMeterNo = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+                $canUpdateReadingAndMeterNo = isEstateAuthority();
             @endphp
             @if($canUpdateReadingAndMeterNo)
             <a href="{{ route('admin.estate.update-meter-reading') }}" class="btn btn-primary btn-sm d-inline-flex align-items-center gap-2">

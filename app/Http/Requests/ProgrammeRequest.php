@@ -34,7 +34,7 @@ class ProgrammeRequest extends FormRequest
             'assistantcoursecoordinator.*' => 'required|string|max:255',
             'assistant_coordinator_role' => 'nullable|array',
             'assistant_coordinator_role.*' => 'nullable|string|max:255',
-            'supportingsection' => 'nullable|exists:user_role_master,pk',
+            'supportingsection' => 'required|exists:roles,id',
         ];
     }
 
@@ -65,6 +65,8 @@ class ProgrammeRequest extends FormRequest
             'assistant_coordinator_role.array' => 'The assistant coordinator role must be an array.',
             'assistant_coordinator_role.*.string' => 'Each assistant coordinator role must be a string.',
             'assistant_coordinator_role.*.max' => 'Each assistant coordinator role must be less than 255 characters.',
+            'supportingsection.required' => 'The supporting section is required.',
+            'supportingsection.exists' => 'The selected supporting section is invalid.',
         ];
     }
 }

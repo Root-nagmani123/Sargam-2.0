@@ -76,10 +76,11 @@ class IssueManagementController extends Controller
                 if (empty($ids)) {
                     $ids = [Auth::user()->user_id];
                 }
+                // Index page: only show issues raised by the employee themselves.
+                // Issues where they are assigned_to are handled by the CENTCOM page.
                 $builder->where(function ($q) use ($ids) {
                     $q->whereIn('employee_master_pk', $ids)
                         ->orWhereIn('issue_logger', $ids)
-                        ->orWhereIn('assigned_to', $ids)
                         ->orWhereIn('created_by', $ids);
                 });
             }

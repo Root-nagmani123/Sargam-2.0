@@ -106,6 +106,12 @@ class SidebarController extends Controller
             return $this->renderNoActiveMenuMessage();
         }
 
+        // Resolve the single most-specific active link in this group first, so a
+        // child page (Create/Edit/View/Show/History/…) keeps exactly its parent
+        // Index/List menu highlighted — or a dedicated child menu when one
+        // exists (e.g. both "users" and "users/create") — and never two at once.
+        $bestScore = $this->bestMatchScore($group, $currentPath, $currentRouteName, $permissions, $isAdmin);
+
         $html = '';
 
         foreach ($group->menus as $menu) {
@@ -129,7 +135,7 @@ class SidebarController extends Controller
 
             if ($hasChild) {
                 foreach ($children as $submenu) {
-                    if ($this->routeMatcher->isActive($submenu->route, $currentPath, $currentRouteName)) {
+                    if ($this->isWinningLink($submenu->route, $currentPath, $currentRouteName, $bestScore)) {
                         $childActive = true;
                         break;
                     }
@@ -140,24 +146,21 @@ class SidebarController extends Controller
                 $ariaExpanded = $childActive ? 'true' : 'false';
 
                 $html .= '
-                <li class="sidebar-item" style="background:#4077ad;
-                    border-radius:30px 0 0 30px;
-                    width:100%;
-                    box-shadow:-2px 3px rgba(251,248,248,0.1);
-                    min-width:250px;">
+                <li class="sidebar-item">
 
                     <a class="'.$parentLinkClass.' d-flex justify-content-between align-items-center"
                         data-bs-toggle="collapse"
                         href="#'.$collapseId.'"
                         aria-expanded="'.$ariaExpanded.'">
+                        <i class="material-icons material-symbols-rounded">'.e($this->menuIcon($menu)).'</i>
                         <span class="hide-menu fw-bold">'.e($menu->name).'</span>
-                        <i class="material-icons">keyboard_arrow_down</i>
+                        <i class="material-icons">chevron_right</i>
                     </a>
                 </li>
                 <ul class="'.$collapseClass.' list-unstyled ps-3" id="'.$collapseId.'">';
 
                 foreach ($children as $submenu) {
-                    $activeClass = $this->routeMatcher->isActive($submenu->route, $currentPath, $currentRouteName) ? ' active' : '';
+                    $activeClass = $this->isWinningLink($submenu->route, $currentPath, $currentRouteName, $bestScore) ? ' active' : '';
                     $href = $this->routeMatcher->resolveHref($submenu->route, $submenu->id);
                     $html .= '
                 <li class="sidebar-item">
@@ -170,11 +173,12 @@ class SidebarController extends Controller
                 $html .= '</ul>';
             } else {
                 if ($hasMenuPermission) {
-                    $activeClass = $this->routeMatcher->isActive($menu->route, $currentPath, $currentRouteName) ? ' active' : '';
+                    $activeClass = $this->isWinningLink($menu->route, $currentPath, $currentRouteName, $bestScore) ? ' active' : '';
                     $href = $this->routeMatcher->resolveHref($menu->route, $menu->id);
                     $html .= '
                 <li class="sidebar-item">
                     <a class="sidebar-link'.$activeClass.'" href="'.e($href).'" target="'.($menu->target == 1 ? '_blank' : '_self').'">
+                        <i class="material-icons material-symbols-rounded">'.e($this->menuIcon($menu)).'</i>
                         <span class="hide-menu">'.e($menu->name).'</span>
                     </a>
                 </li>';
@@ -183,6 +187,58 @@ class SidebarController extends Controller
         }
 
         return $html ?: $this->renderNoActiveMenuMessage();
+    }
+
+    /**
+     * Best (most specific) match score among every permission-visible link the
+     * group will render. Returns -1 when nothing in the group matches the
+     * current request. Mirrors the rendering loop's permission rules so a link
+     * the user cannot see can never claim the active highlight.
+     */
+    protected function bestMatchScore($group, string $currentPath, ?string $currentRouteName, array $permissions, bool $isAdmin): int
+    {
+        $best = -1;
+
+        foreach ($group->menus as $menu) {
+            $children = $menu->children->filter(function ($child) use ($permissions, $isAdmin) {
+                return $isAdmin || $this->menuVisibleToUser($child->permission_name, $permissions);
+            });
+
+            $hasMenuPermission = $isAdmin || $this->menuVisibleToUser($menu->permission_name, $permissions);
+
+            if ($children->isNotEmpty()) {
+                foreach ($children as $submenu) {
+                    $best = max($best, $this->routeMatcher->matchScore($submenu->route, $currentPath, $currentRouteName));
+                }
+            } elseif ($hasMenuPermission) {
+                $best = max($best, $this->routeMatcher->matchScore($menu->route, $currentPath, $currentRouteName));
+            }
+        }
+
+        return $best;
+    }
+
+    /**
+     * A link is highlighted only when it is the most specific match in its
+     * group, so child pages keep a single Index/parent menu active.
+     */
+    protected function isWinningLink(?string $menuRoute, string $currentPath, ?string $currentRouteName, int $bestScore): bool
+    {
+        if ($bestScore < 0) {
+            return false;
+        }
+
+        return $this->routeMatcher->matchScore($menuRoute, $currentPath, $currentRouteName) === $bestScore;
+    }
+
+    /**
+     * Material Symbols icon for a menu row, with a neutral fallback when unset.
+     */
+    protected function menuIcon($menu): string
+    {
+        $icon = trim((string) ($menu->icon ?? ''));
+
+        return $icon !== '' ? $icon : 'label';
     }
 
     protected function renderNoActiveMenuMessage(): string

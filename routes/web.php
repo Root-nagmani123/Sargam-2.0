@@ -117,7 +117,7 @@ Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'
 Route::resource('roles', RoleController::class);
 
 // Protected Routes
-Route::middleware(['auth', 'ensure.role'])->group(function () {
+Route::middleware(['auth'])->group(function () {
 
     Route::prefix('admin')->name('admin.')->group(function () {
         Route::get('users/get-roles', [UserController::class, 'getAllRoles'])
@@ -330,6 +330,9 @@ Route::middleware(['auth', 'ensure.role'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
+        Route::get('profile/edit', function () {
+            return redirect()->route('member.profile.edit', Auth::user()->user_id);
+        })->name('profile.edit.self');
         Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
         Route::get('show/{id}', 'show')->name('show');
         Route::get('/step/{step}', 'loadStep')->name('load-step');
@@ -948,7 +951,7 @@ use App\Http\Controllers\Admin\Setup\QuickLinksSetupController;
 use App\Http\Controllers\Admin\Setup\UsefulLinksSetupController;
 
 // Setup -> Employee Type (moved to controller with modal CRUD)
-Route::middleware(['auth', 'ensure.role'])->group(function () {
+Route::middleware(['auth'])->group(function () {
     Route::prefix('admin/setup/employee-type')->name('admin.setup.employee_type.')->controller(EmployeeTypeController::class)->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('/create', 'create')->name('create');
@@ -1136,6 +1139,8 @@ Route::middleware(['auth', 'ensure.role'])->group(function () {
 
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::get('course-repository/document/{pk}/edit-data', [CourseRepositoryController::class, 'getDocument'])->name('course-repository.document.edit-data');
+    Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
     Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
 
@@ -1640,7 +1645,7 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 
         Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
         Route::get('bill-report-grid', function () {
-            abort_unless(hasRole('Estate'), 403, 'You do not have permission to access this estate section.');
+            abort_unless(isEstateAuthority(), 403, 'You do not have permission to access this estate section.');
 
             return view('admin.estate.estate_bill_report_grid');
         })->name('bill-report-grid');

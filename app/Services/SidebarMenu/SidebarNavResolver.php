@@ -15,8 +15,22 @@ class SidebarNavResolver
         $path = $path ?? request()->path();
         $routeName = $routeName ?? (request()->route()?->getName() ?? '');
 
-        if ($this->isDashboardRoute($routeName, $path)) {
-            return $this->resultForCategorySlug('home');
+        // Fully dynamic, RBAC-driven resolution. The header tab, mini-nav category
+        // and active menu are ALL derived from the matched menu's own category_id /
+        // group_id in the database — never from hardcoded route/name assumptions.
+        // This means relocating a menu to a different tab/category in the Menu
+        // manager is reflected here automatically, with no code changes.
+
+        // Exact menu id carried by the sidebar link (?menu=ID). This disambiguates
+        // routes shared by more than one menu (e.g. two different menu items that
+        // both point to "calendar"), so the menu the user actually clicked — and
+        // its tab/group — is selected, not just the first menu that matches the URL.
+        $requestMenuId = request()->get('menu');
+        if ($requestMenuId) {
+            $menu = Menu::where('is_active', 1)->find($requestMenuId);
+            if ($menu) {
+                return $this->resultFromMenu($menu);
+            }
         }
 
         $requestCategoryId = request()->get('category');
@@ -45,7 +59,11 @@ class SidebarNavResolver
             return $legacy;
         }
 
-        return $this->resultFromFirstCategory();
+        // Nothing matched a menu/category, so there is no breadcrumb trail to show.
+        // In that case fall back to the Home tab rather than the first ordered
+        // category — an unmapped page should land on Home, not arbitrarily
+        // highlight whichever category happens to sort first.
+        return $this->resultForHome();
     }
 
     public function categoryToNavTab(SidebarCategory|string|null $category): string
@@ -59,20 +77,13 @@ class SidebarNavResolver
         return $slug === 'home' ? self::HOME_TAB : '#tab-' . $slug;
     }
 
-    protected function isDashboardRoute(string $routeName, string $path): bool
-    {
-        return request()->routeIs('admin.dashboard')
-            || request()->routeIs('admin.dashboard.*')
-            || request()->routeIs('calendar.index')
-            || $this->normalizePath($path) === 'admin/dashboard'
-            || $this->normalizePath($path) === 'dashboard';
-    }
-
     protected function findMenuForRequest(string $path, string $routeName): ?Menu
     {
         $normalizedPath = $this->normalizePath($path);
+        $requestParams = request()->query();
         $best = null;
         $bestLength = -1;
+        $bestQueryScore = -1; // Higher = more query params matched exactly
 
         foreach ($this->routeMenuIndex() as $entry) {
             if (!$this->entryMatches($entry, $normalizedPath, $routeName)) {
@@ -80,8 +91,27 @@ class SidebarNavResolver
             }
 
             $length = strlen($entry['path'] ?? '');
-            if ($length > $bestLength) {
+            $entryQueryParams = $entry['query_params'] ?? [];
+
+            // Score: how well do query params match?
+            // +2 for each param in entry that matches request value exactly
+            // -1 for each param in entry that is NOT in request (penalise scope=self when request has no scope)
+            $queryScore = 0;
+            foreach ($entryQueryParams as $key => $val) {
+                if (isset($requestParams[$key]) && (string) $requestParams[$key] === (string) $val) {
+                    $queryScore += 2;
+                } else {
+                    $queryScore -= 1; // Entry requires this param but request doesn't have it
+                }
+            }
+
+            // Prefer entry with better query score, then longer path
+            $isBetter = ($queryScore > $bestQueryScore)
+                || ($queryScore === $bestQueryScore && $length > $bestLength);
+
+            if ($isBetter) {
                 $bestLength = $length;
+                $bestQueryScore = $queryScore;
                 $best = $entry['menu'];
             }
         }
@@ -105,7 +135,7 @@ class SidebarNavResolver
     }
 
     /**
-     * @return list<array{menu: Menu, path: string|null, route_name: string|null}>
+     * @return list<array{menu: Menu, path: string|null, route_name: string|null, query_params: array<string,string>}>
      */
     protected function routeMenuIndex(): array
     {
@@ -127,9 +157,10 @@ class SidebarNavResolver
                 }
 
                 $entries[] = [
-                    'menu' => $menu,
-                    'path' => $parsed['path'],
-                    'route_name' => $parsed['route_name'],
+                    'menu'         => $menu,
+                    'path'         => $parsed['path'],
+                    'route_name'   => $parsed['route_name'],
+                    'query_params' => $parsed['query_params'],
                 ];
             }
 
@@ -138,7 +169,7 @@ class SidebarNavResolver
     }
 
     /**
-     * @return array{path: string|null, route_name: string|null}|null
+     * @return array{path: string|null, route_name: string|null, query_params: array<string,string>}|null
      */
     protected function parseMenuRoute(string $route): ?array
     {
@@ -147,17 +178,25 @@ class SidebarNavResolver
             return null;
         }
 
+        // Extract query string before any URL parsing
+        $queryParams = [];
+        if (str_contains($route, '?')) {
+            [$routePath, $queryString] = explode('?', $route, 2);
+            parse_str($queryString, $queryParams);
+            $route = $routePath;
+        }
+
         if (preg_match('#^https?://#i', $route)) {
             $path = parse_url($route, PHP_URL_PATH);
 
-            return $path ? ['path' => $this->normalizePath($path), 'route_name' => null] : null;
+            return $path ? ['path' => $this->normalizePath($path), 'route_name' => null, 'query_params' => $queryParams] : null;
         }
 
         if (str_contains($route, '.') && !str_contains($route, '/')) {
-            return ['path' => null, 'route_name' => $route];
+            return ['path' => null, 'route_name' => $route, 'query_params' => $queryParams];
         }
 
-        return ['path' => $this->normalizePath($route), 'route_name' => null];
+        return ['path' => $this->normalizePath($route), 'route_name' => null, 'query_params' => $queryParams];
     }
 
     protected function entryMatches(array $entry, string $normalizedPath, string $routeName): bool
@@ -177,16 +216,19 @@ class SidebarNavResolver
             return true;
         }
 
-        if (str_ends_with($normalizedPath, '/' . $menuPath) || str_ends_with($normalizedPath, $menuPath)) {
-            return true;
-        }
-
+        // Match only on full path-segment boundaries. Without this, a non-boundary
+        // suffix/substring match (e.g. menu path "state" vs route "admin/estate",
+        // or "attendance" vs "...user_attendance") would resolve the wrong menu,
+        // and therefore the wrong header tab / category.
         if (str_starts_with($normalizedPath, $menuPath . '/')) {
             return true;
         }
 
-        return str_contains($normalizedPath, '/' . $menuPath . '/')
-            || str_contains($normalizedPath, '/' . $menuPath);
+        if (str_ends_with($normalizedPath, '/' . $menuPath)) {
+            return true;
+        }
+
+        return str_contains($normalizedPath, '/' . $menuPath . '/');
     }
 
     protected function routeNamesMatch(string $currentRoute, string $menuRoute): bool
@@ -222,29 +264,55 @@ class SidebarNavResolver
 
     protected function resultFromMenu(Menu $menu): array
     {
+        // The mini-nav group, category and header tab are anchored to the menu's
+        // TOP-LEVEL ancestor, because the sidebar renders a sub-menu under its
+        // parent's group. Reading the matched (child) row's own group_id/category_id
+        // would pick the wrong group whenever a child row's group/category has drifted
+        // from its parent's — so we always resolve them from the ancestor that is
+        // actually displayed directly under the mini-nav group.
+        $anchor = $this->topLevelAncestor($menu);
+
         $category = null;
-        if ($menu->category_id) {
-            $category = SidebarCategory::where('is_active', 1)->find($menu->category_id);
+        if ($anchor->category_id) {
+            $category = SidebarCategory::where('is_active', 1)->find($anchor->category_id);
         }
-        if (!$category && $menu->relationLoaded('group') && $menu->group) {
-            $category = $menu->group->category ?? null;
-        }
-        if (!$category && $menu->group_id) {
-            $menu->loadMissing('group.category');
-            $category = $menu->group?->category;
+        if (!$category && $anchor->group_id) {
+            $anchor->loadMissing('group.category');
+            $category = $anchor->group?->category;
         }
 
         if (!$category) {
-            return $this->resultFromFirstCategory();
+            // The menu matched but its category is missing/inactive, so we can't
+            // build a real breadcrumb trail. Default to the Home tab rather than
+            // arbitrarily highlighting the first ordered category.
+            return $this->resultForHome();
         }
 
         return [
             'nav_tab' => $this->categoryToNavTab($category),
             'category_id' => $category->id,
             'category_slug' => $category->slug,
-            'group_id' => $menu->group_id,
+            'group_id' => $anchor->group_id,
             'menu_id' => $menu->id,
         ];
+    }
+
+    /**
+     * Walk up the parent chain to the top-level menu (the row rendered directly
+     * under a mini-nav group). Returns the menu itself when it has no parent.
+     */
+    protected function topLevelAncestor(Menu $menu): Menu
+    {
+        $guard = 0;
+        while ($menu->parent_id && $guard++ < 20) {
+            $menu->loadMissing('parent');
+            if (!$menu->parent) {
+                break;
+            }
+            $menu = $menu->parent;
+        }
+
+        return $menu;
     }
 
     protected function resultFromCategory(SidebarCategory $category): array
@@ -273,19 +341,21 @@ class SidebarNavResolver
             ];
     }
 
-    protected function resultFromFirstCategory(): array
+    /**
+     * Home-tab result with an empty trail. Used when nothing resolves, so the
+     * Home tab is selected and the breadcrumb falls back to its default.
+     */
+    protected function resultForHome(): array
     {
-        $category = SidebarCategory::where('is_active', 1)->orderBy('order')->first();
+        $home = SidebarCategory::where('is_active', 1)->where('slug', 'home')->first();
 
-        return $category
-            ? $this->resultFromCategory($category)
-            : [
-                'nav_tab' => self::HOME_TAB,
-                'category_id' => null,
-                'category_slug' => 'home',
-                'group_id' => null,
-                'menu_id' => null,
-            ];
+        return [
+            'nav_tab' => self::HOME_TAB,
+            'category_id' => $home?->id,
+            'category_slug' => 'home',
+            'group_id' => null,
+            'menu_id' => null,
+        ];
     }
 
   /**
@@ -293,12 +363,19 @@ class SidebarNavResolver
      */
     protected function legacyFallback(string $path, string $routeName): ?array
     {
+        // Profile edit belongs in the home/general tab, not setup
+        if (request()->routeIs('member.profile.*') || request()->routeIs('member.profile.edit')) {
+            return $this->resultForCategorySlug('home');
+        }
+
         $slug = null;
 
         if (
             request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
             request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
             request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
+            request()->routeIs('roles.*') || request()->routeIs('users.*') ||
+            str_starts_with($path, 'roles') || str_starts_with($path, 'users') ||
             str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
             str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
             str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||

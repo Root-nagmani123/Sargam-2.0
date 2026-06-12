@@ -7,11 +7,11 @@
         <ul class="list-unstyled mb-0">
             @for($i = 89; $i <= 100; $i++)
                 <li class="sidebar-item">
-                    <a href="{{ route('admin.course-repository.user.foundation-course.detail', 'FC-' . $i) }}" 
+                    <a href="{{ route('admin.course-repository.user.foundation-course.detail', 'FC-' . $i) }}"
                        class="sidebar-link {{ request()->route('courseCode') == 'FC-' . $i ? 'active' : '' }}"
                        aria-label="View FC-{{ $i }}">
                         <span>FC-{{ $i }}</span>
-                        <i class="material-icons material-symbols-rounded">chevron_right</i>
+                        <i class="bi bi-chevron-right" aria-hidden="true"></i>
                     </a>
                 </li>
             @endfor

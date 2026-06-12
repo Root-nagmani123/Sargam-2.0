@@ -2217,7 +2217,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
             </div>
 
             <!-- Course Filter -->
-            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;">
+            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;z-index: 0;">
                 <label for="courseFilter" class="form-label mb-0 fw-semibold text-secondary small">Filter by Course</label>
                 <select
                     class="form-select js-calendar-course-choice"
@@ -2361,6 +2361,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                                 <th scope="col">Wednesday</th>
                                                 <th scope="col">Thursday</th>
                                                 <th scope="col">Friday</th>
+                                                <th scope="col">Saturday</th>
+                                                <th scope="col">Sunday</th>
                                             </tr>
                                         </thead>
 
@@ -2573,7 +2575,7 @@ class CalendarManager {
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            hiddenDays: [0, 6], // Initially hide Sunday (0) and Saturday (6)
+            hiddenDays: [], // Show all days Mon–Sun
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -2724,40 +2726,14 @@ class CalendarManager {
             return;
         }
         
-        // Check if any events fall on Saturday (day 6)
-        const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6; // 6 = Saturday
-        });
-
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const hiddenDays = hasSaturdayEvents ? [0] : [0, 6];
-        
-        // Use setTimeout to ensure calendar is fully rendered
+        // Show full week Mon–Sun, no hidden days
         setTimeout(() => {
-            this.calendar.setOption('hiddenDays', hiddenDays);
             this.eventsLoaded = true;
         }, 50);
     }
 
     updateWeekendVisibility() {
-        // Get all events currently in the calendar
-        const events = this.calendar.getEvents();
-        
-        // Check if any events fall on Saturday (day 6)
-        const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6;
-        });
-
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const newHiddenDays = hasSaturdayEvents ? [0] : [0, 6];
-        const currentHiddenDays = this.calendar.getOption('hiddenDays') || [];
-        
-        // Only update if changed to prevent unnecessary re-renders
-        if (JSON.stringify(newHiddenDays.sort()) !== JSON.stringify(currentHiddenDays.sort())) {
-            this.calendar.setOption('hiddenDays', newHiddenDays);
-        }
+        // Full week shown — nothing to update
     }
 
     updateCourseHeader() {
@@ -3964,9 +3940,9 @@ async setInternalFaculty(internalFacultyIds) {
         // Apply week offset
         weekStart.setDate(weekStart.getDate() + (weekOffset * 7));
 
-        // Set week end (Friday)
+        // Set week end (Sunday) - adjust to Friday if you want only weekdays
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday
+        weekEnd.setDate(weekEnd.getDate() + 6); // Monday to Sunday
 
         // Filter events that fall within this week
         return events.filter(event => {
@@ -4067,7 +4043,7 @@ async setInternalFaculty(internalFacultyIds) {
             return;
         }
 
-        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         const headers = thead.querySelectorAll('th:not(.time-column)');
 
         headers.forEach((header, index) => {
@@ -4106,7 +4082,7 @@ async setInternalFaculty(internalFacultyIds) {
             html += `
                 <tr>
                     <th scope="row" class="time-slot">${time}</th>
-                    ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
+                    ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => `
                         <td class="event-cell">
                             ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
                         </td>

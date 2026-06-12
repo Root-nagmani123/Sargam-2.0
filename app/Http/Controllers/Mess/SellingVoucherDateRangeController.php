@@ -545,7 +545,7 @@ class SellingVoucherDateRangeController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
-            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'nullable', 'integer'],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'remarks' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',
@@ -902,7 +902,7 @@ class SellingVoucherDateRangeController extends Controller
                     $fail('The selected course is invalid.');
                 }
             }],
-            'client_id' => ['required_if:client_type_slug,employee,ot', 'integer'],
+            'client_id' => ['required_if:client_type_slug,employee,ot', 'nullable', 'integer'],
             'client_name' => in_array($request->client_type_slug, ['ot', 'course']) ? 'required|string|max:255' : 'nullable|string|max:255',
             'remarks' => 'nullable|string',
             'reference_number' => 'nullable|string|max:100',

@@ -1,18 +1,17 @@
 <div class="row">
+    @php
+        $appellationMasterList = $appellationMasterList ?? [];
+    @endphp
     <div class="col-md-6">
         <div class="mb-3">
-
-            @php $titleOptions = App\Models\EmployeeMaster::title; @endphp
-
-            <x-select 
-                name="title" 
-                label="Title :" 
-                :options="$titleOptions" 
-                :value="$member->title ?? old('title')" 
-                formLabelClass="form-label" 
-                formSelectClass="form-select"
-                labelRequired="true"
-                />
+            <x-select
+                name="appellation"
+                label="Appellation :"
+                placeholder="Select Appellation"
+                formLabelClass="form-label"
+                :options="$appellationMasterList"
+                :value="$member->appellation ?? old('appellation')"
+            />
         </div>
     </div>
     <div class="col-md-6">
@@ -72,7 +71,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="height" label="Exact Height by Measurement (Without Shoes):" type="text" value="{{ $member->height ?? old('height') }}" formLabelClass="form-label" formInputClass="form-control only-numbers" />
+            <x-input name="height" label="Exact Height by Measurement (Without Shoes) - in cm:" type="text" value="{{ $member->height ?? old('height') }}" formLabelClass="form-label" formInputClass="form-control only-numbers" />
 
         </div>
     </div>

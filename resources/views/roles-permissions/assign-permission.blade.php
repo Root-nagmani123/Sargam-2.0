@@ -24,8 +24,39 @@
                 </div>
             </div>
             <div class="card-body">
+                <!-- Search & Filter Bar -->
+                <div class="row g-2 mb-3">
+                    <div class="col-md-5">
+                        <div class="input-group">
+                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
+                            <input type="text" id="permissionSearch" class="form-control" placeholder="Search by menu, permission...">
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="categoryFilter" class="form-select">
+                            <option value="">All Categories</option>
+                            @foreach($categories as $category)
+                                <option value="{{ $category->name }}">{{ $category->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="statusFilter" class="form-select">
+                            <option value="">All Status</option>
+                            <option value="enabled">Enabled</option>
+                            <option value="disabled">Disabled</option>
+                        </select>
+                    </div>
+                    <div class="col-md-1">
+                        <button class="btn btn-outline-secondary w-100" id="clearFilters" title="Clear filters">
+                            <i class="bi bi-x-lg"></i>
+                        </button>
+                    </div>
+                </div>
+                <div id="filterResultCount" class="text-muted small mb-2"></div>
+
                 <div class="table-responsive">
-                    <table class="table">
+                    <table class="table" id="permissionTable">
                         <thead>
                             <tr>
                                 <th>Category</th>
@@ -37,65 +68,39 @@
                             </tr>
                         </thead>
                         <tbody>
-                        @php
-                            $lastCategory = null;
-                            $lastGroup = null;
-                        @endphp
-
                         @foreach($categories as $category)
                             @foreach($category->groups as $group)
                                 @foreach($group->menus as $menu)
                                     @if($menu->children->count() > 0)
-                                        @php $firstChild = true; @endphp
                                         @foreach($menu->children as $child)
-                                            <tr>
-                                                {{-- CATEGORY --}}
-                                                <td>
-                                                    @if($lastCategory != $category->name)
-                                                        {{ $category->name }}
-                                                        @php $lastCategory = $category->name; @endphp
-                                                    @endif
-                                                </td>
-
-                                                {{-- GROUP --}}
-                                                <td>
-                                                    @if($lastGroup != $group->name)
-                                                        {{ $group->name }}
-                                                        @php $lastGroup = $group->name; @endphp
-                                                    @endif
-                                                </td>
-
-                                                {{-- MENU (ONLY FIRST ROW) --}}
-                                                <td>
-                                                    @if($firstChild)
-                                                        {{ $menu->name }}
-                                                        @php $firstChild = false; @endphp
-                                                    @endif
-                                                </td>
-
-                                                {{-- SUB MENU --}}
-                                                <td class="ps-4"> {{ $child->name }}</td>
-
-                                                {{-- PERMISSION --}}
+                                            <tr data-category="{{ $category->name }}"
+                                                data-group="{{ $group->name }}"
+                                                data-menu="{{ $menu->name }}"
+                                                data-submenu="{{ $child->name }}"
+                                                data-permission="{{ $child->permission_name }}">
+                                                <td>{{ $category->name }}</td>
+                                                <td>{{ $group->name }}</td>
+                                                <td>{{ $menu->name }}</td>
+                                                <td class="ps-4">{{ $child->name }}</td>
                                                 <td>{{ $child->permission_name }}</td>
-
-                                                {{-- ACTION --}}
                                                 <td>
                                                     <div class="form-check form-switch">
                                                         <input class="form-check-input permission-toggle" type="checkbox"
-                                                            name="permissions[]"    
+                                                            name="permissions[]"
                                                             data-id="{{ $child->id }}"
                                                             value="{{ $child->permission_name }}"
                                                             {{ in_array($child->permission_name, $rolePermissions) ? 'checked' : '' }}>
-                                                        <label class="form-check-label" for="flexSwitchCheckDefault"></label>
+                                                        <label class="form-check-label"></label>
                                                     </div>
                                                 </td>
-
                                             </tr>
                                         @endforeach
                                     @else
-                                        {{-- NO SUBMENU → NORMAL ROW --}}
-                                        <tr>
+                                        <tr data-category="{{ $category->name }}"
+                                            data-group="{{ $group->name }}"
+                                            data-menu="{{ $menu->name }}"
+                                            data-submenu="-"
+                                            data-permission="{{ $menu->permission_name }}">
                                             <td>{{ $category->name }}</td>
                                             <td>{{ $group->name }}</td>
                                             <td>{{ $menu->name }}</td>
@@ -105,10 +110,10 @@
                                                 <div class="form-check form-switch">
                                                     <input class="form-check-input permission-toggle" type="checkbox"
                                                         name="permissions[]"
-                                                        data-id="{{$menu->id }}"
+                                                        data-id="{{ $menu->id }}"
                                                         value="{{ $menu->permission_name }}"
                                                         {{ in_array($menu->permission_name, $rolePermissions) ? 'checked' : '' }}>
-                                                    <label class="form-check-label" for="flexSwitchCheckDefault"></label>
+                                                    <label class="form-check-label"></label>
                                                 </div>
                                             </td>
                                         </tr>
@@ -118,6 +123,9 @@
                         @endforeach
                         </tbody>
                     </table>
+                    <div id="noResultsMsg" class="text-center text-muted py-4 d-none">
+                        <i class="bi bi-search fs-4 d-block mb-2"></i>No permissions found matching your filters.
+                    </div>
                 </div>
             </div>
         </div>
@@ -222,11 +230,55 @@
         });
     });
 
+    // Search & Filter
+    function applyPermissionFilters() {
+        var search = $('#permissionSearch').val().toLowerCase().trim();
+        var category = $('#categoryFilter').val().toLowerCase();
+        var status = $('#statusFilter').val();
+        var rows = $('#permissionTable tbody tr');
+        var visible = 0;
+
+        rows.each(function () {
+            var $row = $(this);
+            var matchSearch = !search ||
+                ($row.data('menu') + ' ' + $row.data('submenu') + ' ' + $row.data('permission') + ' ' + $row.data('group'))
+                    .toLowerCase().indexOf(search) > -1;
+            var matchCategory = !category || $row.data('category').toLowerCase() === category;
+            var isChecked = $row.find('.permission-toggle').is(':checked');
+            var matchStatus = !status ||
+                (status === 'enabled' && isChecked) ||
+                (status === 'disabled' && !isChecked);
+
+            if (matchSearch && matchCategory && matchStatus) {
+                $row.show();
+                visible++;
+            } else {
+                $row.hide();
+            }
+        });
+
+        var total = rows.length;
+        $('#filterResultCount').text(visible === total ? 'Showing all ' + total + ' permissions' : 'Showing ' + visible + ' of ' + total + ' permissions');
+        $('#noResultsMsg').toggleClass('d-none', visible > 0);
+    }
+
+    $('#permissionSearch').on('input', applyPermissionFilters);
+    $('#categoryFilter, #statusFilter').on('change', applyPermissionFilters);
+    $('#clearFilters').on('click', function () {
+        $('#permissionSearch').val('');
+        $('#categoryFilter').val('');
+        $('#statusFilter').val('');
+        applyPermissionFilters();
+    });
+
+    // Init count on load
+    $(document).ready(function () { applyPermissionFilters(); });
+
     // Column hide/unhide toggle
     $(document).on('change', '.col-toggle', function () {
         let colIndex = $(this).data('col');
         let isVisible = $(this).is(':checked');
-        $('table.table-bordered th:nth-child(' + (colIndex + 1) + '), table.table-bordered td:nth-child(' + (colIndex + 1) + ')').toggle(isVisible);
+        $('#permissionTable th:nth-child(' + (colIndex + 1) + '), #permissionTable td:nth-child(' + (colIndex + 1) + ')').toggle(isVisible);
     });
 
     $(document).on('change', '.permission-toggle', function () {

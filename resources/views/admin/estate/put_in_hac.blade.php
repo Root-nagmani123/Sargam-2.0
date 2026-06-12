@@ -4,10 +4,10 @@
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+        && (isEstateAuthority());
     $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
 @endphp
-@section($estateSelfHomeTab ? 'content' : 'content')
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Put In HAC" />
     <x-estate-workflow-stepper current="put-in-hac" />
@@ -21,7 +21,7 @@
                     <h5 class="mb-0 fw-semibold"><i class="bi bi-building-check me-2"></i>Put In HAC</h5>
                     <p class="small mb-0 opacity-90 mt-1">Select estate requests and put them in House Allotment Committee (HAC)</p>
                 </div>
-                @if(!hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
+                @if(!hasRole('HAC Person') || hasRole('Estate Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
                 <div>
                     <a href="{{ route('admin.estate.request-for-estate', $estateSelfQuery) }}" class="btn btn-light btn-sm">
                         <i class="bi bi-arrow-left me-1"></i> Back to Request for Estate

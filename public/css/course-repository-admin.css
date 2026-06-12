@@ -1,0 +1,851 @@
+/* Course Repository Admin — matches LBSNAA design mockups */
+:root {
+    --cr-design-primary: #0b3d6f;
+    --cr-design-primary-hover: #082d52;
+    --cr-design-border: #d1d5db;
+    --cr-design-muted: #9ca3af;
+    --cr-design-label: #111827;
+    --cr-design-radius: 0.5rem;
+    --cr-design-modal-radius: 0.75rem;
+}
+
+.cr-admin {
+    --bs-primary: var(--cr-design-primary);
+    --bs-primary-rgb: 11, 61, 111;
+    --bs-border-color: var(--cr-design-border);
+}
+
+/* —— Tables (list pages) —— */
+/* Category name: dark, semibold (per reference — not a coloured link) */
+.cr-admin a.cr-link-category {
+    color: #1f2937 !important;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.cr-admin a.cr-link-category:hover { text-decoration: underline; color: #0b3d6f !important; }
+/* Sub-Category & Attachment: blue links (per reference) */
+.cr-admin a.cr-link-subcategory {
+    color: #2563eb !important;
+    font-weight: 600;
+    text-decoration: none;
+    transition: color 0.15s ease;
+}
+.cr-admin a.cr-link-subcategory:hover { text-decoration: underline; color: #1d4ed8 !important; }
+.cr-admin a.cr-link-documents {
+    color: #2563eb !important;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+    text-decoration-thickness: 1px;
+    transition: color 0.15s ease;
+}
+.cr-admin a.cr-link-documents:hover { color: #1d4ed8 !important; }
+.cr-admin a.cr-link-subcategory .bi,
+.cr-admin a.cr-link-documents .bi {
+    font-size: 0.9em;
+    opacity: 0.85;
+}
+/* Zero-count links render muted (e.g. "See 00 Attachment") while staying clickable */
+.cr-admin a.cr-link-muted,
+.cr-admin a.cr-link-muted:hover {
+    color: #adb5bd !important;
+    font-weight: 500;
+    text-decoration: none;
+}
+
+.cr-admin-card {
+    border: 1px solid #e9edf2 !important;
+    border-radius: var(--cr-design-modal-radius) !important;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04), 0 4px 16px rgba(16, 24, 40, 0.06) !important;
+    background: #fff;
+}
+
+/* —— Table —— */
+.cr-admin-table {
+    --bs-table-bg: transparent;
+    border-color: #eef0f3;
+}
+/* Header: full-width light-grey band, muted grey text (per reference) */
+.cr-admin-table thead th {
+    background: #f3f4f6;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #6b7280;
+    border-bottom: 1px solid #e9ebef;
+    border-top: 1px solid #e9ebef;
+    padding: 0.8rem 1rem;
+    text-transform: none;
+    letter-spacing: 0.005em;
+    white-space: nowrap;
+    vertical-align: middle;
+}
+/* Body: airy rows, light dividers, mid-grey text */
+.cr-admin-table tbody td {
+    padding: 1rem;
+    font-size: 0.9rem;
+    border-bottom: 1px solid #f0f1f3;
+    vertical-align: middle;
+    color: #374151;
+}
+.cr-admin-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+.cr-admin-table tbody tr:hover {
+    background-color: #f8fafc;
+}
+.cr-admin-table tbody tr:last-child td {
+    border-bottom: 0;
+}
+/* Avatar: clean flat 40px circle */
+.cr-admin-table .cr-thumb,
+.cr-admin-table .cr-thumb-placeholder {
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: 50%;
+    border: 0;
+    box-shadow: 0 0 0 1px #eceef1;
+    transition: box-shadow 0.2s ease;
+}
+.cr-admin-table tbody tr:hover .cr-thumb,
+.cr-admin-table tbody tr:hover .cr-thumb-placeholder {
+    box-shadow: 0 0 0 1px #d6dde6;
+}
+
+.cr-admin-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cr-design-label);
+}
+
+.cr-admin-icon-btn {
+    width: 2.1rem;
+    height: 2.1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--cr-design-radius);
+    color: var(--cr-design-primary);
+    font-size: 0.95rem;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+.cr-admin-icon-btn:hover {
+    background: rgba(11, 61, 111, 0.1);
+    transform: translateY(-1px);
+}
+.cr-admin-icon-btn.text-danger { color: #dc3545; }
+.cr-admin-icon-btn.text-danger:hover { background: rgba(220, 53, 69, 0.1); }
+
+.cr-admin-empty {
+    background: #f9fafb;
+    border-radius: var(--cr-design-modal-radius);
+}
+
+/* —— Modals (Add Category / Upload Document mockups) —— */
+.cr-design-modal .modal-dialog.cr-design-modal-sm {
+    max-width: 32rem;
+}
+.cr-design-modal .modal-dialog.cr-design-modal-upload {
+    max-width: 56rem;
+}
+
+.cr-design-modal .modal-content {
+    border: 1px solid var(--cr-design-border);
+    border-radius: var(--cr-design-modal-radius);
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.12);
+    overflow: hidden;
+}
+
+.cr-design-modal .modal-header {
+    padding: 1.25rem 1.5rem 1rem;
+    border-bottom: 1px solid var(--cr-design-border);
+    background: #fff;
+}
+
+.cr-design-modal .modal-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--cr-design-label);
+    letter-spacing: -0.01em;
+}
+
+.cr-design-modal .modal-body {
+    padding: 1.25rem 1.5rem 1.5rem;
+    background: #fff;
+}
+
+.cr-design-modal .modal-footer {
+    padding: 1rem 1.5rem 1.25rem;
+    border-top: 1px solid var(--cr-design-border);
+    background: #fff;
+    gap: 0.75rem;
+}
+
+.cr-design-modal .form-label {
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--cr-design-label);
+    margin-bottom: 0.375rem;
+}
+
+.cr-design-modal .form-control,
+.cr-design-modal .form-select {
+    border: 1px solid var(--cr-design-border);
+    border-radius: var(--cr-design-radius);
+    font-size: 0.9375rem;
+    padding: 0.5rem 0.75rem;
+    min-height: 2.625rem;
+    color: #111827;
+}
+.cr-design-modal .form-control::placeholder {
+    color: var(--cr-design-muted);
+    font-style: italic;
+    font-weight: 400;
+}
+
+.cr-design-modal .form-control:focus,
+.cr-design-modal .form-select:focus {
+    border-color: var(--cr-design-primary);
+    box-shadow: 0 0 0 0.15rem rgba(11, 61, 111, 0.15);
+}
+
+.cr-design-modal .form-check-input {
+    width: 1.05em;
+    height: 1.05em;
+    margin-top: 0.15em;
+    border-color: var(--cr-design-border);
+}
+.cr-design-modal .form-check-input:checked {
+    background-color: var(--cr-design-primary);
+    border-color: var(--cr-design-primary);
+}
+.cr-design-modal .form-check-label {
+    font-size: 0.9375rem;
+    color: var(--cr-design-label);
+}
+
+.cr-design-modal .btn-outline-primary {
+    --bs-btn-color: var(--cr-design-primary);
+    --bs-btn-border-color: var(--cr-design-primary);
+    --bs-btn-hover-color: #fff;
+    --bs-btn-hover-bg: var(--cr-design-primary);
+    --bs-btn-hover-border-color: var(--cr-design-primary);
+    border-radius: var(--cr-design-radius);
+    font-weight: 500;
+    padding: 0.5rem 1.35rem;
+    min-width: 6.5rem;
+    background: #fff;
+}
+
+.cr-design-modal .btn-primary {
+    --bs-btn-bg: var(--cr-design-primary);
+    --bs-btn-border-color: var(--cr-design-primary);
+    --bs-btn-hover-bg: var(--cr-design-primary-hover);
+    --bs-btn-hover-border-color: var(--cr-design-primary-hover);
+    border-radius: var(--cr-design-radius);
+    font-weight: 500;
+    padding: 0.5rem 1.35rem;
+    min-width: 6.5rem;
+}
+
+/* Overview section (Upload Document) */
+.cr-design-overview-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--cr-design-label);
+    margin: 0.5rem 0 0;
+}
+.cr-design-divider {
+    border: 0;
+    border-top: 1px solid var(--cr-design-border);
+    margin: 0.5rem 0 1.25rem;
+    opacity: 1;
+}
+
+/* Flatten upload form inner card */
+#uploadModal .cr-upload-form-panel {
+    border: 0 !important;
+    box-shadow: none !important;
+    background: transparent !important;
+    margin-bottom: 0 !important;
+}
+#uploadModal .cr-upload-form-panel > .card-header {
+    display: none;
+}
+#uploadModal .cr-upload-form-panel > .card-body {
+    padding: 0 !important;
+}
+
+/* Keep long option text (e.g. Course Name) from forcing selects/inputs
+   wider than the modal — flex columns/selects default to min-width:auto and overflow. */
+#uploadModal .row {
+    margin-left: 0;
+    margin-right: 0;
+}
+#uploadModal [class*="col-"] {
+    min-width: 0;
+}
+#uploadModal .form-select,
+#uploadModal .form-control {
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+}
+/* Native select: clip the selected long text instead of stretching the control */
+#uploadModal .form-select {
+    text-overflow: ellipsis;
+}
+
+#uploadModal .category-fields small.text-muted {
+    display: none !important;
+}
+
+/* Document location — radio-style toggle group */
+#uploadModal .cr-course-status-group {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 1.25rem;
+    margin-bottom: 0.75rem;
+    padding: 0;
+    border: 0;
+    width: auto;
+}
+#uploadModal .cr-course-status-group .btn {
+    border-radius: var(--cr-design-radius) !important;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 0.35rem 0.85rem;
+}
+#uploadModal .cr-course-status-group .btn-outline-success,
+#uploadModal .cr-course-status-group .btn-outline-secondary {
+    --bs-btn-color: var(--cr-design-label);
+    --bs-btn-border-color: var(--cr-design-border);
+    --bs-btn-bg: #fff;
+}
+#uploadModal .cr-course-status-group .btn-check:checked + .btn-outline-success {
+    background-color: var(--cr-design-primary) !important;
+    border-color: var(--cr-design-primary) !important;
+    color: #fff !important;
+}
+#uploadModal .cr-course-status-group .btn-check:checked + .btn-outline-secondary {
+    background-color: #6b7280 !important;
+    border-color: #6b7280 !important;
+    color: #fff !important;
+}
+
+/* Custom file picker */
+.cr-design-file-label {
+    display: flex;
+    align-items: stretch;
+    width: 100%;
+    min-height: 2.625rem;
+    border: 1px solid var(--cr-design-border);
+    border-radius: var(--cr-design-radius);
+    overflow: hidden;
+    cursor: pointer;
+    background: #fff;
+    margin: 0;
+}
+.cr-design-file-btn {
+    display: inline-flex;
+    align-items: center;
+    padding: 0 1rem;
+    background: #f3f4f6;
+    border-right: 1px solid var(--cr-design-border);
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: var(--cr-design-label);
+    white-space: nowrap;
+}
+.cr-design-file-name {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    padding: 0 0.75rem;
+    font-size: 0.875rem;
+    color: var(--cr-design-muted);
+    font-style: italic;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.cr-design-file-input {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Table file cells in upload modal → design file row */
+#uploadModal .cr-upload-attach-row input[type="file"] {
+    border: 1px solid var(--cr-design-border);
+    border-radius: var(--cr-design-radius);
+    padding: 0.35rem 0.5rem;
+    font-size: 0.875rem;
+}
+#uploadModal .cr-upload-attach-row input[type="file"]::file-selector-button {
+    margin-right: 0.65rem;
+    padding: 0.35rem 0.85rem;
+    border: 0;
+    border-right: 1px solid var(--cr-design-border);
+    border-radius: var(--cr-design-radius) 0 0 var(--cr-design-radius);
+    background: #f3f4f6;
+    font-weight: 500;
+    color: var(--cr-design-label);
+}
+
+#uploadModal .btn.cr-btn-add-row {
+    background: #e8f0f8;
+    border: 1px solid #b8cfe8;
+    color: var(--cr-design-primary);
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--cr-design-radius);
+}
+#uploadModal .btn.cr-btn-remove-row {
+    background: #fde8e8;
+    border: 1px solid #f5c2c2;
+    color: #b91c1c;
+    width: 2.25rem;
+    height: 2.25rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--cr-design-radius);
+}
+
+/* The <form> wraps the error alert, body and footer, so it must drive the
+   scrollable layout: fill the remaining height, let the body scroll, and keep
+   the footer pinned so the dialog end is always reachable even with an error. */
+#uploadModal #uploadForm {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+
+#uploadModal .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+
+#uploadModal .modal-body > p.text-muted.small:last-child {
+    display: none;
+}
+
+#uploadModal #course_attachments_container,
+#uploadModal #other_attachments_container {
+    max-height: 14rem;
+    border: 1px solid var(--cr-design-border);
+    border-radius: var(--cr-design-radius);
+}
+
+.cr-repo-breadcrumb-toolbar .btn:hover {
+    transform: translateY(-1px);
+}
+
+@media (max-width: 575.98px) {
+    .cr-repo-breadcrumb-toolbar { width: 100%; }
+    .cr-repo-breadcrumb-toolbar .btn { flex: 1 1 auto; justify-content: center; }
+}
+
+/* —————————————————————————————————————————————
+   DataTables controls — scoped to this module only.
+   Polishes the auto-generated search / length / info /
+   pagination to match the reference design without
+   altering global table behaviour or markup.
+   ————————————————————————————————————————————— */
+.cr-admin .dataTables_wrapper .dataTables_length,
+.cr-admin .dataTables_wrapper .dataTables_filter {
+    margin-bottom: 1.25rem;
+}
+
+/* Search box — wide pill input with a left magnifier icon */
+.cr-admin .dataTables_wrapper .dataTables_filter {
+    text-align: right;
+    width: 100%;
+    max-width: 360px;
+}
+.cr-admin .dataTables_wrapper .dataTables_filter label {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    width: 100%;
+    position: relative;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #475467;
+    margin-bottom: 0;
+}
+.cr-admin .dataTables_wrapper .dataTables_filter label::before {
+    content: "";
+    position: absolute;
+    left: 0.95rem;
+    width: 16px;
+    height: 16px;
+    pointer-events: none;
+    opacity: 0.55;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: contain;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cline x1='11' y1='11' x2='14.5' y2='14.5'/%3E%3C/svg%3E");
+}
+.cr-admin .dataTables_wrapper .dataTables_filter input {
+    width: 100%;
+    flex: 1 1 auto;
+    min-width: 14rem;
+    padding: 0.6rem 0.95rem 0.6rem 2.5rem;
+    font-size: 0.875rem;
+    border: 1px solid var(--cr-design-border);
+    border-radius: 0.55rem;
+    background-color: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cr-admin .dataTables_wrapper .dataTables_filter input::placeholder {
+    color: var(--cr-design-muted);
+}
+.cr-admin .dataTables_wrapper .dataTables_filter input:focus {
+    outline: 0;
+    border-color: var(--cr-design-primary);
+    box-shadow: 0 0 0 0.18rem rgba(11, 61, 111, 0.12);
+}
+
+/* Columns toggle — trigger button + Column Visibility modal
+   (mirrors the Course Repository user-module design) */
+.cru-col-hidden {
+    display: none !important;
+}
+.cr-admin .cru-colvis-trigger {
+    color: #495057;
+    border-radius: 0.55rem !important;
+}
+.cr-admin .cru-colvis-trigger:hover {
+    background-color: #f1f3f5;
+    border-color: #adb5bd;
+    color: var(--cr-design-primary);
+}
+
+.cru-colvis-modal .modal-title {
+    font-size: 1.25rem;
+    color: #1f2937;
+}
+.cru-colvis-divider {
+    border: 0;
+    border-top: 1px solid var(--cr-design-border);
+    opacity: 1;
+}
+.cru-colvis-chip {
+    border: 1px solid var(--cr-design-border);
+    border-radius: var(--cr-design-radius);
+    padding: 0.75rem 1rem;
+    cursor: pointer;
+    background-color: #fff;
+    font-size: 0.9375rem;
+    color: #344054;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, background-color 0.15s ease;
+}
+.cru-colvis-chip:hover {
+    border-color: rgba(11, 61, 111, 0.45);
+    box-shadow: 0 2px 6px rgba(0, 40, 80, 0.06);
+}
+.cru-colvis-chip .form-check-input {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex-shrink: 0;
+    cursor: pointer;
+}
+.cru-colvis-chip .form-check-input:checked {
+    background-color: var(--cr-design-primary);
+    border-color: var(--cr-design-primary);
+}
+.cru-colvis-chip:has(.form-check-input:checked) {
+    border-color: rgba(11, 61, 111, 0.45);
+    background-color: rgba(11, 61, 111, 0.04);
+}
+.cru-colvis-chip-locked {
+    cursor: not-allowed;
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+.cru-colvis-chip-locked .form-check-input {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+/* Length selector */
+.cr-admin .dataTables_wrapper .dataTables_length label {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: #475467;
+    margin-bottom: 0;
+}
+.cr-admin .dataTables_wrapper .dataTables_length select {
+    padding: 0.4rem 1.75rem 0.4rem 0.65rem;
+    font-size: 0.8125rem;
+    border: 1px solid var(--cr-design-border);
+    border-radius: 0.55rem;
+    color: #344054;
+    background-color: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cr-admin .dataTables_wrapper .dataTables_length select:focus {
+    outline: 0;
+    border-color: var(--cr-design-primary);
+    box-shadow: 0 0 0 0.18rem rgba(11, 61, 111, 0.12);
+}
+
+/* Info text — "Showing X of Y" */
+.cr-admin .dataTables_wrapper .dataTables_info {
+    padding-top: 0.85rem;
+    font-size: 0.8125rem;
+    color: #667085;
+}
+
+/* Reshaped footer: pagination on the left, "Showing [N] of {total} items" on the right.
+   The shared DataTables dom puts info (col-md-5) before pagination (col-md-7); we flip the
+   visual order here so it matches the reference without touching the global init. */
+.cr-admin .dataTables_wrapper > .row:last-child {
+    align-items: center;
+}
+.cr-admin .dataTables_wrapper > .row:last-child > [class*="col-md-5"] {
+    order: 2;
+}
+.cr-admin .dataTables_wrapper > .row:last-child > [class*="col-md-7"] {
+    order: 1;
+}
+.cr-admin .dataTables_wrapper .dataTables_info.cr-footer-info {
+    padding-top: 0;            /* sit on the same baseline as the pagination */
+    color: #667085;
+    font-size: 0.8125rem;
+    line-height: 1;
+}
+.cr-admin .dataTables_wrapper .cr-footer-info > span {
+    line-height: 1;
+}
+/* Compact page-size select: small rounded box with a custom chevron. */
+.cr-admin .dataTables_wrapper .cr-footer-select {
+    width: auto;
+    min-width: 4.25rem;
+    height: 2.1rem;
+    padding: 0 1.9rem 0 0.7rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: #344054;
+    border: 1px solid var(--cr-design-border);
+    border-radius: 8px;
+    background-color: #fff;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.6rem center;
+    background-size: 14px;
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    cursor: pointer;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.cr-admin .dataTables_wrapper .cr-footer-select:focus {
+    outline: 0;
+    border-color: var(--cr-design-primary);
+    box-shadow: 0 0 0 0.18rem rgba(11, 61, 111, 0.12);
+}
+
+/* Pagination */
+.cr-admin .dataTables_wrapper .dataTables_paginate {
+    padding-top: 0;          /* align with the "Showing …" footer baseline */
+    float: left !important;
+    text-align: left !important;
+}
+/* Pills: transparent by default, active = white box with a blue outline.
+   Covers both the plain (.paginate_button) and Bootstrap-5 (.page-link) markup. */
+.cr-admin .dataTables_wrapper .dataTables_paginate ul.pagination {
+    margin: 0;
+    gap: 4px;
+}
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button,
+.cr-admin .dataTables_wrapper .dataTables_paginate .page-item .page-link {
+    min-width: 2.1rem;
+    height: 2.1rem;
+    padding: 0 0.65rem !important;
+    margin: 0 0.15rem !important;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid transparent !important;
+    border-radius: 0.5rem !important;
+    font-size: 0.8125rem;
+    line-height: 1;
+    color: #475467 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button:hover,
+.cr-admin .dataTables_wrapper .dataTables_paginate .page-item:not(.active):not(.disabled) .page-link:hover {
+    background: #f0f4f9 !important;
+    border-color: transparent !important;
+    color: var(--cr-design-primary) !important;
+}
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button.current,
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button.current:hover,
+.cr-admin .dataTables_wrapper .dataTables_paginate .page-item.active .page-link {
+    color: var(--cr-design-primary) !important;
+    background: #fff !important;
+    border: 1px solid var(--cr-design-primary) !important;
+    box-shadow: none !important;
+    font-weight: 600;
+}
+/* Prev / next chevrons — give them a light bordered box and a clearer glyph
+   so they read as buttons (matches the reference ‹ › controls). */
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button.previous,
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button.next,
+.cr-admin .dataTables_wrapper .dataTables_paginate li:first-child .page-link,
+.cr-admin .dataTables_wrapper .dataTables_paginate li:last-child .page-link {
+    border: 1px solid var(--cr-design-border) !important;
+    color: #475467 !important;
+    font-size: 1rem;
+}
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button.previous:hover,
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button.next:hover,
+.cr-admin .dataTables_wrapper .dataTables_paginate li:first-child:not(.disabled) .page-link:hover,
+.cr-admin .dataTables_wrapper .dataTables_paginate li:last-child:not(.disabled) .page-link:hover {
+    border-color: #c5d2e0 !important;
+    background: #f0f4f9 !important;
+    color: var(--cr-design-primary) !important;
+}
+
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button.disabled,
+.cr-admin .dataTables_wrapper .dataTables_paginate .paginate_button.disabled:hover,
+.cr-admin .dataTables_wrapper .dataTables_paginate .page-item.disabled .page-link {
+    color: #cbd5e1 !important;
+    background: transparent !important;
+    border-color: #eef1f5 !important;
+    cursor: default;
+}
+
+/* Responsive: stack search/length and centre pagination on small screens */
+@media (max-width: 767.98px) {
+    .cr-admin .dataTables_wrapper .dataTables_filter,
+    .cr-admin .dataTables_wrapper .dataTables_length {
+        text-align: left !important;
+        float: none !important;
+        width: 100%;
+    }
+    .cr-admin .dataTables_wrapper .dataTables_filter input {
+        width: 100%;
+        min-width: 0;
+    }
+    .cr-admin .dataTables_wrapper .dataTables_filter label {
+        display: flex;
+        width: 100%;
+    }
+    .cr-admin .dataTables_wrapper .dataTables_info,
+    .cr-admin .dataTables_wrapper .dataTables_paginate {
+        text-align: center;
+        float: none;
+        width: 100%;
+    }
+}
+#crCategoriesTable {
+    --bs-table-bg: transparent;
+}
+
+#crCategoriesTable thead th {
+    background: #f8f9fb;
+    border-bottom: 1px solid #eceff3;
+    padding: 14px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#crCategoriesTable tbody td {
+    padding: 18px 16px;
+    vertical-align: middle;
+}
+
+#crCategoriesTable tbody tr {
+    transition: all .2s ease;
+}
+
+#crCategoriesTable tbody tr:hover {
+    background: #fafbfc;
+}
+
+#crCategoriesTable a {
+    color: #4f46e5;
+}
+
+#crCategoriesTable .btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#crCategoriesTable .btn:hover {
+    transform: translateY(-1px);
+}
+
+.card.rounded-4 {
+    border-radius: 16px !important;
+}
+#child_repositories {
+    --bs-table-bg: transparent;
+}
+
+#child_repositories thead th {
+    background: #f8f9fb;
+    border-bottom: 1px solid #eceff3;
+    padding: 14px 16px;
+    font-size: 13px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+#child_repositories tbody td {
+    padding: 18px 16px;
+    vertical-align: middle;
+}
+
+#child_repositories tbody tr {
+    transition: all .2s ease;
+}
+
+#child_repositories tbody tr:hover {
+    background: #fafbfc;
+}
+
+#child_repositories a {
+    color: #4f46e5;
+}
+
+#child_repositories .btn {
+    width: 34px;
+    height: 34px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+#child_repositories .btn:hover {
+    transform: translateY(-1px);
+}
