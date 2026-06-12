@@ -1122,12 +1122,15 @@ class CalendarController extends Controller
                     'v.venue_name',
                     DB::raw('t.START_DATE as from_date'),
                     't.class_session',
-                    // Add field to extract session end time for sorting
+                    // Add field to extract session end time for sorting (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
                     DB::raw("
-                    STR_TO_DATE(
-                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-                        '%h:%i %p'
-                    ) as session_end_time
+                    CASE
+                        WHEN t.class_session LIKE '% - %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                        WHEN t.class_session LIKE '% to %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                        ELSE NULL
+                    END as session_end_time
                 ")
                 ])
                 ->leftJoin('faculty_master as f', function ($join) {
@@ -1167,14 +1170,17 @@ class CalendarController extends Controller
                         ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
                         ->where('tf.is_submitted', 1);
                 })
-                // Show only sessions whose end time has passed
+                // Show only sessions whose end time has passed (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
                 ->whereRaw("
                 TIMESTAMP(
                     t.END_DATE,
-                    STR_TO_DATE(
-                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-                        '%h:%i %p'
-                    )
+                    CASE
+                        WHEN t.class_session LIKE '% - %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                        WHEN t.class_session LIKE '% to %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                        ELSE NULL
+                    END
                 ) <= NOW()
             ");
 
