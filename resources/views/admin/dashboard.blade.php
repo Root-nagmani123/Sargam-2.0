@@ -630,7 +630,7 @@ $userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
                 </div>
             </div>
             @endif
-    @if(!canSeeSecurityManagement())
+    @if(!canSeeSecurityManagement() || hasRole('Super Admin'))
     <div class="row g-2 g-md-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
         <div class="col">
             <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
