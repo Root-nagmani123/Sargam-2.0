@@ -123,7 +123,7 @@
                     </div>
                 </div>
                 <div class="mt-3 pt-2 border-top d-flex flex-wrap gap-2 align-items-center">
-                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center">
+                    <button type="submit" name="refresh" value="1" class="btn btn-primary d-inline-flex align-items-center">
                         <span class="material-icons me-1" style="font-size: 18px;">filter_list</span>
                         Apply Filters
                     </button>
@@ -152,25 +152,26 @@
 
     <div class="card">
         <div class="card-body">
-        @php
-        $fromDateFormatted = request('from_date') ? \Carbon\Carbon::parse(request('from_date'))->format('d-F-Y') : 'Start';
-        $toDateFormatted = request('to_date') ? \Carbon\Carbon::parse(request('to_date'))->format('d-F-Y') : 'End';
-        // Always show all buyers' sections in one go (no pagination)
-        $sectionsToShow = isset($allBuyersSections) ? $allBuyersSections : collect([$groupedSections]);
-    @endphp
-
-    @include('admin.mess.reports.partials.category-wise-print-slip-body', [
-        'sectionsToShow' => $sectionsToShow,
-        'fromDateFormatted' => $fromDateFormatted,
-        'toDateFormatted' => $toDateFormatted,
-        'otCourses' => $otCourses ?? collect(),
-        'grandTotal' => $grandTotal ?? 0,
-        'filtersApplied' => $filtersApplied ?? false,
-        'printPageBreakPerBuyer' => request('print_all'),
-        'freezeSaleVoucherTableHeader' => true,
-    ])
-
-    <!-- Pagination removed: all data loaded in a single view -->
+            @if(config('app.debug') && isset($reportTimingMs))
+                <p class="small text-body-secondary mb-2 no-print" id="cw-sale-voucher-timing-hint">
+                    Server: {{ $reportTimingMs }} ms
+                    @if(isset($reportCacheStatus)) · cache {{ $reportCacheStatus }} @endif
+                    @if(isset($reportLineCount)) · {{ $reportLineCount }} buyer section(s) @endif
+                </p>
+            @endif
+            <div id="cw-sale-voucher-report-wrap">
+                @include('admin.mess.reports.partials.category-wise-print-slip-report', [
+                    'sectionsToShow' => $sectionsToShow ?? [],
+                    'fromDateFormatted' => $fromDateFormatted ?? (request('from_date') ? \Carbon\Carbon::parse(request('from_date'))->format('d-F-Y') : 'Start'),
+                    'toDateFormatted' => $toDateFormatted ?? (request('to_date') ? \Carbon\Carbon::parse(request('to_date'))->format('d-F-Y') : 'End'),
+                    'otCourses' => $otCourses ?? collect(),
+                    'grandTotal' => $grandTotal ?? 0,
+                    'filtersApplied' => $filtersApplied ?? false,
+                    'reportPage' => $reportPage ?? null,
+                    'reportLineCount' => $reportLineCount ?? 0,
+                    'freezeSaleVoucherTableHeader' => $freezeSaleVoucherTableHeader ?? false,
+                ])
+            </div>
         </div>
     </div>
 </div>
@@ -466,7 +467,7 @@ window.addEventListener('load', function() {
 @endif
 
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/css/tom-select.bootstrap5.min.css">
-<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js" defer></script>
 
 <script>
 function printCategoryWiseSlip() {
@@ -480,6 +481,54 @@ function printCategoryWiseSlip() {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    @if(isset($reportTimingMs))
+    console.info(
+        '[Sale Voucher Report] server {{ $reportTimingMs }} ms'
+        @if(isset($reportCacheStatus)) + ', cache {{ $reportCacheStatus }}' @endif
+        @if(isset($reportLineCount)) + ', {{ $reportLineCount }} buyers total' @endif
+    );
+    @endif
+
+    var reportWrap = document.getElementById('cw-sale-voucher-report-wrap');
+    if (reportWrap) {
+        function ajaxLoadReport(url) {
+            if (!url) return;
+            var targetUrl = url;
+            if (!/[?&]ajax=1(?:&|$)/.test(url)) {
+                var sep = url.indexOf('?') === -1 ? '?' : '&';
+                targetUrl = url + sep + 'ajax=1';
+            }
+            reportWrap.style.opacity = '0.55';
+            fetch(targetUrl, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then(function (r) {
+                    var ms = r.headers.get('X-Sale-Voucher-Report-Ms');
+                    var cache = r.headers.get('X-Sale-Voucher-Report-Cache');
+                    if (ms) console.info('[Sale Voucher Report] page ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
+                    return r.text();
+                })
+                .then(function (html) {
+                    reportWrap.innerHTML = html;
+                    reportWrap.style.opacity = '';
+                    hookReportPagination();
+                })
+                .catch(function (e) {
+                    reportWrap.style.opacity = '';
+                    console.error('Sale voucher report pagination failed', e);
+                });
+        }
+
+        function hookReportPagination() {
+            reportWrap.querySelectorAll('.pagination a').forEach(function (a) {
+                a.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    ajaxLoadReport(this.href);
+                });
+            });
+        }
+
+        hookReportPagination();
+    }
+
     var btnPrintAll = document.getElementById('btnPrintAll');
     if (btnPrintAll) {
         btnPrintAll.addEventListener('click', function(e) {
@@ -488,6 +537,9 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    var filtersAlreadyApplied = {{ ($filtersApplied ?? false) ? 'true' : 'false' }};
+
+    function initSaleVoucherFilters() {
     if (typeof TomSelect === 'undefined') return;
 
     var clientTypeSlug = document.getElementById('clientTypeSlug');
@@ -804,8 +856,15 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             if (ok.length) tsBuyer.setValue(ok, true);
         }
-    } else {
+    } else if (!filtersAlreadyApplied) {
         fillBuyerNameSelect();
+    }
+    }
+
+    if ('requestIdleCallback' in window) {
+        requestIdleCallback(initSaleVoucherFilters, { timeout: 2000 });
+    } else {
+        setTimeout(initSaleVoucherFilters, 150);
     }
 });
 </script>

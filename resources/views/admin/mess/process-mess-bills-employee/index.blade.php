@@ -292,7 +292,7 @@
             </form>
 
             <div class="table-responsive">
-                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable">
+                <table class="table text-nowrap align-middle mb-0" id="processMessBillsTable" data-mess-datatable-server-side="1">
                     <thead class="table-light">
                         <tr>
                             <th class="text-nowrap py-2 mess-sort-th mess-report-sort-th" data-mess-col-original="S.No."><span class="d-inline-flex align-items-center gap-1"><span>S.No.</span><span class="mess-report-sort-icon mess-report-sort-icon--muted material-symbols-rounded" aria-hidden="true">unfold_more</span></span></th>
@@ -355,16 +355,6 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', [
-    'tableId' => 'processMessBillsTable',
-    'searchPlaceholder' => 'Search name or invoice no.',
-    'orderColumn' => [[0, 'asc']],
-    'actionColumnIndex' => 9,
-    'infoLabel' => 'bills',
-    'serverSide' => true,
-    'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
-])
-
 @push('scripts')
 <script>
 (function () {
@@ -388,6 +378,7 @@
         if (elUnpaid) elUnpaid.textContent = fmtInt(s.unpaid_count);
         if (elPaid) elPaid.textContent = fmtInt(s.paid_count);
         if (elAmt) elAmt.textContent = '₹ ' + fmtAmt(s.total_amount);
+        if (elDueAmt) elDueAmt.textContent = '₹ ' + fmtAmt(s.total_due_amount);
         if (elPaidPct) {
             var total = Number(s.total_bills) || 0;
             var paid = Number(s.paid_count) || 0;
@@ -427,13 +418,14 @@
     'tableId' => 'processMessBillsTable',
     'searchPlaceholder' => 'Search name or invoice no.',
     'orderColumn' => [[1, 'asc']],
-    'actionColumnIndex' => 8,
+    'actionColumnIndex' => 9,
     'infoLabel' => 'bills',
     'searchDelay' => 500,
     'serverSide' => true,
     'ajaxUrlBase' => route('admin.mess.process-mess-bills-employee.index'),
     'ajaxJsonCallback' => 'applyProcessMessBillStats',
     'columnManager' => true,
+    'colReorder' => false,
     'columnManagerLocked' => [0],
     'columnManagerTitle' => 'Process Mess Bills columns',
 ])
@@ -1911,21 +1903,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         var employeeNames = {
-            'academy staff': [
-@foreach($employees ?? [] as $e)
-                { value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },
-@endforeach
-            ],
-            'faculty': [
-@foreach($faculties ?? [] as $f)
-                { value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },
-@endforeach
-            ],
-            'mess staff': [
-@foreach($messStaff ?? [] as $m)
-                { value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },
-@endforeach
-            ]
+            'academy staff': @json($filterEmployeeBuyerOptions ?? [], JSON_UNESCAPED_UNICODE),
+            'faculty': @json($filterFacultyBuyerOptions ?? [], JSON_UNESCAPED_UNICODE),
+            'mess staff': @json($filterMessStaffBuyerOptions ?? [], JSON_UNESCAPED_UNICODE)
         };
 
         var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
@@ -2314,21 +2294,9 @@ document.addEventListener('DOMContentLoaded', function() {
         ];
 
         var employeeNames = {
-            'academy staff': [
-@foreach($employees ?? [] as $e)
-                { value: '{{ addslashes($e->full_name) }}', text: '{{ addslashes($e->full_name) }}' },
-@endforeach
-            ],
-            'faculty': [
-@foreach($faculties ?? [] as $f)
-                { value: '{{ addslashes($f->full_name) }}', text: '{{ addslashes($f->full_name) }}' },
-@endforeach
-            ],
-            'mess staff': [
-@foreach($messStaff ?? [] as $m)
-                { value: '{{ addslashes($m->full_name) }}', text: '{{ addslashes($m->full_name) }}' },
-@endforeach
-            ]
+            'academy staff': @json($filterEmployeeBuyerOptions ?? [], JSON_UNESCAPED_UNICODE),
+            'faculty': @json($filterFacultyBuyerOptions ?? [], JSON_UNESCAPED_UNICODE),
+            'mess staff': @json($filterMessStaffBuyerOptions ?? [], JSON_UNESCAPED_UNICODE)
         };
         var otBuyerNames = {!! json_encode(($otBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
         var courseBuyerNames = {!! json_encode(($courseBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};

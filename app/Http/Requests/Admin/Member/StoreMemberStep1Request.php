@@ -6,6 +6,7 @@ use App\Models\CasteCategoryMaster;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 use App\Models\EmployeeMaster;
+use App\Models\AppellationMaster;
 class StoreMemberStep1Request extends FormRequest
 {
     /**
@@ -27,7 +28,6 @@ class StoreMemberStep1Request extends FormRequest
     {
         // dd(array_keys(CasteCategoryMaster::GetSeatName()));
         return [
-            'title' => 'required|string|max:20',
             'first_name' => 'required|string|max:100|regex:/^[A-Za-z\s]+$/',
             'middle_name' => 'nullable|string|max:100|regex:/^[A-Za-z\s]+$/',
             'last_name' => 'required|string|max:100|regex:/^[A-Za-z\s]+$/',
@@ -44,6 +44,11 @@ class StoreMemberStep1Request extends FormRequest
                 'required',
                 Rule::in(array_keys(CasteCategoryMaster::GetSeatName()->toArray()))
             ],
+            'appellation' => [
+                'nullable',
+                Rule::exists('appellation_master', 'pk')
+                    ->where('active_inactive', 1)
+            ],
             'height' => 'nullable|regex:/^\d+(\.\d+)?$/',
             'date_of_birth' => 'required|date|before_or_equal:today',
         ];
@@ -52,7 +57,6 @@ class StoreMemberStep1Request extends FormRequest
     public function messages()
     {
         return [
-            'title.required' => 'The title field is required.',
             'first_name.required' => 'The first name field is required.',
             'first_name.regex' => 'The first name must contain only letters and spaces.',
             'middle_name.regex' => 'The middle name must contain only letters and spaces.',
@@ -66,10 +70,11 @@ class StoreMemberStep1Request extends FormRequest
             'marital_status.required' => 'Please select marital status.',
             'gender.required' => 'Please select gender.',
             'caste_category.required' => 'Please select caste category.',
+            'appellation.exists' => 'The selected appellation is invalid.',
             'date_of_birth.required' => 'Date of birth is required.',
             'date_of_birth.before_or_equal' => 'Date of birth cannot be in the future.',
             'height.regex' => 'Height must be a valid number.',
         ];
     }
-    
+
 }

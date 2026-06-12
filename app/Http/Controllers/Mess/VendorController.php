@@ -3,14 +3,34 @@ namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
 use App\Models\Mess\Vendor;
+use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class VendorController extends Controller
 {
+    private const LIST_CACHE_EPOCH_KEY = 'mess_vendor_master_list_epoch';
+
+    public static function bumpListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'VendorController');
+    }
+
     public function index()
     {
-        $vendors = Vendor::orderByDesc('id')->get();
+        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
+        $cacheKey = 'mess_vendor_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
+
+        $vendors = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_VENDOR_MASTER_LIST_CACHE_ENABLED',
+                'seconds' => 'MESS_VENDOR_MASTER_LIST_CACHE_SECONDS',
+            ],
+            'VendorController@index',
+            fn () => Vendor::orderByDesc('id')->get()
+        );
+
         return view('mess.vendors.index', compact('vendors'));
     }
 
@@ -29,6 +49,8 @@ class VendorController extends Controller
         }
 
         Vendor::create($data);
+
+        self::bumpListCacheEpoch();
 
         return redirect()->route('admin.mess.vendors.index')->with('success', 'Vendor added successfully');
     }
@@ -54,6 +76,9 @@ class VendorController extends Controller
         }
 
         $vendor->update($data);
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.vendors.index')->with('success', 'Vendor updated successfully');
     }
 
@@ -61,6 +86,9 @@ class VendorController extends Controller
     {
         $vendor = Vendor::findOrFail($id);
         $vendor->delete();
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.vendors.index')->with('success', 'Vendor deleted successfully');
     }
 
