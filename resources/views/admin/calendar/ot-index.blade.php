@@ -2295,7 +2295,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 
             /* Flat event cards: white, thin colored left bar, title + time only */
             #calendar .fc-event-card {
-                background: #fff !important;
+                background: #F4F9FF !important;
                 border: 1px solid #e5e7eb !important;
                 border-left: 4px solid #4e73df !important;
                 border-radius: 6px !important;
@@ -2685,7 +2685,6 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
 </div>
 
 @include('admin.calendar.partials.add_edit_events')
-@include('admin.calendar.partials.events_details')
 @include('admin.calendar.partials.confirmation')
 
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
@@ -3296,11 +3295,10 @@ class CalendarManager {
     }
 
     handleEventClick(info) {
-        // Close any open popover when an event is clicked
+        // Event details are shown on hover (ot-hover-card); the click-to-open
+        // details modal has been removed. Just close any open "+ more" popover.
         this.closePopover();
-
         this.currentEventId = info.event.id;
-        this.loadEventDetails(info.event.id);
     }
 
     /* ---------- Hover details card (mockup) ---------- */
@@ -3424,15 +3422,13 @@ class CalendarManager {
             editBtn.addEventListener('click', () => {
                 this.hideHoverCard();
                 this.currentEventId = id;
-                const modalEdit = document.getElementById('editEventBtn');
-                if (modalEdit) { modalEdit.dataset.id = id; this.loadEventForEdit(); }
+                this.loadEventForEdit(id);
             });
         }
         if (delBtn) {
             delBtn.addEventListener('click', () => {
                 this.hideHoverCard();
-                const modalDel = document.getElementById('deleteEventBtn');
-                if (modalDel) { modalDel.dataset.id = id; this.confirmDelete(); }
+                this.confirmDelete(id);
             });
         }
     }
@@ -3485,55 +3481,6 @@ class CalendarManager {
         popoverBackdrops.forEach(backdrop => {
             backdrop.remove();
         });
-    }
-
-    async loadEventDetails(eventId) {
-        try {
-            const response = await fetch(`${CalendarConfig.api.eventDetails}?id=${eventId}`, {
-                headers: {
-                    'X-CSRF-TOKEN': '{{ csrf_token() }}'
-                }
-            });
-
-            if (!response.ok) throw new Error('Failed to load event details');
-
-            const data = await response.json();
-            this.showEventDetails(data);
-            
-        } catch (error) {
-            // this.showNotification('Error loading event details', 'danger');
-            console.error('Event details error:', error);
-        }
-    }
-
-    showEventDetails(data) {
-        // Update modal content
-        document.getElementById('eventTitle').textContent = 'Event Details';
-        document.getElementById('eventTopic').textContent = data.topic || '';
-        document.getElementById('eventDate').textContent =
-            new Date(data.start).toLocaleDateString('en-IN', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric'
-            });
-        document.getElementById('eventfaculty').textContent = data.faculty_name || '';
-        document.getElementById('eventVanue').textContent = data.venue_name || '';
-        document.getElementById('eventVanue').textContent = data.venue_name || '';
-        document.getElementById('eventclasssession').textContent = data.class_session || '';
-        document.getElementById('eventgroupname').textContent = data.group_name || '';
-        document.getElementById('internal_faculty_name_show').textContent = data.internal_faculty || '';
-
-        // Set edit/delete button data
-        const editBtn = document.getElementById('editEventBtn');
-        const deleteBtn = document.getElementById('deleteEventBtn');
-
-        if (editBtn) editBtn.dataset.id = data.id;
-        if (deleteBtn) deleteBtn.dataset.id = data.id;
-
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('eventDetails'));
-        modal.show();
     }
 
     handleDateSelect(info) {
@@ -3632,33 +3579,15 @@ class CalendarManager {
             this.toggleFeedbackDependencies();
         });
 
-        // Edit/Delete buttons
-        document.getElementById('editEventBtn')?.addEventListener('click', () => this.loadEventForEdit());
-        document.getElementById('deleteEventBtn')?.addEventListener('click', () => this.confirmDelete());
+        // Edit/Delete are triggered from the hover details card (see wireHoverActions).
 
         // Create event button
         document.getElementById('createEventButton')?.addEventListener('click', () => {
             this.resetEventForm();
         });
 
-        // List view: open details on click/keyboard
-        const listView = document.getElementById('eventListView');
-        listView?.addEventListener('click', (e) => {
-            const card = e.target.closest('.list-event-card');
-            if (card?.dataset?.id) {
-                this.loadEventDetails(card.dataset.id);
-            }
-        });
-        listView?.addEventListener('keydown', (e) => {
-            const card = e.target.closest('.list-event-card');
-            if (!card) return;
-            if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                if (card.dataset?.id) {
-                    this.loadEventDetails(card.dataset.id);
-                }
-            }
-        });
+        // List view cards show full details via their hover/focus tooltip
+        // (.event-tooltip); no click-to-open details modal.
 
         // Density toggle
         document.getElementById('toggleDensityBtn')?.addEventListener('click', () => this.toggleDensity());
@@ -4145,9 +4074,7 @@ class CalendarManager {
         return isValid;
     }
 
-    async loadEventForEdit() {
-        const eventId = document.getElementById('editEventBtn').dataset.id;
-
+    async loadEventForEdit(eventId = this.currentEventId) {
         try {
             const response = await fetch(`/calendar/event-edit/${eventId}`);
             const event = await response.json();
@@ -4160,8 +4087,7 @@ class CalendarManager {
             document.getElementById('submitEventBtn').dataset.action = 'edit';
             document.getElementById('start_datetime').removeAttribute('readonly');
 
-            // Show modal
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
+            // Show the edit modal
             const modal = new bootstrap.Modal(document.getElementById('eventModal'));
             modal.show();
 
@@ -4407,9 +4333,7 @@ async setInternalFaculty(internalFacultyIds) {
         }, 300);
     }
 
-    confirmDelete() {
-        const eventId = document.getElementById('deleteEventBtn').dataset.id;
-
+    confirmDelete(eventId = this.currentEventId) {
         // Show confirmation modal
         const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
         document.getElementById('confirmAction').onclick = () => this.deleteEvent(eventId);
@@ -4429,9 +4353,8 @@ async setInternalFaculty(internalFacultyIds) {
 
             this.showNotification('Event deleted successfully', 'success');
 
-            // Close modals and refresh
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+            // Close modal and refresh
+            bootstrap.Modal.getInstance(document.getElementById('confirmModal'))?.hide();
             this.calendar.refetchEvents();
 
         } catch (error) {
