@@ -2,7 +2,7 @@
 
 @section('title', 'List Meter Reading - Sargam')
 
-@section('content')
+@section('setup_content')
 <style>
     /* List Meter Reading page: force search bar in top-right of header row */
     #listMeterReadingCard .dataTables_wrapper .row:first-child {

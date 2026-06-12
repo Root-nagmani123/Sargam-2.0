@@ -330,10 +330,39 @@ function userHasAssignedRoles(): bool
 
 /**
  * Full sidebar / setup category access (all groups without per-menu permission checks).
+ * Actual DB role names: 'Super Admin' (id:1). 'Admin' does not exist in DB.
  */
 function isSidebarPrivilegedUser(): bool
 {
-    return hasRole('Admin') || hasRole('Super Admin');
+    return hasRole('Super Admin');
+}
+
+/**
+ * Estate authority: can manage all estate records (Estate Admin role or Super Admin).
+ * DB role names: 'Estate Admin' (id:8), 'Super Admin' (id:1).
+ */
+function isEstateAuthority(): bool
+{
+    return hasRole('Estate Admin') || hasRole('Super Admin');
+}
+
+/**
+ * Estate HAC authority: can perform HAC-related actions.
+ * DB role names: 'Estate HAC' (id:9), 'Estate Admin' (id:8), 'Super Admin' (id:1).
+ */
+function isEstateHacAuthority(): bool
+{
+    return hasRole('Estate HAC') || hasRole('Estate Admin') || hasRole('Super Admin');
+}
+
+/**
+ * Training authority: Training Induction Admin, Training MCTP Admin, Training IST, or Estate Admin / Super Admin.
+ * DB role names match exactly.
+ */
+function isTrainingOrEstateAuthority(): bool
+{
+    return hasRole('Estate Admin') || hasRole('Super Admin')
+        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
 }
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).

@@ -4,7 +4,7 @@
     $estateBillIsPersonalView = $estateBillIsPersonalView ?? false;
     $estateBillPageLabel = $estateBillIsPersonalView ? 'My Estate Bill' : 'Generate Estate Bill';
     $estateSelfHomeTab = request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+        && (isEstateAuthority());
     $showGenerateEstateBillSearch = $showGenerateEstateBillSearch ?? false;
     $showUnitSubTypeFilter = $showUnitSubTypeFilter ?? false;
     $genBillActionsCol = $showGenerateEstateBillSearch
@@ -14,7 +14,7 @@
 
 @section('title', $estateBillPageLabel . ' - Sargam')
 
-@section($estateSelfHomeTab ? 'content' : 'content')
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="{{ $estateBillPageLabel }}"></x-breadcrum>
     <x-session_message />

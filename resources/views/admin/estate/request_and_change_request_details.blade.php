@@ -2,7 +2,7 @@
 
 @section('title', 'Request for House & Change Request Details - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="Request for House & Change Request Details" />
     <x-estate-workflow-stepper current="request-for-estate" />
@@ -11,7 +11,7 @@
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
         <h1 class="h4 fw-bold text-dark mb-0">Request for House & Change Request Details</h1>
         @php
-            $isHacPersonOnly = hasRole('HAC Person') && !hasRole('Estate') && !hasRole('Admin') && !hasRole('Training-Induction') && !hasRole('Training-MCTP') && !hasRole('IST') && !hasRole('Staff') && !hasRole('Student-OT') && !hasRole('Doctor') && !hasRole('Guest Faculty') && !hasRole('Internal Faculty');
+            $isHacPersonOnly = hasRole('HAC Person') && !hasRole('Estate Admin') && !hasRole('Super Admin') && !hasRole('Training Induction Admin') && !hasRole('Training MCTP Admin') && !hasRole('Training IST') && !hasRole('Staff') && !hasRole('Student-OT') && !hasRole('Doctor') && !hasRole('Guest Faculty') && !hasRole('Internal Faculty');
         @endphp
         <a href="{{ $isHacPersonOnly ? route('admin.estate.change-request-hac-approved') : route('admin.estate.request-for-estate') }}" class="btn btn-outline-secondary btn-sm">
             <i class="bi bi-arrow-left me-1"></i> {{ $isHacPersonOnly ? 'Back to HAC Approved' : 'Back to Request For Estate' }}
@@ -138,7 +138,7 @@
 
     {{-- Section 2: Change Request Details — hidden for HAC Person only --}}
     @php
-        $showChangeRequestCard = ! (hasRole('HAC Person') && ! hasRole('Estate') && ! hasRole('Admin') && ! hasRole('Training-Induction') && ! hasRole('Training-MCTP') && ! hasRole('IST') && ! hasRole('Staff') && ! hasRole('Student-OT') && ! hasRole('Doctor') && ! hasRole('Guest Faculty') && ! hasRole('Internal Faculty'));
+        $showChangeRequestCard = ! (hasRole('HAC Person') && ! hasRole('Estate Admin') && ! hasRole('Super Admin') && ! hasRole('Training Induction Admin') && ! hasRole('Training MCTP Admin') && ! hasRole('Training IST') && ! hasRole('Staff') && ! hasRole('Student-OT') && ! hasRole('Doctor') && ! hasRole('Guest Faculty') && ! hasRole('Internal Faculty'));
     @endphp
     @if($showChangeRequestCard)
     <div class="card shadow-sm border-0 rounded-3">
@@ -150,7 +150,7 @@
                 $hasCurrentAlot = trim((string) ($requestForHouse->current_alot ?? '')) !== '' && (string) ($requestForHouse->current_alot ?? '') !== '—';
                 $hasAnyChangeRequest = ! $changeRequestDetails->isEmpty();
             @endphp
-            @if($hasCurrentAlot && ! $hasAnyChangeRequest && (hasRole('Estate') || hasRole('Admin')))
+            @if($hasCurrentAlot && ! $hasAnyChangeRequest && (hasRole('Estate Admin') || hasRole('Super Admin')))
                 <a href="{{ route('admin.estate.raise-change-request', ['id' => $requestForHouse->pk]) }}" class="btn btn-info btn-sm">
                     <i class="bi bi-plus-circle me-1"></i> Raise Change Request
                 </a>
