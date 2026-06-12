@@ -99,19 +99,15 @@ class CourseRepositoryMaster extends Model
      */
     public function getDocumentCount()
     {
-        // Count documents linked directly to this repository
-        $directCount = $this->documents()->where('del_type', 1)->count();
-        
-        // Count documents linked through details
-        $detailsCount = CourseRepositoryDocument::where('del_type', 1)
-            ->whereIn('course_repository_details_pk', function($query) {
-                $query->select('pk')
-                    ->from('course_repository_details')
-                    ->where('course_repository_master_pk', $this->pk);
+        $masterPk = $this->pk;
+        $detailPks = CourseRepositoryDetail::where('course_repository_master_pk', $masterPk)->pluck('pk');
+
+        return CourseRepositoryDocument::where('del_type', 1)
+            ->where(function ($q) use ($masterPk, $detailPks) {
+                $q->where('course_repository_master_pk', $masterPk)
+                  ->orWhereIn('course_repository_details_pk', $detailPks);
             })
             ->count();
-        
-        return $directCount + $detailsCount;
     }
 
     /**
