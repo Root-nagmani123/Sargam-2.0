@@ -26,7 +26,10 @@ class CalendarController extends Controller
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->whereDate('end_date', '>=', today());
 
-        if (!empty($data_course_id)) {
+        // Students are scoped by enrolment (the join below), not by role. Skipping the
+        // role-course filter for them avoids get_Role_by_course()'s [-1] (students have
+        // no Spatie role), which would otherwise wipe out their course list.
+        if (!hasRole('Student-OT') && !empty($data_course_id)) {
             $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
         }
 
