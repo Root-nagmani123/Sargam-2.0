@@ -1,21 +1,26 @@
-@extends('admin.layouts.master')
+@extends('fc.layouts.master')
 @section('title', $step->step_name . ' – ' . $form->form_name)
 
-@section('setup_content')
-<div class="container py-4">
-    {{-- Step indicator --}}
-    <div class="d-flex align-items-center gap-2 mb-4 flex-wrap">
-        <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>{{ $form->form_name }}
-        </a>
-        @foreach($allSteps as $si => $s)
-            <span class="badge {{ $s->id === $step->id ? 'bg-primary' : 'bg-light text-dark' }} rounded-pill px-3 py-2">
-                {{ $si + 1 }}. {{ $s->step_name }}
-            </span>
-        @endforeach
+@section('content')
+@include('fc.registration.partials.fc-form-theme')
+<div class="fc-form-page">
+<div class="fc-shell">
+    <div class="fc-band">
+        <div class="fc-band__row">
+            <div class="fc-band__ico"><i class="bi {{ $step->icon ?? 'bi-file-text' }}"></i></div>
+            <div>
+                <h4>{{ $form->form_name }}</h4>
+                <p>Step {{ ($allSteps->search(fn ($s) => $s->id === $step->id)) + 1 }} of {{ $allSteps->count() }} — {{ $step->step_name }}</p>
+            </div>
+            <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3">
+                <i class="bi bi-grid me-1"></i>All Steps
+            </a>
+        </div>
     </div>
 
-    <div class="card border-0 shadow-sm" style="border-radius:10px;">
+    @include('fc.registration.partials.fc-stepper')
+
+    <div class="card fc-card border-0 shadow-sm">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
                 <h5 class="mb-1"><i class="bi {{ $step->icon ?? 'bi-file-text' }} me-2"></i>{{ $step->step_name }}</h5>
@@ -143,6 +148,7 @@
             @endif
         </div>
     </div>
+</div>
 </div>
 @endsection
 
