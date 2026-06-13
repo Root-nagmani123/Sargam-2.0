@@ -779,6 +779,11 @@
         @include('admin.mess.partials.column-manager-auto-init')
     @endif
     @stack('scripts')
+    {{-- Renders page JS placed in @section('scripts') (plural). Without this,
+         @section('scripts') is silently dropped (only @stack('scripts') and
+         @yield('script') singular existed). Pairs with @push('scripts'); no
+         page uses both, so there is no double-render. --}}
+    @yield('scripts')
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             const toggle = document.getElementById('searchToggle');
