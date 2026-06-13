@@ -277,7 +277,26 @@ class MenuService
     }
 
 
+    /**
+     * Per-request memoization. The global view()->composer('*') calls getMenus()
+     * for every view/Blade component rendered on a page; without this the full
+     * RBAC menu tree (incl. getAllPermissions()) is rebuilt dozens of times per
+     * request. Keyed by user id; result is identical, just computed once.
+     */
+    private array $menusCache = [];
+
     public function getMenus()
+    {
+        $key = (string) (auth()->id() ?? 'guest');
+
+        if (array_key_exists($key, $this->menusCache)) {
+            return $this->menusCache[$key];
+        }
+
+        return $this->menusCache[$key] = $this->buildMenus();
+    }
+
+    private function buildMenus()
     {
         $user = auth()->user();
         $isAdmin = isSidebarPrivilegedUser();

@@ -123,17 +123,18 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             {{ $greeting }},
                             <span class="text-primary fw-semibold">{{ $userName }}</span>
                         </p>
-                        <h1 class="h4 fw-bold text-dark mb-0">Dashboard</h1>
+                        <h1 class="h3 fw-bold text-dark mb-0">Dashboard</h1>
                     </div>
-                    <div class="ms-auto text-end">
-                        <div class="d-flex align-items-center justify-content-end gap-2 text-primary">
-                            <i class="bi bi-clock" aria-hidden="true"></i>
-                            <span class="fs-5 fw-semibold tabular-nums"
-                                id="dashboard-live-time">{{ now()->format('H:i') }}</span>
+                    <div class="ms-auto d-flex align-items-center gap-2 gap-sm-3">
+                        <i class="bi bi-clock text-primary lh-1" style="font-size: 1.85rem;" aria-hidden="true"></i>
+                        <div class="lh-sm">
+                            <div class="text-primary fw-bold tabular-nums lh-1" style="font-size: 1.7rem; letter-spacing: -0.01em;">
+                                <span id="dashboard-live-time">{{ now()->format('H:i') }}</span>
+                            </div>
+                            <p class="text-body-secondary mb-0 mt-1" style="font-size: 0.9rem;">
+                                {{ now()->format('l, d F Y') }}
+                            </p>
                         </div>
-                        <p class="text-body-secondary mb-0 mt-1" style="font-size: 0.8125rem;">
-                            {{ now()->format('l, d F Y') }}
-                        </p>
                     </div>
                 </div>
             </div>
