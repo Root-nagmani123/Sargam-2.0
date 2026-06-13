@@ -1,18 +1,26 @@
-@extends('admin.layouts.master')
+@extends('fc.layouts.master')
 @section('title', $form->form_name)
 
-@section('setup_content')
-<div class="container py-4">
-    <div class="d-flex align-items-center mb-4">
-        <div class="rounded-circle d-flex align-items-center justify-content-center me-3"
-             style="width:50px;height:50px;background:#1a3c6e;color:#fff;font-size:1.3rem;">
-            <i class="bi {{ $form->icon ?? 'bi-file-text' }}"></i>
-        </div>
-        <div>
-            <h4 class="mb-0">{{ $form->form_name }}</h4>
-            @if($form->description)
-                <p class="text-muted small mb-0">{{ $form->description }}</p>
-            @endif
+@section('content')
+@include('fc.registration.partials.fc-form-theme')
+<div class="fc-form-page">
+<div class="fc-shell">
+    @php
+        $totalSteps = $steps->count();
+        $doneSteps  = $steps->filter(fn ($s) => ($stepStatus[$s->id] ?? false))->count();
+        $pct        = $totalSteps > 0 ? (int) round($doneSteps / $totalSteps * 100) : 0;
+    @endphp
+    <div class="fc-band">
+        <div class="fc-band__row">
+            <div class="fc-band__ico"><i class="bi {{ $form->icon ?? 'bi-file-text' }}"></i></div>
+            <div>
+                <h1>{{ $form->form_name }}</h1>
+                @if($form->description)<p>{{ $form->description }}</p>@endif
+            </div>
+            <div class="fc-band__meta">
+                <small>{{ $doneSteps }} of {{ $totalSteps }} steps completed</small>
+                <div class="fc-prog"><span style="width: {{ $pct }}%"></span></div>
+            </div>
         </div>
     </div>
 
@@ -195,5 +203,6 @@
             @endforeach
         </div>
     @endif
+</div>
 </div>
 @endsection
