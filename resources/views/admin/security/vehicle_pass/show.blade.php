@@ -1,6 +1,6 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 @section('title', 'Vehicle Pass Application - {{ $vehiclePass->vehicle_req_id ?? "N/A" }}')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-header bg-white">
@@ -321,3 +321,4 @@
     </div>
 </div>
 @endsection
+

@@ -341,18 +341,18 @@ class SidebarNavResolver
         $slug = null;
 
         if (
-            request()->routeIs('admin.employee_idcard.*') || request()->routeIs('admin.issue-management*') ||
+            request()->routeIs('admin.issue-management*') ||
             request()->routeIs('member.*') || request()->routeIs('faculty.*') || request()->routeIs('programme.*') ||
             request()->routeIs('admin.roles.*') || request()->routeIs('admin.users.*') ||
             request()->routeIs('roles.*') || request()->routeIs('users.*') ||
             str_starts_with($path, 'roles') || str_starts_with($path, 'users') ||
             str_starts_with($path, 'setup/') || str_starts_with($path, 'admin/setup') ||
-            str_starts_with($path, 'admin/employee-idcard') || str_starts_with($path, 'admin/issue-management') ||
+            str_starts_with($path, 'admin/issue-management') ||
             str_starts_with($path, 'courseAttendanceNoticeMap') || str_starts_with($path, 'course_memo') ||
             str_starts_with($path, 'building_floor') || str_starts_with($path, 'group_mapping') ||
             str_starts_with($path, 'course-repository') || str_starts_with($path, 'feedback') ||
             str_starts_with($path, 'admin/notice') || str_starts_with($path, 'attendance') ||
-            str_starts_with($path, 'security') || str_starts_with($path, 'ot_notice') ||
+            str_starts_with($path, 'ot_notice') ||
             str_starts_with($path, 'forms') || str_starts_with($path, 'registration') ||
             str_starts_with($path, 'mdo_escrot') ||
             str_starts_with($path, 'medical_exception') || str_starts_with($path, 'memo_discipline') ||

@@ -1,6 +1,6 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 @section('title', 'Approval I - Employee ID Card Requests')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'Approval I - Employee ID Card'])
     <div class="card" style="border-left:4px solid #004a93;">
@@ -142,3 +142,4 @@ document.getElementById('per_page').addEventListener('change', function() {
 });
 </script>
 @endpush
+

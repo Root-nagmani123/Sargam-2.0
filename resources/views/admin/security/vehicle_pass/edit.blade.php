@@ -1,6 +1,6 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 @section('title', 'Edit Vehicle Pass Application - Security Management')
-@section('setup_content')
+@section('content')
 <div class="container-fluid">
     <div class="card" style="border-left:4px solid #004a93;">
         <div class="card-header bg-white">
@@ -83,7 +83,7 @@
                         <div class="mb-3">
                             <label for="applicant_name" class="form-label">Name</label>
                             <input type="text" name="applicant_name" id="applicant_name" class="form-control {{ $editOthersMode ? '' : 'bg-light' }}"
-                                value="{{ $editName }}" placeholder="—"
+                                value="{{ $editName }}" placeholder="â€”"
                                 @unless($editOthersMode) readonly @endunless>
                         </div>
                     </div>
@@ -91,7 +91,7 @@
                         <div class="mb-3">
                             <label for="designation" class="form-label">Designation</label>
                             <input type="text" name="designation" id="designation" class="form-control {{ $editOthersMode ? '' : 'bg-light' }}"
-                                value="{{ $editDesignation }}" placeholder="—"
+                                value="{{ $editDesignation }}" placeholder="â€”"
                                 @unless($editOthersMode) readonly @endunless>
                         </div>
                     </div>
@@ -99,7 +99,7 @@
                         <div class="mb-3">
                             <label for="department" class="form-label">Department</label>
                             <input type="text" name="department" id="department" class="form-control {{ $editOthersMode ? '' : 'bg-light' }}"
-                                value="{{ $editDepartment }}" placeholder="—"
+                                value="{{ $editDepartment }}" placeholder="â€”"
                                 @unless($editOthersMode) readonly @endunless>
                         </div>
                     </div>
@@ -312,7 +312,7 @@ $(document).ready(function() {
                 try { othersLookupAbort.abort(); } catch (e) {}
             }
             othersLookupAbort = new AbortController();
-            setEditLookupHint('Looking up employee…', 'muted');
+            setEditLookupHint('Looking up employeeâ€¦', 'muted');
             var url = lookupUrl + (lookupUrl.indexOf('?') >= 0 ? '&' : '?') + 'id_card_number=' + encodeURIComponent(idVal);
             fetch(url, {
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
@@ -537,3 +537,4 @@ $(document).ready(function() {
 });
 </script>
 @endpush
+

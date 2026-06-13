@@ -1,6 +1,6 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 @section('title', 'Request for Vehicle Pass - Sargam')
-@section('setup_content')
+@section('content')
 <div class="container-fluid vehicle-pass-create-page">
     <x-breadcrum title="Request for Vehicle Pass"></x-breadcrum>
 
@@ -441,7 +441,7 @@
             try { othersLookupAbort.abort(); } catch (e) {}
         }
         othersLookupAbort = new AbortController();
-        setOthersLookupHint('Looking up ID card…', 'muted');
+        setOthersLookupHint('Looking up ID cardâ€¦', 'muted');
         var url = '{{ route("admin.security.vehicle_pass.lookup.by_id_card") }}' + '?id_card_number=' + encodeURIComponent(idVal);
         fetch(url, {
             headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
@@ -648,3 +648,4 @@
 </script>
 @endpush
 @endsection
+
