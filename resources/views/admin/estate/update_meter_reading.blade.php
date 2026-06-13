@@ -4,7 +4,7 @@
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+        && (isEstateAuthority());
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
 @php

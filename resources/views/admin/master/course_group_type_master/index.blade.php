@@ -74,7 +74,7 @@
 <input type="hidden" id="pk" value="">
 <input type="hidden" id="active_inactive" value="">
 @endsection
-@section('scripts')
+@section('script')
 <script>
 $(function() {
     const tableSelector = '#coursegrouptype';

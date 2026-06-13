@@ -135,7 +135,7 @@ class EstatePossessionDetailsDataTable extends DataTable
         }
 
         $user = Auth::user();
-        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        $isEstateAuthority = $user && isEstateAuthority();
         $authorityPersonalScope = $r->input('scope') === 'self' && $isEstateAuthority;
         $hideAuthorityMutations = $authorityPersonalScope;
 
@@ -171,7 +171,7 @@ class EstatePossessionDetailsDataTable extends DataTable
     {
         $hasReading2Col = Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
 
-        $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $isEstateAuthority = isEstateAuthority();
         // Home ?scope=self: read-only list; edit/delete/bulk from Setup → Estate only.
         $hideAuthorityMutations = request('scope') === 'self' && $isEstateAuthority;
 
@@ -330,7 +330,7 @@ class EstatePossessionDetailsDataTable extends DataTable
         // RBAC: Admin / Estate / Super Admin see full list unless Home ?scope=self (own rows only).
         // Other roles (Staff / HAC / Training / IST etc.) always see only their own possessions.
         $user = \Illuminate\Support\Facades\Auth::user();
-        $isEstateAuthority = $user && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        $isEstateAuthority = $user && isEstateAuthority();
         $authorityPersonalScope = request('scope') === 'self' && $isEstateAuthority;
         if (! $isEstateAuthority || $authorityPersonalScope) {
             if ($user) {
@@ -354,7 +354,9 @@ class EstatePossessionDetailsDataTable extends DataTable
             ->setTableId('estatePossessionDetailsTable')
             ->addTableClass('table table-bordered table-striped table-hover align-middle text-nowrap mb-0 w-100')
             ->columns($this->getColumns())
-            ->minifiedAjax()
+            ->minifiedAjax('', null, [
+                'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
+            ])
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,
@@ -384,7 +386,7 @@ class EstatePossessionDetailsDataTable extends DataTable
 
     public function getColumns(): array
     {
-        $isEstateAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $isEstateAuthority = isEstateAuthority();
         $hideAuthorityMutations = request('scope') === 'self' && $isEstateAuthority;
 
         $columns = [];

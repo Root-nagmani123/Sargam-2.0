@@ -1,4 +1,4 @@
-@extends('admin.layouts.timetable')
+@extends('admin.layouts.master')
 
 @section('title', 'Week-{{ str_pad($weekNumber, 2, "0", STR_PAD_LEFT) }} | Course Repository Admin')
 
@@ -46,75 +46,121 @@
                 </li>
             </ul>
 
-            <!-- Tab Content -->
-            <div class="tab-content" id="weekTabContent">
-                <!-- Active Tab -->
-                <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
-                    @if($documents->isEmpty())
-                        <div class="alert alert-info text-center">
-                            <span class="material-icons material-symbols-rounded me-2">info</span>
-                            No documents found for this week.
+                    <div class="tab-content" id="weekTabContent">
+                        <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
+                            @if($documents->isEmpty())
+                            <div class="text-center py-5 text-muted">
+                                <i class="bi bi-inbox display-6 d-block mb-2" aria-hidden="true"></i>
+                                <p class="mb-0">No documents found for this week.</p>
+                            </div>
+                            @else
+                            @php
+                                $cruTableId = 'cruWeekDetailTable';
+                                $cruColumnStorageKey = 'cru-user-week-detail-columns';
+                                $cruColumns = [
+                                    ['key' => 'sno', 'label' => 'S. No.', 'locked' => true],
+                                    ['key' => 'course', 'label' => 'Course Name', 'default' => true],
+                                    ['key' => 'subject', 'label' => 'Major Subject Name', 'default' => true],
+                                    ['key' => 'topic', 'label' => 'Topic Name', 'default' => true],
+                                    ['key' => 'action', 'label' => 'Action', 'locked' => true],
+                                ];
+                            @endphp
+                            <div class="card cru-table-card overflow-hidden" data-cru-table-card="{{ $cruTableId }}">
+                                <div class="cru-table-toolbar d-flex flex-wrap align-items-center justify-content-end gap-2 px-3 py-2 border-bottom bg-white">
+                                    @include('admin.course-repository.user.partials.table-column-toggle', [
+                                        'cruTableId' => $cruTableId,
+                                        'cruColumnStorageKey' => $cruColumnStorageKey,
+                                        'cruColumns' => $cruColumns,
+                                    ])
+                                </div>
+                                <div class="table-responsive">
+                                    <table class="table mb-0 align-middle cru-table" id="{{ $cruTableId }}">
+                                        <thead>
+                                            <tr>
+                                                <th class="text-center cru-col-sno" data-col="sno">S. No.</th>
+                                                <th class="cru-col-course" data-col="course">Course Name</th>
+                                                <th class="cru-col-subject" data-col="subject">Major Subject Name</th>
+                                                <th class="cru-col-topic" data-col="topic">Topic Name</th>
+                                                <th class="text-center cru-col-action" data-col="action">Action</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach($documents as $document)
+                                            <tr>
+                                                <td class="text-center cru-col-sno">{{ $loop->iteration }}</td>
+                                                <td class="cru-col-course">
+                                                    @if($document->detail && $document->detail->course)
+                                                        {{ $document->detail->course->course_name }}
+                                                    @else
+                                                        NA
+                                                    @endif
+                                                </td>
+                                                <td class="cru-col-subject">
+                                                    @if($document->detail && $document->detail->subject)
+                                                        {{ $document->detail->subject->subject_name }}
+                                                    @else
+                                                        NA
+                                                    @endif
+                                                </td>
+                                                <td class="cru-col-topic">
+                                                    @if($document->detail && $document->detail->topic)
+                                                        {{ $document->detail->topic->subject_topic }}
+                                                    @else
+                                                        NA
+                                                    @endif
+                                                </td>
+                                                <td class="text-center cru-col-action">
+                                                    @include('admin.course-repository.user.partials.document-actions', [
+                                                        'detailPk' => $document->pk,
+                                                        'detail' => $document,
+                                                        'fileDoc' => $document->documents->first(),
+                                                    ])
+                                                </td>
+                                            </tr>
+                                            @endforeach
+                                        </tbody>
+                                    </table>
+                                </div>
+                                <div class="cru-table-footer px-3 py-3 border-top">
+                                    <p class="small text-muted mb-0">
+                                        Showing <span class="fw-semibold text-dark">{{ $documents->count() }}</span> of
+                                        <span class="fw-semibold text-dark">{{ $documents->count() }}</span> items
+                                    </p>
+                                </div>
+                            </div>
+                            @endif
                         </div>
-                    @else
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 align-middle">
-                                <thead style="background-color: #dc3545; color: white;">
-                                    <tr>
-                                        <th class="text-center fw-bold">S.No.</th>
-                                        <th class="text-center fw-bold">Course Name</th>
-                                        <th class="text-center fw-bold">Major Subject Name</th>
-                                        <th class="text-center fw-bold">Topic Name</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($documents as $index => $document)
-                                    <tr class="{{ $loop->odd ? 'table-light' : '' }}">
-                                        <td class="text-center">{{ $loop->iteration }}</td>
-                                        <td class="text-center">
-                                            @if($document->detail && $document->detail->course)
-                                                {{ $document->detail->course->course_name }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            @if($document->detail && $document->detail->subject)
-                                                {{ $document->detail->subject->subject_name }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </td>
-                                        <td class="text-center">
-                                            @if($document->detail && $document->detail->topic)
-                                                {{ $document->detail->topic->subject_topic }}
-                                            @else
-                                                N/A
-                                            @endif
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
-                        </div>
-                    @endif
-                </div>
 
-                <!-- Archive Tab -->
-                <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
-                    <div class="alert alert-info text-center">
-                        <span class="material-icons material-symbols-rounded me-2">archive</span>
-                        No archived documents found.
+                        <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
+                            <div class="text-center py-4 text-muted">
+                                <i class="bi bi-archive me-2" aria-hidden="true"></i>
+                                No archived documents found.
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 </div>
 
-<!-- PDF Details Modal -->
 @include('admin.course-repository.user.partials.pdf-details-modal')
-
-<link rel="stylesheet" href="{{ asset('css/course-repository-user.css') }}">
+@include('admin.course-repository.user.partials.assets')
+@if(!empty($documents) && $documents->isNotEmpty())
+@push('scripts')
+@include('admin.course-repository.user.partials.column-toggle-script', [
+    'cruTableId' => 'cruWeekDetailTable',
+    'cruColumnStorageKey' => 'cru-user-week-detail-columns',
+    'cruColumns' => [
+        ['key' => 'sno', 'label' => 'S. No.', 'locked' => true],
+        ['key' => 'course', 'label' => 'Course Name', 'default' => true],
+        ['key' => 'subject', 'label' => 'Major Subject Name', 'default' => true],
+        ['key' => 'topic', 'label' => 'Topic Name', 'default' => true],
+        ['key' => 'action', 'label' => 'Action', 'locked' => true],
+    ],
+])
+@endpush
+@endif
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const modal = document.getElementById('pdfDetailsModal');
@@ -122,7 +168,7 @@ document.addEventListener('DOMContentLoaded', function() {
         modal.addEventListener('show.bs.modal', function(event) {
             const button = event.relatedTarget;
             const documentId = button.getAttribute('data-document-id');
-            
+
             fetch(`/course-repository-user/document/${documentId}/details`)
                 .then(response => response.json())
                 .then(data => {

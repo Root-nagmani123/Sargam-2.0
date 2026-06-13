@@ -1,112 +1,98 @@
-@extends('admin.layouts.timetable')
+@extends('admin.layouts.master')
 
 @section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Course Repository')
 
-@section('content')
+@section('setup_content')
+@php
+$crumbItems = [
+['label' => 'Home', 'url' => route('admin.dashboard')],
+['label' => 'Academic', 'url' => null],
+['label' => 'Course Repository', 'url' => route('admin.course-repository.user.index')],
+];
+if (!empty($ancestors)) {
+foreach ($ancestors as $ancestor) {
+$crumbItems[] = [
+'label' => $ancestor->course_repository_name,
+'url' => route('admin.course-repository.user.show', $ancestor->pk),
+];
+}
+}
+$crumbItems[] = $repository->course_repository_name;
 
-<!-- Main Content -->
-<!-- Title Section with Back Button -->
-<div class="container-fluid">
-    <div class="title-section mb-4">
-        <div class="d-flex justify-content-between align-items-center">
-            <div class="d-flex align-items-center gap-3">
-                <button type="button" onclick="window.history.back()"
-                    class="btn-back btn btn-link p-0 text-decoration-none" aria-label="Go back">
-                    <span class="material-icons material-symbols-rounded fs-4 text-dark">arrow_back</span>
-                </button>
-                <h1 class="h2 mb-0 fw-bold text-dark">{{ $repository->course_repository_name }}</h1>
+$childCount = $repository->children->count();
+$documentCount = $documents->count();
+@endphp
+
+<div class="cru-page">
+    <div class="container-fluid px-3 px-md-4 py-4" id="cru-user-main">
+        <x-breadcrum :title="$repository->course_repository_name" :items="$crumbItems" />
+
+        <div id="cruFilterResults">
+            @if($childCount === 0 && $documentCount === 0)
+            <div class="card border-0 shadow-sm rounded-4 text-center py-5 px-3">
+                <div class="card-body">
+                    <span
+                        class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light text-secondary mb-3 cru-empty-icon">
+                        <i class="bi bi-inbox fs-2" aria-hidden="true"></i>
+                    </span>
+                    <h2 class="h5 fw-semibold text-dark mb-2">No sub-categories or documents</h2>
+                    <p class="text-muted small mb-0 mx-auto" style="max-width: 28rem;">
+                        Nothing is available in this repository yet. Adjust filters or explore another category.
+                    </p>
+                </div>
             </div>
-        </div>
-    </div>
+            @else
+            @if($childCount > 0)
+            @php
+                $cruGridListTableId = 'cruRepoListTableShow';
+                $cruGridColumnStorageKey = 'cru-repo-list-' . $cruGridListTableId;
+                $cruGridColumns = [
+                    ['key' => 'sno', 'label' => 'S. No.', 'locked' => true],
+                    ['key' => 'name', 'label' => 'Category', 'default' => true],
+                    ['key' => 'subcount', 'label' => 'Sub Categories', 'default' => true],
+                ];
+            @endphp
+            <div class="d-flex flex-wrap align-items-end justify-content-end gap-3 mb-3">
+                @include('admin.course-repository.user.partials.page-toolbar', ['showViewToggle' => true])
+            </div>
 
-    <!-- Breadcrumb Navigation -->
-    @if (!empty($ancestors) || $repository->parent)
-    <nav aria-label="breadcrumb" class="mb-4">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item">
-                <a href="{{ route('admin.course-repository.user.index') }}" class="text-decoration-none">Course
-                    Repository</a>
-            </li>
-            @if (!empty($ancestors))
-            @foreach ($ancestors as $ancestor)
-            <li class="breadcrumb-item">
-                <a href="{{ route('admin.course-repository.user.show', $ancestor->pk) }}" class="text-decoration-none">
-                    {{ $ancestor->course_repository_name }}
-                </a>
-            </li>
-            @endforeach
-            @endif
-            <li class="breadcrumb-item active" aria-current="page">{{ $repository->course_repository_name }}</li>
-        </ol>
-    </nav>
-    @endif
-</div>
-<div class="d-flex" id="main-content">
-    <!-- Left Sidebar -->
-   
-
-    <!-- Main Content -->
-    <main class="flex-grow-1">
-        <div class="container-fluid px-4 py-4" id="main-content">
-            <!-- Filter Card -->
+            {{-- Shared filter toolbar (with inline column show/hide) — stays visible across both card and grid views --}}
             @if(isset($courses) && isset($subjects) && isset($faculties))
             @include('admin.course-repository.user.partials.filter-card', [
             'route' => route('admin.course-repository.user.show', $repository->pk),
             'courses' => $courses,
             'subjects' => $subjects,
             'faculties' => $faculties,
+            'sectors' => $sectors ?? collect(),
+            'ministries' => $ministries ?? collect(),
             'filters' => $filters ?? [],
+            'columnToggle' => [
+                'tableId' => $cruGridListTableId,
+                'storageKey' => $cruGridColumnStorageKey,
+                'columns' => $cruGridColumns,
+            ],
             ])
             @endif
 
-            @if($repository->children->count() == 0 && $documents->count() == 0)
-            <!-- Empty State -->
-            <div class="card shadow-sm">
-                <div class="card-body text-center py-5">
-                    <span class="material-icons material-symbols-rounded"
-                        style="font-size: 48px; color: #ccc;">inbox</span>
-                    <p class="text-muted mt-3">No sub-categories or documents found in this repository.</p>
-                </div>
-            </div>
-            @else
-            <!-- Child Repositories Section -->
-            @if($repository->children->count() > 0)
-            <div class="course-cards-grid mb-4">
-                <div class="row g-4">
-                    @foreach ($repository->children as $child)
-                    <div class="col-md-4 col-lg-3">
-                        <div class="card course-card shadow-sm h-100"
-                            onclick="window.location='{{ route('admin.course-repository.user.show', $child->pk) }}'">
-                            <div class="card-img-wrapper">
-                                @php
-                                $imageUrl = null;
-                                if($child->category_image && \Storage::disk('public')->exists($child->category_image)) {
-                                $imageUrl = asset('storage/' . $child->category_image);
-                                }
-                                if(!$imageUrl) {
-                                $imageUrl = 'https://via.placeholder.com/400x200/004a93/ffffff?text=' .
-                                urlencode($child->course_repository_name);
-                                }
-                                @endphp
-                                <img src="{{ $imageUrl }}" alt="{{ $child->course_repository_name }}"
-                                    class="card-img-top" loading="lazy"
-                                    onerror="this.src='https://via.placeholder.com/400x200/004a93/ffffff?text={{ urlencode($child->course_repository_name) }}'">
-                            </div>
-                            <div class="card-body d-flex flex-column" style="background-color: #F2F2F2;">
-                                <h5 class="card-title text-center fw-bold mb-3">
-                                    {{ Str::limit($child->course_repository_name, 50) }}</h5>
-                                <div class="mt-auto">
-                                    <a href="{{ route('admin.course-repository.user.show', $child->pk) }}"
-                                        class="btn btn-outline-primary w-100 fw-semibold"
-                                        onclick="event.stopPropagation();">
-                                        Click Here
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
+            <div class="course-cards-grid mb-4 mb-md-5" id="courseCardsGrid">
+                <div class="cru-view-cards card card-body">
+                    <div class="row g-3 g-md-4">
+                        @foreach ($repository->children as $child)
+                        @include('admin.course-repository.user.partials.repository-card', [
+                        'repository' => $child,
+                        'cardRoute' => route('admin.course-repository.user.show', $child->pk),
+                        ])
+                        @endforeach
                     </div>
-                    @endforeach
                 </div>
+                @include('admin.course-repository.user.partials.repository-list-table', [
+                'items' => $repository->children,
+                'listTableId' => $cruGridListTableId,
+                'listRouteMode' => 'show',
+                'nameColumnLabel' => 'Category',
+                'cruColumns' => $cruGridColumns,
+                'cruColumnStorageKey' => $cruGridColumnStorageKey,
+                ])
             </div>
             @endif
 
@@ -134,6 +120,13 @@
                             </thead>
                             <tbody>
                                 @foreach ($documents as $index => $doc)
+                                @php
+                                    $fileUrl = $doc->public_file_url;
+                                    $videoLink = trim((string) ($doc->detail->videolink ?? ''));
+                                    $hasVideo = $videoLink !== '';
+                                    $videoDetailPk = $doc->detail->pk ?? null;
+                                    $isDirectVideoFile = $hasVideo && preg_match('/\.(mp4|webm|ogg|mov|m4v)(\?.*)?$/i', $videoLink);
+                                @endphp
                               <tr class="{{ $loop->odd ? 'table-light' : '' }}">
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>
@@ -181,7 +174,7 @@
                                         <small>
                                             @if($doc->detail && $doc->detail->author)
                                             {{ Str::limit($doc->detail->author->full_name, 15) }}
-                                            @elseif($doc->detail && $doc->detail->author_name)
+                                            @elseif($doc->detail && $doc->detail->author_name && !is_numeric($doc->detail->author_name))
                                             {{ Str::limit($doc->detail->author_name, 15) }}
                                             @else
                                             N/A
@@ -189,9 +182,39 @@
                                         </small>
                                     </td>
                                     <td class="text-center">
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}" onclick="event.stopPropagation();" style="background-color: #e7f1ff00; border:0;padding:0;">
-                                            <span class="material-icons material-symbols-rounded">download</span>
-                                        </a>
+                                        <div class="d-inline-flex align-items-center justify-content-center gap-2">
+                                            @if($fileUrl)
+                                                <a href="{{ $fileUrl }}" target="_blank"
+                                                    class="btn btn-link btn-sm text-primary p-0" onclick="event.stopPropagation();"
+                                                    title="View document" aria-label="View document">
+                                                    <i class="bi bi-eye fs-5" aria-hidden="true"></i>
+                                                </a>
+                                                <a href="{{ $fileUrl }}" download="{{ $doc->upload_document }}"
+                                                    class="btn btn-link btn-sm text-primary p-0" onclick="event.stopPropagation();"
+                                                    title="Download document" aria-label="Download document">
+                                                    <i class="bi bi-download fs-5" aria-hidden="true"></i>
+                                                </a>
+                                            @endif
+                                            @if($hasVideo)
+                                                @if($videoDetailPk)
+                                                <a href="{{ route('admin.course-repository.user.document-video', $videoDetailPk) }}"
+                                                    class="btn btn-link btn-sm text-danger p-0" onclick="event.stopPropagation();"
+                                                    title="View video" aria-label="View video">
+                                                    <i class="bi bi-play-btn fs-5" aria-hidden="true"></i>
+                                                </a>
+                                                @endif
+                                                <a href="{{ $videoLink }}" target="_blank" rel="noopener noreferrer"
+                                                    @if($isDirectVideoFile) download @endif
+                                                    class="btn btn-link btn-sm text-danger p-0" onclick="event.stopPropagation();"
+                                                    title="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}"
+                                                    aria-label="{{ $isDirectVideoFile ? 'Download video' : 'Open video link' }}">
+                                                    <i class="bi bi-download fs-5" aria-hidden="true"></i>
+                                                </a>
+                                            @endif
+                                            @if(!$fileUrl && !$hasVideo)
+                                                <span class="text-muted small">N/A</span>
+                                            @endif
+                                        </div>
                                     </td>
                                 </tr>
                                 @endforeach
@@ -203,10 +226,9 @@
             @endif
             @endif
         </div>
-    </main>
+    </div>
 </div>
 
-<!-- Link to CSS -->
-<link rel="stylesheet" href="{{ asset('css/course-repository-user.css') }}">
-
+@include('admin.course-repository.user.partials.assets')
+@include('admin.course-repository.partials.single-click-links')
 @endsection

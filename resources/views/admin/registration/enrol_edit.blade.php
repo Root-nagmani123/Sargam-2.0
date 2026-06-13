@@ -262,7 +262,7 @@
     </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
     <script>
         // Run this BEFORE any other scripts
         (function() {
@@ -398,7 +398,7 @@
             });
         });
     </script>
-@endsection
+@endpush
 
 <style>
     .form-label.required:after {

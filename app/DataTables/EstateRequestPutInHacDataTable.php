@@ -47,12 +47,12 @@ class EstateRequestPutInHacDataTable extends DataTable
     {
         $r = $this->request();
         $user = Auth::user();
-        $canPutInHac = $user && (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        $canPutInHac = $user && (hasRole('HAC Person') || isEstateHacAuthority());
 
         $empScope = ['t' => 'all'];
         if ($canPutInHac
             && $r->input('scope') === 'self'
-            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+            && isEstateHacAuthority()) {
             $ids = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             $ids = array_values(array_unique(array_map('intval', $ids)));
             sort($ids, SORT_NUMERIC);
@@ -130,7 +130,7 @@ class EstateRequestPutInHacDataTable extends DataTable
 
     public function query(EstateHomeRequestDetails $model): QueryBuilder
     {
-        $canPutInHac = hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $canPutInHac = hasRole('HAC Person') || isEstateHacAuthority();
         // Self-service staff/training roles must not access HAC queues via this listing.
         // Return an empty dataset when user is not authorized.
         if (! Auth::check() || ! $canPutInHac) {
@@ -167,7 +167,7 @@ class EstateRequestPutInHacDataTable extends DataTable
 
         // Home ?scope=self: only this user's requests (same as Request For Estate self view).
         if (request('scope') === 'self'
-            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))) {
+            && isEstateHacAuthority()) {
             $user = Auth::user();
             if ($user) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
@@ -190,7 +190,9 @@ class EstateRequestPutInHacDataTable extends DataTable
             ->setTableId('putInHacTable')
             ->addTableClass('table table-bordered table-striped table-hover align-middle mb-0')
             ->columns($this->getColumns())
-            ->minifiedAjax()
+            ->minifiedAjax('', null, [
+                'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
+            ])
             ->parameters([
                 'responsive' => false,
                 'autoWidth' => false,

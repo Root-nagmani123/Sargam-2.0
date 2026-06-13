@@ -2,7 +2,7 @@
 
 @section('title', 'Possession View - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Possession View"></x-breadcrum>
     <x-session_message />

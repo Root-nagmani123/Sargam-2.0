@@ -2,7 +2,7 @@
 
 @section('title', ($item ? 'Edit' : 'Add') . ' Estate Electric Slab - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
     <x-breadcrum title="{{ $item ? 'Edit' : 'Add' }} Estate Electric Slab" />
 

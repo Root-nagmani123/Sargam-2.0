@@ -37,7 +37,7 @@
                             </li>
                             @endauth
 
-                            @if(hasRole('Admin') || hasRole('Training-Induction'))
+                            @if(hasRole('Super Admin') || hasRole('Admin') || hasRole('Training-Induction'))
                             <!-- Participant / Dashboard Statistics -->
                             <li class="sidebar-item">
                                 <a class="sidebar-link {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"

@@ -139,20 +139,42 @@
               ordering: enableOrdering,
               info: enableInfo,
               language: {
-                search: 'Search:',
-                searchPlaceholder: 'Type to filter...'
+                search: '',
+                searchPlaceholder: 'Search',
+                info: 'of _MAX_ items',
+                infoFiltered: '(filtered from _MAX_ total)',
+                infoEmpty: 'of 0 items',
+                lengthMenu: '_MENU_',
+                paginate: {
+                  previous: '&lsaquo;',
+                  next: '&rsaquo;'
+                }
               },
               initComplete: function() {
                 try {
-                  $(this.api().table().container()).addClass('dt-length-style-' + lengthStyle);
+                  const api = this.api();
+                  const $container = $(api.table().container());
+                  $container.addClass('dt-length-style-' + lengthStyle);
+
+                  // Pixel-exact footer: "Showing [<select>] of N items".
+                  // Move the length <select> to sit between a "Showing" label
+                  // and the info text, all inside the same flex group.
+                  const $info = $container.find('.dataTables_info');
+                  const $length = $container.find('.dataTables_length');
+                  if ($info.length && $length.length && !$container.find('.dt-showing-label').length) {
+                    // Build "Showing [<select>] of N items" in that visual order.
+                    const $label = $('<span class="dt-showing-label">Showing</span>');
+                    $label.insertBefore($info);   // Showing ... (before "of N items")
+                    $length.insertBefore($info);  // Showing [select] of N items
+                  }
                 } catch (e) {}
               }
             };
 
             if (hasButtons && showExport) {
-              tableOptions.dom = "<'row mb-3'<'col-md-8 d-flex align-items-center gap-2 flex-wrap'Bl><'col-md-4'f>>" +
+              tableOptions.dom = "<'row mb-3 align-items-center'<'col-md-6 d-flex align-items-center gap-2 flex-wrap'B><'col-md-6 dt-toolbar-search'f>>" +
                                  "<'row'<'col-12'tr>>" +
-                                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>";
+                                 "<'row mt-3 align-items-center dt-bottom-bar'<'col-md-6 dt-bottom-paginate'p><'col-md-6 dt-bottom-info d-flex align-items-center justify-content-md-end gap-2'il>>";
               tableOptions.buttons = [
                 { extend: 'copyHtml5', className: 'btn btn-outline-primary btn-sm' },
                 { extend: 'csvHtml5', className: 'btn btn-outline-primary btn-sm' },
@@ -161,9 +183,9 @@
                 { extend: 'print', className: 'btn btn-outline-primary btn-sm' }
               ];
             } else {
-              tableOptions.dom = "<'row mb-3'<'col-md-6'l><'col-md-6'f>>" +
+              tableOptions.dom = "<'row mb-3 align-items-center'<'col-md-6'><'col-md-6 dt-toolbar-search'f>>" +
                                  "<'row'<'col-12'tr>>" +
-                                 "<'row mt-3'<'col-md-5'i><'col-md-7'p>>";
+                                 "<'row mt-3 align-items-center dt-bottom-bar'<'col-md-6 dt-bottom-paginate'p><'col-md-6 dt-bottom-info d-flex align-items-center justify-content-md-end gap-2'il>>";
             }
 
             $table.DataTable(tableOptions);

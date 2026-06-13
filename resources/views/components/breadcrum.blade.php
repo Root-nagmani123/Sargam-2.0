@@ -138,10 +138,23 @@
         return 'General';
     })();
 
+    $trailFromMenu = null;
+    if (isset($breadcrumbTrail) && is_array($breadcrumbTrail) && count($breadcrumbTrail)) {
+        $trailFromMenu = $breadcrumbTrail;
+        if (filled($title) && $title !== 'Page') {
+            $lastIndex = count($trailFromMenu) - 1;
+            if ($lastIndex >= 0) {
+                $trailFromMenu[$lastIndex]['label'] = $title;
+            } else {
+                $trailFromMenu[] = ['label' => $title, 'url' => null];
+            }
+        }
+    }
+
     $breadcrumbItems = collect(
         is_array($items) && count($items)
             ? array_values(array_filter($items, fn ($item) => filled($item)))
-            : ['Home', $resolvedSection, $title]
+            : ($trailFromMenu ?: ['Home', $resolvedSection, $title])
     )
         ->map(function ($item) {
             if (is_array($item)) {
@@ -211,7 +224,7 @@
                                             @if ($isLast) aria-current="page" @endif>
                                             @if (!$isLast && filled($item['url']))
                                                 <a href="{{ $item['url'] }}"
-                                                   class="link-secondary link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-75-hover">
+                                                   class="link-offset-2 link-underline link-underline-opacity-0 link-underline-opacity-75-hover">
                                                     {{ $item['label'] }}
                                                 </a>
                                             @else

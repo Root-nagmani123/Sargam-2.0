@@ -1,133 +1,39 @@
 @extends('admin.layouts.master')
 
 @push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet"
+    href="{{ asset('css/course-repository-admin.css') }}?v={{ @filemtime(public_path('css/course-repository-admin.css')) ?: time() }}">
 <style>
-/* Fallback styles for missing CSS files */
-.fallback-styles {
-    /* This ensures basic styling even if external CSS fails to load */
-}
-
-/* Modal Scrolling Enhancement */
-#uploadModal .modal-dialog-scrollable .modal-body {
-    max-height: calc(100vh - 250px) !important;
-    overflow-y: auto !important;
-    overflow-x: hidden !important; 
-    padding: 1.5rem;
-}
-
-#uploadModal .modal-dialog-scrollable .modal-header {
-    position: sticky;
-    top: 0;
-    z-index: 1020;
-    background-color: white;
-    flex-shrink: 0;
-}
-
-#uploadModal .modal-dialog-scrollable .modal-footer {
-    position: sticky;
-    bottom: 0;
-    z-index: 1020;
-    background-color: white;
-    flex-shrink: 0;
-}
-
-#uploadModal .modal-dialog-scrollable {
-    max-height: calc(100vh - 1rem);
-}
-
-#uploadModal .modal-content {
-    max-height: calc(100vh - 1rem);
-    display: flex;
-    flex-direction: column;
-}
-
-/* Custom scrollbar styling */
-#uploadModal .modal-body::-webkit-scrollbar {
-    width: 10px;
-}
-
-#uploadModal .modal-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-#uploadModal .modal-body::-webkit-scrollbar-thumb {
-    background: #0d6efd;
-    border-radius: 10px;
-}
-
-#uploadModal .modal-body::-webkit-scrollbar-thumb:hover {
-    background: #0b5ed7;
-}
-
-/* Attachments table container scrolling */
-#uploadModal #course_attachments_container,
-#uploadModal #other_attachments_container {
-    max-height: 300px !important;
-    overflow-y: auto !important;
-    overflow-x: auto !important;
-    border: 1px solid #dee2e6;
-    border-radius: 0.375rem;
-    position: relative;
-}
-
-#uploadModal #course_attachments_container table,
-#uploadModal #other_attachments_container table {
-    margin-bottom: 0;
-}
-
-#uploadModal #course_attachments_container::-webkit-scrollbar,
-#uploadModal #other_attachments_container::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
-}
-
-#uploadModal #course_attachments_container::-webkit-scrollbar-track,
-#uploadModal #other_attachments_container::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-#uploadModal #course_attachments_container::-webkit-scrollbar-thumb,
-#uploadModal #other_attachments_container::-webkit-scrollbar-thumb {
-    background: #6c757d;
-    border-radius: 10px;
-}
-
-#uploadModal #course_attachments_container::-webkit-scrollbar-thumb:hover,
-#uploadModal #other_attachments_container::-webkit-scrollbar-thumb:hover {
-    background: #5a6268;
-}
+    /* Course Name dropdown (Choices.js): keep the control at the column width and
+       let long course names wrap onto a second line inside the open menu instead
+       of overflowing. */
+    .cr-course-choices .choices,
+    .cr-course-choices .choices__inner,
+    .cr-course-choices .choices__list--dropdown {
+        width: 100%;
+        max-width: 100%;
+    }
+    .cr-course-choices .choices__list--dropdown .choices__item,
+    .cr-course-choices .choices__list[aria-expanded] .choices__item {
+        white-space: normal !important;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        line-height: 1.3;
+    }
+    /* Selected value stays on one line (ellipsis) so the closed field height is stable. */
+    .cr-course-choices .choices__list--single .choices__item {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
 </style>
-
 @endpush
 
 @section('title', ($repository->course_repository_name ?? 'Repository Details') . ' | Lal Bahadur')
 
 @section('setup_content')
-<style>
-.upload-zone {
-    display: block;
-    border: 2px dashed #cfe2ff;
-    border-radius: 12px;
-    padding: 2rem;
-    background-color: #f8fbff;
-    cursor: pointer;
-    transition: all 0.2s ease-in-out;
-}
-
-.upload-zone:hover,
-.upload-zone:focus-within {
-    border-color: #0d6efd;
-    background-color: #eef5ff;
-}
-
-.upload-icon {
-    font-size: 42px;
-    color: #0d6efd;
-    margin-bottom: 0.5rem;
-}
-</style>
+@include('admin.partials.choices-bootstrap5')
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     var el = document.getElementById('category_image_create');
@@ -147,42 +53,43 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<div class="container-fluid">
-    <!-- Breadcrumb Navigation -->
-    <div class="mb-4">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-            <nav aria-label="breadcrumb" class="flex-grow-1">
-                <ol class="breadcrumb mb-0">
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}"
-                            class="text-decoration-none text-muted d-flex align-items-center">
-                            <span class="material-icons material-symbols-rounded me-1"
-                                style="font-size: 18px;">home</span> Academics
-                        </a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}"
-                            class="text-decoration-none text-muted">MCTP</a>
-                    </li>
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.index') }}" class="text-decoration-none text-muted">Course
-                            Repository Admin</a>
-                    </li>
-                    @if (!empty($ancestors))
-                    @foreach ($ancestors as $ancestor)
-                    <li class="breadcrumb-item">
-                        <a href="{{ route('course-repository.show', $ancestor->pk) }}"
-                            class="text-decoration-none text-muted">{{ $ancestor->course_repository_name }}</a>
-                    </li>
-                    @endforeach
-                    @endif
-                    <li class="breadcrumb-item active" aria-current="page">
-                        <span class="fw-semibold text-primary">{{ $repository->course_repository_name }}</span>
-                    </li>
-                </ol>
-            </nav>
+<div class="container-fluid cr-admin pb-3">
+    @php
+    $crumbItems = [
+    ['label' => 'Home', 'url' => route('admin.dashboard')],
+    ['label' => 'Course Repository', 'url' => route('course-repository.index')],
+    ];
+    if (!empty($ancestors)) {
+    foreach ($ancestors as $ancestor) {
+    $crumbItems[] = [
+    'label' => $ancestor->course_repository_name,
+    'url' => route('course-repository.show', $ancestor->pk),
+    ];
+    }
+    }
+    $crumbItems[] = ['label' => $repository->course_repository_name, 'url' => null];
+    @endphp
+
+    <x-breadcrum :title="$repository->course_repository_name" :items="$crumbItems">
+        <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 cr-repo-breadcrumb-toolbar"
+            role="toolbar" aria-label="Repository actions">
+            <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#uploadModal"
+                aria-label="Upload documents"
+                class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
+                <span class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">upload_file</span>
+                <span class="d-none d-sm-inline">Upload Documents</span>
+                <span class="d-inline d-sm-none">Upload</span>
+            </a>
+            <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal"
+                aria-label="Add new sub category"
+                class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
+                <span class="material-icons material-symbols-rounded fs-6 lh-1"
+                    aria-hidden="true">create_new_folder</span>
+                <span class="d-none d-sm-inline">Add Sub Category</span>
+                <span class="d-inline d-sm-none">Add</span>
+            </a>
         </div>
-    </div>
+    </x-breadcrum>
 
     <div class="datatables">
         <div class="card border-0 shadow-lg modern-card">
@@ -190,10 +97,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 <!-- Page Title and Actions -->
                 <div class="d-flex justify-content-between align-items-center flex-wrap gap-3 mb-4 pb-3 border-bottom">
                     <div class="d-flex align-items-center gap-3">
-                        <a href="javascript:void(0)" type="button" onclick="window.history.back()"
-                            class="text-primary p-2 back-btn">
-                            <span class="material-icons material-symbols-rounded">arrow_back_ios</span>
-                        </a>
                         <div>
                             <h3 class="mb-0 fw-bold text-primary">{{ $repository->course_repository_name }}</h3>
                         </div>
@@ -202,7 +105,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         <!-- Upload Documents (Secondary Action) -->
                         <button type="button"
-                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow-sm btn-hover-lift"
+                            class="btn btn-outline-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-medium shadow-sm btn-hover-lift"
                             data-bs-toggle="modal" data-bs-target="#uploadModal">
                             <span class="material-icons material-symbols-rounded fs-6">
                                 upload
@@ -212,7 +115,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
                         <!-- Add Category (Primary Action) -->
                         <button type="button"
-                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-pill fw-medium shadow btn-hover-lift" data-bs-toggle="modal" data-bs-target="#createModal">
+                            class="btn btn-primary btn-sm d-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-medium shadow btn-hover-lift"
+                            data-bs-toggle="modal" data-bs-target="#createModal">
                             <span class="material-icons material-symbols-rounded fs-6">
                                 add
                             </span>
@@ -224,20 +128,21 @@ document.addEventListener('DOMContentLoaded', function() {
                 </div>
 
                 @if($repository->children->count() == 0 && $documents->count() == 0)
-                <!-- Empty State -->
-                <div class="text-center py-5 my-5">
-                    <div class="empty-state-icon mb-3">
-                        <span class="material-icons material-symbols-rounded"
-                            style="font-size: 64px; color: #dee2e6;">folder_off</span>
+                <div class="text-center py-5 px-3 cr-admin-empty">
+                    <div
+                        class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
+                        <i class="bi bi-folder-x display-6 text-secondary" aria-hidden="true"></i>
                     </div>
-                    <h5 class="text-muted mb-2">No Content Found</h5>
-                    <p class="text-muted mb-4">Start by adding a category or uploading a document to get started.</p>
-                    <div class="d-flex gap-2 justify-content-center">
-                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded" data-bs-toggle="modal"
-                            data-bs-target="#createModal">
-                            Add Category
+                    <h5 class="text-secondary mb-2 fw-semibold">No Content Found</h5>
+                    <p class="text-muted mb-4 small">Start by adding a sub-category or uploading a document.</p>
+                    <div class="d-flex flex-wrap gap-2 justify-content-center">
+                        <a href="javascript:void(0)" class="btn btn-primary btn-sm rounded-1 px-3"
+                            data-bs-toggle="modal" data-bs-target="#createModal">
+                            <i class="bi bi-folder-plus me-1" aria-hidden="true"></i>Add Sub Category
                         </a>
-                        <a href="" class="btn btn-outline-primary btn-sm rounded">Upload Document
+                        <a href="javascript:void(0)" class="btn btn-outline-primary btn-sm rounded-1 px-3"
+                            data-bs-toggle="modal" data-bs-target="#uploadModal">
+                            <i class="bi bi-upload me-1" aria-hidden="true"></i>Upload Document
                         </a>
                     </div>
                 </div>
@@ -246,110 +151,149 @@ document.addEventListener('DOMContentLoaded', function() {
                 @if($repository->children->count() > 0)
                 <div class="mb-4">
                     <div class="table-responsive">
-                        <table class="table" id="child_repositories">
-                            <thead>
+                        <table class="table table-hover align-middle mb-0 datatable cr-admin-table"
+                            id="child_repositories" data-export="false">
+                            <thead class="bg-light">
                                 <tr>
-                                    <th class="col">#</th>
-                                    <th class="col">Image</th>
-                                    <th class="col">Sub Category Name</th>
-                                    <th class="col">Details</th>
-                                    <th class="col">Sub-Categories</th>
-                                    <th class="col">Documents</th>
-                                    <th class="col">Actions</th>
+                                    <th class="ps-4 fw-semibold text-secondary small">#</th>
+                                    <th class="fw-semibold text-secondary small">Category</th>
+                                    <th class="fw-semibold text-secondary small">Details</th>
+                                    <th class="fw-semibold text-secondary small">Sub-Categories</th>
+                                    <th class="fw-semibold text-secondary small">Documents</th>
+                                    <th class="text-center fw-semibold text-secondary small">Actions</th>
                                 </tr>
                             </thead>
                             <tbody>
                                 @foreach ($repository->children as $index => $child)
-                                <tr>
-                                    <td>
+
+                                <tr class="border-bottom">
+
+                                    <td class="ps-4 fw-medium text-muted">
                                         {{ $loop->iteration }}
                                     </td>
+
                                     <td>
-                                        @if($child->category_image &&
-                                        \Storage::disk('public')->exists($child->category_image))
-                                        <img src="{{ asset('storage/' . $child->category_image) }}" alt="Category Image"
-                                            class="rounded-2 shadow-sm"
-                                            style="width: 60px; height: 60px; object-fit: cover;">
-                                        @else
-                                        <div class="bg-light rounded-2 d-flex align-items-center justify-content-center"
-                                            style="width: 60px; height: 60px;">
-                                            <i class="material-icons material-symbols-rounded text-muted"
-                                                style="font-size: 24px;">image</i>
+                                        <div class="d-flex align-items-center gap-3">
+
+                                            @if(filled($child->category_image) &&
+                                            \Storage::disk('public')->exists($child->category_image))
+
+                                            <img src="{{ asset('storage/' . $child->category_image) }}" alt=""
+                                                class="rounded-circle object-fit-cover shadow-sm" width="42"
+                                                height="42">
+
+                                            @else
+
+                                            <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
+                                                style="width:42px;height:42px;">
+                                                <i class="bi bi-image text-muted"></i>
+                                            </div>
+
+                                            @endif
+
+                                            <div>
+                                                <a href="{{ route('course-repository.show', $child->pk) }}"
+                                                    class="text-decoration-none text-dark fw-medium">
+                                                    {{ $child->course_repository_name }}
+                                                </a>
+                                            </div>
+
                                         </div>
-                                        @endif
                                     </td>
+
+                                    <td>
+                                        <span class="text-muted small">
+                                            {{ Str::limit($child->course_repository_details ?? 'N/A', 60) }}
+                                        </span>
+                                    </td>
+
                                     <td>
                                         <a href="{{ route('course-repository.show', $child->pk) }}"
-                                            class="text-decoration-none fw-semibold text-dark hover-primary">
-                                            {{ $child->course_repository_name }}
+                                            class="text-decoration-none fw-medium small">
+                                            {{ $child->children->count() }} Sub-Categories
                                         </a>
                                     </td>
+
                                     <td>
-                                        <span
-                                            class="text-muted small">{{ Str::limit($child->course_repository_details ?? 'N/A', 50) }}</span>
+                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                            class="text-decoration-none fw-medium small">
+                                            View {{ str_pad($child->getDocumentCount(), 2, '0', STR_PAD_LEFT) }}
+                                            Attachments
+                                        </a>
                                     </td>
-                                    <td>{{ $child->children->count() }} - sub-categories
-                                    </td>
-                                    <td>{{ $child->getDocumentCount() }} - documents
-                                    </td>
-                                    <td>
-                                        <div class="btn-group d-flex gap-2 text-primary" role="group">
-                                            <!-- <a href="{{ route('course-repository.show', $child->pk) }}"
-                                                class="text-primary"
-                                                data-bs-toggle="tooltip" title="View">
-                                                <span class="material-icons material-symbols-rounded">visibility</span>
-                                            </a> -->
-                                            <a href="javascript:void(0)" class="text-primary edit-repo"
+
+                                    <td class="text-center">
+
+                                        <div class="d-inline-flex align-items-center">
+
+                                            <a href="javascript:void(0)"
+                                                class="btn btn-light bg-transparent border-0 p-0 edit-repo"
                                                 data-pk="{{ $child->pk }}"
                                                 data-name="{{ $child->course_repository_name }}"
                                                 data-details="{{ $child->course_repository_details }}"
-                                                data-image="{{ $child->category_image }}" data-bs-toggle="tooltip"
-                                                title="Edit" aria-label="Edit" aria-haspopup="true" aria-expanded="false" data-bs-target="#editModal">
-                                                <span class=" material-icons material-symbols-rounded">edit</span>
+                                                data-image="{{ $child->category_image }}"
+                                                data-attachment="{{ $child->category_attachment }}" title="Edit">
+
+                                                <i class="bi bi-pencil text-primary"></i>
                                             </a>
-                                            <a href="javascript:void(0)" class="text-primary delete-repo"
-                                                data-pk="{{ $child->pk }}" data-bs-toggle="tooltip" title="Delete">
-                                                <span class="material-icons material-symbols-rounded">delete</span>
+
+                                            <a href="javascript:void(0)"
+                                                class="btn btn-light bg-transparent border-0 p-0 delete-repo"
+                                                data-pk="{{ $child->pk }}" title="Delete">
+
+                                                <i class="bi bi-trash text-danger"></i>
                                             </a>
+
                                         </div>
+
                                     </td>
+
                                 </tr>
+
                                 @endforeach
                             </tbody>
                         </table>
                     </div>
                 </div>
                 @endif
+            </div>
 
+            @endif
+        </div>
+        @if($documents->count() > 0)
+        <div class="card">
+            <div class="card-body">
                 <!-- Documents Section -->
-                @if($documents->count() > 0)
+
                 <div class="table-responsive">
-                    <table class="table" id="documents">
-                        <thead>
+                    <table class="table table-hover align-middle mb-0 datatable cr-admin-table" id="documents"
+                        data-export="false">
+                        <thead class="table-light">
                             <tr>
-                                <th class="col text-center">S.No.</th>
-                                <th class="col text-center">Document Name</th>
-                                <th class="col text-center">File Title</th>
-                                <th class="col text-center">Course Name</th>
-                                <th class="col text-center">Subject</th>
-                                <th class="col text-center">Topic</th>
-                                <th class="col text-center">Session Date</th>
-                                <th class="col text-center">Sector</th>
-                                <th class="col text-center">Ministry</th>
-                                <th class="col text-center">Author</th>
-                                <th class="col text-center">Action</th>
+                                <th class="text-center cru-col-dsno" scope="col">S.No.</th>
+                                <th class="cru-col-docname" scope="col">Document Name</th>
+                                <th class="cru-col-filetitle" scope="col">File Title</th>
+                                <th class="cru-col-coursename" scope="col">Course Name</th>
+                                <th class="cru-col-subject" scope="col">Subject</th>
+                                <th class="cru-col-topic" scope="col">Topic</th>
+                                <th class="cru-col-sessiondate" scope="col">Session Date</th>
+                                <th class="cru-col-sector" scope="col">Sector</th>
+                                <th class="cru-col-ministry" scope="col">Ministry</th>
+                                <th class="cru-col-author" scope="col">Author</th>
+                                <th class="text-center cru-col-daction" scope="col">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach ($documents as $index => $doc)
                             <tr class="{{ $loop->odd ? 'odd' : 'even' }}">
-                                <td>{{ $loop->iteration }}</td>
-                                <td>
-                                    <i class="fas fa-file-alt text-primary me-2"></i>
-                                    <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                <td class="cru-col-dsno">{{ $loop->iteration }}</td>
+                                <td class="cru-col-docname">
+                                    <i class="bi bi-file-earmark-pdf text-danger me-1" aria-hidden="true"></i>
+                                    <span
+                                        class="fw-semibold">{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</span>
                                 </td>
-                                <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
-                                <td>
+                                <td class="cru-col-filetitle">{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
+                                <td class="cru-col-coursename">
                                     @if($doc->detail)
                                     @if($doc->detail->course)
                                     {{ $doc->detail->course->course_name }}
@@ -360,7 +304,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                     @endif
                                     @endif
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cru-col-subject">
                                     <small class="text-muted">
                                         @if($doc->detail)
                                         @if($doc->detail->timetable)
@@ -375,7 +319,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         @endif
                                     </small>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cru-col-topic">
                                     <small class="text-muted">
                                         @if($doc->detail)
                                         @if($doc->detail->timetable)
@@ -390,7 +334,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         @endif
                                     </small>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cru-col-sessiondate">
                                     <small class="text-muted">
                                         @if($doc->detail && $doc->detail->session_date)
                                         {{ \Carbon\Carbon::parse($doc->detail->session_date)->format('d M Y') }}
@@ -399,7 +343,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         @endif
                                     </small>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cru-col-sector">
                                     <small class="text-muted">
                                         @if($doc->detail)
                                         @if($doc->detail->sector)
@@ -414,7 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         @endif
                                     </small>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cru-col-ministry">
                                     <small class="text-muted">
                                         @if($doc->detail)
                                         @if($doc->detail->ministry)
@@ -429,7 +373,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         @endif
                                     </small>
                                 </td>
-                                <td class="text-center">
+                                <td class="text-center cru-col-author">
                                     <small class="text-muted">
                                         @if($doc->detail)
                                         @if($doc->detail->author)
@@ -444,15 +388,20 @@ document.addEventListener('DOMContentLoaded', function() {
                                         @endif
                                     </small>
                                 </td>
-                                <td class="text-center">
-                                    <div class="btn-group" role="group">
+                                <td class="text-center cru-col-daction">
+                                    <div class="d-inline-flex gap-1" role="group" aria-label="Document actions">
+                                        <a href="javascript:void(0)" class="cr-admin-icon-btn edit-doc"
+                                            data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Edit"
+                                            aria-label="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></a>
                                         <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
-                                            class="text-primary" data-bs-toggle="tooltip" title="Download">
-                                            <span class="material-icons material-symbols-rounded">download</span>
+                                            class="cr-admin-icon-btn" data-bs-toggle="tooltip" title="Download"
+                                            aria-label="Download">
+                                            <i class="bi bi-download" aria-hidden="true"></i>
                                         </a>
-                                        <a class="text-primary delete-doc" data-pk="{{ $doc->pk }}"
-                                            data-bs-toggle="tooltip" title="Delete">
-                                            <span class="material-icons material-symbols-rounded">delete</span>
+                                        <a href="javascript:void(0)" class="cr-admin-icon-btn text-danger delete-doc"
+                                            data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Delete"
+                                            aria-label="Delete">
+                                            <i class="bi bi-trash" aria-hidden="true"></i>
                                         </a>
                                     </div>
                                 </td>
@@ -461,109 +410,71 @@ document.addEventListener('DOMContentLoaded', function() {
                         </tbody>
                     </table>
                 </div>
+
             </div>
-            @endif
-            @endif
         </div>
+        @endif
     </div>
 </div>
 </div>
 
 <!-- Create Category Modal -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-4">
+<div class="modal fade cr-design-modal" id="createModal" tabindex="-1" aria-labelledby="createModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
+        <div class="modal-content">
 
-            <!-- Header -->
-            <div class="modal-header bg-primary bg-gradient text-white border-0 rounded-top-4">
-                <h5 class="modal-title fw-semibold d-flex align-items-center" id="createModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2 fs-5">
-                        add_circle
-                    </span>
-                    Create New Category
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+            <div class="modal-header">
+                <h5 class="modal-title" id="createModalLabel">Add Sub Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
 
-            <!-- Form -->
             <form id="createForm" method="POST" action="{{ route('course-repository.store') }}"
                 enctype="multipart/form-data">
                 @csrf
                 <input type="hidden" name="parent_type" value="{{ $repository->pk }}">
 
-                <div class="modal-body p-4">
+                <div class="modal-body">
 
-                    <!-- Category Name -->
-                    <div class="mb-4">
-                        <div class="form-floating">
-                            <input type="text" class="form-control form-control-lg" id="course_repository_name"
-                                name="course_repository_name" placeholder="Category Name" required>
-                            <label for="course_repository_name">
-                                <span class="material-icons material-symbols-rounded me-1 fs-6">
-                                    folder
-                                </span>
-                                Category Name <span class="text-danger">*</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Details -->
-                    <div class="mb-4">
-                        <div class="form-floating">
-                            <textarea class="form-control" id="course_repository_details"
-                                name="course_repository_details" placeholder="Details" style="height: 110px"></textarea>
-                            <label for="course_repository_details">
-                                <span class="material-icons material-symbols-rounded me-1 fs-6">
-                                    subject
-                                </span>
-                                Details (Optional)
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Upload Section -->
                     <div class="mb-3">
-                        <label class="form-label fw-semibold">
-                            Category Image
+                        <label for="course_repository_name" class="form-label">
+                            Sub-Category Name <span class="text-danger">*</span>
                         </label>
+                        <input type="text" class="form-control" id="course_repository_name"
+                            name="course_repository_name" placeholder="eg. E-Office" required>
+                    </div>
 
-                        <label for="category_image_create" class="upload-zone">
+                    <div class="mb-3">
+                        <label for="course_repository_details" class="form-label">Description</label>
+                        <textarea class="form-control" id="course_repository_details" name="course_repository_details"
+                            rows="3" placeholder="Add description"></textarea>
+                    </div>
 
-                            <div class="text-center">
-                                <span class="material-icons material-symbols-rounded upload-icon">
-                                    cloud_upload
-                                </span>
-                                <p class="mb-1 fw-medium">
-                                    <span class="text-primary">Click to upload</span>
-                                    or drag and drop
-                                </p>
-                                <small class="text-muted">
-                                    JPEG, PNG, JPG, GIF (Max 2MB)
-                                </small>
-                            </div>
-
-                            <input type="file" id="category_image_create" name="category_image"
-                                accept="image/jpeg,image/png,image/jpg,image/gif" hidden>
+                    <div class="mb-3">
+                        <label class="form-label d-flex align-items-center gap-1">
+                            Thumbnail Image
+                            <i class="bi bi-info-circle-fill text-primary" data-bs-toggle="tooltip"
+                                data-bs-placement="top" title="JPEG, PNG, JPG or GIF · Max 2MB" role="img"
+                                aria-label="Allowed formats: JPEG, PNG, JPG, GIF up to 2MB"></i>
                         </label>
-
-                        <!-- Preview -->
-                        <div class="mt-3">
-                            <img id="preview_create_show" class="img-thumbnail shadow-sm d-none"
-                                alt="Category image preview" style="max-width: 150px;">
+                        @include('admin.course-repository.partials.cr-design-file', [
+                        'inputId' => 'category_image_create',
+                        'inputName' => 'category_image',
+                        'required' => true,
+                        'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
+                        ])
+                        <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
+                        <div class="mt-2">
+                            <img id="preview_create_show" class="img-thumbnail rounded-1 shadow-sm d-none"
+                                alt="Category image preview" style="max-width: 120px;">
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Footer -->
-                <div class="modal-footer bg-light border-0 px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                        Save Category
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-primary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Add Sub-Category</button>
                 </div>
             </form>
 
@@ -573,62 +484,75 @@ document.addEventListener('DOMContentLoaded', function() {
 
 
 <!-- Edit Category Modal -->
-<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg">
-            <div class="modal-header bg-primary text-white border-0">
-                <h5 class="modal-title fw-semibold" id="editModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2" style="font-size: 20px;">edit</span>Edit
-                    Category
-                </h5>
-                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                    aria-label="Close"></button>
+<div class="modal fade cr-design-modal" id="editModal" tabindex="-1" aria-labelledby="editModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="editModalLabel">Edit Sub Category</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="editForm" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
-                <div class="modal-body p-4">
+                <div class="modal-body">
                     <div class="mb-3">
-                        <label for="edit_course_repository_name" class="form-label fw-semibold">
-                            Category Name <span class="text-danger">*</span>
+                        <label for="edit_course_repository_name" class="form-label">
+                            Sub-Category Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control form-control-lg" id="edit_course_repository_name"
-                            name="course_repository_name" required>
+                        <input type="text" class="form-control" id="edit_course_repository_name"
+                            name="course_repository_name" placeholder="eg. E-Office" required>
                     </div>
                     <div class="mb-3">
-                        <label for="edit_course_repository_details" class="form-label fw-semibold">Details</label>
+                        <label for="edit_course_repository_details" class="form-label">Description</label>
                         <textarea class="form-control" id="edit_course_repository_details"
-                            name="course_repository_details" rows="3"></textarea>
+                            name="course_repository_details" rows="3"
+                            placeholder="eg. Lorem ipsum dolor sit amet"></textarea>
                     </div>
-                    <div class="mb-3">
-                        <label for="category_image_edit" class="form-label fw-semibold">Category Image</label>
-                        <div id="current_image_container_show" class="mb-3" style="display: none;">
-                            <p class="text-muted mb-2 small"><strong>Current Image:</strong></p>
-                            <img id="current_image_show" src="" alt="Current"
-                                style="max-width: 150px; border-radius: 8px;" class="img-thumbnail shadow-sm">
+                    <div class="mb-0">
+                        <label class="form-label d-flex align-items-center gap-1">
+                            Thumbnail Image
+                            <i class="bi bi-info-circle-fill text-primary" data-bs-toggle="tooltip"
+                                data-bs-placement="top" title="JPEG, PNG, JPG or GIF · Max 2MB" role="img"
+                                aria-label="Allowed formats: JPEG, PNG, JPG, GIF up to 2MB"></i>
+                        </label>
+                        <div id="current_image_container_show" class="mb-2" style="display: none;">
+                            <p class="text-muted mb-1 small">Current image</p>
+                            <img id="current_image_show" src="" alt="Current" class="img-thumbnail rounded-1 shadow-sm"
+                                style="max-width: 120px;">
                         </div>
-                        <input type="file" class="form-control" id="category_image_edit" name="category_image"
-                            accept="image/jpeg,image/png,image/jpg,image/gif">
-                        <small class="text-muted d-block mt-2">
-                            <span class="material-icons material-symbols-rounded me-1"
-                                style="font-size: 14px;">info</span>Supported formats: JPEG, PNG, JPG, GIF (Max 2MB)
-                        </small>
-                        <div class="mt-3">
-                            <img id="preview_edit_show" src="" alt="Preview"
-                                style="max-width: 150px; display: none; border-radius: 8px;"
-                                class="img-thumbnail shadow-sm">
+                        @include('admin.course-repository.partials.cr-design-file', [
+                        'inputId' => 'category_image_edit',
+                        'inputName' => 'category_image',
+                        'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
+                        ])
+                        <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
+                        <div class="mt-2">
+                            <img id="preview_edit_show" src="" alt="Preview" class="img-thumbnail rounded-1 shadow-sm"
+                                style="max-width: 120px; display: none;">
                         </div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label">Attachment</label>
+                        <div id="current_attachment_container_show" class="mb-2" style="display: none;">
+                            <p class="text-muted mb-1 small">Current attachment</p>
+                            <a id="current_attachment_show" href="#" target="_blank" rel="noopener"
+                                class="d-inline-flex align-items-center gap-1 small">
+                                <i class="bi bi-paperclip"></i><span>View current file</span>
+                            </a>
+                        </div>
+                        @include('admin.course-repository.partials.cr-design-file', [
+                        'inputId' => 'category_attachment_edit',
+                        'inputName' => 'category_attachment',
+                        'accept' => '.jpeg,.png,.jpg,.gif,.pdf,.doc,.docx,.xls,.xlsx',
+                        ])
+                        <div class="form-text small text-muted mt-1">JPG, PNG, GIF, PDF, DOC, XLS (Max 5MB)</div>
                     </div>
                 </div>
-                <div class="modal-footer border-0 bg-light px-4 py-3">
-                    <button type="button" class="btn btn-outline-secondary rounded-pill px-4" data-bs-dismiss="modal">
-                        <span class="material-icons material-symbols-rounded me-1"
-                            style="font-size: 16px;">cancel</span>Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary rounded-pill px-4 shadow-sm">
-                        <span class="material-icons material-symbols-rounded me-1"
-                            style="font-size: 16px;">check_circle</span>Update Category
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end gap-2">
+                    <button type="button" class="btn btn-outline-primary px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary px-4">Update Sub-Category</button>
                 </div>
             </form>
         </div>
@@ -636,82 +560,79 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <!-- Upload Modal -->
-<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-xl modal-dialog-scrollable modal-dialog-centered">
-        <div class="modal-content border-0 shadow-lg rounded-3">
-            <div class="modal-header bg-white border-bottom px-4 py-3">
-                <h5 class="modal-title fw-semibold text-dark" id="uploadModalLabel">
-                    <span class="material-icons material-symbols-rounded me-2 text-primary"
-                        style="font-size: 22px;">cloud_upload</span>Upload Document
-                </h5>
+<div class="modal fade cr-design-modal" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable modal-dialog-centered cr-design-modal-upload">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="uploadModalLabel">Upload Document</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <form id="uploadForm" method="POST" action="javascript:void(0);" enctype="multipart/form-data" novalidate>
                 @csrf
-                <div id="uploadFormErrors" class="alert alert-danger d-none mx-4 mt-3 mb-0" role="alert"></div>
-                <div class="modal-body p-4 bg-light"
-                    style="max-height: calc(100vh - 250px); overflow-y: auto; overflow-x: hidden;">
-                    <!-- Category Type Selection - Radio Buttons -->
+                <input type="hidden" name="upload_edit_pk" id="upload_edit_pk" value="">
+                <div id="uploadFormErrors" class="alert alert-danger d-none mx-3 mt-3 mb-0" role="alert"></div>
+                <div id="uploadEditNotice" class="alert alert-info d-none mx-3 mt-3 mb-0 py-2 small" role="status">
+                    <i class="bi bi-info-circle me-1"></i>
+                    Editing existing document. Current file: <span id="uploadEditCurrentFile" class="fw-semibold"></span>.
+                    Choose a new file only if you want to replace it.
+                </div>
+                <div class="modal-body">
                     <div class="mb-3">
-                        <div class="d-flex gap-4 align-items-center">
+                        <label class="form-label d-block">Document Type <span class="text-danger">*</span></label>
+                        <div class="d-flex flex-wrap gap-3">
                             <div class="form-check">
                                 <input class="form-check-input category-radio" type="radio" name="category"
                                     id="category_course" value="Course" checked>
-                                <label class="form-check-label fw-medium" for="category_course">
-                                    Course
-                                </label>
+                                <label class="form-check-label" for="category_course">Course</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input category-radio" type="radio" name="category"
                                     id="category_other" value="Other">
-                                <label class="form-check-label fw-medium" for="category_other">
-                                    Other
-                                </label>
+                                <label class="form-check-label" for="category_other">Other</label>
                             </div>
                             <div class="form-check">
                                 <input class="form-check-input category-radio" type="radio" name="category"
                                     id="category_institutional" value="Institutional">
-                                <label class="form-check-label fw-medium" for="category_institutional">
-                                    Institutional
-                                </label>
+                                <label class="form-check-label" for="category_institutional">Institutional</label>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Course Repository Form Card -->
-                    <div class="card border-0 shadow-sm rounded-3 mb-3">
+                    <p class="cr-design-overview-title">Overview</p>
+                    <hr class="cr-design-divider">
+
+                    <div class="card cr-upload-form-panel mb-0">
                         <div class="card-header bg-white border-0 py-3">
                             <h6 class="mb-0 fw-semibold text-dark">Course Repository of LBSNAA</h6>
                         </div>
-                        <div class="card-body p-4 bg-white">
+                        <div class="card-body p-0 bg-white">
 
                             <!-- Course Category Fields -->
                             <div id="courseFields" class="category-fields">
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Document Location <span
+                                            class="text-danger">*</span></label>
+                                    <div class="btn-group cr-course-status-group" role="group"
+                                        aria-label="Course Status Filter">
+                                        <input type="radio" class="btn-check" name="course_status" id="btnActiveCourses"
+                                            value="active" checked>
+                                        <label class="btn btn-outline-success btn-sm"
+                                            for="btnActiveCourses">Active</label>
+                                        <input type="radio" class="btn-check" name="course_status"
+                                            id="btnArchivedCourses" value="archived">
+                                        <label class="btn btn-outline-secondary btn-sm"
+                                            for="btnArchivedCourses">Archived</label>
+                                    </div>
+                                </div>
+
                                 <!-- Row 1: Course Name & Major Subject Name -->
                                 <div class="row g-3 mb-3">
-                                    <div class="col-md-6">
+                                    <div class="col-md-6 choices-bs-scope cr-course-choices">
                                         <label for="course_name" class="form-label">
                                             Course Name <span class="text-danger">*</span>
                                         </label>
-                                        <!-- Active/Archive Toggle -->
-                                        <!-- Active/Archive Toggle -->
-                                        <div class="btn-group w-100 mb-3" role="group"
-                                            aria-label="Course Status Filter">
-                                            <input type="radio" class="btn-check" name="course_status"
-                                                id="btnActiveCourses" value="active" checked>
-                                            <label class="btn btn-outline-success" for="btnActiveCourses">
-                                                <span class="material-icons material-symbols-rounded me-1"
-                                                    style="font-size: 16px;">check_circle</span>Active Courses
-                                            </label>
-
-                                            <input type="radio" class="btn-check" name="course_status"
-                                                id="btnArchivedCourses" value="archived">
-                                            <label class="btn btn-outline-secondary" for="btnArchivedCourses">
-                                                <span class="material-icons material-symbols-rounded me-1"
-                                                    style="font-size: 16px;">archive</span>Archived Courses
-                                            </label>
-                                        </div>
-                                        <select class="form-select" id="course_name" name="course_name" required>
+                                        <select class="form-select form-select-sm" id="course_name" name="course_name" required data-no-choices>
                                             <option value="" selected>Select</option>
                                             @foreach(($activeCourses ?? []) as $course)
                                             <option value="{{ $course->pk }}" data-status="active">
@@ -785,7 +706,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Keywords <span class="text-danger">*</span>
                                         </label>
                                         <input type="text" class="form-control" id="keywords_course"
-                                            name="keywords_course" placeholder="ABCD12345" required>
+                                            name="keywords_course" placeholder="eg. Lorem ipsum dolor sit amet"
+                                            required>
                                         <small class="text-muted d-flex align-items-center mt-1">
                                             <i class="bi bi-info-circle me-1"></i> Enter Keyword
                                         </small>
@@ -823,11 +745,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                 <!-- Video Link -->
                                 <div class="mb-4">
-                                    <label for="video_link_course" class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2"
-                                            style="font-size: 18px; vertical-align: middle;">video_library</span>
-                                        Video Link
-                                    </label>
+                                    <label for="video_link_course" class="form-label">Video Link</label>
                                     <input type="url" class="form-control" id="video_link_course"
                                         name="video_link_course" placeholder="https://www.youtube.com/watch?v=...">
                                     <small class="text-muted d-block mt-1">
@@ -835,43 +753,40 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </small>
                                 </div>
 
-                                <!-- Attachments with Titles -->
+                                <!-- Document Upload -->
                                 <div class="mb-4">
                                     <label class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2"
-                                            style="font-size: 18px; vertical-align: middle;">attach_file</span>
-                                        Attachments <span class="text-danger">*</span>
+                                        Document Upload <span class="text-danger">*</span>
+                                        <i class="bi bi-info-circle text-muted ms-1"
+                                            title="Max 10MB. jpg, jpeg, png, pdf, doc, docx" aria-hidden="true"></i>
                                     </label>
 
-                                    <!-- Attachments Table -->
-                                    <div class="table-responsive" id="course_attachments_container"
-                                        style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
-                                        <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg">
+                                    <div class="table-responsive" id="course_attachments_container">
+                                        <table class="table table-sm mb-0 align-middle">
+                                            <thead>
                                                 <tr>
-                                                    <th style="width: 5%;">S.No.</th>
-                                                    <th>Attachment Title</th>
-                                                    <th>Upload File <span>max size: 10MB , allowed types: jpg, jpeg, png, pdf, doc, docx</span></th>
-                                                    <th style="width: 8%;">Action</th>
+                                                    <th style="width: 4%;">#</th>
+                                                    <th>Title</th>
+                                                    <th>File</th>
+                                                    <th style="width: 6%;"></th>
                                                 </tr>
                                             </thead>
                                             <tbody id="course_attachments_tbody">
-                                                <tr class="attachment-row">
+                                                <tr class="attachment-row cr-upload-attach-row">
                                                     <td class="row-number">1</td>
                                                     <td>
-                                                        <input type="text" class="form-control "
-                                                            name="attachment_titles[]" placeholder="e.g., Week-01">
+                                                        <input type="text" class="form-control"
+                                                            name="attachment_titles[]" placeholder="eg. Week-01">
                                                     </td>
                                                     <td>
-                                                        <input type="file" class="form-control "
-                                                            name="attachments[]" accept="*/*">
+                                                        <input type="file" class="form-control" name="attachments[]"
+                                                            accept="*/*">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
-                                                            class="btn btn-sm btn-danger delete-attachment"
-                                                            style="display: none;">
-                                                            <span class="material-icons material-symbols-rounded"
-                                                                style="font-size: 16px;">delete</span>
+                                                            class="btn cr-btn-remove-row delete-attachment"
+                                                            style="display: none;" aria-label="Remove row">
+                                                            <i class="bi bi-dash-lg" aria-hidden="true"></i>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -879,14 +794,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </table>
                                     </div>
 
-                                    <!-- Add More Button -->
-                                    <div class="mt-3">
-                                        <button type="button"
-                                            class="btn btn-outline-primary btn-sm add-attachment-course"
-                                            data-category="course">
-                                            <span class="material-icons material-symbols-rounded me-1"
-                                                style="font-size: 16px;">add_circle</span>
-                                            Add More Attachment
+                                    <div class="mt-2">
+                                        <button type="button" class="btn cr-btn-add-row add-attachment-course"
+                                            data-category="course" aria-label="Add attachment row">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -894,28 +805,28 @@ document.addEventListener('DOMContentLoaded', function() {
 
                             <!-- Other Category Fields -->
                             <div id="otherFields" class="category-fields" style="display: none;">
+                                <div class="mb-3">
+                                    <label class="form-label d-block">Document Location <span
+                                            class="text-danger">*</span></label>
+                                    <div class="btn-group cr-course-status-group" role="group"
+                                        aria-label="Other Course Status Filter">
+                                        <input type="radio" class="btn-check" name="course_status_other"
+                                            id="btnActiveCoursesOther" value="active" checked>
+                                        <label class="btn btn-outline-success btn-sm"
+                                            for="btnActiveCoursesOther">Active</label>
+                                        <input type="radio" class="btn-check" name="course_status_other"
+                                            id="btnArchivedCoursesOther" value="archived">
+                                        <label class="btn btn-outline-secondary btn-sm"
+                                            for="btnArchivedCoursesOther">Archived</label>
+                                    </div>
+                                </div>
+
                                 <!-- Row 1: Course Name & Major Subject Name -->
                                 <div class="row g-3 mb-3">
                                     <div class="col-md-6">
                                         <label for="course_name_other" class="form-label">
                                             Course Name <span class="text-danger">*</span>
                                         </label>
-                                        <!-- Active/Archive Toggle for Other Category -->
-                                        <div class="btn-group w-100 mb-2" role="group"
-                                            aria-label="Other Course Status Filter">
-                                            <input type="radio" class="btn-check" name="course_status_other"
-                                                id="btnActiveCoursesOther" value="active" checked>
-                                            <label class="btn btn-outline-success btn-sm" for="btnActiveCoursesOther">
-                                                <i class="bi bi-check-circle me-1"></i>Active Courses
-                                            </label>
-
-                                            <input type="radio" class="btn-check" name="course_status_other"
-                                                id="btnArchivedCoursesOther" value="archived">
-                                            <label class="btn btn-outline-secondary btn-sm"
-                                                for="btnArchivedCoursesOther">
-                                                <i class="bi bi-archive me-1"></i>Archived Courses
-                                            </label>
-                                        </div>
                                         <select class="form-select" id="course_name_other" name="course_name_other">
                                             <option value="" selected>Select</option>
                                             @foreach(($activeCourses ?? []) as $course)
@@ -984,7 +895,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             Keywords <span class="text-danger">*</span>
                                         </label>
                                         <input type="text" class="form-control" id="keywords_other"
-                                            name="keywords_other" placeholder="ABCD12345">
+                                            name="keywords_other" placeholder="eg. Lorem ipsum dolor sit amet">
                                         <small class="text-muted d-flex align-items-center mt-1">
                                             <i class="bi bi-info-circle me-1"></i> Enter Keyword
                                         </small>
@@ -1022,56 +933,44 @@ document.addEventListener('DOMContentLoaded', function() {
 
                                 <!-- Video Link -->
                                 <div class="mb-4">
-                                    <label for="video_link_other" class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2"
-                                            style="font-size: 18px; vertical-align: middle;">video_library</span>
-                                        Video Link
-                                    </label>
+                                    <label for="video_link_other" class="form-label">Video Link</label>
                                     <input type="url" class="form-control" id="video_link_other" name="video_link_other"
                                         placeholder="https://www.youtube.com/watch?v=...">
-                                    <small class="text-muted d-block mt-1">
-                                        <i class="bi bi-info-circle me-1"></i> Enter video URL (YouTube, Vimeo, etc.)
-                                    </small>
                                 </div>
 
-                                <!-- Attachments with Titles -->
                                 <div class="mb-4">
                                     <label class="form-label">
-                                        <span class="material-icons material-symbols-rounded me-2"
-                                            style="font-size: 18px; vertical-align: middle;">attach_file</span>
-                                        Attachments <span class="text-danger">*</span>
+                                        Document Upload <span class="text-danger">*</span>
+                                        <i class="bi bi-info-circle text-muted ms-1" aria-hidden="true"></i>
                                     </label>
 
-                                    <!-- Attachments Table -->
-                                    <div class="table-responsive" id="other_attachments_container"
-                                        style="max-height: 300px; overflow-y: auto; overflow-x: auto;">
-                                        <table class="table table-bordered table-hover mb-0">
-                                            <thead class="bg-light">
+                                    <div class="table-responsive" id="other_attachments_container">
+                                        <table class="table table-sm mb-0 align-middle">
+                                            <thead>
                                                 <tr>
-                                                    <th style="width: 5%;">S.No.</th>
-                                                    <th>Attachment Title</th>
-                                                    <th>Upload File</th>
-                                                    <th style="width: 8%;">Action</th>
+                                                    <th style="width: 4%;">#</th>
+                                                    <th>Title</th>
+                                                    <th>File</th>
+                                                    <th style="width: 6%;"></th>
                                                 </tr>
                                             </thead>
                                             <tbody id="other_attachments_tbody">
-                                                <tr class="attachment-row">
+                                                <tr class="attachment-row cr-upload-attach-row">
                                                     <td class="row-number">1</td>
                                                     <td>
-                                                        <input type="text" class="form-control "
+                                                        <input type="text" class="form-control"
                                                             name="attachment_titles_other[]"
-                                                            placeholder="e.g., Document-01">
+                                                            placeholder="eg. Document-01">
                                                     </td>
                                                     <td>
-                                                        <input type="file" class="form-control "
+                                                        <input type="file" class="form-control"
                                                             name="attachments_other[]" accept="*/*">
                                                     </td>
                                                     <td class="text-center">
                                                         <button type="button"
-                                                            class="btn btn-sm btn-danger delete-attachment"
-                                                            style="display: none;">
-                                                            <span class="material-icons material-symbols-rounded"
-                                                                style="font-size: 16px;">delete</span>
+                                                            class="btn cr-btn-remove-row delete-attachment"
+                                                            style="display: none;" aria-label="Remove row">
+                                                            <i class="bi bi-dash-lg" aria-hidden="true"></i>
                                                         </button>
                                                     </td>
                                                 </tr>
@@ -1079,14 +978,10 @@ document.addEventListener('DOMContentLoaded', function() {
                                         </table>
                                     </div>
 
-                                    <!-- Add More Button -->
-                                    <div class="mt-3">
-                                        <button type="button"
-                                            class="btn btn-outline-primary btn-sm add-attachment-other"
-                                            data-category="other">
-                                            <span class="material-icons material-symbols-rounded me-1"
-                                                style="font-size: 16px;">add_circle</span>
-                                            Add More Attachment
+                                    <div class="mt-2">
+                                        <button type="button" class="btn cr-btn-add-row add-attachment-other"
+                                            data-category="other" aria-label="Add attachment row">
+                                            <i class="bi bi-plus-lg" aria-hidden="true"></i>
                                         </button>
                                     </div>
                                 </div>
@@ -1095,97 +990,56 @@ document.addEventListener('DOMContentLoaded', function() {
                             <!-- Institutional Category Fields -->
                             <div id="institutionalFields" class="category-fields" style="display: none;">
 
-                                <div class="row">
-                                    <div class="col-md-6">
-                                        <!-- Keywords -->
-                                        <div class="mb-3">
-                                            <label for="Key_words_institutional" class="form-label">
-                                                Add Key words <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="text" class="form-control" id="Key_words_institutional"
-                                                name="Key_words_institutional" placeholder="Enter Keywords">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <!-- Keywords -->
-                                        <div class="mb-3">
-                                            <label for="Key_words_institutional" class="form-label">
-                                                Keywords <span class="text-danger">*</span>
-                                            </label>
-                                            <input type="text" class="form-control" id="Key_words_institutional"
-                                                name="Key_words_institutional" placeholder="Enter Keywords">
-                                        </div>
-                                    </div>
-                                    <div class="col-md-6">
-                                        <!-- sector -->
+                                <div class="mb-3">
+                                    <label for="Key_words_institutional" class="form-label">
+                                        Keywords <span class="text-danger">*</span>
+                                    </label>
+                                    <input type="text" class="form-control" id="Key_words_institutional"
+                                        name="Key_words_institutional" placeholder="eg. Lorem ipsum dolor sit amet">
+                                </div>
 
-                                        <div class="mb-3">
-                                            <label for="sector_master_institutional" class="form-label">
-                                                Sector <span class="text-danger">*</span>
-                                            </label>
-                                            <select class="form-select" id="sector_master_institutional"
-                                                name="sector_master_institutional">
-                                                <option value="" selected>Select</option>
-                                                @foreach(($sectors ?? []) as $sector)
-                                                <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                <div class="row g-3 mb-3">
+                                    <div class="col-md-6">
+                                        <label for="sector_master_institutional" class="form-label">
+                                            Sector <span class="text-danger">*</span>
+                                        </label>
+                                        <select class="form-select" id="sector_master_institutional"
+                                            name="sector_master_institutional">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($sectors ?? []) as $sector)
+                                            <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                     <div class="col-md-6">
-                                        <!-- ministries -->
-
-                                        <div class="mb-3">
-                                            <label for="ministry_master_institutional" class="form-label">Ministry <span
-                                                    class="text-danger">*</span></label>
-                                            <select class="form-select" id="ministry_master_institutional"
-                                                name="ministry_master_institutional">
-                                                <option value="" selected>Select</option>
-                                                @foreach(($ministries ?? []) as $ministry)
-                                                <option value="{{ $ministry->pk }}"
-                                                    data-sector="{{ $ministry->sector_master_pk }}"
-                                                    style="display:none;">{{ $ministry->ministry_name }}</option>
-                                                @endforeach
-                                            </select>
-                                        </div>
+                                        <label for="ministry_master_institutional" class="form-label">Ministry <span
+                                                class="text-danger">*</span></label>
+                                        <select class="form-select" id="ministry_master_institutional"
+                                            name="ministry_master_institutional">
+                                            <option value="" selected>Select</option>
+                                            @foreach(($ministries ?? []) as $ministry)
+                                            <option value="{{ $ministry->pk }}"
+                                                data-sector="{{ $ministry->sector_master_pk }}" style="display:none;">
+                                                {{ $ministry->ministry_name }}</option>
+                                            @endforeach
+                                        </select>
                                     </div>
                                 </div>
 
-
-                                <!-- Video Link -->
-                                <!-- <div class="mb-3">
-                                    <label for="keyword_institutional" class="form-label">Video Link</label>
-                                    <input type="text" class="form-control" id="keyword_institutional"
-                                        name="keyword_institutional" placeholder="Enter Video Link">
-                                </div> -->
-
-                                <!-- Upload Attachment -->
                                 <div class="mb-3">
-                                    <label class="form-label">
-                                        Upload Attachment <span class="text-danger">*</span>
+                                    <label class="form-label d-block">
+                                        Document Upload <span class="text-danger">*</span>
+                                        <i class="bi bi-info-circle text-muted ms-1" aria-hidden="true"></i>
                                     </label>
-                                    <div class="upload-area border rounded-3 text-center p-5 bg-light position-relative"
-                                        style="border-style: dashed !important; cursor: pointer;">
-                                        <input type="file"
-                                            class="file-input-institutional position-absolute w-100 h-100 opacity-0"
-                                            name="attachments_institutional[]" accept="*/*" multiple
-                                            style="top: 0; left: 0; cursor: pointer;">
-                                        <div class="upload-icon mb-2">
-                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"
-                                                xmlns="http://www.w3.org/2000/svg">
-                                                <path d="M12 15V3M12 3L8 7M12 3L16 7" stroke="#0d6efd" stroke-width="2"
-                                                    stroke-linecap="round" stroke-linejoin="round" />
-                                                <path
-                                                    d="M2 17L2.62 19.86C2.71 20.37 3.14 20.75 3.66 20.75H20.34C20.86 20.75 21.29 20.37 21.38 19.86L22 17"
-                                                    stroke="#0d6efd" stroke-width="2" stroke-linecap="round"
-                                                    stroke-linejoin="round" />
-                                            </svg>
-                                        </div>
-                                        <p class="mb-1 text-primary fw-medium">Click to upload <span
-                                                class="text-muted">or drag and drop</span></p>
-                                        <div class="selected-files-institutional mt-2 text-start" style="display:none;">
-                                        </div>
-                                    </div>
+                                    @include('admin.course-repository.partials.cr-design-file', [
+                                    'inputId' => 'attachments_institutional',
+                                    'inputName' => 'attachments_institutional[]',
+                                    'inputClass' => 'file-input-institutional',
+                                    'accept' => '*/*',
+                                    'multiple' => true,
+                                    ])
+                                    <div class="selected-files-institutional mt-2 text-start small text-muted"
+                                        style="display:none;"></div>
                                 </div>
                             </div>
 
@@ -1199,13 +1053,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     </p>
                 </div>
 
-                <div class="modal-footer border-0 bg-white px-4 py-3">
-                    <button type="submit" class="btn btn-primary px-5 rounded-pill" id="uploadBtn">
-                        Save
-                    </button>
-                    <button type="button" class="btn btn-outline-secondary px-5 rounded-pill" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary" id="uploadBtn">Add Document</button>
                 </div>
             </form>
         </div>
@@ -1243,14 +1093,14 @@ document.addEventListener('DOMContentLoaded', function() {
                         <input class="form-check-input me-1" type="checkbox" value="documents" checked>
                         <span class="material-symbols-outlined me-1"
                             style="font-size: 16px;">description</span>Documents
-                        <span class="badge bg-primary rounded-pill ms-auto">{{ $documents->count() ?? 0 }}</span>
+                        <span class="badge bg-primary rounded-1 ms-auto">{{ $documents->count() ?? 0 }}</span>
                     </label>
                     <label class="list-group-item">
                         <input class="form-check-input me-1" type="checkbox" value="categories" checked>
                         <span class="material-symbols-outlined me-1"
                             style="font-size: 16px;">folder</span>Sub-Categories
                         <span
-                            class="badge bg-success rounded-pill ms-auto">{{ $repository->children->count() ?? 0 }}</span>
+                            class="badge bg-success rounded-1 ms-auto">{{ $repository->children->count() ?? 0 }}</span>
                     </label>
                 </div>
             </div>
@@ -1360,6 +1210,272 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
+<!-- Column Visibility — Sub-Categories & Documents tables (DataTables) -->
+<script>
+(function() {
+    'use strict';
+
+    // Per-table column config. idx = DataTables column index. locked columns stay visible.
+    var TABLES = {
+        'child_repositories': {
+            storageKey: 'cru-columns-child_repositories',
+            columns: [{
+                    idx: 0,
+                    label: '#',
+                    locked: true
+                },
+                {
+                    idx: 1,
+                    label: 'Image'
+                },
+                {
+                    idx: 2,
+                    label: 'Sub Category Name'
+                },
+                {
+                    idx: 3,
+                    label: 'Details'
+                },
+                {
+                    idx: 4,
+                    label: 'Sub-Categories'
+                },
+                {
+                    idx: 5,
+                    label: 'Documents'
+                },
+                {
+                    idx: 6,
+                    label: 'Actions',
+                    locked: true
+                }
+            ]
+        },
+        'documents': {
+            storageKey: 'cru-columns-documents',
+            columns: [{
+                    idx: 0,
+                    label: 'S.No.',
+                    locked: true
+                },
+                {
+                    idx: 1,
+                    label: 'Document Name'
+                },
+                {
+                    idx: 2,
+                    label: 'File Title'
+                },
+                {
+                    idx: 3,
+                    label: 'Course Name'
+                },
+                {
+                    idx: 4,
+                    label: 'Subject'
+                },
+                {
+                    idx: 5,
+                    label: 'Topic'
+                },
+                {
+                    idx: 6,
+                    label: 'Session Date'
+                },
+                {
+                    idx: 7,
+                    label: 'Sector'
+                },
+                {
+                    idx: 8,
+                    label: 'Ministry'
+                },
+                {
+                    idx: 9,
+                    label: 'Author'
+                },
+                {
+                    idx: 10,
+                    label: 'Action',
+                    locked: true
+                }
+            ]
+        }
+    };
+
+    function toggleable(cfg) {
+        return cfg.columns.filter(function(c) {
+            return !c.locked;
+        });
+    }
+
+    function defaults(cfg) {
+        var s = {};
+        toggleable(cfg).forEach(function(c) {
+            s[c.idx] = true;
+        });
+        return s;
+    }
+
+    function loadState(cfg) {
+        try {
+            var raw = localStorage.getItem(cfg.storageKey);
+            if (!raw) return defaults(cfg);
+            var parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== 'object') return defaults(cfg);
+            var base = defaults(cfg);
+            Object.keys(base).forEach(function(k) {
+                if (typeof parsed[k] === 'boolean') base[k] = parsed[k];
+            });
+            return base;
+        } catch (e) {
+            return defaults(cfg);
+        }
+    }
+
+    function saveState(cfg, state) {
+        try {
+            localStorage.setItem(cfg.storageKey, JSON.stringify(state));
+        } catch (e) {}
+    }
+
+    function buildModal(tableId, cfg) {
+        var modalId = 'cruColVisModal-' + tableId;
+        if (document.getElementById(modalId)) return;
+
+        var chips = cfg.columns.map(function(c) {
+            if (c.locked) {
+                return '<div class="col">' +
+                    '<label class="cru-colvis-chip cru-colvis-chip-locked d-flex align-items-center gap-2 mb-0" title="Always visible">' +
+                    '<input type="checkbox" class="form-check-input m-0" checked disabled>' +
+                    '<span class="text-truncate">' + c.label + '</span>' +
+                    '</label></div>';
+            }
+            return '<div class="col">' +
+                '<label class="cru-colvis-chip d-flex align-items-center gap-2 mb-0">' +
+                '<input type="checkbox" class="form-check-input m-0 cru-col-toggle-checkbox" data-table="' +
+                tableId + '" data-col="' + c.idx + '" checked>' +
+                '<span class="text-truncate">' + c.label + '</span>' +
+                '</label></div>';
+        }).join('');
+
+        var html =
+            '<div class="modal fade cru-colvis-modal" id="' + modalId + '" tabindex="-1" aria-labelledby="' +
+            modalId + '-label" aria-hidden="true">' +
+            '<div class="modal-dialog modal-dialog-centered modal-lg">' +
+            '<div class="modal-content border-0 rounded-4 shadow">' +
+            '<div class="modal-header border-0 pb-2 px-4 pt-4">' +
+            '<h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="' + modalId + '-label">' +
+            '<i class="bi bi-sliders2 text-primary" aria-hidden="true"></i> Column Visibility' +
+            '</h5>' +
+            '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+            '</div>' +
+            '<hr class="cru-colvis-divider mx-4 my-0">' +
+            '<div class="modal-body px-4 py-4">' +
+            '<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">' + chips + '</div>' +
+            '</div>' +
+            '<div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">' +
+            '<button type="button" class="btn btn-link btn-sm text-decoration-none p-0 d-inline-flex align-items-center gap-1 cru-col-toggle-reset" data-table="' +
+            tableId + '">' +
+            '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset to default' +
+            '</button>' +
+            '<button type="button" class="btn btn-outline-primary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Close</button>' +
+            '</div>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+        document.body.insertAdjacentHTML('beforeend', html);
+    }
+
+    function buildTrigger(tableId, wrapper) {
+        var trigger =
+            '<span class="cru-column-toggle d-inline-flex align-items-center ms-2">' +
+            '<button type="button" class="btn btn-light border btn-sm d-inline-flex align-items-center gap-2 fw-semibold cru-colvis-trigger" ' +
+            'data-bs-toggle="modal" data-bs-target="#cruColVisModal-' + tableId + '" title="Show / hide columns">' +
+            '<i class="bi bi-layout-three-columns" aria-hidden="true"></i>' +
+            '<span class="d-none d-sm-inline">Columns</span>' +
+            '</button>' +
+            '</span>';
+        var filter = wrapper.querySelector('.dataTables_filter');
+        var searchInput = filter ? filter.querySelector('input') : null;
+        if (searchInput) {
+            searchInput.insertAdjacentHTML('afterend', trigger);
+        } else if (filter) {
+            filter.insertAdjacentHTML('beforeend', trigger);
+        } else {
+            wrapper.insertAdjacentHTML('afterbegin', trigger);
+        }
+    }
+
+    function buildTable(tableId, cfg) {
+        if (!(window.jQuery && jQuery.fn && jQuery.fn.dataTable)) return false;
+        var el = document.getElementById(tableId);
+        if (!el || !jQuery.fn.dataTable.isDataTable(el)) return false;
+
+        var api = jQuery(el).DataTable();
+        var wrapper = el.closest('.dataTables_wrapper');
+        if (!wrapper) return false;
+        if (wrapper.querySelector('.cru-column-toggle')) return true; // already built
+
+        buildModal(tableId, cfg);
+        buildTrigger(tableId, wrapper);
+
+        function applyState(state) {
+            toggleable(cfg).forEach(function(c) {
+                var vis = state[c.idx] !== false;
+                api.column(c.idx).visible(vis, false);
+                var cb = document.querySelector('.cru-col-toggle-checkbox[data-table="' + tableId +
+                    '"][data-col="' + c.idx + '"]');
+                if (cb) cb.checked = vis;
+            });
+            api.columns.adjust();
+        }
+
+        applyState(loadState(cfg));
+
+        document.querySelectorAll('.cru-col-toggle-checkbox[data-table="' + tableId + '"]').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var idx = parseInt(this.getAttribute('data-col'), 10);
+                var next = loadState(cfg);
+                if (!this.checked) {
+                    var visibleCount = toggleable(cfg).filter(function(c) {
+                        return next[c.idx] !== false;
+                    }).length;
+                    if (visibleCount <= 1) {
+                        this.checked = true;
+                        return;
+                    }
+                }
+                next[idx] = this.checked;
+                api.column(idx).visible(this.checked);
+                saveState(cfg, next);
+            });
+        });
+
+        document.querySelectorAll('.cru-col-toggle-reset[data-table="' + tableId + '"]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                try {
+                    localStorage.removeItem(cfg.storageKey);
+                } catch (e) {}
+                applyState(defaults(cfg));
+            });
+        });
+        return true;
+    }
+
+    // The global DataTables init runs on DOMContentLoaded; retry briefly until each table exists.
+    Object.keys(TABLES).forEach(function(tableId) {
+        if (!document.getElementById(tableId)) return; // section not rendered
+        var tries = 0;
+        (function attempt() {
+            if (buildTable(tableId, TABLES[tableId])) return;
+            if (tries++ < 40) setTimeout(attempt, 100);
+        })();
+    });
+})();
+</script>
+
+@include('admin.course-repository.partials.single-click-links')
 @endsection
 
 <script>
@@ -1408,6 +1524,16 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
         if (!selectedCategory) {
             showUploadError('Please select a category (Course, Other or Institutional).');
             return;
+        }
+
+        // Edit mode: when the modal was opened from a document's Edit button, send an
+        // update instead of creating new records. submit() returns true once it takes over.
+        if (window.crDocEdit && window.crDocEdit.isEditing()) {
+            if (window.crDocEdit.submit(form, {
+                    showError: showUploadError
+                })) {
+                return;
+            }
         }
 
         if (selectedCategory === 'Course') {
@@ -1566,7 +1692,7 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
                     uploadData.append('attachments[]', fileInput.files[0]);
                     var title = (attachmentTitles[index] && attachmentTitles[index].value &&
                             attachmentTitles[index].value.trim()) ? attachmentTitles[index].value
-                    .trim() : 'Untitled';
+                        .trim() : 'Untitled';
                     uploadData.append('attachment_titles[]', title);
                 }
             });
@@ -1589,7 +1715,7 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             uploadData.append('video_link', vi ? vi.value : '');
         }
 
-        var repositoryPk = {{ $repository->pk }};
+        var repositoryPk = @json($repository->pk);
         fetch('/course-repository/' + repositoryPk + '/upload-document', {
                 method: 'POST',
                 body: uploadData,
@@ -1661,6 +1787,404 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
     }
 });
 
+// ===== DOCUMENT EDIT MODE — reuses the Upload modal so the form looks identical to "Add" =====
+window.crDocEdit = (function() {
+    'use strict';
+
+    function $id(id) {
+        return document.getElementById(id);
+    }
+
+    function wait(ms) {
+        return new Promise(function(resolve) {
+            setTimeout(resolve, ms);
+        });
+    }
+
+    function fireChange(el) {
+        if (el) el.dispatchEvent(new Event('change', {
+            bubbles: true
+        }));
+    }
+
+    // ===== Course Name -> Choices.js (searchable, fixed width, wraps long names) =====
+    // Choices owns the rendered dropdown, so the native data-status show/hide trick no
+    // longer works; we keep a canonical snapshot of every course and rebuild the
+    // Choices list (filtered by Active/Archived) on demand instead.
+    var courseChoices = null;
+    var courseOptionsAll = []; // [{ value, label, status }]
+
+    function getCheckedCourseStatus() {
+        var checked = document.querySelector('input[name="course_status"]:checked');
+        return checked ? checked.value : 'active';
+    }
+
+    // Rebuild the Course Name choices to only those matching `status`.
+    // When `keepValue` is passed, that course is re-selected after the rebuild.
+    function applyCourseStatusChoices(status, keepValue) {
+        if (!courseChoices) return;
+        var list = [{ value: '', label: 'Select', placeholder: true, selected: !keepValue }];
+        courseOptionsAll.forEach(function (o) {
+            if (o.status === status) {
+                list.push({ value: o.value, label: o.label });
+            }
+        });
+        courseChoices.setChoices(list, 'value', 'label', true); // replace existing
+        if (keepValue !== undefined && keepValue !== null && keepValue !== '') {
+            try { courseChoices.setChoiceByValue(String(keepValue)); } catch (e) { /* ignore */ }
+        }
+    }
+
+    // Used by the edit/prefill flow: make sure the saved course is present and selected,
+    // syncing the Active/Archived radio so the visible list matches.
+    function syncCourseChoiceForEdit(pk, label) {
+        if (!courseChoices || pk === null || pk === undefined || pk === '') return;
+        pk = String(pk);
+        var found = null;
+        for (var i = 0; i < courseOptionsAll.length; i++) {
+            if (String(courseOptionsAll[i].value) === pk) { found = courseOptionsAll[i]; break; }
+        }
+        var status = found ? found.status : getCheckedCourseStatus();
+        if (!found) {
+            courseOptionsAll.push({ value: pk, label: label || pk, status: status });
+        }
+        var radio = document.querySelector('input[name="course_status"][value="' + status + '"]');
+        if (radio && !radio.checked) radio.checked = true;
+        applyCourseStatusChoices(status, pk);
+    }
+
+    // Set a <select> value, injecting a labeled option if it isn't present.
+    function setSelectValue(selectId, value, label) {
+        var sel = $id(selectId);
+        if (!sel || value === null || value === undefined || value === '') return sel;
+        value = String(value);
+        var present = false;
+        for (var i = 0; i < sel.options.length; i++) {
+            if (String(sel.options[i].value) === value) {
+                present = true;
+                break;
+            }
+        }
+        if (!present) {
+            var opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = label || value;
+            sel.appendChild(opt);
+        }
+        sel.value = value;
+        return sel;
+    }
+
+    // Wait for an async-loaded option to appear, then select it (and fire change so the
+    // next cascade level loads). Falls back to injecting a labeled option after timeout.
+    function selectWhenReady(selectId, value, label, timeoutMs) {
+        return new Promise(function(resolve) {
+            if (value === null || value === undefined || value === '') {
+                resolve(false);
+                return;
+            }
+            value = String(value);
+            var start = (window.performance && performance.now) ? performance.now() : Date.now();
+            (function check() {
+                var sel = $id(selectId);
+                if (sel) {
+                    for (var i = 0; i < sel.options.length; i++) {
+                        if (String(sel.options[i].value) === value) {
+                            sel.value = value;
+                            fireChange(sel);
+                            resolve(true);
+                            return;
+                        }
+                    }
+                }
+                var now = (window.performance && performance.now) ? performance.now() : Date.now();
+                if (now - start > (timeoutMs || 3500)) {
+                    var s = setSelectValue(selectId, value, label);
+                    fireChange(s);
+                    resolve(false);
+                    return;
+                }
+                setTimeout(check, 80);
+            })();
+        });
+    }
+
+    function setVal(id, value) {
+        var el = $id(id);
+        if (el) el.value = (value === null || value === undefined) ? '' : value;
+    }
+
+    // Pre-fill the Course-category section (cascading dropdowns).
+    function prefillCourse(d) {
+        var courseSel = setSelectValue('course_name', d.course_master_pk, d.course_name);
+        syncCourseChoiceForEdit(d.course_master_pk, d.course_name); // keep Choices UI in sync
+        fireChange(courseSel); // -> loads subjects
+        return Promise.resolve()
+            .then(function() {
+                return selectWhenReady('subject_name', d.subject_pk, d.subject_name);
+            }) // -> loads topics
+            .then(function() {
+                return selectWhenReady('timetable_name', d.topic_pk, d.topic_name);
+            }) // -> loads session/author
+            .then(function() {
+                return wait(450);
+            }) // let session/author auto-fill settle, then override with saved values
+            .then(function() {
+                setVal('session_date', d.session_date);
+                setSelectValue('author_name', d.author_name, d.author_label);
+                var sectorSel = setSelectValue('sector_master', d.sector_master_pk, d.sector_name);
+                fireChange(sectorSel); // -> loads ministries
+                return selectWhenReady('ministry_master', d.ministry_master_pk, d.ministry_name);
+            })
+            .then(function() {
+                // keywords + video LAST — cascade change handlers overwrite keywords
+                setVal('keywords_course', d.keyword);
+                setVal('video_link_course', d.videolink);
+                setVal('session_date', d.session_date);
+            });
+    }
+
+    // Pre-fill the Other-category section (mostly free-text inputs).
+    function prefillOther(d) {
+        setSelectValue('course_name_other', d.course_master_pk, d.course_name);
+        setVal('major_subject_other', d.subject_pk);
+        setVal('topic_name_other', d.topic_pk);
+        setVal('session_date_other', d.session_date);
+        setVal('author_name_other', d.author_name);
+        var sectorSel = setSelectValue('sector_master_other', d.sector_master_pk, d.sector_name);
+        fireChange(sectorSel); // -> loads ministries (Other)
+        return selectWhenReady('ministry_master_other', d.ministry_master_pk, d.ministry_name)
+            .then(function() {
+                setVal('keywords_other', d.keyword);
+                setVal('video_link_other', d.videolink);
+            });
+    }
+
+    // Pre-fill the Institutional-category section.
+    function prefillInstitutional(d) {
+        setVal('Key_words_institutional', d.keyword);
+        var sectorSel = setSelectValue('sector_master_institutional', d.sector_master_pk, d.sector_name);
+        fireChange(sectorSel);
+        return selectWhenReady('ministry_master_institutional', d.ministry_master_pk, d.ministry_name);
+    }
+
+    // Put the document title into the first attachment row of the active category.
+    function setTitleRow(category, fileTitle) {
+        var name = category === 'Other' ? 'attachment_titles_other[]' : 'attachment_titles[]';
+        var titleInput = document.querySelector('#uploadForm input[name="' + name + '"]');
+        if (titleInput) titleInput.value = fileTitle || '';
+    }
+
+    function selectCategory(category) {
+        var map = {
+            Course: 'category_course',
+            Other: 'category_other',
+            Institutional: 'category_institutional'
+        };
+        var radio = $id(map[category] || 'category_course');
+        if (radio) {
+            radio.checked = true;
+            fireChange(radio); // toggles which category-fields section is visible
+        }
+    }
+
+    function setEditChrome(on, currentFile) {
+        var title = $id('uploadModalLabel');
+        if (title) title.textContent = on ? 'Edit Document' : 'Upload Document';
+        var btn = $id('uploadBtn');
+        if (btn) btn.textContent = on ? 'Update Document' : 'Add Document';
+        var notice = $id('uploadEditNotice');
+        if (notice) notice.classList.toggle('d-none', !on);
+        var cur = $id('uploadEditCurrentFile');
+        if (cur) cur.textContent = currentFile || '';
+    }
+
+    // Reset the upload modal back to "create" mode.
+    function reset() {
+        var pkEl = $id('upload_edit_pk');
+        if (pkEl) pkEl.value = '';
+        setEditChrome(false, '');
+        var form = $id('uploadForm');
+        if (form) delete form.dataset.currentFileTitle;
+    }
+
+    // Populate the upload modal from the document's data and open it in edit mode.
+    function enter(data) {
+        var form = $id('uploadForm');
+        if (form) {
+            try {
+                form.reset();
+            } catch (e) {}
+            form.dataset.currentFileTitle = data.file_title || '';
+        }
+        var pkEl = $id('upload_edit_pk');
+        if (pkEl) pkEl.value = data.pk;
+
+        var category = data.category || 'Course';
+        selectCategory(category);
+        setEditChrome(true, data.upload_document || '');
+        setTitleRow(category, data.file_title);
+
+        var d = data.detail || {};
+        var done;
+        if (category === 'Other') done = prefillOther(d);
+        else if (category === 'Institutional') done = prefillInstitutional(d);
+        else done = prefillCourse(d);
+
+        var modalEl = $id('uploadModal');
+        if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+            (bootstrap.Modal.getInstance(modalEl) || new bootstrap.Modal(modalEl)).show();
+        }
+        return done;
+    }
+
+    function isEditing() {
+        var pkEl = $id('upload_edit_pk');
+        return !!(pkEl && pkEl.value);
+    }
+
+    // Build the update payload from the upload form and POST it. Returns true if it handled submit.
+    function submit(form, helpers) {
+        var pkEl = $id('upload_edit_pk');
+        var pk = pkEl ? pkEl.value : '';
+        if (!pk) return false; // not in edit mode — let the normal upload flow run
+
+        helpers = helpers || {};
+        var showError = helpers.showError || function(m) {
+            alert(m);
+        };
+        var category = (document.querySelector('input[name="category"]:checked') || {}).value || 'Course';
+
+        var fd = new FormData();
+        fd.append('_token', (form.querySelector('[name="_token"]') || {}).value || '');
+        fd.append('category', category);
+
+        // Map per-category fields to the controller's expected names
+        var fileTitle, fileInput;
+        if (category === 'Course') {
+            fd.append('course_name', (($id('course_name') || {}).value) || '');
+            fd.append('subject_name', (($id('subject_name') || {}).value) || '');
+            fd.append('timetable_name', (($id('timetable_name') || {}).value) || '');
+            fd.append('session_date', (($id('session_date') || {}).value) || '');
+            fd.append('author_name', (($id('author_name') || {}).value) || '');
+            fd.append('sector_master', (($id('sector_master') || {}).value) || '');
+            fd.append('ministry_master', (($id('ministry_master') || {}).value) || '');
+            fd.append('keywords', (($id('keywords_course') || {}).value) || '');
+            fd.append('video_link', (($id('video_link_course') || {}).value) || '');
+            var t1 = document.querySelector('#uploadForm input[name="attachment_titles[]"]');
+            fileTitle = t1 ? t1.value : '';
+            fileInput = document.querySelector('#uploadForm input[name="attachments[]"]');
+        } else if (category === 'Other') {
+            fd.append('course_name', (($id('course_name_other') || {}).value) || '');
+            fd.append('subject_name', (($id('major_subject_other') || {}).value) || '');
+            fd.append('timetable_name', (($id('topic_name_other') || {}).value) || '');
+            fd.append('session_date', (($id('session_date_other') || {}).value) || '');
+            fd.append('author_name', (($id('author_name_other') || {}).value) || '');
+            fd.append('sector_master', (($id('sector_master_other') || {}).value) || '');
+            fd.append('ministry_master', (($id('ministry_master_other') || {}).value) || '');
+            fd.append('keywords', (($id('keywords_other') || {}).value) || '');
+            fd.append('video_link', (($id('video_link_other') || {}).value) || '');
+            var t2 = document.querySelector('#uploadForm input[name="attachment_titles_other[]"]');
+            fileTitle = t2 ? t2.value : '';
+            fileInput = document.querySelector('#uploadForm input[name="attachments_other[]"]');
+        } else {
+            fd.append('keywords', (($id('Key_words_institutional') || {}).value) || '');
+            fd.append('sector_master', (($id('sector_master_institutional') || {}).value) || '');
+            fd.append('ministry_master', (($id('ministry_master_institutional') || {}).value) || '');
+            fileTitle = (form.dataset.currentFileTitle || ''); // institutional has no title field
+            fileInput = document.querySelector('#uploadForm input[name="attachments_institutional[]"]');
+        }
+
+        // Keep the existing title if the row was cleared
+        if (!fileTitle && form.dataset.currentFileTitle) fileTitle = form.dataset.currentFileTitle;
+        fd.append('file_title', fileTitle || '');
+
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            fd.append('document_file', fileInput.files[0]);
+        }
+
+        var csrfEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
+        var csrfToken = csrfEl ? (csrfEl.getAttribute('content') || csrfEl.value) : null;
+
+        var submitBtn = $id('uploadBtn');
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.dataset.originalText = submitBtn.innerHTML;
+            submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Updating...';
+        }
+        var restoreBtn = function() {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = submitBtn.dataset.originalText || 'Update Document';
+            }
+        };
+
+        fetch('/course-repository/document/' + pk + '/update', {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': csrfToken || '',
+                    'Accept': 'application/json'
+                },
+                body: fd
+            })
+            .then(function(r) {
+                return r.json().then(function(data) {
+                    return {
+                        ok: r.ok,
+                        data: data
+                    };
+                });
+            })
+            .then(function(result) {
+                if (result.ok && result.data && result.data.success) {
+                    var modalEl = $id('uploadModal');
+                    if (modalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
+                        var inst = bootstrap.Modal.getInstance(modalEl);
+                        if (inst) inst.hide();
+                    }
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Updated!',
+                            text: 'Document has been updated.',
+                            showConfirmButton: false,
+                            timer: 1500
+                        }).then(function() {
+                            location.reload();
+                        });
+                    } else {
+                        location.reload();
+                    }
+                    return;
+                }
+                restoreBtn();
+                var errMsg = (result.data && result.data.error) || 'Update failed';
+                if (result.data && result.data.errors && typeof result.data.errors === 'object') {
+                    var parts = [];
+                    Object.keys(result.data.errors).forEach(function(field) {
+                        var val = result.data.errors[field];
+                        parts.push(Array.isArray(val) ? val.join(' ') : val);
+                    });
+                    if (parts.length) errMsg = parts.join(' | ');
+                }
+                showError(errMsg);
+            })
+            .catch(function() {
+                restoreBtn();
+                showError('Network error. Please try again.');
+            });
+
+        return true; // handled
+    }
+
+    return {
+        enter: enter,
+        reset: reset,
+        submit: submit,
+        isEditing: isEditing
+    };
+})();
+
 document.addEventListener('DOMContentLoaded', function() {
     // ===== EDIT/DELETE BUTTONS - Register first so they work even if other code throws =====
     document.addEventListener('click', function(e) {
@@ -1671,25 +2195,100 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 const pk = editBtn.getAttribute('data-pk');
                 const image = editBtn.getAttribute('data-image');
+                const attachment = editBtn.getAttribute('data-attachment');
                 const nameInput = document.getElementById('edit_course_repository_name');
                 const detailsInput = document.getElementById('edit_course_repository_details');
                 if (nameInput) nameInput.value = editBtn.getAttribute('data-name') || '';
                 if (detailsInput) detailsInput.value = editBtn.getAttribute('data-details') || '';
                 const currentImageContainer = document.getElementById('current_image_container_show');
                 const currentImage = document.getElementById('current_image_show');
-                if (image && image !== 'null' && image !== '' && currentImage && currentImageContainer) {
+                if (image && image !== 'null' && image !== '' && currentImage &&
+                    currentImageContainer) {
                     currentImage.src = '/storage/' + image;
                     currentImageContainer.style.display = 'block';
                 } else if (currentImageContainer) currentImageContainer.style.display = 'none';
                 const previewImage = document.getElementById('preview_edit_show');
                 if (previewImage) previewImage.style.display = 'none';
+
+                // Current attachment link
+                const currentAttachmentContainer = document.getElementById(
+                    'current_attachment_container_show');
+                const currentAttachment = document.getElementById('current_attachment_show');
+                if (attachment && attachment !== 'null' && attachment !== '' && currentAttachment &&
+                    currentAttachmentContainer) {
+                    currentAttachment.href = '/storage/' + attachment;
+                    currentAttachmentContainer.style.display = 'block';
+                } else if (currentAttachmentContainer) currentAttachmentContainer.style.display =
+                    'none';
+
+                // Reset the edit file-input labels so a stale filename isn't shown
+                ['category_image_edit', 'category_attachment_edit'].forEach(function(id) {
+                    const inp = document.getElementById(id);
+                    if (inp) inp.value = '';
+                    const lbl = document.getElementById(id + '_label');
+                    if (lbl) lbl.textContent = 'No file chosen';
+                });
                 const editForm = document.getElementById('editForm');
                 if (editForm && pk) editForm.action = '/course-repository/' + pk;
                 const editModalEl = document.getElementById('editModal');
                 if (editModalEl && typeof bootstrap !== 'undefined' && bootstrap.Modal) {
                     (new bootstrap.Modal(editModalEl)).show();
                 }
-            } catch (err) { console.warn('Edit error:', err); }
+            } catch (err) {
+                console.warn('Edit error:', err);
+            }
+            return;
+        }
+        const editDocBtn = e.target.closest('.edit-doc');
+        if (editDocBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+            const pk = editDocBtn.getAttribute('data-pk');
+            if (!pk || !window.crDocEdit) return;
+
+            // Reset any stale error and fetch the document + its detail, then open the
+            // Upload modal pre-filled in edit mode (identical form to "Add Document").
+            const errEl = document.getElementById('uploadFormErrors');
+            if (errEl) {
+                errEl.classList.add('d-none');
+                errEl.innerHTML = '';
+            }
+
+            fetch('/course-repository/document/' + pk + '/edit-data', {
+                    headers: {
+                        'Accept': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(function(r) {
+                    return r.json();
+                })
+                .then(function(res) {
+                    if (res && res.success && res.data) {
+                        window.crDocEdit.enter(res.data);
+                    } else {
+                        if (typeof Swal !== 'undefined') {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: (res && res.error) || 'Could not load document'
+                            });
+                        } else {
+                            alert((res && res.error) || 'Could not load document');
+                        }
+                    }
+                })
+                .catch(function() {
+                    if (typeof Swal !== 'undefined') {
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Could not load document'
+                        });
+                    } else {
+                        alert('Could not load document');
+                    }
+                });
             return;
         }
         const deleteRepoBtn = e.target.closest('.delete-repo');
@@ -1697,7 +2296,8 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             e.stopPropagation();
             const pk = deleteRepoBtn.getAttribute('data-pk');
-            const tokenEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
+            const tokenEl = document.querySelector('[name="_token"]') || document.querySelector(
+                'meta[name="csrf-token"]');
             const token = tokenEl ? (tokenEl.getAttribute('content') || tokenEl.value) : null;
             if (!pk || !token) return;
             if (typeof Swal !== 'undefined') {
@@ -1767,33 +2367,47 @@ document.addEventListener('DOMContentLoaded', function() {
                         confirmButtonText: 'Yes, delete it!'
                     }).then(function(result) {
                         if (result.isConfirmed) {
-                            var csrfEl = document.querySelector('[name="_token"]') || document.querySelector('meta[name="csrf-token"]');
-                            var csrfToken = csrfEl ? (csrfEl.getAttribute('content') || csrfEl.value) : null;
+                            var csrfEl = document.querySelector('[name="_token"]') || document
+                                .querySelector('meta[name="csrf-token"]');
+                            var csrfToken = csrfEl ? (csrfEl.getAttribute('content') || csrfEl
+                                .value) : null;
                             if (!csrfToken) return;
                             fetch('/course-repository/document/' + pk, {
-                                method: 'DELETE',
-                                headers: {
-                                    'X-CSRF-TOKEN': csrfToken,
-                                    'Content-Type': 'application/json'
-                                }
-                            })
-                            .then(function(r) { return r.json(); })
-                            .then(function(data) {
-                                if (data.success) {
+                                    method: 'DELETE',
+                                    headers: {
+                                        'X-CSRF-TOKEN': csrfToken,
+                                        'Content-Type': 'application/json'
+                                    }
+                                })
+                                .then(function(r) {
+                                    return r.json();
+                                })
+                                .then(function(data) {
+                                    if (data.success) {
+                                        Swal.fire({
+                                            icon: 'success',
+                                            title: 'Deleted!',
+                                            text: 'Document has been deleted.',
+                                            showConfirmButton: false,
+                                            timer: 1500
+                                        }).then(function() {
+                                            location.reload();
+                                        });
+                                    } else {
+                                        Swal.fire({
+                                            icon: 'error',
+                                            title: 'Error!',
+                                            text: data.error || 'Delete failed'
+                                        });
+                                    }
+                                })
+                                .catch(function() {
                                     Swal.fire({
-                                        icon: 'success',
-                                        title: 'Deleted!',
-                                        text: 'Document has been deleted.',
-                                        showConfirmButton: false,
-                                        timer: 1500
-                                    }).then(function() { location.reload(); });
-                                } else {
-                                    Swal.fire({ icon: 'error', title: 'Error!', text: data.error || 'Delete failed' });
-                                }
-                            })
-                            .catch(function() {
-                                Swal.fire({ icon: 'error', title: 'Error!', text: 'Delete failed' });
-                            });
+                                        icon: 'error',
+                                        title: 'Error!',
+                                        text: 'Delete failed'
+                                    });
+                                });
                         }
                     });
                 } else {
@@ -1801,7 +2415,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         showToast('success', 'Document deleted successfully');
                     }
                 }
-            } catch (err) { console.warn('Delete document error:', err); }
+            } catch (err) {
+                console.warn('Delete document error:', err);
+            }
         }
     });
 
@@ -1930,31 +2546,67 @@ document.addEventListener('DOMContentLoaded', function() {
         // Don't prevent default handling for critical errors
     });
 
-    const repositoryPk = {{ $repository->pk }};
+    const repositoryPk = @json($repository->pk);
 
     // ===== COURSE FILTERING LOGIC =====
     const courseStatusRadios = document.querySelectorAll('input[name="course_status"]');
     const courseSelect = document.getElementById('course_name');
 
+    // Turn the Course Name select into a searchable Choices dropdown. We snapshot
+    // every option (incl. archived) up front, then drive the visible list from that
+    // snapshot so the Active/Archived filter and edit-prefill keep working.
+    if (courseSelect && typeof Choices !== 'undefined' && !courseChoices) {
+        Array.prototype.forEach.call(courseSelect.options, function (opt) {
+            if (opt.value === '') return; // skip the placeholder option
+            courseOptionsAll.push({
+                value: opt.value,
+                label: (opt.textContent || '').trim(),
+                status: opt.getAttribute('data-status') || 'active'
+            });
+        });
+        try {
+            courseChoices = new Choices(courseSelect, {
+                searchEnabled: true,
+                shouldSort: false,
+                allowHTML: false,
+                itemSelectText: '',
+                placeholder: true,
+                placeholderValue: 'Select',
+                searchPlaceholderValue: 'Search…',
+                position: 'bottom'
+            });
+            // Start filtered to the currently selected status (Active by default).
+            applyCourseStatusChoices(getCheckedCourseStatus());
+        } catch (e) {
+            console.warn('Course Name Choices init failed', e);
+            courseChoices = null;
+        }
+    }
+
     if (courseStatusRadios.length > 0 && courseSelect) {
         courseStatusRadios.forEach(radio => {
             radio.addEventListener('change', function() {
                 const status = this.value;
-                const options = courseSelect.querySelectorAll('option');
 
-                options.forEach(option => {
-                    if (option.value === '') {
-                        // Always show the empty/select option
-                        option.style.display = 'block';
-                    } else {
-                        const optionStatus = option.getAttribute('data-status');
-                        option.style.display = (optionStatus === status) ? 'block' :
-                            'none';
-                    }
-                });
+                if (courseChoices) {
+                    // Rebuild the Choices list for this status and clear the selection.
+                    applyCourseStatusChoices(status);
+                } else {
+                    const options = courseSelect.querySelectorAll('option');
+                    options.forEach(option => {
+                        if (option.value === '') {
+                            // Always show the empty/select option
+                            option.style.display = 'block';
+                        } else {
+                            const optionStatus = option.getAttribute('data-status');
+                            option.style.display = (optionStatus === status) ? 'block' :
+                                'none';
+                        }
+                    });
+                    // Reset course selection when filter changes
+                    courseSelect.value = '';
+                }
 
-                // Reset course selection when filter changes
-                courseSelect.value = '';
                 // Reset dependent dropdowns
                 resetSubjectDropdown();
                 resetTopicDropdown();
@@ -2794,36 +3446,48 @@ document.addEventListener('DOMContentLoaded', function() {
                 field.style.display = 'none';
             });
 
-            // Show the selected category fields
+            // Show the selected category fields (null-safe element access)
+            const setShow = (id, show) => {
+                const el = document.getElementById(id);
+                if (el) el.style.display = show ? 'block' : 'none';
+            };
+            const setRequired = (id, required) => {
+                const el = document.getElementById(id);
+                if (!el) return;
+                if (required) el.setAttribute('required', 'required');
+                else el.removeAttribute('required');
+            };
             if (category === 'Course') {
-                document.getElementById('courseFields').style.display = 'block';
-                document.getElementById('courseVideoLink').style.display = 'block';
-                document.getElementById('courseAttachments').style.display = 'block';
-                // Make course-specific keywords required
-                document.getElementById('keywords_course').setAttribute('required', 'required');
-                document.getElementById('keywords_other').removeAttribute('required');
-                document.getElementById('Key_words_institutional').removeAttribute('required');
+                setShow('courseFields', true);
+                setShow('courseVideoLink', true);
+                setShow('courseAttachments', true);
+                setRequired('keywords_course', true);
+                setRequired('keywords_other', false);
+                setRequired('Key_words_institutional', false);
             } else if (category === 'Other') {
-                document.getElementById('otherFields').style.display = 'block';
-                // Make other-specific keywords required
-                document.getElementById('keywords_course').removeAttribute('required');
-                document.getElementById('keywords_other').setAttribute('required', 'required');
-                document.getElementById('Key_words_institutional').removeAttribute('required');
+                setShow('otherFields', true);
+                setRequired('keywords_course', false);
+                setRequired('keywords_other', true);
+                setRequired('Key_words_institutional', false);
             } else if (category === 'Institutional') {
-                document.getElementById('institutionalFields').style.display = 'block';
-                // Make institutional-specific keywords required
-                document.getElementById('keywords_course').removeAttribute('required');
-                document.getElementById('keywords_other').removeAttribute('required');
-                document.getElementById('Key_words_institutional').setAttribute('required',
-                    'required');
+                setShow('institutionalFields', true);
+                setRequired('keywords_course', false);
+                setRequired('keywords_other', false);
+                setRequired('Key_words_institutional', true);
             }
         });
     });
 
-    // Set initial state (Course is default)
-    document.getElementById('courseFields').style.display = 'block';
-    document.getElementById('courseVideoLink').style.display = 'block';
-    document.getElementById('courseAttachments').style.display = 'block';
+    // Set initial state (Course is default).
+    // Null-safe: these elements only exist when the upload modal is rendered;
+    // a hard .style access on a missing element would throw and abort the rest
+    // of this DOMContentLoaded callback (breaking later handlers like edit submit).
+    const cf = document.getElementById('courseFields');
+    if (cf) cf.style.display = 'block';
+    const cvl = document.getElementById('courseVideoLink');
+    if (cvl) cvl.style.display = 'block';
+    const ca = document.getElementById('courseAttachments');
+    if (ca) ca.style.display = 'block';
 
     // Active/Archive Course Toggle - Updated for btn-check
     const btnActiveCourses = document.getElementById('btnActiveCourses');
@@ -3074,6 +3738,20 @@ document.addEventListener('DOMContentLoaded', function() {
     // Listen for upload modal show event to trigger keywords update
     const uploadModalElement = document.getElementById('uploadModal');
     if (uploadModalElement) {
+        // Opened via an "Upload Documents" button (has relatedTarget) -> force create mode.
+        // Programmatic .show() from the document Edit flow has no relatedTarget, so edit
+        // mode and its pre-filled values are preserved.
+        uploadModalElement.addEventListener('show.bs.modal', function(ev) {
+            if (ev.relatedTarget && window.crDocEdit) {
+                window.crDocEdit.reset();
+                const f = document.getElementById('uploadForm');
+                if (f) {
+                    try {
+                        f.reset();
+                    } catch (e) {}
+                }
+            }
+        });
         uploadModalElement.addEventListener('shown.bs.modal', function() {
             const errEl = document.getElementById('uploadFormErrors');
             if (errEl) {
@@ -3442,20 +4120,20 @@ document.addEventListener('click', function(e) {
         const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
 
         const newRow = document.createElement('tr');
-        newRow.className = 'attachment-row';
+        newRow.className = 'attachment-row cr-upload-attach-row';
         newRow.innerHTML = `
             <td class="row-number">${rowCount}</td>
             <td>
-                <input type="text" class="form-control " 
-                    name="attachment_titles[]" placeholder="e.g., Week-${rowCount}">
+                <input type="text" class="form-control"
+                    name="attachment_titles[]" placeholder="eg. Week-${rowCount}">
             </td>
             <td>
-                <input type="file" class="form-control " 
+                <input type="file" class="form-control"
                     name="attachments[]" accept="*/*">
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger delete-attachment">
-                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                <button type="button" class="btn cr-btn-remove-row delete-attachment" aria-label="Remove row">
+                    <i class="bi bi-dash-lg" aria-hidden="true"></i>
                 </button>
             </td>
         `;
@@ -3482,20 +4160,20 @@ document.addEventListener('click', function(e) {
         const rowCount = tbody.querySelectorAll('.attachment-row').length + 1;
 
         const newRow = document.createElement('tr');
-        newRow.className = 'attachment-row';
+        newRow.className = 'attachment-row cr-upload-attach-row';
         newRow.innerHTML = `
             <td class="row-number">${rowCount}</td>
             <td>
-                <input type="text" class="form-control " 
-                    name="attachment_titles_other[]" placeholder="e.g., Document-${rowCount}">
+                <input type="text" class="form-control"
+                    name="attachment_titles_other[]" placeholder="eg. Document-${rowCount}">
             </td>
             <td>
-                <input type="file" class="form-control " 
+                <input type="file" class="form-control"
                     name="attachments_other[]" accept="*/*">
             </td>
             <td class="text-center">
-                <button type="button" class="btn btn-sm btn-danger delete-attachment">
-                    <span class="material-icons material-symbols-rounded" style="font-size: 16px;">delete</span>
+                <button type="button" class="btn cr-btn-remove-row delete-attachment" aria-label="Remove row">
+                    <i class="bi bi-dash-lg" aria-hidden="true"></i>
                 </button>
             </td>
         `;
@@ -3543,3 +4221,4 @@ document.addEventListener('click', function(e) {
     }
 });
 </script>
+@include('admin.course-repository.partials.cr-design-scripts')

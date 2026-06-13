@@ -76,8 +76,9 @@ class HostelBuildingFloorRoomMappingController extends Controller
                     \Illuminate\Validation\Rule::in(array_keys(BuildingFloorRoomMapping::$roomTypes))
                 ],
             ]);
+            
 
-            $decryptedPk = decrypt($request->pk);
+            
             $room_name = '';
             $building = BuildingMaster::where('pk', $request->building_master_pk)->first();
             $floor = FloorMaster::where('pk', $request->floor_master_pk)->first();
@@ -88,7 +89,8 @@ class HostelBuildingFloorRoomMappingController extends Controller
                 $room_name .= '-' . $request->room_type;
             }
 
-            if($decryptedPk) {
+            if(isset($request->pk)){
+                $decryptedPk = safeDecrypt($request->pk);
                 $mapping = BuildingFloorRoomMapping::findOrFail($decryptedPk);
             }
             else{
@@ -104,6 +106,10 @@ class HostelBuildingFloorRoomMappingController extends Controller
             return redirect()->route('hostel.building.floor.room.map.index')->with('success', 'Hostel Floor Room mapping created successfully.');
         }
         catch(\Exception $e) {
+            \Log::error($e->getMessage(), [
+                'stack' => $e->getTraceAsString(),
+                'request_data' => $request->all()
+            ]);
 
             return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Something went wrong');
         }

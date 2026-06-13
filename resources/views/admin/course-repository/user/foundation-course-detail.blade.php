@@ -1,12 +1,9 @@
-@extends('admin.layouts.timetable')
+@extends('admin.layouts.master')
 
 @section('title', 'Foundation Course-' . $courseCode . ' | Course Repository Admin')
 
 @section('content')
 <div class="d-flex">
-    <!-- Left Sidebar -->
-   
-
     <!-- Main Content -->
     <main class="flex-grow-1">
         <div class="container-fluid px-4 py-4" id="main-content">
@@ -33,87 +30,45 @@
                 </div>
             </div>
 
-            <!-- Filter Card -->
-            @include('admin.course-repository.user.partials.filter-card', [
-                'route' => route('admin.course-repository.user.foundation-course.detail', $courseCode),
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => $filters,
-            ])
+    <div class="d-flex cru-layout-with-sidebar align-items-stretch w-100">
 
-            <!-- Tabs -->
-            <ul class="nav nav-tabs mb-3" id="foundationTabs" role="tablist">
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link active" id="active-tab" data-bs-toggle="tab" data-bs-target="#active" type="button" role="tab" aria-controls="active" aria-selected="true">
-                        Active
-                    </button>
-                </li>
-                <li class="nav-item" role="presentation">
-                    <button class="nav-link" id="archive-tab" data-bs-toggle="tab" data-bs-target="#archive" type="button" role="tab" aria-controls="archive" aria-selected="false">
-                        Archive
-                    </button>
-                </li>
-            </ul>
+        <main class="flex-grow-1 min-vw-0">
+            <div class="container-fluid px-3 px-md-4 py-4" id="main-content">
+                <div class="cru-panel bg-white border rounded-3 shadow-sm p-3 p-md-4">
+                    @if(isset($courses) && isset($subjects) && isset($faculties))
+                    @include('admin.course-repository.user.partials.filter-card', [
+                        'route' => route('admin.course-repository.user.foundation-course.detail', $courseCode),
+                        'courses' => $courses,
+                        'subjects' => $subjects,
+                        'faculties' => $faculties,
+                        'filters' => $filters,
+                    ])
+                    @endif
 
-            <!-- Tab Content -->
-            <div class="tab-content" id="foundationTabContent">
-                <!-- Active Tab -->
-                <div class="tab-pane fade show active" id="active" role="tabpanel" aria-labelledby="active-tab">
+                    @include('admin.course-repository.user.partials.page-toolbar', ['showViewToggle' => true])
+
                     @if($repositories->isEmpty())
-                        <div class="alert alert-info text-center">
-                            <span class="material-icons material-symbols-rounded me-2">info</span>
-                            No materials found.
-                        </div>
+                    <div class="text-center py-5 text-muted">
+                        <i class="bi bi-inbox display-6 d-block mb-2" aria-hidden="true"></i>
+                        <p class="mb-0">No materials found.</p>
+                    </div>
                     @else
-                        <div class="table-responsive">
-                            <table class="table table-hover mb-0 align-middle">
-                                <thead style="background-color: #dc3545; color: white;">
-                                    <tr>
-                                        <th class="text-center fw-bold">S.No.</th>
-                                        <th class="text-center fw-bold">Sub Category Name</th>
-                                        <th class="text-center fw-bold">Details</th>
-                                        <th class="text-center fw-bold">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @foreach($repositories as $index => $repository)
-                                    <tr class="{{ $loop->odd ? 'table-light' : '' }}">
-                                        <td class="text-center">{{ $loop->iteration }}</td>
-                                        <td class="text-center">
-                                            <a href="{{ route('admin.course-repository.user.show', $repository->pk) }}" class="text-decoration-none fw-semibold">
-                                                {{ $repository->course_repository_name }}
-                                            </a>
-                                        </td>
-                                        <td class="text-center">
-                                            <a href="{{ route('admin.course-repository.user.show', $repository->pk) }}" class="text-decoration-none text-primary">
-                                                {{ $repository->children->count() }} sub-categories
-                                            </a>
-                                        </td>
-                                        <td class="text-center">
-                                            <a href="{{ route('admin.course-repository.user.show', $repository->pk) }}" class="btn btn-sm btn-outline-primary">
-                                                <span class="material-icons material-symbols-rounded me-1">visibility</span> View
-                                            </a>
-                                        </td>
-                                    </tr>
-                                    @endforeach
-                                </tbody>
-                            </table>
+                    <div class="course-cards-grid" id="courseCardsGrid">
+                        <div class="row g-3 g-md-4">
+                            @foreach($repositories as $repository)
+                                @include('admin.course-repository.user.partials.repository-card', [
+                                    'repository' => $repository,
+                                    'cardRoute' => route('admin.course-repository.user.show', $repository->pk),
+                                ])
+                            @endforeach
                         </div>
+                    </div>
                     @endif
                 </div>
-
-                <!-- Archive Tab -->
-                <div class="tab-pane fade" id="archive" role="tabpanel" aria-labelledby="archive-tab">
-                    <div class="alert alert-info text-center">
-                        <span class="material-icons material-symbols-rounded me-2">archive</span>
-                        No archived materials found.
-                    </div>
-                </div>
             </div>
-        </div>
-    </main>
+        </main>
+    </div>
 </div>
 
-<link rel="stylesheet" href="{{ asset('css/course-repository-user.css') }}">
+@include('admin.course-repository.user.partials.assets')
 @endsection
