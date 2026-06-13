@@ -10,7 +10,7 @@
 
 @php
 $user = Auth::user();
-$isAdminSummary = hasRole('Admin');
+$isAdminSummary = hasRole('Admin') || hasRole('Super Admin');
 $daysOld = $isAdminSummary ? 10 : null;
 $notifications = ($user && $user->user_id) ? notification()->getNotifications($user->user_id, 10, false, $daysOld) :
 collect();
@@ -178,7 +178,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         </div>
         @endif
 
-        @if(hasRole('Security Card') || hasRole('Admin Security'))
+        @if(hasRole('Security Card') || hasRole('Admin Security') || hasRole('Super Admin'))
         @php
         $idCardApprovalRoute = hasRole('Admin Security')
         ? route('admin.security.employee_idcard_approval.approval3')
@@ -187,68 +187,68 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         <div class="dashboard-stats-grid row g-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3">
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-blue h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-person-badge"></i></span>
-                                <p class="stat-label">Pending Permanent ID Requests</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-person-badge"></i>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayPendingPermanentIdCardRequests ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Pending Permanent ID Requests</p>
+                                @php $v = (int) ($todayPendingPermanentIdCardRequests ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-title mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
+                            </div>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-blue h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-person-vcard"></i></span>
-                                <p class="stat-label">Pending Contractual ID Requests</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-person-vcard"></i>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayPendingContractualIdCardRequests ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Pending Contractual ID Requests</p>
+                                @php $v = (int) ($todayPendingContractualIdCardRequests ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-title mb-0">Total pending: {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
+                            </div>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-amber h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-copy"></i></span>
-                                <p class="stat-label">Duplicate Permanent ID Requests</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-copy"></i>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayDuplicatePermIdCardRequests ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Duplicate Permanent ID Requests</p>
+                                @php $v = (int) ($todayDuplicatePermIdCardRequests ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-title mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}</p>
+                            </div>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-amber h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-files"></i></span>
-                                <p class="stat-label">Duplicate Contractual ID Requests</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-files"></i>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayDuplicateContractualIdCardRequests ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Duplicate Contractual ID Requests</p>
+                                @php $v = (int) ($todayDuplicateContractualIdCardRequests ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-title mb-0">Total pending: {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
+                            </div>
                         </div>
                     </div>
                 </a>
@@ -256,17 +256,17 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             <div class="col">
                 <a href="{{ route('admin.security.family_idcard_approval.index') }}"
                     class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-blue h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-people"></i></span>
-                                <p class="stat-label">Requested Family ID</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-people"></i>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayFamilyApprovals ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Requested Family ID</p>
+                                @php $v = (int) ($todayFamilyApprovals ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-title mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
+                            </div>
                         </div>
                     </div>
                 </a>
@@ -274,17 +274,17 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             <div class="col">
                 <a href="{{ route('admin.security.vehicle_pass_approval.index') }}"
                     class="text-decoration-none d-block h-100">
-                    <div class="card dashboard-stat-card border-0 card-green h-100">
-                        <div class="card-body dashboard-stat-card-inner">
-                            <div class="stat-icon-row">
-                                <span class="stat-icon" aria-hidden="true"><i class="bi bi-car-front"></i></span>
-                                <p class="stat-label">Requested Vehicle Pass</p>
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-green">
+                                <i class="bi bi-car-front"></i>
                             </div>
-                            <p class="stat-meta">Today</p>
-                            @php $v = (int) ($todayVehicleApprovals ?? 0); @endphp
-                            <div class="dashboard-stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</div>
-                            <p class="stat-meta mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
-                            <span class="stat-link-hint">Go to approvals <i class="bi bi-arrow-right-short" aria-hidden="true"></i></span>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Requested Vehicle Pass</p>
+                                @php $v = (int) ($todayVehicleApprovals ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                                <p class="stat-title mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
+                            </div>
                         </div>
                     </div>
                 </a>
@@ -450,7 +450,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 @endif
             </div>
 
-            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin'))
             <div class="col">
                 <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
@@ -526,7 +526,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <div class="card-header py-3 px-4">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 gap-md-3">
                             <h5 class="dashboard-feed-panel__title mb-0">Notices</h5>
-                            @if(hasRole('Admin'))
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
                             <a href="{{ route('admin.notice.create') }}"
                                 class="btn btn-sm dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
@@ -543,7 +543,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <i class="bi bi-file-earmark-x"></i>
                             </span>
                             <p class="mb-3 text-body-secondary">No notices available.</p>
-                            @if(hasRole('Admin'))
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
                             <a href="{{ route('admin.notice.create') }}"
                                 class="btn dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
@@ -622,7 +622,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         @endif
                     </div>
                 </div>
-                @if(hasRole('Admin') || hasRole('Training-Induction'))
+                @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Super Admin'))
                 <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-notifications-panel">
                     <div class="card-header py-3 px-4">
                         <div class="d-flex justify-content-between align-items-center gap-3">
@@ -633,7 +633,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 @else
                                 <i class="bi bi-bell text-primary opacity-75" aria-hidden="true"></i>
                                 @endif
-                                <span>{{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}</span>
+                                <span>{{ hasRole('Admin') || hasRole('Super Admin') ? 'Admin Summary' : 'Notifications' }}</span>
                             </h5>
                             <span class="dashboard-feed-count-badge"
                                 aria-label="{{ $notificationBadgeCount }} items">{{ $notificationBadgeCount }}</span>
@@ -722,7 +722,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 </div>
                 @endif
 
-                @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin'))
                 <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-todays-classes-panel">
                     <div class="card-header py-3 px-4">
                         <h5 class="dashboard-feed-panel__title mb-0">Today's Classes</h5>

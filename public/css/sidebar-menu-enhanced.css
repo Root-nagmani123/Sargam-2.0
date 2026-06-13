@@ -260,7 +260,6 @@
     background: #ffffff;
     border-radius: 0;
     border: none;
-    border-left: 1px solid #f0f0f0;
     box-shadow: none;
     transition: opacity 0.2s ease, visibility 0.2s ease;
     overflow-y: auto;
