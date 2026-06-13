@@ -306,6 +306,16 @@ function hasRole($role)
     $user = Auth::user();
     if (!$user) return false;
 
+    // Session roles take precedence. Students get the 'Student-OT' pseudo-role only
+    // in the session (it is never assigned as a Spatie role), and admin/faculty
+    // session roles are derived from their Spatie roles at login. Checking the
+    // session first keeps both flows working — including Moodle token logins,
+    // where the middleware logs the user in and sets user_roles in the session.
+    $sessionRoles = Session::get('user_roles', []);
+    if (is_array($sessionRoles) && in_array($role, $sessionRoles, true)) {
+        return true;
+    }
+
     // Backward-compatible alias: old code may use "SuperAdmin" while DB role is "Super Admin".
     if ($role === 'SuperAdmin' || $role === 'Super Admin') {
         return $user->hasRole('Super Admin') || $user->hasRole('SuperAdmin');
