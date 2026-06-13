@@ -56,7 +56,7 @@
     <!-- end Vertical Steps Example -->
 </div>
 
-@section('scripts')
+@push('scripts')
 <script>
 let employeePK = null;
 
@@ -220,5 +220,5 @@ $(document).ready(function() {
 </script>
 
 
-@endsection
+@endpush
 @endsection
