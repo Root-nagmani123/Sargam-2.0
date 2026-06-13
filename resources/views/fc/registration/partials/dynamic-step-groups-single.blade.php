@@ -11,21 +11,27 @@
         ? route('fc-reg.forms.step', [$form, $nextStep])
         : route('fc-reg.forms.dashboard', $form);
 @endphp
-<div class="container py-2 fc-step3-page">
-    <div class="d-flex align-items-center gap-2 mb-3 flex-wrap">
-        <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-arrow-left me-1"></i>{{ $form->form_name }}
-        </a>
-        @isset($allSteps)
-            @foreach($allSteps as $si => $s)
-                <span class="badge {{ $s->id === $step->id ? 'bg-primary' : 'bg-light text-dark' }} rounded-pill px-3 py-2">
-                    {{ $si + 1 }}. {{ $s->step_name }}
-                </span>
-            @endforeach
-        @endisset
+@include('fc.registration.partials.fc-form-theme')
+<div class="fc-form-page">
+<div class="fc-shell fc-step3-page">
+    <div class="fc-band">
+        <div class="fc-band__row">
+            <div class="fc-band__ico"><i class="bi {{ $step->icon ?? 'bi-list-ul' }}"></i></div>
+            <div>
+                <h4>{{ $form->form_name }}</h4>
+                <p>Step {{ (isset($allSteps) ? ($allSteps->search(fn ($s) => $s->id === $step->id)) : 0) + 1 }}@isset($allSteps) of {{ $allSteps->count() }}@endisset — {{ $step->step_name }}</p>
+            </div>
+            <a href="{{ route('fc-reg.forms.dashboard', $form) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3">
+                <i class="bi bi-grid me-1"></i>All Steps
+            </a>
+        </div>
     </div>
 
-    <div class="card border-0 shadow-sm" style="border-radius:10px;">
+    @isset($allSteps)
+        @include('fc.registration.partials.fc-stepper')
+    @endisset
+
+    <div class="card fc-card border-0 shadow-sm">
         <div class="card-header bg-white py-3">
             <h5 class="mb-1"><i class="bi {{ $step->icon ?? 'bi-journal-text' }} me-2"></i>{{ $step->step_name }}</h5>
             @if($step->description)
@@ -124,6 +130,7 @@
         </div>
     </div>
 </div>
+</div>
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('admin_assets/libs/select2/dist/css/select2.min.css') }}">
@@ -137,6 +144,8 @@
 @endpush
 
 @push('scripts')
+{{-- FC public layout has no jQuery; load it if not already present (select2 needs it). --}}
+<script>window.jQuery || document.write('<script src="https://code.jquery.com/jquery-3.6.4.min.js"><\/script>')</script>
 <script src="{{ asset('admin_assets/libs/select2/dist/js/select2.full.min.js') }}"></script>
 <script>
 // Repeatable "Add Row" — identical behaviour to the tabbed layout.

@@ -381,8 +381,64 @@ class DynamicFormService
         if (! $step) {
             return null;
         }
-        $t = $step->target_table;
-        return DB::table($t)->where($this->userCol($t), $this->userVal($t, $userId))->first();
+
+        // A flat step can write to several tables (e.g. Descriptive Roll →
+        // student_master_firsts + student_master_seconds + knowledge_hindi).
+        // Merge every table its fields target so ALL values prefill on
+        // review/edit, not just the step's primary target_table.
+        $fields = $step->activeFields;
+
+        $tables = [];
+        if (filled($step->target_table)) {
+            $tables[$step->target_table] = true;
+        }
+        foreach ($fields as $f) {
+            $tbl = $f->target_table ?: $step->target_table;
+            if (filled($tbl)) {
+                $tables[$tbl] = true;
+            }
+        }
+
+        $rowsByTable = [];
+        foreach (array_keys($tables) as $tbl) {
+            if (! Schema::hasTable($tbl)) {
+                continue;
+            }
+            $uVal = $this->userVal($tbl, $userId);
+            if ($uVal === '' || $uVal === null) {
+                continue;
+            }
+            $row = DB::table($tbl)->where($this->userCol($tbl), $uVal)->first();
+            if ($row) {
+                $rowsByTable[$tbl] = $row;
+            }
+        }
+
+        if ($rowsByTable === []) {
+            return null;
+        }
+
+        // Base on the primary target-table row (keeps completion flags etc.).
+        $merged = (object) ((array) ($rowsByTable[$step->target_table] ?? []));
+
+        // Each field pulls from its own table — correct even if two tables
+        // share a column name.
+        foreach ($fields as $f) {
+            $col = $f->target_column;
+            if (! $col || $col === '_skip') {
+                continue;
+            }
+            $tbl = $f->target_table ?: $step->target_table;
+            $row = $rowsByTable[$tbl] ?? null;
+            if ($row !== null) {
+                $arr = (array) $row;
+                if (array_key_exists($col, $arr)) {
+                    $merged->{$col} = $arr[$col];
+                }
+            }
+        }
+
+        return $merged;
     }
 
     /**

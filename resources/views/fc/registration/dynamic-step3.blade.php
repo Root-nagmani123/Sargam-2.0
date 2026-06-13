@@ -1,7 +1,7 @@
-@extends('admin.layouts.master')
+@extends(isset($form) ? 'fc.layouts.master' : 'admin.layouts.master')
 @section('title', $step->step_name)
 
-@section('setup_content')
+@section(isset($form) ? 'content' : 'setup_content')
 @isset($form)
     {{-- Dynamic forms: single-page (no-tabs) layout, one AJAX Save & Continue --}}
     @include('fc.registration.partials.dynamic-step-groups-single')
