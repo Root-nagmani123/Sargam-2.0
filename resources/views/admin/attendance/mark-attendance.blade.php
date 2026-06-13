@@ -100,6 +100,6 @@ table.table-bordered.dataTable td:nth-child(4) {
         </div>
     </div>
     @endsection
-    @section('scripts')
+    @section('script')
     {!! $dataTable->scripts() !!}
     @endsection

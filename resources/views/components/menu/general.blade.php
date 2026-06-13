@@ -45,9 +45,10 @@
                             </li>
                             @endauth
 
-                            @if(hasRole('Admin') || hasRole('Training-Induction'))
-                            <li class="sidebar-item mb-1">
-                                <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"
+                            @if(hasRole('Super Admin') || hasRole('Admin') || hasRole('Training-Induction'))
+                            <!-- Participant / Dashboard Statistics -->
+                            <li class="sidebar-item">
+                                <a class="sidebar-link {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"
                                     href="{{ route('admin.dashboard-statistics.index') }}">
                                     <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">groups</i>
                                     <span class="hide-menu small small-sm-normal text-nowrap">Batch Profile</span>
