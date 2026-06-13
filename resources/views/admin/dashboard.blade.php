@@ -5,12 +5,12 @@
 @section('content')
 <style>
 .admin-dashboard-surface {
-    background: linear-gradient(160deg, #f0f4f9 0%, #e8eef6 50%, #f5f7fb 100%);
+    background: transparent;
     min-height: 100%;
 }
 .dashboard-panel {
     border: 0;
-    border-radius: 1rem;
+    border-radius: var(--ds-radius-2);
     background: var(--bs-body-bg);
     box-shadow: 0 2px 12px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
     overflow: hidden;
@@ -24,7 +24,7 @@
 .dashboard-panel .card-header .material-icons.material-symbols-rounded {
     width: 2.25rem;
     height: 2.25rem;
-    border-radius: 0.6rem;
+    border-radius: var(--ds-radius-1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -34,62 +34,60 @@
 }
 
 .dashboard-stat-card {
-    border: 0;
-    border-left: 3px solid var(--bs-border-color);
-    border-radius: 0.9rem;
-    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    background: #fff;
+    box-shadow: none;
     overflow: hidden;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    min-height: 84px;
+    transition: box-shadow 0.15s ease, border-color 0.15s ease;
+    min-height: 80px;
 }
 
 .dashboard-stat-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(16, 24, 40, 0.1);
+    box-shadow: var(--ds-shadow-sm);
+    border-color: #d7dde5;
 }
 
+/* Icon-left, packed-start layout (overrides utility justify-content-between) */
 .dashboard-stat-card .card-body {
-    padding: 0.55rem 0.7rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start !important;
+    gap: 0.75rem;
+    padding: 0.875rem 1rem;
 }
 
 .dashboard-stat-value {
-    font-size: clamp(1.35rem, 1.55vw, 1.85rem);
+    font-size: clamp(1.4rem, 1.6vw, 1.75rem);
     line-height: 1.05;
     letter-spacing: -0.02em;
 }
 
-.dashboard-stat-card.card-blue {
-    border-left-color: var(--bs-primary);
-    background: var(--bs-primary-bg-subtle);
+/* Flat target: numbers read dark; colour lives only in the icon chip */
+.dashboard-stat-card .dashboard-stat-value {
+    color: var(--ds-ink) !important;
 }
 
-.dashboard-stat-card.card-green {
-    border-left-color: var(--bs-success);
-    background: var(--bs-success-bg-subtle);
-}
-
-.dashboard-stat-card.card-amber {
-    border-left-color: var(--bs-warning);
-    background: var(--bs-warning-bg-subtle);
-}
-
+/* Flat target: card stays white regardless of accent type */
+.dashboard-stat-card.card-blue,
+.dashboard-stat-card.card-green,
+.dashboard-stat-card.card-amber,
 .dashboard-stat-card.card-rose {
-    border-left-color: var(--bs-danger);
-    background: var(--bs-danger-bg-subtle);
+    background: #fff;
 }
 
 .dashboard-panel {
-    border: 0;
-    border-radius: 0.9rem;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
     background: var(--bs-body-bg);
-    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.07);
+    box-shadow: var(--ds-shadow-sm);
 }
 
 .dashboard-panel .card-header {
-    border-bottom: 1px solid var(--bs-border-color-translucent);
+    border-bottom: 1px solid var(--ds-line);
     background: transparent;
-    padding-top: 0.9rem !important;
-    padding-bottom: 0.9rem !important;
+    padding-top: var(--ds-space-3) !important;
+    padding-bottom: var(--ds-space-3) !important;
 }
 
 .dashboard-birthday-item {
@@ -120,43 +118,43 @@
 }
 
 .dashboard-welcome {
-    background: linear-gradient(135deg, #004a93 0%, #003a75 50%, #002d5c 100%) !important;
-    border-radius: 1rem;
-    color: #fff;
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 74, 147, 0.25);
-    position: relative;
-    overflow: hidden;
+    background: #fff;
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    padding: 1.125rem 1.25rem;
+    margin-bottom: var(--ds-space-3);
+    box-shadow: var(--ds-shadow-sm);
 }
-.dashboard-welcome::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 40%;
-    height: 200%;
-    background: radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 70%);
-    pointer-events: none;
+.dashboard-welcome-greeting {
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted);
+    margin-bottom: 0.125rem;
 }
-.dashboard-welcome h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.25rem; letter-spacing: -0.01em; }
-.dashboard-welcome .text-white { font-size: 0.9rem; opacity: 0.95; }
-.dashboard-welcome .material-icons { opacity: 0.9; }
+.dashboard-welcome-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--ds-ink);
+    margin: 0;
+}
+.dashboard-welcome-time .material-icons { font-size: 1.25rem; }
 
 .dashboard-stat-card .stat-icon {
-    width: 2.15rem;
-    height: 2.15rem;
-    border-radius: 0.5rem;
+    order: -1;
+    width: 2.5rem;
+    height: 2.5rem;
+    border-radius: var(--ds-radius-1);
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.05rem;
-    opacity: 0.9;
+    font-size: 1.25rem;
+    flex-shrink: 0;
 }
-.dashboard-stat-card.card-blue .stat-icon { background: rgba(var(--bs-primary-rgb), 0.2); color: var(--bs-primary); }
-.dashboard-stat-card.card-green .stat-icon { background: rgba(var(--bs-success-rgb), 0.2); color: var(--bs-success); }
-.dashboard-stat-card.card-amber .stat-icon { background: rgba(var(--bs-warning-rgb), 0.2); color: var(--bs-warning); }
-.dashboard-stat-card.card-rose .stat-icon { background: rgba(var(--bs-danger-rgb), 0.2); color: var(--bs-danger); }
+.dashboard-stat-card.card-blue .stat-icon { background: rgba(var(--bs-primary-rgb), 0.12); color: var(--bs-primary); }
+.dashboard-stat-card.card-green .stat-icon { background: rgba(var(--bs-success-rgb), 0.14); color: var(--bs-success); }
+.dashboard-stat-card.card-amber .stat-icon { background: rgba(var(--bs-warning-rgb), 0.16); color: #b3801b; }
+.dashboard-stat-card.card-rose .stat-icon { background: rgba(var(--bs-danger-rgb), 0.12); color: var(--bs-danger); }
 
 .dashboard-stat-card .stat-link-hint {
     font-size: 0.7rem;
@@ -173,7 +171,7 @@
     padding: 2rem 1.25rem;
     color: var(--bs-secondary);
     background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.03) 0%, transparent 100%);
-    border-radius: 0.75rem;
+    border-radius: var(--ds-radius-2);
     border: 1px dashed var(--bs-border-color-translucent);
 }
 .dashboard-empty-state .material-icons {
@@ -191,16 +189,15 @@
 .dashboard-empty-state p { font-size: 0.875rem; }
 
 .dashboard-tweet-item {
-    padding: 12px 14px 12px 16px;
-    margin-bottom: 10px;
-    border-radius: 10px;
-    border-left: 4px solid var(--bs-primary);
-    background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.05) 0%, transparent 100%);
-    transition: background 0.2s ease, transform 0.15s ease;
+    padding: 0.75rem 0.875rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--ds-radius-1);
+    border-left: 3px solid var(--bs-primary);
+    background: var(--ds-surface-2);
+    transition: background 0.15s ease;
 }
 .dashboard-tweet-item:hover {
-    background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.08) 0%, transparent 100%);
-    transform: translateX(2px);
+    background: #eef1f5;
 }
 .dashboard-tweet-item:last-child { margin-bottom: 0; }
 
@@ -208,7 +205,7 @@
 .dashboard-class-card {
     padding: 14px 16px;
     margin-bottom: 12px;
-    border-radius: 12px;
+    border-radius: var(--ds-radius-2);
     border: 1px solid rgba(0, 0, 0, 0.06);
     border-left: 4px solid var(--bs-primary);
     background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.7) 100%);
@@ -266,34 +263,32 @@
     justify-content: space-between;
     gap: 14px;
     width: 100%;
-    padding: 16px 18px;
-    margin-bottom: 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-left: 4px solid transparent;
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.8) 100%);
+    padding: 0.875rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--ds-radius-1);
+    border: 1px solid var(--ds-line);
+    border-left: 3px solid transparent;
+    background: #fff;
     text-align: left;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: background 0.15s ease, border-color 0.15s ease;
     cursor: pointer;
 }
 .dashboard-notification-item:hover {
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,1) 100%);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-    transform: translateY(-1px);
+    background: var(--ds-surface-2);
+    border-color: #d7dde5;
 }
 .dashboard-notification-item-unread {
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%);
+    background: rgba(var(--bs-primary-rgb), 0.05);
     border-left-color: var(--bs-primary);
-    border-color: rgba(var(--bs-primary-rgb), 0.15);
+    border-color: rgba(var(--bs-primary-rgb), 0.18);
 }
 .dashboard-notification-item-unread:hover {
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.12) 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
+    background: rgba(var(--bs-primary-rgb), 0.09);
 }
 .dashboard-notification-item .notification-icon-wrap {
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: 0.65rem;
+    border-radius: var(--ds-radius-1);
     background: rgba(var(--bs-primary-rgb), 0.12);
     color: var(--bs-primary);
     display: inline-flex;
@@ -352,34 +347,33 @@
 /* Notices panel - item design and blinking "New" tag */
 .dashboard-notice-item {
     display: block;
-    padding: 16px 18px;
-    margin-bottom: 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-left: 4px solid transparent;
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.8) 100%);
+    padding: 0.875rem 1rem;
+    margin-bottom: 0.5rem;
+    border-radius: var(--ds-radius-1);
+    border: 1px solid var(--ds-line);
+    border-left: 3px solid var(--bs-primary);
+    background: var(--ds-surface-2);
     text-decoration: none;
     color: inherit;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+    transition: background 0.15s ease, border-color 0.15s ease;
 }
 .dashboard-notice-item:hover {
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,1) 100%);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-    transform: translateY(-1px);
+    background: #eef1f5;
+    border-color: #d7dde5;
+    border-left-color: var(--bs-primary);
 }
 .dashboard-notice-item-new {
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%);
+    background: rgba(var(--bs-primary-rgb), 0.06);
     border-left-color: var(--bs-primary);
-    border-color: rgba(var(--bs-primary-rgb), 0.15);
+    border-color: rgba(var(--bs-primary-rgb), 0.18);
 }
 .dashboard-notice-item-new:hover {
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.12) 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
+    background: rgba(var(--bs-primary-rgb), 0.1);
 }
 .dashboard-notice-item .notice-icon-wrap {
     width: 2.5rem;
     height: 2.5rem;
-    border-radius: 0.65rem;
+    border-radius: var(--ds-radius-1);
     background: rgba(var(--bs-primary-rgb), 0.12);
     color: var(--bs-primary);
     display: inline-flex;
@@ -391,7 +385,7 @@
 .dashboard-notice-title {
     font-size: 0.9375rem;
     font-weight: 600;
-    color: var(--bs-body-color);
+    color: var(--bs-primary);
     line-height: 1.35;
 }
 .dashboard-notice-date {
@@ -481,7 +475,7 @@ $sargamNoRoleUser = Auth::check()
                     <p class="mb-0 text-white-50 small">Wishing you a wonderful year ahead!</p>
                     @if(($myBirthdayWishCount ?? 0) > 0)
                     <div class="mt-1">
-                        <span class="badge bg-white text-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.85rem;">
+                        <span class="badge bg-white text-primary rounded-1 px-3 py-1 fw-semibold" style="font-size:0.85rem;">
                             🎁 {{ $myBirthdayWishCount }} {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }} received today!
                         </span>
                     </div>
@@ -494,7 +488,7 @@ $sargamNoRoleUser = Auth::check()
     <style>
     .birthday-banner-wrapper {
         position: relative;
-        border-radius: 1rem;
+        border-radius: var(--ds-radius-2);
         overflow: hidden;
         background: linear-gradient(135deg, #e91e63 0%, #9c27b0 40%, #673ab7 70%, #3f51b5 100%);
         box-shadow: 0 6px 30px rgba(233, 30, 99, 0.35);
@@ -523,14 +517,17 @@ $sargamNoRoleUser = Auth::check()
     </style>
     @endif
 
-    <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
+    <div class="dashboard-welcome d-flex flex-wrap align-items-center justify-content-between gap-3">
         <div>
-            <h2 class="mb-0 text-white">{{ $greeting }}, {{ $userName }}</h2>
-            <div class="text-white">{{ now()->format('l, d F Y') }}</div>
+            <div class="dashboard-welcome-greeting">{{ $greeting }}, <span class="text-primary fw-semibold">{{ $userName }}</span></div>
+            <h1 class="dashboard-welcome-title">Dashboard</h1>
         </div>
-        <div class="d-none d-sm-block">
-            <span class="material-icons material-symbols-rounded align-middle me-1">calendar_month</span>
-            <span class="small" id="dashboard-live-time">{{ now()->format('h:i A') }}</span>
+        <div class="d-none d-sm-flex align-items-center gap-2 dashboard-welcome-time">
+            <span class="material-icons material-symbols-rounded text-primary">schedule</span>
+            <div class="text-end">
+                <div class="fw-semibold text-primary" id="dashboard-live-time">{{ now()->format('h:i A') }}</div>
+                <div class="small text-body-secondary">{{ now()->format('l, d F Y') }}</div>
+            </div>
         </div>
     </div>
 
@@ -543,7 +540,7 @@ $sargamNoRoleUser = Auth::check()
                             : route('admin.security.employee_idcard_approval.approval2');
                     @endphp
                     <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
+                        <div class="card dashboard-stat-card shadow-sm rounded-2 card-blue">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Pending Permanent ID Requests</p>
@@ -559,7 +556,7 @@ $sargamNoRoleUser = Auth::check()
                 </div>
                 <div class="col-xl-3 col-md-6">
                     <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
+                        <div class="card dashboard-stat-card shadow-sm rounded-2 card-blue">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Pending Contractual ID Requests</p>
@@ -575,7 +572,7 @@ $sargamNoRoleUser = Auth::check()
                 </div>
                 <div class="col-xl-3 col-md-6">
                     <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
+                        <div class="card dashboard-stat-card shadow-sm rounded-2 card-amber">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Duplicate Permanent ID Requests</p>
@@ -591,7 +588,7 @@ $sargamNoRoleUser = Auth::check()
                 </div>
                 <div class="col-xl-3 col-md-6">
                     <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
+                        <div class="card dashboard-stat-card shadow-sm rounded-2 card-amber">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Duplicate Contractual ID Requests</p>
@@ -607,7 +604,7 @@ $sargamNoRoleUser = Auth::check()
                 </div>
                 <div class="col-xl-4 col-md-6">
                     <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
+                        <div class="card dashboard-stat-card shadow-sm rounded-2 card-blue">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Requested Family ID</p>
@@ -623,7 +620,7 @@ $sargamNoRoleUser = Auth::check()
                 </div>
                 <div class="col-xl-4 col-md-6">
                     <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-green">
+                        <div class="card dashboard-stat-card shadow-sm rounded-2 card-green">
                             <div class="card-body d-flex align-items-center justify-content-between gap-2">
                                 <div>
                                     <p class="small text-dark mb-1">Requested Vehicle Pass</p>
@@ -643,7 +640,7 @@ $sargamNoRoleUser = Auth::check()
     <div class="row g-2 g-md-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
         <div class="col">
             <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-blue h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Total Active Courses</p>
@@ -658,7 +655,7 @@ $sargamNoRoleUser = Auth::check()
 
         <div class="col">
             <a href="{{ route('admin.dashboard.incoming_course') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-green h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Upcoming Courses</p>
@@ -673,7 +670,7 @@ $sargamNoRoleUser = Auth::check()
 
         <div class="col">
             <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-amber h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Upcoming Events</p>
@@ -689,7 +686,7 @@ $sargamNoRoleUser = Auth::check()
         <div class="col">
             @if(hasRole('Student-OT'))
             <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-rose h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Medical Exception</p>
@@ -702,7 +699,7 @@ $sargamNoRoleUser = Auth::check()
             </a>
             @else
             <a href="{{ route('admin.dashboard.guest_faculty') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-rose h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Total Guest Faculty</p>
@@ -719,7 +716,7 @@ $sargamNoRoleUser = Auth::check()
         @if(($todayApproval1IdCardRequests ?? 0) > 0)
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Today's Pending ID Card Requests (Approval I)</p>
@@ -737,7 +734,7 @@ $sargamNoRoleUser = Auth::check()
         @if(($todayApproval1DuplicateIdCardRequests ?? 0) > 0)
         <div class="col-xl-3 col-md-6">
             <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-amber h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">Today's Pending Duplicate ID Card Requests (Approval I)</p>
@@ -756,7 +753,7 @@ $sargamNoRoleUser = Auth::check()
         <div class="col-xl-3 col-md-6">
             @if(hasRole('Student-OT'))
             <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
                         <div>
                             <p class="small text-dark mb-1">OT MDO/Escort</p>
@@ -769,7 +766,7 @@ $sargamNoRoleUser = Auth::check()
             </a>
             @else
             <a href="{{ route('admin.dashboard.inhouse_faculty') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-blue h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Total Inhouse Faculty</p>
@@ -786,7 +783,7 @@ $sargamNoRoleUser = Auth::check()
         @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
         <div class="col">
             <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-green h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Session Details</p>
@@ -803,7 +800,7 @@ $sargamNoRoleUser = Auth::check()
         @if(isset($isCCorACC) && $isCCorACC)
         <div class="col">
             <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
+                <div class="card dashboard-stat-card shadow-sm rounded-2 card-amber h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
                         <div class="min-w-0">
                             <p class="small text-body-secondary mb-1 text-truncate">Total Students</p>
@@ -822,13 +819,13 @@ $sargamNoRoleUser = Auth::check()
     <div class="row g-3 g-lg-4">
         <div class="col-lg-7">
         @if(hasRole('Admin') || hasRole('Training-Induction'))
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-2 mb-4">
                 <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-semibold d-flex align-items-center gap-2">
                         <span class="material-icons material-symbols-rounded text-primary">notifications</span>
                         {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
                     </h5>
-                    <span class="badge text-bg-primary rounded-pill">{{ $notificationBadgeCount }}</span>
+                    <span class="badge text-bg-primary rounded-1">{{ $notificationBadgeCount }}</span>
                 </div>
                 <div class="card-body p-3 p-md-4 dashboard-list-scroll">
                     @if($notifications->isEmpty())
@@ -864,7 +861,7 @@ $sargamNoRoleUser = Auth::check()
                 </div>
             </div>
 
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-2 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">campaign</span>
                     <h5 class="mb-0 fw-semibold">Campus Tweets</h5>
@@ -884,7 +881,7 @@ $sargamNoRoleUser = Auth::check()
             @endif
 
             @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-2 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">fact_check</span>
                     <h5 class="mb-0 fw-semibold">Today's Classes</h5>
@@ -917,7 +914,7 @@ $sargamNoRoleUser = Auth::check()
             </div>
             @endif
 
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-3">
+            <div class="card dashboard-panel shadow-sm rounded-2 mb-3">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">push_pin</span>
                     <h5 class="mb-0 fw-semibold">Notices</h5>
@@ -966,19 +963,19 @@ $sargamNoRoleUser = Auth::check()
         </div>
 
         <div class="col-lg-5">
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-2 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">cake</span>
                     <h4 class="mb-0 fw-semibold text-primary">Today's Birthday</h4>
-                    <span class="ms-auto badge rounded-pill text-bg-primary-subtle text-primary border border-primary-subtle">
+                    <span class="ms-auto badge rounded-1 text-bg-primary">
                         {{ $emp_dob_data->count() }}
                     </span>
                     @if($emp_dob_data->isNotEmpty())
-                    <a href="{{ route('admin.birthday-wish.index') }}" class="btn btn-sm btn-primary rounded-pill ms-2 d-inline-flex align-items-center gap-1" title="Send wishes to all">
+                    <a href="{{ route('admin.birthday-wish.index') }}" class="btn btn-sm btn-primary rounded-1 ms-2 d-inline-flex align-items-center gap-1" title="Send wishes to all">
                         <span class="material-icons material-symbols-rounded" style="font-size:14px;">send</span>
                         <span style="font-size:0.75rem;">Send Wishes</span>
                     </a>
-                    <button type="button" class="btn btn-sm btn-success rounded-pill ms-1 d-inline-flex align-items-center gap-1" id="btn-quick-wish-all" title="Quick wish everyone at once">
+                    <button type="button" class="btn btn-sm btn-success rounded-1 ms-1 d-inline-flex align-items-center gap-1" id="btn-quick-wish-all" title="Quick wish everyone at once">
                         <span class="material-icons material-symbols-rounded" style="font-size:14px;">celebration</span>
                         <span style="font-size:0.75rem;">Wish All</span>
                     </button>
@@ -1002,7 +999,7 @@ $sargamNoRoleUser = Auth::check()
                         $subject = rawurlencode('Happy Birthday ' . ($fullName ?: ''));
                         $body = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday!\n\nRegards,");
                         @endphp
-                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-4">
+                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-2">
                             <div class="card-body p-3">
                                 <div class="d-flex align-items-start gap-3">
                                     @if($photo)
@@ -1026,7 +1023,7 @@ $sargamNoRoleUser = Auth::check()
                                             </div>
                                             @php $wishCount = $birthdayWishCounts[$employee->pk] ?? 0; @endphp
                                             @if($wishCount > 0)
-                                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem;" title="{{ $wishCount }} wishes sent">
+                                            <span class="badge rounded-1 bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem;" title="{{ $wishCount }} wishes sent">
                                                 🎁 {{ $wishCount }} {{ $wishCount === 1 ? 'wish' : 'wishes' }}
                                             </span>
                                             @endif
@@ -1062,14 +1059,14 @@ $sargamNoRoleUser = Auth::check()
                                             @endphp
                                             <a href="https://wa.me/{{ $whatsappPhone }}?text={{ $whatsappMsg }}"
                                                target="_blank"
-                                               class="btn btn-sm btn-outline-success rounded-pill d-inline-flex align-items-center gap-1"
+                                               class="btn btn-sm btn-outline-success rounded-1 d-inline-flex align-items-center gap-1"
                                                title="Send Birthday WhatsApp">
                                                 <span class="material-icons material-symbols-rounded" style="font-size:14px;">chat</span>
                                                 <span style="font-size:0.75rem;">WhatsApp</span>
                                             </a>
                                             @endif
                                             <button type="button"
-                                                class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center gap-1 btn-custom-wish"
+                                                class="btn btn-sm btn-outline-secondary rounded-1 d-inline-flex align-items-center gap-1 btn-custom-wish"
                                                 data-name="{{ $fullName }}"
                                                 data-email="{{ $email }}"
                                                 data-mobile="{{ $employee->mobile ?? '' }}"
@@ -1090,11 +1087,11 @@ $sargamNoRoleUser = Auth::check()
             </div>
 
             @if(($upcomingBirthdays ?? collect())->isNotEmpty())
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
+            <div class="card dashboard-panel shadow-sm rounded-2 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-warning">upcoming</span>
                     <h6 class="mb-0 fw-semibold">Upcoming Birthdays</h6>
-                    <span class="ms-auto badge rounded-pill text-bg-warning-subtle text-warning border border-warning-subtle">
+                    <span class="ms-auto badge rounded-1 text-bg-warning-subtle text-warning border border-warning-subtle">
                         Next 7 days
                     </span>
                 </div>
@@ -1107,7 +1104,7 @@ $sargamNoRoleUser = Auth::check()
                             $upAvClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger'];
                             $upAvClass = $upAvClasses[$loop->index % count($upAvClasses)];
                         @endphp
-                        <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-3" style="background: rgba(var(--bs-warning-rgb), 0.05);">
+                        <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-2" style="background: rgba(var(--bs-warning-rgb), 0.05);">
                             @if($upPhoto)
                                 <img src="{{ $upPhoto }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0" style="width:2rem; height:2rem;">
                             @else
@@ -1120,7 +1117,7 @@ $sargamNoRoleUser = Auth::check()
                                 <div class="text-body-secondary" style="font-size:0.7rem;">{{ $upcoming->designation_name ?? '' }}</div>
                             </div>
                             <div class="text-end flex-shrink-0">
-                                <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle" style="font-size:0.65rem;">
+                                <span class="badge rounded-1 bg-warning-subtle text-warning border border-warning-subtle" style="font-size:0.65rem;">
                                     🎂 {{ $upcoming->birthday_date }}
                                 </span>
                                 <div class="text-body-secondary" style="font-size:0.6rem;">in {{ $upcoming->days_away }} {{ $upcoming->days_away == 1 ? 'day' : 'days' }}</div>
@@ -1132,7 +1129,7 @@ $sargamNoRoleUser = Auth::check()
             </div>
             @endif
 
-            <div class="card dashboard-panel shadow-sm rounded-4">
+            <div class="card dashboard-panel shadow-sm rounded-2">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">calendar_month</span>
                     <h5 class="mb-0 fw-semibold">Calendar</h5>
@@ -1153,8 +1150,8 @@ $sargamNoRoleUser = Auth::check()
 <!-- Custom Birthday Wish Modal -->
 <div class="modal fade" id="customWishModal" tabindex="-1" aria-labelledby="customWishModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header bg-primary bg-opacity-10 border-0 rounded-top-4 px-4 py-3">
+        <div class="modal-content rounded-2 border-0 shadow">
+            <div class="modal-header bg-primary bg-opacity-10 border-0 rounded-top-2 px-4 py-3">
                 <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="customWishModalLabel">
                     <span class="material-icons material-symbols-rounded text-primary">celebration</span>
                     Send Birthday Wish
@@ -1204,8 +1201,8 @@ $sargamNoRoleUser = Auth::check()
                 </div>
             </div>
             <div class="modal-footer border-0 px-4 pb-4">
-                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-pill px-4 d-flex align-items-center gap-2" id="btn-send-wish">
+                <button type="button" class="btn btn-light rounded-1 px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-1 px-4 d-flex align-items-center gap-2" id="btn-send-wish">
                     <span class="material-icons material-symbols-rounded" style="font-size:18px;">send</span> Send Wish
                 </button>
             </div>
@@ -1661,7 +1658,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <!-- No role assigned notice -->
     <div class="modal fade" id="noRoleModal" tabindex="-1" aria-labelledby="noRoleModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
         <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content border-0 rounded-4 shadow-lg overflow-hidden" style="border-top: 4px solid #004a93 !important;">
+            <div class="modal-content border-0 rounded-2 shadow-lg overflow-hidden" style="border-top: 4px solid #004a93 !important;">
                 <div class="modal-body text-center px-4 px-md-5 py-5">
                     <div class="mx-auto mb-4 d-flex align-items-center justify-content-center rounded-circle bg-warning-subtle" style="width:88px; height:88px;">
                         <i class="material-icons material-symbols-rounded text-warning-emphasis lh-1" style="font-size:2.5rem;">warning</i>
@@ -1674,7 +1671,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     <div class="d-grid gap-2 d-sm-flex justify-content-sm-center">
                         <form action="{{ route('logout') }}" method="POST" class="m-0 d-grid">
                             @csrf
-                            <button type="submit" class="btn btn-outline-secondary rounded-3 px-4 py-2 fw-medium">
+                            <button type="submit" class="btn btn-outline-secondary rounded-2 px-4 py-2 fw-medium">
                                 <i class="bi bi-box-arrow-right me-1"></i> Log out
                             </button>
                         </form>

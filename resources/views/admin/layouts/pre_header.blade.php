@@ -28,6 +28,8 @@
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <!-- Sidebar Menu Enhanced CSS -->
 <link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
+<!-- Sargam Design System (tokens + refinements + components) — must load LAST -->
+<link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:

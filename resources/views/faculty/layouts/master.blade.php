@@ -399,6 +399,9 @@
     <!-- Tab Memory System Styles -->
     <link rel="stylesheet" href="{{ asset('admin_assets/css/tab-memory-styles.css') }}">
 
+    <!-- Sargam Design System — must load LAST -->
+    <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
+
 </head>
 
 <body data-sidebartype="mini-sidebar">

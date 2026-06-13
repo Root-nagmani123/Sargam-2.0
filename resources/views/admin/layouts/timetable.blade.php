@@ -29,6 +29,8 @@
     <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
     <link href="https://cdn.ux4g.gov.in/UX4G@2.0.8/css/ux4g-min.css" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
+    <!-- Sargam Design System — must load LAST -->
+    <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}" />
 </head>
 <x-session_message />
 
