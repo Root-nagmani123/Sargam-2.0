@@ -2,6 +2,33 @@
    Dashboard Stat Cards - Redesigned
    ======================================== */
 
+/* Fluid auto-fit grid: card width + count-per-row adjust to screen width.
+   Overrides Bootstrap's fixed row-cols-* breakpoints so cards reflow smoothly
+   instead of snapping between set column counts. */
+.dashboard-stats-grid.row {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: 1rem;
+    margin-right: 0;
+    margin-left: 0;
+}
+
+.dashboard-stats-grid.row > .col {
+    flex: none;
+    width: auto;
+    max-width: none;
+    padding-right: 0;
+    padding-left: 0;
+    margin-top: 0;
+}
+
+/* Narrow phones: allow cards to shrink further so two never overflow */
+@media (max-width: 400px) {
+    .dashboard-stats-grid.row {
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    }
+}
+
 .dashboard-stats-grid > .col > a {
     color: inherit;
     text-decoration: none;
