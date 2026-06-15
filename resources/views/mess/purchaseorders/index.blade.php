@@ -2,7 +2,7 @@
 @section('title', 'Purchase Orders')
 @section('content')
 @php
-$canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin');
+$canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid py-3 py-md-4 po-ux">
     <div class="no-print">

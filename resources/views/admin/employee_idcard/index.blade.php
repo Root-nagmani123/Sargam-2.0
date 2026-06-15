@@ -61,7 +61,7 @@
     <div class="card border border-body-secondary rounded-4 shadow-sm mb-3">
         <div class="card-body py-3">
             <form method="GET" action="{{ route('admin.employee_idcard.index') }}" class="row g-3 align-items-end" id="idcardFilterForm">
-               @if(HasRole('Admin'))
+               @if(hasRole('Super Admin'))
                 <div class="col-12 col-md-3">
                     <label for="idcardSearch" class="form-label small text-muted mb-0">Search by Name</label>
                     <input type="search" name="search" id="idcardSearch" class="form-control " placeholder="Employee name..." value="{{ old('search', $search ?? '') }}">

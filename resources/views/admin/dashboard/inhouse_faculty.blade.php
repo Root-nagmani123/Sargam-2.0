@@ -481,7 +481,7 @@
                                 <th scope="col">Current Sector</th>
                                 <th scope="col">Session Count</th>
                                 <th scope="col">Feedback Average</th>
-                                @if((hasRole('Admin')))
+                                @if((hasRole('Super Admin')))
                                 <th scope="col">Action</th>
                                 @endif
                             </tr>
@@ -553,7 +553,7 @@
                                         <span class="text-muted small">No feedback yet</span>
                                     @endif
                                 </td>
-                                @if((hasRole('Admin')))
+                                @if((hasRole('Super Admin')))
                                     <td>
                                         <a href="{{ route('feedback.average', ['faculty_name' => $faculty->full_name]) }}"
                                            class="btn btn-view-feedback btn-sm">

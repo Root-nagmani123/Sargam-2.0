@@ -2,7 +2,7 @@
 @section('title', 'Selling Voucher')
 @section('content')
 @php
-    $canDeleteSellingVoucher = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteSellingVoucher = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid py-3">
     <x-breadcrum title="Selling Voucher" />
