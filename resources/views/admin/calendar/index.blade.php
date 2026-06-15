@@ -1,4 +1,4 @@
-@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'Academic TimeTable')
 
@@ -3021,8 +3021,11 @@ class CalendarManager {
         if (editBtn) editBtn.dataset.id = data.id;
         if (deleteBtn) deleteBtn.dataset.id = data.id;
 
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('eventDetails'));
+        // Show modal. Reuse the single Bootstrap instance for this element
+        // (getOrCreateInstance) instead of `new Modal()` on every open — repeated
+        // `new` calls stack extra focus-trap/backdrop listeners on the same node,
+        // which then fight each other and make the modal blink/flicker.
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventDetails'));
         modal.show();
     }
 
@@ -3032,7 +3035,7 @@ class CalendarManager {
         this.resetEventForm();
         this.setFormDate(info.start);
 
-        const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventModal'));
         modal.show();
     }
 
@@ -3542,7 +3545,7 @@ class CalendarManager {
             this.showNotification(result.message || 'Event saved successfully', 'success');
 
             // Close modal and refresh calendar
-            bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('eventModal'))?.hide();
             this.calendar.refetchEvents();
             setTimeout(() => {
                window.location.reload(); 
@@ -3651,8 +3654,8 @@ class CalendarManager {
             document.getElementById('start_datetime').removeAttribute('readonly');
 
             // Show modal
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventModal'));
             modal.show();
 
         } catch (error) {
@@ -3901,7 +3904,7 @@ async setInternalFaculty(internalFacultyIds) {
         const eventId = document.getElementById('deleteEventBtn').dataset.id;
 
         // Show confirmation modal
-        const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        const confirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
         document.getElementById('confirmAction').onclick = () => this.deleteEvent(eventId);
         confirmModal.show();
     }
@@ -3920,8 +3923,8 @@ async setInternalFaculty(internalFacultyIds) {
             this.showNotification('Event deleted successfully', 'success');
 
             // Close modals and refresh
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
+            bootstrap.Modal.getInstance(document.getElementById('confirmModal'))?.hide();
             this.calendar.refetchEvents();
 
         } catch (error) {
@@ -4394,7 +4397,7 @@ async setInternalFaculty(internalFacultyIds) {
             if (e.key === 'Escape') {
                 const openModals = document.querySelectorAll('.modal.show');
                 openModals.forEach(modal => {
-                    bootstrap.Modal.getInstance(modal).hide();
+                    bootstrap.Modal.getInstance(modal)?.hide();
                 });
             }
 

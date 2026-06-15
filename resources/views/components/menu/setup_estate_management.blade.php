@@ -15,7 +15,7 @@
                                 // Staff/self-service: Request For Estate + My Estate Bill.
                                 // Training roles should behave like normal staff (self-service), not like estate authorities.
                                 $estateSelfServiceRoles = hasRole('Staff')
-                                    || hasRole('Student-OT')
+                                    || hasRole('Officer Trainee')
                                     || hasRole('Doctor')
                                     || hasRole('Guest Faculty')
                                     || hasRole('Internal Faculty')

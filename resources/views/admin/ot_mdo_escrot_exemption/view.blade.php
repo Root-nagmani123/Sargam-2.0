@@ -1,8 +1,8 @@
-@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'Session Moderator/Escort Duty - Sargam | Lal Bahadur')
 
-@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+@section(hasRole('Officer Trainee') ? 'content' : 'setup_content')
 <style>
 .student-card {
     background: #ffffff;

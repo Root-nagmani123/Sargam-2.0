@@ -5,12 +5,12 @@
 --}}
 @props(['current' => 'request-for-estate'])
 @php
-    $isHacPersonOnly = hasRole('HAC Person') && !hasRole('Estate') && !hasRole('Super Admin') && !hasRole('Training Induction Admin') && !hasRole('Training MCTP Admin') && !hasRole('Training IST') && !hasRole('Staff') && !hasRole('Student-OT') && !hasRole('Doctor') && !hasRole('Guest Faculty') && !hasRole('Internal Faculty');
+    $isHacPersonOnly = hasRole('HAC Person') && !hasRole('Estate') && !hasRole('Super Admin') && !hasRole('Training Induction Admin') && !hasRole('Training MCTP Admin') && !hasRole('Training IST') && !hasRole('Staff') && !hasRole('Officer Trainee') && !hasRole('Doctor') && !hasRole('Guest Faculty') && !hasRole('Internal Faculty');
     // Authority users: Estate/Admin/Super Admin OR HAC Person.
     // Training roles must behave like normal staff (self-service), so they are NOT treated as privileged here.
     $isPrivilegedEstate = hasRole('Estate') || hasRole('Super Admin') || hasRole('Super Admin');
     $estateSelfServiceRoles = hasRole('Staff')
-        || hasRole('Student-OT')
+        || hasRole('Officer Trainee')
         || hasRole('Doctor')
         || hasRole('Guest Faculty')
         || hasRole('Internal Faculty')

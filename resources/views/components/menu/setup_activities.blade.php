@@ -14,7 +14,7 @@
                             <!-- ---------------------------------- -->
                             @php
                                 $showUserManagement = hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
-                                $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
+                                $estateSelfServiceRoles = hasRole('Staff') || hasRole('Officer Trainee') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
                                 // Check if current self-service user is a permanent LBSNAA employee (payroll = 0)
                                 $isPermanentEstateEmployee = false;
                                 $user = Auth::user();

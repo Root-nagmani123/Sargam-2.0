@@ -687,7 +687,7 @@ $sargamNoRoleUser = Auth::check()
         </div>
 
         <div class="col">
-            @if(hasRole('Student-OT'))
+            @if(hasRole('Officer Trainee'))
             <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
                     <div class="card-body d-flex align-items-center justify-content-between gap-3">
@@ -754,7 +754,7 @@ $sargamNoRoleUser = Auth::check()
         @endif
 
         <div class="col-xl-3 col-md-6">
-            @if(hasRole('Student-OT'))
+            @if(hasRole('Officer Trainee'))
             <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">
                 <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
                     <div class="card-body d-flex align-items-start justify-content-between gap-2">
@@ -883,7 +883,7 @@ $sargamNoRoleUser = Auth::check()
             </div>
             @endif
 
-            @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+            @if(hasRole('Officer Trainee') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
                     <span class="material-icons material-symbols-rounded text-primary">fact_check</span>
