@@ -146,11 +146,8 @@
             <h2 class="h5 fw-bold mb-0 text-body">
                 <i class="bi bi-arrow-left-right me-2"></i> Change Request Details
             </h2>
-            @php
-                $hasCurrentAlot = trim((string) ($requestForHouse->current_alot ?? '')) !== '' && (string) ($requestForHouse->current_alot ?? '') !== '—';
-                $hasAnyChangeRequest = ! $changeRequestDetails->isEmpty();
-            @endphp
-            @if($hasCurrentAlot && ! $hasAnyChangeRequest && (hasRole('Estate Admin') || hasRole('Super Admin')))
+            @php $hasCurrentAlot = trim((string) ($requestForHouse->current_alot ?? '')) !== '' && (string) ($requestForHouse->current_alot ?? '') !== '—'; @endphp
+            @if($hasCurrentAlot)
                 <a href="{{ route('admin.estate.raise-change-request', ['id' => $requestForHouse->pk]) }}" class="btn btn-info btn-sm">
                     <i class="bi bi-plus-circle me-1"></i> Raise Change Request
                 </a>
