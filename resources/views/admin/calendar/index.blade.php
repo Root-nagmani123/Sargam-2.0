@@ -2389,6 +2389,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <!-- Modern JavaScript with improved accessibility -->
+@php
+    $calendarRequiresCourses = !is_faculty_portal_user()
+        && !hasRole('Student-OT')
+        && !hasRole('Admin')
+        && !hasRole('Super Admin');
+@endphp
 <script>
 console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
 
@@ -2515,6 +2521,7 @@ class CalendarManager {
         this.listViewWeekOffset = 0; // Track week offset for list view
         this.selectedCourseId = null;
         this.courses = @json($courseMaster);
+        this.calendarRequiresCourses = @json($calendarRequiresCourses);
         this.eventsLoaded = false; // Track if events have been loaded initially
         this.init();
     }
@@ -2523,7 +2530,7 @@ class CalendarManager {
         try {
             console.log('Initializing calendar manager...');
 
-            if (!this.courses || this.courses.length === 0) {
+            if (this.calendarRequiresCourses && (!this.courses || this.courses.length === 0)) {
                 console.log('No courses available for this admin — skipping calendar load');
                 const loadingOverlay = document.getElementById('calendarLoadingOverlay');
                 if (loadingOverlay) {
@@ -2679,7 +2686,7 @@ class CalendarManager {
     }
 
     fetchEvents(info, successCallback, failureCallback) {
-        if (!this.courses || this.courses.length === 0) {
+        if (this.calendarRequiresCourses && (!this.courses || this.courses.length === 0)) {
             successCallback([]);
             return;
         }
