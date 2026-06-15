@@ -24,8 +24,8 @@ body {
 /* Container - Mobile First */
 .container {
     width: 100%;
-    padding-right: 15px;
-    padding-left: 15px;
+    padding-right: 1rem;
+    padding-left: 1rem;
     margin-right: auto;
     margin-left: auto;
 }
@@ -34,24 +34,24 @@ body {
 .row {
     display: flex;
     flex-wrap: wrap;
-    margin-right: -15px;
-    margin-left: -15px;
+    margin-right: calc(1.5rem / -2);
+    margin-left: calc(1.5rem / -2);
 }
 
 [class*="col-"] {
     width: 100%;
-    padding-right: 15px;
-    padding-left: 15px;
+    padding-right: calc(1.5rem / 2);
+    padding-left: calc(1.5rem / 2);
 }
 
 /* ========== TOP HEADER (GOVT BAR) ========== */
 .top-header {
-    padding: 8px 0;
+    padding: 0.5rem 0;
     font-size: 11px;
 }
 
 .top-header .container {
-    padding: 0 10px;
+    padding: 0 0.75rem;
 }
 
 .top-header .row {
@@ -61,7 +61,7 @@ body {
 .top-header .col-md-3,
 .top-header .col-md-9 {
     width: 100%;
-    padding: 5px 0;
+    padding: 0.25rem 0;
 }
 
 .top-header img {
@@ -70,7 +70,7 @@ body {
 
 .top-header .nav {
     flex-direction: column;
-    gap: 8px;
+    gap: 0.5rem;
 }
 
 .top-header .nav-item {
@@ -89,7 +89,7 @@ body {
 
 /* ========== HEADER / NAVIGATION ========== */
 .header {
-    padding: 10px 0;
+    padding: 0.75rem 0;
 }
 
 .navbar {
@@ -110,13 +110,13 @@ body {
 }
 
 .navbar-toggler {
-    padding: 4px 8px;
+    padding: 0.25rem 0.5rem;
     font-size: 1.2rem;
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .navbar-collapse {
-    margin-top: 15px;
+    margin-top: 1rem;
 }
 
 .navbar-nav {
@@ -124,18 +124,18 @@ body {
 }
 
 .navbar-nav .nav-item {
-    margin: 5px 0;
+    margin: 0.25rem 0;
     text-align: center;
 }
 
 .navbar-nav .nav-link {
     margin: 0 !important;
-    padding: 12px 15px;
+    padding: 0.75rem 1rem;
 }
 
 .navbar-nav .btn {
     width: 100%;
-    margin: 10px 0 !important;
+    margin: 0.5rem 0 !important;
 }
 
 /* ========== CONTENT AREAS ========== */
@@ -159,23 +159,23 @@ body {
 .form-control,
 .form-select {
     font-size: 14px;
-    padding: 10px 12px;
+    padding: 0.5rem 0.75rem;
 }
 
 .form-label {
     font-size: 13px;
     font-weight: 600;
-    margin-bottom: 6px;
+    margin-bottom: 0.5rem;
 }
 
 .btn {
     font-size: 14px;
-    padding: 10px 20px;
+    padding: 0.5rem 1rem;
 }
 
 /* Stack form columns on mobile */
 .row.g-3 [class*="col-md-"] {
-    margin-bottom: 15px;
+    margin-bottom: 1rem;
 }
 
 /* ========== TABLES ========== */
@@ -192,7 +192,7 @@ body {
 
 .table th,
 .table td {
-    padding: 8px;
+    padding: 0.5rem;
     white-space: nowrap;
 }
 
@@ -202,18 +202,18 @@ body {
 .dataTables_wrapper .dataTables_info,
 .dataTables_wrapper .dataTables_paginate {
     font-size: 12px;
-    margin: 10px 0;
+    margin: 0.5rem 0;
 }
 
 .dataTables_wrapper .dataTables_filter input {
     width: 100%;
     margin-left: 0 !important;
-    margin-top: 5px;
+    margin-top: 0.25rem;
 }
 
 /* ========== MODALS ========== */
 .modal-dialog {
-    margin: 10px;
+    margin: 0.75rem;
 }
 
 .modal-content {
@@ -222,18 +222,18 @@ body {
 
 .modal-header,
 .modal-footer {
-    padding: 12px 15px;
+    padding: 0.75rem 1rem;
 }
 
 .modal-body {
-    padding: 15px;
+    padding: 1rem;
 }
 
 /* ========== ALERTS & NOTICES ========== */
 .alert {
     font-size: 13px;
-    padding: 12px 15px;
-    margin-bottom: 15px;
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
 }
 
 .notice-box {
@@ -249,11 +249,11 @@ footer {
 }
 
 footer .container {
-    padding: 0 15px;
+    padding: 0 1rem;
 }
 
 footer .row > div {
-    margin-bottom: 15px;
+    margin-bottom: 1rem;
 }
 
 /* ========== ACCESSIBILITY PANEL ========== */
@@ -266,7 +266,7 @@ footer .row > div {
 
 .uwaw-features__item {
     font-size: 13px;
-    padding: 10px;
+    padding: 0.75rem;
 }
 
 /* ========== UTILITIES ========== */
@@ -702,7 +702,7 @@ body[data-sidebartype="full"] .left-sidebar {
 }
 
 .sidebar-nav .sidebar-link {
-    padding: 15px 20px;
+    padding: 1rem 1.5rem;
     display: flex;
     align-items: center;
     min-height: 48px; /* Touch-friendly */
@@ -720,7 +720,7 @@ body[data-sidebartype="full"] .left-sidebar {
 
 .sidebar-nav .sidebar-link i,
 .sidebar-nav .sidebar-link .material-icons {
-    margin-right: 15px;
+    margin-right: 1rem;
     font-size: 20px;
     width: 24px;
     text-align: center;
@@ -728,7 +728,7 @@ body[data-sidebartype="full"] .left-sidebar {
 
 /* Mini nav for mobile */
 .mini-nav {
-    padding: 10px 0;
+    padding: 0.5rem 0;
 }
 
 .mini-nav-ul {
@@ -738,7 +738,7 @@ body[data-sidebartype="full"] .left-sidebar {
 }
 
 .mini-nav-ul .nav-small-cap {
-    padding: 10px 20px;
+    padding: 0.5rem 1.5rem;
     font-size: 11px;
     text-transform: uppercase;
     color: #8a99af;
@@ -747,7 +747,7 @@ body[data-sidebartype="full"] .left-sidebar {
 
 /* Sidebar header for mobile */
 .sidebar-header {
-    padding: 20px;
+    padding: 1.5rem;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
@@ -759,7 +759,7 @@ body[data-sidebartype="full"] .left-sidebar {
     border: none;
     font-size: 24px;
     cursor: pointer;
-    padding: 5px;
+    padding: 0.25rem;
     color: #2a3547;
     display: flex;
     align-items: center;

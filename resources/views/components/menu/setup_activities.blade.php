@@ -1,21 +1,11 @@
-<nav class="sidebar-nav d-block simplebar-scrollable-y" id="menu-right-setup-mini-6" data-simplebar="init">
-    <div class="simplebar-wrapper" style="margin: 0px -20px -24px;">
-        <div class="simplebar-height-auto-observer-wrapper">
-            <div class="simplebar-height-auto-observer"></div>
-        </div>
-        <div class="simplebar-mask">
-            <div class="simplebar-offset" style="right: 0px; bottom: 0px;">
-                <div class="simplebar-content-wrapper" tabindex="0" role="region" aria-label="scrollable content"
-                    style="height: 100%; overflow: hidden scroll;">
-                    <div class="simplebar-content" style="padding: 20px 0px 20px 24px;">
-                        <ul class="sidebar-menu" id="sidebarnav">
-                            <!-- ---------------------------------- -->
-                            <!-- Home -->
-                            <!-- ---------------------------------- -->
+@include('components.menu.partials.panel-shell-open', [
+    'panelMenuId' => 'menu-right-setup-mini-6',
+    'panelMenuTitle' => 'USER MANAGEMENT',
+    'panelMenuClass' => 'sidebar-setup-user-management-menu',
+])
                             @php
-                                $showUserManagement = hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
-                                $estateSelfServiceRoles = hasRole('Staff') || hasRole('Officer Trainee') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
-                                // Check if current self-service user is a permanent LBSNAA employee (payroll = 0)
+                                $showUserManagement = hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+                                $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
                                 $isPermanentEstateEmployee = false;
                                 $user = Auth::user();
                                 if ($user && $estateSelfServiceRoles && \Illuminate\Support\Facades\Schema::hasTable('employee_master')) {
@@ -35,177 +25,166 @@
                                         }
                                     }
                                 }
-                                // Estate section visible for:
-                                // - Admin / Super Admin / Training / IST (user management)
-                                // - Estate / HAC Person
-                                // - All self-service estate roles (Staff, Student-OT, Doctor, Guest Faculty, Internal Faculty)
-                                //   They will still be restricted inside the menu to only their own-data items.
                                 $showEstateSection = $showUserManagement || hasRole('Estate') || hasRole('Super Admin') || hasRole('HAC Person') || $estateSelfServiceRoles;
                                 $isEstateAdmin = hasRole('Estate') || hasRole('Super Admin');
                                 $isHACPerson = hasRole('HAC Person');
                             @endphp
-                             @if($showUserManagement)
-                            <li class="nav-section" role="listitem">
+                            @if($showUserManagement)
 
-                                <!-- Main Container with Improved Layout -->
-                                <div class="d-flex align-items-center justify-content-between w-100">
-
-                                    <!-- Left Side: Collapse Button with Enhanced Accessibility -->
-                                    <div class="d-flex align-items-center mb-3">
-                                        <!-- Section Title with Proper Semantic Markup -->
-                                        <h2 class="section-title text-white m-0"
-                                            style="font-size: 1.125rem; font-weight: 600; letter-spacing: 0.25px;">
-                                            User Management
-                                        </h2>
-                                    </div>
-                                </div>
-                            </li>
-                            <!-- ---------------------------------- -->
-                            <!-- Academic -->
-                            <!-- ---------------------------------- -->
-                            {{-- EMPLOYEE --}}
-
-                            <li class="sidebar-item" style="background: #4077ad;
-                                border-radius: 30px 0px 0px 30px;
-                                width: 100%;
-                                box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                                min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link sidebar-link-collapse d-flex align-items-center justify-content-between rounded-2 px-3 py-2"
                                     data-bs-toggle="collapse" href="#employeeCollapse" role="button"
                                     aria-expanded="false" aria-controls="employeeCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Employee</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                    <span class="d-flex align-items-center gap-2 min-w-0">
+                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">badge</i>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Employee</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded sidebar-panel-menu__chevron menu-icon" aria-hidden="true">chevron_right</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="employeeCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('member.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Employee Master</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.employee.type.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Employee Type</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.employee.group.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Employee Group</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.department.master.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Department
-                                            Master</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.designation.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Designation
-                                            Master</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.caste.category.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Caste Category</span>
-                                    </a></li>
+                            <ul class="collapse list-unstyled mb-2" id="employeeCollapse">
+                                <li class="sidebar-panel-submenu-tree">
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('member.*') ? 'active' : '' }}"
+                                                href="{{ route('member.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Employee Master</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.employee.type.*') ? 'active' : '' }}"
+                                                href="{{ route('master.employee.type.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Employee Type</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.employee.group.*') ? 'active' : '' }}"
+                                                href="{{ route('master.employee.group.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Employee Group</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.department.master.*') ? 'active' : '' }}"
+                                                href="{{ route('master.department.master.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Department Master</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.designation.*') ? 'active' : '' }}"
+                                                href="{{ route('master.designation.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Designation Master</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.caste.category.*') ? 'active' : '' }}"
+                                                href="{{ route('master.caste.category.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Caste Category</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
                             </ul>
 
-                            {{-- FACULTY --}}
-
-                            <li class="sidebar-item" style="background: #4077ad;
-                        border-radius: 30px 0px 0px 30px;
-                        width: 100%;
-                        box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                        min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link sidebar-link-collapse d-flex align-items-center justify-content-between rounded-2 px-3 py-2"
                                     data-bs-toggle="collapse" href="#facultyCollapse" role="button"
                                     aria-expanded="false" aria-controls="facultyCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Faculty</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                    <span class="d-flex align-items-center gap-2 min-w-0">
+                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">school</i>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded sidebar-panel-menu__chevron menu-icon" aria-hidden="true">chevron_right</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="facultyCollapse">
-
-                               <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('master.appellation.*') ? 'active' : '' }}"
-                                        href="{{ route('master.appellation.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Appellation Master</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.faculty.expertise.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty
-                                            Expertise</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('master.faculty.type.master.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty Type</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link" href="{{ route('faculty.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Faculty</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link {{ request()->routeIs('admin.faculty.whos-who') ? 'active' : '' }}"
-                                        href="{{ route('admin.faculty.whos-who') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Who's Who</span>
-                                    </a></li>
+                            <ul class="collapse list-unstyled mb-2" id="facultyCollapse">
+                                <li class="sidebar-panel-submenu-tree">
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.appellation.*') ? 'active' : '' }}"
+                                                href="{{ route('master.appellation.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Appellation Master</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.faculty.expertise.*') ? 'active' : '' }}"
+                                                href="{{ route('master.faculty.expertise.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Faculty Expertise</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('master.faculty.type.master.*') ? 'active' : '' }}"
+                                                href="{{ route('master.faculty.type.master.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Faculty Type</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('faculty.*') ? 'active' : '' }}"
+                                                href="{{ route('faculty.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Faculty</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('admin.faculty.whos-who') ? 'active' : '' }}"
+                                                href="{{ route('admin.faculty.whos-who') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Who's Who</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
                             </ul>
 
-                            {{-- USER MANAGEMENT --}}
-                            <li class="sidebar-item" style="background: #4077ad;
-                            border-radius: 30px 0px 0px 30px;
-                            width: 100%;
-                            box-shadow: -2px 3px rgba(251, 248, 248, 0.1);
-                            min-width: 250px;">
-                                <a class="sidebar-link d-flex justify-content-between align-items-center"
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link sidebar-link-collapse d-flex align-items-center justify-content-between rounded-2 px-3 py-2"
                                     data-bs-toggle="collapse" href="#userManagementCollapse" role="button"
                                     aria-expanded="false" aria-controls="userManagementCollapse">
-                                    <span class="hide-menu fw-bold small small-sm-normal text-nowrap">Roles &
-                                        Permissions</span>
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 18px; font-size: 24px-sm;">keyboard_arrow_down</i>
+                                    <span class="d-flex align-items-center gap-2 min-w-0">
+                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">admin_panel_settings</i>
+                                        <span class="hide-menu small small-sm-normal text-nowrap">Roles &amp; Permissions</span>
+                                    </span>
+                                    <i class="material-icons material-symbols-rounded sidebar-panel-menu__chevron menu-icon" aria-hidden="true">chevron_right</i>
                                 </a>
                             </li>
-                            <ul class="collapse list-unstyled ps-3" id="userManagementCollapse">
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.roles.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">Roles</span>
-                                    </a></li>
-                                <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.users.index') }}">
-                                        <span class="hide-menu small small-sm-normal text-nowrap">User
-                                            Permissions</span>
-                                    </a></li>
-
-                                {{-- <li class="sidebar-item"><a class="sidebar-link"
-                                        href="{{ route('admin.permissions.index') }}">
-                                <span class="hide-menu">Permissions</span>
-                                </a></li> --}}
+                            <ul class="collapse list-unstyled mb-2" id="userManagementCollapse">
+                                <li class="sidebar-panel-submenu-tree">
+                                    <ul class="list-unstyled mb-0">
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('admin.roles.*') ? 'active' : '' }}"
+                                                href="{{ route('admin.roles.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">Roles</span>
+                                            </a>
+                                        </li>
+                                        <li class="sidebar-item mb-1">
+                                            <a class="sidebar-link d-flex align-items-center rounded-2 px-3 py-2 {{ request()->routeIs('admin.users.*') ? 'active' : '' }}"
+                                                href="{{ route('admin.users.index') }}">
+                                                <span class="hide-menu small small-sm-normal text-nowrap">User Permissions</span>
+                                            </a>
+                                        </li>
+                                    </ul>
+                                </li>
                             </ul>
-                            @if (hasRole('Super Admin') || hasRole('Super Admin'))
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link" href="{{ route('admin.setup.quick_links.index') }}">
+                            @if (hasRole('Admin') || hasRole('Super Admin'))
+                                <li class="sidebar-item mb-1">
+                                    <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ request()->routeIs('admin.setup.quick_links.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.setup.quick_links.index') }}">
+                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">link</i>
                                         <span class="hide-menu small small-sm-normal text-nowrap">Quick Links Master</span>
                                     </a>
                                 </li>
-                                <li class="sidebar-item">
-                                    <a class="sidebar-link" href="{{ route('admin.setup.useful_links.index') }}">
+                                <li class="sidebar-item mb-1">
+                                    <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ request()->routeIs('admin.setup.useful_links.*') ? 'active' : '' }}"
+                                        href="{{ route('admin.setup.useful_links.index') }}">
+                                        <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">bookmark</i>
                                         <span class="hide-menu small small-sm-normal text-nowrap">Useful Links Master</span>
                                     </a>
                                 </li>
                             @endif
 
-                            <li class="sidebar-item"><a class="sidebar-link" href="{{ route('course-repository.index') }}">
-                                    <span class="hide-menu">Course Repository</span>
-                                </a></li>
+                            <li class="sidebar-item mb-1">
+                                <a class="sidebar-link d-flex align-items-center gap-2 rounded-2 px-3 py-2 {{ request()->routeIs('course-repository.*') ? 'active' : '' }}"
+                                    href="{{ route('course-repository.index') }}">
+                                    <i class="material-icons material-symbols-rounded sidebar-panel-menu__icon" aria-hidden="true">folder_special</i>
+                                    <span class="hide-menu small small-sm-normal text-nowrap">Course Repository</span>
+                                </a>
+                            </li>
                             @endif
-
-                        </ul>
-                    </div>
-                </div>
-            </div>
-        </div>
-        <div class="simplebar-placeholder" style="width: 240px; height: 864px;"></div>
-    </div>
-    <div class="simplebar-track simplebar-horizontal" style="visibility: hidden;">
-        <div class="simplebar-scrollbar" style="width: 0px; display: none;"></div>
-    </div>
-    <div class="simplebar-track simplebar-vertical" style="visibility: visible;">
-        <div class="simplebar-scrollbar" style="height: 45px; display: block; transform: translate3d(0px, 0px, 0px);">
-        </div>
-    </div>
-</nav>
+@include('components.menu.partials.panel-shell-close')

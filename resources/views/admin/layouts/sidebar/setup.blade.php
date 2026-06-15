@@ -12,15 +12,52 @@
                 $isContractualEmployee = $emp && (int) ($emp->payroll ?? 0) !== 0;
             }
         }
+        $setupAcademicsActive = request()->routeIs('programme.*')
+            || request()->routeIs('master.course.group.type.*')
+            || request()->routeIs('group.mapping.*')
+            || request()->routeIs('student.medical.exemption.*')
+            || request()->routeIs('mdo-escrot-exemption.*')
+            || request()->routeIs('mdo-escort-exemption.*')
+            || request()->routeIs('master.exemption.*')
+            || request()->routeIs('master.mdo_duty_type.*')
+            || request()->routeIs('master.memo.*')
+            || request()->routeIs('course.memo.*')
+            || request()->routeIs('master.discipline.*')
+            || request()->routeIs('admin.feedback.*')
+            || request()->routeIs('feedback.*')
+            || request()->routeIs('calendar.*')
+            || request()->routeIs('attendance.*')
+            || request()->routeIs('faculty.*')
+            || request()->routeIs('medical.exception.*')
+            || request()->routeIs('ot.*')
+            || request()->routeIs('memo.*')
+            || request()->routeIs('peer.*')
+            || request()->routeIs('admin.course-repository.user.*')
+            || request()->is('academic*');
     @endphp
     <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
         <!-- ---------------------------------- -->
-        <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
-            <div class="flex-fill d-flex flex-column" style="min-height: 0;">
-                <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
-                    
+        <div class="iconbar sargam-sidebar-iconbar flex-fill d-flex flex-row align-items-stretch" style="min-height: 0;">
+                <div class="mini-nav sargam-mini-nav flex-shrink-0 d-flex flex-column" style="min-height: 0; width: 90px;">
+                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
+                        <a class="sidebar-mini-toggle sidebartoggler sidebar-mini-squircle-item nav-link p-0 border-0 bg-transparent shadow-none"
+                            id="headerCollapse"
+                            href="javascript:void(0)"
+                            data-bs-toggle="tooltip"
+                            data-bs-custom-class="custom-tooltip"
+                            data-bs-placement="right"
+                            aria-label="Toggle sidebar menu">
+                            <span class="sidebar-mini-squircle-box sidebar-mini-squircle-box--neutral">
+                                <i id="sidebarToggleIcon" class="material-icons material-symbols-rounded" aria-hidden="true">left_panel_close</i>
+                            </span>
+                            <span class="sidebar-mini-squircle-label sidebar-mini-toggle-label">
+                                <span class="sidebar-mini-toggle-text-close">Close</span>
+                                <span class="sidebar-mini-toggle-text-open">Open</span>
+                            </span>
+                        </a>
+                    </div>
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init" style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
                             <div class="simplebar-height-auto-observer-wrapper">
@@ -32,13 +69,13 @@
                                     <div class="simplebar-content-wrapper" tabindex="0" role="region"
                                         aria-label="scrollable content" style="height: 100%; overflow: hidden scroll;">
                                         <div class="simplebar-content" style="padding: 0px;">
-                                            <li class="mini-nav-item {{ request()->is('academic*') ? 'selected' : '' }}" id="setup-mini-4">
+                                            <li class="mini-nav-item {{ $setupAcademicsActive ? 'selected' : '' }}" id="setup-mini-4">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
-                                                        <i class="material-icons menu-icon material-symbols-rounded">dashboard_customize</i>
+                                                    class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
+                                                    <span class="sidebar-mini-squircle-box">
+                                                        <i class="material-icons menu-icon material-symbols-rounded">school</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Academic</span>
+                                                    <span class="mini-nav-title sidebar-mini-squircle-label">Academics</span>
                                                 </a>
                                             </li>
 
@@ -50,21 +87,21 @@
                                             )
                                             <li class="mini-nav-item" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
+                                                    <span class="sidebar-mini-squircle-box">
                                                         <i class="material-icons menu-icon material-symbols-rounded">calendar_month</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Time Table</span>
+                                                    <span class="mini-nav-title sidebar-mini-squircle-label">Time Table</span>
                                                 </a>
                                             </li>
 
                                             <li class="mini-nav-item {{ request()->is('users*') ? 'selected' : '' }}" id="setup-mini-6">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
+                                                    <span class="sidebar-mini-squircle-box">
                                                         <i class="material-icons menu-icon material-symbols-rounded">user_attributes</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Users</span>
+                                                    <span class="mini-nav-title sidebar-mini-squircle-label">Users</span>
                                                 </a>
                                             </li>
                                             @endif
@@ -72,20 +109,20 @@
                                             @if(! hasRole('Training MCTP Admin') && ! hasRole('Training IST'))
                                             <li class="mini-nav-item {{ request()->is('master*') ? 'selected' : '' }}" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
+                                                    <span class="sidebar-mini-squircle-box">
                                                         <i class="material-icons menu-icon material-symbols-rounded">menu_open</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">Master</span>
+                                                    <span class="mini-nav-title sidebar-mini-squircle-label">Master</span>
                                                 </a>
                                             </li>
                                             <li class="mini-nav-item {{ request()->is('forms*') ? 'selected' : '' }}" id="mini-3">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
-                                                    <span class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
+                                                    <span class="sidebar-mini-squircle-box">
                                                         <i class="material-icons menu-icon material-symbols-rounded">note_add</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">FC Forms</span>
+                                                    <span class="mini-nav-title sidebar-mini-squircle-label">FC Forms</span>
                                                 </a>
                                             </li>
                                             @endif
@@ -110,7 +147,7 @@
                     </ul>
 
                 </div>
-                <div class="sidebarmenu">
+                <div class="sidebarmenu flex-fill min-vw-0 d-flex flex-column" style="min-height: 0;">
                     <!-- ---------------------------------- -->
                     <!-- Academic -->
                     <!-- ---------------------------------- -->
@@ -142,195 +179,20 @@
                     <!-- ---------------------------------- -->
 
                 </div>
-            </div>
         </div>
     </div>
 </aside>
 
-<style>
-    /* Google-style sidebar - light gray, icon above text, oval selected state */
-    #sidebar-setup .sidebar-google-style.side-mini-panel {
-        width: 90px;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav {
-        background: #f0f0f0 !important;
-        border: 1px solid var(--bs-border-color-translucent);
-        padding: 12px 0;
-        border-radius: 10px;
-    }
-
-    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger {
-        padding: 16px 0;
-        margin: 0;
-    }
-
-    #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
-        color: var(--bs-secondary-color) !important;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item {
-        list-style: none;
-        display: flex !important;
-        justify-content: center !important;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav ul.mini-nav-ul {
-        padding-inline-start: 0 !important;
-        list-style: none !important;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a {
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        padding: 12px 8px !important;
-        padding-left: 8px !important;
-        margin: 4px 8px !important;
-        background: transparent !important;
-        height: auto !important;
-        min-height: 56px;
-        width: 100%;
-        transition: background-color 0.2s ease, color 0.2s ease;
-    }
-
-    #sidebar-setup .sidebar-google-style .sidebar-google-item {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: center !important;
-        justify-content: center !important;
-        gap: 4px;
-        text-align: center !important;
-    }
-
-    #sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap {
-        display: flex !important;
-        align-items: center !important;
-        justify-content: center !important;
-        width: 48px;
-        height: 32px;
-        margin-inline: auto;
-        border-radius: 24px;
-        transition: background 0.2s;
-    }
-
-    #sidebar-setup .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
-        line-height: 1 !important;
-        vertical-align: middle !important;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a .material-icons {
-        font-size: 24px !important;
-        color: var(--bs-secondary-color) !important;
-    }
-
-    #sidebar-setup .sidebar-google-style .sidebar-google-label {
-        font-size: 11px;
-        color: var(--bs-secondary-color) !important;
-        font-weight: 400;
-        text-align: center;
-        line-height: 1.2;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:hover .material-icons,
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:hover .sidebar-google-label {
-        color: var(--bs-emphasis-color) !important;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item>a:focus-visible {
-        outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
-        outline-offset: 2px;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-icon-wrap {
-        background: var(--bs-primary-bg-subtle) !important;
-        border-radius: 10px;
-        padding: 10px;
-        box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
-        transition: all 0.2s ease;
-        transform: scale(1.05);
-        margin: 4px 8px;
-        width: 100%;
-        height: 100%;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .material-icons,
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a .sidebar-google-label {
-        color: var(--bs-primary-text-emphasis) !important;
-    }
-
-    #sidebar-setup .sidebar-google-style .mini-nav .mini-nav-item.selected>a:before {
-        display: none !important;
-    }
-</style>
-
 <script>
-    // Global function to collapse all menus
     function collapseAllMenus() {
-        const allCollapses = document.querySelectorAll('.sidebarmenu .collapse');
-        allCollapses.forEach(collapse => {
-            const bsCollapse = bootstrap.Collapse.getInstance(collapse);
-            if (bsCollapse) {
-                bsCollapse.hide();
-            } else {
-                collapse.classList.remove('show');
-            }
-
-            // Update the toggle button arrow
-            const collapseId = collapse.id;
-            const toggleBtn = document.querySelector(`[href="#${collapseId}"], [data-bs-target="#${collapseId}"]`);
-            if (toggleBtn) {
-                toggleBtn.setAttribute('aria-expanded', 'false');
-                toggleBtn.classList.add('collapsed');
-                const icon = toggleBtn.querySelector('.material-icons');
-                if (icon && icon.textContent.includes('keyboard_arrow_up')) {
-                    icon.textContent = 'keyboard_arrow_down';
-                }
-            }
-        });
-    }
-
-    // Add accordion behavior - when one opens, others close
-    document.addEventListener('DOMContentLoaded', function() {
         const setupSidebar = document.getElementById('sidebar-setup');
         if (!setupSidebar) return;
-
-        // Add accordion behavior to collapsible menus
-        const collapseElements = setupSidebar.querySelectorAll('.sidebar-item [data-bs-toggle="collapse"]');
-        collapseElements.forEach(trigger => {
-            trigger.addEventListener('click', function(e) {
-                const targetId = this.getAttribute('href') || this.getAttribute('data-bs-target');
-                const targetCollapse = document.querySelector(targetId);
-
-                // Find all collapse elements in the same parent container
-                const parentNav = this.closest('.sidebar-nav');
-                if (parentNav) {
-                    const allCollapses = parentNav.querySelectorAll('.collapse');
-                    allCollapses.forEach(collapse => {
-                        if (collapse !== targetCollapse && collapse.classList.contains(
-                                'show')) {
-                            const bsCollapse = bootstrap.Collapse.getInstance(collapse);
-                            if (bsCollapse) {
-                                bsCollapse.hide();
-                            }
-                        }
-                    });
-                }
-
-                // Rotate arrow icon
-                const icon = this.querySelector('.material-icons');
-                if (icon) {
-                    setTimeout(() => {
-                        if (targetCollapse.classList.contains('show')) {
-                            icon.textContent = 'keyboard_arrow_up';
-                        } else {
-                            icon.textContent = 'keyboard_arrow_down';
-                        }
-                    }, 350);
-                }
-            });
+        setupSidebar.querySelectorAll('nav.sidebar-panel-menu').forEach(function (nav) {
+            if (typeof window.collapseSidebarPanelNav === 'function') {
+                window.collapseSidebarPanelNav(nav);
+            }
         });
-    });
+    }
 
     document.addEventListener('DOMContentLoaded', function() {
         console.log('Setup sidebar script started');
@@ -397,15 +259,19 @@
             selectedItem.classList.add('selected');
             console.log('Selected mini-nav item:', miniId);
         }
-        sidebarMenus.forEach(function(nav) {
-            nav.classList.remove('d-block');
-            nav.style.display = 'none';
-        });
         const targetMenuId = 'menu-right-' + miniId;
         const targetMenu = document.getElementById(targetMenuId);
         if (targetMenu) {
-            targetMenu.classList.add('d-block');
-            targetMenu.style.display = 'block';
+            if (typeof window.activateSidebarPanelNav === 'function') {
+                window.activateSidebarPanelNav(targetMenu);
+            } else {
+                sidebarMenus.forEach(function(nav) {
+                    nav.classList.remove('d-block', 'is-active-panel');
+                    nav.style.display = 'none';
+                });
+                targetMenu.classList.add('d-block', 'is-active-panel');
+                targetMenu.style.display = 'flex';
+            }
             document.body.setAttribute('data-sidebartype', 'full');
             console.log('Displayed menu:', targetMenu.id);
             // Periodically keep sidebar visible for 3 seconds
@@ -473,7 +339,13 @@
 
         // Function to restore sidebar menu visibility
         function restoreSidebarMenu() {
-            // Always remove selected from all mini-nav-items first
+            const serverSelected = setupSidebar.querySelector('.mini-nav-item.selected');
+            if (serverSelected) {
+                showSidebarMenu(serverSelected.id);
+                setTimeout(expandActiveMenus, 100);
+                return;
+            }
+
             miniNavItems.forEach(function(navItem) {
                 navItem.classList.remove('selected');
             });
