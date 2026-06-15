@@ -957,6 +957,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $nameCandidates = $this->messBillBuyerNameCandidatesForCurrentUser();
         $nameLikePatterns = $this->buildMessSelfServiceClientNameLikePatterns($nameCandidates);
+        $billClientIds = $this->messSelfServiceBillClientIdsForCurrentUser();
 
         $dateRangeQuery = SellingVoucherDateRangeReport::query()
             ->select([
@@ -974,7 +975,7 @@ class ProcessMessBillsEmployeeController extends Controller
             ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS);
         $dateRangeQuery->whereIn('status', $this->sellingVoucherDateRangeReportSaleVoucherStatuses());
         $this->applySellingVoucherDateRangeItemIssueDateFilter($dateRangeQuery, $dateFrom, $dateTo);
-        $this->applyMyBillsClientNameOrStubFalse($dateRangeQuery, $nameLikePatterns);
+        $this->applyMyBillsDateRangeClientFilter($dateRangeQuery, $nameLikePatterns, $billClientIds);
 
         $kitchenIssueQuery = KitchenIssueMaster::query()
             ->select([
@@ -3579,6 +3580,10 @@ class ProcessMessBillsEmployeeController extends Controller
             // Employee (1): client_id = employee_master.pk = user_credentials.user_id
             if ($clientType === KitchenIssueMaster::CLIENT_EMPLOYEE) {
                 if ($clientId > 0) {
+                    if (FacultyMaster::where('pk', $clientId)->exists()) {
+                        return $this->resolveReceiverUserIdFromFacultyClientId($clientId);
+                    }
+
                     return $clientId;
                 }
                 $clientName = trim($bill->client_name ?? ($categoryName ?? ''));
@@ -3602,6 +3607,16 @@ class ProcessMessBillsEmployeeController extends Controller
         // Selling Voucher Date Range: map buyer name to app user (employee or student by type)
         $slug = (string) ($bill->client_type_slug ?? '');
         $clientName = trim($bill->client_name ?? ($categoryName ?? ''));
+        $clientId = isset($bill->client_id) ? (int) $bill->client_id : 0;
+
+        if ($slug === 'employee' && $clientId > 0) {
+            if (FacultyMaster::where('pk', $clientId)->exists()) {
+                return $this->resolveReceiverUserIdFromFacultyClientId($clientId);
+            }
+
+            return $clientId;
+        }
+
         if ($clientName === '') {
             return null;
         }
@@ -4849,16 +4864,24 @@ class ProcessMessBillsEmployeeController extends Controller
         return array_values(array_unique($patterns));
     }
 
-    private function applyMyBillsClientNameOrStubFalse($query, array $likePatterns): void
+    private function applyMyBillsDateRangeClientFilter($query, array $likePatterns, array $billClientIds): void
     {
-        if ($likePatterns === []) {
-            $query->whereRaw('0 = 1');
-
-            return;
-        }
-        $query->where(function ($q) use ($likePatterns) {
-            foreach ($likePatterns as $pat) {
-                $q->orWhere('client_name', 'like', $pat);
+        $query->where(function ($outer) use ($likePatterns, $billClientIds) {
+            if ($likePatterns !== []) {
+                $outer->where(function ($q) use ($likePatterns) {
+                    foreach ($likePatterns as $pat) {
+                        $q->orWhere('client_name', 'like', $pat);
+                    }
+                });
+            }
+            if ($billClientIds !== []) {
+                $outer->orWhere(function ($q) use ($billClientIds) {
+                    $q->where('client_type_slug', 'employee')
+                        ->whereIn('client_id', $billClientIds);
+                });
+            }
+            if ($likePatterns === [] && $billClientIds === []) {
+                $outer->whereRaw('0 = 1');
             }
         });
     }
@@ -4929,7 +4952,62 @@ class ProcessMessBillsEmployeeController extends Controller
             // Fall back to current user_id only.
         }
 
+        $facultyPk = \get_auth_faculty_master_pk();
+        if ($facultyPk !== null && $facultyPk > 0) {
+            $linked[] = $facultyPk;
+            try {
+                $employeePk = FacultyMaster::query()
+                    ->where('pk', $facultyPk)
+                    ->value('employee_master_pk');
+                if ($employeePk !== null && (int) $employeePk > 0) {
+                    $linked[] = (int) $employeePk;
+                }
+            } catch (\Throwable $e) {
+                // Keep faculty pk only.
+            }
+        }
+
         return array_values(array_unique(array_filter($linked, fn ($id) => (int) $id > 0)));
+    }
+
+    /**
+     * client_id values on mess bills that belong to the logged-in user (employee pk and/or faculty pk).
+     *
+     * @return array<int, int>
+     */
+    private function messSelfServiceBillClientIdsForCurrentUser(): array
+    {
+        return $this->authLinkedUserIdsForMessSelfService();
+    }
+
+    /**
+     * Map faculty_master.pk (bill client_id) to portal user_credentials.user_id.
+     */
+    private function resolveReceiverUserIdFromFacultyClientId(int $facultyPk): ?int
+    {
+        if ($facultyPk <= 0) {
+            return null;
+        }
+
+        $faculty = FacultyMaster::query()
+            ->where('pk', $facultyPk)
+            ->first(['pk', 'employee_master_pk']);
+
+        if (!$faculty) {
+            return null;
+        }
+
+        $employeePk = (int) ($faculty->employee_master_pk ?? 0);
+        if ($employeePk > 0) {
+            return $employeePk;
+        }
+
+        if (Schema::hasTable('user_credentials')
+            && DB::table('user_credentials')->where('user_id', $facultyPk)->exists()) {
+            return $facultyPk;
+        }
+
+        return null;
     }
 
     private function currentUserCanAdminMessBills(): bool
@@ -4946,8 +5024,8 @@ class ProcessMessBillsEmployeeController extends Controller
             return;
         }
         $rid = $this->resolveReceiverUserIdFromAnyBill($bills);
-        $uid = (int) (auth()->user()->user_id ?? 0);
-        if ($rid === null || $rid <= 0 || (int) $rid !== $uid) {
+        $linkedUserIds = $this->authLinkedUserIdsForMessSelfService();
+        if ($rid === null || $rid <= 0 || ! in_array((int) $rid, $linkedUserIds, true)) {
             abort(403);
         }
     }
@@ -4959,8 +5037,8 @@ class ProcessMessBillsEmployeeController extends Controller
         }
         $isKitchen = !($bill instanceof SellingVoucherDateRangeReport);
         $rid = $this->getReceiverUserIdForBill($bill, $isKitchen);
-        $uid = (int) (auth()->user()->user_id ?? 0);
-        if ($rid === null || $rid <= 0 || (int) $rid !== $uid) {
+        $linkedUserIds = $this->authLinkedUserIdsForMessSelfService();
+        if ($rid === null || $rid <= 0 || ! in_array((int) $rid, $linkedUserIds, true)) {
             abort(403);
         }
     }
@@ -5016,6 +5094,16 @@ class ProcessMessBillsEmployeeController extends Controller
                 $n = DB::table('user_credentials')->where('user_id', $uid)->value('name');
                 if ($n !== null && trim((string) $n) !== '') {
                     $names[] = trim((string) $n);
+                }
+            }
+
+            $facultyPk = \get_auth_faculty_master_pk();
+            if ($facultyPk !== null && $facultyPk > 0) {
+                $facultyName = FacultyMaster::query()
+                    ->where('pk', $facultyPk)
+                    ->value('full_name');
+                if ($facultyName !== null && trim((string) $facultyName) !== '') {
+                    $names[] = trim((string) $facultyName);
                 }
             }
         }
