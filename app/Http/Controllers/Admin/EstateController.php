@@ -868,60 +868,26 @@ class EstateController extends Controller
                     $notificationService = app(NotificationService::class);
                     $receiverService = app(NotificationReceiverService::class);
                     $approverUserIds = $receiverService->getEstateRequestApproverUserIds();
-                    $hacUserIds = $receiverService->getEstateHacPersonUserIds();
                     $empLabel = trim((string) ($validated['emp_name'] ?? ''));
                     $idLabel = trim((string) ($validated['employee_id'] ?? ''));
                     $who = $empLabel !== '' || $idLabel !== ''
                         ? trim($empLabel . ($idLabel !== '' ? ' (' . $idLabel . ')' : ''))
                         : 'An employee';
                     $senderId = (int) ($user->user_id ?? 0);
-
-                    $hacSet = [];
-                    foreach ($hacUserIds as $rid) {
-                        $hacSet[(int) $rid] = true;
-                    }
-
-                    $titleApprove = 'New estate request';
                     $bodyApprove = "{$who} has submitted an estate request. Please review and approve.";
-                    $titleHac = 'Estate request — Put in HAC';
-                    $bodyHac = "{$who} has submitted an estate request. Please put it in HAC and complete HAC approval.";
-                    $bodyBoth = "{$who} has submitted an estate request. Please review and approve, put it in HAC, and complete HAC approval.";
 
-                    $sent = [];
                     foreach ($approverUserIds as $rid) {
                         $rid = (int) $rid;
                         if ($senderId > 0 && $rid === $senderId) {
                             continue;
                         }
-                        $inHac = isset($hacSet[$rid]);
-                        $body = $inHac ? $bodyBoth : $bodyApprove;
-                        $title = $inHac ? 'New estate request (approve / HAC)' : $titleApprove;
                         $notificationService->create(
                             $rid,
                             'estate_request',
                             'Estate',
                             (int) $record->pk,
-                            $title,
-                            $body
-                        );
-                        $sent[$rid] = true;
-                    }
-
-                    foreach ($hacUserIds as $rid) {
-                        $rid = (int) $rid;
-                        if ($senderId > 0 && $rid === $senderId) {
-                            continue;
-                        }
-                        if (isset($sent[$rid])) {
-                            continue;
-                        }
-                        $notificationService->create(
-                            $rid,
-                            'estate_request',
-                            'EstateHac',
-                            (int) $record->pk,
-                            $titleHac,
-                            $bodyHac
+                            'New estate request',
+                            $bodyApprove
                         );
                     }
                 } catch (\Throwable $e) {
@@ -8949,12 +8915,27 @@ class EstateController extends Controller
     }
 
     /**
-     * Admin / Estate / Super Admin opening estate with ?scope=self (e.g. Home sidebar) should see only their own rows.
+     * Home sidebar / My Estate Bill: ?scope=self means personal (self-service) view, any role.
      */
     private function isEstateAuthorityPersonalScope(\Illuminate\Http\Request $request): bool
     {
-        return $request->get('scope') === 'self'
-            && (isEstateAuthority());
+        return $request->get('scope') === 'self';
+    }
+
+    /**
+     * Generate Bill list / print: restrict to logged-in user's employee_pk(s).
+     * Privileged roles see all unless ?scope=self; everyone else always sees own rows only.
+     */
+    private function shouldApplyGenerateEstateBillSelfFilter(\Illuminate\Http\Request $request): bool
+    {
+        if ($this->isEstateAuthorityPersonalScope($request)) {
+            return true;
+        }
+
+        $hasPrivBill = isEstateAuthority()
+            || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+
+        return ! $hasPrivBill;
     }
 
     /**
@@ -9310,9 +9291,7 @@ class EstateController extends Controller
             [$year, $month] = explode('-', $billMonth);
 
             $hasEpdReading2 = Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
-            $hasPrivBill = (isEstateAuthority())
-                || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
-            $applySelfFilter = ! $hasPrivBill || $this->isEstateAuthorityPersonalScope($request);
+            $applySelfFilter = $this->shouldApplyGenerateEstateBillSelfFilter($request);
 
             $restrictEmployeePksSorted = null;
             if ($applySelfFilter) {
@@ -10206,7 +10185,7 @@ class EstateController extends Controller
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
             }
 
-            if ($this->isEstateAuthorityPersonalScope($request)) {
+            if ($this->shouldApplyGenerateEstateBillSelfFilter($request)) {
                 $this->applyGenerateEstateBillEmployeeSelfFilter($query);
             }
 
@@ -10342,7 +10321,7 @@ class EstateController extends Controller
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
             }
 
-            if ($this->isEstateAuthorityPersonalScope($request)) {
+            if ($this->shouldApplyGenerateEstateBillSelfFilter($request)) {
                 $this->applyGenerateEstateBillEmployeeSelfFilter($query);
             }
 

@@ -2522,6 +2522,16 @@ class CalendarManager {
     init() {
         try {
             console.log('Initializing calendar manager...');
+
+            if (!this.courses || this.courses.length === 0) {
+                console.log('No courses available for this admin — skipping calendar load');
+                const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                }
+                return;
+            }
+
             this.initFullCalendar();
             
             try { this.bindEvents(); } catch (e) { console.error('bindEvents error:', e); }
@@ -2669,6 +2679,11 @@ class CalendarManager {
     }
 
     fetchEvents(info, successCallback, failureCallback) {
+        if (!this.courses || this.courses.length === 0) {
+            successCallback([]);
+            return;
+        }
+
         // Build URL with course filter
         let url = CalendarConfig.api.events;
         const params = new URLSearchParams();
