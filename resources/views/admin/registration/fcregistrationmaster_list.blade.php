@@ -10,7 +10,7 @@
     </style>
     <div class="container-fluid">
 
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             {{-- <div class="card-body">
                 <!-- Filters Form -->
                 <form id="registrationFilterForm">

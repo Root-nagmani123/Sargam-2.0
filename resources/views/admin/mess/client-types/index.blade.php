@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Client Types" />
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-body">
                 <div class="row">
                     <div class="col-6"><h4>Client Types</h4></div>

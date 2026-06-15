@@ -10,7 +10,7 @@
     @endif
 
     {{-- Student Information Header --}}
-    <div class="card shadow mb-4" style="border-left: 4px solid #004a93;">
+    <div class="card shadow mb-4" >
         <div class="card-body">
             <div class="row g-3">
                 <div class="col-md-4">

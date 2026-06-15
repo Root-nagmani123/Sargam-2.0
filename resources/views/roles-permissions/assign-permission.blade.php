@@ -5,7 +5,7 @@
     <x-breadcrum title="Assign Permission" />
     <x-session_message />
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-header border-bottom d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Assign Permission ({{ ucfirst($role->name) }})</h4>
                 <div class="dropdown">
@@ -25,35 +25,42 @@
             </div>
             <div class="card-body">
                 <!-- Search & Filter Bar -->
-                <div class="row g-2 mb-3">
-                    <div class="col-md-5">
-                        <div class="input-group">
-                            <span class="input-group-text bg-white"><i class="bi bi-search text-muted"></i></span>
-                            <input type="text" id="permissionSearch" class="form-control" placeholder="Search by menu, permission...">
+                <div class="bg-body-tertiary border rounded-3 p-3 mb-3">
+                    <div class="row g-3 align-items-end">
+                        <div class="col-12 col-lg-5">
+                            <label for="permissionSearch" class="form-label small fw-semibold text-secondary mb-1">Search
+                            </label>
+                            <div class="input-group shadow-sm">
+                                <span class="input-group-text bg-white border-end-0"><i class="material-icons material-symbols-rounded text-muted">search</i></span>
+                                <input type="text" id="permissionSearch" class="form-control border-start-0 ps-0" placeholder="Search by menu, permission...">
+                            </div>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <label for="categoryFilter" class="form-label small fw-semibold text-secondary mb-1">Category
+                            </label>
+                            <select id="categoryFilter" class="form-select shadow-sm">
+                                <option value="">All Categories</option>
+                                @foreach($categories as $category)
+                                    <option value="{{ $category->name }}">{{ $category->name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="col-6 col-lg-3">
+                            <label for="statusFilter" class="form-label small fw-semibold text-secondary mb-1">Status
+                            </label>
+                            <select id="statusFilter" class="form-select shadow-sm">
+                                <option value="">All Status</option>
+                                <option value="enabled">Enabled</option>
+                                <option value="disabled">Disabled</option>
+                            </select>
+                        </div>
+                        <div class="col-12 col-lg-1 d-grid">
+                            <button class="btn btn-outline-secondary btn-sm" id="clearFilters" type="button" title="Clear filters">
+                                <i class="material-icons material-symbols-rounded">clear</i><span class="d-lg-none ms-1">Clear filters</span>
+                            </button>
                         </div>
                     </div>
-                    <div class="col-md-3">
-                        <select id="categoryFilter" class="form-select">
-                            <option value="">All Categories</option>
-                            @foreach($categories as $category)
-                                <option value="{{ $category->name }}">{{ $category->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <select id="statusFilter" class="form-select">
-                            <option value="">All Status</option>
-                            <option value="enabled">Enabled</option>
-                            <option value="disabled">Disabled</option>
-                        </select>
-                    </div>
-                    <div class="col-md-1">
-                        <button class="btn btn-outline-secondary w-100" id="clearFilters" title="Clear filters">
-                            <i class="bi bi-x-lg"></i>
-                        </button>
-                    </div>
                 </div>
-                <div id="filterResultCount" class="text-muted small mb-2"></div>
 
                 <div class="table-responsive">
                     <table class="table" id="permissionTable">
@@ -123,9 +130,6 @@
                         @endforeach
                         </tbody>
                     </table>
-                    <div id="noResultsMsg" class="text-center text-muted py-4 d-none">
-                        <i class="bi bi-search fs-4 d-block mb-2"></i>No permissions found matching your filters.
-                    </div>
                 </div>
             </div>
         </div>
@@ -230,55 +234,86 @@
         });
     });
 
-    // Search & Filter
-    function applyPermissionFilters() {
-        var search = $('#permissionSearch').val().toLowerCase().trim();
-        var category = $('#categoryFilter').val().toLowerCase();
+    // ---- Permission table as a DataTable ----
+    // The dedicated search/category/status controls above drive the DataTable via
+    // its API (the built-in search box is left out of the layout). Status is a
+    // checkbox-based filter, so it runs through a custom ext.search predicate.
+    var permissionTable = null;
+
+    // Custom "Enabled/Disabled" filter based on the toggle switch in each row.
+    $.fn.dataTable.ext.search.push(function (settings, data, dataIndex) {
+        if (settings.nTable.id !== 'permissionTable') return true;
         var status = $('#statusFilter').val();
-        var rows = $('#permissionTable tbody tr');
-        var visible = 0;
+        if (!status) return true;
+        var row = settings.aoData[dataIndex].nTr;
+        var isChecked = $(row).find('.permission-toggle').is(':checked');
+        return (status === 'enabled' && isChecked) || (status === 'disabled' && !isChecked);
+    });
 
-        rows.each(function () {
-            var $row = $(this);
-            var matchSearch = !search ||
-                ($row.data('menu') + ' ' + $row.data('submenu') + ' ' + $row.data('permission') + ' ' + $row.data('group'))
-                    .toLowerCase().indexOf(search) > -1;
-            var matchCategory = !category || $row.data('category').toLowerCase() === category;
-            var isChecked = $row.find('.permission-toggle').is(':checked');
-            var matchStatus = !status ||
-                (status === 'enabled' && isChecked) ||
-                (status === 'disabled' && !isChecked);
-
-            if (matchSearch && matchCategory && matchStatus) {
-                $row.show();
-                visible++;
-            } else {
-                $row.hide();
+    $(document).ready(function () {
+        permissionTable = $('#permissionTable').DataTable({
+            responsive: true,
+            autoWidth: false,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, -1], [10, 25, 50, 100, 'All']],
+            order: [],
+            columnDefs: [{ orderable: false, targets: 5 }], // Action (toggle) column
+            dom: "<'row'<'col-12'tr>>" +
+                 "<'row mt-3 align-items-center dt-bottom-bar'<'col-md-6 dt-bottom-paginate'p><'col-md-6 dt-bottom-info d-flex align-items-center justify-content-md-end gap-2'il>>",
+            language: {
+                info: 'of _MAX_ items',
+                infoFiltered: '(filtered from _MAX_ total)',
+                infoEmpty: 'of 0 items',
+                lengthMenu: '_MENU_',
+                emptyTable: 'No permissions available.',
+                zeroRecords: 'No permissions found matching your filters.',
+                paginate: { previous: '&lsaquo;', next: '&rsaquo;' }
+            },
+            initComplete: function () {
+                try {
+                    var api = this.api();
+                    var $container = $(api.table().container());
+                    $container.addClass('dt-length-style-pill');
+                    var $info = $container.find('.dataTables_info');
+                    var $length = $container.find('.dataTables_length');
+                    if ($info.length && $length.length && !$container.find('.dt-showing-label').length) {
+                        $('<span class="dt-showing-label">Showing</span>').insertBefore($info);
+                        $length.insertBefore($info);
+                    }
+                } catch (e) {}
+            },
+            drawCallback: function () {
+                var info = this.api().page.info();
+                $('#filterResultCount').text(
+                    info.recordsDisplay === info.recordsTotal
+                        ? 'Showing all ' + info.recordsTotal + ' permissions'
+                        : 'Showing ' + info.recordsDisplay + ' of ' + info.recordsTotal + ' permissions'
+                );
             }
         });
 
-        var total = rows.length;
-        $('#filterResultCount').text(visible === total ? 'Showing all ' + total + ' permissions' : 'Showing ' + visible + ' of ' + total + ' permissions');
-        $('#noResultsMsg').toggleClass('d-none', visible > 0);
-    }
+        function applyPermissionFilters() {
+            var category = $('#categoryFilter').val();
+            // Category = exact match on column 0; global search covers the rest.
+            permissionTable
+                .column(0)
+                .search(category ? '^' + $.fn.dataTable.util.escapeRegex(category) + '$' : '', true, false);
+            permissionTable.search($('#permissionSearch').val()).draw();
+        }
 
-    $('#permissionSearch').on('input', applyPermissionFilters);
-    $('#categoryFilter, #statusFilter').on('change', applyPermissionFilters);
-    $('#clearFilters').on('click', function () {
-        $('#permissionSearch').val('');
-        $('#categoryFilter').val('');
-        $('#statusFilter').val('');
-        applyPermissionFilters();
-    });
+        $('#permissionSearch').on('input', applyPermissionFilters);
+        $('#categoryFilter, #statusFilter').on('change', applyPermissionFilters);
+        $('#clearFilters').on('click', function () {
+            $('#permissionSearch').val('');
+            $('#categoryFilter').val('');
+            $('#statusFilter').val('');
+            applyPermissionFilters();
+        });
 
-    // Init count on load
-    $(document).ready(function () { applyPermissionFilters(); });
-
-    // Column hide/unhide toggle
-    $(document).on('change', '.col-toggle', function () {
-        let colIndex = $(this).data('col');
-        let isVisible = $(this).is(':checked');
-        $('#permissionTable th:nth-child(' + (colIndex + 1) + '), #permissionTable td:nth-child(' + (colIndex + 1) + ')').toggle(isVisible);
+        // Column hide/unhide toggle via the DataTables API.
+        $(document).on('change', '.col-toggle', function () {
+            permissionTable.column($(this).data('col')).visible($(this).is(':checked'));
+        });
     });
 
     $(document).on('change', '.permission-toggle', function () {

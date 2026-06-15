@@ -3,7 +3,7 @@
 
 @section('setup_content')
 <div class="container-fluid">
-    <div class="card p-3" style="border-left: 4px solid #004a93;">
+    <div class="card p-3" >
         <h4>All Peer Evaluation Groups</h4>
 
         @if ($groups->isEmpty())
