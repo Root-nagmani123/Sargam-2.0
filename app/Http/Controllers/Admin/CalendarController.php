@@ -137,17 +137,21 @@ class CalendarController extends Controller
         // The OT page is always for a Student-OT, who has no Spatie role — so
         // get_Role_by_course() would return [-1] and wipe out the list. Scope by
         // enrolment (the join below) only, never by the role-course filter.
-        $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
-            ->whereDate('end_date', '>=', today());
+        //
+        // No end_date restriction: a student must still see their enrolled
+        // course timetable after the course has ended (to review past sessions,
+        // give feedback, etc.). The enrolment mapping is the only scope.
+        $courseMaster = CourseMaster::where('course_master.active_inactive', 1);
 
-        // OT page is always scoped to the student's mapped courses.
+        // OT page is always scoped to the student's active course mappings.
         $courseMaster = $courseMaster->leftJoin(
             'student_master_course__map',
             'student_master_course__map.course_master_pk',
             '=',
             'course_master.pk'
         )
-            ->where('student_master_course__map.student_master_pk', auth()->user()->user_id);
+            ->where('student_master_course__map.student_master_pk', auth()->user()->user_id)
+            ->where('student_master_course__map.active_inactive', 1);
 
         $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
             ->get();
