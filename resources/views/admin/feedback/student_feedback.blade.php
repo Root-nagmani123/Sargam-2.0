@@ -612,33 +612,7 @@
             // Tab switching handled by Bootstrap
         });
 
-        // Handle form submission success
-        @if (session('success'))
-            const successAlert = `
-    <div class="alert alert-success alert-dismissible fade show" role="alert">
-        {{ session('success') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>`;
-            $('.session-feedback-main').prepend(successAlert);
-
-            setTimeout(function() {
-                const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
-                submittedTab.show();
-
-                setTimeout(function() {
-                    window.location.reload();
-                }, 500);
-            }, 1500);
-        @endif
-
-        @if (session('error'))
-            const errorAlert = `
-    <div class="alert alert-danger alert-dismissible fade show" role="alert">
-        {{ session('error') }}
-        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-    </div>`;
-            $('.session-feedback-main').prepend(errorAlert);
-        @endif
+        // Success/error flash alerts are rendered by the master layout (admin.layouts.timetable)
 
         // Prevent double form submission
         $('#vertical-wizard').on('submit', function(e) {

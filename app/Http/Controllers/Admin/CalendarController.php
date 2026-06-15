@@ -134,14 +134,11 @@ class CalendarController extends Controller
             'session_id' => session()->getId()
         ]);
 
-        $data_course_id = get_Role_by_course();
-
+        // The OT page is always for a Student-OT, who has no Spatie role — so
+        // get_Role_by_course() would return [-1] and wipe out the list. Scope by
+        // enrolment (the join below) only, never by the role-course filter.
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->whereDate('end_date', '>=', today());
-
-        if (!empty($data_course_id)) {
-            $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
-        }
 
         // OT page is always scoped to the student's mapped courses.
         $courseMaster = $courseMaster->leftJoin(
@@ -1586,6 +1583,13 @@ class CalendarController extends Controller
             $ratingCheckbox = $request->Ratting_checkbox[$i] ?? 0;
             $remarkCheckbox = $request->Remark_checkbox[$i] ?? 0;
 
+            // On a bulk submit, rows the student left untouched are silently
+            // skipped — they are not errors, just sessions with no feedback yet.
+            $isBulk = !$request->has('submit_index');
+            if ($isBulk && !$content && !$presentation && empty(trim((string) $remarks))) {
+                continue;
+            }
+
             // Validate that ratings are provided if rating checkbox is enabled
             if ($ratingCheckbox == 1) {
                 if (!$content && !$presentation) {
@@ -1628,8 +1632,18 @@ class CalendarController extends Controller
             $inserted++;
         }
 
+        // Summarise errors: show each distinct reason once with a count, so the
+        // flash message stays short instead of repeating the same line per row.
+        $errorSummary = '';
+        if (!empty($errors)) {
+            $errorSummary = collect($errors)
+                ->countBy()
+                ->map(fn($count, $reason) => $count > 1 ? "$reason ($count)" : $reason)
+                ->implode('; ');
+        }
+
         if ($inserted === 0) {
-            $errorMessage = !empty($errors) ? implode(', ', $errors) : 'Please submit at least one feedback.';
+            $errorMessage = $errorSummary !== '' ? $errorSummary : 'Please submit at least one feedback.';
             return back()->withErrors([
                 'error' => $errorMessage
             ]);
@@ -1637,8 +1651,9 @@ class CalendarController extends Controller
 
         // If some succeeded but some failed
         if (!empty($errors) && $inserted > 0) {
+            $failedCount = count($errors);
             $successMessage = "Successfully submitted $inserted feedback(s). " .
-                (!empty($errors) ? 'Some items failed: ' . implode(', ', $errors) : '');
+                "$failedCount item(s) failed: $errorSummary";
             return back()->with('success', $successMessage);
         }
 
