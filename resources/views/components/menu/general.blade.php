@@ -1,5 +1,5 @@
 @php
-    $showHomeEstateMini = hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate');
+    $showHomeEstateMini = hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Estate');
     $homeEstateMiniSelected = $showHomeEstateMini && request('scope') === 'self' && (
         request()->routeIs('admin.estate.request-for-estate')
         || request()->routeIs('admin.estate.generate-estate-bill*')
@@ -37,7 +37,7 @@
                             </li>
                             @endauth
 
-                            @if(hasRole('Super Admin') || hasRole('Admin') || hasRole('Training-Induction'))
+                            @if(hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin'))
                             <!-- Participant / Dashboard Statistics -->
                             <li class="sidebar-item">
                                 <a class="sidebar-link {{ request()->routeIs('admin.dashboard-statistics.*') ? 'active' : '' }}"

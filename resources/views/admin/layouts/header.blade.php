@@ -125,7 +125,7 @@
                                     data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                                     id="setup-tab">
 
-                                    @if(hasRole('Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training-Induction') || hasRole('IST'))
+                                    @if(hasRole('Super Admin')|| hasRole('Mess-Admin') || hasRole('Mess-Staff') || hasRole('Training Induction Admin') || hasRole('Training IST'))
                                     <span>Setup</span>
                                     @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                                     hasRole('Student-OT'))
@@ -172,7 +172,7 @@
                 $unreadCount = (Auth::user() && Auth::user()->user_id)
                     ? notification()->getUnreadCount(
                         Auth::user()->user_id,
-                        hasRole('Admin') ? 10 : null
+                        hasRole('Super Admin') ? 10 : null
                     )
                     : 0;
             @endphp
@@ -207,7 +207,7 @@
                             Auth::user()->user_id,
                             10,
                             false,
-                            hasRole('Admin') ? 10 : null
+                            hasRole('Super Admin') ? 10 : null
                         )
                         : collect();
                 @endphp
@@ -250,7 +250,7 @@
                             data-bs-toggle="tab" role="tab" aria-selected="{{ $activeNavTab === '#tab-setup' ? 'true' : 'false' }}" aria-controls="setup-panel"
                             id="setup-tab-mobile">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">settings</i>
-                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Staff'))
+                            @if(hasRole('Super Admin') || hasRole('Training Induction Admin') ||  hasRole('Staff'))
                             <span>Setup</span>
                             @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
                             hasRole('Student-OT'))
@@ -314,7 +314,7 @@
                                 Auth::user()->user_id,
                                 10,
                                 false,
-                                hasRole('Admin') ? 10 : null
+                                hasRole('Super Admin') ? 10 : null
                             )
                             : collect();
                         @endphp

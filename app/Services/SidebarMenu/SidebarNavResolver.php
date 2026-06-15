@@ -196,7 +196,27 @@ class SidebarNavResolver
             return ['path' => null, 'route_name' => $route, 'query_params' => $queryParams];
         }
 
-        return ['path' => $this->normalizePath($route), 'route_name' => null, 'query_params' => $queryParams];
+        return ['path' => $this->stripTrailingIdSegment($this->normalizePath($route)), 'route_name' => null, 'query_params' => $queryParams];
+    }
+
+    /**
+     * Menu routes occasionally hardcode a specific record id (e.g.
+     * "member/profile/edit/1", "admin/fc/joining-documents/30"). That literal id
+     * prevents the menu from matching the same page for any OTHER id
+     * ("member/profile/edit/11382"), so the request falls through to a broader
+     * parent menu that happens to sit in a DIFFERENT tab — and the page shows up
+     * under the wrong tab. We treat a trailing numeric segment as a wildcard for
+     * the match index only (the stored route/href is untouched, so sidebar links
+     * are unaffected), keeping at least one base segment so a path is never
+     * collapsed to nothing.
+     */
+    protected function stripTrailingIdSegment(string $path): string
+    {
+        if (preg_match('#^(.+)/\d+$#', $path, $m)) {
+            return $m[1];
+        }
+
+        return $path;
     }
 
     protected function entryMatches(array $entry, string $normalizedPath, string $routeName): bool

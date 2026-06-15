@@ -5,18 +5,18 @@
 --}}
 @props(['current' => 'request-for-estate'])
 @php
-    $isHacPersonOnly = hasRole('HAC Person') && !hasRole('Estate') && !hasRole('Admin') && !hasRole('Training-Induction') && !hasRole('Training-MCTP') && !hasRole('IST') && !hasRole('Staff') && !hasRole('Student-OT') && !hasRole('Doctor') && !hasRole('Guest Faculty') && !hasRole('Internal Faculty');
+    $isHacPersonOnly = hasRole('HAC Person') && !hasRole('Estate') && !hasRole('Super Admin') && !hasRole('Training Induction Admin') && !hasRole('Training MCTP Admin') && !hasRole('Training IST') && !hasRole('Staff') && !hasRole('Student-OT') && !hasRole('Doctor') && !hasRole('Guest Faculty') && !hasRole('Internal Faculty');
     // Authority users: Estate/Admin/Super Admin OR HAC Person.
     // Training roles must behave like normal staff (self-service), so they are NOT treated as privileged here.
-    $isPrivilegedEstate = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+    $isPrivilegedEstate = hasRole('Estate') || hasRole('Super Admin') || hasRole('Super Admin');
     $estateSelfServiceRoles = hasRole('Staff')
         || hasRole('Student-OT')
         || hasRole('Doctor')
         || hasRole('Guest Faculty')
         || hasRole('Internal Faculty')
-        || hasRole('Training-Induction')
-        || hasRole('Training-MCTP')
-        || hasRole('IST');
+        || hasRole('Training Induction Admin')
+        || hasRole('Training MCTP Admin')
+        || hasRole('Training IST');
     $hasHacPersonRole = hasRole('HAC Person');
 
     $stages = [
@@ -41,7 +41,7 @@
 
     // Home sidebar personal estate: keep ?scope=self on stepper links so tab stays on Home.
     $estateStepperRouteParams = (request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate')))
+        && (hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Estate')))
         ? ['scope' => 'self']
         : [];
 @endphp
