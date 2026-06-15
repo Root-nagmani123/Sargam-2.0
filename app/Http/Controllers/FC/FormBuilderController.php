@@ -221,15 +221,28 @@ class FormBuilderController extends Controller
 
         $groupLookups = [];
         foreach ($groups as $group) {
-            $groupLookups[$group->group_name] = $this->formService->getGroupLookupData($group->activeGroupFields);
+            $fieldsForLookups = $group->activeGroupFields->isNotEmpty()
+                ? $group->activeGroupFields
+                : $group->groupFields;
+            $groupLookups[$group->group_name] = $this->formService->getGroupLookupData($fieldsForLookups);
         }
+
+        $districtOptions = $this->formService->getDistrictMasterOptions();
 
         $docMasters = collect();
         if ($step->isDocumentsStep()) {
             $docMasters = FcJoiningRelatedDocumentsMaster::where('is_active', 1)->orderBy('display_order')->get();
         }
 
-        return view('admin.form-builder.preview', compact('step', 'fields', 'lookups', 'groups', 'groupLookups', 'docMasters'));
+        return view('admin.form-builder.preview', compact(
+            'step',
+            'fields',
+            'lookups',
+            'groups',
+            'groupLookups',
+            'districtOptions',
+            'docMasters'
+        ));
     }
 
     // ── Private helpers ─────────────────────────────────────────────

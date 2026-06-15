@@ -1,8 +1,8 @@
 -- =============================================================================
--- Build a FRESH dynamic form: "99th Foundation Course Registration"
--- Mirrors the legacy PHP form (PDF) — tab sequence, section headings & fields.
--- Uses the existing dynamic engine ONLY (fc_forms / fc_form_steps /
--- fc_form_fields / fc_form_field_groups / fc_form_group_fields). No code changes.
+-- Build dynamic form: "FC Template" (slug: fc_template)
+-- Full replica of "99th Foundation Course Registration" (fc-99th-fresh) — same
+-- 7 steps, 72 flat fields (step 1), 10 groups (step 2), and all other fields.
+-- Does NOT modify or delete fc-99th-fresh.
 --
 -- Steps:
 --   1 Descriptive Roll                (flat; firsts + seconds + knowledge_hindi)
@@ -13,20 +13,13 @@
 --   6 Special Assistant               (flat; impairment + adjustments + doc)
 --   7 Vision Statement                (flat; single textarea)
 --
--- ASSUMPTIONS (change if wrong — all isolated & easy to edit):
---   • "Background" options = Rural/Urban   (Section 0 / Step 1)
---   • Guardian fields stored in new guardian_* columns on student_master_seconds
---   • Hobbies & Academic Distinction = repeatable rows (replace_all)
---   • Pre-Medical History group (fc_pre_history) always present in Step 2
---
--- HOW TO RUN: set @course_pk below, then run the whole file in phpMyAdmin or
--- `mysql`. SAFE TO RE-RUN: it deletes any existing copy of this form first and
--- only adds columns that don't already exist. Form is created INACTIVE; preview
--- via its admin/edit URL, then flip is_active = 1 when ready.
+-- HOW TO RUN: set @course_pk if linking to a programme, then run in phpMyAdmin or
+-- `mysql`. SAFE TO RE-RUN: deletes only fc_template (not fc-99th-fresh). Column
+-- adds are idempotent. Form is created INACTIVE; set is_active = 1 when ready.
 -- =============================================================================
 
-SET @course_pk = 11;                       -- <<< 99th Foundation Course (course_master.pk). CHANGE if needed.
-SET @form_slug = 'fc-99th-fresh';          -- <<< unique slug for the new form
+SET @course_pk = NULL;                       -- <<< course_master.pk (optional). Set when assigning to a course.
+SET @form_slug = 'fc_template';              -- <<< unique slug for the template form
 SET @now = NOW();
 SET SQL_SAFE_UPDATES = 0;                  -- allow the cleanup DELETEs below
 
@@ -56,9 +49,9 @@ DELETE FROM fc_forms      WHERE id      = @old_id;
 -- SECTION 1 · New columns the PDF needs (idempotent — only adds if missing)
 -- ─────────────────────────────────────────────────────────────────────────────
 
-DROP PROCEDURE IF EXISTS fc99_add_col;
+DROP PROCEDURE IF EXISTS fc_template_add_col;
 DELIMITER $$
-CREATE PROCEDURE fc99_add_col(IN p_tbl VARCHAR(64), IN p_col VARCHAR(64), IN p_def TEXT)
+CREATE PROCEDURE fc_template_add_col(IN p_tbl VARCHAR(64), IN p_col VARCHAR(64), IN p_def TEXT)
 BEGIN
     IF NOT EXISTS (
         SELECT 1 FROM information_schema.COLUMNS
@@ -70,89 +63,89 @@ BEGIN
 END$$
 DELIMITER ;
 
-CALL fc99_add_col('student_master_firsts','background','`background` VARCHAR(100) NULL');
+CALL fc_template_add_col('student_master_firsts','background','`background` VARCHAR(100) NULL');
 
-CALL fc99_add_col('student_master_seconds','birth_area_type','`birth_area_type` VARCHAR(50) NULL');
-CALL fc99_add_col('student_master_seconds','guardian_or_spouse','`guardian_or_spouse` VARCHAR(20) NULL');
-CALL fc99_add_col('student_master_seconds','guardian_first_name','`guardian_first_name` VARCHAR(100) NULL');
-CALL fc99_add_col('student_master_seconds','guardian_middle_name','`guardian_middle_name` VARCHAR(100) NULL');
-CALL fc99_add_col('student_master_seconds','guardian_last_name','`guardian_last_name` VARCHAR(100) NULL');
-CALL fc99_add_col('student_master_seconds','guardian_contact_no','`guardian_contact_no` VARCHAR(20) NULL');
-CALL fc99_add_col('student_master_seconds','guardian_email','`guardian_email` VARCHAR(150) NULL');
-CALL fc99_add_col('student_master_seconds','perm_district','`perm_district` VARCHAR(100) NULL');
-CALL fc99_add_col('student_master_seconds','perm_city_name','`perm_city_name` VARCHAR(150) NULL');
-CALL fc99_add_col('student_master_seconds','pres_district','`pres_district` VARCHAR(100) NULL');
-CALL fc99_add_col('student_master_seconds','pres_city_name','`pres_city_name` VARCHAR(150) NULL');
-CALL fc99_add_col('student_master_seconds','highest_stream_id','`highest_stream_id` BIGINT NULL');
-CALL fc99_add_col('student_master_seconds','matric_state_id','`matric_state_id` BIGINT NULL');
-CALL fc99_add_col('student_master_seconds','matric_district','`matric_district` VARCHAR(100) NULL');
-CALL fc99_add_col('student_master_seconds','matric_city','`matric_city` VARCHAR(100) NULL');
-CALL fc99_add_col('student_master_seconds','matric_city_name','`matric_city_name` VARCHAR(150) NULL');
-CALL fc99_add_col('student_master_seconds','cse_attempts','`cse_attempts` INT NULL');
-CALL fc99_add_col('student_master_seconds','previous_service_id','`previous_service_id` BIGINT NULL');
+CALL fc_template_add_col('student_master_seconds','birth_area_type','`birth_area_type` VARCHAR(50) NULL');
+CALL fc_template_add_col('student_master_seconds','guardian_or_spouse','`guardian_or_spouse` VARCHAR(20) NULL');
+CALL fc_template_add_col('student_master_seconds','guardian_first_name','`guardian_first_name` VARCHAR(100) NULL');
+CALL fc_template_add_col('student_master_seconds','guardian_middle_name','`guardian_middle_name` VARCHAR(100) NULL');
+CALL fc_template_add_col('student_master_seconds','guardian_last_name','`guardian_last_name` VARCHAR(100) NULL');
+CALL fc_template_add_col('student_master_seconds','guardian_contact_no','`guardian_contact_no` VARCHAR(20) NULL');
+CALL fc_template_add_col('student_master_seconds','guardian_email','`guardian_email` VARCHAR(150) NULL');
+CALL fc_template_add_col('student_master_seconds','perm_district','`perm_district` VARCHAR(100) NULL');
+CALL fc_template_add_col('student_master_seconds','perm_city_name','`perm_city_name` VARCHAR(150) NULL');
+CALL fc_template_add_col('student_master_seconds','pres_district','`pres_district` VARCHAR(100) NULL');
+CALL fc_template_add_col('student_master_seconds','pres_city_name','`pres_city_name` VARCHAR(150) NULL');
+CALL fc_template_add_col('student_master_seconds','highest_stream_id','`highest_stream_id` BIGINT NULL');
+CALL fc_template_add_col('student_master_seconds','matric_state_id','`matric_state_id` BIGINT NULL');
+CALL fc_template_add_col('student_master_seconds','matric_district','`matric_district` VARCHAR(100) NULL');
+CALL fc_template_add_col('student_master_seconds','matric_city','`matric_city` VARCHAR(100) NULL');
+CALL fc_template_add_col('student_master_seconds','matric_city_name','`matric_city_name` VARCHAR(150) NULL');
+CALL fc_template_add_col('student_master_seconds','cse_attempts','`cse_attempts` INT NULL');
+CALL fc_template_add_col('student_master_seconds','previous_service_id','`previous_service_id` BIGINT NULL');
 
-CALL fc99_add_col('student_master_qualification_details','institution_type','`institution_type` VARCHAR(50) NULL');
-CALL fc99_add_col('student_master_qualification_details','to_year','`to_year` VARCHAR(10) NULL');
-CALL fc99_add_col('student_master_qualification_details','division','`division` VARCHAR(20) NULL');
+CALL fc_template_add_col('student_master_qualification_details','institution_type','`institution_type` VARCHAR(50) NULL');
+CALL fc_template_add_col('student_master_qualification_details','to_year','`to_year` VARCHAR(10) NULL');
+CALL fc_template_add_col('student_master_qualification_details','division','`division` VARCHAR(20) NULL');
 
-CALL fc99_add_col('student_cloth_size_master_details','track_suit_size','`track_suit_size` VARCHAR(20) NULL');
+CALL fc_template_add_col('student_cloth_size_master_details','track_suit_size','`track_suit_size` VARCHAR(20) NULL');
 
-CALL fc99_add_col('student_master_spouse_masters','spouse_in_cse','`spouse_in_cse` VARCHAR(10) NULL');
+CALL fc_template_add_col('student_master_spouse_masters','spouse_in_cse','`spouse_in_cse` VARCHAR(10) NULL');
 
-CALL fc99_add_col('new_registration_bank_details_masters','doc_aadhar_path','`doc_aadhar_path` VARCHAR(255) NULL');
-CALL fc99_add_col('new_registration_bank_details_masters','doc_pan_path','`doc_pan_path` VARCHAR(255) NULL');
-CALL fc99_add_col('new_registration_bank_details_masters','doc_cancel_cheque_path','`doc_cancel_cheque_path` VARCHAR(255) NULL');
+CALL fc_template_add_col('new_registration_bank_details_masters','doc_aadhar_path','`doc_aadhar_path` VARCHAR(255) NULL');
+CALL fc_template_add_col('new_registration_bank_details_masters','doc_pan_path','`doc_pan_path` VARCHAR(255) NULL');
+CALL fc_template_add_col('new_registration_bank_details_masters','doc_cancel_cheque_path','`doc_cancel_cheque_path` VARCHAR(255) NULL');
 
 -- Core student-master columns the form writes to that may be absent on leaner
 -- installs (present on some DBs, missing on others). Idempotent — added if missing.
-CALL fc99_add_col('student_master_firsts','full_name_hindi','`full_name_hindi` varchar(200) NULL');
-CALL fc99_add_col('student_master_firsts','first_name','`first_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_firsts','middle_name','`middle_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_firsts','last_name','`last_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_firsts','pan_card','`pan_card` varchar(20) NULL');
-CALL fc99_add_col('student_master_firsts','aadhar_number','`aadhar_number` varchar(20) NULL');
-CALL fc99_add_col('student_master_firsts','passport_no','`passport_no` varchar(20) NULL');
-CALL fc99_add_col('student_master_firsts','alt_mobile_no','`alt_mobile_no` varchar(20) NULL');
-CALL fc99_add_col('student_master_firsts','alt_email','`alt_email` varchar(150) NULL');
-CALL fc99_add_col('student_master_firsts','instagram_id','`instagram_id` varchar(100) NULL');
-CALL fc99_add_col('student_master_firsts','twitter_id','`twitter_id` varchar(100) NULL');
-CALL fc99_add_col('student_master_firsts','vision_statement','`vision_statement` text NULL');
-CALL fc99_add_col('student_master_seconds','birth_state_id','`birth_state_id` bigint unsigned NULL');
-CALL fc99_add_col('student_master_seconds','birth_district','`birth_district` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','birth_city','`birth_city` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','mother_first_name','`mother_first_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','mother_middle_name','`mother_middle_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','mother_last_name','`mother_last_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','mother_qualification_id','`mother_qualification_id` bigint unsigned NULL');
-CALL fc99_add_col('student_master_seconds','mother_profession_id','`mother_profession_id` bigint unsigned NULL');
-CALL fc99_add_col('student_master_seconds','mother_annual_income','`mother_annual_income` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','father_first_name','`father_first_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','father_middle_name','`father_middle_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','father_last_name','`father_last_name` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','father_qualification_id','`father_qualification_id` bigint unsigned NULL');
-CALL fc99_add_col('student_master_seconds','father_annual_income','`father_annual_income` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','domicile_district','`domicile_district` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','dietary_preference','`dietary_preference` varchar(50) NULL');
-CALL fc99_add_col('student_master_seconds','high_altitude_condition','`high_altitude_condition` varchar(10) NULL');
-CALL fc99_add_col('student_master_seconds','high_altitude_remarks','`high_altitude_remarks` text NULL');
-CALL fc99_add_col('student_master_seconds','health_asthma','`health_asthma` varchar(10) NULL');
-CALL fc99_add_col('student_master_seconds','health_lung_disease','`health_lung_disease` varchar(50) NULL');
-CALL fc99_add_col('student_master_seconds','health_kidney_disease','`health_kidney_disease` varchar(10) NULL');
-CALL fc99_add_col('student_master_seconds','health_diabetes','`health_diabetes` varchar(10) NULL');
-CALL fc99_add_col('student_master_seconds','health_blood_disorder','`health_blood_disorder` varchar(50) NULL');
-CALL fc99_add_col('student_master_seconds','health_immunocompromised','`health_immunocompromised` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','health_liver_disease','`health_liver_disease` varchar(10) NULL');
-CALL fc99_add_col('student_master_seconds','health_cardiac_condition','`health_cardiac_condition` varchar(100) NULL');
-CALL fc99_add_col('student_master_seconds','health_pregnant_lactating','`health_pregnant_lactating` varchar(10) NULL');
-CALL fc99_add_col('student_master_seconds','health_additional_info','`health_additional_info` text NULL');
+CALL fc_template_add_col('student_master_firsts','full_name_hindi','`full_name_hindi` varchar(200) NULL');
+CALL fc_template_add_col('student_master_firsts','first_name','`first_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_firsts','middle_name','`middle_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_firsts','last_name','`last_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_firsts','pan_card','`pan_card` varchar(20) NULL');
+CALL fc_template_add_col('student_master_firsts','aadhar_number','`aadhar_number` varchar(20) NULL');
+CALL fc_template_add_col('student_master_firsts','passport_no','`passport_no` varchar(20) NULL');
+CALL fc_template_add_col('student_master_firsts','alt_mobile_no','`alt_mobile_no` varchar(20) NULL');
+CALL fc_template_add_col('student_master_firsts','alt_email','`alt_email` varchar(150) NULL');
+CALL fc_template_add_col('student_master_firsts','instagram_id','`instagram_id` varchar(100) NULL');
+CALL fc_template_add_col('student_master_firsts','twitter_id','`twitter_id` varchar(100) NULL');
+CALL fc_template_add_col('student_master_firsts','vision_statement','`vision_statement` text NULL');
+CALL fc_template_add_col('student_master_seconds','birth_state_id','`birth_state_id` bigint unsigned NULL');
+CALL fc_template_add_col('student_master_seconds','birth_district','`birth_district` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','birth_city','`birth_city` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','mother_first_name','`mother_first_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','mother_middle_name','`mother_middle_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','mother_last_name','`mother_last_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','mother_qualification_id','`mother_qualification_id` bigint unsigned NULL');
+CALL fc_template_add_col('student_master_seconds','mother_profession_id','`mother_profession_id` bigint unsigned NULL');
+CALL fc_template_add_col('student_master_seconds','mother_annual_income','`mother_annual_income` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','father_first_name','`father_first_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','father_middle_name','`father_middle_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','father_last_name','`father_last_name` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','father_qualification_id','`father_qualification_id` bigint unsigned NULL');
+CALL fc_template_add_col('student_master_seconds','father_annual_income','`father_annual_income` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','domicile_district','`domicile_district` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','dietary_preference','`dietary_preference` varchar(50) NULL');
+CALL fc_template_add_col('student_master_seconds','high_altitude_condition','`high_altitude_condition` varchar(10) NULL');
+CALL fc_template_add_col('student_master_seconds','high_altitude_remarks','`high_altitude_remarks` text NULL');
+CALL fc_template_add_col('student_master_seconds','health_asthma','`health_asthma` varchar(10) NULL');
+CALL fc_template_add_col('student_master_seconds','health_lung_disease','`health_lung_disease` varchar(50) NULL');
+CALL fc_template_add_col('student_master_seconds','health_kidney_disease','`health_kidney_disease` varchar(10) NULL');
+CALL fc_template_add_col('student_master_seconds','health_diabetes','`health_diabetes` varchar(10) NULL');
+CALL fc_template_add_col('student_master_seconds','health_blood_disorder','`health_blood_disorder` varchar(50) NULL');
+CALL fc_template_add_col('student_master_seconds','health_immunocompromised','`health_immunocompromised` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','health_liver_disease','`health_liver_disease` varchar(10) NULL');
+CALL fc_template_add_col('student_master_seconds','health_cardiac_condition','`health_cardiac_condition` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','health_pregnant_lactating','`health_pregnant_lactating` varchar(10) NULL');
+CALL fc_template_add_col('student_master_seconds','health_additional_info','`health_additional_info` text NULL');
 
 -- Step completion-flag columns (written on each step's target table when saved).
-CALL fc99_add_col('student_master_firsts','step1_completed','`step1_completed` tinyint(1) NULL DEFAULT 0');
-CALL fc99_add_col('student_master_seconds','health_completed','`health_completed` tinyint(1) NULL DEFAULT 0');
-CALL fc99_add_col('student_master_firsts','vision_completed','`vision_completed` tinyint(1) NULL DEFAULT 0');
-CALL fc99_add_col('student_iosr_reasonable_adjust_masters','special_completed','`special_completed` tinyint(1) NULL DEFAULT 0');
+CALL fc_template_add_col('student_master_firsts','step1_completed','`step1_completed` tinyint(1) NULL DEFAULT 0');
+CALL fc_template_add_col('student_master_seconds','health_completed','`health_completed` tinyint(1) NULL DEFAULT 0');
+CALL fc_template_add_col('student_master_firsts','vision_completed','`vision_completed` tinyint(1) NULL DEFAULT 0');
+CALL fc_template_add_col('student_iosr_reasonable_adjust_masters','special_completed','`special_completed` tinyint(1) NULL DEFAULT 0');
 
-DROP PROCEDURE IF EXISTS fc99_add_col;
+DROP PROCEDURE IF EXISTS fc_template_add_col;
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -160,7 +153,7 @@ DROP PROCEDURE IF EXISTS fc99_add_col;
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO fc_forms (form_name, form_slug, description, icon, consolidation_table, user_identifier, is_active, course_master_pk, created_at, updated_at)
-VALUES ('99th Foundation Course Registration', @form_slug, 'Descriptive roll based registration for the 99th Foundation Course.', 'bi-file-text', 'student_masters', 'user_id', 0, @course_pk, @now, @now);
+VALUES ('FC Template', @form_slug, 'Reusable template — same structure as 99th Foundation Course Registration (fc-99th-fresh).', 'bi-file-text', 'student_masters', 'user_id', 0, @course_pk, @now, @now);
 SET @form_id = LAST_INSERT_ID();
 
 
@@ -169,7 +162,7 @@ SET @form_id = LAST_INSERT_ID();
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO fc_form_steps (form_id, step_name, step_slug, step_number, target_table, completion_column, tracker_column, is_active, description, icon, created_at, updated_at)
-VALUES (@form_id, 'Descriptive Roll', 'fc99-step1', 1, 'student_master_firsts', 'step1_completed', 'step1_done', 1, 'Personal, family, address, physical & language details.', 'bi-person-fill', @now, @now);
+VALUES (@form_id, 'Descriptive Roll', 'fc-template-step1', 1, 'student_master_firsts', 'step1_completed', 'step1_done', 1, 'Personal, family, address, physical & language details.', 'bi-person-fill', @now, @now);
 SET @s1 = LAST_INSERT_ID();
 
 INSERT INTO fc_form_fields
@@ -265,7 +258,7 @@ VALUES
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO fc_form_steps (form_id, step_name, step_slug, step_number, target_table, completion_column, tracker_column, is_active, description, icon, created_at, updated_at)
-VALUES (@form_id, 'Descriptive Roll Continue…', 'fc99-step3', 2, 'student_masters', NULL, 'step3_done', 1, 'Languages, education, employment, distinctions, hobbies, dress & spouse.', 'bi-list-ul', @now, @now);
+VALUES (@form_id, 'Descriptive Roll Continue…', 'fc-template-step2', 2, 'student_masters', NULL, 'step3_done', 1, 'Languages, education, employment, distinctions, hobbies, dress & spouse.', 'bi-list-ul', @now, @now);
 SET @s2 = LAST_INSERT_ID();
 
 -- Group 1: Languages Known (replace_all)
@@ -379,7 +372,7 @@ INSERT INTO fc_form_group_fields (group_id, field_name, label, field_type, targe
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO fc_form_steps (form_id, step_name, step_slug, step_number, target_table, completion_column, tracker_column, is_active, description, icon, created_at, updated_at)
-VALUES (@form_id, 'Joining Documents', 'fc99-joining-documents', 3, 'fc_joining_documents_user_uploads', NULL, 'docs_done', 1, 'Upload duly filled and signed joining documents.', 'bi-folder-fill', @now, @now);
+VALUES (@form_id, 'Joining Documents', 'fc-template-joining-documents', 3, 'fc_joining_documents_user_uploads', NULL, 'docs_done', 1, 'Upload duly filled and signed joining documents.', 'bi-folder-fill', @now, @now);
 SET @s4 = LAST_INSERT_ID();
 INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table, target_column, validation_rules, is_required, display_order, section_heading, css_class, file_max_kb, file_extensions, is_active, created_at, updated_at) VALUES
 (@s4,'doc_family_details','Family Details Form (Form-3) of Rule 54(12) of CCS (Pensions) Rules, 1972','file','fc_joining_documents_user_uploads','admin_family_details_form','nullable|file|mimes:jpeg,jpg,png,pdf|max:5120',0,1,'Administration Section Related Documents','col-md-6',5120,'jpeg,jpg,png,pdf',1,@now,@now),
@@ -404,7 +397,7 @@ INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO fc_form_steps (form_id, step_name, step_slug, step_number, target_table, completion_column, tracker_column, is_active, description, icon, created_at, updated_at)
-VALUES (@form_id, 'Bank Details', 'fc99-bank', 4, 'new_registration_bank_details_masters', NULL, 'bank_done', 1, 'Bank account details and supporting documents.', 'bi-bank', @now, @now);
+VALUES (@form_id, 'Bank Details', 'fc-template-bank', 4, 'new_registration_bank_details_masters', NULL, 'bank_done', 1, 'Bank account details and supporting documents.', 'bi-bank', @now, @now);
 SET @s5 = LAST_INSERT_ID();
 INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table, target_column, validation_rules, is_required, display_order, section_heading, css_class, file_max_kb, file_extensions, is_active, created_at, updated_at) VALUES
 (@s5,'account_holder_name','Account Holder Name','text','new_registration_bank_details_masters','account_holder_name','required|string|max:200',1,1,'Bank Details','col-md-6',NULL,NULL,1,@now,@now),
@@ -421,7 +414,7 @@ INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO fc_form_steps (form_id, step_name, step_slug, step_number, target_table, completion_column, tracker_column, is_active, description, icon, created_at, updated_at)
-VALUES (@form_id, 'Health Risk Factors', 'fc99-health', 5, 'student_master_seconds', 'health_completed', 'health_done', 1, 'Tick the vulnerabilities / risk factors that apply in your case.', 'bi-heart-pulse-fill', @now, @now);
+VALUES (@form_id, 'Health Risk Factors', 'fc-template-health', 5, 'student_master_seconds', 'health_completed', 'health_done', 1, 'Tick the vulnerabilities / risk factors that apply in your case.', 'bi-heart-pulse-fill', @now, @now);
 SET @s6 = LAST_INSERT_ID();
 INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table, target_column, validation_rules, is_required, display_order, options_json, section_heading, css_class, is_active, created_at, updated_at) VALUES
 (@s6,'health_asthma','Asthma','radio','student_master_seconds','health_asthma','required|in:No,Yes',1,1,'[{"value":"No","label":"No"},{"value":"Yes","label":"Yes"}]','Health Vulnerabilities Risk Factors','col-md-12',1,@now,@now),
@@ -441,7 +434,7 @@ INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO fc_form_steps (form_id, step_name, step_slug, step_number, target_table, completion_column, tracker_column, is_active, description, icon, created_at, updated_at)
-VALUES (@form_id, 'Special Assistant', 'fc99-special', 6, 'student_iosr_reasonable_adjust_masters', 'special_completed', 'special_done', 1, 'Physical impairment information and reasonable adjustments.', 'bi-universal-access', @now, @now);
+VALUES (@form_id, 'Special Assistant', 'fc-template-special', 6, 'student_iosr_reasonable_adjust_masters', 'special_completed', 'special_done', 1, 'Physical impairment information and reasonable adjustments.', 'bi-universal-access', @now, @now);
 SET @s7 = LAST_INSERT_ID();
 INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table, target_column, validation_rules, is_required, display_order, section_heading, css_class, file_max_kb, file_extensions, is_active, created_at, updated_at) VALUES
 (@s7,'physical_impairment_info','Relevant information relating to physical impairment','textarea','student_iosr_reasonable_adjust_masters','physical_impairment_info','nullable|string|max:1000',0,1,'Physical Impairment','col-md-12',NULL,NULL,1,@now,@now),
@@ -455,7 +448,7 @@ INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table
 -- ─────────────────────────────────────────────────────────────────────────────
 
 INSERT INTO fc_form_steps (form_id, step_name, step_slug, step_number, target_table, completion_column, tracker_column, is_active, description, icon, created_at, updated_at)
-VALUES (@form_id, 'Vision Statement', 'fc99-vision', 7, 'student_master_firsts', 'vision_completed', 'vision_done', 1, 'Statement of Vision and Aspirations of an Officer Trainee.', 'bi-lightbulb-fill', @now, @now);
+VALUES (@form_id, 'Vision Statement', 'fc-template-vision', 7, 'student_master_firsts', 'vision_completed', 'vision_done', 1, 'Statement of Vision and Aspirations of an Officer Trainee.', 'bi-lightbulb-fill', @now, @now);
 SET @s8 = LAST_INSERT_ID();
 INSERT INTO fc_form_fields (step_id, field_name, label, field_type, target_table, target_column, validation_rules, is_required, display_order, placeholder, section_heading, css_class, is_active, created_at, updated_at) VALUES
 (@s8,'vision_statement','Statement of Vision and Aspirations','textarea','student_master_firsts','vision_statement','required|string|min:50|max:1500',1,1,'Write about 100 words on your vision and aspiration as a civil servant.','Vision Statement','col-md-12',1,@now,@now);

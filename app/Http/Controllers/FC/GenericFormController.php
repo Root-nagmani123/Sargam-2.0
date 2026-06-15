@@ -125,12 +125,13 @@ class GenericFormController extends Controller
                 'allSteps',
                 'prevStep',
                 'nextStep'
-            ));
+            ))->with('districtOptions', $this->formService->getDistrictMasterOptions());
         }
 
         // Flat fields step
         $lookups      = $this->formService->getLookupData($fields);
         $existingData = $this->formService->getExistingData($step->step_slug, $userId);
+        $districtOptions = $this->formService->getDistrictMasterOptions();
 
         $allSteps  = $form->activeSteps;
         $stepIndex = $allSteps->search(fn($s) => $s->id === $step->id);
@@ -138,14 +139,15 @@ class GenericFormController extends Controller
         $nextStep  = $stepIndex < $allSteps->count() - 1 ? $allSteps[$stepIndex + 1] : null;
 
         return view('forms.step-fields', [
-            'form'         => $form,
-            'step'         => $step,
-            'fields'       => $fields,
-            'lookups'      => $lookups,
-            'existingData' => $existingData,
-            'allSteps'     => $allSteps,
-            'prevStep'     => $prevStep,
-            'nextStep'     => $nextStep,
+            'form'            => $form,
+            'step'            => $step,
+            'fields'          => $fields,
+            'lookups'         => $lookups,
+            'existingData'    => $existingData,
+            'districtOptions' => $districtOptions,
+            'allSteps'        => $allSteps,
+            'prevStep'        => $prevStep,
+            'nextStep'        => $nextStep,
         ]);
     }
 
@@ -177,8 +179,9 @@ class GenericFormController extends Controller
             }
 
             $single = collect([$field]);
+            $existingData = $this->formService->getExistingDataForStep($step, $userId);
             $this->formService->assertMultipartUploadsValid($request, $single);
-            $rules = $this->formService->buildValidationRules($single);
+            $rules = $this->formService->buildValidationRules($single, $step, $userId, $existingData);
             [$customMessages, $customAttributes] = $this->formService->validationMessagesAndAttributes($single);
             $validator = Validator::make($request->all(), $rules, $customMessages, $customAttributes);
             if ($validator->fails()) {
@@ -333,9 +336,12 @@ class GenericFormController extends Controller
      */
     private function validateFlatStepOrRedirect(Request $request, FcForm $form, FcFormStep $step, $fields)
     {
+        $userId = Auth::id();
+        $existingData = $this->formService->getExistingDataForStep($step, $userId);
+
         $this->formService->assertMultipartUploadsValid($request, $fields);
 
-        $rules = $this->formService->buildValidationRules($fields);
+        $rules = $this->formService->buildValidationRules($fields, $step, $userId, $existingData);
         [$customMessages, $customAttributes] = $this->formService->validationMessagesAndAttributes($fields);
         $validator = Validator::make($request->all(), $rules, $customMessages, $customAttributes);
 
@@ -353,9 +359,12 @@ class GenericFormController extends Controller
      */
     private function validateGroupStepOrRedirect(Request $request, FcForm $form, FcFormStep $step, FcFormFieldGroup $group, $groupFields)
     {
+        $userId = Auth::id();
+        $existingRows = $this->formService->getExistingGroupRows($group, $userId);
+
         $this->formService->assertMultipartUploadsValid($request, $groupFields, $group->group_name);
 
-        $rules = $this->formService->buildGroupValidationRules($group);
+        $rules = $this->formService->buildGroupValidationRules($group, $userId, $existingRows);
         [$customMessages, $customAttributes] = $this->formService->validationMessagesAndAttributes($groupFields, $group->group_name);
         $validator = Validator::make($request->all(), $rules, $customMessages, $customAttributes);
 

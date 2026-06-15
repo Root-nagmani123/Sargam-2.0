@@ -4,9 +4,10 @@
     $groupFields = $group->activeGroupFields->isNotEmpty()
         ? $group->activeGroupFields
         : $group->groupFields;
+    $isReadonly = $readonly ?? false;
 @endphp
 
-@php $hideRemoveRow = ($group->max_rows <= 1 && $group->min_rows >= 1); @endphp
+@php $hideRemoveRow = ($group->max_rows <= 1 && $group->min_rows >= 1) || $isReadonly; @endphp
 <div class="repeatable-row border rounded p-3 mb-2 bg-light position-relative" data-index="{{ $i }}">
     <div class="row g-2">
         @foreach($groupFields as $gf)
@@ -21,6 +22,17 @@
                 $options     = $gf->decoded_options ?? [];
                 $valCol      = $gf->lookup_value_column ?? 'id';
                 $lblCol      = $gf->lookup_label_column ?? 'name';
+                $isDistrictField = ($gf->lookup_table ?? '') === 'state_district_mapping'
+                    || str_ends_with($gf->field_name, '_district')
+                    || str_contains(strtolower((string) $gf->label), 'district');
+                $districtRows = $districtOptions ?? collect();
+                $pairedStateField = str_ends_with($gf->field_name, '_district')
+                    ? str_replace('_district', '_state_id', $gf->field_name)
+                    : null;
+                $pairedStateInputName = $pairedStateField ? "{$groupName}[{$i}][{$pairedStateField}]" : null;
+                $isStateLookup = $gf->field_type === 'select'
+                    && $gf->lookup_table
+                    && str_contains(strtolower((string) $gf->lookup_table), 'state');
             @endphp
             <div class="{{ $gf->css_class }}">
                 <label class="form-label small fw-semibold">
@@ -28,6 +40,22 @@
                     @if($gf->is_required)<span class="text-danger">*</span>@endif
                 </label>
 
+                @if($isDistrictField)
+                    <select name="{{ $fieldName }}"
+                            class="form-select form-select-sm fc-district-select @error($errorKey) is-invalid @enderror"
+                            @if($pairedStateInputName) data-fc-state-field="{{ $pairedStateInputName }}" @endif
+                            @if($gf->is_required) data-required="1" @endif
+                            {{ $isReadonly ? 'disabled' : '' }}>
+                        <option value="">-- Select District --</option>
+                        @foreach($districtRows as $item)
+                            <option value="{{ $item->district_name }}"
+                                    data-state-id="{{ $item->state_master_pk }}"
+                                    {{ (string) $fieldValue === (string) $item->district_name ? 'selected' : '' }}>
+                                {{ $item->district_name }}
+                            </option>
+                        @endforeach
+                    </select>
+                @else
                 @switch($gf->field_type)
                     @case('text')
                     @case('email')
@@ -36,22 +64,32 @@
                         <input type="{{ $gf->field_type }}" name="{{ $fieldName }}"
                                class="form-control form-control-sm @error($errorKey) is-invalid @enderror"
                                @if($gf->is_required) data-required="1" @endif
-                               value="{{ $fieldValue }}" placeholder="{{ $gf->placeholder ?? '' }}">
+                               value="{{ $fieldValue }}" placeholder="{{ $gf->placeholder ?? '' }}"
+                               {{ $isReadonly ? 'disabled' : '' }}>
                         @break
                     @case('textarea')
                         <textarea name="{{ $fieldName }}"
                                   class="form-control form-control-sm @error($errorKey) is-invalid @enderror"
                                   @if($gf->is_required) data-required="1" @endif
-                                  rows="2" placeholder="{{ $gf->placeholder ?? '' }}">{{ $fieldValue }}</textarea>
+                                  rows="2" placeholder="{{ $gf->placeholder ?? '' }}"
+                                  {{ $isReadonly ? 'disabled' : '' }}>{{ $fieldValue }}</textarea>
                         @break
                     @case('select')
                         <select name="{{ $fieldName }}"
                                 @if($gf->is_required) data-required="1" @endif
-                                class="form-select form-select-sm {{ str_contains($gf->css_class ?? '', 'select2-field') ? 'select2-dynamic' : '' }} @error($errorKey) is-invalid @enderror">
+                                class="form-select form-select-sm {{ str_contains($gf->css_class ?? '', 'select2-field') ? 'select2-dynamic' : '' }} @error($errorKey) is-invalid @enderror @if($isStateLookup) fc-state-select @endif"
+                                @if($isStateLookup && str_ends_with($gf->field_name, '_state_id'))
+                                    data-fc-country-field="{{ str_replace('_state_id', '_country_id', $gf->field_name) }}"
+                                @endif
+                                {{ $isReadonly ? 'disabled' : '' }}>
                             <option value="">-- Select --</option>
                             @if(count($lookupItems) > 0)
                                 @foreach($lookupItems as $item)
-                                    <option value="{{ $item->{$valCol} }}" {{ (string)$fieldValue === (string)$item->{$valCol} ? 'selected' : '' }}>{{ $item->{$lblCol} }}</option>
+                                    <option value="{{ $item->{$valCol} }}"
+                                            @if($isStateLookup && isset($item->country_master_pk))
+                                                data-country-id="{{ $item->country_master_pk }}"
+                                            @endif
+                                            {{ (string)$fieldValue === (string)$item->{$valCol} ? 'selected' : '' }}>{{ $item->{$lblCol} }}</option>
                                 @endforeach
                             @elseif(count($options) > 0)
                                 @foreach($options as $opt)
@@ -78,7 +116,8 @@
                                         <input class="form-check-input @error($errorKey) is-invalid @enderror" type="checkbox"
                                                name="{{ $fieldName }}[]" value="{{ $gOptVal }}"
                                                id="fc_gcb_{{ $gf->id }}_{{ $i }}_{{ $oi }}"
-                                               {{ in_array($gOptVal, $selectedG, true) ? 'checked' : '' }}>
+                                               {{ in_array($gOptVal, $selectedG, true) ? 'checked' : '' }}
+                                               {{ $isReadonly ? 'disabled' : '' }}>
                                         <label class="form-check-label small" for="fc_gcb_{{ $gf->id }}_{{ $i }}_{{ $oi }}">{{ $gOptLbl }}</label>
                                     </div>
                                 @endforeach
@@ -88,7 +127,8 @@
                                 <input class="form-check-input @error($errorKey) is-invalid @enderror" type="checkbox"
                                        name="{{ $fieldName }}" value="1"
                                        id="fc_gcb_single_{{ $gf->id }}_{{ $i }}"
-                                       {{ fc_checkbox_single_checked($fieldValue) ? 'checked' : '' }}>
+                                       {{ fc_checkbox_single_checked($fieldValue) ? 'checked' : '' }}
+                                       {{ $isReadonly ? 'disabled' : '' }}>
                                 <label class="form-check-label small" for="fc_gcb_single_{{ $gf->id }}_{{ $i }}">{{ $gf->label }}</label>
                             </div>
                         @endif
@@ -103,13 +143,15 @@
                         <input type="file" name="{{ $fieldName }}"
                                class="form-control form-control-sm fc-file-upload @error($errorKey) is-invalid @enderror"
                                accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png"
-                               data-max-kb="{{ $gMaxKbAttr }}">
+                               data-max-kb="{{ $gMaxKbAttr }}"
+                               {{ $isReadonly ? 'disabled' : '' }}>
                         <div class="form-text text-muted">{{ $fileHint }}</div>
                         @if(! empty($existingFilePath))
                             <div class="small mt-1 dynamic-current-file-hint">Current file: <a href="{{ asset($existingFilePath) }}" target="_blank" rel="noopener">View</a></div>
                         @endif
                         @break
                 @endswitch
+                @endif
 
                 @error($errorKey)
                     <div class="invalid-feedback">{{ $message }}</div>

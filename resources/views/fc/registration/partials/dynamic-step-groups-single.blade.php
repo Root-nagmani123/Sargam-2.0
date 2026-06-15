@@ -31,6 +31,17 @@
         @include('fc.registration.partials.fc-stepper')
     @endisset
 
+    @if($errors->any())
+        <div class="alert alert-danger shadow-sm mb-3" role="alert" id="fc-validation-alert">
+            <strong class="d-block mb-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Please fix the following errors:</strong>
+            <ul class="mb-0 ps-3">
+                @foreach($errors->all() as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="card fc-card border-0 shadow-sm">
         <div class="card-header bg-white py-3">
             <h5 class="mb-1"><i class="bi {{ $step->icon ?? 'bi-journal-text' }} me-2"></i>{{ $step->step_name }}</h5>
@@ -87,6 +98,7 @@
                                         @foreach($rows as $i => $row)
                                             @include('fc.registration.partials.dynamic-group-row', [
                                                 'group' => $group, 'i' => $i, 'row' => $row, 'groupLookups' => $gLookups,
+                                                'districtOptions' => $districtOptions ?? collect(),
                                             ])
                                         @endforeach
                                     @else
@@ -94,6 +106,7 @@
                                         @for($i = 0; $i < $starterRows; $i++)
                                             @include('fc.registration.partials.dynamic-group-row', [
                                                 'group' => $group, 'i' => $i, 'row' => (object)[], 'groupLookups' => $gLookups,
+                                                'districtOptions' => $districtOptions ?? collect(),
                                             ])
                                         @endfor
                                     @endif
@@ -144,6 +157,8 @@
 @endpush
 
 @push('scripts')
+@include('fc.registration.partials.fc-form-validation')
+@include('fc.registration.partials.fc-location-cascade-script')
 {{-- FC public layout has no jQuery; load it if not already present (select2 needs it). --}}
 <script>window.jQuery || document.write('<script src="https://code.jquery.com/jquery-3.6.4.min.js"><\/script>')</script>
 <script src="{{ asset('admin_assets/libs/select2/dist/js/select2.full.min.js') }}"></script>
