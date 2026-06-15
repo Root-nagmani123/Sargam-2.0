@@ -17,6 +17,7 @@
 <!-- Core Css -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <link rel="stylesheet" href="{{asset('css/custom.css')}}">
+<link rel="stylesheet" href="{{ asset('css/admin-header.css') }}?v={{ @filemtime(public_path('css/admin-header.css')) ?: time() }}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
 <!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
 
@@ -24,10 +25,14 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
+<!-- Unified Spacing System -->
+<link rel="stylesheet" href="{{asset('css/spacing-system.css')}}?v={{ @filemtime(public_path('css/spacing-system.css')) ?: time() }}">
 <!-- Breadcrumb Component CSS -->
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <!-- Sidebar Menu Enhanced CSS -->
 <link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
+<!-- Sargam Design System (tokens + refinements + components) — must load LAST -->
+<link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:

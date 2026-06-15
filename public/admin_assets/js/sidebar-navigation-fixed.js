@@ -137,21 +137,22 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Add selected class to clicked item
                 miniNavItem.classList.add('selected');
                 
-                // Hide sidebar menus only within current pane
-                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
-                    nav.classList.remove('d-block');
-                    nav.style.display = 'none';
-                });
-                
-                // Show the target menu
                 const targetMenuId = 'menu-right-' + itemId;
                 let targetMenu = paneRoot.querySelector('#' + CSS.escape(targetMenuId));
                 if (!targetMenu) {
                     targetMenu = document.getElementById(targetMenuId);
                 }
                 if (targetMenu) {
-                    targetMenu.classList.add('d-block');
-                    targetMenu.style.display = 'block';
+                    if (typeof window.activateSidebarPanelNav === 'function') {
+                        window.activateSidebarPanelNav(targetMenu);
+                    } else {
+                        paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                            nav.classList.remove('d-block', 'is-active-panel');
+                            nav.style.display = 'none';
+                        });
+                        targetMenu.classList.add('d-block', 'is-active-panel');
+                        targetMenu.style.display = 'flex';
+                    }
                     document.body.setAttribute('data-sidebartype', 'full');
                     console.log('Displayed menu:', targetMenuId);
                 }
@@ -187,12 +188,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 targetMenu = document.getElementById(targetMenuId);
             }
             if (targetMenu) {
-                paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
-                    nav.classList.remove('d-block');
-                    nav.style.display = 'none';
-                });
-                targetMenu.classList.add('d-block');
-                targetMenu.style.display = 'block';
+                if (typeof window.activateSidebarPanelNav === 'function') {
+                    window.activateSidebarPanelNav(targetMenu);
+                } else {
+                    paneRoot.querySelectorAll('.sidebarmenu nav').forEach(function(nav) {
+                        nav.classList.remove('d-block', 'is-active-panel');
+                        nav.style.display = 'none';
+                    });
+                    targetMenu.classList.add('d-block', 'is-active-panel');
+                    targetMenu.style.display = 'flex';
+                }
             }
             console.log('Restored active mini-nav:', activeId, 'for pane:', paneRoot.id || 'global');
         });
@@ -245,7 +250,9 @@ document.addEventListener('DOMContentLoaded', function() {
     // ==========================================
     
     function initializeHeaderTabs() {
-        const headerTabs = document.querySelectorAll('.navbar-nav [data-bs-toggle="tab"]');
+        const headerTabs = document.querySelectorAll(
+            '#mainNavbar [data-bs-toggle="tab"], .mobile-tabbar [data-bs-toggle="tab"]'
+        );
         
         console.log('Found', headerTabs.length, 'header tab links');
         
@@ -352,6 +359,29 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         });
+        
+        // If we found a non-home tab with content, activate it
+        if (activeTabId) {
+            console.log('Auto-activating tab based on content:', activeTabId);
+            
+            // Find and activate the corresponding header tab
+            const headerTab = document.querySelector(
+                '#mainNavbar a[href="' + activeTabId + '"], .mobile-tabbar a[href="' + activeTabId + '"]'
+            );
+            if (headerTab) {
+                // Remove active from all tabs
+                document.querySelectorAll('#mainNavbar [data-bs-toggle="tab"], .mobile-tabbar [data-bs-toggle="tab"]').forEach(function(tab) {
+                    tab.classList.remove('active');
+                    tab.setAttribute('aria-selected', 'false');
+                });
+                
+                // Activate the correct header tab
+                headerTab.classList.add('active');
+                headerTab.setAttribute('aria-selected', 'true');
+                
+                // Sync both content areas
+                syncBodyWrapperTab(activeTabId);
+                syncSidebarTab(activeTabId);
 
         // The header tab to highlight comes from the RBAC resolver — the SAME source
         // as the breadcrumb (window.SARGAM_ACTIVE_NAV_TAB). This keeps the active

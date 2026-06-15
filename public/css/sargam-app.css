@@ -1,0 +1,363 @@
+/* =====================================================================
+   Sargam 2.0 — Unified Design System (sargam-app.css)
+   ---------------------------------------------------------------------
+   SINGLE design-system layer for the ERP. Loaded LAST in every layout
+   so its refinements win the cascade where intended.
+
+   Structure
+     Layer A  — Design tokens (--ds-*). Zero side effects.
+     Layer B  — Gentle, app-wide visual refinements (cards / tables /
+                buttons / inputs / focus). Visual only — no layout,
+                no structural, no behavioural changes.
+     Layer C  — Opt-in components (.ds-*). Apply nothing until a page
+                adds the class. Use these when modernizing a screen.
+
+   HARD RULES (mandate)
+     • NO rounded-pill. Controls/badges/buttons = rounded-1 (4px).
+       Cards / modals cap at rounded-2 (8px).
+     • One 4px-grid spacing scale. No random margins.
+     • Never redefine --bs-* (the theme + forced-light layer own those).
+     • Never change form names / IDs / JS hooks / RBAC / Blade logic.
+   ===================================================================== */
+
+/* =====================================================================
+   LAYER A — DESIGN TOKENS
+   ===================================================================== */
+:root {
+    /* --- Spacing: strict 4px grid --------------------------------- */
+    --ds-space-1: 0.25rem;   /*  4px */
+    --ds-space-2: 0.5rem;    /*  8px */
+    --ds-space-3: 1rem;      /* 16px  (DEFAULT) */
+    --ds-space-4: 1.5rem;    /* 24px */
+    --ds-space-5: 2rem;      /* 32px */
+    --ds-space-6: 3rem;      /* 48px */
+
+    /* --- Radius: enterprise scale (NO pills) ---------------------- */
+    --ds-radius-0: 0;
+    --ds-radius-1: 0.25rem;  /* 4px  — DEFAULT: buttons, inputs, badges, chips */
+    --ds-radius-2: 0.5rem;   /* 8px  — cards, modals, panels */
+    --ds-radius: var(--ds-radius-1);
+    --ds-radius-card: var(--ds-radius-2);
+
+    /* --- Elevation: subtle, enterprise-grade ---------------------- */
+    --ds-shadow-sm: 0 1px 2px rgba(16, 24, 40, 0.05);
+    --ds-shadow:    0 1px 3px rgba(16, 24, 40, 0.08), 0 1px 2px rgba(16, 24, 40, 0.04);
+    --ds-shadow-lg: 0 4px 12px rgba(16, 24, 40, 0.10), 0 2px 4px rgba(16, 24, 40, 0.06);
+
+    /* --- Brand (mirror theme; do NOT redefine --bs-*) ------------- */
+    --ds-primary: var(--bs-primary, #004a93);
+    --ds-secondary: #b12923;
+    --ds-ink: #1f2937;          /* primary text */
+    --ds-ink-muted: #667085;    /* secondary text */
+    --ds-line: #e5e7eb;         /* hairline borders */
+    --ds-surface: #ffffff;      /* card surface */
+    --ds-surface-2: #f8fafc;    /* subtle fill / headers */
+    --ds-canvas: #f1f4f9;       /* page background */
+
+    /* --- Control sizing ------------------------------------------- */
+    --ds-control-h: 2.5rem;     /* 40px — consistent input/button height */
+    --ds-control-h-sm: 2rem;    /* 32px */
+    --ds-focus-ring: 0 0 0 0.2rem rgba(var(--bs-primary-rgb, 0 74 147), 0.20);
+}
+
+/* =====================================================================
+   LAYER B — GENTLE APP-WIDE REFINEMENTS  (visual only)
+   Conservative on purpose: 400+ views render through this. No layout
+   shifts, no broad !important, nothing that can alter behaviour.
+   ===================================================================== */
+
+/* Smoother type rendering across the app */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+}
+
+/* Accessible, consistent keyboard focus ring (does not affect mouse use) */
+.btn:focus-visible,
+.form-control:focus-visible,
+.form-select:focus-visible,
+.page-link:focus-visible,
+a.dropdown-item:focus-visible {
+    outline: none;
+    box-shadow: var(--ds-focus-ring);
+}
+
+/* Table headers: quieter, more scannable enterprise look.
+   Intentionally gentle — only weight/colour/spacing, no size or
+   text-transform overrides, so existing table layouts are untouched. */
+.table > thead > tr > th,
+.table > thead th {
+    font-weight: 600;
+    letter-spacing: 0.01em;
+    color: var(--ds-ink-muted);
+}
+
+/* Consistent control heights (kept gentle — min-height, not height) */
+.form-control,
+.form-select {
+    min-height: var(--ds-control-h);
+}
+.form-control-sm,
+.form-select-sm {
+    min-height: var(--ds-control-h-sm);
+}
+
+/* ---------------------------------------------------------------------
+   PROJECT-WIDE PAGE PADDING — single source of truth
+   ---------------------------------------------------------------------
+   The theme (styles.css) applies a non-grid `padding: 10px` to every
+   .container-fluid. ~354 admin views wrap their content in one, so this
+   is THE universal page-padding lever. We align it to the 16px grid token
+   so every page gets identical, grid-aligned outer spacing.
+
+   Scoped under .page-wrapper (admin shell) → specificity (0,2,0) beats the
+   theme's (0,1,0) base rule without !important, and leaves login / public
+   containers untouched. Visual-only; affects no layout behaviour.
+   --------------------------------------------------------------------- */
+.page-wrapper .container-fluid,
+.page-wrapper .container-lg,
+.page-wrapper .container-md,
+.page-wrapper .container-sm,
+.page-wrapper .container-xl,
+.page-wrapper .container-xxl {
+    padding: var(--ds-space-3);            /* 16px — the project default */
+}
+@media (max-width: 575.98px) {
+    .page-wrapper .container-fluid,
+    .page-wrapper .container-lg,
+    .page-wrapper .container-md,
+    .page-wrapper .container-sm,
+    .page-wrapper .container-xl,
+    .page-wrapper .container-xxl {
+        padding: var(--ds-space-2);        /* 8px on phones */
+    }
+}
+
+/* =====================================================================
+   LAYER C — OPT-IN COMPONENTS  (.ds-*)
+   Inert until a page adds the class. Use when modernizing a screen.
+   ===================================================================== */
+
+/* --- Page header ------------------------------------------------- */
+.ds-page-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3);
+    margin-bottom: var(--ds-space-4);
+}
+.ds-page-header .ds-page-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: var(--ds-ink);
+    margin: 0;
+}
+.ds-page-header .ds-page-subtitle {
+    font-size: 0.875rem;
+    color: var(--ds-ink-muted);
+    margin: 0;
+}
+
+/* --- Card ------------------------------------------------------- */
+.ds-card {
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-card);
+    box-shadow: var(--ds-shadow-sm);
+    overflow: hidden;
+}
+.ds-card > .ds-card-header,
+.ds-card > .card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--ds-space-2);
+    padding: var(--ds-space-3) var(--ds-space-3);
+    background: var(--ds-surface-2);
+    border-bottom: 1px solid var(--ds-line);
+    font-weight: 600;
+    color: var(--ds-ink);
+}
+.ds-card > .ds-card-body,
+.ds-card > .card-body {
+    padding: var(--ds-space-3);
+}
+.ds-card--accent {
+    border-left: 3px solid var(--ds-primary);
+}
+
+/* --- Toolbar (filters / search / actions strip) ----------------- */
+.ds-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--ds-space-2);
+    margin-bottom: var(--ds-space-3);
+}
+.ds-toolbar .ds-toolbar-spacer { margin-left: auto; }
+
+/* --- Stat card -------------------------------------------------- */
+.ds-stat-card {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--ds-space-3);
+    padding: var(--ds-space-3);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-left: 3px solid var(--ds-primary);
+    border-radius: var(--ds-radius-2);
+    box-shadow: var(--ds-shadow-sm);
+    transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+.ds-stat-card:hover {
+    box-shadow: var(--ds-shadow);
+    transform: translateY(-1px);
+}
+.ds-stat-card .ds-stat-label {
+    font-size: 0.8125rem;
+    color: var(--ds-ink-muted);
+    margin: 0 0 var(--ds-space-1);
+}
+.ds-stat-card .ds-stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    color: var(--ds-ink);
+}
+.ds-stat-card .ds-stat-icon {
+    width: 2.25rem;
+    height: 2.25rem;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ds-radius-1);
+    background: rgba(var(--bs-primary-rgb, 0 74 147), 0.12);
+    color: var(--ds-primary);
+}
+
+/* --- Table: sticky header + scroll wrap ------------------------- */
+.ds-table-wrap {
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    overflow: auto;
+}
+.ds-table-wrap > .table { margin-bottom: 0; }
+.ds-table-sticky > thead > tr > th {
+    position: sticky;
+    top: 0;
+    z-index: 2;
+    background: var(--ds-surface-2);
+}
+
+/* --- Action buttons (row actions) ------------------------------- */
+.ds-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--ds-space-1);
+}
+.btn-icon {
+    --bs-btn-padding-x: 0;
+    --bs-btn-padding-y: 0;
+    width: 2rem;
+    height: 2rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ds-radius-1);
+    line-height: 1;
+}
+
+/* --- Form sections (large forms) -------------------------------- */
+.ds-form-section {
+    padding: var(--ds-space-4);
+    background: var(--ds-surface);
+    border: 1px solid var(--ds-line);
+    border-radius: var(--ds-radius-2);
+    margin-bottom: var(--ds-space-4);
+}
+.ds-form-section > .ds-form-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--ds-ink);
+    margin: 0 0 var(--ds-space-3);
+    padding-bottom: var(--ds-space-2);
+    border-bottom: 1px solid var(--ds-line);
+}
+
+/* --- Vertical stepper (wizards) --------------------------------- */
+.ds-stepper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--ds-space-3);
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+.ds-stepper .ds-step {
+    display: flex;
+    gap: var(--ds-space-2);
+    align-items: flex-start;
+}
+.ds-stepper .ds-step-index {
+    width: 1.75rem;
+    height: 1.75rem;
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--ds-radius-1);
+    background: var(--ds-surface-2);
+    border: 1px solid var(--ds-line);
+    font-size: 0.8125rem;
+    font-weight: 600;
+    color: var(--ds-ink-muted);
+}
+.ds-stepper .ds-step.is-active .ds-step-index,
+.ds-stepper .ds-step.is-done .ds-step-index {
+    background: var(--ds-primary);
+    border-color: var(--ds-primary);
+    color: #fff;
+}
+
+/* --- Empty state ------------------------------------------------ */
+.ds-empty-state {
+    text-align: center;
+    padding: var(--ds-space-5) var(--ds-space-4);
+    color: var(--ds-ink-muted);
+    border: 1px dashed var(--ds-line);
+    border-radius: var(--ds-radius-2);
+}
+
+/* =====================================================================
+   SPACING CONTRACT — the ONE system every page follows
+   ---------------------------------------------------------------------
+   Scale (4px grid)     Token            Bootstrap utility   Use for
+     4px   --ds-space-1   .*-1 / gap-1     icon gaps, tight chips
+     8px   --ds-space-2   .*-2 / gap-2     button groups, inline controls
+    16px   --ds-space-3   .*-3 / gap-3     DEFAULT: card/form padding,
+                                            grid gaps, form groups (mb-3)
+    24px   --ds-space-4   .*-4 / gap-4     between SECTIONS (mb-4)
+    32px   --ds-space-5   (no BS util)     between MAJOR BLOCKS
+                                            → use .ds-block-gap, not mb-5
+                                            (Bootstrap mb-5 = 48px, off-grid)
+
+   Rules
+     • Page outer padding is handled globally (see PAGE PADDING above) —
+       do NOT add p-* to the page's root .container-fluid.
+     • Cards: p-3 (16px) default, p-4 (24px) for roomy forms. Nothing else.
+     • Card headers: px-3 py-3.  Modals: p-4.  Form groups: mb-3.
+     • Sections: mb-4.  Major blocks: .ds-block-gap (32px).
+     • Never invent random mt-*/mb-*/padding values off this scale.
+   ===================================================================== */
+.ds-stack-2 > * + * { margin-top: var(--ds-space-2); }
+.ds-stack-3 > * + * { margin-top: var(--ds-space-3); }
+.ds-stack-4 > * + * { margin-top: var(--ds-space-4); }
+.ds-section-gap,
+.ds-section        { margin-bottom: var(--ds-space-4); }   /* 24px — between sections */
+.ds-block-gap,
+.ds-block          { margin-bottom: var(--ds-space-5); }   /* 32px — between major blocks */

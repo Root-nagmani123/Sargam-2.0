@@ -50,6 +50,8 @@
     <link rel="stylesheet" type="text/css" href="{{asset('css/mobile-sidebar.css')}}">
     <!-- Custom css-->
     <link rel="stylesheet" type="text/css" href="{{asset('css/custom.css')}}">
+    <!-- Sargam Design System — must load LAST -->
+    <link rel="stylesheet" type="text/css" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
 </head>
 
 <body>

@@ -1,0 +1,356 @@
+/**
+ * Calendar Creation — master page polish (loads last).
+ * Reference: government-portal layout from design frames.
+ */
+
+.calendar-admin-page.cal-master-page {
+    padding: 1rem 1rem 1.5rem;
+    max-width: 100%;
+}
+
+@media (min-width: 992px) {
+    .calendar-admin-page.cal-master-page {
+        padding: 1rem 1.5rem 2rem;
+    }
+}
+
+/* Breadcrumb row */
+.calendar-admin-page.cal-master-page .cal-portal-breadcrumb-wrap {
+    margin-bottom: 0.5rem;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-breadcrumb-wrap .modern-breadcrumb-wrapper {
+    margin-bottom: 0 !important;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-breadcrumb-wrap .modern-breadcrumb-shell {
+    background: transparent !important;
+    border: 0 !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    border-radius: 0 !important;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-breadcrumb-wrap .modern-breadcrumb-shell:hover {
+    box-shadow: none !important;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-breadcrumb-wrap .modern-breadcrumb-title {
+    display: none !important;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-breadcrumb-wrap .modern-breadcrumb-trail {
+    font-size: 0.8125rem;
+    color: #98a2b3;
+    margin-bottom: 0;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-breadcrumb-wrap .breadcrumb-item + .breadcrumb-item::before {
+    color: #d0d5dd;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-breadcrumb-wrap .modern-breadcrumb-trail .breadcrumb-item.active span {
+    color: #667085;
+    font-weight: 500;
+}
+
+/* Page title + Add Event */
+.calendar-admin-page.cal-master-page .cal-page-header {
+    margin-bottom: 1.25rem !important;
+}
+
+.calendar-admin-page.cal-master-page .cal-page-title {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: #101828;
+    letter-spacing: -0.025em;
+    line-height: 1.2;
+}
+
+.calendar-admin-page.cal-master-page .cal-btn-add-event {
+    background-color: #004085 !important;
+    border-color: #004085 !important;
+    color: #fff !important;
+    font-size: 0.9375rem;
+    min-height: 40px;
+    padding: 0.5rem 1.25rem !important;
+    border-radius: 8px !important;
+    box-shadow: 0 1px 2px rgba(16, 24, 40, 0.08);
+}
+
+.calendar-admin-page.cal-master-page .cal-btn-add-event:hover {
+    background-color: #003366 !important;
+    border-color: #003366 !important;
+}
+
+/* Main white card */
+.calendar-admin-page.cal-master-page .cal-portal-card {
+    border: 1px solid #e4e7ec !important;
+    border-radius: 12px !important;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06) !important;
+    background: #fff !important;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-card > .card-body {
+    padding: 1.25rem 1.5rem 1.5rem !important;
+}
+
+/* Toolbar row: Filters (left) | month nav + views (right) — reference layout */
+.calendar-admin-page.cal-master-page .cal-portal-toolbar-row.programme-dt-toolbar {
+    margin-bottom: 1.25rem !important;
+    padding-bottom: 0;
+    border-bottom: 0;
+    overflow: visible;
+    position: relative;
+    z-index: 20;
+    min-height: 40px;
+}
+
+.calendar-admin-page.cal-master-page .cal-filters-group {
+    flex: 0 1 auto;
+    min-width: 0;
+}
+
+.calendar-admin-page.cal-master-page .cal-filters-group .programme-dt-filter-select {
+    width: 180px;
+    flex-shrink: 0;
+}
+
+.calendar-admin-page.cal-master-page .cal-filters-group select.form-select.cal-filter-select {
+    height: 40px;
+    min-height: 40px;
+    width: 100%;
+    padding: 0.375rem 2rem 0.375rem 0.875rem;
+    font-size: 0.9375rem;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    color: #344054;
+    background-color: #fff;
+    box-shadow: none;
+    text-overflow: ellipsis;
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.calendar-admin-page.cal-master-page .cal-filters-group select.form-select.cal-filter-select:focus {
+    border-color: #004085;
+    box-shadow: 0 0 0 3px rgba(0, 64, 133, 0.12);
+}
+
+.calendar-admin-page.cal-master-page .cal-filters-group select.form-select.cal-filter-select.cal-filter-empty {
+    color: #667085;
+}
+
+.calendar-admin-page.cal-master-page .programme-dt-toolbar .programme-dt-btn-reset.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1.25;
+    white-space: nowrap;
+    box-shadow: none;
+}
+
+.calendar-admin-page.cal-master-page .cal-toolbar-nav {
+    flex-shrink: 0;
+}
+
+/* Month navigation — light gray square arrow buttons */
+.calendar-admin-page.cal-master-page .cal-portal-nav-cluster {
+    background: #f9fafb;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    padding: 2px 4px;
+    gap: 0.125rem;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-nav-btn {
+    width: 2rem;
+    height: 2rem;
+    min-width: 2rem;
+    border: 1px solid #e4e7ec;
+    border-radius: 6px;
+    background: #fff;
+    color: #344054;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-nav-btn:hover {
+    background: #f9fafb;
+    color: #004085;
+    border-color: #d0d5dd;
+}
+
+.calendar-admin-page.cal-master-page .cal-portal-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #101828;
+    min-width: 9rem;
+    text-align: center;
+}
+
+/* View toggle — active = light blue border/fill per reference */
+.calendar-admin-page.cal-master-page .cal-view-switch {
+    background: #f9fafb;
+    border: 1px solid #e4e7ec;
+    border-radius: 8px;
+    padding: 3px;
+    gap: 0;
+}
+
+.calendar-admin-page.cal-master-page .cal-view-switch .btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border: 1px solid transparent !important;
+    border-radius: 6px !important;
+    color: #667085;
+    background: transparent;
+}
+
+.calendar-admin-page.cal-master-page .cal-view-switch .btn.active {
+    background: #fff !important;
+    color: #004085 !important;
+    border-color: #c7d7fe !important;
+    box-shadow: 0 0 0 1px #c7d7fe;
+}
+
+/* Reference shows list + calendar only; extra options in ⋯ menu */
+.calendar-admin-page.cal-master-page .cal-toolbar-more {
+    display: none;
+}
+
+@media (max-width: 1199.98px) {
+    .calendar-admin-page.cal-master-page .cal-toolbar-more {
+        display: block;
+    }
+}
+
+/* Calendar grid */
+.calendar-admin-page.cal-master-page #calendar {
+    margin-bottom: 0;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-scrollgrid {
+    border: 1px solid #e4e7ec !important;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-col-header-cell {
+    background: #bfdcff !important;
+    border-color: #e4e7ec !important;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-col-header-cell-cushion {
+    color: #004085 !important;
+    font-weight: 600;
+    font-size: 0.875rem;
+    padding: 0.625rem 0.5rem;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-daygrid-day {
+    border-color: #e4e7ec !important;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-daygrid-day-frame {
+    min-height: 8rem;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-daygrid-day.fc-day-today .fc-daygrid-day-frame {
+    background-color: #eef5ff !important;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-daygrid-day-top {
+    flex-direction: row-reverse;
+    justify-content: flex-end;
+    padding: 0.375rem 0.5rem 0.125rem;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-daygrid-day-number {
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #344054;
+    padding: 0;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-day-other .fc-daygrid-day-number {
+    color: #98a2b3;
+}
+
+/* +N More link */
+.calendar-admin-page.cal-master-page #calendar .fc-daygrid-day-more-link,
+.calendar-admin-page.cal-master-page #calendar .fc-more-link {
+    font-size: 0.8125rem !important;
+    font-weight: 600 !important;
+    color: #004085 !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    padding: 0.125rem 0.375rem !important;
+    margin-top: 0.125rem;
+    display: inline-block;
+}
+
+.calendar-admin-page.cal-master-page #calendar .fc-daygrid-day-more-link:hover {
+    text-decoration: underline !important;
+    color: #003366 !important;
+}
+
+/* Loading overlay */
+.calendar-admin-page.cal-master-page #calendarLoadingOverlay {
+    border-radius: 8px;
+    z-index: 50;
+}
+
+/* FullCalendar popover (+more list) */
+.calendar-admin-page.cal-master-page .fc-popover {
+    border: 1px solid #e4e7ec !important;
+    border-radius: 12px !important;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12) !important;
+}
+
+.calendar-admin-page.cal-master-page .fc-popover-header {
+    background: #fff !important;
+    color: #004085 !important;
+    font-weight: 600;
+    border-bottom: 1px solid #eaecf0;
+}
+
+@media (max-width: 1199.98px) {
+    .calendar-admin-page.cal-master-page .cal-toolbar-nav {
+        width: 100%;
+        justify-content: space-between;
+    }
+}
+
+@media (max-width: 767.98px) {
+    .calendar-admin-page.cal-master-page .cal-page-title {
+        font-size: 1.375rem;
+    }
+
+    .calendar-admin-page.cal-master-page .cal-filters-group .programme-dt-filter-select {
+        width: 100%;
+        max-width: 280px;
+    }
+
+    .calendar-admin-page.cal-master-page .cal-filters-group {
+        width: 100%;
+    }
+
+    .calendar-admin-page.cal-master-page .cal-toolbar-nav {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .calendar-admin-page.cal-master-page .cal-portal-card > .card-body {
+        padding: 1rem !important;
+    }
+}
+
+@media (max-width: 575.98px) {
+    .calendar-admin-page.cal-master-page .cal-btn-add-event span {
+        display: none;
+    }
+
+    .calendar-admin-page.cal-master-page .cal-btn-add-event {
+        padding: 0.5rem 0.65rem !important;
+    }
+}

@@ -9,7 +9,7 @@
 
 .navbar-nav .nav-link:hover,
 .navbar-nav .nav-link:focus {
-    background-color: #f2f2f2;
+    background-color: #f7f7f7;
     color: #000;
     outline: none;
 }

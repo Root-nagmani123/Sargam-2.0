@@ -167,22 +167,22 @@
             font-size: 14px;
         }
 
-        .calendar th {
-            background: #f8f9fa;
-            padding: 8px;
-            text-align: center;
-            font-weight: 600;
-        }
+    .calendar th {
+        background: #f8f9fa;
+        padding: 0.5rem;
+        text-align: center;
+        font-weight: 600;
+    }
 
-        .calendar td {
-            width: 14.28%;
-            height: 65px;
-            padding: 6px;
-            vertical-align: top;
-            border: 1px solid #e5e5e5;
-            text-align: right;
-            position: relative;
-        }
+    .calendar td {
+        width: 14.28%;
+        height: 65px;
+        padding: 0.5rem;
+        vertical-align: top;
+        border: 1px solid #e5e5e5;
+        text-align: right;
+        position: relative;
+    }
 
         .holiday {
             background-color: #ffe5e5 !important;
@@ -190,22 +190,22 @@
             font-weight: 600;
         }
 
-        .holiday span {
-            font-size: 11px;
-            display: block;
-            color: #dc3545;
-            text-align: left;
-            margin-top: 4px;
-        }
+    .holiday span {
+        font-size: 11px;
+        display: block;
+        color: #dc3545;
+        text-align: left;
+        margin-top: 0.25rem;
+    }
 
-        /* Basic container */
-        .calendar-component {
-            max-width: 100%;
-            background: #fff;
-            border-radius: 12px;
-            padding: 14px;
-            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
-        }
+    /* Basic container */
+    .calendar-component {
+        max-width: 100%;
+        background: #fff;
+        border-radius: 12px;
+        padding: 1rem;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    }
 
         .calendar-header .form-select {
             max-width: 120px;
@@ -220,17 +220,17 @@
             table-layout: fixed;
         }
 
-        .calendar-table th {
-            font-weight: 600;
-            padding: 8px 6px;
-        }
+    .calendar-table th {
+        font-weight: 600;
+        padding: 0.5rem;
+    }
 
-        .calendar-table td {
-            padding: 8px 6px;
-            vertical-align: middle;
-            border: none;
-            text-align: center;
-        }
+    .calendar-table td {
+        padding: 0.5rem;
+        vertical-align: middle;
+        border: none;
+        text-align: center;
+    }
 
 
 
@@ -239,9 +239,9 @@
             transition: background .12s ease;
         }
 
-        .calendar-cell:hover {
-            background: #f2f2f2;
-        }
+    .calendar-cell:hover {
+        background: #f7f7f7;
+    }
 
         .calendar-cell:focus {
             outline: 3px solid #004a93;
@@ -277,22 +277,22 @@
         }
 
 
-        /* Responsive behavior */
-        @media (max-width: 480px) {
-            .calendar-component {
-                padding: 10px;
-                max-width: 100%;
-            }
-
-            .calendar-header {
-                gap: .5rem;
-            }
-
-            .calendar-table th,
-            .calendar-table td {
-                padding: 6px 4px;
-            }
+    /* Responsive behavior */
+    @media (max-width: 480px) {
+        .calendar-component {
+            padding: 0.5rem;
+            max-width: 100%;
         }
+
+        .calendar-header {
+            gap: 0.5rem;
+        }
+
+        .calendar-table th,
+        .calendar-table td {
+            padding: 0.5rem 0.25rem;
+        }
+    }
 
         /* Wrapper */
         .modern-bottom-dd {
@@ -305,21 +305,21 @@
             color: #000;
         }
 
-        /* Trigger */
-        .dd-trigger {
-            border: none;
-            border-bottom: 1px solid #4c8ec5;
-            /* Soft Blue like screenshot */
-            border-radius: 10px;
-            background: transparent;
-            padding: 8px 0 10px 0;
-            font-weight: 600;
-            font-size: 1rem;
-            min-height: 44px;
-            /* GIGW Minimum touch target */
-            cursor: pointer;
-            transition: all .25s ease;
-        }
+    /* Trigger */
+    .dd-trigger {
+        border: none;
+        border-bottom: 1px solid #4c8ec5;
+        /* Soft Blue like screenshot */
+        border-radius: 10px;
+        background: transparent;
+        padding: 0.5rem 0 0.75rem 0;
+        font-weight: 600;
+        font-size: 1rem;
+        min-height: 44px;
+        /* GIGW Minimum touch target */
+        cursor: pointer;
+        transition: all .25s ease;
+    }
 
         /* Hover */
         .dd-trigger:hover {
@@ -339,20 +339,20 @@
             transition: .25s;
         }
 
-        /* Menu */
-        .dd-menu {
-            border-radius: 10px;
-            padding: 6px 0;
-            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
-            animation: fadeIn .15s ease-out;
-        }
+    /* Menu */
+    .dd-menu {
+        border-radius: 10px;
+        padding: 0.5rem 0;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+        animation: fadeIn .15s ease-out;
+    }
 
-        /* Menu Items */
-        .dd-menu-item {
-            padding: 10px 14px;
-            min-height: 40px;
-            font-weight: 500;
-        }
+    /* Menu Items */
+    .dd-menu-item {
+        padding: 0.5rem 1rem;
+        min-height: 40px;
+        font-weight: 500;
+    }
 
         /* Hover */
         .dd-menu-item:hover {
@@ -386,9 +386,9 @@
             color: #aaa;
         }
 
-        .pagination li {
-            margin-right: 4px;
-        }
+    .pagination li {
+        margin-right: 0.25rem;
+    }
 
         .pagination .page-link:hover {
             color: #0d6efd;
@@ -806,6 +806,7 @@
     @include('admin.layouts.footer')
     <script src="{{ asset('js/forms.js') }}"></script>
     <script src="{{ asset('admin_assets/js/sidebar-navigation-fixed.js') }}"></script>
+    <script src="{{ asset('admin_assets/js/sidebar-panel-accordion.js') }}?v=2"></script>
     <script src="{{ asset('admin_assets/js/tab-persistence.js') }}"></script>
     <script src="{{ asset('admin_assets/js/nav-state.js') }}"></script>
     <!-- SweetAlert2 -->
@@ -1022,6 +1023,7 @@
                     window.hideSargamLoader();
                 }
             }
+            icon.classList.remove("rotated");
         });
     </script>
     <script src="{{ asset('admin_assets/js/sidebar-dynamic-toggle.js') }}"></script>

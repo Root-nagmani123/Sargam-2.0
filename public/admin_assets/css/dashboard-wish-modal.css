@@ -1,0 +1,14 @@
+#customWishModal {
+    --wish-navy: #004a99;
+    --wish-navy-hover: #003d80;
+    --wish-border: #e5e7eb;
+}
+#customWishModal .dashboard-wish-modal-dialog { max-width: 32rem; }
+#customWishModal .dashboard-wish-modal { border-radius: 12px; box-shadow: 0 8px 30px rgba(15, 23, 42, 0.12); }
+#customWishModal .dashboard-wish-modal__header { padding: 1.25rem 1.5rem 0.75rem; border: 0; }
+#customWishModal .dashboard-wish-modal__title { font-size: 1.125rem; font-weight: 700; color: #111827; }
+#customWishModal .dashboard-wish-modal__divider { border-top: 1px solid var(--wish-border); margin: 0 1.5rem; }
+#customWishModal .dashboard-wish-modal__body { padding: 1rem 1.5rem 1.25rem; }
+#customWishModal .dashboard-wish-name-inline { border: 0; background: transparent; color: var(--wish-navy); font-weight: 700; }
+#customWishModal .dashboard-wish-btn-cancel { color: var(--wish-navy); border: 1px solid var(--wish-navy); background: #fff; border-radius: 6px; }
+#customWishModal .dashboard-wish-btn-send { color: #fff; background: var(--wish-navy); border: 1px solid var(--wish-navy); border-radius: 6px; }
