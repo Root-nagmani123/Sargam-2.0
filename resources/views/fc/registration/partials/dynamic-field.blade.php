@@ -11,6 +11,46 @@
     $lookupItems = $lookups[$fieldName] ?? [];
     $valCol      = $field->lookup_value_column ?? 'id';
     $lblCol      = $field->lookup_label_column ?? 'name';
+    $isDistrictField = ($field->lookup_table ?? '') === 'state_district_mapping'
+        || str_ends_with($fieldName, '_district')
+        || str_contains(strtolower((string) $field->label), 'district');
+    $districtStatePairs = [
+        'perm_district' => 'perm_state_id',
+        'pres_district' => 'pres_state_id',
+        'birth_district' => 'birth_state_id',
+        'matric_district' => 'matric_state_id',
+    ];
+    $pairedStateField = $districtStatePairs[$fieldName]
+        ?? (str_ends_with($fieldName, '_district') ? str_replace('_district', '_state_id', $fieldName) : null);
+    $pairedCountryField = str_replace('_district', '_country_id', str_replace('_state_id', '_country_id', $pairedStateField));
+    if (str_ends_with($fieldName, '_state_id')) {
+        $pairedCountryField = str_replace('_state_id', '_country_id', $fieldName);
+    }
+    $isStateLookup = $fieldType === 'select'
+        && $field->lookup_table
+        && str_contains(strtolower((string) $field->lookup_table), 'state');
+    $isCountryLookup = $fieldType === 'select'
+        && $field->lookup_table
+        && str_contains(strtolower((string) $field->lookup_table), 'country');
+    $districtRows = $districtOptions ?? collect();
+    $panHelp = 'Format: ABCDE1234F (5 uppercase letters, 4 digits, 1 uppercase letter)';
+    $isPanField = $fieldName === 'pan_card'
+        || str_contains(strtolower((string) $field->label), 'pan');
+    $textInputMode = match ($fieldType) {
+        'number' => 'decimal',
+        'email' => 'email',
+        default => 'text',
+    };
+    $textPattern = null;
+    if ($fieldType === 'number') {
+        $textPattern = '[0-9]*';
+    } elseif (in_array($fieldType, ['text', 'textarea'], true)
+        && ! preg_match('/\b(regex|alpha_num|alpha_dash|digits|numeric|integer)\b/', (string) ($field->validation_rules ?? ''))) {
+        $textPattern = '.*[^\d].*|^$';
+    }
+    if (preg_match('/\balpha_num\b/', (string) ($field->validation_rules ?? ''))) {
+        $textPattern = '[A-Za-z0-9]*';
+    }
 @endphp
 
 <label class="form-label small fw-semibold">
@@ -18,18 +58,44 @@
     @if($field->is_required)<span class="text-danger">*</span>@endif
 </label>
 
+@if($isDistrictField)
+    <select name="{{ $fieldName }}"
+            class="form-select fc-district-select @error($fieldName) is-invalid @enderror"
+            @if($pairedStateField) data-fc-state-field="{{ $pairedStateField }}" @endif
+            @if($field->is_required) data-fc-required="1" aria-required="true" @endif
+            {{ $isReadonly ? 'disabled' : '' }}>
+        <option value="">-- Select District --</option>
+        @foreach($districtRows as $item)
+            <option value="{{ $item->district_name }}"
+                    data-state-id="{{ $item->state_master_pk }}"
+                    @if(isset($item->country_master_pk)) data-country-id="{{ $item->country_master_pk }}" @endif
+                    {{ (string) $value === (string) $item->district_name ? 'selected' : '' }}>
+                {{ $item->district_name }}
+            </option>
+        @endforeach
+    </select>
+@else
 @switch($fieldType)
     @case('text')
     @case('email')
     @case('number')
     @case('date')
-        <input type="{{ $fieldType }}"
+        <input type="{{ $fieldType === 'number' ? 'text' : $fieldType }}"
                name="{{ $fieldName }}"
                class="form-control @error($fieldName) is-invalid @enderror"
                value="{{ $value }}"
                placeholder="{{ $field->placeholder ?? '' }}"
-               {{ $field->is_required ? 'required' : '' }}
+               inputmode="{{ $textInputMode }}"
+               @if($textPattern) pattern="{{ $textPattern }}" @endif
+               @if($fieldType === 'date' && in_array(strtolower((string) ($field->target_column ?? $fieldName)), ['date_of_birth', 'dob'], true))
+                   max="{{ now()->subYears(15)->format('Y-m-d') }}"
+               @endif
+               @if($isPanField) style="text-transform:uppercase" @endif
+               @if($field->is_required) data-fc-required="1" aria-required="true" @endif
                {{ $isReadonly ? 'disabled' : '' }}>
+        @if($isPanField)
+            <div class="form-text text-muted">{{ $panHelp }}</div>
+        @endif
         @break
 
     @case('textarea')
@@ -37,19 +103,28 @@
                   class="form-control @error($fieldName) is-invalid @enderror"
                   rows="3"
                   placeholder="{{ $field->placeholder ?? '' }}"
-                  {{ $field->is_required ? 'required' : '' }}
+                  inputmode="{{ $textInputMode }}"
+                  @if($textPattern) pattern="{{ $textPattern }}" @endif
+                  @if($field->is_required) data-fc-required="1" aria-required="true" @endif
                   {{ $isReadonly ? 'disabled' : '' }}>{{ $value }}</textarea>
         @break
 
     @case('select')
         <select name="{{ $fieldName }}"
-                class="form-select @error($fieldName) is-invalid @enderror"
-                {{ $field->is_required ? 'required' : '' }}
+                class="form-select @error($fieldName) is-invalid @enderror
+                    @if($isStateLookup) fc-state-select @endif
+                    @if($isCountryLookup) fc-country-select @endif"
+                @if($isStateLookup && $pairedCountryField) data-fc-country-field="{{ $pairedCountryField }}" @endif
+                @if($field->is_required) data-fc-required="1" aria-required="true" @endif
                 {{ $isReadonly ? 'disabled' : '' }}>
             <option value="">-- Select --</option>
             @if($field->lookup_table && count($lookupItems) > 0)
                 @foreach($lookupItems as $item)
-                    <option value="{{ $item->{$valCol} }}" {{ (string)$value === (string)$item->{$valCol} ? 'selected' : '' }}>
+                    <option value="{{ $item->{$valCol} }}"
+                            @if($isStateLookup && isset($item->country_master_pk))
+                                data-country-id="{{ $item->country_master_pk }}"
+                            @endif
+                            {{ (string)$value === (string)$item->{$valCol} ? 'selected' : '' }}>
                         {{ $item->{$lblCol} }}
                     </option>
                 @endforeach
@@ -117,19 +192,27 @@
     @case('file')
         @php
             $fileMaxKb = (int) ($field->file_max_kb ?? 0);
-            $fileHint = $field->help_text ?: fc_file_upload_hint($field->validation_rules ?? null, $fileMaxKb > 0 ? $fileMaxKb : null);
+            if ($fileMaxKb <= 0 && preg_match('/max:(\d+)/', (string) ($field->validation_rules ?? ''), $m)) {
+                $fileMaxKb = (int) $m[1];
+            }
+            if ($fileMaxKb <= 0) {
+                $fileMaxKb = 5120;
+            }
+            $acceptExts = $field->file_extensions ?: 'jpeg,jpg,png,pdf';
+            $fileHint = $field->help_text ?: fc_file_upload_hint($field->validation_rules ?? null, $fileMaxKb);
         @endphp
         <input type="file"
                name="{{ $fieldName }}"
                class="form-control fc-file-upload @error($fieldName) is-invalid @enderror"
-               accept="{{ $field->file_extensions ? '.' . implode(',.', explode(',', $field->file_extensions)) : '.pdf,.jpg,.jpeg,.png' }}"
-               data-max-kb="{{ $fileMaxKb > 0 ? $fileMaxKb : (preg_match('/max:(\d+)/', (string) ($field->validation_rules ?? ''), $m) ? (int) $m[1] : 5120) }}"
+               accept="{{ '.' . implode(',.', array_map('trim', explode(',', $acceptExts))) }}"
+               data-max-kb="{{ $fileMaxKb }}"
+               data-accept-ext="{{ $acceptExts }}"
+               @if($field->is_required && ! ($value && ! $isReadonly)) data-fc-required="1" aria-required="true" @endif
                {{ $isReadonly ? 'disabled' : '' }}>
-        @if($fileHint)
-            <div class="form-text text-muted">{{ $fileHint }}</div>
-        @endif
+        <div class="form-text text-muted">{{ $fileHint }}</div>
         @if($value && !$isReadonly)
             <small class="text-success d-block mt-1"><i class="bi bi-check-circle"></i> File uploaded: {{ basename($value) }}</small>
+            <input type="hidden" name="{{ $fieldName }}_existing" value="1">
         @endif
         @break
 
@@ -138,11 +221,12 @@
         <small class="text-muted">[Hidden field: {{ $fieldName }}]</small>
         @break
 @endswitch
+@endif
 
 @error($fieldName)
     <div class="invalid-feedback">{{ $message }}</div>
 @enderror
 
-@if($field->help_text)
+@if($field->help_text && ! $isPanField && $fieldType !== 'file')
     <small class="text-muted d-block mt-1">{{ $field->help_text }}</small>
 @endif
