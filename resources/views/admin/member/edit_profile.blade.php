@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Edit Profile - Sargam | Lal Bahadur')
+@section('title', 'Edit Member Profile')
 
 @section('content')
     @php

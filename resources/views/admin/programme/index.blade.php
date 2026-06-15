@@ -90,7 +90,7 @@
     <x-breadcrum title="Course Master" />
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card" >
+        <div class="card" style="border-left: 4px solid #004a93;">
             <div class="card-body">
 
                 <section class="row align-items-center mb-4" role="region" aria-labelledby="courseMasterHeading">

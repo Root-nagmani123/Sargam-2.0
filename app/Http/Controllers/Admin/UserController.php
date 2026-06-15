@@ -22,6 +22,10 @@ use App\Models\CourseMaster;
 use App\Models\FacultyMaster;
 use App\Models\Holiday;
 use App\Services\NotificationService;
+use App\Exports\UsersExport;
+use Maatwebsite\Excel\Facades\Excel;
+use Maatwebsite\Excel\Excel as ExcelWriter;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 use Adldap\Laravel\Facades\Adldap;
 use Illuminate\Support\Facades\Auth;
@@ -60,6 +64,31 @@ use Carbon\Carbon;
 class UserController extends Controller
 {
     private const ADMIN_USERS_INDEX_LIST_EPOCH_KEY = 'admin_users_index_list_epoch';
+
+    /**
+     * Human-readable labels for the user_category code stored on user_credentials.
+     * Extend this map as new user types are introduced.
+     */
+    public const USER_TYPE_LABELS = [
+        'S' => 'Student',
+        'E' => 'Employee',
+        'F' => 'Faculty',
+        'A' => 'Admin',
+    ];
+
+    /**
+     * Resolve a user_category code to a display label, falling back gracefully.
+     */
+    public static function userTypeLabel($code): string
+    {
+        $code = trim((string) $code);
+
+        if ($code === '') {
+            return 'Unknown';
+        }
+
+        return self::USER_TYPE_LABELS[$code] ?? 'Other';
+    }
     /**
      * Display a listing of users.
      *
@@ -327,6 +356,7 @@ class UserController extends Controller
         $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(true);
         $fullDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(false);
         $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
+        $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
 
         return view('admin.dashboard', compact(
             'year',
@@ -361,8 +391,165 @@ class UserController extends Controller
             'todayDuplicatePermIdCardRequests',
             'todayDuplicateContractualIdCardRequests',
             'fullDuplicatePermIdCardRequests',
-            'fullDuplicateContractualIdCardRequests'
+            'fullDuplicateContractualIdCardRequests',
+            'idCardApprovalRoute'
         ));
+    }
+
+    /**
+     * Dashboard feed "See all" page (notifications, notices, birthdays, wishes).
+     */
+    public function dashboardFeed(Request $request)
+    {
+        $allowedTabs = ['notifications', 'notices', 'birthdays', 'wishes'];
+        $activeTab = $request->query('tab', 'notifications');
+        if (! in_array($activeTab, $allowedTabs, true)) {
+            $activeTab = 'notifications';
+        }
+
+        $data = $this->buildDashboardFeedData();
+        $data['activeTab'] = $activeTab;
+
+        return view('admin.dashboard.feed', $data);
+    }
+
+    /**
+     * Shared data for dashboard feed page.
+     */
+    protected function buildDashboardFeedData(): array
+    {
+        $user = Auth::user();
+        $isAdminSummary = hasRole('Admin');
+        $daysOld = $isAdminSummary ? 10 : null;
+        $currentUserPk = ($user && $user->user_id) ? $user->user_id : 0;
+
+        $emp_dob_data = EmployeeMaster::where('status', 1)
+            ->whereRaw("DATE_FORMAT(dob, '%m-%d') = DATE_FORMAT(CURDATE(), '%m-%d')")
+            ->where('employee_master.pk', '!=', $currentUserPk)
+            ->leftJoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+            ->select(
+                'employee_master.pk',
+                'employee_master.first_name',
+                'employee_master.email',
+                'employee_master.mobile',
+                'employee_master.office_extension_no',
+                'employee_master.profile_picture',
+                'employee_master.last_name',
+                'designation_master.designation_name',
+                'employee_master.dob'
+            )
+            ->get();
+
+        $birthdayWishCounts = [];
+        if ($emp_dob_data->isNotEmpty()) {
+            $birthdayPks = $emp_dob_data->pluck('pk')->toArray();
+            $birthdayWishCounts = \App\Models\Notification::whereIn('receiver_user_id', $birthdayPks)
+                ->where('type', 'birthday')
+                ->whereDate('created_at', today())
+                ->selectRaw('receiver_user_id, COUNT(*) as wish_count')
+                ->groupBy('receiver_user_id')
+                ->pluck('wish_count', 'receiver_user_id')
+                ->toArray();
+        }
+
+        $upcomingBirthdays = collect();
+        for ($i = 1; $i <= 7; $i++) {
+            $futureDate = now()->addDays($i);
+            $upcoming = EmployeeMaster::where('status', 1)
+                ->whereRaw("DATE_FORMAT(dob, '%m-%d') = ?", [$futureDate->format('m-d')])
+                ->leftJoin('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+                ->select(
+                    'employee_master.pk',
+                    'employee_master.first_name',
+                    'employee_master.last_name',
+                    'employee_master.email',
+                    'employee_master.mobile',
+                    'employee_master.office_extension_no',
+                    'employee_master.profile_picture',
+                    'employee_master.dob',
+                    'designation_master.designation_name'
+                )
+                ->get()
+                ->each(function ($emp) use ($futureDate) {
+                    $emp->birthday_date = $futureDate->format('d M');
+                    $emp->days_away = $futureDate->diffInDays(now());
+                });
+            $upcomingBirthdays = $upcomingBirthdays->merge($upcoming);
+        }
+
+        $notices = get_notice_notification_by_role();
+
+        $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
+        $noticeTabLabels = [
+            'office-orders' => 'Office Orders',
+            'work-allocation' => 'Work Allocation',
+            'notice-circular' => 'Notice/ Circular/ Order',
+        ];
+        $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
+        foreach ($notices as $noticeForTab) {
+            $tabKey = $this->resolveDashboardNoticeTabKey($noticeForTab->notice_type ?? '');
+            $noticeTabCounts[$tabKey]++;
+        }
+        $defaultNoticeTab = 'office-orders';
+        foreach ($noticeTabKeys as $tabKeyCandidate) {
+            if ($noticeTabCounts[$tabKeyCandidate] > 0) {
+                $defaultNoticeTab = $tabKeyCandidate;
+                break;
+            }
+        }
+
+        $feedExpandedNotifications = collect();
+        $feedExpandedWishes = collect();
+        $notificationBadgeCount = 0;
+
+        if ($user && $user->user_id) {
+            $feedNotificationsQuery = \App\Models\Notification::with('sender')
+                ->where('receiver_user_id', $user->user_id);
+            if ($daysOld !== null) {
+                $feedNotificationsQuery->where('created_at', '>=', now()->subDays($daysOld));
+            }
+            $feedAll = $feedNotificationsQuery->orderByDesc('created_at')->limit(100)->get();
+            $feedExpandedWishes = $feedAll->filter(function ($item) {
+                return strtolower((string) ($item->type ?? '')) === 'birthday';
+            })->values();
+            $feedExpandedNotifications = $feedAll->filter(function ($item) {
+                return strtolower((string) ($item->type ?? '')) !== 'birthday';
+            })->values();
+
+            $notificationBadgeCount = $isAdminSummary
+                ? notification()->getUnreadCount($user->user_id, $daysOld)
+                : $feedAll->where('is_read', 0)->count();
+        }
+
+        return compact(
+            'user',
+            'isAdminSummary',
+            'daysOld',
+            'emp_dob_data',
+            'upcomingBirthdays',
+            'birthdayWishCounts',
+            'notices',
+            'noticeTabKeys',
+            'noticeTabLabels',
+            'noticeTabCounts',
+            'defaultNoticeTab',
+            'feedExpandedNotifications',
+            'feedExpandedWishes',
+            'notificationBadgeCount'
+        );
+    }
+
+    public function resolveDashboardNoticeTabKey(?string $type): string
+    {
+        $t = strtolower((string) ($type ?? ''));
+        if (str_contains($t, 'office order')) {
+            return 'office-orders';
+        }
+        if (str_contains($t, 'course notice')) {
+            return 'work-allocation';
+        }
+
+        return 'notice-circular';
     }
 
     /**
@@ -1342,11 +1529,11 @@ class UserController extends Controller
     public function index(Request $request)
     {
         $perPage = (int) $request->input('per_page', 10);
-        $search = $request->input('search');
+        $search = trim((string) ($request->input('search') ?? ''));
         $user_type = trim((string) $request->input('User_type', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'admin_users_index:v1:' . md5(json_encode([
+        $cacheKey = 'admin_users_index:v4:' . md5(json_encode([
             'epoch' => $epoch,
             'search' => $search,
             'user_type' => $user_type,
@@ -1380,6 +1567,25 @@ class UserController extends Controller
      */
     private function buildAdminUsersIndexPaginator(Request $request, int $perPage, $search, string $user_type): array
     {
+        $paginator = $this->adminUsersBaseQuery($search, $user_type)
+            ->paginate($perPage)
+            ->withQueryString();
+
+        return [
+            'items' => $paginator->items(),
+            'total' => $paginator->total(),
+            'perPage' => $paginator->perPage(),
+            'currentPage' => $paginator->currentPage(),
+        ];
+    }
+
+    /**
+     * Build the base query for the admin users listing, applying the same
+     * search + user-type filters used by both the paginated index and exports.
+     * Keeping this in one place ensures exports honour the active filters.
+     */
+    private function adminUsersBaseQuery($search, string $user_type)
+    {
         $usersQuery = DB::table('user_credentials as uc')
             ->leftJoin('employee_role_mapping as erm', 'erm.user_credentials_pk', '=', 'uc.pk')
             ->leftJoin('user_role_master as urm', 'urm.pk', '=', 'erm.user_role_master_pk')
@@ -1390,6 +1596,7 @@ class UserController extends Controller
                 'uc.last_name',
                 'uc.email_id',
                 'uc.mobile_no',
+                'uc.user_category as User_type',
                 DB::raw("GROUP_CONCAT(urm.user_role_display_name SEPARATOR ', ') as roles")
             )
             ->groupBy(
@@ -1398,29 +1605,113 @@ class UserController extends Controller
                 'uc.first_name',
                 'uc.last_name',
                 'uc.email_id',
-                'uc.mobile_no'
+                'uc.mobile_no',
+                'uc.user_category'
             );
 
-        if ($search) {
-            $usersQuery->where(function ($q) use ($search) {
-                $q->where('uc.user_name', 'like', "%{$search}%")
-                    ->orWhere('uc.first_name', 'like', "%{$search}%")
-                    ->orWhere('uc.last_name', 'like', "%{$search}%")
-                    ->orWhere('uc.email_id', 'like', "%{$search}%");
+        $search = trim((string) ($search ?? ''));
+
+        if ($search !== '') {
+            $searchLower = strtolower(preg_replace('/\s+/', ' ', $search) ?? $search);
+
+            // Split the query into terms so a multi-word search (e.g. "virender virodia")
+            // matches when each term is found in *some* field, even across different
+            // columns (one term in user_name, another in last_name).
+            $terms = array_filter(explode(' ', $searchLower), fn ($t) => $t !== '');
+
+            $usersQuery->where(function ($outer) use ($terms) {
+                foreach ($terms as $term) {
+                    $like = "%{$term}%";
+                    $outer->where(function ($q) use ($like) {
+                        $q->whereRaw("LOWER(TRIM(COALESCE(uc.user_name, ''))) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(TRIM(uc.first_name)) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(TRIM(uc.last_name)) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(TRIM(uc.email_id)) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.first_name), TRIM(uc.last_name))) LIKE ?", [$like])
+                            ->orWhereRaw("LOWER(CONCAT_WS(' ', TRIM(uc.last_name), TRIM(uc.first_name))) LIKE ?", [$like]);
+                    });
+                }
             });
         }
         if ($user_type !== '') {
             $usersQuery->where('uc.user_category', $user_type);
         }
 
-        $paginator = $usersQuery->paginate($perPage)->withQueryString();
+        return $usersQuery;
+    }
 
+    /**
+     * Column definitions available for export, keyed by the toggle key used in
+     * the listing. Each entry maps to a heading and a value resolver.
+     *
+     * @return array<string, array{label: string, value: callable}>
+     */
+    private function adminUsersExportColumns(): array
+    {
         return [
-            'items' => $paginator->items(),
-            'total' => $paginator->total(),
-            'perPage' => $paginator->perPage(),
-            'currentPage' => $paginator->currentPage(),
+            'username'    => ['label' => 'Username',  'value' => fn ($u) => $u->user_name ?? ''],
+            'name'        => ['label' => 'Name',      'value' => fn ($u) => trim(($u->first_name ?? '') . ' ' . ($u->last_name ?? ''))],
+            'email'       => ['label' => 'Email',     'value' => fn ($u) => $u->email_id ?? ''],
+            'mobile'      => ['label' => 'Mobile',    'value' => fn ($u) => $u->mobile_no ?: '—'],
+            'usertype'    => ['label' => 'User Type', 'value' => fn ($u) => self::userTypeLabel($u->User_type ?? '')],
+            'roles'       => ['label' => 'Roles',     'value' => fn ($u) => $u->roles ?: 'No Role'],
         ];
+    }
+
+    /**
+     * Export the users listing (csv / xlsx / pdf) honouring the active search,
+     * user-type filter and — where provided — the columns the user has left
+     * visible in the grid.
+     */
+    public function export(Request $request, string $format)
+    {
+        $search = trim((string) ($request->input('search') ?? ''));
+        $user_type = trim((string) $request->input('User_type', ''));
+
+        // Determine which columns to export based on the grid's visible columns.
+        $allColumns = $this->adminUsersExportColumns();
+        $requested = array_filter(explode(',', (string) $request->input('columns', '')));
+        $requested = array_values(array_intersect($requested, array_keys($allColumns)));
+
+        if (empty($requested)) {
+            $requested = array_keys($allColumns);
+        }
+
+        $headings = array_merge(['S. No.'], array_map(fn ($k) => $allColumns[$k]['label'], $requested));
+
+        $records = $this->adminUsersBaseQuery($search, $user_type)
+            ->orderBy('uc.pk')
+            ->get();
+
+        $rows = [];
+        foreach ($records as $i => $record) {
+            $row = [$i + 1];
+            foreach ($requested as $key) {
+                $row[] = $allColumns[$key]['value']($record);
+            }
+            $rows[] = $row;
+        }
+
+        $timestamp = now()->format('Ymd_His');
+        $fileBase = "users_{$timestamp}";
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.user_management.users.partials.export_pdf', [
+                'headings' => $headings,
+                'rows' => $rows,
+                'generatedAt' => now()->format('d-m-Y H:i'),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download("{$fileBase}.pdf");
+        }
+
+        $writerType = $format === 'csv' ? ExcelWriter::CSV : ExcelWriter::XLSX;
+
+        return Excel::download(
+            new UsersExport($headings, $rows),
+            "{$fileBase}.{$format}",
+            $writerType
+        );
     }
 
     private static function bumpAdminUsersIndexCacheEpoch(): void

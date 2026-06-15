@@ -4,9 +4,25 @@
         <!-- ---------------------------------- -->
         <!-- Start Vertical Layout Sidebar -->
         <!-- ---------------------------------- -->
-        <div class="iconbar flex-fill d-flex flex-column" style="min-height: 0;">
-            <div class="flex-fill d-flex flex-column" style="min-height: 0;">
-                <div class="mini-nav flex-fill d-flex flex-column" style="min-height: 0;">
+        <div class="iconbar sargam-sidebar-iconbar flex-fill d-flex flex-row align-items-stretch" style="min-height: 0;">
+                <div class="mini-nav sargam-mini-nav flex-shrink-0 d-flex flex-column" style="min-height: 0; width: 90px;">
+                    <div class="d-flex align-items-center justify-content-center sidebar-google-hamburger">
+                        <a class="sidebar-mini-toggle sidebartoggler sidebar-mini-squircle-item nav-link p-0 border-0 bg-transparent shadow-none"
+                            id="headerCollapse"
+                            href="javascript:void(0)"
+                            data-bs-toggle="tooltip"
+                            data-bs-custom-class="custom-tooltip"
+                            data-bs-placement="right"
+                            aria-label="Toggle sidebar menu">
+                            <span class="sidebar-mini-squircle-box sidebar-mini-squircle-box--neutral">
+                                <i id="sidebarToggleIcon" class="material-icons material-symbols-rounded" aria-hidden="true">left_panel_close</i>
+                            </span>
+                            <span class="sidebar-mini-squircle-label sidebar-mini-toggle-label">
+                                <span class="sidebar-mini-toggle-text-close">Close</span>
+                                <span class="sidebar-mini-toggle-text-open">Open</span>
+                            </span>
+                        </a>
+                    </div>
                     <ul class="mini-nav-ul simplebar-scrollable-y flex-fill" data-simplebar="init"
                         style="min-height: 0;">
                         <div class="simplebar-wrapper" style="margin: 0px;">
@@ -22,12 +38,11 @@
                                             <li class="mini-nav-item {{ request()->routeIs('admin.birthday-wish.*') ? 'selected' : '' }}"
                                                 id="mini-12">
                                                 <a href="javascript:void(0)"
-                                                    class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
-                                                    <span
-                                                        class="sidebar-google-icon-wrap d-flex align-items-center justify-content-center">
+                                                    class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
+                                                    <span class="sidebar-mini-squircle-box">
                                                         <i class="material-icons menu-icon material-symbols-rounded">apps</i>
                                                     </span>
-                                                    <span class="mini-nav-title sidebar-google-label">General</span>
+                                                    <span class="mini-nav-title sidebar-mini-squircle-label">General</span>
                                                 </a>
                                             </li>
 
@@ -51,117 +66,17 @@
                     </ul>
 
                 </div>
-                <div class="sidebarmenu">
+                <div class="sidebarmenu flex-fill min-vw-0 d-flex flex-column" style="min-height: 0;">
                     <!-- ---------------------------------- -->
                     <!-- Communication -->
                     <!-- ---------------------------------- -->
                     <x-menu.communication_setup />
                 </div>
-            </div>
         </div>
     </div>
 </aside>
 
 <style>
-/* Google-style sidebar — communications tab pane (#sidebar-communications), same language as home */
-#sidebar-communications .sidebar-google-style.side-mini-panel {
-    width: 90px;
-}
-#sidebar-communications .sidebar-google-style .mini-nav {
-    background: #f0f0f0 !important;
-    border: 1px solid var(--bs-border-color-translucent);
-    padding: 12px 0;
-    border-radius: 10px;
-}
-#sidebar-communications .sidebar-google-style .sidebar-google-hamburger {
-    padding: 16px 0;
-    margin: 0;
-}
-#sidebar-communications .sidebar-google-style .sidebar-google-hamburger .sidebartoggler {
-    color: var(--bs-secondary-color) !important;
-}
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item {
-    list-style: none;
-    display: flex !important;
-    justify-content: center !important;
-}
-#sidebar-communications .sidebar-google-style .mini-nav ul.mini-nav-ul {
-    padding-inline-start: 0 !important;
-    list-style: none !important;
-}
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item > a {
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    padding: 12px 8px !important;
-    padding-left: 8px !important;
-    margin: 4px 8px !important;
-    background: transparent !important;
-    height: auto !important;
-    min-height: 56px;
-    width: 100%;
-    transition: background-color 0.2s ease, color 0.2s ease;
-}
-#sidebar-communications .sidebar-google-style .sidebar-google-item {
-    display: flex !important;
-    flex-direction: column !important;
-    align-items: center !important;
-    justify-content: center !important;
-    gap: 4px;
-    text-align: center !important;
-}
-#sidebar-communications .sidebar-google-style .sidebar-google-icon-wrap {
-    display: flex !important;
-    align-items: center !important;
-    justify-content: center !important;
-    width: 48px;
-    height: 32px;
-    margin-inline: auto;
-    border-radius: 24px;
-    transition: background 0.2s;
-}
-#sidebar-communications .sidebar-google-style .sidebar-google-icon-wrap .material-icons {
-    line-height: 1 !important;
-    vertical-align: middle !important;
-}
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item > a .material-icons {
-    font-size: 24px !important;
-    color: var(--bs-secondary-color) !important;
-}
-#sidebar-communications .sidebar-google-style .sidebar-google-label {
-    font-size: 11px;
-    color: var(--bs-secondary-color) !important;
-    font-weight: 400;
-    text-align: center;
-    line-height: 1.2;
-}
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item > a:hover .material-icons,
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item > a:hover .sidebar-google-label {
-    color: var(--bs-emphasis-color) !important;
-}
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item > a:focus-visible {
-    outline: 2px solid rgba(var(--bs-primary-rgb), 0.35);
-    outline-offset: 2px;
-}
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-icon-wrap {
-    background: var(--bs-primary-bg-subtle) !important;
-    border-radius: 10px;
-    padding: 10px;
-    box-shadow: 0 2px 8px rgba(13, 110, 253, 0.16);
-    transition: all 0.2s ease;
-    transform: scale(1.05);
-    margin: 4px 8px;
-    width: 100%;
-    height: 100%;
-}
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item.selected > a .material-icons,
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item.selected > a .sidebar-google-label {
-    color: var(--bs-primary-text-emphasis) !important;
-}
-#sidebar-communications .sidebar-google-style .mini-nav .mini-nav-item.selected > a:before {
-    display: none !important;
-}
-
 /* Section headers in fly-out menu (matches home / general menu pill style) */
 #sidebar-communications .comm-sidebar-section-heading {
     background: #4077ad;
@@ -238,15 +153,19 @@ document.addEventListener('DOMContentLoaded', function() {
         if (selectedItem) {
             selectedItem.classList.add('selected');
         }
-        sidebarMenus.forEach(function(nav) {
-            nav.classList.remove('d-block');
-            nav.style.display = 'none';
-        });
         const targetMenuId = 'menu-right-' + miniId;
         const targetMenu = document.getElementById(targetMenuId);
         if (targetMenu) {
-            targetMenu.classList.add('d-block');
-            targetMenu.style.display = 'block';
+            if (typeof window.activateSidebarPanelNav === 'function') {
+                window.activateSidebarPanelNav(targetMenu);
+            } else {
+                sidebarMenus.forEach(function(nav) {
+                    nav.classList.remove('d-block', 'is-active-panel');
+                    nav.style.display = 'none';
+                });
+                targetMenu.classList.add('d-block', 'is-active-panel');
+                targetMenu.style.display = 'flex';
+            }
             document.body.setAttribute('data-sidebartype', 'full');
             keepSidebarVisible(targetMenuId, 3000);
         }

@@ -6,10 +6,8 @@
 <div class="container-fluid">
     <x-breadcrum title="Upcoming Course"></x-breadcrum>
 
-    <div class="card" >
-        <div class="card-body">
-            <h4>Upcoming Course</h4>
-            <hr class="my-2">
+    <div class="card">
+        <div class="card-body"> 
             <div class="datatables">
                 <div class="table-responsive">
                     <table class="table" id="incoming_course">
