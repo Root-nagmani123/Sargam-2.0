@@ -11,12 +11,27 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\User;
 use Illuminate\Support\Facades\Session;
+use App\Services\FacultyFeedbackReportService;
 
 
 
 
 class CalendarController extends Controller
 {
+    /**
+     * Limit timetable rows to sessions assigned to the given faculty.
+     */
+    private function scopeTimetableForFaculty($query, int $facultyPk)
+    {
+        return $query->where(function ($q) use ($facultyPk) {
+            $q->where('timetable.faculty_master', $facultyPk)
+                ->orWhereRaw('JSON_CONTAINS(COALESCE(NULLIF(timetable.faculty_master, ""), "[]"), ?)', ['"'.$facultyPk.'"'])
+                ->orWhereRaw('FIND_IN_SET(?, timetable.faculty_master)', [$facultyPk])
+                ->orWhereRaw('JSON_CONTAINS(COALESCE(NULLIF(timetable.internal_faculty, ""), "[]"), ?)', ['"'.$facultyPk.'"'])
+                ->orWhereRaw('FIND_IN_SET(?, timetable.internal_faculty)', [$facultyPk]);
+        });
+    }
+
     public function index(Request $request)
     {
         
@@ -26,10 +41,21 @@ class CalendarController extends Controller
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->whereDate('end_date', '>=', today());
 
-        // Students are scoped by enrolment (the join below), not by role. Skipping the
-        // role-course filter for them avoids get_Role_by_course()'s [-1] (students have
-        // no Spatie role), which would otherwise wipe out their course list.
-        if (!hasRole('Student-OT') && !empty($data_course_id)) {
+        // Faculty see courses from their timetable / coordinator assignments, not role mapping.
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $facultyCourseIds = app(FacultyFeedbackReportService::class)->getAccessibleCourseIds($facultyPk);
+                $courseMaster = $facultyCourseIds->isNotEmpty()
+                    ? $courseMaster->whereIn('course_master.pk', $facultyCourseIds)
+                    : $courseMaster->whereRaw('1 = 0');
+            } else {
+                $courseMaster = $courseMaster->whereRaw('1 = 0');
+            }
+        } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
+            // Students are scoped by enrolment (the join below), not by role. Skipping the
+            // role-course filter for them avoids get_Role_by_course()'s [-1] (students have
+            // no Spatie role), which would otherwise wipe out their course list.
             $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
         }
 
@@ -111,7 +137,14 @@ class CalendarController extends Controller
             ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
 
         $data_course_id = get_Role_by_course();
-        if (!hasRole('Student-OT') && !empty($data_course_id)) {
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $events = $this->scopeTimetableForFaculty($events, $facultyPk);
+            } else {
+                $events = $events->whereRaw('1 = 0');
+            }
+        } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
             $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
         }
 
@@ -258,10 +291,19 @@ class CalendarController extends Controller
                 ->where('student_course_group_map.student_master_pk', $student_pk);
         }
 
-        // Training admins (MCTP, IST, Induction) only see events for their aligned courses.
-        $data_course_id = get_Role_by_course();
-        if (!hasRole('Student-OT') && !empty($data_course_id)) {
-            $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
+        // Scope events by user type (faculty assignments vs training-admin course alignment).
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $events = $this->scopeTimetableForFaculty($events, $facultyPk);
+            } else {
+                $events = $events->whereRaw('1 = 0');
+            }
+        } else {
+            $data_course_id = get_Role_by_course();
+            if (!hasRole('Student-OT') && !empty($data_course_id)) {
+                $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
+            }
         }
 
         $cuurent_month_start_date = Carbon::now()->startOfMonth()->toDateString();
@@ -286,32 +328,6 @@ class CalendarController extends Controller
                 'venue_master.venue_name as venue_name'
             )
             ->get();
-
-        // Internal / Guest Faculty - Filter after fetching to handle JSON
-        if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
-            $faculty_pk = auth()->user()->user_id;
-            $faculty_master_pk = DB::table('faculty_master')
-                ->where('employee_master_pk', $faculty_pk)
-                ->value('pk');
-
-            if ($faculty_master_pk) {
-                $events = $events->filter(function ($event) use ($faculty_master_pk) {
-                    $facultyIds = json_decode($event->faculty_master, true);
-                    // Handle both old integer format and new JSON array format
-                    if (is_array($facultyIds)) {
-                        return in_array($faculty_master_pk, $facultyIds);
-                    } else {
-                        // Old format: integer value
-                        return $event->faculty_master == $faculty_master_pk;
-                    }
-                });
-            } else {
-                $events = collect([]);
-            }
-        }
-
-
-
 
         // Array of some sample colors
         $colors = ['#ffffff'];
@@ -455,9 +471,18 @@ class CalendarController extends Controller
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
             ->where('timetable.pk', $eventId);
 
-        $data_course_id = get_Role_by_course();
-        if (!hasRole('Student-OT') && !empty($data_course_id)) {
-            $eventQuery->whereIn('timetable.course_master_pk', $data_course_id);
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $eventQuery = $this->scopeTimetableForFaculty($eventQuery, $facultyPk);
+            } else {
+                $eventQuery->whereRaw('1 = 0');
+            }
+        } else {
+            $data_course_id = get_Role_by_course();
+            if (!hasRole('Student-OT') && !empty($data_course_id)) {
+                $eventQuery->whereIn('timetable.course_master_pk', $data_course_id);
+            }
         }
 
         $event = $eventQuery->select(
