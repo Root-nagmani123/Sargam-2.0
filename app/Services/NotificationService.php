@@ -14,6 +14,31 @@ class NotificationService
     private const MESS_COMBINED_RECEIPT_MARKER = "\u{2060}MESS_COMBINED_RECEIPT\x1F";
 
     /**
+     * Estate workflow alerts (new request / HAC routing): Estate Admin and Super Admin only.
+     */
+    public static function isEstateAdminWorkflowNotification(?string $type, ?string $moduleName = null): bool
+    {
+        return strtolower(trim((string) $type)) === 'estate_request';
+    }
+
+    /**
+     * Hide estate workflow alerts from roles other than Estate Admin / Super Admin.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder|\Illuminate\Database\Query\Builder  $query
+     */
+    private function applyEstateAdminWorkflowVisibilityFilter($query): void
+    {
+        if (isEstateAuthority()) {
+            return;
+        }
+
+        $query->where(function ($q) {
+            $q->whereNull('type')
+                ->orWhere('type', '!=', 'estate_request');
+        });
+    }
+
+    /**
      * Create a new notification
      * 
      * @param int $receiverUserId The user_id of the receiver (Faculty/Student)
@@ -245,8 +270,11 @@ class NotificationService
     public function getUnreadNotifications(int $userId, ?int $limit = null)
     {
         $query = Notification::where('receiver_user_id', $userId)
-            ->where('is_read', 0)
-            ->orderBy('created_at', 'desc');
+            ->where('is_read', 0);
+
+        $this->applyEstateAdminWorkflowVisibilityFilter($query);
+
+        $query->orderBy('created_at', 'desc');
 
         if ($limit) {
             $query->limit($limit);
@@ -275,6 +303,8 @@ class NotificationService
             $query->where('created_at', '>=', now()->subDays($daysOld));
         }
 
+        $this->applyEstateAdminWorkflowVisibilityFilter($query);
+
         $query->orderBy('created_at', 'desc');
 
         if ($limit) {
@@ -298,6 +328,8 @@ class NotificationService
         if ($daysOld !== null) {
             $query->where('created_at', '>=', now()->subDays($daysOld));
         }
+
+        $this->applyEstateAdminWorkflowVisibilityFilter($query);
 
         return $query->count();
     }
