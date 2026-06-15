@@ -7,7 +7,7 @@
    instead of snapping between set column counts. */
 .dashboard-stats-grid.row {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 1rem;
     margin-right: 0;
     margin-left: 0;

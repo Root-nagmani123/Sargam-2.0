@@ -181,8 +181,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         </div>
         @endif
 
-        @if(hasRole('Security Card') || hasRole('Admin Security') || hasRole('Super Admin'))
+        
         <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 mt-3">
+            @if(hasRole('Security Card') || hasRole('Admin Security') || hasRole('Super Admin'))
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
