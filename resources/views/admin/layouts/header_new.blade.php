@@ -293,7 +293,7 @@
                             @if(hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Staff'))
                             <span>Setup</span>
                             @elseif(hasRole('Internal Faculty') || hasRole('Guest Faculty') ||
-                            hasRole('Student-OT'))
+                            hasRole('Officer Trainee'))
                             <span>Academics</span>
                             @endif
                         </a>

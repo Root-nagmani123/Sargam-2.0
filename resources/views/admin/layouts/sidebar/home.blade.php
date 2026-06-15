@@ -42,7 +42,7 @@
                                                     <span class="mini-nav-title sidebar-google-label">General</span>
                                                 </a>
                                             </li>
-                                            @if(hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
+                                            @if(hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Officer Trainee') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
                                             <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}" id="mini-11">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -64,7 +64,7 @@
                                                 </a>
                                             </li>
                                             @endif
-                                            @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                                            @if(! hasRole('Officer Trainee') && ! $isContractualEmployee)
                                             <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item d-flex flex-column align-items-center justify-content-center rounded-3">
@@ -110,7 +110,7 @@
                     <x-menu.general />
                     <x-menu.setup_estate_management />
                     <x-menu.setup_mess_management />
-                    @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                    @if(! hasRole('Officer Trainee') && ! $isContractualEmployee)
                     <x-menu.setup_security_management />
                     <x-menu.setup_issue_management />
                     @endif

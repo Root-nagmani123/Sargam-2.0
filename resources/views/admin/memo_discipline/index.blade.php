@@ -732,7 +732,7 @@
                             <th class="text-center">Final</th>
                             <th>Remarks</th>
                             <th>Status</th>
-                            @if(! hasRole('Student-OT'))
+                            @if(! hasRole('Officer Trainee'))
                             <th class="text-end">Action</th>
                             @endif
                         </tr>
@@ -829,7 +829,7 @@
                             </td>
 
                             <!-- Action -->
-                            @if(! hasRole('Student-OT'))
+                            @if(! hasRole('Officer Trainee'))
                             <td class="text-end">
                                 @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin')
                                 || hasRole('Training Induction Admin'))
