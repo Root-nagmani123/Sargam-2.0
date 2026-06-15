@@ -12,7 +12,6 @@ use Yajra\DataTables\Html\Editor\Editor;
 use Yajra\DataTables\Html\Editor\Fields;
 use Yajra\DataTables\Services\DataTable;
 use Illuminate\Support\Facades\DB;
-use Carbon\Carbon;
 
 
 class FcRegistrationMasterListDaTable extends DataTable
@@ -170,16 +169,13 @@ class FcRegistrationMasterListDaTable extends DataTable
             $query->where('fc_registration_master.course_master_pk', $course);
         }
 
+        // Active / Archived tabs follow roster status (active_inactive), not programme end_date.
+        // Otherwise freshly imported trainees disappear when their course_master.end_date has passed.
         $statusFilter = request('course_status_filter', 'active');
-        $currentDate = Carbon::now()->format('Y-m-d');
         if ($statusFilter === 'archive') {
-            $query->whereNotNull('fc_registration_master.course_master_pk')
-                ->where('cm.end_date', '<', $currentDate);
+            $query->where('fc_registration_master.active_inactive', 0);
         } else {
-            $query->where(function ($q) use ($currentDate) {
-                $q->whereNull('fc_registration_master.course_master_pk')
-                    ->orWhere('cm.end_date', '>=', $currentDate);
-            });
+            $query->where('fc_registration_master.active_inactive', 1);
         }
 
         if ($exemption = request('exemption_category')) {

@@ -469,16 +469,10 @@ class RegistrationImportController extends Controller
         }
 
         $statusFilter = $request->input('course_status_filter', 'active');
-        $currentDate = Carbon::now()->format('Y-m-d');
-
         if ($statusFilter === 'archive') {
-            $query->whereNotNull('fc_registration_master.course_master_pk')
-                ->where('cm.end_date', '<', $currentDate);
+            $query->where('fc_registration_master.active_inactive', 0);
         } else {
-            $query->where(function ($q) use ($currentDate) {
-                $q->whereNull('fc_registration_master.course_master_pk')
-                    ->orWhere('cm.end_date', '>=', $currentDate);
-            });
+            $query->where('fc_registration_master.active_inactive', 1);
         }
     }
 

@@ -1396,7 +1396,7 @@ if (! function_exists('fc_file_upload_hint')) {
      */
     function fc_file_upload_hint(?string $validationRules, ?int $fileMaxKb = null): string
     {
-        $maxKb = $fileMaxKb ?? 10240;
+        $maxKb = $fileMaxKb ?? 5120;
         $mimes = ['pdf', 'jpg', 'jpeg', 'png'];
 
         if ($validationRules) {

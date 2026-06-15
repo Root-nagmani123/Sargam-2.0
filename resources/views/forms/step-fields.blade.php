@@ -20,6 +20,17 @@
 
     @include('fc.registration.partials.fc-stepper')
 
+    @if($errors->any())
+        <div class="alert alert-danger shadow-sm mb-3" role="alert" id="fc-validation-alert">
+            <strong class="d-block mb-2"><i class="bi bi-exclamation-triangle-fill me-1"></i> Please fix the following errors:</strong>
+            <ul class="mb-0 ps-3">
+                @foreach($errors->all() as $err)
+                    <li>{{ $err }}</li>
+                @endforeach
+            </ul>
+        </div>
+    @endif
+
     <div class="card fc-card border-0 shadow-sm">
         <div class="card-header bg-white py-3 d-flex justify-content-between align-items-start flex-wrap gap-2">
             <div>
@@ -54,16 +65,6 @@
             @if(session('error'))
                 <div class="alert alert-danger small py-2">{{ session('error') }}</div>
             @endif
-            @if($errors->any())
-                <div class="alert alert-danger small py-2 mb-3">
-                    <strong class="d-block mb-1">Please fix the following:</strong>
-                    <ul class="mb-0 ps-3">
-                        @foreach($errors->all() as $err)
-                            <li>{{ $err }}</li>
-                        @endforeach
-                    </ul>
-                </div>
-            @endif
             @php $allFileFields = $fields->isNotEmpty() && $fields->every(fn ($f) => $f->field_type === 'file'); @endphp
 
             @if($allFileFields)
@@ -92,7 +93,7 @@
                     </div>
                 </form>
             @else
-            <form method="POST" action="{{ route('fc-reg.forms.step.save', [$form, $step]) }}" enctype="multipart/form-data">
+            <form method="POST" action="{{ route('fc-reg.forms.step.save', [$form, $step]) }}" enctype="multipart/form-data" class="fc-reg-step-form" novalidate>
                 @csrf
 
                 @php $lastSection = null; @endphp
@@ -118,10 +119,11 @@
 
                     <div class="{{ $field->css_class }}">
                         @include('fc.registration.partials.dynamic-field', [
-                            'field'        => $field,
-                            'existingData' => $existingData,
-                            'lookups'      => $lookups,
-                            'readonly'     => false,
+                            'field'           => $field,
+                            'existingData'    => $existingData,
+                            'lookups'         => $lookups,
+                            'districtOptions' => $districtOptions ?? collect(),
+                            'readonly'        => false,
                         ])
                     </div>
                 @endforeach
@@ -156,22 +158,25 @@
     $hasSameAsPermanent = $fields->contains(fn ($f) => $f->field_name === 'same_as_permanent');
 @endphp
 @push('scripts')
+@include('fc.registration.partials.fc-form-validation')
 @if($hasSameAsPermanent ?? false)
 @include('fc.registration.partials.same-as-permanent-script')
 @endif
+@include('fc.registration.partials.fc-location-cascade-script')
 <script>
 document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (input) {
-    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10) || 0;
-    var allowedExts = ['pdf','jpg','jpeg','png'];
+    var maxKb = parseInt(input.getAttribute('data-max-kb'), 10) || 5120;
+    var allowedExts = (input.getAttribute('data-accept-ext') || 'pdf,jpg,jpeg,png')
+        .split(',').map(function (e) { return e.trim().toLowerCase(); });
 
     function validateFile(file) {
-        if (!file) return;
+        if (!file) return true;
         var ext = file.name.split('.').pop().toLowerCase();
-        var errEl = input.nextElementSibling;
-        if (!errEl || !errEl.classList.contains('js-file-error')) {
+        var errEl = input.parentNode.querySelector('.js-file-error');
+        if (!errEl) {
             errEl = document.createElement('div');
             errEl.className = 'js-file-error text-danger small mt-1';
-            input.parentNode.insertBefore(errEl, input.nextSibling);
+            input.parentNode.appendChild(errEl);
         }
         var msg = '';
         if (allowedExts.indexOf(ext) === -1) {
@@ -184,10 +189,11 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
             errEl.textContent = msg;
             input.classList.add('is-invalid');
             input.value = '';
-        } else {
-            errEl.textContent = '';
-            input.classList.remove('is-invalid');
+            return false;
         }
+        errEl.textContent = '';
+        input.classList.remove('is-invalid');
+        return true;
     }
 
     input.addEventListener('change', function () { validateFile(this.files[0]); });
@@ -195,8 +201,10 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
     var form = input.closest('form');
     if (form) {
         form.addEventListener('submit', function (e) {
-            if (input.files && input.files.length) { validateFile(input.files[0]); }
-            if (input.classList.contains('is-invalid')) { e.preventDefault(); input.focus(); }
+            if (input.files && input.files.length && !validateFile(input.files[0])) {
+                e.preventDefault();
+                input.focus();
+            }
         });
     }
 });

@@ -13,30 +13,6 @@
     .fc-fb-actions .btn { flex-shrink: 0; }
     .fc-fb-actions__form { display: inline-flex; margin: 0; padding: 0; }
     .fc-field-form-section .border { border-color: var(--bs-border-color) !important; }
-    /* Nested group tabs: global .tab-content>.tab-pane {display:none} hides pane bodies (fields table). */
-    #fcFbGroupTabContent {
-        display: grid;
-        grid-template-columns: 1fr;
-    }
-    #fcFbGroupTabContent > .tab-pane {
-        grid-row: 1;
-        grid-column: 1;
-        margin: 0;
-        padding: 0;
-    }
-    #fcFbGroupTabContent > .tab-pane:not(.show.active) {
-        display: none !important;
-        visibility: hidden !important;
-        height: 0 !important;
-        overflow: hidden !important;
-        pointer-events: none;
-    }
-    #fcFbGroupTabContent > .tab-pane.show.active {
-        display: block !important;
-        visibility: visible !important;
-        height: auto !important;
-        opacity: 1;
-    }
 </style>
 @endpush
 
@@ -234,150 +210,125 @@
     </div>
     @endif
 
-    {{-- GROUPS SECTION (Step 3 / Other Details) --}}
+    {{-- GROUPED STEP: same flat Fields table as step 1; groups managed separately --}}
     @if($step->usesFieldGroups())
+    @php
+        $groupedFieldCount = $step->fieldGroups->sum(fn ($g) => $g->groupFields->count());
+    @endphp
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-            <h6 class="mb-0 text-uppercase small fw-bold text-muted">Field Groups / Tabs ({{ $step->fieldGroups->count() }})</h6>
-            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addGroupModal">
-                <i class="bi bi-plus-circle me-1"></i>Add Group
-            </button>
+            <h6 class="mb-0 text-uppercase small fw-bold text-muted" id="fcGroupFieldsCountLabel">Fields ({{ $groupedFieldCount }})</h6>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#fcManageGroups" aria-expanded="false">
+                    <i class="bi bi-collection me-1"></i>Manage Groups ({{ $step->fieldGroups->count() }})
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="openAddGroupFieldModal()">
+                    <i class="bi bi-plus-circle me-1"></i>Add Field
+                </button>
+            </div>
         </div>
-        <div class="card-body fc-fb-step-groups">
-            <p class="small text-muted mb-3">
-                <i class="bi bi-info-circle me-1"></i>
-                Select a group tab below. Fields for that group appear under <strong>Group settings</strong>.
-            </p>
-            {{-- Group tabs --}}
-            <ul class="nav nav-tabs mb-3 flex-wrap" id="fcFbGroupTabs" role="tablist">
-                @foreach($step->fieldGroups as $gi => $group)
-                    <li class="nav-item" role="presentation">
-                        <a class="nav-link text-nowrap {{ $gi === 0 ? 'active' : '' }}"
-                           id="fc-fb-grp-tab-{{ $group->id }}"
-                           data-bs-toggle="tab"
-                           data-bs-target="#grp-{{ $group->id }}"
-                           href="#grp-{{ $group->id }}"
-                           role="tab"
-                           aria-controls="grp-{{ $group->id }}"
-                           aria-selected="{{ $gi === 0 ? 'true' : 'false' }}">
-                            {{ $group->group_label }}
-                            <span class="badge bg-secondary ms-1">{{ $group->groupFields->count() }}</span>
-                            @if(! $group->is_active)
-                                <i class="bi bi-eye-slash text-muted ms-1"></i>
-                            @endif
-                        </a>
-                    </li>
-                @endforeach
-            </ul>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr class="small text-muted">
+                            <th style="width:40px;">#</th>
+                            <th>Label</th>
+                            <th>Field Name</th>
+                            <th>Type</th>
+                            <th>Target Column</th>
+                            <th>Section</th>
+                            <th>Required</th>
+                            <th>Active</th>
+                            <th class="fc-fb-actions-col">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="groupFieldsList">
+                        @php $hasAnyGroupField = false; @endphp
+                        @foreach($step->fieldGroups as $group)
+                            @foreach($group->groupFields as $field)
+                                @php $hasAnyGroupField = true; @endphp
+                                @include('admin.form-builder.partials.group-field-row', compact('group', 'field'))
+                            @endforeach
+                        @endforeach
+                        @if(! $hasAnyGroupField)
+                            <tr>
+                                <td colspan="9" class="text-center text-muted small py-4">
+                                    @if($step->fieldGroups->isEmpty())
+                                        No field groups yet. Use <strong>Manage Groups</strong> to add one, then <strong>Add Field</strong>.
+                                    @else
+                                        No fields yet. Use <strong>Add Field</strong> to add fields to a group.
+                                    @endif
+                                </td>
+                            </tr>
+                        @endif
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
 
-            <div class="tab-content" id="fcFbGroupTabContent">
-                @foreach($step->fieldGroups as $gi => $group)
-                    <div class="tab-pane fade {{ $gi === 0 ? 'show active' : '' }}"
-                         id="grp-{{ $group->id }}"
-                         role="tabpanel"
-                         aria-labelledby="fc-fb-grp-tab-{{ $group->id }}">
-                        {{-- Group settings --}}
-                        <div class="border rounded p-3 mb-3 bg-light">
-                            <form method="POST" action="{{ route('fc-reg.admin.form-builder.group.update', $group) }}" class="row g-2 align-items-end">
-                                @csrf @method('PUT')
-                                <div class="col-md-3">
-                                    <label class="form-label small fw-semibold">Label</label>
-                                    <input type="text" name="group_label" class="form-control form-control-sm" value="{{ $group->group_label }}">
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small fw-semibold">Target Table</label>
-                                    <input type="text" name="target_table" class="form-control form-control-sm" value="{{ $group->target_table }}">
-                                </div>
-                                <div class="col-md-2">
-                                    <label class="form-label small fw-semibold">Save Mode</label>
-                                    <select name="save_mode" class="form-select form-select-sm">
-                                        <option value="replace_all" {{ $group->save_mode === 'replace_all' ? 'selected' : '' }}>Replace All</option>
-                                        <option value="upsert" {{ $group->save_mode === 'upsert' ? 'selected' : '' }}>Upsert</option>
-                                    </select>
-                                </div>
-                                <div class="col-md-1">
-                                    <label class="form-label small fw-semibold">Min</label>
-                                    <input type="number" name="min_rows" class="form-control form-control-sm" value="{{ $group->min_rows }}" min="0">
-                                </div>
-                                <div class="col-md-1">
-                                    <label class="form-label small fw-semibold">Max</label>
-                                    <input type="number" name="max_rows" class="form-control form-control-sm" value="{{ $group->max_rows }}" min="1">
-                                </div>
-                                <div class="col-md-1">
-                                    <div class="form-check form-switch mt-2">
-                                        <input class="form-check-input" type="checkbox" name="is_active" value="1" {{ $group->is_active ? 'checked' : '' }}>
-                                        <label class="form-check-label small">Active</label>
-                                    </div>
-                                </div>
-                                <div class="col-md-2 d-flex gap-1">
-                                    <button type="submit" class="btn btn-sm btn-primary">Save</button>
-                                </div>
-                            </form>
-                            <div class="text-end mt-2">
-                                <form method="POST" action="{{ route('fc-reg.admin.form-builder.group.delete', $group) }}" class="d-inline" onsubmit="return confirm('Delete this group and all its fields?')">
-                                    @csrf @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-trash me-1"></i>Delete Group</button>
-                                </form>
-                            </div>
-                        </div>
-
-                        {{-- Group fields table --}}
-                        <h6 class="text-uppercase small fw-bold text-muted mb-2">
-                            Fields in this group ({{ $group->groupFields->count() }})
-                        </h6>
-                        <div class="d-flex justify-content-end mb-2">
-                            <button class="btn btn-sm btn-outline-primary" onclick="openAddGroupFieldModal({{ $group->id }})">
-                                <i class="bi bi-plus-circle me-1"></i>Add Field
-                            </button>
-                        </div>
-                        <div class="table-responsive">
-                            <table class="table table-sm table-hover mb-0">
-                                <thead>
-                                    <tr class="small text-muted">
-                                        <th>#</th><th>Label</th><th>Field Name</th><th>Type</th><th>Target Column</th><th>Required</th><th>Active</th><th class="fc-fb-actions-col">Actions</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    @forelse($group->groupFields as $gf)
-                                        <tr>
-                                            <td class="text-muted small">{{ $gf->display_order }}</td>
-                                            <td class="fw-semibold small">{{ $gf->label }}</td>
-                                            <td><code class="small">{{ $gf->field_name }}</code></td>
-                                            <td><span class="badge bg-light text-dark">{{ $gf->field_type }}</span></td>
-                                            <td><code class="small">{{ $gf->target_column }}</code></td>
-                                            <td>{!! $gf->is_required ? '<span class="badge bg-danger">Yes</span>' : '<span class="badge bg-secondary">No</span>' !!}</td>
-                                            <td>{!! $gf->is_active ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-secondary">No</span>' !!}</td>
-                                            <td class="fc-fb-actions-col">
-                                                <div class="fc-fb-actions">
-                                                    <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 btn-edit-group-field" data-field='@json($gf)' title="Edit">
-                                                        <i class="bi bi-pencil"></i>
-                                                    </button>
-                                                    @if($gf->is_active)
-                                                        <button type="button" class="btn btn-sm btn-outline-secondary py-0 px-1" title="Cannot delete — field is in use"
-                                                            onclick="alert('This field is currently in use on the form and cannot be deleted. Set it to inactive first, then try again.')">
-                                                            <i class="bi bi-trash"></i>
-                                                        </button>
-                                                    @else
-                                                        <form method="POST" action="{{ route('fc-reg.admin.form-builder.group-field.delete', $gf) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete?')">
-                                                            @csrf @method('DELETE')
-                                                            <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
-                                                        </form>
-                                                    @endif
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    @empty
-                                        <tr>
-                                            <td colspan="8" class="text-center text-muted small py-4">
-                                                No fields in this group yet. Use <strong>Add Field</strong> above.
-                                            </td>
-                                        </tr>
-                                    @endforelse
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                @endforeach
+    <div class="collapse mb-4" id="fcManageGroups">
+        <div class="card border-0 shadow-sm" style="border-radius:10px;">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
+                <h6 class="mb-0 text-uppercase small fw-bold text-muted">Field Groups ({{ $step->fieldGroups->count() }})</h6>
+                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addGroupModal">
+                    <i class="bi bi-plus-circle me-1"></i>Add Group
+                </button>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-hover mb-0">
+                        <thead>
+                            <tr class="small text-muted">
+                                <th style="width:40px;">#</th>
+                                <th>Group Label</th>
+                                <th>Slug</th>
+                                <th>Target Table</th>
+                                <th>Save Mode</th>
+                                <th>Min / Max</th>
+                                <th>Fields</th>
+                                <th>Active</th>
+                                <th class="fc-fb-actions-col">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($step->fieldGroups as $group)
+                                <tr>
+                                    <td class="text-muted small">{{ $group->display_order }}</td>
+                                    <td class="fw-semibold small">{{ $group->group_label }}</td>
+                                    <td><code class="small">{{ $group->group_name }}</code></td>
+                                    <td><code class="small">{{ $group->target_table }}</code></td>
+                                    <td class="small">{{ $group->save_mode === 'upsert' ? 'Upsert' : 'Replace All' }}</td>
+                                    <td class="small text-muted">{{ $group->min_rows }} / {{ $group->max_rows }}</td>
+                                    <td><span class="badge bg-secondary">{{ $group->groupFields->count() }}</span></td>
+                                    <td>
+                                        @if($group->is_active)
+                                            <span class="badge bg-success">Yes</span>
+                                        @else
+                                            <span class="badge bg-secondary">No</span>
+                                        @endif
+                                    </td>
+                                    <td class="fc-fb-actions-col">
+                                        <div class="fc-fb-actions">
+                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-1 btn-edit-group" data-group='@json($group)' title="Edit group">
+                                                <i class="bi bi-pencil"></i>
+                                            </button>
+                                            <form method="POST" action="{{ route('fc-reg.admin.form-builder.group.delete', $group) }}" class="fc-fb-actions__form" onsubmit="return confirm('Delete this group and all its fields?')">
+                                                @csrf @method('DELETE')
+                                                <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-1" title="Delete"><i class="bi bi-trash"></i></button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="9" class="text-center text-muted small py-4">No groups yet.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -448,6 +399,30 @@
     </div>
 </div>
 
+{{-- EDIT GROUP MODAL --}}
+<div class="modal fade" id="editGroupModal" tabindex="-1">
+    <div class="modal-dialog">
+        <form method="POST" id="editGroupForm" class="modal-content">
+            @csrf @method('PUT')
+            <div class="modal-header"><h5 class="modal-title">Edit Field Group</h5><button type="button" class="btn-close" data-bs-dismiss="modal"></button></div>
+            <div class="modal-body">
+                <div class="mb-3"><label class="form-label small fw-semibold">Group Label</label><input type="text" name="group_label" id="editGroupLabel" class="form-control" required></div>
+                <div class="mb-3"><label class="form-label small fw-semibold">Target Table</label><input type="text" name="target_table" id="editGroupTargetTable" class="form-control" required></div>
+                <div class="row g-3">
+                    <div class="col-md-4"><label class="form-label small fw-semibold">Save Mode</label><select name="save_mode" id="editGroupSaveMode" class="form-select"><option value="replace_all">Replace All</option><option value="upsert">Upsert</option></select></div>
+                    <div class="col-md-4"><label class="form-label small fw-semibold">Min Rows</label><input type="number" name="min_rows" id="editGroupMinRows" class="form-control" min="0"></div>
+                    <div class="col-md-4"><label class="form-label small fw-semibold">Max Rows</label><input type="number" name="max_rows" id="editGroupMaxRows" class="form-control" min="1"></div>
+                </div>
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" name="is_active" value="1" id="editGroupActive">
+                    <label class="form-check-label small" for="editGroupActive">Active</label>
+                </div>
+            </div>
+            <div class="modal-footer"><button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button><button type="submit" class="btn btn-primary">Save Group</button></div>
+        </form>
+    </div>
+</div>
+
 {{-- ADD/EDIT GROUP FIELD MODAL --}}
 <div class="modal fade" id="groupFieldModal" tabindex="-1">
     <div class="modal-dialog modal-lg">
@@ -455,10 +430,19 @@
             @csrf
             <input type="hidden" name="_method" id="gfMethod" value="POST">
             <div class="modal-header">
-                <h5 class="modal-title" id="groupFieldModalTitle">Add Group Field</h5>
+                <h5 class="modal-title" id="groupFieldModalTitle">Add Field</h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
+                <div class="mb-3" id="gfGroupSelectWrap">
+                    <label class="form-label small fw-semibold">Section (field group) <span class="text-danger">*</span></label>
+                    <select id="gfGroupSelect" class="form-select" required>
+                        <option value="">-- Select group --</option>
+                        @foreach($step->fieldGroups as $group)
+                            <option value="{{ $group->id }}">{{ $group->group_label }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 @include('admin.form-builder._field-form', ['prefix' => 'gf', 'field' => null, 'showTargetTable' => false])
             </div>
             <div class="modal-footer">
@@ -910,10 +894,37 @@ function moveField(fieldId, direction) {
 
 function openAddGroupFieldModal(groupId) {
     const form = document.getElementById('groupFieldForm');
-    form.action = '{{ url("fc-reg/admin/form-builder/groups") }}/' + groupId + '/fields';
+    const groupSelect = document.getElementById('gfGroupSelect');
+    const groupSelectWrap = document.getElementById('gfGroupSelectWrap');
+    const selectedGroupId = groupId || (groupSelect ? groupSelect.value : '');
+
+    if (!selectedGroupId) {
+        form.action = '#';
+        document.getElementById('gfMethod').value = 'POST';
+        document.getElementById('groupFieldModalTitle').textContent = 'Add Field';
+        document.getElementById('gfSubmitBtn').textContent = 'Add Field';
+        if (groupSelectWrap) groupSelectWrap.classList.remove('d-none');
+        form.querySelectorAll('input[type=text], input[type=number], textarea').forEach(el => el.value = '');
+        form.querySelectorAll('.fc-options-json-input').forEach(el => { el.value = ''; });
+        form.querySelectorAll('.target-column-sync').forEach(el => { el.value = ''; });
+        form.querySelectorAll('input[type=checkbox]').forEach(el => el.checked = false);
+        form.querySelector('[name="css_class"]').value = 'col-md-6';
+        var typeEl = form.querySelector('[name="field_type"]');
+        if (typeEl) typeEl.value = 'text';
+        setFcChoiceSource(form, 'fixed');
+        const isActiveEl = form.querySelector('[name="is_active"]');
+        if (isActiveEl) isActiveEl.checked = true;
+        toggleFcFieldFormSections(form);
+        new bootstrap.Modal(document.getElementById('groupFieldModal')).show();
+        return;
+    }
+
+    form.action = '{{ url("fc-reg/admin/form-builder/groups") }}/' + selectedGroupId + '/fields';
     document.getElementById('gfMethod').value = 'POST';
-    document.getElementById('groupFieldModalTitle').textContent = 'Add Group Field';
+    document.getElementById('groupFieldModalTitle').textContent = 'Add Field';
     document.getElementById('gfSubmitBtn').textContent = 'Add Field';
+    if (groupSelect) groupSelect.value = String(selectedGroupId);
+    if (groupSelectWrap) groupSelectWrap.classList.remove('d-none');
     form.querySelectorAll('input[type=text], input[type=number], textarea').forEach(el => el.value = '');
     form.querySelectorAll('.fc-options-json-input').forEach(el => { el.value = ''; });
     form.querySelectorAll('.target-column-sync').forEach(el => { el.value = ''; });
@@ -929,12 +940,41 @@ function openAddGroupFieldModal(groupId) {
     new bootstrap.Modal(document.getElementById('groupFieldModal')).show();
 }
 
+function moveGroupField(fieldId, groupId, direction) {
+    const rows = [...document.querySelectorAll('#groupFieldsList tr[data-group-id="' + groupId + '"]')];
+    const ids = rows.map(r => parseInt(r.dataset.id));
+    const idx = ids.indexOf(fieldId);
+    if (direction === 'up' && idx > 0) { [ids[idx-1], ids[idx]] = [ids[idx], ids[idx-1]]; }
+    else if (direction === 'down' && idx < ids.length - 1) { [ids[idx], ids[idx+1]] = [ids[idx+1], ids[idx]]; }
+    else return;
+
+    fetch('{{ route("fc-reg.admin.form-builder.group-field.reorder") }}', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
+        body: JSON.stringify({ order: ids })
+    }).then(() => location.reload());
+}
+
+function editGroup(group) {
+    const form = document.getElementById('editGroupForm');
+    form.action = '{{ url("fc-reg/admin/form-builder/groups") }}/' + group.id;
+    document.getElementById('editGroupLabel').value = group.group_label || '';
+    document.getElementById('editGroupTargetTable').value = group.target_table || '';
+    document.getElementById('editGroupSaveMode').value = group.save_mode || 'replace_all';
+    document.getElementById('editGroupMinRows').value = group.min_rows ?? 0;
+    document.getElementById('editGroupMaxRows').value = group.max_rows ?? 20;
+    document.getElementById('editGroupActive').checked = group.is_active !== false && group.is_active !== 0;
+    new bootstrap.Modal(document.getElementById('editGroupModal')).show();
+}
+
 function editGroupField(field) {
     const form = document.getElementById('groupFieldForm');
     form.action = '{{ url("fc-reg/admin/form-builder/group-fields") }}/' + field.id;
     document.getElementById('gfMethod').value = 'PUT';
-    document.getElementById('groupFieldModalTitle').textContent = 'Edit Group Field';
+    document.getElementById('groupFieldModalTitle').textContent = 'Edit Field';
     document.getElementById('gfSubmitBtn').textContent = 'Update Field';
+    const groupSelectWrap = document.getElementById('gfGroupSelectWrap');
+    if (groupSelectWrap) groupSelectWrap.classList.add('d-none');
     const inputs = {
         field_name: field.field_name,
         label: field.label, field_type: field.field_type,
@@ -995,10 +1035,29 @@ document.querySelectorAll('.btn-edit-group-field').forEach(function(btn) {
     });
 });
 
-var groupTabList = document.getElementById('fcFbGroupTabs');
-if (groupTabList && typeof bootstrap !== 'undefined' && bootstrap.Tab) {
-    groupTabList.querySelectorAll('[data-bs-toggle="tab"]').forEach(function(el) {
-        bootstrap.Tab.getOrCreateInstance(el);
+document.querySelectorAll('.btn-edit-group').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+        try {
+            editGroup(JSON.parse(this.getAttribute('data-group') || '{}'));
+        } catch (e) {
+            console.error('Could not open group editor', e);
+        }
+    });
+});
+
+var groupFieldForm = document.getElementById('groupFieldForm');
+if (groupFieldForm) {
+    groupFieldForm.addEventListener('submit', function(e) {
+        if (document.getElementById('gfMethod').value !== 'POST') {
+            return;
+        }
+        const groupSelect = document.getElementById('gfGroupSelect');
+        if (!groupSelect || !groupSelect.value) {
+            e.preventDefault();
+            alert('Please select a section (field group) first.');
+            return;
+        }
+        groupFieldForm.action = '{{ url("fc-reg/admin/form-builder/groups") }}/' + groupSelect.value + '/fields';
     });
 }
 </script>
