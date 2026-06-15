@@ -126,7 +126,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-auto text-white py-2" style="background-color: #004a93;">
+    <footer class="mt-auto text-white py-2" style="background-color: #101808;">
         <div class="container-lg p-0">
             <div class="row align-items-center gy-2">
                 <div class="col-md-8 mb-2 mb-md-0">
