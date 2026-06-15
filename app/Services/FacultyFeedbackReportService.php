@@ -39,8 +39,10 @@ class FacultyFeedbackReportService
         $timetableCourseIds = DB::table('timetable')
             ->where(function ($query) use ($facultyPk) {
                 $query->where('faculty_master', $facultyPk)
-                    ->orWhereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
-                    ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk]);
+                    ->orWhereRaw('JSON_CONTAINS(COALESCE(NULLIF(faculty_master, ""), "[]"), ?)', ['"'.$facultyPk.'"'])
+                    ->orWhereRaw('FIND_IN_SET(?, faculty_master)', [$facultyPk])
+                    ->orWhereRaw('JSON_CONTAINS(COALESCE(NULLIF(internal_faculty, ""), "[]"), ?)', ['"'.$facultyPk.'"'])
+                    ->orWhereRaw('FIND_IN_SET(?, internal_faculty)', [$facultyPk]);
             })
             ->distinct()
             ->pluck('course_master_pk');
