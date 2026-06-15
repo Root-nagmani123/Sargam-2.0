@@ -18,7 +18,7 @@
     <x-session_message />
 
     <!-- Student Basic Information -->
-    <div class="card mb-4" style="border-left: 4px solid #004a93;">
+    <div class="card mb-4" >
         <div class="card-header bg-primary text-white py-2">
             <h6 class="mb-0"><i class="fas fa-user me-2"></i>Student Information</h6>
         </div>
@@ -560,7 +560,7 @@
                             font-weight: bold;
                         }
                         tr:nth-child(even) {
-                            background-color: #f2f2f2;
+                            background-color: #f7f7f7;
                         }
                         @media print {
                             body { margin: 0; }

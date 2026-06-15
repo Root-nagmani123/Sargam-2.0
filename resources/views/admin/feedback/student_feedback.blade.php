@@ -372,7 +372,7 @@
                                                 <circle cx="25" cy="25" r="20" stroke="#004A93"
                                                     stroke-width="5" fill="rgba(255,255,255,0)" />
                                             </svg>
-                                            <p style="margin-top:10px; font-weight:500;">Submitting...</p>
+                                            <p style="margin-top:0.5rem; font-weight:500;">Submitting...</p>
                                         </div>
                                     </div>
                                 </div>

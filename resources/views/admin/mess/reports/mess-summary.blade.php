@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Mess/Store Summary Report" />
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-body">
                 <h4 class="mb-4">Mess/Store Summary Report</h4>
                 <hr>

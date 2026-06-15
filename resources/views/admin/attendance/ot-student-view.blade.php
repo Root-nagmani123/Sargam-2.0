@@ -1,79 +1,10 @@
-@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'OT Student Attendance Details')
 
 @section('content')
-<style>
-    .attendance-page .attn-card {
-        background: #fff;
-        border: 0 !important;
-        border-radius: 14px !important;
-        box-shadow: 0 1px 3px rgba(16, 24, 40, .06), 0 1px 2px rgba(16, 24, 40, .04) !important;
-    }
-    .attendance-page .page-title { font-weight: 700; font-size: 1.7rem; color: #111827; }
-
-    /* Info cards */
-    .attendance-page .info-card { border-left: 4px solid #1d4ed8 !important; transition: transform .15s ease, box-shadow .15s ease; }
-    .attendance-page .info-card.accent-blue { border-left-color: #2563eb !important; }
-    .attendance-page .info-card.accent-teal { border-left-color: #0dcaf0 !important; }
-    .attendance-page .info-card:hover { transform: translateY(-2px); box-shadow: 0 .5rem 1rem rgba(16, 24, 40, .1) !important; }
-    .attendance-page .info-label { font-size: .8rem; color: #6b7280; font-weight: 500; margin-bottom: .25rem; }
-    .attendance-page .info-value { font-weight: 700; color: #111827; font-size: .98rem; }
-
-    /* View toggle + Download */
-    .attendance-page .view-btn { border: 1px solid #d7dce5; background: #fff; color: #1f2937; border-radius: .6rem; padding: .5rem 1.25rem; font-weight: 600; font-size: .92rem; transition: all .15s ease; }
-    .attendance-page .view-btn.active { background: #0d4d92; border-color: #0d4d92; color: #fff; box-shadow: 0 .25rem .6rem rgba(13, 77, 146, .2); }
-    .attendance-page .view-btn:hover:not(.active) { background: #f1f4f9; }
-    .attendance-page .download-btn { border: 1px solid #d7dce5; background: #fff; color: #0d4d92; border-radius: .6rem; padding: .5rem 1.1rem; font-weight: 600; font-size: .92rem; transition: all .15s ease; }
-    .attendance-page .download-btn:hover { background: #f1f4f9; }
-
-    /* Filter toolbar */
-    .attendance-page .toolbar-label { color: #6b7280; font-size: .9rem; }
-    .attendance-page .toolbar-control { min-width: 150px; max-width: 190px; border: 1px solid #d7dce5; border-radius: .6rem; color: #374151; font-weight: 500; }
-    .attendance-page .toolbar-control:focus { border-color: #0d4d92; box-shadow: 0 0 0 .2rem rgba(13, 77, 146, .12); }
-    .attendance-page .btn-tool { border: 1px solid #d7dce5; background: #fff; color: #374151; border-radius: .6rem; font-weight: 600; font-size: .88rem; }
-    .attendance-page .btn-tool:hover { background: #f1f4f9; }
-    /* Column Visibility modal */
-    .col-vis-modal { border: 0; border-radius: 16px; box-shadow: 0 1.5rem 3rem rgba(16, 24, 40, .2); }
-    .col-vis-modal .modal-title { color: #111827; }
-    .col-vis-chip { border: 1px solid #e2e6ee; border-radius: 10px; padding: .55rem .75rem; cursor: pointer; transition: border-color .15s ease, background .15s ease; color: #374151; }
-    .col-vis-chip:hover { border-color: #0d4d92; background: #f8fafc; }
-    .col-vis-chip:has(input:checked) { border-color: #0d4d92; background: #f1f6fc; }
-    /* Expandable table search */
-    .attendance-page #tableSearchInput { width: 0; min-width: 0; padding-left: 0; padding-right: 0; margin-right: 0; border-color: transparent; opacity: 0; overflow: hidden; transition: width .2s ease, opacity .2s ease, padding .2s ease, margin .2s ease; }
-    .attendance-page #tableSearchWrap.open #tableSearchInput { width: 200px; min-width: 200px; padding-left: .6rem; padding-right: .6rem; margin-right: .4rem; border: 1px solid #d7dce5; border-radius: .6rem; opacity: 1; }
-    .attendance-page #tableSearchInput:focus { border-color: #0d4d92; box-shadow: 0 0 0 .2rem rgba(13, 77, 146, .12); }
-    .attendance-page .btn-reset { border: 1px solid #ef4444; background: #fff; color: #ef4444; border-radius: .6rem; font-weight: 600; font-size: .88rem; }
-    .attendance-page .btn-reset:hover { background: #ef4444; color: #fff; }
-
-    /* Table */
-    .attendance-page .table thead th { background: #f4f6fa; color: #6b7280; font-weight: 600; font-size: .8rem; border-bottom: 1px solid #e6e9f0; text-transform: none; letter-spacing: 0; white-space: nowrap; }
-    .attendance-page .table tbody td { vertical-align: middle; border-color: #eef1f6; font-size: .9rem; color: #1f2937; }
-    .attendance-page .table tbody td .sub { color: #9ca3af; font-size: .8rem; }
-    .attendance-page .dash { color: #cbd5e1; }
-
-    /* Status pills */
-    .attendance-page .status-badge { border-radius: 999px; padding: .4rem .9rem; font-size: .78rem; font-weight: 600; min-width: 84px; }
-    .attendance-page .status-badge.bg-success-subtle { background: #dcfce7 !important; }
-    .attendance-page .status-badge.text-success-emphasis { color: #16a34a !important; }
-    .attendance-page .status-badge.bg-danger-subtle { background: #fee2e2 !important; }
-    .attendance-page .status-badge.text-danger-emphasis { color: #dc2626 !important; }
-    .attendance-page .status-badge.bg-warning-subtle { background: #fef3c7 !important; }
-    .attendance-page .status-badge.text-warning-emphasis { color: #d97706 !important; }
-    .attendance-page .status-badge.bg-secondary-subtle { background: #f1f5f9 !important; }
-    .attendance-page .status-badge.text-secondary-emphasis { color: #64748b !important; }
-
-    /* Pagination */
-    .attendance-page .pagination .page-link { border: 1px solid transparent; background: transparent; color: #374151; border-radius: 8px; margin: 0 2px; min-width: 34px; text-align: center; }
-    .attendance-page .pagination .page-item.active .page-link { border-color: #6366f1; color: #4f46e5; background: #fff; font-weight: 600; }
-    .attendance-page .pagination .page-item:first-child .page-link,
-    .attendance-page .pagination .page-item:last-child .page-link { border-color: #e6e9f0; color: #9ca3af; }
-    .attendance-page .pagination .page-link:focus { box-shadow: none; }
-    .attendance-page .per-page { border: 1px solid #d7dce5; }
-</style>
-
-<div class="container-fluid attendance-page p-0 px-2 py-2">
-    @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+<div class="container-fluid">
+     @if(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST'))
     <x-breadcrum title="My Attendance Record" />
     <x-session_message />
     @endif
@@ -88,12 +19,14 @@
     </div>
 
     {{-- Student Information Header --}}
-    <div class="row g-3 mb-4">
-        <div class="col-md-4">
-            <div class="attn-card info-card h-100">
-                <div class="p-4">
-                    <div class="info-label">Course Name</div>
-                    <div class="info-value text-break">{{ $course->course_name ?? 'N/A' }}</div>
+    <div class="card shadow mb-4" >
+        <div class="card-body">
+            <div class="row g-3">
+                <div class="col-md-4">
+                    <strong>Course Name:</strong>
+                    <span class="text-primary">
+                        {{ $course->course_name ?? 'N/A' }}
+                    </span>
                 </div>
             </div>
         </div>

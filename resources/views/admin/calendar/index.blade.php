@@ -1,4 +1,4 @@
-@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'Academic TimeTable')
 
@@ -2185,12 +2185,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     <!-- Main Content Area -->
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
-         @if(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))
+         @if(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST'))
         <section
     class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
     role="region"
     aria-labelledby="controlPanelHeading"
-    style="border-left: 4px solid #004a93;"
+    
 >
     <h2 id="controlPanelHeading" class="visually-hidden">
         Calendar Control Panel
@@ -2236,7 +2236,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         </fieldset>
 
         <!-- Primary Actions -->
-        @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+        @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'))
         <div class="d-flex align-items-center justify-content-start justify-content-xl-end gap-2">
             <button
                 type="button"
@@ -2522,6 +2522,16 @@ class CalendarManager {
     init() {
         try {
             console.log('Initializing calendar manager...');
+
+            if (!this.courses || this.courses.length === 0) {
+                console.log('No courses available for this admin — skipping calendar load');
+                const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                }
+                return;
+            }
+
             this.initFullCalendar();
             
             try { this.bindEvents(); } catch (e) { console.error('bindEvents error:', e); }
@@ -2669,6 +2679,11 @@ class CalendarManager {
     }
 
     fetchEvents(info, successCallback, failureCallback) {
+        if (!this.courses || this.courses.length === 0) {
+            successCallback([]);
+            return;
+        }
+
         // Build URL with course filter
         let url = CalendarConfig.api.events;
         const params = new URLSearchParams();
@@ -3006,18 +3021,21 @@ class CalendarManager {
         if (editBtn) editBtn.dataset.id = data.id;
         if (deleteBtn) deleteBtn.dataset.id = data.id;
 
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('eventDetails'));
+        // Show modal. Reuse the single Bootstrap instance for this element
+        // (getOrCreateInstance) instead of `new Modal()` on every open — repeated
+        // `new` calls stack extra focus-trap/backdrop listeners on the same node,
+        // which then fight each other and make the modal blink/flicker.
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventDetails'));
         modal.show();
     }
 
     handleDateSelect(info) {
-        if (!@json(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))) return;
+        if (!@json(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST'))) return;
 
         this.resetEventForm();
         this.setFormDate(info.start);
 
-        const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventModal'));
         modal.show();
     }
 
@@ -3527,7 +3545,7 @@ class CalendarManager {
             this.showNotification(result.message || 'Event saved successfully', 'success');
 
             // Close modal and refresh calendar
-            bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('eventModal'))?.hide();
             this.calendar.refetchEvents();
             setTimeout(() => {
                window.location.reload(); 
@@ -3636,8 +3654,8 @@ class CalendarManager {
             document.getElementById('start_datetime').removeAttribute('readonly');
 
             // Show modal
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventModal'));
             modal.show();
 
         } catch (error) {
@@ -3886,7 +3904,7 @@ async setInternalFaculty(internalFacultyIds) {
         const eventId = document.getElementById('deleteEventBtn').dataset.id;
 
         // Show confirmation modal
-        const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        const confirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
         document.getElementById('confirmAction').onclick = () => this.deleteEvent(eventId);
         confirmModal.show();
     }
@@ -3905,8 +3923,8 @@ async setInternalFaculty(internalFacultyIds) {
             this.showNotification('Event deleted successfully', 'success');
 
             // Close modals and refresh
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
+            bootstrap.Modal.getInstance(document.getElementById('confirmModal'))?.hide();
             this.calendar.refetchEvents();
 
         } catch (error) {
@@ -4379,7 +4397,7 @@ async setInternalFaculty(internalFacultyIds) {
             if (e.key === 'Escape') {
                 const openModals = document.querySelectorAll('.modal.show');
                 openModals.forEach(modal => {
-                    bootstrap.Modal.getInstance(modal).hide();
+                    bootstrap.Modal.getInstance(modal)?.hide();
                 });
             }
 

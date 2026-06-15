@@ -3,7 +3,7 @@
 @section('content')
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
-    $canDeleteClientType = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteClientType = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Client Types Master"></x-breadcrum>

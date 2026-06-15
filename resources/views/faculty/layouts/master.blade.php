@@ -135,7 +135,7 @@
     }
 
     .calendar-cell:hover {
-        background: #f2f2f2;
+        background: #f7f7f7;
     }
 
     .calendar-cell:focus {
@@ -398,6 +398,9 @@
     
     <!-- Tab Memory System Styles -->
     <link rel="stylesheet" href="{{ asset('admin_assets/css/tab-memory-styles.css') }}">
+
+    <!-- Sargam Design System — must load LAST -->
+    <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
 
 </head>
 

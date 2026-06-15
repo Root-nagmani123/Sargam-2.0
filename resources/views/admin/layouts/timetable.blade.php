@@ -27,6 +27,8 @@
     @include('components.fonts-sargam')
     <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
     <link rel="stylesheet" href="{{ asset('css/custom.css') }}?v={{ @filemtime(public_path('css/custom.css')) ?: time() }}" />
+    <!-- Sargam Design System — must load LAST -->
+    <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}" />
 </head>
 <x-session_message />
 

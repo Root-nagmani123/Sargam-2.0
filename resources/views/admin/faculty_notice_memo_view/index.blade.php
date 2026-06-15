@@ -153,7 +153,7 @@
                     <!-- Total Records Summary -->
                     <div class="row mb-4">
                         <div class="col-12">
-                            <div class="card bg-light" style="border-left: 4px solid #004a93;">
+                            <div class="card bg-light" >
                                 <div class="card-body">
                                     <div class="row">
                                         <div class="col-md-6">

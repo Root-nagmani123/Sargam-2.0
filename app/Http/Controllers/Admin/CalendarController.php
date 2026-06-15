@@ -35,7 +35,10 @@ class CalendarController extends Controller
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->whereDate('end_date', '>=', today());
 
-        if (!empty($data_course_id)) {
+        // Students are scoped by enrolment (the join below), not by role. Skipping the
+        // role-course filter for them avoids get_Role_by_course()'s [-1] (students have
+        // no Spatie role), which would otherwise wipe out their course list.
+        if (!hasRole('Student-OT') && !empty($data_course_id)) {
             $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
         }
 
@@ -182,8 +185,14 @@ class CalendarController extends Controller
         // Fetch events from timetable table for the week
         $events = DB::table('timetable')
             ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-            ->whereBetween('timetable.START_DATE', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
+
+        $data_course_id = get_Role_by_course();
+        if (!hasRole('Student-OT') && !empty($data_course_id)) {
+            $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
+        }
+
+        $events = $events->whereBetween('timetable.START_DATE', [$weekStart->toDateString(), $weekEnd->toDateString()])
             ->select(
                 'timetable.pk',
                 'timetable.subject_topic',
@@ -325,6 +334,13 @@ class CalendarController extends Controller
                 ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
                 ->where('student_course_group_map.student_master_pk', $student_pk);
         }
+
+        // Training admins (MCTP, IST, Induction) only see events for their aligned courses.
+        $data_course_id = get_Role_by_course();
+        if (!hasRole('Student-OT') && !empty($data_course_id)) {
+            $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
+        }
+
         $cuurent_month_start_date = Carbon::now()->startOfMonth()->toDateString();
         $cuurent_month_end_date = Carbon::now()->endOfMonth()->toDateString();
         if (($request->start) && ($request->end)) {
@@ -512,10 +528,16 @@ class CalendarController extends Controller
     {
         $eventId = $request->id;
 
-        $event = DB::table('timetable')
+        $eventQuery = DB::table('timetable')
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-            ->where('timetable.pk', $eventId)
-            ->select(
+            ->where('timetable.pk', $eventId);
+
+        $data_course_id = get_Role_by_course();
+        if (!hasRole('Student-OT') && !empty($data_course_id)) {
+            $eventQuery->whereIn('timetable.course_master_pk', $data_course_id);
+        }
+
+        $event = $eventQuery->select(
                 'timetable.pk',
                 'timetable.class_session',
                 'timetable.subject_topic',

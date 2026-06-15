@@ -17901,7 +17901,7 @@ progress {
 .container-sm,
 .container-xl,
 .container-xxl {
-    --bs-gutter-x: 30px;
+    --bs-gutter-x: 10px;
     --bs-gutter-y: 0;
     width: 100%;
     padding-right: calc(var(--bs-gutter-x) * 0.5);
@@ -38295,8 +38295,8 @@ fieldset:disabled .btn {
     margin-left: calc(30px / 2);
     margin-right: calc(30px / 2);
     margin-bottom: 30px;
-    border-radius: 30px;
-    background: #f2f2f2;
+    border-radius: 10px;
+    background: #f7f7f7;
     min-height: calc(100vh - 155px);
 }
 @media (max-width: 480px) {
@@ -38426,7 +38426,7 @@ pre.code-view code.hljs {
     z-index: 99;
     position: relative;
     background: #ECEDF8;
-    width: 90px;
+    width: 92px;
     margin-top: 120px;
     padding: 5px;
 }
@@ -40073,7 +40073,7 @@ html[data-layout="horizontal"]>.container-xxl {
 }
 
 .table th {
-  background: #F3F3F3 !important;
+background-color: #F3F3F3 !important;
     color: #787878 !important;
 }
 
@@ -48090,12 +48090,11 @@ body .apexcharts-tooltip-title {
     background-repeat: no-repeat;
     background-position: center;
     background-size: contain;
-    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='none' stroke='%236b7280' stroke-width='1.6' stroke-linecap='round'%3E%3Ccircle cx='7' cy='7' r='5'/%3E%3Cline x1='11' y1='11' x2='14.5' y2='14.5'/%3E%3C/svg%3E");
 }
 
 .dataTables_wrapper .dataTables_filter input {
-    width: 100%;
-    flex: 1 1 auto;
+    width: 360px;
+    flex: 0 0 360px;
     max-width: 100%;
     padding: 0.6rem 0.95rem 0.6rem 2.5rem;
     margin-left: 0;
@@ -51449,7 +51448,7 @@ h6 {
 
 .header-fp .navbar .navbar-nav .nav-link.active {
     background-color: var(--bs-primary-bg-subtle);
-    color: var(--bs-primary) !important;
+    color: white !important;
 }
 
 .tabs-pills .nav-item .nav-link {
@@ -51631,6 +51630,9 @@ h6 {
     text-overflow: unset;
 }
 .navbar-nav .nav-link.active {
+    background-color: transparent;
+    color: #ffffff !important;
+    font-size: 16px !important;
     line-height: 24px;
     font-weight: 500 !important;
     padding: 20px !important;

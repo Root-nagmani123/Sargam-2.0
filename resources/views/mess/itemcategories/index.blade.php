@@ -4,8 +4,8 @@
 @php
     $categoryTypes = \App\Models\Mess\ItemCategory::categoryTypes();
     $selectedCategoryType = $categoryTypeFilter ?? request('category_type', '');
-   $canDeleteItemCategory = hasRole('Admin') || hasRole('Mess-Admin');
-   // $canDeleteItemCategory = hasRole('Admin') || (hasRole('Mess-Admin') && auth()->check() && strcasecmp((string) auth()->user()->name, 'Rohit Aggarwal') === 0);
+   $canDeleteItemCategory = hasRole('Super Admin') || hasRole('Mess-Admin');
+   // $canDeleteItemCategory = hasRole('Super Admin') || (hasRole('Mess-Admin') && auth()->check() && strcasecmp((string) auth()->user()->name, 'Rohit Aggarwal') === 0);
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Category Item Master"></x-breadcrum>

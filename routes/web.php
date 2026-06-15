@@ -130,6 +130,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
 
         // Route::resource('permissions', PermissionController::class);
+        Route::get('users/export/{format}', [UserController::class, 'export'])
+            ->whereIn('format', ['csv', 'xlsx', 'pdf'])
+            ->name('users.export');
         Route::resource('users', UserController::class);
         Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
         Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
@@ -143,6 +146,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/admin/navigation-error', [\App\Http\Controllers\Admin\NavigationErrorController::class, 'show'])
         ->name('admin.navigation.error');
+    Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');

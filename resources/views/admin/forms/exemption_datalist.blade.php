@@ -5,7 +5,7 @@
 @section('setup_content')
     <div class="container-fluid">
         <x-breadcrum title="User Registration and Exemption Summary" />
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
                 <div class="card-body">
                     <!-- Filters and Export -->
                     <form method="GET" action="{{ route('admin.exemption.export') }}">

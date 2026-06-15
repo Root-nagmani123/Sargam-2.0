@@ -358,8 +358,8 @@
                     <div class="d-flex justify-content-end align-items-center gap-2">
 
                         <!-- Add Group Mapping -->
-                        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') ||
-                        hasRole('Training-Induction'))
+                        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') ||
+                        hasRole('Training Induction Admin'))
                         <a href="{{ route('memo.discipline.create') }}"
                             class="btn btn-primary d-flex align-items-center">
                             <i class="material-icons menu-icon material-symbols-rounded"
@@ -732,7 +732,7 @@
                             <th class="text-center">Final</th>
                             <th>Remarks</th>
                             <th>Status</th>
-                            @if(! hasRole('Student-OT'))
+                            @if(! hasRole('Officer Trainee'))
                             <th class="text-end">Action</th>
                             @endif
                         </tr>
@@ -812,14 +812,14 @@
 
                                     <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
+                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
                                         <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                     </a>
                                 </div>
                                 @else
                                 <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                     data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                    data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
+                                    data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
                                     <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                 </a>
                                 <span class="badge bg-secondary-subtle text-secondary">
@@ -829,10 +829,10 @@
                             </td>
 
                             <!-- Action -->
-                            @if(! hasRole('Student-OT'))
+                            @if(! hasRole('Officer Trainee'))
                             <td class="text-end">
-                                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin')
-                                || hasRole('Training-Induction'))
+                                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin')
+                                || hasRole('Training Induction Admin'))
                                 @if($memo->status == 1)
                                 <button class="btn btn-sm btn-outline-primary" data-discipline="{{ $memo->pk }}"
                                     id="sendMemoBtn">

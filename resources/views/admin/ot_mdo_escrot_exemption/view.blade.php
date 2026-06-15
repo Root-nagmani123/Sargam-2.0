@@ -1,8 +1,8 @@
-@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'Session Moderator/Escort Duty')
 
-@section(hasRole('Student-OT') ? 'content' : 'setup_content')
+@section(hasRole('Officer Trainee') ? 'content' : 'setup_content')
 <style>
     /* ===== Session Moderator / Escort Duty — modern UI (scoped to .otmdo) ===== */
     .otmdo {
@@ -223,12 +223,48 @@
                     </div>
                 </div>
 
-                <div class="d-flex align-items-center gap-3 otmdo-header-actions">
-                    @if($isStudentView)
-                    <div class="text-md-end small lh-lg">
-                        <div><span class="otmdo-id-label">OT Code:</span> <span class="otmdo-id-value">{{ $studentData['ot_code'] }}</span></div>
-                        <div><span class="otmdo-id-label">OT Name:</span> <span class="otmdo-id-value">{{ $studentData['student_name'] }}</span></div>
-                        <div><span class="otmdo-id-label">Email:</span> <span class="otmdo-id-value">{{ $studentData['email'] ?? 'N/A' }}</span></div>
+            <hr>
+
+            @php
+            // Check if this is a student login view (has student_name, ot_code, email keys)
+            $isStudentView = isset($studentData) && isset($studentData['student_name']) &&
+            isset($studentData['ot_code']);
+            @endphp
+
+            @if($isStudentView)
+            <!-- Student Login View - Student Details -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card bg-light" >
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted mb-1">Student Name</label>
+                                        <div class="fs-5 fw-semibold">{{ $studentData['student_name'] }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted mb-1">OT Code</label>
+                                        <div class="fs-5 fw-semibold">{{ $studentData['ot_code'] }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted mb-1">Email</label>
+                                        <div class="fs-5 fw-semibold">{{ $studentData['email'] ?? 'N/A' }}</div>
+                                    </div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="mb-3">
+                                        <label class="form-label fw-bold text-muted mb-1">Total Duty Count</label>
+                                        <div class="fs-5 fw-semibold text-primary">
+                                            {{ $studentData['total_duty_count'] }}</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     @endif
                     <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 otmdo-no-print"

@@ -126,8 +126,9 @@
             background: #ffffff !important;
             border: none;
             border-right: 1px solid #eaecf0;
+            border-top: 1px solid #eaecf0;
             padding: 4px 0;
-            border-radius: 0;
+            border-radius: 10px;
         }
 
         #sidebar-setup .sidebar-google-style .sidebar-google-hamburger {
@@ -308,11 +309,6 @@
         .sidebar-google-style .sidebarmenu *:not(i):not(span):not(a):not(li):not(ul):not(h2):not(button) {
             background: #ffffff !important;
             background-color: #ffffff !important;
-        }
-
-        #sidebar-setup .sidebar-google-style .sidebarmenu {
-            border-left: 1px solid #eaecf0 !important;
-            padding: 0 !important;
         }
 
         #sidebar-setup .sidebar-google-style .sidebarmenu .sidebar-nav {

@@ -5,7 +5,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Appellation Master"></x-breadcrum>
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-body">
             <div class="row">
                 <div class="col-6">
