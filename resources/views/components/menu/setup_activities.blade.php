@@ -13,7 +13,7 @@
                             <!-- Home -->
                             <!-- ---------------------------------- -->
                             @php
-                                $showUserManagement = hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+                                $showUserManagement = hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
                                 $estateSelfServiceRoles = hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty');
                                 // Check if current self-service user is a permanent LBSNAA employee (payroll = 0)
                                 $isPermanentEstateEmployee = false;
@@ -176,7 +176,7 @@
                                 <span class="hide-menu">Permissions</span>
                                 </a></li> --}}
                             </ul>
-                            @if (hasRole('Admin') || hasRole('Super Admin'))
+                            @if (hasRole('Super Admin') || hasRole('Super Admin'))
                                 <li class="sidebar-item">
                                     <a class="sidebar-link" href="{{ route('admin.setup.quick_links.index') }}">
                                         <span class="hide-menu small small-sm-normal text-nowrap">Quick Links Master</span>

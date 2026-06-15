@@ -447,7 +447,7 @@ table>thead{
 
 @php
 $user = Auth::user();
-$isAdminSummary = hasRole('Admin');
+$isAdminSummary = hasRole('Super Admin');
 $daysOld = $isAdminSummary ? 10 : null;
 $notifications = ($user && $user->user_id) ? notification()->getNotifications($user->user_id, 10, false, $daysOld) : collect();
 $notificationBadgeCount = ($user && $user->user_id)
@@ -821,12 +821,12 @@ $sargamNoRoleUser = Auth::check()
 
     <div class="row g-3 g-lg-4">
         <div class="col-lg-7">
-        @if(hasRole('Admin') || hasRole('Training-Induction'))
+        @if(hasRole('Super Admin') || hasRole('Training Induction Admin'))
             <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
                 <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
                     <h5 class="mb-0 fw-semibold d-flex align-items-center gap-2">
                         <span class="material-icons material-symbols-rounded text-primary">notifications</span>
-                        {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
+                        {{ hasRole('Super Admin') ? 'Admin Summary' : 'Notifications' }}
                     </h5>
                     <span class="badge text-bg-primary rounded-pill">{{ $notificationBadgeCount }}</span>
                 </div>

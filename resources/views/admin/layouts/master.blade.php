@@ -58,6 +58,37 @@
             }
         }
     }
+
+    // Decouple the page's @section name from the tab it appears in. The active tab
+    // is resolved from the matched menu's own category (i.e. wherever its sidebar
+    // <li> lives), but a view only renders into the pane whose section name it
+    // happened to pick. So a page that declares @section('content') while its <li>
+    // sits in the Setup tab would activate the Setup tab but leave it blank (its
+    // content stuck in the hidden Home pane). Here we detect the single content
+    // block the view actually defined — preferring the one that matches the active
+    // tab, then falling back to whichever of the five is non-empty — and render it
+    // into the active pane only. Result: a page always appears in the tab its menu
+    // item belongs to, whatever section name the view used.
+    $tabPaneSections = [
+        '#home' => 'content',
+        '#tab-setup' => 'setup_content',
+        '#tab-communications' => 'communications_content',
+        '#tab-academics' => 'academics_content',
+        '#tab-material-management' => 'material_management_content',
+    ];
+    $activeTabSection = $tabPaneSections[$activeNavTab] ?? 'content';
+    $resolvedPaneSection = null;
+    if (trim($__env->yieldContent($activeTabSection)) !== '') {
+        $resolvedPaneSection = $activeTabSection;
+    } else {
+        foreach ($tabPaneSections as $candidate) {
+            if (trim($__env->yieldContent($candidate)) !== '') {
+                $resolvedPaneSection = $candidate;
+                break;
+            }
+        }
+    }
+    $resolvedPaneSection = $resolvedPaneSection ?? $activeTabSection;
 @endphp
 
 
@@ -732,34 +763,39 @@
                     </div>
                 @endif
                 <!-- Tab Content Container -->
+                {{-- The page's content is rendered ONLY into the active pane (the tab
+                     its sidebar <li> resolves to), using the section the view actually
+                     defined ($resolvedPaneSection). Inactive panes stay empty so the
+                     page never renders twice (which would duplicate element IDs and
+                     break DataTables). See the @php block above for the resolution. --}}
                 <div class="tab-content" id="mainNavbarContent">
                     <!-- Home Tab -->
                     <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#home' ? 'show active' : '' }}" id="home" role="tabpanel">
-                        @yield('content')
+                        @if(($activeNavTab ?? '#home') === '#home') @yield($resolvedPaneSection) @endif
                     </div>
 
                         <!-- Setup Tab -->
                         <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-setup' ? 'show active' : '' }}"
                             id="tab-setup" role="tabpanel">
-                            @yield('setup_content')
+                            @if(($activeNavTab ?? '#home') === '#tab-setup') @yield($resolvedPaneSection) @endif
                         </div>
 
                         <!-- Communications Tab -->
                         <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-communications' ? 'show active' : '' }}"
                             id="tab-communications" role="tabpanel">
-                            @yield('communications_content')
+                            @if(($activeNavTab ?? '#home') === '#tab-communications') @yield($resolvedPaneSection) @endif
                         </div>
 
                         <!-- Academics Tab -->
                         <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-academics' ? 'show active' : '' }}"
                             id="tab-academics" role="tabpanel">
-                            @yield('academics_content')
+                            @if(($activeNavTab ?? '#home') === '#tab-academics') @yield($resolvedPaneSection) @endif
                         </div>
 
                         <!-- Material Management Tab -->
                         <div class="tab-pane fade {{ ($activeNavTab ?? '#home') === '#tab-material-management' ? 'show active' : '' }}"
                             id="tab-material-management" role="tabpanel">
-                            @yield('material_management_content')
+                            @if(($activeNavTab ?? '#home') === '#tab-material-management') @yield($resolvedPaneSection) @endif
                         </div>
                     </div>
                 </main>

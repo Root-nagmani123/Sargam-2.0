@@ -2,7 +2,7 @@
 @section('title', 'Selling Voucher with Date Range')
 @section('content')
 @php
-$canDeleteSellingVoucherDateRange = hasRole('Admin') || hasRole('Mess-Admin');
+$canDeleteSellingVoucherDateRange = hasRole('Super Admin') || hasRole('Mess-Admin');
 $selectedStatuses = collect((array) request()->input('status', []))
 ->filter(fn ($value) => $value !== null && $value !== '')
 ->map(fn ($value) => (string) $value)

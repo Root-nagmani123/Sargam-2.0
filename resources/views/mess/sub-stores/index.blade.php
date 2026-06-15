@@ -2,7 +2,7 @@
 @section('title', 'Sub Store Master')
 @section('content')
 @php
-    $canDeleteSubStore = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteSubStore = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Sub Store Master"></x-breadcrum>
