@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Dashboard')
+@section('title', 'Dashboard - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('content')
 <style>
@@ -48,76 +48,13 @@
     box-shadow: 0 4px 10px rgba(16, 24, 40, 0.1);
 }
 
-.dashboard-stat-card .dashboard-stat-card-inner,
-.dashboard-stat-card .card-body.dashboard-stat-card-inner {
-    position: relative;
-    z-index: 2;
-    display: grid;
-    grid-template-columns: var(--stat-icon-size) 1fr;
-    column-gap: 12px;
-    row-gap: 8px;
-    align-content: space-between;
-    min-height: var(--stat-card-min-h);
-    height: 100%;
-    padding: var(--stat-pad-y) var(--stat-pad-x) 26px var(--stat-pad-left);
+.dashboard-stat-card .card-body {
+    padding: 0.55rem 0.7rem;
 }
 
-.dashboard-stat-card:has(.stat-meta) {
-    --stat-card-min-h: 172px;
-}
-
-.dashboard-stat-card:has(.stat-meta) .dashboard-stat-card-inner,
-.dashboard-stat-card:has(.stat-meta) .card-body.dashboard-stat-card-inner {
-    align-content: start;
-    row-gap: 4px;
-}
-
-.dashboard-stat-card:has(.stat-meta) .dashboard-stat-value {
-    margin: 0;
-    padding-top: 8px;
-}
-
-.dashboard-stat-card .stat-icon {
-    width: var(--stat-icon-size);
-    height: var(--stat-icon-size);
-    border-radius: var(--stat-icon-radius);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.125rem;
-    line-height: 1;
-    flex-shrink: 0;
-    grid-column: 1;
-    align-self: center;
-    margin: 0;
-}
-
-.dashboard-stat-card .stat-label {
-    grid-column: 2;
-    align-self: center;
-    margin: 0;
-    padding: 0;
-    font-size: var(--stat-label-size);
-    font-weight: 400;
-    line-height: 1.35;
-    color: var(--stat-label-color);
-    max-width: 100%;
-}
-
-.dashboard-stat-card .stat-meta {
-    grid-column: 1 / -1;
-    margin: 0;
-    font-size: 12px;
-    line-height: 1.35;
-    color: #94a3b8;
-}
-
-.dashboard-stat-card .dashboard-stat-value {
-    grid-column: 1 / -1;
-    margin: 0;
-    font-size: var(--stat-value-size);
-    font-weight: 700;
-    line-height: 1;
+.dashboard-stat-value {
+    font-size: clamp(1.35rem, 1.55vw, 1.85rem);
+    line-height: 1.05;
     letter-spacing: -0.02em;
 }
 

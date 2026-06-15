@@ -24,8 +24,8 @@ body {
 /* Container - Mobile First */
 .container {
     width: 100%;
-    padding-right: 1rem;
-    padding-left: 1rem;
+    padding-right: 15px;
+    padding-left: 15px;
     margin-right: auto;
     margin-left: auto;
 }
@@ -34,24 +34,24 @@ body {
 .row {
     display: flex;
     flex-wrap: wrap;
-    margin-right: calc(1.5rem / -2);
-    margin-left: calc(1.5rem / -2);
+    margin-right: -15px;
+    margin-left: -15px;
 }
 
 [class*="col-"] {
     width: 100%;
-    padding-right: calc(1.5rem / 2);
-    padding-left: calc(1.5rem / 2);
+    padding-right: 15px;
+    padding-left: 15px;
 }
 
 /* ========== TOP HEADER (GOVT BAR) ========== */
 .top-header {
-    padding: 0.5rem 0;
+    padding: 8px 0;
     font-size: 11px;
 }
 
 .top-header .container {
-    padding: 0 0.75rem;
+    padding: 0 10px;
 }
 
 .top-header .row {
@@ -61,7 +61,7 @@ body {
 .top-header .col-md-3,
 .top-header .col-md-9 {
     width: 100%;
-    padding: 0.25rem 0;
+    padding: 5px 0;
 }
 
 .top-header img {
@@ -70,7 +70,7 @@ body {
 
 .top-header .nav {
     flex-direction: column;
-    gap: 0.5rem;
+    gap: 8px;
 }
 
 .top-header .nav-item {
@@ -89,7 +89,7 @@ body {
 
 /* ========== HEADER / NAVIGATION ========== */
 .header {
-    padding: 0.75rem 0;
+    padding: 10px 0;
 }
 
 .navbar {
@@ -110,13 +110,13 @@ body {
 }
 
 .navbar-toggler {
-    padding: 0.25rem 0.5rem;
+    padding: 4px 8px;
     font-size: 1.2rem;
     border: 1px solid rgba(0, 0, 0, 0.1);
 }
 
 .navbar-collapse {
-    margin-top: 1rem;
+    margin-top: 15px;
 }
 
 .navbar-nav {
@@ -124,18 +124,18 @@ body {
 }
 
 .navbar-nav .nav-item {
-    margin: 0.25rem 0;
+    margin: 5px 0;
     text-align: center;
 }
 
 .navbar-nav .nav-link {
     margin: 0 !important;
-    padding: 0.75rem 1rem;
+    padding: 12px 15px;
 }
 
 .navbar-nav .btn {
     width: 100%;
-    margin: 0.5rem 0 !important;
+    margin: 10px 0 !important;
 }
 
 /* ========== CONTENT AREAS ========== */
@@ -159,23 +159,23 @@ body {
 .form-control,
 .form-select {
     font-size: 14px;
-    padding: 0.5rem 0.75rem;
+    padding: 10px 12px;
 }
 
 .form-label {
     font-size: 13px;
     font-weight: 600;
-    margin-bottom: 0.5rem;
+    margin-bottom: 6px;
 }
 
 .btn {
     font-size: 14px;
-    padding: 0.5rem 1rem;
+    padding: 10px 20px;
 }
 
 /* Stack form columns on mobile */
 .row.g-3 [class*="col-md-"] {
-    margin-bottom: 1rem;
+    margin-bottom: 15px;
 }
 
 /* ========== TABLES ========== */
@@ -192,7 +192,7 @@ body {
 
 .table th,
 .table td {
-    padding: 0.5rem;
+    padding: 8px;
     white-space: nowrap;
 }
 
@@ -202,18 +202,18 @@ body {
 .dataTables_wrapper .dataTables_info,
 .dataTables_wrapper .dataTables_paginate {
     font-size: 12px;
-    margin: 0.5rem 0;
+    margin: 10px 0;
 }
 
 .dataTables_wrapper .dataTables_filter input {
     width: 100%;
     margin-left: 0 !important;
-    margin-top: 0.25rem;
+    margin-top: 5px;
 }
 
 /* ========== MODALS ========== */
 .modal-dialog {
-    margin: 0.75rem;
+    margin: 10px;
 }
 
 .modal-content {
@@ -222,18 +222,18 @@ body {
 
 .modal-header,
 .modal-footer {
-    padding: 0.75rem 1rem;
+    padding: 12px 15px;
 }
 
 .modal-body {
-    padding: 1rem;
+    padding: 15px;
 }
 
 /* ========== ALERTS & NOTICES ========== */
 .alert {
     font-size: 13px;
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
+    padding: 12px 15px;
+    margin-bottom: 15px;
 }
 
 .notice-box {
@@ -249,11 +249,11 @@ footer {
 }
 
 footer .container {
-    padding: 0 1rem;
+    padding: 0 15px;
 }
 
 footer .row > div {
-    margin-bottom: 1rem;
+    margin-bottom: 15px;
 }
 
 /* ========== ACCESSIBILITY PANEL ========== */
@@ -266,7 +266,7 @@ footer .row > div {
 
 .uwaw-features__item {
     font-size: 13px;
-    padding: 0.75rem;
+    padding: 10px;
 }
 
 /* ========== UTILITIES ========== */
@@ -702,7 +702,7 @@ body[data-sidebartype="full"] .left-sidebar {
 }
 
 .sidebar-nav .sidebar-link {
-    padding: 1rem 1.5rem;
+    padding: 15px 20px;
     display: flex;
     align-items: center;
     min-height: 48px; /* Touch-friendly */
@@ -720,7 +720,7 @@ body[data-sidebartype="full"] .left-sidebar {
 
 .sidebar-nav .sidebar-link i,
 .sidebar-nav .sidebar-link .material-icons {
-    margin-right: 1rem;
+    margin-right: 15px;
     font-size: 20px;
     width: 24px;
     text-align: center;
@@ -728,7 +728,7 @@ body[data-sidebartype="full"] .left-sidebar {
 
 /* Mini nav for mobile */
 .mini-nav {
-    padding: 0.5rem 0;
+    padding: 10px 0;
 }
 
 .mini-nav-ul {
@@ -738,7 +738,7 @@ body[data-sidebartype="full"] .left-sidebar {
 }
 
 .mini-nav-ul .nav-small-cap {
-    padding: 0.5rem 1.5rem;
+    padding: 10px 20px;
     font-size: 11px;
     text-transform: uppercase;
     color: #8a99af;
@@ -747,7 +747,7 @@ body[data-sidebartype="full"] .left-sidebar {
 
 /* Sidebar header for mobile */
 .sidebar-header {
-    padding: 1.5rem;
+    padding: 20px;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
     display: flex;
     align-items: center;
@@ -759,7 +759,7 @@ body[data-sidebartype="full"] .left-sidebar {
     border: none;
     font-size: 24px;
     cursor: pointer;
-    padding: 0.25rem;
+    padding: 5px;
     color: #2a3547;
     display: flex;
     align-items: center;
