@@ -5,7 +5,7 @@
 @section('content')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
-<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
 <link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=1">
 
 @php
@@ -181,8 +181,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         </div>
         @endif
 
-        @if(hasRole('Security Card') || hasRole('Admin Security') || hasRole('Super Admin'))
-        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3">
+        
+        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 mt-3">
+            @if(hasRole('Security Card') || hasRole('Admin Security') || hasRole('Super Admin'))
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
@@ -194,7 +195,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <p class="stat-title">Pending Permanent ID Requests</p>
                                 @php $v = (int) ($todayPendingPermanentIdCardRequests ?? 0); @endphp
                                 <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-title mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
                             </div>
                         </div>
                     </div>
@@ -211,8 +211,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <p class="stat-title">Pending Contractual ID Requests</p>
                                 @php $v = (int) ($todayPendingContractualIdCardRequests ?? 0); @endphp
                                 <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-title mb-0">Total pending:
-                                    {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
                             </div>
                         </div>
                     </div>
@@ -229,8 +227,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <p class="stat-title">Duplicate Permanent ID Requests</p>
                                 @php $v = (int) ($todayDuplicatePermIdCardRequests ?? 0); @endphp
                                 <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-title mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}
-                                </p>
                             </div>
                         </div>
                     </div>
@@ -247,8 +243,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <p class="stat-title">Duplicate Contractual ID Requests</p>
                                 @php $v = (int) ($todayDuplicateContractualIdCardRequests ?? 0); @endphp
                                 <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-title mb-0">Total pending:
-                                    {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
                             </div>
                         </div>
                     </div>
@@ -266,7 +260,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <p class="stat-title">Requested Family ID</p>
                                 @php $v = (int) ($todayFamilyApprovals ?? 0); @endphp
                                 <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-title mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
                             </div>
                         </div>
                     </div>
@@ -284,17 +277,14 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <p class="stat-title">Requested Vehicle Pass</p>
                                 @php $v = (int) ($todayVehicleApprovals ?? 0); @endphp
                                 <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-title mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
                             </div>
                         </div>
                     </div>
                 </a>
             </div>
-        </div>
-        @endif
+            @endif
         @if(!hasRole('Security Card') && !hasRole('Admin Security'))
-        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3">
-            <div class="col">
+        <div class="col">
                 <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
@@ -490,8 +480,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 </a>
             </div>
             @endif
+            @endif
         </div>
-        @endif
 
         <div class="row g-3 g-lg-4">
             <div class="col">
