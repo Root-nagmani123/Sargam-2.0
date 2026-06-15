@@ -401,17 +401,6 @@
             base.searchChoices = true;
             base.searchFloor = 0;
             base.searchResultLimit = 500;
-            base.classNames = Object.assign({}, CHOICES_DEFAULT_CLASSNAMES, {
-                containerOuter: 'choices form-select form-select-sm w-100 alloc-item-choices-outer',
-                containerInner: 'choices__inner d-flex align-items-center flex-nowrap overflow-hidden border-0 rounded-0 bg-transparent px-2',
-                listSingle: 'choices__list--single flex-grow-1 min-w-0 text-start',
-                listDropdown: 'choices__list--dropdown border rounded-2 shadow-sm bg-body mt-1 p-0',
-                item: 'choices__item text-truncate min-w-0',
-                itemSelectable: 'choices__item--selectable px-3 py-2 text-truncate d-block w-100',
-                itemChoice: 'choices__item--choice px-3 py-2 text-truncate d-block w-100',
-                placeholder: 'choices__placeholder text-truncate text-body-secondary mb-0 w-100 small',
-                button: 'choices__button flex-shrink-0 align-self-center',
-            });
         }
         return base;
     }
