@@ -19,6 +19,19 @@ use Illuminate\Validation\ValidationException;
 
 class DynamicFormService
 {
+    /**
+     * Tables with at most one row per user (unique user_id). Must use upsert, not replace_all inserts.
+     *
+     * @var list<string>
+     */
+    private const SINGLE_ROW_PER_USER_TABLES = [
+        'student_master_hobbies_details',
+        'student_knowledge_hindi_masters',
+        'student_master_spouse_masters',
+        'student_cloth_size_master_details',
+        'student_master_seconds',
+    ];
+
     /** @var array<string, string|null> */
     protected static array $columnTypeCache = [];
 
@@ -98,9 +111,18 @@ class DynamicFormService
 
     /**
      * Build Laravel validation rules from field definitions.
+     * When $step and $userId are provided, file fields with an existing upload are optional on re-submit.
      */
-    public function buildValidationRules(Collection $fields): array
-    {
+    public function buildValidationRules(
+        Collection $fields,
+        ?FcFormStep $step = null,
+        ?int $userId = null,
+        ?object $existingData = null
+    ): array {
+        if ($existingData === null && $step !== null && $userId !== null) {
+            $existingData = $this->getExistingData($step->step_slug, $userId);
+        }
+
         $rules = [];
         foreach ($fields as $field) {
             if ($field->field_type === 'checkbox' && count($field->decoded_options) > 0) {
@@ -117,13 +139,7 @@ class DynamicFormService
                 }
             }
 
-            if ($field->validation_rules) {
-                $rules[$field->field_name] = $field->validation_rules;
-            } elseif ($field->is_required) {
-                $rules[$field->field_name] = 'required';
-            } else {
-                $rules[$field->field_name] = 'nullable';
-            }
+            $rules[$field->field_name] = $this->resolveFieldValidationRules($field, $existingData);
         }
 
         return $rules;
@@ -206,6 +222,11 @@ class DynamicFormService
                 $messages[$key.'.uploaded'] = "{$field->label} could not be uploaded. It may exceed {$maxLabel}.";
                 $messages[$key.'.mimes'] = "{$field->label} must be a ".str_replace('|', ', ', (string) ($field->file_extensions ?? 'allowed file')).'.';
             }
+
+            $col = strtolower((string) ($field->target_column ?? $field->field_name ?? ''));
+            if ($field->field_type === 'date' && in_array($col, ['date_of_birth', 'dob'], true)) {
+                $messages[$key.'.before_or_equal'] = "{$field->label} must be at least 15 years ago.";
+            }
         }
 
         return [$messages, $attributes];
@@ -214,8 +235,11 @@ class DynamicFormService
     /**
      * Build validation rules for a repeatable group's rows.
      */
-    public function buildGroupValidationRules(FcFormFieldGroup $group): array
-    {
+    public function buildGroupValidationRules(
+        FcFormFieldGroup $group,
+        ?int $userId = null,
+        ?Collection $existingRows = null
+    ): array {
         $rules  = [];
         $prefix = $group->group_name;
 
@@ -228,6 +252,10 @@ class DynamicFormService
         $groupFields = $group->activeGroupFields->isNotEmpty()
             ? $group->activeGroupFields
             : $group->groupFields;
+
+        if ($existingRows === null && $userId !== null) {
+            $existingRows = $this->getExistingGroupRows($group, $userId);
+        }
 
         foreach ($groupFields as $field) {
             $key = "{$prefix}.*.{$field->field_name}";
@@ -245,13 +273,13 @@ class DynamicFormService
                 }
             }
 
-            if ($field->validation_rules) {
-                $rules[$key] = $this->normalizeLanguageMasterExistsInRules($field->validation_rules, $field);
-            } elseif ($field->is_required) {
-                $rules[$key] = 'required';
-            } else {
-                $rules[$key] = 'nullable';
+            $existingPath = null;
+            if ($field->field_type === 'file' && $existingRows && $existingRows->isNotEmpty()) {
+                $col = $field->target_column ?: $field->field_name;
+                $existingPath = $existingRows->first()->{$col} ?? null;
             }
+
+            $rules[$key] = $this->resolveFieldValidationRules($field, null, $existingPath);
         }
 
         return $rules;
@@ -264,15 +292,57 @@ class DynamicFormService
     {
         $lookups = [];
         foreach ($fields as $field) {
-            if ($field->lookup_table) {
-                $query = DB::table($field->lookup_table);
-                if ($field->lookup_order_column) {
-                    $query->orderBy($field->lookup_order_column);
-                }
-                $lookups[$field->field_name] = $query->get();
+            if (! $field->lookup_table) {
+                continue;
             }
+
+            $table = $this->normalizeLookupTable($field->lookup_table);
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
+            $query = DB::table($table);
+
+            if ($table === 'state_master' && Schema::hasColumn($table, 'country_master_pk')) {
+                $query->select('*');
+            }
+
+            if ($field->lookup_order_column) {
+                $query->orderBy($field->lookup_order_column);
+            } elseif ($field->lookup_label_column) {
+                $query->orderBy($field->lookup_label_column);
+            }
+
+            $lookups[$field->field_name] = $query->get();
         }
+
         return $lookups;
+    }
+
+    /**
+     * District options from state_district_mapping for cascading address fields.
+     *
+     * @return Collection<int, object>
+     */
+    public function getDistrictMasterOptions(): Collection
+    {
+        if (! Schema::hasTable('state_district_mapping')) {
+            return collect();
+        }
+
+        $query = DB::table('state_district_mapping')
+            ->select('pk', 'district_name', 'state_master_pk', 'country_master_pk');
+
+        if (Schema::hasColumn('state_district_mapping', 'active_inactive')) {
+            $query->where('active_inactive', 1);
+        }
+
+        return $query->orderBy('district_name')->get();
+    }
+
+    public function getExistingDataForStep(FcFormStep $step, int $userId): ?object
+    {
+        return $this->getExistingData($step->step_slug, $userId);
     }
 
     /**
@@ -282,10 +352,7 @@ class DynamicFormService
     {
         $lookups = [];
         foreach ($groupFields as $field) {
-            $table = $field->lookup_table;
-            if ($table === 'language_masters') {
-                $table = 'language_master';
-            }
+            $table = $this->normalizeLookupTable((string) ($field->lookup_table ?? ''));
 
             if ($field->field_type === 'select' && $field->target_column === 'language_id') {
                 $lookups[$field->field_name] = $this->languageMasterLookupRows($field);
@@ -826,8 +893,10 @@ class DynamicFormService
             $gt = $group->target_table;
             $uCol = $this->userCol($gt);
             $uVal = $this->userVal($gt, $userId);
+            $useUpsert = $group->save_mode === 'upsert'
+                || in_array($gt, self::SINGLE_ROW_PER_USER_TABLES, true);
 
-            if ($group->save_mode === 'replace_all') {
+            if (! $useUpsert) {
                 DB::table($gt)->where($uCol, $uVal)->delete();
 
                 foreach ($rows as $row) {
@@ -840,7 +909,9 @@ class DynamicFormService
                 }
             } else {
                 // upsert mode (single-row tables like spouse, hobbies, dress sizes)
-                $row = $rows[0] ?? [];
+                $row = count($rows) > 1
+                    ? $this->collapseGroupRowsForUpsert($rows, $fields)
+                    : ($rows[0] ?? []);
                 $data = [$uCol => $uVal, 'updated_at' => now()];
                 $hasMeaningful = false;
 
@@ -866,6 +937,34 @@ class DynamicFormService
                 }
             }
         });
+    }
+
+    /**
+     * When a single-row table receives multiple repeatable rows, merge values per field.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     * @return array<string, mixed>
+     */
+    private function collapseGroupRowsForUpsert(array $rows, Collection $fields): array
+    {
+        $merged = [];
+
+        foreach ($fields as $field) {
+            $parts = [];
+            foreach ($rows as $row) {
+                $value = $row[$field->field_name] ?? null;
+                $stored = $this->normalizeGroupFieldStoredValue($field, $value);
+                if ($this->isMeaningfulStoredValue($stored, $field)) {
+                    $parts[] = is_array($stored) ? implode(', ', $stored) : (string) $stored;
+                }
+            }
+
+            if ($parts !== []) {
+                $merged[$field->field_name] = count($parts) === 1 ? $parts[0] : implode(', ', $parts);
+            }
+        }
+
+        return $merged;
     }
 
     /**
@@ -983,7 +1082,183 @@ class DynamicFormService
             return $kb >= 1024 && $kb % 1024 === 0 ? ($kb / 1024).' MB' : $kb.' KB';
         }
 
-        return '10 MB';
+        return '5 MB';
+    }
+
+    /**
+     * @param  FcFormField|FcFormGroupField  $field
+     */
+    private function resolveFieldValidationRules(
+        FcFormField|FcFormGroupField $field,
+        ?object $existingData = null,
+        mixed $existingFilePath = null
+    ): string {
+        if ($field->field_type === 'file') {
+            if ($existingFilePath === null && $existingData !== null) {
+                $col = $field->target_column ?: $field->field_name;
+                $existingFilePath = $existingData->{$col} ?? null;
+            }
+
+            return $this->buildFileValidationRules($field, filled($existingFilePath));
+        }
+
+        $rules = $field->validation_rules
+            ?: ($field->is_required ? 'required' : 'nullable');
+
+        if ($field instanceof FcFormGroupField) {
+            $rules = $this->normalizeLanguageMasterExistsInRules($rules, $field);
+        }
+
+        $rules = $this->normalizeExistsTableInRules($rules);
+        $rules = $this->appendFieldTypeValidationRules($field, $rules);
+        $rules = $this->appendDateOfBirthRule($field, $rules);
+
+        return $this->cleanValidationRules($rules);
+    }
+
+    /**
+     * @param  FcFormField|FcFormGroupField  $field
+     */
+    private function buildFileValidationRules(FcFormField|FcFormGroupField $field, bool $hasExistingUpload): string
+    {
+        $rules = $field->validation_rules ?: ($field->is_required ? 'required' : 'nullable');
+
+        if ($hasExistingUpload) {
+            $rules = preg_replace('/\brequired\b/', 'nullable', $rules) ?? $rules;
+        }
+
+        $maxKb = $this->resolveFileMaxKb($field);
+        $ext = $field->file_extensions ?: 'jpeg,jpg,png,pdf';
+
+        if (! preg_match('/\b(file|image)\b/', $rules)) {
+            $rules .= str_contains(strtolower($ext), 'pdf') && ! str_contains(strtolower($ext), 'jpg')
+                ? '|file'
+                : '|image';
+        }
+
+        if (! preg_match('/\bmimes:/', $rules)) {
+            $rules .= '|mimes:'.str_replace(' ', '', $ext);
+        }
+
+        if (preg_match('/max:\d+/', $rules)) {
+            $rules = preg_replace('/max:\d+/', 'max:'.$maxKb, $rules) ?? $rules;
+        } else {
+            $rules .= '|max:'.$maxKb;
+        }
+
+        return $this->cleanValidationRules($rules);
+    }
+
+    /**
+     * @param  FcFormField|FcFormGroupField  $field
+     */
+    private function resolveFileMaxKb(FcFormField|FcFormGroupField $field): int
+    {
+        if (! empty($field->file_max_kb)) {
+            return (int) $field->file_max_kb;
+        }
+
+        if ($field->validation_rules && preg_match('/max:(\d+)/', $field->validation_rules, $m)) {
+            return (int) $m[1];
+        }
+
+        return 5120;
+    }
+
+    private function normalizeLookupTable(string $table): string
+    {
+        $aliases = [
+            'language_masters' => 'language_master',
+            'country_masters' => 'country_master',
+            'state_masters' => 'state_master',
+            'district_masters' => 'district_master',
+            'state_district_masters' => 'state_district_mapping',
+            'qualification_masters' => 'qualification_master',
+            'religion_masters' => 'religion_master',
+            'category_masters' => 'category_master',
+        ];
+
+        return $aliases[$table] ?? $table;
+    }
+
+    private function normalizeExistsTableInRules(string $rules): string
+    {
+        $map = [
+            'language_masters' => 'language_master',
+            'country_masters' => 'country_master',
+            'state_masters' => 'state_master',
+            'district_masters' => 'district_master',
+            'state_district_masters' => 'state_district_mapping',
+        ];
+
+        foreach ($map as $from => $to) {
+            $rules = preg_replace('/exists:\s*'.preg_quote($from, '/').'\s*,/i', 'exists:'.$to.',', $rules) ?? $rules;
+        }
+
+        return $rules;
+    }
+
+    /**
+     * @param  FcFormField|FcFormGroupField  $field
+     */
+    private function appendFieldTypeValidationRules(FcFormField|FcFormGroupField $field, string $rules): string
+    {
+        if ($field->field_type === 'number') {
+            if (! preg_match('/\b(numeric|integer|digits|decimal)\b/', $rules)) {
+                $rules .= '|numeric';
+            }
+
+            return $rules;
+        }
+
+        if (in_array($field->field_type, ['text', 'textarea'], true)) {
+            if (! preg_match('/\b(regex|alpha_num|alpha_dash)\b/', $rules)) {
+                $rules .= '|string';
+            }
+        }
+
+        if ($field->field_type === 'email' && ! preg_match('/\bemail\b/', $rules)) {
+            $rules .= '|email';
+        }
+
+        if (preg_match('/\balpha_num\b/', $rules) === 0
+            && preg_match('/regex:.*\[A-Z\]\{5\}/i', $rules)) {
+            // PAN-style fields already have regex
+        } elseif (str_contains(strtolower((string) $field->field_name), 'pan')
+            && ! preg_match('/\bregex:/', $rules)) {
+            $rules .= '|regex:/^[A-Z]{5}[0-9]{4}[A-Z]$/';
+        }
+
+        return $rules;
+    }
+
+    /**
+     * @param  FcFormField|FcFormGroupField  $field
+     */
+    private function appendDateOfBirthRule(FcFormField|FcFormGroupField $field, string $rules): string
+    {
+        $col = strtolower((string) ($field->target_column ?? $field->field_name ?? ''));
+        if ($field->field_type !== 'date' || ! in_array($col, ['date_of_birth', 'dob'], true)) {
+            return $rules;
+        }
+
+        $maxDob = now()->subYears(15)->format('Y-m-d');
+        if (preg_match('/\bbefore_or_equal:/', $rules)) {
+            return preg_replace('/before_or_equal:[^\|]+/', 'before_or_equal:'.$maxDob, $rules) ?? $rules;
+        }
+        if (preg_match('/\bbefore:/', $rules) && ! preg_match('/\bbefore_or_equal:/', $rules)) {
+            return preg_replace('/before:[^\|]+/', 'before_or_equal:'.$maxDob, $rules) ?? $rules;
+        }
+
+        return $rules.'|date|before_or_equal:'.$maxDob;
+    }
+
+    private function cleanValidationRules(string $rules): string
+    {
+        $rules = trim($rules, '|');
+        $rules = preg_replace('/\|{2,}/', '|', $rules) ?? $rules;
+
+        return $rules;
     }
 
     private function isMeaningfulStoredValue(mixed $value, FcFormGroupField $field): bool
@@ -1130,12 +1405,31 @@ class DynamicFormService
             return $value;
         }
 
+        if (in_array($field->field_type, ['select', 'radio'], true) && $field->lookup_table) {
+            $type = $this->getColumnType($table, $column);
+            if ($type !== null && in_array($type, ['smallint', 'integer', 'int', 'bigint', 'tinyint'], true)) {
+                return is_numeric($value) ? (int) $value : $value;
+            }
+        }
+
         $type = $this->getColumnType($table, $column);
         if ($type === null) {
             return $value;
         }
 
-        if (in_array($type, ['tinyint', 'boolean', 'bool', 'smallint', 'integer', 'int', 'bigint'], true)) {
+        if ($field->field_type === 'checkbox' && count($field->decoded_options ?? []) === 0) {
+            return $this->coerceToBoolInt($value) ? 1 : 0;
+        }
+
+        if (in_array($type, ['smallint', 'integer', 'int', 'bigint'], true)) {
+            return is_numeric($value) ? (int) $value : $value;
+        }
+
+        if (in_array($type, ['tinyint', 'boolean', 'bool'], true)) {
+            if (str_ends_with($column, '_id') || $field->lookup_table) {
+                return is_numeric($value) ? (int) $value : $value;
+            }
+
             return $this->coerceToBoolInt($value) ? 1 : 0;
         }
 

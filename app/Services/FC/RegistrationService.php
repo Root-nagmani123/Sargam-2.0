@@ -16,6 +16,7 @@ use App\Models\FC\{
 use Illuminate\Support\Collection;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class RegistrationService
 {
@@ -668,15 +669,16 @@ class RegistrationService
         }
 
         if (! empty($field->lookup_table) && ! empty($field->lookup_value_column) && ! empty($field->lookup_label_column)) {
+            $resolvedTable = $this->resolveLookupTableName((string) $field->lookup_table);
             $lk = implode('|', [
-                (string) $field->lookup_table,
+                $resolvedTable,
                 (string) $field->lookup_value_column,
                 (string) $field->lookup_label_column,
                 (string) $raw,
             ]);
             if (! array_key_exists($lk, $lookupCache)) {
                 $lookupCache[$lk] = $this->resolveLookupLabelSafely(
-                    (string) $field->lookup_table,
+                    $resolvedTable,
                     (string) $field->lookup_value_column,
                     (string) $field->lookup_label_column,
                     $raw
@@ -831,41 +833,71 @@ class RegistrationService
 
     private function resolveLookupLabelSafely(string $table, string $valueColumn, string $labelColumn, mixed $raw): ?string
     {
-        try {
-            $value = DB::table($table)->where($valueColumn, $raw)->value($labelColumn);
-            if ($value !== null && $value !== '') {
-                return (string) $value;
-            }
-        } catch (QueryException) {
-            // Fall through to tolerant resolution below.
-        }
-
-        $candidateValueColumns = array_values(array_unique(array_filter([
-            $valueColumn,
-            $valueColumn === 'id' ? 'pk' : null,
-            $valueColumn === 'pk' ? 'id' : null,
-            'id',
-            'pk',
+        $tables = array_values(array_unique(array_filter([
+            $this->resolveLookupTableName($table),
+            $table,
         ])));
 
-        foreach ($candidateValueColumns as $col) {
+        foreach ($tables as $resolvedTable) {
+            if (! Schema::hasTable($resolvedTable)) {
+                continue;
+            }
+
             try {
-                if (! DB::getSchemaBuilder()->hasColumn($table, $col)) {
-                    continue;
-                }
-                if (! DB::getSchemaBuilder()->hasColumn($table, $labelColumn)) {
-                    continue;
-                }
-                $value = DB::table($table)->where($col, $raw)->value($labelColumn);
+                $value = DB::table($resolvedTable)->where($valueColumn, $raw)->value($labelColumn);
                 if ($value !== null && $value !== '') {
                     return (string) $value;
                 }
             } catch (QueryException) {
-                continue;
+                // Fall through to tolerant resolution below.
+            }
+
+            $candidateValueColumns = array_values(array_unique(array_filter([
+                $valueColumn,
+                $valueColumn === 'id' ? 'pk' : null,
+                $valueColumn === 'pk' ? 'id' : null,
+                'id',
+                'pk',
+            ])));
+
+            foreach ($candidateValueColumns as $col) {
+                try {
+                    if (! Schema::hasColumn($resolvedTable, $col)) {
+                        continue;
+                    }
+                    if (! Schema::hasColumn($resolvedTable, $labelColumn)) {
+                        continue;
+                    }
+                    $value = DB::table($resolvedTable)->where($col, $raw)->value($labelColumn);
+                    if ($value !== null && $value !== '') {
+                        return (string) $value;
+                    }
+                } catch (QueryException) {
+                    continue;
+                }
             }
         }
 
         return null;
+    }
+
+    private function resolveLookupTableName(string $table): string
+    {
+        $aliases = [
+            'language_masters' => 'language_master',
+            'country_masters' => 'country_master',
+            'state_masters' => 'state_master',
+            'district_masters' => 'district_master',
+            'state_district_masters' => 'state_district_mapping',
+            'qualification_masters' => 'qualification_master',
+            'religion_masters' => 'religion_master',
+            'category_masters' => 'category_master',
+            'caste_category_masters' => 'caste_category_master',
+            'blood_group_masters' => 'blood_group_master',
+            'marital_status_masters' => 'marital_status_master',
+        ];
+
+        return $aliases[$table] ?? $table;
     }
 
     /**
