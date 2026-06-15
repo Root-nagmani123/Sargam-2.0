@@ -2,7 +2,7 @@
 
 @section('setup_content')
 @include('admin.mess.reports.partials.report-styles')
-<div class="card" style="border-left: 4px solid #004a93;">
+<div class="card" >
     <div class="card-header">
         <h5 class="mb-0">
             <iconify-icon icon="solar:cart-large-2-bold" class="me-2"></iconify-icon>

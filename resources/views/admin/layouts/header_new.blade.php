@@ -189,49 +189,78 @@
     </div>
 
     <!-- User Profile Dropdown -->
+    <style>
+        .profile-dd .profile-dd-item {
+            padding: .68rem .8rem;
+            border-radius: .65rem;
+            font-size: .9rem;
+            font-weight: 500;
+            color: #1f2937;
+            border-bottom: 1px solid #f1f3f5;
+            transition: background-color .15s ease, color .15s ease;
+        }
+        .profile-dd li:last-child .profile-dd-item { border-bottom: 0; }
+        .profile-dd .profile-dd-item i {
+            font-size: 1.05rem;
+            color: #6b7280;
+            width: 1.25rem;
+            text-align: center;
+            transition: color .15s ease;
+        }
+        .profile-dd .profile-dd-item:hover,
+        .profile-dd .profile-dd-item:focus {
+            background-color: #f3f6fb;
+            color: #0d6efd;
+        }
+        .profile-dd .profile-dd-item:hover i,
+        .profile-dd .profile-dd-item:focus i { color: #0d6efd; }
+        .profile-dd .profile-dd-logout:hover,
+        .profile-dd .profile-dd-logout:focus { background-color: #fdecec; color: #dc3545; }
+        .profile-dd .profile-dd-logout:hover i,
+        .profile-dd .profile-dd-logout:focus i { color: #dc3545; }
+    </style>
     <div class="dropdown header-profile-dropdown">
-        <button type="button" class="btn p-0 border-0 bg-transparent d-none d-lg-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false">
+        <a class=" d-none d-lg-flex align-items-center gap-2" data-bs-toggle="dropdown" aria-expanded="false">
             <span class="rounded-circle bg-light d-flex align-items-center justify-content-center overflow-hidden flex-shrink-0" style="width:38px; height:38px; border: 2px solid #e5e7eb;">
-                <i class="material-icons material-symbols-rounded text-secondary" style="font-size:22px;">person</i>
+                <img src="{{ get_profile_pic() }}" alt="Profile photo" class="w-100 h-100 object-fit-cover rounded-circle" onerror="this.onerror=null;this.src='{{ asset('images/dummypic.jpeg') }}';">
             </span>
             <span class="lh-sm text-start d-none d-lg-block">
                 <span class="d-block fw-semibold text-dark text-truncate" style="font-size: 0.8125rem; max-width:170px;">{{ trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) ?: (Auth::user()->name ?? 'User') }}</span>
                 <span class="d-block text-body-secondary text-truncate" style="font-size:0.6875rem; max-width:170px;">{{ Auth::user()->getRoleNames()->implode(', ') ?: 'Employee' }}</span>
             </span>
             <i class="bi bi-chevron-down text-body-secondary" style="font-size:11px;"></i>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-3 p-2 mt-2" style="min-width: 250px;">
+        </a>
+        <ul class="dropdown-menu dropdown-menu-end shadow-lg border-0 rounded-4 p-2 mt-2 profile-dd" style="min-width: 268px;">
             <!-- User identity card -->
-            <li class="px-1 pt-1 pb-2">
-                <div class="d-flex align-items-center gap-2 p-2 rounded-3 bg-primary-subtle">
-                    <span class="rounded-circle bg-white border border-primary-subtle d-flex align-items-center justify-content-center flex-shrink-0 overflow-hidden" style="width:44px; height:44px;">
-                        <i class="material-icons material-symbols-rounded text-primary" style="font-size:26px;">person</i>
+            <li class="mb-1">
+                <div class="d-flex align-items-center gap-3 p-2 rounded-3 bg-primary-subtle">
+                    <span class="rounded-circle bg-white border border-primary-subtle d-flex align-items-center justify-content-center flex-shrink-0 overflow-hidden" style="width:46px; height:46px;">
+                        <img src="{{ get_profile_pic() }}" alt="Profile photo" class="w-100 h-100 object-fit-cover rounded-circle" onerror="this.onerror=null;this.src='{{ asset('images/dummypic.jpeg') }}';">
                     </span>
                     <div class="lh-sm overflow-hidden">
-                        <div class="fw-semibold text-primary-emphasis text-truncate" style="font-size:0.875rem;">{{ trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) ?: (Auth::user()->name ?? 'User') }}</div>
-                        <div class="text-body-secondary text-truncate" style="font-size:0.75rem;">{{ Auth::user()->getRoleNames()->implode(', ') ?: 'Employee' }}</div>
+                        <div class="fw-semibold text-dark text-truncate" style="font-size:0.9rem;">{{ trim((Auth::user()->first_name ?? '') . ' ' . (Auth::user()->last_name ?? '')) ?: (Auth::user()->name ?? 'User') }}</div>
+                        <div class="text-body-secondary text-truncate" style="font-size:0.78rem;">{{ Auth::user()->getRoleNames()->implode(', ') ?: 'Employee' }}</div>
                     </div>
                 </div>
             </li>
-            <li><hr class="dropdown-divider my-2"></li>
+            <li><hr class="dropdown-divider mt-1 mb-2"></li>
             <li>
-                <a class="dropdown-item d-flex align-items-center gap-3 rounded-2 py-2 px-3" href="{{ route('member.profile.edit', Auth::user()->user_id ?? 0) }}">
-                    <i class="bi bi-pencil text-body-secondary" style="font-size:16px;"></i>
+                <a class="dropdown-item profile-dd-item d-flex align-items-center gap-3" href="{{ route('member.profile.edit', Auth::user()->user_id ?? 0) }}">
+                    <i class="material-icons material-symbols-rounded">edit</i>
                     <span>Edit Profile</span>
                 </a>
             </li>
             <li>
-                <a class="dropdown-item d-flex align-items-center gap-3 rounded-2 py-2 px-3" href="{{ route('admin.password.change_password') }}">
-                    <i class="bi bi-arrow-counterclockwise text-body-secondary" style="font-size:16px;"></i>
+                <a class="dropdown-item profile-dd-item d-flex align-items-center gap-3" href="{{ route('admin.password.change_password') }}">
+                    <i class="material-icons material-symbols-rounded">lock</i>
                     <span>Change Password</span>
                 </a>
             </li>
-            <li><hr class="dropdown-divider my-1"></li>
             <li>
                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
-                    <button type="submit" class="dropdown-item d-flex align-items-center gap-3 rounded-2 py-2 px-3 text-danger">
-                        <i class="bi bi-box-arrow-right" style="font-size:16px;"></i>
+                    <button type="submit" class="dropdown-item profile-dd-item profile-dd-logout d-flex align-items-center gap-3">
+                        <i class="material-icons material-symbols-rounded">logout</i>
                         <span>Log out</span>
                     </button>
                 </form>

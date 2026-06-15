@@ -5,7 +5,7 @@
 @section('setup_content')
 <div class="container-fluid">
 <x-breadcrum title="Memo Type Master" />
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-body">
             <h4 class="card-title mb-3">
                 {{ isset($memoType) ? 'Edit' : 'Add' }} Memo Type

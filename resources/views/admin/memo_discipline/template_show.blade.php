@@ -12,7 +12,7 @@
         {{ 'The document size exceeds the maximum limit of 1 MB or invalid file type. Please upload a valid document.' }}
     </div>
     @endif
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-body">
             <div class="gap-2 text-end">
                     <a href="{{ route('memo.discipline.index') }}" class="btn btn-outline-secondary">Back</a>

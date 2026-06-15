@@ -2190,7 +2190,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
     role="region"
     aria-labelledby="controlPanelHeading"
-    style="border-left: 4px solid #004a93;"
+    
 >
     <h2 id="controlPanelHeading" class="visually-hidden">
         Calendar Control Panel

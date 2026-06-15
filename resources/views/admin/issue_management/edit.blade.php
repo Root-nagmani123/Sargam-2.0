@@ -31,7 +31,7 @@
 <div class="container-fluid py-3">
     <x-breadcrum title="Edit Issue" />
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-body">
                 <h4 class="mb-3">Edit Issue #{{ $issue->pk }}</h4>
                 <hr>

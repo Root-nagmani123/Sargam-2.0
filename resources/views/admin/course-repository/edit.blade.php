@@ -6,7 +6,7 @@
 <div class="container-fluid"> 
     <x-breadcrum title="Edit Category" />
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-body">
                 <div class="row justify-content-center">
                     <div class="col-md-8"> 
