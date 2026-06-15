@@ -356,6 +356,7 @@ class UserController extends Controller
         $todayDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(true);
         $fullDuplicatePermIdCardRequests = $this->getTodayDuplicatePermanentIdCardRequestsCount(false);
         $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
+        $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
 
         return view('admin.dashboard', compact(
             'year',
@@ -390,7 +391,8 @@ class UserController extends Controller
             'todayDuplicatePermIdCardRequests',
             'todayDuplicateContractualIdCardRequests',
             'fullDuplicatePermIdCardRequests',
-            'fullDuplicateContractualIdCardRequests'
+            'fullDuplicateContractualIdCardRequests',
+            'idCardApprovalRoute'
         ));
     }
 

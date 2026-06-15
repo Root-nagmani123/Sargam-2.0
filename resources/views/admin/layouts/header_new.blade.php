@@ -265,7 +265,7 @@
                 <form action="{{ route('logout') }}" method="POST" class="m-0">
                     @csrf
                     <button type="submit" class="dropdown-item header-profile-logout-item d-flex align-items-center gap-3 rounded-2 py-2 px-3">
-                        <i class="bi bi-box-arrow-right" style="font-size:16px;"></i>
+                        <i class="material-icons material-symbols-rounded">logout</i>
                         <span>Log out</span>
                     </button>
                 </form>
