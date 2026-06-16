@@ -13,7 +13,7 @@ class StudentMasterSecond extends Model
 
     protected $fillable = [
         'user_id',
-        'category_id', 'religion_id', 'nationality', 'domicile_state', 'domicile_district',
+        'category_id', 'religion_id', 'nationality', 'domicile_state', 'domicile_state_id', 'domicile_district',
         'marital_status', 'blood_group', 'height_cm', 'weight_kg',
         'identification_mark1', 'identification_mark2',
         'birth_state_id', 'birth_district', 'birth_city', 'birth_area_type',
