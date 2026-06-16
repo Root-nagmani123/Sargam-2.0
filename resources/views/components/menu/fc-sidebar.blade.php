@@ -176,6 +176,12 @@
                         </li>
                     </ul>
                 </li>
+                <li class="sidebar-item {{ request()->routeIs('fc-reg.admin.sample-documents.*') ? 'active' : '' }}">
+                    <a class="sidebar-link {{ request()->routeIs('fc-reg.admin.sample-documents.*') ? 'active' : '' }}"
+                        href="{{ route('fc-reg.admin.sample-documents.index') }}">
+                        <span class="hide-menu small small-sm-normal text-nowrap">Sample Document Master</span>
+                    </a>
+                </li>
             </ul>
 
             <li class="sidebar-item mb-1">
