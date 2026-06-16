@@ -13,6 +13,20 @@ class MDOEscotDutyMap extends Model
 
     protected $primaryKey = 'pk';
 
+    /** Duty acknowledgement statuses */
+    public const STATUS_PENDING = 'pending';
+    public const STATUS_COMPLETED = 'completed';
+
+    protected $casts = [
+        'acknowledged_at' => 'datetime',
+    ];
+
+    /** True when the duty is still awaiting OT acknowledgement. */
+    public function isPending(): bool
+    {
+        return ($this->duty_status ?? self::STATUS_PENDING) !== self::STATUS_COMPLETED;
+    }
+
     public static function getMdoDutyTypes(): array
     {
         return [

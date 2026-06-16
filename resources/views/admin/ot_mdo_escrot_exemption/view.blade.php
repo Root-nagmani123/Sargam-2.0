@@ -3,196 +3,8 @@
 @section('title', 'Session Moderator/Escort Duty')
 
 @section(hasRole('Officer Trainee') ? 'content' : 'setup_content')
-<style>
-    /* ===== Session Moderator / Escort Duty — modern UI (scoped to .otmdo) ===== */
-    .otmdo {
-        --otmdo-primary: #004a93;
-        --otmdo-primary-soft: #eaf1f9;
-        --otmdo-border: #eef0f3;
-    }
 
-    .otmdo .otmdo-card {
-        border: 0;
-        border-radius: 14px;
-        background: #fff;
-        box-shadow: 0 1px 2px rgba(16, 24, 40, .04), 0 4px 16px rgba(16, 24, 40, .06);
-    }
-
-    .otmdo .otmdo-accent {
-        border-left: 4px solid var(--otmdo-primary);
-    }
-
-    .otmdo .otmdo-icon-badge {
-        width: 44px;
-        height: 44px;
-        border-radius: 12px;
-        background: var(--otmdo-primary-soft);
-        color: var(--otmdo-primary);
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        flex: 0 0 auto;
-    }
-
-    .otmdo .otmdo-id-label {
-        font-size: .75rem;
-        color: #6b7280;
-    }
-
-    .otmdo .otmdo-id-value {
-        font-weight: 700;
-        color: #111827;
-    }
-
-    /* Summary stat cards */
-    .otmdo .otmdo-stat {
-        border: 1px solid var(--otmdo-border);
-        border-left: 4px solid var(--otmdo-primary);
-        border-radius: 12px;
-        background: #fff;
-        height: 100%;
-        transition: transform .15s ease, box-shadow .15s ease;
-    }
-
-    .otmdo .otmdo-stat:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 6px 18px rgba(16, 24, 40, .08);
-    }
-
-    .otmdo .otmdo-stat-label {
-        font-size: .8125rem;
-        font-weight: 600;
-        color: #6b7280;
-    }
-
-    .otmdo .otmdo-stat-value {
-        font-size: 1.6rem;
-        font-weight: 700;
-        line-height: 1;
-        color: #111827;
-    }
-
-    .otmdo .otmdo-stat-ico {
-        width: 40px;
-        height: 40px;
-        border-radius: 10px;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.2rem;
-    }
-
-    /* Filter toolbar */
-    .otmdo .otmdo-toolbar {
-        border: 1px solid var(--otmdo-border);
-        border-radius: 12px;
-        background: #fff;
-    }
-
-    .otmdo .otmdo-toolbar .form-label {
-        font-size: .75rem;
-        font-weight: 600;
-        color: #6b7280;
-        margin-bottom: .25rem;
-    }
-
-    .otmdo .otmdo-toolbar .form-select,
-    .otmdo .otmdo-toolbar .form-control {
-        border-radius: 8px;
-        font-size: .875rem;
-    }
-
-    /* Table */
-    .otmdo .otmdo-table {
-        margin-bottom: 0;
-    }
-
-    .otmdo .otmdo-table thead th {
-        background: #f3f4f6;
-        color: #6b7280;
-        font-size: .75rem;
-        font-weight: 600;
-        letter-spacing: .03em;
-        text-transform: uppercase;
-        white-space: nowrap;
-        border: 0;
-        padding: .85rem 1rem;
-        vertical-align: middle;
-    }
-
-    .otmdo .otmdo-table tbody td {
-        padding: .9rem 1rem;
-        vertical-align: middle;
-        border-bottom: 1px solid #f0f1f3;
-        color: #374151;
-        font-size: .9rem;
-    }
-
-    .otmdo .otmdo-table tbody tr:last-child td {
-        border-bottom: 0;
-    }
-
-    .otmdo .otmdo-table tbody tr {
-        transition: background-color .15s ease;
-    }
-
-    .otmdo .otmdo-table tbody tr:hover {
-        background: #f8fafc;
-    }
-
-    .otmdo .otmdo-date {
-        font-weight: 600;
-        color: #1f2937;
-        white-space: nowrap;
-    }
-
-    .otmdo .otmdo-time {
-        font-size: .8rem;
-        color: #6b7280;
-        white-space: nowrap;
-    }
-
-    /* Duty-type pills */
-    .otmdo .otmdo-badge {
-        font-weight: 600;
-        font-size: .75rem;
-        padding: .35rem .7rem;
-        border-radius: 999px;
-    }
-
-    .otmdo .otmdo-badge-escort {
-        background: var(--otmdo-primary-soft);
-        color: var(--otmdo-primary);
-    }
-
-    .otmdo .otmdo-badge-mdo {
-        background: #e7f6ec;
-        color: #1a7f4b;
-    }
-
-    .otmdo .otmdo-badge-neutral {
-        background: #f1f3f5;
-        color: #495057;
-    }
-
-    .otmdo .otmdo-empty {
-        border: 1px dashed #d8dde3;
-        border-radius: 12px;
-        background: #f9fafb;
-    }
-
-    @media (max-width: 575.98px) {
-        .otmdo .otmdo-header-actions {
-            width: 100%;
-        }
-    }
-
-    @media print {
-        .otmdo .otmdo-no-print {
-            display: none !important;
-        }
-    }
-</style>
+@include('admin.ot_mdo_escrot_exemption._styles')
 
 @php
     // Detect single-student (OT) view vs. multi-student admin view.
@@ -205,73 +17,46 @@
         if (str_contains($t, 'mdo') || str_contains($t, 'moder')) return 'otmdo-badge-mdo';
         return 'otmdo-badge-neutral';
     };
+
+    // Helper: render the acknowledgement status pill.
+    $otmdoStatus = function ($status) {
+        $isCompleted = strtolower((string) $status) === 'completed';
+        $cls = $isCompleted ? 'otmdo-status-completed' : 'otmdo-status-pending';
+        $label = $isCompleted ? 'Completed' : 'Pending';
+        return '<span class="otmdo-badge ' . $cls . '">' . $label . '</span>';
+    };
 @endphp
 
-<div class="container-fluid otmdo">
+<div class="container-fluid otmdo px-2 py-2">
 
     {{-- ===================== HEADER ===================== --}}
-    <div class="card otmdo-card otmdo-accent mb-3">
+    <div class="card otmdo-card mb-3">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3">
-                <div class="d-flex align-items-center gap-3">
-                    <span class="otmdo-icon-badge">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">assignment_ind</i>
-                    </span>
-                    <div>
-                        <h4 class="mb-0 fw-bold text-dark">Session Moderator / Escort Duty</h4>
-                        <p class="mb-0 small text-muted">Your assigned moderator &amp; escort duties</p>
-                    </div>
+                {{-- Title --}}
+                <div>
+                    <h4 class="otmdo-title mb-1">Session Moderator / Escort Duty</h4>
+                    <p class="mb-0 small text-muted">Your assigned moderator &amp; escort duties</p>
                 </div>
 
-            <hr>
-
-            @php
-            // Check if this is a student login view (has student_name, ot_code, email keys)
-            $isStudentView = isset($studentData) && isset($studentData['student_name']) &&
-            isset($studentData['ot_code']);
-            @endphp
-
-            @if($isStudentView)
-            <!-- Student Login View - Student Details -->
-            <div class="row mb-4">
-                <div class="col-12">
-                    <div class="card bg-light" >
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold text-muted mb-1">Student Name</label>
-                                        <div class="fs-5 fw-semibold">{{ $studentData['student_name'] }}</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold text-muted mb-1">OT Code</label>
-                                        <div class="fs-5 fw-semibold">{{ $studentData['ot_code'] }}</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold text-muted mb-1">Email</label>
-                                        <div class="fs-5 fw-semibold">{{ $studentData['email'] ?? 'N/A' }}</div>
-                                    </div>
-                                </div>
-                                <div class="col-md-3">
-                                    <div class="mb-3">
-                                        <label class="form-label fw-bold text-muted mb-1">Total Duty Count</label>
-                                        <div class="fs-5 fw-semibold text-primary">
-                                            {{ $studentData['total_duty_count'] }}</div>
-                                    </div>
-                                </div>
-                            </div>
+                {{-- Right: OT identity (student view) + print --}}
+                <div class="d-flex align-items-start gap-3 otmdo-header-actions">
+                    @if($isStudentView)
+                    <div class="text-md-end">
+                        <div class="mb-1">
+                            <span class="otmdo-id-label">OT Code:</span>
+                            <span class="otmdo-id-value ms-1">{{ $studentData['ot_code'] }}</span>
+                        </div>
+                        <div class="mb-1">
+                            <span class="otmdo-id-label">OT Name:</span>
+                            <span class="otmdo-id-value ms-1">{{ $studentData['student_name'] }}</span>
+                        </div>
+                        <div>
+                            <span class="otmdo-id-label">Email:</span>
+                            <span class="otmdo-id-value ms-1">{{ $studentData['email'] ?? 'N/A' }}</span>
                         </div>
                     </div>
                     @endif
-                    <button type="button" class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 otmdo-no-print"
-                        onclick="window.print()" aria-label="Print this page">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">print</i>
-                        <span class="d-none d-sm-inline">Print</span>
-                    </button>
                 </div>
             </div>
         </div>
@@ -281,48 +66,34 @@
     @if($isStudentView)
         @php
             $dutyMaps = $studentData['duty_maps'] ?? [];
-            $totalDuties = $studentData['total_duty_count'] ?? count($dutyMaps);
-            $escortCount = collect($dutyMaps)->filter(fn($d) => str_contains(strtolower($d['duty_type'] ?? ''), 'escort'))->count();
-            $moderatorCount = collect($dutyMaps)->filter(function ($d) {
-                $t = strtolower($d['duty_type'] ?? '');
-                return str_contains($t, 'mdo') || str_contains($t, 'moder');
-            })->count();
+            $stats = $studentData['stats'] ?? ['today' => 0, 'pending' => 0, 'completed' => 0];
         @endphp
 
-        {{-- Summary cards (real aggregates only) --}}
+        {{-- Summary cards — click to open the matching sub-page --}}
         <div class="row g-3 mb-3">
             <div class="col-12 col-sm-4">
-                <div class="otmdo-stat p-3 d-flex align-items-center justify-content-between">
+                <a href="{{ route('ot.mdo.escrot.today') }}" class="otmdo-stat p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <div class="otmdo-stat-label">Total Duties</div>
-                        <div class="otmdo-stat-value">{{ str_pad($totalDuties, 2, '0', STR_PAD_LEFT) }}</div>
+                        <div class="otmdo-stat-label">Today's Duty</div>
+                        <div class="otmdo-stat-value mt-2">{{ str_pad($stats['today'], 2, '0', STR_PAD_LEFT) }}</div>
                     </div>
-                    <span class="otmdo-stat-ico" style="background:#eaf1f9;color:#004a93;">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">assignment</i>
-                    </span>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-sm-4">
-                <div class="otmdo-stat p-3 d-flex align-items-center justify-content-between">
+                <a href="{{ route('ot.mdo.escrot.pending') }}" class="otmdo-stat p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <div class="otmdo-stat-label">Escort Duties</div>
-                        <div class="otmdo-stat-value">{{ str_pad($escortCount, 2, '0', STR_PAD_LEFT) }}</div>
+                        <div class="otmdo-stat-label">Pending Duty</div>
+                        <div class="otmdo-stat-value mt-2">{{ str_pad($stats['pending'], 2, '0', STR_PAD_LEFT) }}</div>
                     </div>
-                    <span class="otmdo-stat-ico" style="background:#eaf1f9;color:#004a93;">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">badge</i>
-                    </span>
-                </div>
+                </a>
             </div>
             <div class="col-6 col-sm-4">
-                <div class="otmdo-stat p-3 d-flex align-items-center justify-content-between">
+                <a href="{{ route('ot.mdo.escrot.completed') }}" class="otmdo-stat p-3 d-flex align-items-center justify-content-between">
                     <div>
-                        <div class="otmdo-stat-label">Moderator Duties</div>
-                        <div class="otmdo-stat-value">{{ str_pad($moderatorCount, 2, '0', STR_PAD_LEFT) }}</div>
+                        <div class="otmdo-stat-label">Completed Duty</div>
+                        <div class="otmdo-stat-value mt-2">{{ str_pad($stats['completed'], 2, '0', STR_PAD_LEFT) }}</div>
                     </div>
-                    <span class="otmdo-stat-ico" style="background:#e7f6ec;color:#1a7f4b;">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">co_present</i>
-                    </span>
-                </div>
+                </a>
             </div>
         </div>
 
@@ -330,7 +101,7 @@
         <div class="otmdo-toolbar p-3 mb-3 otmdo-no-print">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-md-auto d-flex align-items-center gap-2 me-md-2 pb-1 pb-md-0">
-                    <i class="material-icons material-symbols-rounded text-primary" aria-hidden="true">filter_list</i>
+                    <i class="bi bi-funnel text-primary" aria-hidden="true"></i>
                     <span class="fw-semibold text-dark">Filters</span>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
@@ -356,8 +127,8 @@
                 </div>
                 <div class="col-12 col-md-auto">
                     <button type="button" id="clearFilterBtn"
-                        class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">restart_alt</i>
+                        class="btn btn-outline-danger btn-sm w-100 rounded-1 d-inline-flex align-items-center justify-content-center gap-1">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
                         Reset Filters
                     </button>
                 </div>
@@ -377,6 +148,7 @@
                                 <th>Course Name</th>
                                 <th>Duty Type</th>
                                 <th>Faculty</th>
+                                <th class="text-center">Status</th>
                                 <th class="text-center pe-3 pe-md-4">Action</th>
                             </tr>
                         </thead>
@@ -402,7 +174,7 @@
                                     <span class="fw-semibold text-dark">{{ $duty['course'] ?? 'N/A' }}</span>
                                     @if($hasRemark)
                                     <div class="small text-muted text-truncate" style="max-width: 22rem;" title="{{ $remark }}">
-                                        <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:14px;" aria-hidden="true">sticky_note_2</i>{{ $remark }}
+                                        <i class="bi bi-sticky align-middle me-1" aria-hidden="true"></i>{{ $remark }}
                                     </div>
                                     @endif
                                 </td>
@@ -412,17 +184,34 @@
                                     </span>
                                 </td>
                                 <td>{{ $duty['faculty'] ?? 'N/A' }}</td>
+                                <td class="text-center">{!! $otmdoStatus($duty['status'] ?? 'pending') !!}</td>
                                 <td class="text-center pe-3 pe-md-4">
-                                    @if(strtolower($duty['duty_type'] ?? '') == 'escort' && !empty($duty['faculty_master_pk']))
-                                    <a href="{{ route('faculty.edit', ['id' => encrypt($duty['faculty_master_pk'])]) }}"
-                                        class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1"
-                                        aria-label="Edit Faculty Details">
-                                        <i class="material-icons material-symbols-rounded" style="font-size:16px;" aria-hidden="true">edit</i>
-                                        <span class="d-none d-lg-inline">Edit Faculty</span>
-                                    </a>
-                                    @else
-                                    <span class="text-muted">—</span>
-                                    @endif
+                                    @php $isCompleted = ($duty['status'] ?? 'pending') === 'completed'; @endphp
+                                    <div class="d-inline-flex align-items-center gap-2">
+                                        @if($isCompleted)
+                                        <button type="button" class="btn btn-outline-secondary btn-sm rounded-1 d-inline-flex align-items-center gap-1" disabled>
+                                            <i class="bi bi-check2" aria-hidden="true"></i>
+                                            <span>Acknowledged</span>
+                                        </button>
+                                        @else
+                                        <form method="POST" action="{{ route('ot.mdo.escrot.acknowledge') }}" class="d-inline">
+                                            @csrf
+                                            <input type="hidden" name="duty_pk" value="{{ $duty['id'] }}">
+                                            <button type="submit" class="btn btn-outline-primary btn-sm rounded-1 d-inline-flex align-items-center gap-1">
+                                                <i class="bi bi-hand-thumbs-up" aria-hidden="true"></i>
+                                                <span>Acknowledge</span>
+                                            </button>
+                                        </form>
+                                        @endif
+
+                                        @if(strtolower($duty['duty_type'] ?? '') == 'escort' && !empty($duty['faculty_master_pk']))
+                                        <a href="{{ route('faculty.edit', ['id' => encrypt($duty['faculty_master_pk'])]) }}"
+                                            class="btn btn-outline-primary btn-sm rounded-1 d-inline-flex align-items-center"
+                                            title="Edit Faculty Details" aria-label="Edit Faculty Details">
+                                            <i class="bi bi-pencil-square" aria-hidden="true"></i>
+                                        </a>
+                                        @endif
+                                    </div>
                                 </td>
                             </tr>
                             @endforeach
@@ -437,7 +226,7 @@
                 </div>
                 @else
                 <div class="otmdo-empty text-center py-5 m-3 m-md-4">
-                    <i class="material-icons material-symbols-rounded text-secondary" style="font-size:48px;" aria-hidden="true">event_busy</i>
+                    <i class="bi bi-calendar-x text-secondary" style="font-size:48px;" aria-hidden="true"></i>
                     <p class="mt-2 mb-0 fw-semibold text-secondary">No records found</p>
                     <p class="small text-muted mb-0">There are no duties matching the selected filters.</p>
                 </div>
@@ -457,7 +246,7 @@
         <div class="otmdo-toolbar p-3 mb-3 otmdo-no-print">
             <div class="row g-2 align-items-end">
                 <div class="col-12 col-md-auto d-flex align-items-center gap-2 me-md-2 pb-1 pb-md-0">
-                    <i class="material-icons material-symbols-rounded text-primary" aria-hidden="true">filter_list</i>
+                    <i class="bi bi-funnel text-primary" aria-hidden="true"></i>
                     <span class="fw-semibold text-dark">Filters</span>
                 </div>
                 <div class="col-12 col-sm-6 col-md-3">
@@ -483,8 +272,8 @@
                 </div>
                 <div class="col-12 col-md-auto">
                     <button type="button" id="clearFilterBtn"
-                        class="btn btn-outline-danger btn-sm w-100 d-inline-flex align-items-center justify-content-center gap-1">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">restart_alt</i>
+                        class="btn btn-outline-danger btn-sm w-100 rounded-3 d-inline-flex align-items-center justify-content-center gap-1">
+                        <i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i>
                         Reset Filters
                     </button>
                 </div>
@@ -498,10 +287,10 @@
                 <div class="otmdo-stat p-3 d-flex align-items-center justify-content-between">
                     <div>
                         <div class="otmdo-stat-label">Students</div>
-                        <div class="otmdo-stat-value">{{ $totalStudents }}</div>
+                        <div class="otmdo-stat-value mt-2">{{ $totalStudents }}</div>
                     </div>
                     <span class="otmdo-stat-ico" style="background:#eaf1f9;color:#004a93;">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">groups</i>
+                        <i class="bi bi-people" aria-hidden="true"></i>
                     </span>
                 </div>
             </div>
@@ -509,10 +298,10 @@
                 <div class="otmdo-stat p-3 d-flex align-items-center justify-content-between">
                     <div>
                         <div class="otmdo-stat-label">Total Duties</div>
-                        <div class="otmdo-stat-value">{{ $totalDutiesAll }}</div>
+                        <div class="otmdo-stat-value mt-2">{{ $totalDutiesAll }}</div>
                     </div>
                     <span class="otmdo-stat-ico" style="background:#e7f6ec;color:#1a7f4b;">
-                        <i class="material-icons material-symbols-rounded" aria-hidden="true">assignment</i>
+                        <i class="bi bi-card-checklist" aria-hidden="true"></i>
                     </span>
                 </div>
             </div>
@@ -524,8 +313,8 @@
                 {{-- Student header --}}
                 <div class="d-flex flex-column flex-sm-row justify-content-between align-items-start align-items-sm-center gap-2 pb-3 mb-3 border-bottom">
                     <div class="d-flex align-items-center gap-3">
-                        <span class="otmdo-icon-badge">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">person</i>
+                        <span class="otmdo-stat-ico" style="background:#eaf1f9;color:#004a93;">
+                            <i class="bi bi-person" aria-hidden="true"></i>
                         </span>
                         <div>
                             <h6 class="mb-0 fw-bold text-dark">
@@ -537,7 +326,7 @@
                         </div>
                     </div>
                     <span class="badge rounded-pill text-bg-primary fs-6 fw-semibold px-3 py-2 d-inline-flex align-items-center gap-1">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">assignment</i>
+                        <i class="bi bi-card-checklist" aria-hidden="true"></i>
                         {{ $student['duty_count'] }} {{ Str::plural('Duty', $student['duty_count']) }}
                     </span>
                 </div>
@@ -552,6 +341,7 @@
                                 <th>Course Name</th>
                                 <th>Duty Type</th>
                                 <th>Faculty</th>
+                                <th class="text-center">Status</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -576,7 +366,7 @@
                                     <span class="fw-semibold text-dark">{{ $duty['course'] ?? 'N/A' }}</span>
                                     @if($hasRemark)
                                     <div class="small text-muted text-truncate" style="max-width: 22rem;" title="{{ $remark }}">
-                                        <i class="material-icons material-symbols-rounded align-middle me-1" style="font-size:14px;" aria-hidden="true">sticky_note_2</i>{{ $remark }}
+                                        <i class="bi bi-sticky align-middle me-1" aria-hidden="true"></i>{{ $remark }}
                                     </div>
                                     @endif
                                 </td>
@@ -586,6 +376,7 @@
                                     </span>
                                 </td>
                                 <td>{{ $duty['faculty'] ?? 'N/A' }}</td>
+                                <td class="text-center">{!! $otmdoStatus($duty['status'] ?? 'pending') !!}</td>
                             </tr>
                             @endforeach
                         </tbody>
@@ -602,7 +393,7 @@
         <div class="card otmdo-card">
             <div class="card-body p-3 p-md-4">
                 <div class="otmdo-empty text-center py-5">
-                    <i class="material-icons material-symbols-rounded text-secondary" style="font-size:48px;" aria-hidden="true">search_off</i>
+                    <i class="bi bi-search text-secondary" style="font-size:48px;" aria-hidden="true"></i>
                     <p class="mt-2 mb-0 fw-semibold text-secondary">No student data found</p>
                     <p class="small text-muted mb-0">No students match the selected filters.</p>
                 </div>
