@@ -52,10 +52,10 @@ class EstateHacApprovedDataTable extends DataTable
     {
         $r = $this->request();
         $user = Auth::user();
-        $canSeeHacApproved = $user && (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        $canSeeHacApproved = $user && (hasRole('HAC Person') || isEstateHacAuthority());
 
         $authorityPersonalScope = $r->input('scope') === 'self'
-            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+            && isEstateHacAuthority();
 
         $empScope = ['t' => 'all'];
         if ($authorityPersonalScope && $user) {
@@ -197,10 +197,10 @@ class EstateHacApprovedDataTable extends DataTable
 
     public function query(EstateHacApprovedRow $model): EloquentBuilder
     {
-        $canSeeHacApproved = hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $canSeeHacApproved = hasRole('HAC Person') || isEstateHacAuthority();
 
         $authorityPersonalScope = request('scope') === 'self'
-            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+            && isEstateHacAuthority();
         $selfEmployeePks = [];
         if ($authorityPersonalScope && Auth::check()) {
             $selfEmployeePks = array_values(array_filter(
@@ -315,6 +315,7 @@ class EstateHacApprovedDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
                 'type_filter' => '$("#hacApprovedTypeFilter").val()',
+                'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
             ])
             ->parameters([
                 'responsive' => false,

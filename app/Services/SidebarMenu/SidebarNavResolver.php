@@ -80,8 +80,10 @@ class SidebarNavResolver
     protected function findMenuForRequest(string $path, string $routeName): ?Menu
     {
         $normalizedPath = $this->normalizePath($path);
+        $requestParams = request()->query();
         $best = null;
         $bestLength = -1;
+        $bestQueryScore = -1; // Higher = more query params matched exactly
 
         foreach ($this->routeMenuIndex() as $entry) {
             if (!$this->entryMatches($entry, $normalizedPath, $routeName)) {
@@ -89,8 +91,27 @@ class SidebarNavResolver
             }
 
             $length = strlen($entry['path'] ?? '');
-            if ($length > $bestLength) {
+            $entryQueryParams = $entry['query_params'] ?? [];
+
+            // Score: how well do query params match?
+            // +2 for each param in entry that matches request value exactly
+            // -1 for each param in entry that is NOT in request (penalise scope=self when request has no scope)
+            $queryScore = 0;
+            foreach ($entryQueryParams as $key => $val) {
+                if (isset($requestParams[$key]) && (string) $requestParams[$key] === (string) $val) {
+                    $queryScore += 2;
+                } else {
+                    $queryScore -= 1; // Entry requires this param but request doesn't have it
+                }
+            }
+
+            // Prefer entry with better query score, then longer path
+            $isBetter = ($queryScore > $bestQueryScore)
+                || ($queryScore === $bestQueryScore && $length > $bestLength);
+
+            if ($isBetter) {
                 $bestLength = $length;
+                $bestQueryScore = $queryScore;
                 $best = $entry['menu'];
             }
         }
@@ -114,7 +135,7 @@ class SidebarNavResolver
     }
 
     /**
-     * @return list<array{menu: Menu, path: string|null, route_name: string|null}>
+     * @return list<array{menu: Menu, path: string|null, route_name: string|null, query_params: array<string,string>}>
      */
     protected function routeMenuIndex(): array
     {
@@ -136,9 +157,10 @@ class SidebarNavResolver
                 }
 
                 $entries[] = [
-                    'menu' => $menu,
-                    'path' => $parsed['path'],
-                    'route_name' => $parsed['route_name'],
+                    'menu'         => $menu,
+                    'path'         => $parsed['path'],
+                    'route_name'   => $parsed['route_name'],
+                    'query_params' => $parsed['query_params'],
                 ];
             }
 
@@ -147,7 +169,7 @@ class SidebarNavResolver
     }
 
     /**
-     * @return array{path: string|null, route_name: string|null}|null
+     * @return array{path: string|null, route_name: string|null, query_params: array<string,string>}|null
      */
     protected function parseMenuRoute(string $route): ?array
     {
@@ -156,17 +178,45 @@ class SidebarNavResolver
             return null;
         }
 
+        // Extract query string before any URL parsing
+        $queryParams = [];
+        if (str_contains($route, '?')) {
+            [$routePath, $queryString] = explode('?', $route, 2);
+            parse_str($queryString, $queryParams);
+            $route = $routePath;
+        }
+
         if (preg_match('#^https?://#i', $route)) {
             $path = parse_url($route, PHP_URL_PATH);
 
-            return $path ? ['path' => $this->normalizePath($path), 'route_name' => null] : null;
+            return $path ? ['path' => $this->normalizePath($path), 'route_name' => null, 'query_params' => $queryParams] : null;
         }
 
         if (str_contains($route, '.') && !str_contains($route, '/')) {
-            return ['path' => null, 'route_name' => $route];
+            return ['path' => null, 'route_name' => $route, 'query_params' => $queryParams];
         }
 
-        return ['path' => $this->normalizePath($route), 'route_name' => null];
+        return ['path' => $this->stripTrailingIdSegment($this->normalizePath($route)), 'route_name' => null, 'query_params' => $queryParams];
+    }
+
+    /**
+     * Menu routes occasionally hardcode a specific record id (e.g.
+     * "member/profile/edit/1", "admin/fc/joining-documents/30"). That literal id
+     * prevents the menu from matching the same page for any OTHER id
+     * ("member/profile/edit/11382"), so the request falls through to a broader
+     * parent menu that happens to sit in a DIFFERENT tab — and the page shows up
+     * under the wrong tab. We treat a trailing numeric segment as a wildcard for
+     * the match index only (the stored route/href is untouched, so sidebar links
+     * are unaffected), keeping at least one base segment so a path is never
+     * collapsed to nothing.
+     */
+    protected function stripTrailingIdSegment(string $path): string
+    {
+        if (preg_match('#^(.+)/\d+$#', $path, $m)) {
+            return $m[1];
+        }
+
+        return $path;
     }
 
     protected function entryMatches(array $entry, string $normalizedPath, string $routeName): bool

@@ -1,7 +1,7 @@
 @extends('admin.layouts.master')
 
 @section('setup_content')
-<div class="card" style="border-left: 4px solid #004a93;">
+<div class="card" >
     <div class="card-header d-flex justify-content-between align-items-center">
         <h5 class="mb-0">
             <iconify-icon icon="solar:tag-price-bold" class="me-2"></iconify-icon>

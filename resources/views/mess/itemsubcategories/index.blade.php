@@ -3,7 +3,7 @@
 @section('content')
 @php
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
-    $canDeleteItemSubcategory = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteItemSubcategory = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Subcategory Item Master"></x-breadcrum>

@@ -8,7 +8,7 @@
         <x-breadcrum title="Hostel Building Floor Room Mapping" />
         <x-session_message />
         <!-- start Vertical Steps Example -->
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-body">
                 <h4 class="card-title mb-3">
                     {{ !empty($hostelFloorMappingRoom) ? 'Edit Hostel Building Floor Room Mapping' : 'Create Hostel Building Floor Room Mapping' }}

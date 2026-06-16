@@ -130,6 +130,9 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('roles/{id}', [RoleController::class, 'destroy'])->name('roles.destroy');
 
         // Route::resource('permissions', PermissionController::class);
+        Route::get('users/export/{format}', [UserController::class, 'export'])
+            ->whereIn('format', ['csv', 'xlsx', 'pdf'])
+            ->name('users.export');
         Route::resource('users', UserController::class);
         Route::get('users/assign-role/{id}', [UserController::class, 'assignRole'])->name('users.assignRole');
         Route::post('users/assign-role-save', [UserController::class, 'assignRoleSave'])
@@ -143,6 +146,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
     Route::get('/admin/navigation-error', [\App\Http\Controllers\Admin\NavigationErrorController::class, 'show'])
         ->name('admin.navigation.error');
+    Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
@@ -470,6 +474,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
+
+        // Dedicated OT (Officer Trainee / Student-OT) calendar with its own data flow
+        Route::prefix('ot')->name('ot.')->group(function () {
+            Route::get('/', [CalendarController::class, 'otIndex'])->name('index');
+            Route::get('/full-calendar-details', [CalendarController::class, 'otFullCalendarDetails'])->name('event.calendar-details');
+            Route::get('/single-calendar-details', [CalendarController::class, 'otSingleCalendarDetails'])->name('event.Singlecalendar-details');
+            Route::get('/download', [CalendarController::class, 'otDownloadPdf'])->name('download');
+        });
     });
 
     // Timetable Report
@@ -788,6 +800,12 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
 
     // OT MDO/Escort Exception View
     Route::get('/ot-mdo-escrot-exemption-view', [OTMDOEscrotExemptionController::class, 'index'])->name('ot.mdo.escrot.exemption.view');
+    // OT acknowledges a duty (Pending -> Completed)
+    Route::post('/ot-mdo-escrot-acknowledge', [OTMDOEscrotExemptionController::class, 'acknowledge'])->name('ot.mdo.escrot.acknowledge');
+    // OT duty sub-pages (Today's / Pending / Completed)
+    Route::get('/ot-mdo-escrot-today', [OTMDOEscrotExemptionController::class, 'today'])->name('ot.mdo.escrot.today');
+    Route::get('/ot-mdo-escrot-pending', [OTMDOEscrotExemptionController::class, 'pending'])->name('ot.mdo.escrot.pending');
+    Route::get('/ot-mdo-escrot-completed', [OTMDOEscrotExemptionController::class, 'completed'])->name('ot.mdo.escrot.completed');
 
     // Faculty MDO/Escort Exception View
     Route::get('/faculty-mdo-escort-exception-view', [FacultyMDOEscortExceptionViewController::class, 'index'])->name('faculty.mdo.escort.exception.view');
@@ -1139,6 +1157,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::get('course-repository/document/{pk}/edit-data', [CourseRepositoryController::class, 'getDocument'])->name('course-repository.document.edit-data');
+    Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
     Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
 
@@ -1643,7 +1663,7 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 
         Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
         Route::get('bill-report-grid', function () {
-            abort_unless(hasRole('Estate'), 403, 'You do not have permission to access this estate section.');
+            abort_unless(isEstateAuthority(), 403, 'You do not have permission to access this estate section.');
 
             return view('admin.estate.estate_bill_report_grid');
         })->name('bill-report-grid');

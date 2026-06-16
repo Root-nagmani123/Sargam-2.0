@@ -3,249 +3,124 @@
 @section('title', 'Course Repositories | Lal Bahadur')
 
 @section('setup_content')
-<style>
-    /* Chevron-style divider */
-    .breadcrumb-divider-chevron {
-        --bs-breadcrumb-divider: ">";
-    }
-
-    /* Accessible link styling */
-    .breadcrumb-link {
-        color: #495057; 
-        text-decoration: none;
-        font-weight: 500;
-    }
-
-    .breadcrumb-link:hover,
-    .breadcrumb-link:focus {
-        color: #0d6efd;
-        text-decoration: underline;
-    }
-
-    /* Ensure wrapping on small screens */
-    .breadcrumb {
-        flex-wrap: wrap;
-        row-gap: 0.25rem;
-    }
-
-    /* Active item emphasis */
-    .breadcrumb-item.active {
-        color: #0d6efd;
-    }
-
-    /* Modal Header - Blue Gradient */
-    .upload-modal-header {
-        background: linear-gradient(135deg, #0d6efd 0%, #0b5ed7 100%);
-        padding: 1.5rem !important;
-    }
-
-    .upload-modal-header .header-icon-circle {
-        width: 40px;
-        height: 40px;
-        min-width: 40px;
-        border-radius: 50%;
-        background: #fff;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin-right: 0.5rem;
-    }
-
-    .upload-modal-header .header-icon-circle .material-icons,
-    .upload-modal-header .header-icon-circle .material-symbols-rounded {
-        color: #0d6efd;
-        font-size: 1.3rem !important;
-    }
-
-    .upload-modal-header .modal-title {
-        color: #fff;
-        font-weight: 600;
-        font-size: 1.25rem;
-        margin: 0;
-    }
-
-    .upload-modal-header .btn-close-white {
-        opacity: 0.9;
-    }
-
-    /* Upload Zone */
-    .upload-zone-ref {
-        display: block;
-        border: 2px dashed #b6d4fe;
-        border-radius: 12px;
-        background-color: #f8fbff;
-        cursor: pointer;
-        transition: border-color 0.2s, background-color 0.2s;
-        min-height: 180px;
-        padding: 0;
-    }
-
-    .upload-zone-ref:hover,
-    .upload-zone-ref:focus-within {
-        border-color: #0d6efd;
-        background-color: #eef5ff;
-    }
-
-    .upload-zone-ref.upload-dragover {
-        border-color: #0d6efd;
-        background-color: #eef5ff;
-    }
-
-    .upload-zone-inner {
-        cursor: pointer;
-        height: 100%;
-    }
-
-    .upload-icon-ref {
-        font-size: 48px;
-        display: block;
-        color: #0d6efd;
-    }
-
-    .upload-zone-ref .upload-cta {
-        color: #0d6efd;
-    }
-
-    /* Form Controls */
-    .form-control-lg {
-        border-color: #e0e0e0;
-        border-radius: 0.5rem;
-    }
-
-    .form-control-lg:focus {
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-
-    /* Buttons */
-    .btn-cancel-ref {
-        background-color: #fff;
-        border: 1px solid #dc3545;
-        color: #dc3545;
-        border-radius: 0.5rem;
-        font-weight: 500;
-    }
-
-    .btn-cancel-ref:hover {
-        background-color: #fff5f5;
-        border-color: #dc3545;
-        color: #b02a37;
-    }
-</style>
-<div class="container-fluid">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{{ asset('css/course-repository-admin.css') }}">
+<div class="container-fluid cr-admin pb-3">
     <!-- Breadcrumb -->
-<x-breadcrum title="Course Repository" />
+    <x-breadcrum title="Course Repository">
+    </x-breadcrum>
 
-
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card-body p-4 p-md-5">
-            <!-- Header -->
-            <div
-                class="d-flex flex-column flex-md-row justify-content-between align-items-start align-items-md-center gap-3 mb-4">
-                <div class="d-flex align-items-center gap-3">
-                    <a href="javascript:void(0)" onclick="window.history.back()" class="p-2" aria-label="Go back">
-                        <span
-                            class="material-icons material-symbols-rounded text-dark fs-6 text-primary">arrow_back_ios</span>
-                    </a>
-                    <div>
-                        <h3 class="mb-0 fw-semibold text-primary">Course Repository</h3>
-                    </div>
-                </div>
-                <div class="d-flex flex-wrap align-items-center gap-2">
-
-                    <!-- Upload Documents -->
-                    <!-- <button type="button" class="btn btn-outline-primary btn-sm d-flex align-items-center"
-                        data-bs-toggle="modal" data-bs-target="#uploadModal" aria-label="Upload documents">
-                        <span class="material-icons material-symbols-rounded me-1 fs-6" aria-hidden="true">upload</span>
-                        Upload Documents
-                    </button> -->
-
-                    <!-- Add Category (Primary Action) -->
-                    <button type="button" class="btn btn-primary btn-sm d-flex align-items-center"
-                        data-bs-toggle="modal" data-bs-target="#createModal" aria-label="Add new category">
-                        <span class="material-icons material-symbols-rounded me-1 fs-6" aria-hidden="true">add</span>
-                        Add Category
-                    </button>
-
-                </div>
-
+    <div class="card border-0 cr-admin-card overflow-hidden">
+        <div class="card-body p-3 p-md-4">
+            <div class="d-flex justify-content-end mb-3">
+                <a href="javascript:void(0)" data-bs-toggle="modal" data-bs-target="#createModal"
+                    aria-label="Add new category"
+                    class="btn btn-sm btn-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
+                    <i class="bi bi-plus" aria-hidden="true"></i>
+                    <span>Add Category</span>
+                </a>
             </div>
-
+            <hr class="my-2">
+            
             @if ($repositories->isEmpty())
-            <div class="text-center py-5 px-3 rounded-3"
-                style="background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);">
-                <div class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3"
-                    style="width: 80px; height: 80px; background: #e2e8f0;">
-                    <span class="material-icons material-symbols-rounded text-muted"
-                        style="font-size: 2.5rem;">folder_open</span>
+            <div class="text-center py-5 px-3 cr-admin-empty">
+                <div
+                    class="rounded-circle d-inline-flex align-items-center justify-content-center mb-3 cr-admin-empty-icon">
+                    <i class="bi bi-folder2-open display-6 text-secondary" aria-hidden="true"></i>
                 </div>
-                <p class="text-muted mb-2 fw-medium">No categories yet</p>
+                <p class="text-secondary mb-2 fw-semibold">No categories yet</p>
                 <p class="text-muted small mb-3">Get started by creating your first category.</p>
-                <a href="javascript:void(0)" class="btn btn-primary" data-bs-toggle="modal"
+                <a href="javascript:void(0)" class="btn btn-primary rounded-2 px-3" data-bs-toggle="modal"
                     data-bs-target="#createModal">
-                    <span class="material-icons material-symbols-rounded me-1">add_circle</span> Create category
+                    <i class="bi bi-plus-circle me-1" aria-hidden="true"></i>Create Category
                 </a>
             </div>
             @else
             <div class="table-responsive">
-                <table class="table align-middle mb-0 datatable" data-export="false">
+                <table id="crCategoriesTable" class="table datatable" data-export="false">
                     <thead>
                         <tr>
-                            <th class="col">#</th>
-                            <th class="col">Image</th>
-                            <th class="col">Category</th>
-                            <th class="col">Sub-categories</th>
-                            <th class="col">Documents</th>
-                            <th class="col">Actions</th>
+                            <th>S. No.</th>
+                            <th>Category</th>
+                            <th>Sub-Category</th>
+                            <th>Attachment</th>
+                            <th>Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         @foreach($repositories as $key => $repo)
-                        <tr class="border-bottom border-light">
-                            <td class="ps-4 text-muted">{{ $repositories->firstItem() + $key }}</td>
-                            <td>
-                                @if($repo->category_image && \Storage::disk('public')->exists($repo->category_image))
-                                <img src="{{ asset('storage/' . $repo->category_image) }}"
-                                    alt="{{ $repo->course_repository_name }}" class="rounded object-fit-cover"
-                                    style="width: 48px; height: 48px;">
-                                @else
-                                <span
-                                    class="d-inline-flex align-items-center justify-content-center rounded bg-light text-muted small"
-                                    style="width: 48px; height: 48px;">
-                                    <span class="material-icons material-symbols-rounded">image</span>
-                                </span>
-                                @endif
+
+                        @php
+                        $subCount = $repo->children->count();
+                        $docCount = $repo->getDocumentCount();
+                        @endphp
+
+                        <tr class="border-bottom">
+                            <td class="ps-4 fw-medium">
+                                {{ $repositories->firstItem() + $key }}
                             </td>
+
+                            <td>
+                                <div class="d-flex align-items-center gap-3">
+
+                                    @if(filled($repo->category_image) &&
+                                    \Storage::disk('public')->exists($repo->category_image))
+                                    <img src="{{ asset('storage/' . $repo->category_image) }}"
+                                        class="rounded-circle object-fit-cover" width="40" height="40" alt="">
+                                    @else
+                                    <div class="rounded-circle bg-light d-flex align-items-center justify-content-center"
+                                        style="width:40px;height:40px;">
+                                        <i class="bi bi-image text-muted"></i>
+                                    </div>
+                                    @endif
+
+                                    <div>
+                                        <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                            class="text-decoration-none text-dark fw-medium">
+                                            {{ $repo->course_repository_name }}
+                                        </a>
+                                    </div>
+
+                                </div>
+                            </td>
+
                             <td>
                                 <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-decoration-none fw-medium text-dark">
-                                    {{ $repo->course_repository_name }}
+                                    class="text-decoration-none small fw-medium {{ $subCount == 0 ? 'text-secondary' : '' }}">
+                                    {{ $subCount }} Sub-Category
                                 </a>
                             </td>
+
                             <td>
                                 <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-primary border-bottom">
-                                    {{ $repo->children->count() }} - sub-categories
+                                    class="text-decoration-none small fw-medium {{ $docCount == 0 ? 'text-secondary' : '' }}">
+                                    See {{ str_pad($docCount, 2, '0', STR_PAD_LEFT) }} Attachment
                                 </a>
                             </td>
-                            <td>
-                                <a href="{{ route('course-repository.show', $repo->pk) }}"
-                                    class="text-primary border-bottom">{{ $repo->getDocumentCount() }} - documents</a>
-                            </td>
-                            <td class="pe-4">
-                                <div class="d-flex gap-1" role="group" aria-label="Category actions">
-                                    <a href="javascript:void(0)" class="edit-repo text-primary" data-pk="{{ $repo->pk }}"
-                                        data-name="{{ $repo->course_repository_name }}"
+
+                            <td class="text-center">
+                                <div class="d-inline-flex align-items-center">
+
+                                    <a href="javascript:void(0)"
+                                        class="btn btn-sm btn-light edit-repo bg-transparent border-0 p-0"
+                                        data-pk="{{ $repo->pk }}" data-name="{{ $repo->course_repository_name }}"
                                         data-details="{{ $repo->course_repository_details }}"
-                                        data-image="{{ $repo->category_image }}" aria-label="Edit category">
-                                        <span class="material-icons material-symbols-rounded">edit</span>
+                                        data-image="{{ $repo->category_image }}" title="Edit">
+
+                                        <i class="bi bi-pencil text-primary"></i>
                                     </a>
-                                    <a href="javascript:void(0)" class="delete-repo text-primary ms-2" data-pk="{{ $repo->pk }}" aria-label="Delete category">
-                                        <span class="material-icons material-symbols-rounded">delete</span>
+
+                                    <a href="javascript:void(0)"
+                                        class="btn btn-sm btn-light delete-repo bg-transparent border-0 p-0"
+                                        data-pk="{{ $repo->pk }}" title="Delete">
+
+                                        <i class="bi bi-trash text-danger"></i>
                                     </a>
+
                                 </div>
                             </td>
                         </tr>
+
                         @endforeach
                     </tbody>
                 </table>
@@ -257,6 +132,271 @@
                 url.searchParams.set('page', '1');
                 window.location.href = url.toString();
             });
+
+            // —— Columns show/hide (modal design — matches Course Repository user module) ——
+            (function initColumnToggle() {
+                var TABLE_ID = 'crCategoriesTable';
+                var STORAGE_KEY = 'cru-columns-' + TABLE_ID;
+                var MODAL_ID = 'cruColVisModal-' + TABLE_ID;
+
+                // DataTables column index → label. locked columns stay always visible.
+                var COLUMNS = [{
+                        idx: 0,
+                        label: 'S. No.',
+                        locked: true
+                    },
+                    {
+                        idx: 1,
+                        label: 'Image'
+                    },
+                    {
+                        idx: 2,
+                        label: 'Category'
+                    },
+                    {
+                        idx: 3,
+                        label: 'Sub-Category'
+                    },
+                    {
+                        idx: 4,
+                        label: 'Attachment'
+                    },
+                    {
+                        idx: 5,
+                        label: 'Actions',
+                        locked: true
+                    }
+                ];
+                var TOGGLEABLE = COLUMNS.filter(function(c) {
+                    return !c.locked;
+                });
+
+                function defaults() {
+                    var s = {};
+                    TOGGLEABLE.forEach(function(c) {
+                        s[c.idx] = true;
+                    });
+                    return s;
+                }
+
+                function loadState() {
+                    try {
+                        var raw = localStorage.getItem(STORAGE_KEY);
+                        if (!raw) return defaults();
+                        var parsed = JSON.parse(raw);
+                        if (!parsed || typeof parsed !== 'object') return defaults();
+                        var base = defaults();
+                        Object.keys(base).forEach(function(k) {
+                            if (typeof parsed[k] === 'boolean') base[k] = parsed[k];
+                        });
+                        return base;
+                    } catch (e) {
+                        return defaults();
+                    }
+                }
+
+                function saveState(state) {
+                    try {
+                        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+                    } catch (e) {}
+                }
+
+                function chips() {
+                    var locked = COLUMNS.filter(function(c) {
+                        return c.locked;
+                    }).map(function(c) {
+                        return '<div class="col">' +
+                            '<label class="cru-colvis-chip cru-colvis-chip-locked d-flex align-items-center gap-2 mb-0" title="Always visible">' +
+                            '<input type="checkbox" class="form-check-input m-0" checked disabled>' +
+                            '<span class="text-truncate">' + c.label + '</span>' +
+                            '</label></div>';
+                    }).join('');
+                    var toggleable = TOGGLEABLE.map(function(c) {
+                        return '<div class="col">' +
+                            '<label class="cru-colvis-chip d-flex align-items-center gap-2 mb-0">' +
+                            '<input type="checkbox" class="form-check-input m-0 cru-col-toggle-checkbox" data-col="' +
+                            c.idx + '" checked>' +
+                            '<span class="text-truncate">' + c.label + '</span>' +
+                            '</label></div>';
+                    }).join('');
+                    return locked + toggleable;
+                }
+
+                function buildModal() {
+                    if (document.getElementById(MODAL_ID)) return;
+                    var html =
+                        '<div class="modal fade cru-colvis-modal" id="' + MODAL_ID +
+                        '" tabindex="-1" aria-labelledby="' + MODAL_ID + '-label" aria-hidden="true">' +
+                        '<div class="modal-dialog modal-dialog-centered modal-lg">' +
+                        '<div class="modal-content border-0 rounded-4 shadow">' +
+                        '<div class="modal-header border-0 pb-2 px-4 pt-4">' +
+                        '<h5 class="modal-title fw-bold d-flex align-items-center gap-2" id="' + MODAL_ID +
+                        '-label">' +
+                        '<i class="bi bi-sliders2 text-primary" aria-hidden="true"></i> Column Visibility' +
+                        '</h5>' +
+                        '<button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>' +
+                        '</div>' +
+                        '<hr class="cru-colvis-divider mx-4 my-0">' +
+                        '<div class="modal-body px-4 py-4">' +
+                        '<div class="row row-cols-1 row-cols-sm-2 row-cols-lg-3 g-3">' + chips() + '</div>' +
+                        '</div>' +
+                        '<div class="modal-footer border-0 px-4 pb-4 pt-0 d-flex justify-content-between">' +
+                        '<button type="button" class="btn btn-link btn-sm text-decoration-none p-0 d-inline-flex align-items-center gap-1 cru-col-toggle-reset">' +
+                        '<i class="bi bi-arrow-counterclockwise" aria-hidden="true"></i> Reset to default' +
+                        '</button>' +
+                        '<button type="button" class="btn btn-outline-primary btn-sm px-4 fw-semibold" data-bs-dismiss="modal">Close</button>' +
+                        '</div>' +
+                        '</div>' +
+                        '</div>' +
+                        '</div>';
+                    document.body.insertAdjacentHTML('beforeend', html);
+                }
+
+                function build() {
+                    if (!(window.jQuery && jQuery.fn && jQuery.fn.dataTable)) return false;
+                    var el = document.getElementById(TABLE_ID);
+                    if (!el || !jQuery.fn.dataTable.isDataTable(el)) return false;
+
+                    var api = jQuery(el).DataTable();
+                    var wrapper = el.closest('.dataTables_wrapper');
+                    if (!wrapper) return false;
+                    if (wrapper.querySelector('.cru-column-toggle')) return true; // already built
+
+                    buildModal();
+
+                    // Trigger button placed after the search input.
+                    var trigger =
+                        '<span class="cru-column-toggle d-inline-flex align-items-center ms-2">' +
+                        '<button type="button" class="btn btn-light border btn-sm d-inline-flex align-items-center gap-2 fw-semibold cru-colvis-trigger" ' +
+                        'data-bs-toggle="modal" data-bs-target="#' + MODAL_ID + '" title="Show / hide columns">' +
+                        '<i class="bi bi-layout-three-columns" aria-hidden="true"></i>' +
+                        '<span class="d-none d-sm-inline">Columns</span>' +
+                        '</button>' +
+                        '</span>';
+                    var filter = wrapper.querySelector('.dataTables_filter');
+                    var searchInput = filter ? filter.querySelector('input') : null;
+                    if (searchInput) {
+                        searchInput.insertAdjacentHTML('afterend', trigger);
+                    } else if (filter) {
+                        filter.insertAdjacentHTML('beforeend', trigger);
+                    } else {
+                        wrapper.insertAdjacentHTML('afterbegin', trigger);
+                    }
+
+                    function applyState(state) {
+                        TOGGLEABLE.forEach(function(c) {
+                            var vis = state[c.idx] !== false;
+                            api.column(c.idx).visible(vis, false);
+                            var cb = document.querySelector('.cru-col-toggle-checkbox[data-col="' + c.idx +
+                                '"]');
+                            if (cb) cb.checked = vis;
+                        });
+                        api.columns.adjust();
+                    }
+
+                    applyState(loadState());
+
+                    document.querySelectorAll('.cru-col-toggle-checkbox').forEach(function(cb) {
+                        cb.addEventListener('change', function() {
+                            var idx = parseInt(this.getAttribute('data-col'), 10);
+                            var next = loadState();
+                            // Keep at least one toggleable column visible.
+                            if (!this.checked) {
+                                var visibleCount = TOGGLEABLE.filter(function(c) {
+                                    return next[c.idx] !== false;
+                                }).length;
+                                if (visibleCount <= 1) {
+                                    this.checked = true;
+                                    return;
+                                }
+                            }
+                            next[idx] = this.checked;
+                            api.column(idx).visible(this.checked);
+                            saveState(next);
+                        });
+                    });
+
+                    var resetBtn = document.querySelector('.cru-col-toggle-reset');
+                    if (resetBtn) {
+                        resetBtn.addEventListener('click', function() {
+                            try {
+                                localStorage.removeItem(STORAGE_KEY);
+                            } catch (e) {}
+                            applyState(defaults());
+                        });
+                    }
+                    return true;
+                }
+
+                // The global init runs on DOMContentLoaded; retry briefly until the DataTable exists.
+                var tries = 0;
+                (function attempt() {
+                    if (build()) return;
+                    if (tries++ < 40) setTimeout(attempt, 100);
+                })();
+            })();
+
+            // —— Footer: "Showing [N] of {total} items" (page-scoped; reshapes this table only) ——
+            (function initFooterLayout() {
+                var TABLE_ID = 'crCategoriesTable';
+
+                function build() {
+                    if (!(window.jQuery && jQuery.fn && jQuery.fn.dataTable)) return false;
+                    var el = document.getElementById(TABLE_ID);
+                    if (!el || !jQuery.fn.dataTable.isDataTable(el)) return false;
+
+                    var api = jQuery(el).DataTable();
+                    var wrapper = el.closest('.dataTables_wrapper');
+                    if (!wrapper) return false;
+                    if (wrapper.classList.contains('cr-footer-ready')) return true;
+
+                    var lengthWrap = wrapper.querySelector('.dataTables_length');
+                    var select = lengthWrap ? lengthWrap.querySelector('select') : null;
+                    var info = wrapper.querySelector('.dataTables_info');
+                    if (!select || !info) {
+                        wrapper.classList.add('cr-footer-ready');
+                        return true;
+                    }
+
+                    // Hide the default top "Show N entries" control.
+                    lengthWrap.classList.add('d-none');
+
+                    // The global init may have injected its own "Showing" label and
+                    // moved the length select; this page owns the footer, so strip
+                    // that duplicate before building our own layout.
+                    var strayLabel = wrapper.querySelector('.dt-showing-label');
+                    if (strayLabel) strayLabel.remove();
+
+                    function render() {
+                        var total = api.page.info().recordsTotal;
+                        info.innerHTML = '';
+                        info.classList.add('cr-footer-info', 'd-flex', 'align-items-center',
+                            'justify-content-md-end', 'gap-2', 'flex-wrap');
+                        var pre = document.createElement('span');
+                        pre.textContent = 'Showing';
+                        var post = document.createElement('span');
+                        post.textContent = 'of ' + total.toLocaleString() + ' items';
+                        info.appendChild(pre);
+                        info.appendChild(select);
+                        info.appendChild(post);
+                        select.classList.add('cr-footer-select');
+                    }
+
+                    render();
+                    api.on('draw', function() {
+                        if (select.parentNode !== info) render();
+                    });
+
+                    wrapper.classList.add('cr-footer-ready');
+                    return true;
+                }
+
+                var tries = 0;
+                (function attempt() {
+                    if (build()) return;
+                    if (tries++ < 40) setTimeout(attempt, 100);
+                })();
+            })();
             </script>
             @endif
         </div>
@@ -264,94 +404,63 @@
 </div>
 
 <!-- Create Category Modal -->
-<div class="modal fade" id="createModal" tabindex="-1" aria-labelledby="createModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+<div class="modal fade cr-design-modal" id="createModal" tabindex="-1" aria-labelledby="createModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
+        <div class="modal-content">
 
             <!-- Modal Header - Blue Gradient -->
             <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
                 <h5 class="modal-title fw-bold d-flex align-items-center gap-2 mb-0" id="createModalLabel">
-                    <span class="header-icon-circle">
-                        <span class="material-icons material-symbols-rounded">add_circle</span>
-                    </span>
                     Create New Category
                 </h5>
                 <button type="button" class="btn-close btn-close-white shadow-none" data-bs-dismiss="modal"
                     aria-label="Close"></button>
             </div>
 
-            <!-- Form -->
             <form method="POST" id="createForm" action="{{ route('course-repository.store') }}"
                 enctype="multipart/form-data">
                 @csrf
 
-                <div class="modal-body p-4">
+                <div class="modal-body">
 
-                    <!-- Category Name -->
                     <div class="mb-3">
-                        <label for="modal_course_repository_name" class="form-label fw-medium text-dark mb-2">
+                        <label for="modal_course_repository_name" class="form-label">
                             Category Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control form-control-lg"
-                            id="modal_course_repository_name" name="course_repository_name"
-                            placeholder="Enter category name" required>
+                        <input type="text" class="form-control" id="modal_course_repository_name"
+                            name="course_repository_name" placeholder="eg. E-Office" required>
                     </div>
 
-                    <!-- Details (Optional) -->
                     <div class="mb-3">
-                        <label for="modal_course_repository_details" class="form-label fw-medium text-dark mb-2">
-                            Details <span class="text-muted small">(Optional)</span>
+                        <label for="modal_course_repository_details" class="form-label">
+                            Description <span class="text-muted fw-normal">(Optional)</span>
                         </label>
-                        <textarea class="form-control form-control-lg"
-                            id="modal_course_repository_details" name="course_repository_details" rows="3"
-                            placeholder="Enter category details"></textarea>
+                        <textarea class="form-control" id="modal_course_repository_details"
+                            name="course_repository_details" rows="3"
+                            placeholder="Add a description"></textarea>
                     </div>
 
-                    <!-- Category Image Section -->
                     <div class="mb-0">
-                        <label class="form-label fw-medium text-dark mb-3 d-block">
-                            Category Image
-                        </label>
-
-                        <label for="modal_category_image" class="upload-zone-ref d-block mb-0">
-                            <div class="upload-zone-inner d-flex align-items-center justify-content-center">
-                                <div class="text-center">
-                                    <span class="material-icons material-symbols-rounded upload-icon-ref mb-2 d-block">
-                                        cloud_upload
-                                    </span>
-                                    <p class="mb-1 fw-medium upload-cta">
-                                        Click to upload or drag and drop
-                                    </p>
-                                    <small class="text-muted">
-                                        JPEG, PNG, JPG, GIF (Max 2MB)
-                                    </small>
-                                </div>
-                            </div>
-
-                            <input type="file" id="modal_category_image" name="category_image"
-                                accept="image/jpeg,image/png,image/jpg,image/gif" class="visually-hidden" required>
-                        </label>
-
-                        <!-- Preview -->
-                        <div class="mt-3">
-                            <img id="preview_create" alt="Image preview" class="img-fluid rounded-2 d-none"
+                        <label class="form-label d-block">Thumbnail Image</label>
+                        @include('admin.course-repository.partials.cr-design-file', [
+                        'inputId' => 'modal_category_image',
+                        'inputName' => 'category_image',
+                        'required' => true,
+                        'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
+                        ])
+                        <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
+                        <div class="mt-2">
+                            <img id="preview_create" alt="Image preview" class="img-thumbnail rounded-1 d-none"
                                 style="max-width: 120px; object-fit: cover;">
                         </div>
                     </div>
 
                 </div>
 
-                <!-- Modal Footer -->
-                <div class="modal-footer border-0 px-4 py-3 bg-light">
-                    <button type="button" class="btn btn-cancel-ref px-4" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
-                        <span class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">
-                            check_circle
-                        </span>
-                        Save Category
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Category</button>
                 </div>
 
             </form>
@@ -359,9 +468,10 @@
     </div>
 </div>
 <!-- Edit Category Modal -->
-<div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+<div class="modal fade cr-design-modal" id="editModal" tabindex="-1" aria-labelledby="editModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered cr-design-modal-sm">
+        <div class="modal-content">
 
             <!-- Modal Header - Blue Gradient -->
             <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
@@ -375,38 +485,31 @@
                     aria-label="Close"></button>
             </div>
 
-            <!-- Form -->
             <form id="editForm" method="POST" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
 
-                <div class="modal-body p-4">
+                <div class="modal-body">
 
-                    <!-- Category Name -->
                     <div class="mb-3">
-                        <label for="edit_course_repository_name" class="form-label fw-medium text-dark mb-2">
+                        <label for="edit_course_repository_name" class="form-label">
                             Category Name <span class="text-danger">*</span>
                         </label>
-                        <input type="text" class="form-control form-control-lg"
-                            id="edit_course_repository_name" name="course_repository_name"
-                            placeholder="Enter category name" required>
+                        <input type="text" class="form-control" id="edit_course_repository_name"
+                            name="course_repository_name" placeholder="eg. E-Office" required>
                     </div>
 
-                    <!-- Details (Optional) -->
                     <div class="mb-3">
-                        <label for="edit_course_repository_details" class="form-label fw-medium text-dark mb-2">
-                            Details <span class="text-muted small">(Optional)</span>
+                        <label for="edit_course_repository_details" class="form-label">
+                            Description <span class="text-muted fw-normal">(Optional)</span>
                         </label>
-                        <textarea class="form-control form-control-lg"
-                            id="edit_course_repository_details" name="course_repository_details" rows="3"
-                            placeholder="Enter category details"></textarea>
+                        <textarea class="form-control" id="edit_course_repository_details"
+                            name="course_repository_details" rows="3"
+                            placeholder="Add a description"></textarea>
                     </div>
 
-                    <!-- Category Image Section -->
                     <div class="mb-0">
-                        <label class="form-label fw-medium text-dark mb-3 d-block">
-                            Category Image
-                        </label>
+                        <label class="form-label d-block">Attachment</label>
 
                         <!-- Current Image Display -->
                         <div id="current_image_container" class="mb-3" style="display: none;">
@@ -415,25 +518,12 @@
                                 style="max-width: 120px; object-fit: cover;">
                         </div>
 
-                        <!-- Upload Zone -->
-                        <label for="edit_category_image" class="upload-zone-ref d-block mb-0">
-                            <div class="upload-zone-inner d-flex align-items-center justify-content-center">
-                                <div class="text-center">
-                                    <span class="material-icons material-symbols-rounded upload-icon-ref mb-2 d-block">
-                                        cloud_upload
-                                    </span>
-                                    <p class="mb-1 fw-medium upload-cta">
-                                        Click to upload or drag and drop
-                                    </p>
-                                    <small class="text-muted">
-                                        JPEG, PNG, JPG, GIF (Max 2MB)
-                                    </small>
-                                </div>
-                            </div>
-
-                            <input type="file" class="visually-hidden" id="edit_category_image" name="category_image"
-                                accept="image/jpeg,image/png,image/jpg,image/gif">
-                        </label>
+                        @include('admin.course-repository.partials.cr-design-file', [
+                        'inputId' => 'edit_category_image',
+                        'inputName' => 'category_image',
+                        'accept' => 'image/jpeg,image/png,image/jpg,image/gif',
+                        ])
+                        <div class="form-text small text-muted mt-1">JPEG, PNG, JPG, GIF (Max 2MB)</div>
 
                         <!-- Preview -->
                         <div class="mt-3">
@@ -444,17 +534,9 @@
 
                 </div>
 
-                <!-- Modal Footer -->
-                <div class="modal-footer border-0 px-4 py-3 bg-light">
-                    <button type="button" class="btn btn-cancel-ref px-4" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
-                        <span class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">
-                            check_circle
-                        </span>
-                        Save Category
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Update Category</button>
                 </div>
 
             </form>
@@ -463,10 +545,10 @@
 </div>
 
 <!-- Upload Modal -->
-<div class="modal fade" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel" aria-hidden="true"
-    data-bs-backdrop="static">
-    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg">
-        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+<div class="modal fade cr-design-modal" id="uploadModal" tabindex="-1" aria-labelledby="uploadModalLabel"
+    aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable cr-design-modal-sm">
+        <div class="modal-content">
 
             <!-- Header: blue gradient -->
             <div class="modal-header upload-modal-header text-white border-0 py-4 px-4">
@@ -483,61 +565,44 @@
             <form id="uploadForm" enctype="multipart/form-data">
                 @csrf
 
-                <div class="modal-body p-4">
+                <div class="modal-body">
 
-                    <!-- File Title (Optional) -->
                     <div class="mb-3">
-                        <label for="file_title" class="form-label fw-medium text-dark mb-2">
-                            File Title <span class="text-muted small">(Optional)</span>
+                        <label for="file_title" class="form-label">
+                            File Title <span class="text-muted fw-normal">(Optional)</span>
                         </label>
-                        <input type="text" class="form-control form-control-lg" id="file_title"
-                            name="file_title" placeholder="Enter file title">
+                        <input type="text" class="form-control" id="file_title" name="file_title"
+                            placeholder="eg. Week-01">
                     </div>
 
-                    <!-- Select File -->
                     <div class="mb-0">
-                        <label class="form-label fw-medium text-dark mb-3 d-block">
-                            Select File <span class="text-danger">*</span>
+                        <label class="form-label d-block">
+                            Document Upload <span class="text-danger">*</span>
                         </label>
-
-                        <div id="uploadDropzone" class="upload-zone-ref">
-                            <label for="file" class="upload-zone-inner d-flex align-items-center justify-content-center mb-0">
-                                <input type="file" id="file" name="file" accept="*/*" required class="visually-hidden">
-                                <div class="text-center">
-                                    <span class="material-icons material-symbols-rounded upload-icon-ref mb-2 d-block">
-                                        cloud_upload
-                                    </span>
-                                    <p class="mb-1 fw-medium upload-cta" id="uploadZoneText">
-                                        Click to upload or drag and drop
-                                    </p>
-                                    <p class="mb-0 small fw-medium text-success d-none" id="uploadFileName"></p>
-                                    <small class="text-muted">
-                                        PDF, DOC, DOCX, XLS, XLSX, images, etc. (Max 100 MB)
-                                    </small>
-                                </div>
-                            </label>
-                        </div>
+                        @include('admin.course-repository.partials.cr-design-file', [
+                        'inputId' => 'file',
+                        'inputName' => 'file',
+                        'required' => true,
+                        'accept' => '*/*',
+                        ])
+                        <div class="form-text small text-muted mt-1">PDF, DOC, DOCX, XLS, XLSX, images, etc. (Max 100
+                            MB)</div>
                     </div>
 
                 </div>
 
-                <!-- Footer -->
-                <div class="modal-footer border-0 px-4 py-3 bg-light">
-                    <button type="button" class="btn btn-cancel-ref px-4" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary px-4 d-flex align-items-center gap-1">
-                        <span class="material-icons material-symbols-rounded" style="font-size: 1.1rem;">
-                            check_circle
-                        </span>
-                        Save
-                    </button>
+                <div class="modal-footer cr-admin-modal-footer d-flex justify-content-end">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Add Document</button>
                 </div>
 
             </form>
         </div>
     </div>
 </div>
+
+
+
 
 
 @endsection
@@ -548,8 +613,12 @@
     // Use Laravel-generated URLs so prefix (e.g. /admin) is correct
     var courseRepoUpdateUrlTemplate = "{{ route('course-repository.update', ['pk' => '___PK___']) }}";
     var courseRepoDestroyUrlTemplate = "{{ route('course-repository.destroy', ['pk' => '___PK___']) }}";
-    window.getCourseRepoUpdateUrl = function(pk) { return courseRepoUpdateUrlTemplate.replace('___PK___', pk); };
-    window.getCourseRepoDestroyUrl = function(pk) { return courseRepoDestroyUrlTemplate.replace('___PK___', pk); };
+    window.getCourseRepoUpdateUrl = function(pk) {
+        return courseRepoUpdateUrlTemplate.replace('___PK___', pk);
+    };
+    window.getCourseRepoDestroyUrl = function(pk) {
+        return courseRepoDestroyUrlTemplate.replace('___PK___', pk);
+    };
 })();
 document.addEventListener('DOMContentLoaded', function() {
 
@@ -626,71 +695,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Drag and drop for create modal
-    const createModalImageInput = document.getElementById('modal_category_image');
-    if (createModalImageInput) {
-        const createUploadZone = document.querySelector('#createModal .upload-zone-ref');
-        if (createUploadZone) {
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-                createUploadZone.addEventListener(event, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                });
-            });
-            ['dragenter', 'dragover'].forEach(event => {
-                createUploadZone.addEventListener(event, () => {
-                    createUploadZone.classList.add('upload-dragover');
-                });
-            });
-            ['dragleave', 'drop'].forEach(event => {
-                createUploadZone.addEventListener(event, () => {
-                    createUploadZone.classList.remove('upload-dragover');
-                });
-            });
-            createUploadZone.addEventListener('drop', (e) => {
-                const files = e.dataTransfer?.files;
-                if (files?.length) {
-                    const dt = new DataTransfer();
-                    dt.items.add(files[0]);
-                    createModalImageInput.files = dt.files;
-                    createModalImageInput.dispatchEvent(new Event('change'));
-                }
-            });
-        }
-    }
 
-    // Drag and drop for edit modal
-    const editModalImageInput = document.getElementById('edit_category_image');
-    if (editModalImageInput) {
-        const editUploadZone = document.querySelector('#editModal .upload-zone-ref');
-        if (editUploadZone) {
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(event => {
-                editUploadZone.addEventListener(event, (e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                });
-            });
-            ['dragenter', 'dragover'].forEach(event => {
-                editUploadZone.addEventListener(event, () => {
-                    editUploadZone.classList.add('upload-dragover');
-                });
-            });
-            ['dragleave', 'drop'].forEach(event => {
-                editUploadZone.addEventListener(event, () => {
-                    editUploadZone.classList.remove('upload-dragover');
-                });
-            });
-            editUploadZone.addEventListener('drop', (e) => {
-                const files = e.dataTransfer?.files;
-                if (files?.length) {
-                    const dt = new DataTransfer();
-                    dt.items.add(files[0]);
-                    editModalImageInput.files = dt.files;
-                    editModalImageInput.dispatchEvent(new Event('change'));
-                }
-            });
-        }
-    }
     document.getElementById('createForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
 
@@ -768,9 +773,18 @@ document.addEventListener('DOMContentLoaded', function() {
                     try {
                         data = text ? JSON.parse(text) : {};
                     } catch (e) {
-                        return { ok: response.ok, status: response.status, message: text || 'Server error' };
+                        return {
+                            ok: response.ok,
+                            status: response.status,
+                            message: text || 'Server error'
+                        };
                     }
-                    return { ok: response.ok, status: response.status, data: data, raw: text };
+                    return {
+                        ok: response.ok,
+                        status: response.status,
+                        data: data,
+                        raw: text
+                    };
                 });
             })
             .then(function(result) {
@@ -790,7 +804,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (result.data) {
                     if (result.data.message) errMsg = result.data.message;
                     if (result.data.errors && typeof result.data.errors === 'object') {
-                        var first = Object.keys(result.data.errors).map(function(k) { return result.data.errors[k][0]; })[0];
+                        var first = Object.keys(result.data.errors).map(function(k) {
+                            return result.data.errors[k][0];
+                        })[0];
                         if (first) errMsg = first;
                     }
                 } else if (result.status === 419) {
@@ -800,7 +816,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 } else if (result.message && result.message.length < 200) {
                     errMsg = result.message;
                 }
-                Swal.fire({ icon: 'error', title: 'Error!', text: errMsg });
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Error!',
+                    text: errMsg
+                });
                 submitBtn.disabled = false;
                 submitBtn.innerHTML =
                     '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
@@ -839,12 +859,22 @@ document.addEventListener('DOMContentLoaded', function() {
                     form.method = 'POST';
                     form.action = window.getCourseRepoDestroyUrl(pk);
 
-                    var csrfToken = (document.querySelector('meta[name="csrf-token"]') && document.querySelector('meta[name="csrf-token"]').getAttribute('content')) || (document.querySelector('[name="_token"]') && document.querySelector('[name="_token"]').value);
+                    var csrfToken = (document.querySelector(
+                        'meta[name="csrf-token"]') && document.querySelector(
+                            'meta[name="csrf-token"]').getAttribute('content')) || (
+                        document.querySelector('[name="_token"]') && document
+                        .querySelector('[name="_token"]').value);
                     if (!csrfToken) {
-                        Swal.fire({ icon: 'error', title: 'Error', text: 'Security token missing. Please refresh the page.' });
+                        Swal.fire({
+                            icon: 'error',
+                            title: 'Error',
+                            text: 'Security token missing. Please refresh the page.'
+                        });
                         return;
                     }
-                    form.innerHTML = '<input type="hidden" name="_token" value="' + csrfToken + '"><input type="hidden" name="_method" value="DELETE">';
+                    form.innerHTML = '<input type="hidden" name="_token" value="' +
+                        csrfToken +
+                        '"><input type="hidden" name="_method" value="DELETE">';
                     document.body.appendChild(form);
                     form.submit();
                 }
@@ -852,66 +882,17 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Upload modal – file input, drag-and-drop, filename display
     (function initUploadModal() {
         const fileInput = document.getElementById('file');
         const fileTitleInput = document.getElementById('file_title');
-        const dropzone = document.getElementById('uploadDropzone');
-        const zoneText = document.getElementById('uploadZoneText');
-        const fileNameEl = document.getElementById('uploadFileName');
         const uploadModal = document.getElementById('uploadModal');
 
-        function setFileLabel(name) {
-            if (name) {
-                zoneText.classList.add('d-none');
-                fileNameEl.textContent = 'Selected: ' + name;
-                fileNameEl.classList.remove('d-none');
-            } else {
-                zoneText.classList.remove('d-none');
-                fileNameEl.classList.add('d-none');
-                fileNameEl.textContent = '';
-            }
-        }
-
         function clearUploadZone() {
-            if (fileInput) fileInput.value = '';
+            if (fileInput) {
+                fileInput.value = '';
+                fileInput.dispatchEvent(new Event('change'));
+            }
             if (fileTitleInput) fileTitleInput.value = '';
-            setFileLabel(null);
-            dropzone?.classList.remove('upload-dragover');
-        }
-
-        if (fileInput) {
-            fileInput.addEventListener('change', function() {
-                setFileLabel(this.files.length ? this.files[0].name : null);
-            });
-        }
-
-        if (dropzone) {
-            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function(ev) {
-                dropzone.addEventListener(ev, function(e) {
-                    e.preventDefault();
-                    e.stopPropagation();
-                });
-            });
-            ['dragenter', 'dragover'].forEach(function(ev) {
-                dropzone.addEventListener(ev, function() {
-                    dropzone.classList.add('upload-dragover');
-                });
-            });
-            ['dragleave', 'drop'].forEach(function(ev) {
-                dropzone.addEventListener(ev, function() {
-                    dropzone.classList.remove('upload-dragover');
-                });
-            });
-            dropzone.addEventListener('drop', function(e) {
-                const files = e.dataTransfer?.files;
-                if (files?.length && fileInput) {
-                    var dt = new DataTransfer();
-                    dt.items.add(files[0]);
-                    fileInput.files = dt.files;
-                    setFileLabel(files[0].name);
-                }
-            });
         }
 
         if (uploadModal) {
@@ -978,4 +959,6 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+@include('admin.course-repository.partials.cr-design-scripts')
+@include('admin.course-repository.partials.single-click-links')
 @endsection

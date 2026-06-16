@@ -2,7 +2,7 @@
 
 @section('title', 'Return House - Sargam')
 
-@section('content')
+@section('setup_content')
 <style>
     .form-check-label-border { display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.5rem 1rem; border: 1px solid var(--bs-border-color, #dee2e6); border-radius: 0.5rem; cursor: pointer; transition: border-color .15s, background-color .15s; }
     .form-check-label-border:hover { border-color: var(--bs-primary); }
@@ -73,7 +73,7 @@
                 <div class="modal-body p-4">
                     @php
                         // Only Admin / Estate / Super Admin can work with "Other Employee" in Return House.
-                        $canManageOtherEmployees = hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin');
+                        $canManageOtherEmployees = isEstateAuthority();
                     @endphp
                     <form id="requestHouseForm" method="POST" action="{{ route('admin.estate.possession-view.store') }}" enctype="multipart/form-data" class="needs-validation" novalidate>
                         @csrf

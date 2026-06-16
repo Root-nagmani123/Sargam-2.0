@@ -1,4 +1,4 @@
-@extends(hasRole('Student-OT') ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'Academic TimeTable')
 
@@ -2169,7 +2169,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     @endif
     
     <!-- Page Header with ARIA landmark -->
-    @if(hasRole('Admin'))
+    @if(hasRole('Super Admin'))
         <header aria-label="Page header">
             <x-breadcrum title="Academic TimeTable" />
         </header>
@@ -2185,12 +2185,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
     <!-- Main Content Area -->
     <main id="main-content" role="main">
         <!-- Action Controls with proper semantics -->
-         @if(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))
+         @if(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST'))
         <section
     class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
     role="region"
     aria-labelledby="controlPanelHeading"
-    style="border-left: 4px solid #004a93;"
+    
 >
     <h2 id="controlPanelHeading" class="visually-hidden">
         Calendar Control Panel
@@ -2217,7 +2217,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
             </div>
 
             <!-- Course Filter -->
-            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;">
+            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;z-index: 0;">
                 <label for="courseFilter" class="form-label mb-0 fw-semibold text-secondary small">Filter by Course</label>
                 <select
                     class="form-select js-calendar-course-choice"
@@ -2236,7 +2236,7 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
         </fieldset>
 
         <!-- Primary Actions -->
-        @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+        @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'))
         <div class="d-flex align-items-center justify-content-start justify-content-xl-end gap-2">
             <button
                 type="button"
@@ -2361,6 +2361,8 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                                                 <th scope="col">Wednesday</th>
                                                 <th scope="col">Thursday</th>
                                                 <th scope="col">Friday</th>
+                                                <th scope="col">Saturday</th>
+                                                <th scope="col">Sunday</th>
                                             </tr>
                                         </thead>
 
@@ -2387,6 +2389,12 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
   <script src="{{asset('admin_assets/libs/fullcalendar/index.global.min.js')}}"></script>
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <!-- Modern JavaScript with improved accessibility -->
+@php
+    $calendarRequiresCourses = !is_faculty_portal_user()
+        && !hasRole('Student-OT')
+        && !hasRole('Admin')
+        && !hasRole('Super Admin');
+@endphp
 <script>
 console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
 
@@ -2513,6 +2521,7 @@ class CalendarManager {
         this.listViewWeekOffset = 0; // Track week offset for list view
         this.selectedCourseId = null;
         this.courses = @json($courseMaster);
+        this.calendarRequiresCourses = @json($calendarRequiresCourses);
         this.eventsLoaded = false; // Track if events have been loaded initially
         this.init();
     }
@@ -2520,6 +2529,16 @@ class CalendarManager {
     init() {
         try {
             console.log('Initializing calendar manager...');
+
+            if (this.calendarRequiresCourses && (!this.courses || this.courses.length === 0)) {
+                console.log('No courses available for this admin — skipping calendar load');
+                const loadingOverlay = document.getElementById('calendarLoadingOverlay');
+                if (loadingOverlay) {
+                    loadingOverlay.style.display = 'none';
+                }
+                return;
+            }
+
             this.initFullCalendar();
             
             try { this.bindEvents(); } catch (e) { console.error('bindEvents error:', e); }
@@ -2573,7 +2592,7 @@ class CalendarManager {
 
         this.calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            hiddenDays: [0, 6], // Initially hide Sunday (0) and Saturday (6)
+            hiddenDays: [], // Show all days Mon–Sun
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
@@ -2667,6 +2686,11 @@ class CalendarManager {
     }
 
     fetchEvents(info, successCallback, failureCallback) {
+        if (this.calendarRequiresCourses && (!this.courses || this.courses.length === 0)) {
+            successCallback([]);
+            return;
+        }
+
         // Build URL with course filter
         let url = CalendarConfig.api.events;
         const params = new URLSearchParams();
@@ -2724,40 +2748,14 @@ class CalendarManager {
             return;
         }
         
-        // Check if any events fall on Saturday (day 6)
-        const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6; // 6 = Saturday
-        });
-
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const hiddenDays = hasSaturdayEvents ? [0] : [0, 6];
-        
-        // Use setTimeout to ensure calendar is fully rendered
+        // Show full week Mon–Sun, no hidden days
         setTimeout(() => {
-            this.calendar.setOption('hiddenDays', hiddenDays);
             this.eventsLoaded = true;
         }, 50);
     }
 
     updateWeekendVisibility() {
-        // Get all events currently in the calendar
-        const events = this.calendar.getEvents();
-        
-        // Check if any events fall on Saturday (day 6)
-        const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6;
-        });
-
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const newHiddenDays = hasSaturdayEvents ? [0] : [0, 6];
-        const currentHiddenDays = this.calendar.getOption('hiddenDays') || [];
-        
-        // Only update if changed to prevent unnecessary re-renders
-        if (JSON.stringify(newHiddenDays.sort()) !== JSON.stringify(currentHiddenDays.sort())) {
-            this.calendar.setOption('hiddenDays', newHiddenDays);
-        }
+        // Full week shown — nothing to update
     }
 
     updateCourseHeader() {
@@ -3030,18 +3028,21 @@ class CalendarManager {
         if (editBtn) editBtn.dataset.id = data.id;
         if (deleteBtn) deleteBtn.dataset.id = data.id;
 
-        // Show modal
-        const modal = new bootstrap.Modal(document.getElementById('eventDetails'));
+        // Show modal. Reuse the single Bootstrap instance for this element
+        // (getOrCreateInstance) instead of `new Modal()` on every open — repeated
+        // `new` calls stack extra focus-trap/backdrop listeners on the same node,
+        // which then fight each other and make the modal blink/flicker.
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventDetails'));
         modal.show();
     }
 
     handleDateSelect(info) {
-        if (!@json(hasRole('Training') || hasRole('Admin') ||  hasRole('Training-MCTP') || hasRole('IST'))) return;
+        if (!@json(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST'))) return;
 
         this.resetEventForm();
         this.setFormDate(info.start);
 
-        const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventModal'));
         modal.show();
     }
 
@@ -3551,7 +3552,7 @@ class CalendarManager {
             this.showNotification(result.message || 'Event saved successfully', 'success');
 
             // Close modal and refresh calendar
-            bootstrap.Modal.getInstance(document.getElementById('eventModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('eventModal'))?.hide();
             this.calendar.refetchEvents();
             setTimeout(() => {
                window.location.reload(); 
@@ -3660,8 +3661,8 @@ class CalendarManager {
             document.getElementById('start_datetime').removeAttribute('readonly');
 
             // Show modal
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            const modal = new bootstrap.Modal(document.getElementById('eventModal'));
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
+            const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventModal'));
             modal.show();
 
         } catch (error) {
@@ -3910,7 +3911,7 @@ async setInternalFaculty(internalFacultyIds) {
         const eventId = document.getElementById('deleteEventBtn').dataset.id;
 
         // Show confirmation modal
-        const confirmModal = new bootstrap.Modal(document.getElementById('confirmModal'));
+        const confirmModal = bootstrap.Modal.getOrCreateInstance(document.getElementById('confirmModal'));
         document.getElementById('confirmAction').onclick = () => this.deleteEvent(eventId);
         confirmModal.show();
     }
@@ -3929,8 +3930,8 @@ async setInternalFaculty(internalFacultyIds) {
             this.showNotification('Event deleted successfully', 'success');
 
             // Close modals and refresh
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
+            bootstrap.Modal.getInstance(document.getElementById('confirmModal'))?.hide();
             this.calendar.refetchEvents();
 
         } catch (error) {
@@ -3964,9 +3965,9 @@ async setInternalFaculty(internalFacultyIds) {
         // Apply week offset
         weekStart.setDate(weekStart.getDate() + (weekOffset * 7));
 
-        // Set week end (Friday)
+        // Set week end (Sunday) - adjust to Friday if you want only weekdays
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday
+        weekEnd.setDate(weekEnd.getDate() + 6); // Monday to Sunday
 
         // Filter events that fall within this week
         return events.filter(event => {
@@ -4067,7 +4068,7 @@ async setInternalFaculty(internalFacultyIds) {
             return;
         }
 
-        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
+        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
         const headers = thead.querySelectorAll('th:not(.time-column)');
 
         headers.forEach((header, index) => {
@@ -4106,7 +4107,7 @@ async setInternalFaculty(internalFacultyIds) {
             html += `
                 <tr>
                     <th scope="row" class="time-slot">${time}</th>
-                    ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
+                    ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => `
                         <td class="event-cell">
                             ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
                         </td>
@@ -4403,7 +4404,7 @@ async setInternalFaculty(internalFacultyIds) {
             if (e.key === 'Escape') {
                 const openModals = document.querySelectorAll('.modal.show');
                 openModals.forEach(modal => {
-                    bootstrap.Modal.getInstance(modal).hide();
+                    bootstrap.Modal.getInstance(modal)?.hide();
                 });
             }
 

@@ -45,7 +45,7 @@
 <div class="container-fluid">
     <x-breadcrum title="MDO/Escort Exemption" />
     <div class="datatables">
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row">
@@ -273,7 +273,7 @@ $(document).ready(function() {
         tableHtml += 'table { border-collapse: collapse; width: 100%; margin-top: 20px; }';
         tableHtml += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }';
         tableHtml += 'th { background-color: #b72a2a; color: white; font-weight: bold; }';
-        tableHtml += 'tr:nth-child(even) { background-color: #f2f2f2; }';
+        tableHtml += 'tr:nth-child(even) { background-color: #f7f7f7; }';
         tableHtml += 'h2 { color: #004a93; margin-bottom: 20px; }';
         tableHtml += '@media print { body { margin: 0; } @page { margin: 1cm; } }';
         tableHtml += '</style></head><body>';

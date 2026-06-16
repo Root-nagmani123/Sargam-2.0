@@ -306,6 +306,16 @@ function hasRole($role)
     $user = Auth::user();
     if (!$user) return false;
 
+    // Session roles take precedence. Students get the 'Student-OT' pseudo-role only
+    // in the session (it is never assigned as a Spatie role), and admin/faculty
+    // session roles are derived from their Spatie roles at login. Checking the
+    // session first keeps both flows working — including Moodle token logins,
+    // where the middleware logs the user in and sets user_roles in the session.
+    $sessionRoles = Session::get('user_roles', []);
+    if (is_array($sessionRoles) && in_array($role, $sessionRoles, true)) {
+        return true;
+    }
+
     // Backward-compatible alias: old code may use "SuperAdmin" while DB role is "Super Admin".
     if ($role === 'SuperAdmin' || $role === 'Super Admin') {
         return $user->hasRole('Super Admin') || $user->hasRole('SuperAdmin');
@@ -330,10 +340,39 @@ function userHasAssignedRoles(): bool
 
 /**
  * Full sidebar / setup category access (all groups without per-menu permission checks).
+ * Actual DB role names: 'Super Admin' (id:1). 'Admin' does not exist in DB.
  */
 function isSidebarPrivilegedUser(): bool
 {
-    return hasRole('Admin') || hasRole('Super Admin');
+    return hasRole('Super Admin');
+}
+
+/**
+ * Estate authority: can manage all estate records (Estate Admin role or Super Admin).
+ * DB role names: 'Estate Admin' (id:8), 'Super Admin' (id:1).
+ */
+function isEstateAuthority(): bool
+{
+    return hasRole('Estate Admin') || hasRole('Super Admin');
+}
+
+/**
+ * Estate HAC authority: can perform HAC-related actions.
+ * DB role names: 'Estate HAC' (id:9), 'Estate Admin' (id:8), 'Super Admin' (id:1).
+ */
+function isEstateHacAuthority(): bool
+{
+    return hasRole('Estate HAC') || hasRole('Estate Admin') || hasRole('Super Admin');
+}
+
+/**
+ * Training authority: Training Induction Admin, Training MCTP Admin, Training IST, or Estate Admin / Super Admin.
+ * DB role names match exactly.
+ */
+function isTrainingOrEstateAuthority(): bool
+{
+    return hasRole('Estate Admin') || hasRole('Super Admin')
+        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
 }
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
@@ -341,6 +380,7 @@ function isSidebarPrivilegedUser(): bool
 function is_faculty_portal_user(): bool
 {
     $user = Auth::user();
+    // print_r($user);die;
     if (! $user) {
         return false;
     }
@@ -349,7 +389,7 @@ function is_faculty_portal_user(): bool
         return true;
     }
 
-    return hasRole('Internal Faculty') || hasRole('Guest Faculty');
+    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty');
 }
 
 /**
@@ -580,7 +620,8 @@ function canSeeMessSelfServiceSetup(): bool
         || hasRole('Internal Faculty')
         || hasRole('Training-Induction')
         || hasRole('Training-MCTP')
-        || hasRole('IST');
+        || hasRole('IST')
+        || hasRole('Employee');
 }
 
 function get_Role_by_course()
@@ -592,8 +633,8 @@ function get_Role_by_course()
         return [];
     }
 
-    // Admin / Super Admin see all courses — no restriction
-    if (hasRole('Admin') || hasRole('Super Admin')) {
+    // Admin / Super Admin / PA see all courses — no restriction
+    if (hasRole('Admin') || hasRole('Super Admin') || hasRole('PA')) {
         return [];
     }
 

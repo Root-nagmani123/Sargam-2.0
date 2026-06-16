@@ -17,7 +17,7 @@
 
 <div class="container-fluid">
      <x-breadcrum title="Peer Evaluation - Admin Panel" />
-    <div class="card p-3" style="border-left: 4px solid #004a93;">
+    <div class="card p-3" >
         <h4 class="mb-4">Peer Evaluation - Admin Panel  </h4>
 
         {{-- Manage Courses Section --}}

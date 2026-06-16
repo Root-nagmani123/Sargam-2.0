@@ -2,7 +2,7 @@
 
 @section('title', 'Update Meter Reading of Other - Sargam')
 
-@section('content')
+@section('setup_content')
 @php
     $otherMeterReadingFlashParts = [];
     if (session('error')) {
