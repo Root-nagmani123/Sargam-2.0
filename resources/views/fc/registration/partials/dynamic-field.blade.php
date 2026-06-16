@@ -19,6 +19,7 @@
         'pres_district' => 'pres_state_id',
         'birth_district' => 'birth_state_id',
         'matric_district' => 'matric_state_id',
+        'domicile_district' => 'domicile_state',
     ];
     $pairedStateField = $districtStatePairs[$fieldName]
         ?? (str_ends_with($fieldName, '_district') ? str_replace('_district', '_state_id', $fieldName) : null);

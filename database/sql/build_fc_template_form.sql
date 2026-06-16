@@ -124,6 +124,7 @@ CALL fc_template_add_col('student_master_seconds','father_middle_name','`father_
 CALL fc_template_add_col('student_master_seconds','father_last_name','`father_last_name` varchar(100) NULL');
 CALL fc_template_add_col('student_master_seconds','father_qualification_id','`father_qualification_id` bigint unsigned NULL');
 CALL fc_template_add_col('student_master_seconds','father_annual_income','`father_annual_income` varchar(100) NULL');
+CALL fc_template_add_col('student_master_seconds','domicile_state_id','`domicile_state_id` BIGINT UNSIGNED NULL');
 CALL fc_template_add_col('student_master_seconds','domicile_district','`domicile_district` varchar(100) NULL');
 CALL fc_template_add_col('student_master_seconds','dietary_preference','`dietary_preference` varchar(50) NULL');
 CALL fc_template_add_col('student_master_seconds','high_altitude_condition','`high_altitude_condition` varchar(10) NULL');
@@ -224,7 +225,7 @@ VALUES
 (@s1,'perm_city','City / Village','text','student_master_seconds','perm_city','required|string|max:100',1,47,NULL,NULL,NULL,NULL,'Permanent Address','col-md-4',NULL,NULL,1,@now,@now),
 (@s1,'perm_city_name','Enter City / Town Name','text','student_master_seconds','perm_city_name','required|string|max:150',1,48,NULL,NULL,NULL,NULL,'Permanent Address','col-md-4',NULL,NULL,1,@now,@now),
 (@s1,'perm_pincode','Postal Code','text','student_master_seconds','perm_pincode','required|digits:6',1,49,NULL,NULL,NULL,NULL,'Permanent Address','col-md-4',NULL,NULL,1,@now,@now),
-(@s1,'domicile_state','Domicile State','text','student_master_seconds','domicile_state','required|string|max:100',1,50,NULL,NULL,NULL,NULL,'Permanent Address','col-md-6',NULL,NULL,1,@now,@now),
+(@s1,'domicile_state_id','Domicile State','select','student_master_seconds','domicile_state_id','required|exists:state_master,pk',1,50,NULL,'state_master','pk','state_name','Permanent Address','col-md-6',NULL,NULL,1,@now,@now),
 (@s1,'domicile_district','Domicile District','text','student_master_seconds','domicile_district','required|string|max:100',1,51,NULL,NULL,NULL,NULL,'Permanent Address','col-md-6',NULL,NULL,1,@now,@now),
 -- § Mailing Address
 (@s1,'same_as_permanent','Same as above','checkbox','student_master_seconds','_skip','nullable|boolean',0,52,NULL,NULL,NULL,NULL,'Mailing Address','col-md-12',NULL,NULL,1,@now,@now),
@@ -328,7 +329,7 @@ INSERT INTO fc_form_group_fields (group_id, field_name, label, field_type, targe
 
 -- Group 7: Hobbies (upsert — one row per user on student_master_hobbies_details)
 INSERT INTO fc_form_field_groups (step_id, group_name, group_label, target_table, save_mode, min_rows, max_rows, display_order, is_active, created_at, updated_at)
-VALUES (@s2,'hobbies','Hobbies','student_master_hobbies_details','upsert',0,1,7,1,@now,@now);
+VALUES (@s2,'hobbies','Hobbies','student_master_hobbies_details','upsert',0,10,7,1,@now,@now);
 SET @g7 = LAST_INSERT_ID();
 INSERT INTO fc_form_group_fields (group_id, field_name, label, field_type, target_column, validation_rules, is_required, display_order, css_class, is_active, created_at, updated_at) VALUES
 (@g7,'hobbies','Hobbies','textarea','hobbies','nullable|string|max:1000',0,1,'col-md-12',1,@now,@now);

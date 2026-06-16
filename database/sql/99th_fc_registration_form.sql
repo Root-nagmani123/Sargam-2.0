@@ -934,27 +934,26 @@ VALUES
  NULL,NULL,NULL,NULL,NULL,
  'Special Assistance','col-md-12', NULL, NULL, 1, NOW(), NOW()),
 
-(@s7, 'adjustment_required',    'Reasonable Adjustments Requested', 'radio',
+(@s7, 'adjustment_required',    'Reasonable Adjustments Requested', 'textarea',
  'student_iosr_reasonable_adjust_masters', 'adjustment_required',
- 'nullable|in:0,1', 0, 2,
- NULL, NULL, NULL,
- '[{"value":"1","label":"Yes"},{"value":"0","label":"No"}]',
- NULL, NULL, NULL, NULL,
- NULL,'col-md-12', NULL, NULL, 1, NOW(), NOW()),
-
-(@s7, 'adjustment_type',        'Details of Adjustments Required',  'textarea',
- 'student_iosr_reasonable_adjust_masters', 'adjustment_type',
- 'nullable|string|max:300', 0, 3,
- 'Describe the adjustments required (if Yes above)', NULL, NULL,
+ 'nullable|string|max:1000', 0, 2,
+ 'Describe the adjustments required', NULL, NULL,
  NULL,NULL,NULL,NULL,NULL,
  NULL,'col-md-12', NULL, NULL, 1, NOW(), NOW()),
+
+(@s7, 'adjustment_type',        'Document Title',                   'text',
+ 'student_iosr_reasonable_adjust_masters', 'adjustment_type',
+ 'nullable|string|max:200', 0, 3,
+ 'Title of the supporting document', NULL, NULL,
+ NULL,NULL,NULL,NULL,NULL,
+ NULL,'col-md-6', NULL, NULL, 1, NOW(), NOW()),
 
 (@s7, 'doc_path',               'Supporting Document Upload',       'file',
  'student_iosr_reasonable_adjust_masters', 'doc_path',
  'nullable|file|mimes:jpeg,jpg,png,pdf|max:5120', 0, 4,
  NULL, 'PDF/JPG/PNG, max 5 MB', NULL,
  NULL,NULL,NULL,NULL,NULL,
- NULL,'col-md-12', 5120, 'jpeg,jpg,png,pdf', 1, NOW(), NOW());
+ NULL,'col-md-6', 5120, 'jpeg,jpg,png,pdf', 1, NOW(), NOW());
 
 
 -- ─────────────────────────────────────────────────────────────────────────────
@@ -1198,7 +1197,7 @@ VALUES
 INSERT INTO fc_form_field_groups
     (step_id, group_name, group_label, target_table, save_mode, min_rows, max_rows, display_order, is_active, created_at, updated_at)
 VALUES
-    (@s3, 'hobbies', 'Hobbies & Skills', 'student_master_hobbies_details', 'upsert', 0, 1, 7, 1, NOW(), NOW());
+    (@s3, 'hobbies', 'Hobbies & Skills', 'student_master_hobbies_details', 'upsert', 0, 10, 7, 1, NOW(), NOW());
 
 SET @g7 = LAST_INSERT_ID();
 

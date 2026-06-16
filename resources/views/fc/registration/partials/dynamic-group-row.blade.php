@@ -160,7 +160,7 @@
         @endforeach
     </div>
     @unless($hideRemoveRow)
-        <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2 remove-row-btn" onclick="this.closest('.repeatable-row').remove()" title="Remove row">
+        <button type="button" class="btn btn-sm btn-outline-danger position-absolute top-0 end-0 m-2 remove-row-btn" onclick="var r=this.closest('.repeatable-row'),c=r.parentElement;if(c.querySelectorAll('.repeatable-row').length>1){r.remove();}else{r.querySelectorAll('input,select,textarea').forEach(function(e){if(e.tagName==='SELECT'){e.selectedIndex=0;}else if(e.type==='checkbox'||e.type==='radio'){e.checked=false;}else{e.value='';}e.classList.remove('is-invalid');});}" title="Remove row">
             <i class="bi bi-x-lg"></i>
         </button>
     @endunless
