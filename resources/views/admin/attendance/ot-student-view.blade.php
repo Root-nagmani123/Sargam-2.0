@@ -1,6 +1,6 @@
 @extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
-@section('title', 'Academic TimeTable - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'OT Student Attendance Details')
 
 @section('content')
 <div class="container-fluid">
@@ -8,6 +8,15 @@
     <x-breadcrum title="My Attendance Record" />
     <x-session_message />
     @endif
+
+    @php $recordCount = count($attendanceRecords); $isArchive = ($archiveMode ?? 'active') === 'archive'; @endphp
+
+    {{-- Page Title --}}
+    <div class="attn-card mb-4">
+        <div class="py-4 px-4">
+            <h1 class="page-title mb-0">Attendance Details</h1>
+        </div>
+    </div>
 
     {{-- Student Information Header --}}
     <div class="card shadow mb-4" >
@@ -19,299 +28,470 @@
                         {{ $course->course_name ?? 'N/A' }}
                     </span>
                 </div>
-                <div class="col-md-4">
-                    <strong>Student Name:</strong>
-                    <span class="text-primary">
-                        {{ $student->display_name ?? 'N/A' }}
-                    </span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="attn-card info-card accent-blue h-100">
+                <div class="p-4">
+                    <div class="info-label">Student Name</div>
+                    <div class="info-value text-break">{{ $student->display_name ?? 'N/A' }}</div>
                 </div>
-                <div class="col-md-4">
-                    <strong>OT Code:</strong>
-                    <span class="text-primary">
-                        {{ $student->generated_OT_code ?? 'N/A' }}
-                    </span>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="attn-card info-card accent-blue h-100">
+                <div class="p-4">
+                    <div class="info-label">OT Code</div>
+                    <div class="info-value text-break">{{ $student->generated_OT_code ?? 'N/A' }}</div>
                 </div>
             </div>
         </div>
     </div>
 
-    {{-- Filter Form --}}
-    <div class="card shadow-lg mb-4 border-0 rounded-4">
-        <div class="card-header bg-primary text-white p-3 rounded-top-4">
-            <h5 class="mb-0 fw-bold d-flex align-items-center text-white">
-                <i class="bi bi-funnel-fill me-2"></i> Attendance Filters
-            </h5>
+    {{-- View Mode toggle + Download --}}
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <div class="d-flex gap-2" role="group" aria-label="Attendance View Mode">
+            <button type="button" id="filterActive" class="view-btn {{ !$isArchive ? 'active' : '' }}"
+                aria-pressed="{{ !$isArchive ? 'true' : 'false' }}">
+                Active{{ !$isArchive ? ': '.$recordCount : '' }}
+            </button>
+            <button type="button" id="filterArchive" class="view-btn {{ $isArchive ? 'active' : '' }}"
+                aria-pressed="{{ $isArchive ? 'true' : 'false' }}">
+                Archive{{ $isArchive ? ': '.$recordCount : '' }}
+            </button>
         </div>
-        <div class="card-body p-4">
+        <button type="button" id="downloadBtn" class="download-btn d-inline-flex align-items-center gap-2">
+            <i class="bi bi-download"></i> Download
+        </button>
+    </div>
+
+    {{-- Attendance Details Table --}}
+    <div class="attn-card overflow-hidden">
+
+        {{-- Filter toolbar --}}
+        <div class="px-4 py-3 border-bottom">
             <form method="GET" action="{{ route('attendance.OT.student_mark.student', [
-            'group_pk' => $group_pk,
-            'course_pk' => $course_pk,
-            'timetable_pk' => $timetable_pk,
-            'student_pk' => $student_pk
-        ]) }}" id="filterForm">
+                'group_pk' => $group_pk,
+                'course_pk' => $course_pk,
+                'timetable_pk' => $timetable_pk,
+                'student_pk' => $student_pk
+            ]) }}" id="filterForm">
                 <input type="hidden" name="archive_mode" id="archive_mode_input" value="{{ $archiveMode ?? 'active' }}">
 
-                <div class="row mb-4">
-                    <div class="col-12 text-end">
-                        <label class="form-label d-block text-muted small fw-semibold">View Mode:</label>
-                        <div class="btn-group border border-1 border-primary rounded-pill overflow-hidden" role="group"
-                            aria-label="Attendance Status Filter">
-                            <button type="button"
-                                class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'active' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
-                                id="filterActive"
-                                aria-pressed="{{ ($archiveMode ?? 'active') === 'active' ? 'true' : 'false' }}">
-                                <i class="bi bi-check-circle me-1"></i> Active 
-                            </button>
-                            <button type="button"
-                                class="btn btn-sm text-decoration-none {{ ($archiveMode ?? 'active') === 'archive' ? 'bg-primary text-white shadow-sm' : 'btn-light text-primary' }} px-4 fw-semibold"
-                                id="filterArchive"
-                                aria-pressed="{{ ($archiveMode ?? 'active') === 'archive' ? 'true' : 'false' }}">
-                                <i class="bi bi-archive me-1"></i> Archive 
+                <div class="d-flex flex-wrap align-items-center gap-2">
+                    <span class="toolbar-label me-1">Filters</span>
+
+                    {{-- Course Filter - Only show in Archive mode --}}
+                    @if($isArchive)
+                    <select class="form-select form-select-sm toolbar-control select2 flex-grow-0" id="filter_course"
+                        name="filter_course" aria-label="Filter by Course">
+                        <option value="">-- Select Course --</option>
+                        @foreach($archivedCourses as $archivedCourse)
+                        <option value="{{ $archivedCourse->pk }}"
+                            {{ $filterCourse == $archivedCourse->pk ? 'selected' : '' }}>
+                            {{ $archivedCourse->course_name }}
+                        </option>
+                        @endforeach
+                    </select>
+                    @endif
+
+                    <input type="date" class="form-control form-control-sm toolbar-control flex-grow-0" id="filter_date"
+                        name="filter_date" value="{{ $filterDate ?? date('Y-m-d') }}" max="{{ date('Y-m-d') }}"
+                        aria-label="Filter by Date">
+
+                    <select class="form-select form-select-sm toolbar-control flex-grow-0" id="filter_status"
+                        name="filter_status" aria-label="Filter by Attendance Status">
+                        <option value="">-- All Status --</option>
+                        <option value="Present" {{ $filterStatus == 'Present' ? 'selected' : '' }}>Present</option>
+                        <option value="Late" {{ $filterStatus == 'Late' ? 'selected' : '' }}>Late</option>
+                        <option value="Absent" {{ $filterStatus == 'Absent' ? 'selected' : '' }}>Absent</option>
+                        <option value="Not Marked" {{ $filterStatus == 'Not Marked' ? 'selected' : '' }}>Not Marked</option>
+                    </select>
+
+                    <button type="button" class="btn btn-sm btn-reset d-inline-flex align-items-center gap-1"
+                        id="clearFilters">
+                        <i class="bi bi-arrow-counterclockwise"></i> Reset Filters
+                    </button>
+
+                    <div class="ms-auto d-flex align-items-center gap-2">
+                        {{-- Columns toggle (opens Column Visibility modal) --}}
+                        @php $columns = ['S. No.', 'Date & Time', 'Venue', 'Group', 'Topic', 'Faculty', 'Attendance Status', 'Duty Type', 'Exemption', 'Doc / Comment']; @endphp
+                        <button class="btn btn-sm btn-tool d-inline-flex align-items-center gap-2"
+                            type="button" id="columnsBtn" data-bs-toggle="modal"
+                            data-bs-target="#columnVisibilityModal">
+                            Columns <i class="bi bi-layout-three-columns"></i>
+                        </button>
+
+                        {{-- Table search (client-side, expandable) --}}
+                        <div class="d-inline-flex align-items-center" id="tableSearchWrap">
+                            <input type="text" id="tableSearchInput" class="form-control form-control-sm"
+                                placeholder="Search records…" aria-label="Search attendance table"
+                                autocomplete="off">
+                            <button type="button" class="btn btn-sm btn-tool d-inline-flex align-items-center"
+                                id="tableSearchBtn" title="Search records" aria-label="Search records"
+                                aria-expanded="false">
+                                <i class="bi bi-search"></i>
                             </button>
                         </div>
                     </div>
                 </div>
-
-                <hr class="my-4">
-
-                <div class="row g-4">
-                    {{-- Course Filter - Only show in Archive mode --}}
-                    @if(($archiveMode ?? 'active') === 'archive')
-                    <div class="col-lg-4 col-md-6">
-                        <label for="filter_course" class="form-label fw-semibold">
-                            <i class="bi bi-book me-1 text-primary"></i> Course:
-                        </label>
-                        <select class="form-select form-select-lg select2" id="filter_course"
-                            name="filter_course" aria-label="Filter by Course">
-                            <option value="">-- Select Course --</option>
-                            @foreach($archivedCourses as $archivedCourse)
-                            <option value="{{ $archivedCourse->pk }}"
-                                {{ $filterCourse == $archivedCourse->pk ? 'selected' : '' }}>
-                                {{ $archivedCourse->course_name }}
-                            </option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endif
-                    
-                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-5' : 'col-lg-6' }} col-md-6">
-                        <label for="filter_date" class="form-label fw-semibold">
-                            <i class="bi bi-calendar-date me-1 text-primary"></i> Date:
-                        </label>
-                        <input type="date" class="form-control form-control-lg" id="filter_date" name="filter_date"
-                            value="{{ $filterDate ?? date('Y-m-d') }}" max="{{ date('Y-m-d') }}" aria-label="Filter by Date">
-                    </div>
-                    <div class="{{ ($archiveMode ?? 'active') === 'archive' ? 'col-lg-5' : 'col-lg-4' }} col-md-6">
-                        <label for="filter_status" class="form-label fw-semibold">
-                            <i class="bi bi-check-circle me-1 text-primary"></i> Attendance Status:
-                        </label>
-                        <select class="form-select form-select-lg select2" id="filter_status"
-                            name="filter_status" aria-label="Filter by Attendance Status">
-                            <option value="">-- All Status --</option>
-                            <option value="Present" {{ $filterStatus == 'Present' ? 'selected' : '' }}>Present</option>
-                            <option value="Late" {{ $filterStatus == 'Late' ? 'selected' : '' }}>Late</option>
-                            <option value="Absent" {{ $filterStatus == 'Absent' ? 'selected' : '' }}>Absent</option>
-                            <option value="Not Marked" {{ $filterStatus == 'Not Marked' ? 'selected' : '' }}>Not Marked</option>
-                        </select>
-                    </div>
-                    <div class="col-lg-2 col-md-12 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary w-100 fw-bold btn-lg me-2" id="applyFilters">
-                            <i class="bi bi-search"></i> Apply
-                        </button>
-                        <button type="button" class="btn btn-outline-secondary w-100 btn-lg" id="clearFilters">
-                            <i class="bi bi-x-circle"></i> Clear
-                        </button>
-                    </div>
-                </div>
             </form>
         </div>
+
+        @if($recordCount > 0)
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0" id="attendanceTable">
+                <thead>
+                    <tr>
+                        <th class="text-center py-3 px-4">S. No.</th>
+                        <th class="text-nowrap py-3">Date &amp; time</th>
+                        <th class="py-3">Venue</th>
+                        <th class="py-3">Group</th>
+                        <th class="py-3">Topic</th>
+                        <th class="py-3">Faculty</th>
+                        <th class="text-center text-nowrap py-3">Attendance Status</th>
+                        <th class="text-center text-nowrap py-3">Duty Type (MDO/ Escort)</th>
+                        <th class="text-center py-3">Exemption</th>
+                        <th class="text-center py-3 px-4">Doc/ Comment</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($attendanceRecords as $record)
+                    <tr>
+                        <td class="text-center text-muted fw-semibold px-4">{{ $loop->iteration }}</td>
+                        <td class="fw-semibold text-nowrap">
+                            <div class="d-flex flex-column">
+                                <span>{{ $record['date'] }}</span>
+                                <span class="sub">{{ $record['session_time'] }}</span>
+                            </div>
+                        </td>
+                        <td>{{ $record['venue'] }}</td>
+                        <td>{{ $record['group'] }}</td>
+                        <td>{{ $record['topic'] }}</td>
+                        <td>{{ $record['faculty'] }}</td>
+
+                        <td class="text-center">
+                            @php
+                            $status = $record['attendance_status'];
+                            $color = '';
+                            if ($status == 'Present') {
+                            $color = 'success';
+                            } elseif ($status == 'Late') {
+                            $color = 'warning';
+                            } elseif ($status == 'Absent') {
+                            $color = 'danger';
+                            } else {
+                            $color = 'secondary';
+                            }
+                            @endphp
+                            <span class="badge status-badge bg-{{ $color }}-subtle text-{{ $color }}-emphasis">
+                                {{ $status }}
+                            </span>
+                        </td>
+
+                        <td class="text-center">
+                            @if($record['duty_type'])
+                            <span
+                                class="badge rounded-pill bg-info-subtle text-info-emphasis border border-info-subtle fw-semibold py-2 px-3">{{ $record['duty_type'] }}</span>
+                            @else
+                            <span class="dash">-</span>
+                            @endif
+                        </td>
+
+                        <td class="text-center">
+                            @if($record['exemption_type'])
+                            <span
+                                class="badge rounded-pill bg-primary-subtle text-primary-emphasis border border-primary-subtle fw-semibold py-2 px-3">{{ $record['exemption_type'] }}</span>
+                            @else
+                            <span class="dash">-</span>
+                            @endif
+                        </td>
+
+                        <td class="text-center text-nowrap px-4">
+                            @if($record['exemption_document'])
+                            <a href="{{ asset('storage/' . $record['exemption_document']) }}" target="_blank"
+                                class="btn btn-sm btn-outline-primary me-2" title="View Document"
+                                aria-label="View Exemption Document">
+                                <i class="bi bi-eye-fill"></i>
+                            </a>
+                            @endif
+
+                            @if($record['exemption_comment'])
+                            @if($record['exemption_document'])
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
+                                data-bs-placement="top" title="{{ $record['exemption_comment'] }}"
+                                aria-label="View Comment">
+                                <i class="bi bi-chat-text-fill"></i>
+                            </button>
+                            @else
+                            <span class="text-muted small" data-bs-toggle="tooltip" data-bs-placement="top"
+                                title="{{ $record['exemption_comment'] }}">{{ Str::limit($record['exemption_comment'], 15) }}</span>
+                            @endif
+                            @else
+                            @if(!$record['exemption_document'])
+                            <span class="dash">-</span>
+                            @endif
+                            @endif
+                        </td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+
+        {{-- Pagination footer --}}
+        <div class="px-4 py-3 border-top">
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                <nav aria-label="Attendance pagination">
+                    <ul class="pagination pagination-sm mb-0" id="tablePager"></ul>
+                </nav>
+                <div class="d-flex align-items-center gap-2 text-muted small">
+                    <span>Showing</span>
+                    <select id="perPageSelect" class="form-select form-select-sm per-page w-auto"
+                        aria-label="Rows per page">
+                        <option value="6">6</option>
+                        <option value="10" selected>10</option>
+                        <option value="25">25</option>
+                        <option value="50">50</option>
+                        <option value="100">100</option>
+                    </select>
+                    <span>of <span id="totalItems">{{ $recordCount }}</span> items</span>
+                </div>
+            </div>
+        </div>
+        @else
+        <div class="text-center text-muted py-5 px-4">
+            <i class="bi bi-calendar-x display-5 d-block mb-3 text-secondary opacity-50"></i>
+            <h6 class="fw-semibold mb-1">No attendance records found</h6>
+            <p class="mb-0 small">Try adjusting the date, status, or view mode filters above.</p>
+        </div>
+        @endif
     </div>
 
+    {{-- Column Visibility modal --}}
+    <div class="modal fade" id="columnVisibilityModal" tabindex="-1"
+        aria-labelledby="columnVisibilityLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content col-vis-modal">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="columnVisibilityLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <hr class="mt-0 mb-0 mx-3">
+                <div class="modal-body">
+                    <div class="row g-2">
+                        @foreach($columns as $i => $colName)
+                        <div class="col-12 col-sm-6 col-md-4">
+                            <label class="col-vis-chip d-flex align-items-center gap-2 mb-0">
+                                <input type="checkbox" class="form-check-input m-0 column-toggle"
+                                    data-col="{{ $i }}" checked>
+                                <span class="small text-truncate">{{ $colName }}</span>
+                            </label>
+                        </div>
+                        @endforeach
+                    </div>
+                </div>
+                <div class="modal-footer border-0 pt-2">
+                    <button type="button" class="btn btn-outline-primary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{-- Front-end enhancements: tooltips, client-side pagination, column toggle, CSV download --}}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const form = document.getElementById('filterForm');
-        const archiveModeInput = document.getElementById('archive_mode_input');
-        const filterActive = document.getElementById('filterActive');
-        const filterArchive = document.getElementById('filterArchive');
-        const clearFilters = document.getElementById('clearFilters');
-        const applyFilters = document.getElementById('applyFilters');
+        // Tooltips (guarded: a missing/blocked Bootstrap must not kill the rest of the script)
+        try {
+            if (window.bootstrap && bootstrap.Tooltip) {
+                [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+                    .forEach(function(el) { new bootstrap.Tooltip(el); });
+            }
+        } catch (e) { /* ignore tooltip init errors */ }
 
-        // 1. Toggle Button Logic
-        function setArchiveMode(mode) {
-            archiveModeInput.value = mode;
-            // The form submission will handle the class updates via blade based on the new URL parameter
-            form.submit();
+        // ---- Expandable client-side search (wired before the table guard so the
+        //      icon always toggles, even when the current view has no records) ----
+        var applySearch = function() {};   // replaced with the real impl once a table exists
+        (function() {
+            var wrap = document.getElementById('tableSearchWrap');
+            var btn = document.getElementById('tableSearchBtn');
+            var input = document.getElementById('tableSearchInput');
+            if (!wrap || !btn || !input) return;
+            btn.addEventListener('click', function() {
+                var open = wrap.classList.toggle('open');
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+                if (open) {
+                    input.focus();
+                } else if (input.value) {   // clear search on collapse
+                    input.value = '';
+                    applySearch('');
+                }
+            });
+            input.addEventListener('input', function() { applySearch(this.value); });
+            input.addEventListener('keydown', function(e) {
+                if (e.key === 'Enter') e.preventDefault();   // keep it client-side
+                if (e.key === 'Escape') btn.click();         // collapse + clear
+            });
+        })();
+
+        var table = document.getElementById('attendanceTable');
+        if (!table) return;
+
+        // ---- Client-side pagination (display only) ----
+        var tbody = table.querySelector('tbody');
+        var rows = Array.prototype.slice.call(tbody.querySelectorAll('tr'));
+        var perPageSelect = document.getElementById('perPageSelect');
+        var pager = document.getElementById('tablePager');
+        var totalItemsEl = document.getElementById('totalItems');
+        var perPage = parseInt(perPageSelect.value, 10) || 10;
+        var currentPage = 1;
+
+        // Pre-compute a lowercased text haystack per row for client-side search
+        var haystacks = rows.map(function(r) {
+            return (r.textContent || '').toLowerCase().replace(/\s+/g, ' ');
+        });
+        var query = '';
+
+        function getFiltered() {
+            if (!query) return rows;
+            return rows.filter(function(r, i) {
+                return haystacks[i].indexOf(query) !== -1;
+            });
         }
 
-        filterActive.addEventListener('click', function() {
-            if (archiveModeInput.value !== 'active') {
-                setArchiveMode('active');
-            }
-        });
+        function renderRows() {
+            var data = getFiltered();
+            var total = data.length;
+            if (totalItemsEl) totalItemsEl.textContent = total;
 
-        filterArchive.addEventListener('click', function() {
-            if (archiveModeInput.value !== 'archive') {
-                setArchiveMode('archive');
-            }
-        });
+            var pages = Math.max(1, Math.ceil(total / perPage));
+            if (currentPage > pages) currentPage = pages;
+            var start = (currentPage - 1) * perPage;
+            var end = start + perPage;
 
-        // 2. Clear Filters Logic
-        clearFilters.addEventListener('click', function() {
-            document.getElementById('filter_date').value = '';
-            const statusSelect = document.getElementById('filter_status');
-            if (statusSelect) statusSelect.value = '';
-            
-            const courseSelect = document.getElementById('filter_course');
-            if (courseSelect) {
-                courseSelect.value = '';
-                if ($.fn.select2 && $(courseSelect).hasClass('select2-hidden-accessible')) {
-                    $(courseSelect).val('').trigger('change');
+            // Hide everything, then reveal the current page of the filtered set
+            rows.forEach(function(r) { r.style.display = 'none'; });
+            data.slice(start, end).forEach(function(r) { r.style.display = ''; });
+
+            // No-match placeholder row
+            var noRes = document.getElementById('noSearchResultRow');
+            if (total === 0) {
+                if (!noRes) {
+                    noRes = document.createElement('tr');
+                    noRes.id = 'noSearchResultRow';
+                    var td = document.createElement('td');
+                    td.colSpan = 10;
+                    td.className = 'text-center text-muted py-4';
+                    td.textContent = 'No records match your search.';
+                    noRes.appendChild(td);
+                    tbody.appendChild(noRes);
+                }
+                noRes.style.display = '';
+            } else if (noRes) {
+                noRes.style.display = 'none';
+            }
+
+            buildPager(pages);
+        }
+
+        function makeItem(label, page, opts) {
+            opts = opts || {};
+            var li = document.createElement('li');
+            li.className = 'page-item' + (opts.active ? ' active' : '') + (opts.disabled ? ' disabled' : '');
+            var a = document.createElement('a');
+            a.className = 'page-link';
+            a.href = '#';
+            a.innerHTML = label;
+            a.addEventListener('click', function(e) {
+                e.preventDefault();
+                if (opts.disabled || opts.active) return;
+                currentPage = page;
+                renderRows();
+            });
+            li.appendChild(a);
+            pager.appendChild(li);
+        }
+
+        function buildPager(pages) {
+            if (!pager) return;
+            pager.innerHTML = '';
+            makeItem('&laquo;', currentPage - 1, { disabled: currentPage === 1 });
+
+            var list = [];
+            for (var p = 1; p <= pages; p++) {
+                if (p === 1 || p === pages || (p >= currentPage - 1 && p <= currentPage + 1)) {
+                    list.push(p);
+                } else if (list[list.length - 1] !== '...') {
+                    list.push('...');
                 }
             }
+            list.forEach(function(p) {
+                if (p === '...') {
+                    var li = document.createElement('li');
+                    li.className = 'page-item disabled';
+                    li.innerHTML = '<span class="page-link">&hellip;</span>';
+                    pager.appendChild(li);
+                } else {
+                    makeItem(String(p), p, { active: p === currentPage });
+                }
+            });
 
-            archiveModeInput.value = '{{ $archiveMode ?? 'active' }}';
-            form.submit();
+            makeItem('&raquo;', currentPage + 1, { disabled: currentPage === pages });
+        }
+
+        if (perPageSelect) {
+            perPageSelect.addEventListener('change', function() {
+                perPage = parseInt(this.value, 10) || 10;
+                currentPage = 1;
+                renderRows();
+            });
+        }
+        // Connect the search box (wired above the table guard) to the renderer
+        applySearch = function(val) {
+            query = (val || '').trim().toLowerCase();
+            currentPage = 1;
+            renderRows();
+        };
+        renderRows();
+
+        // ---- Column show/hide toggle ----
+        document.querySelectorAll('.column-toggle').forEach(function(cb) {
+            cb.addEventListener('change', function() {
+                var idx = parseInt(this.dataset.col, 10);
+                var disp = this.checked ? '' : 'none';
+                table.querySelectorAll('tr').forEach(function(tr) {
+                    var cell = tr.children[idx];
+                    if (cell) cell.style.display = disp;
+                });
+            });
         });
 
-        // 3. Apply Filters Logic (Ensure it explicitly submits the form)
-        applyFilters.addEventListener('click', function(e) {
-            e.preventDefault(); // Stop default button action
-            form.submit(); // Explicitly submit the form
-        });
-
-        // 4. Accessibility (GIGW) - Ensure filter changes submit the form
-        // Add listeners for changes to submit automatically, or rely on explicit 'Apply' button
-        // For better control and performance, rely on the explicit 'Apply' button for main filters,
-        // but the 'View Mode' toggle submits instantly.
-
-    });
-    </script>
-
-    {{-- Attendance Details Table --}}
-    <div class="card shadow-sm rounded-4 overflow-hidden">
-        <div class="card-header bg-white border-bottom py-3">
-            <div class="d-flex justify-content-between align-items-center">
-                <h4 class="mb-0 fw-semibold">Attendance Details</h4>
-            </div>
-        </div>
-        <div class="card-body p-0">
-            @if(count($attendanceRecords) > 0)
-            <div class="table-responsive">
-                <table class="table table-hover align-middle mb-0 border-light">
-                    <thead>
-                        <tr>
-                            <th class="text-nowrap">Date & Time</th>
-                            <th>Venue</th>
-                            <th>Group</th>
-                            <th>Topic</th>
-                            <th>Faculty</th>
-                            <th class="text-center text-nowrap">Attendance Status</th>
-                            <th class="text-center text-nowrap">Duty Type (MDO/Escort)</th>
-                            <th class="text-center">Exemption</th>
-                            <th class="text-center">Doc / Comment</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($attendanceRecords as $record)
-                        <tr>
-                            <td class="fw-semibold text-nowrap">
-                                <div class="d-flex flex-column">
-                                    <span>{{ $record['date'] }}</span>
-                                    <small class="text-muted">{{ $record['session_time'] }}</small>
-                                </div>
-                            </td>
-                            <td>{{ $record['venue'] }}</td>
-                            <td>{{ $record['group'] }}</td>
-                            <td>{{ $record['topic'] }}</td>
-                            <td>{{ $record['faculty'] }}</td>
-
-                            <td class="text-center">
-                                @php
-                                $status = $record['attendance_status'];
-                                $color = '';
-                                $icon = '';
-                                if ($status == 'Present') {
-                                $color = 'success';
-                                $icon = 'bi-check-circle-fill';
-                                } elseif ($status == 'Late') {
-                                $color = 'warning';
-                                $icon = 'bi-clock-fill';
-                                } elseif ($status == 'Absent') {
-                                $color = 'danger';
-                                $icon = 'bi-x-octagon-fill';
-                                } else {
-                                $color = 'secondary';
-                                $icon = 'bi-question-circle-fill';
-                                }
-                                @endphp
-                                <span class="badge bg-{{ $color }} fw-bold py-2 px-3">
-                                    <i class="bi {{ $icon }} me-1"></i> {{ $status }}
-                                </span>
-                            </td>
-
-                            <td class="text-center">
-                                @if($record['duty_type'])
-                                <span
-                                    class="badge bg-info-subtle text-info fw-semibold">{{ $record['duty_type'] }}</span>
-                                @else
-                                <span class="text-muted small">-</span>
-                                @endif
-                            </td>
-
-                            <td class="text-center">
-                                @if($record['exemption_type'])
-                                <span
-                                    class="badge bg-primary-subtle text-primary fw-semibold">{{ $record['exemption_type'] }}</span>
-                                @else
-                                <span class="text-muted small">-</span>
-                                @endif
-                            </td>
-
-                            <td class="text-center text-nowrap">
-                                @if($record['exemption_document'])
-                                <a href="{{ asset('storage/' . $record['exemption_document']) }}" target="_blank"
-                                    class="btn btn-sm btn-outline-primary me-2" title="View Document"
-                                    aria-label="View Exemption Document">
-                                    <i class="bi bi-eye-fill"></i>
-                                </a>
-                                @endif
-
-                                @if($record['exemption_comment'])
-                                @if($record['exemption_document'])
-                                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="tooltip"
-                                    data-bs-placement="top" title="{{ $record['exemption_comment'] }}"
-                                    aria-label="View Comment">
-                                    <i class="bi bi-chat-text-fill"></i>
-                                </button>
-                                @else
-                                <span class="text-muted small" data-bs-toggle="tooltip" data-bs-placement="top"
-                                    title="{{ $record['exemption_comment'] }}">{{ Str::limit($record['exemption_comment'], 15) }}</span>
-                                @endif
-                                @else
-                                @if(!$record['exemption_document'])
-                                <span class="text-muted small">-</span>
-                                @endif
-                                @endif
-                            </td>
-                        </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
-            @else
-            <div class="alert alert-info text-center m-4" role="alert">
-                <i class="bi bi-info-circle me-2"></i> No attendance records found for the selected filters.
-            </div>
-            @endif
-        </div>
-    </div>
-
-    <script>
-    document.addEventListener('DOMContentLoaded', function() {
-        var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
-        var tooltipList = tooltipTriggerList.map(function(tooltipTriggerEl) {
-            return new bootstrap.Tooltip(tooltipTriggerEl)
-        })
+        // ---- Download (CSV export of full table, current filtered view) ----
+        var downloadBtn = document.getElementById('downloadBtn');
+        if (downloadBtn) {
+            downloadBtn.addEventListener('click', function() {
+                var csv = [];
+                table.querySelectorAll('tr').forEach(function(tr) {
+                    var cells = Array.prototype.slice.call(tr.children).filter(function(c) {
+                        return c.style.display !== 'none';
+                    });
+                    var line = cells.map(function(c) {
+                        var t = (c.innerText || '').replace(/\s+/g, ' ').trim();
+                        return '"' + t.replace(/"/g, '""') + '"';
+                    });
+                    csv.push(line.join(','));
+                });
+                var blob = new Blob(["﻿" + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
+                var url = URL.createObjectURL(blob);
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = 'attendance-details.csv';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+        }
     });
     </script>
 </div>
@@ -324,7 +504,8 @@ $(document).ready(function() {
     if ($.fn.select2) {
         $('.select2').select2({
             placeholder: 'Select an option',
-            allowClear: true
+            allowClear: true,
+            width: 'resolve'
         });
     }
 
@@ -379,8 +560,9 @@ $(document).ready(function() {
     $('#clearFilters').on('click', function() {
         $('#filter_date').val('');
         $('#filter_status').val('');
-        if ($.fn.select2) {
-            $('#filter_status').select2('val', '');
+        const statusSelect = $('#filter_status');
+        if ($.fn.select2 && statusSelect.hasClass('select2-hidden-accessible')) {
+            statusSelect.select2('val', '');
         }
         const courseSelect = $('#filter_course');
         if (courseSelect.length) {

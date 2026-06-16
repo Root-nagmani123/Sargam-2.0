@@ -126,7 +126,7 @@
     </main>
 
     <!-- Footer -->
-    <footer class="mt-auto text-white py-2" style="background-color: #004a93;">
+    <footer class="mt-auto text-white py-2" style="background-color: #101808;">
         <div class="container-lg p-0">
             <div class="row align-items-center gy-2">
                 <div class="col-md-8 mb-2 mb-md-0">
@@ -289,32 +289,20 @@
                 // Tab switching handled by Bootstrap
             });
 
-            // Handle form submission success
+            // Flash alerts are rendered once by <x-session_message />.
+            // On feedback success, switch to the Submitted tab and refresh.
             @if (session('success'))
-                const successAlert = `
-        <div class="alert alert-success alert-dismissible fade show" role="alert">
-            {{ session('success') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>`;
-                $('.session-feedback-main, .container.my-5').first().prepend(successAlert);
-
                 setTimeout(function() {
-                    const submittedTab = new bootstrap.Tab(document.getElementById('submitted-tab'));
-                    submittedTab.show();
+                    const submittedTabEl = document.getElementById('submitted-tab');
+                    if (submittedTabEl) {
+                        const submittedTab = new bootstrap.Tab(submittedTabEl);
+                        submittedTab.show();
 
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 500);
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 500);
+                    }
                 }, 1500);
-            @endif
-
-            @if (session('error'))
-                const errorAlert = `
-        <div class="alert alert-danger alert-dismissible fade show" role="alert">
-            {{ session('error') }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>`;
-                $('.session-feedback-main, .container.my-5').first().prepend(errorAlert);
             @endif
 
             // Add form validation

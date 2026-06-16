@@ -105,7 +105,7 @@ $documentCount = $documents->count();
                 <div class="card-body">
                     <div class="table-responsive">
                         <table class="table table-hover mb-0 align-middle">
-                            <thead style="background-color: #dc3545; color: white;">
+                            <thead class="table-light">
                                 <tr>
                                     <th class="text-center fw-bold">S.No.</th>
                                     <th class="fw-bold">Document Name</th>
@@ -131,8 +131,7 @@ $documentCount = $documents->count();
                                     <td class="text-center">{{ $loop->iteration }}</td>
                                     <td>
                                         <span
-                                            class="material-icons material-symbols-rounded text-danger me-2">picture_as_pdf</span>
-                                        <strong>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}</strong>
+                                            class="material-icons material-symbols-rounded text-danger">picture_as_pdf</span>{{ Str::limit($doc->upload_document ?? 'N/A', 30) }}
                                     </td>
                                     <td>{{ Str::limit($doc->file_title ?? 'N/A', 25) }}</td>
                                     <td>

@@ -474,6 +474,14 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
+
+        // Dedicated OT (Officer Trainee / Student-OT) calendar with its own data flow
+        Route::prefix('ot')->name('ot.')->group(function () {
+            Route::get('/', [CalendarController::class, 'otIndex'])->name('index');
+            Route::get('/full-calendar-details', [CalendarController::class, 'otFullCalendarDetails'])->name('event.calendar-details');
+            Route::get('/single-calendar-details', [CalendarController::class, 'otSingleCalendarDetails'])->name('event.Singlecalendar-details');
+            Route::get('/download', [CalendarController::class, 'otDownloadPdf'])->name('download');
+        });
     });
 
     // Timetable Report
@@ -792,6 +800,12 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
 
     // OT MDO/Escort Exception View
     Route::get('/ot-mdo-escrot-exemption-view', [OTMDOEscrotExemptionController::class, 'index'])->name('ot.mdo.escrot.exemption.view');
+    // OT acknowledges a duty (Pending -> Completed)
+    Route::post('/ot-mdo-escrot-acknowledge', [OTMDOEscrotExemptionController::class, 'acknowledge'])->name('ot.mdo.escrot.acknowledge');
+    // OT duty sub-pages (Today's / Pending / Completed)
+    Route::get('/ot-mdo-escrot-today', [OTMDOEscrotExemptionController::class, 'today'])->name('ot.mdo.escrot.today');
+    Route::get('/ot-mdo-escrot-pending', [OTMDOEscrotExemptionController::class, 'pending'])->name('ot.mdo.escrot.pending');
+    Route::get('/ot-mdo-escrot-completed', [OTMDOEscrotExemptionController::class, 'completed'])->name('ot.mdo.escrot.completed');
 
     // Faculty MDO/Escort Exception View
     Route::get('/faculty-mdo-escort-exception-view', [FacultyMDOEscortExceptionViewController::class, 'index'])->name('faculty.mdo.escort.exception.view');
