@@ -39,6 +39,22 @@
             || scoped.querySelector('.fc-district-select');
     }
 
+    function forceDomicileCascade(stateSelect) {
+        if (!stateSelect || stateSelect.name !== 'domicile_state_id') {
+            return;
+        }
+        var scoped = stateSelect.closest('.row.g-3') || document;
+        var districtSelect = scoped.querySelector('.fc-district-select[name="domicile_district"]')
+            || scoped.querySelector('.fc-district-select[data-fc-state-field="domicile_state_id"]');
+        if (!districtSelect) {
+            return;
+        }
+        filterSelectByData(districtSelect, 'data-state-id', stateSelect.value, false);
+        if (districtSelect.value && districtSelect.options[districtSelect.selectedIndex]?.disabled) {
+            districtSelect.value = '';
+        }
+    }
+
     function findStateForCountry(countrySelect) {
         var countryName = countrySelect.name;
         var scoped = countrySelect.closest('.repeatable-row') || countrySelect.closest('.row.g-3') || document;
@@ -67,7 +83,8 @@
             if (!districtSelect) {
                 return;
             }
-            filterSelectByData(districtSelect, 'data-state-id', stateId, true);
+            filterSelectByData(districtSelect, 'data-state-id', stateId, false);
+            forceDomicileCascade(this);
         });
 
         var countryField = stateSelect.getAttribute('data-fc-country-field');
@@ -82,6 +99,7 @@
             if (districtSelect) {
                 filterSelectByData(districtSelect, 'data-state-id', stateSelect.value, true);
             }
+            forceDomicileCascade(stateSelect);
         }
     });
 })();
