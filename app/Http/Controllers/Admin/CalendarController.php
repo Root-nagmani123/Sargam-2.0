@@ -873,7 +873,17 @@ class CalendarController extends Controller
             ->orderBy('timetable.class_session')
             ->get();
 
-        $rows = $events->map(function ($event) {
+        // Build a per-day, per-session map so the PDF can render a weekly grid.
+        $sessionsByDay = [];   // [Y-m-d][sessionLabel] = [ ['topic','faculty','venue'], ... ]
+        $venueCounts   = [];
+
+        foreach ($events as $event) {
+            $dateKey      = Carbon::parse($event->START_DATE)->format('Y-m-d');
+            $sessionLabel = trim((string) $event->class_session);
+            if ($sessionLabel === '') {
+                $sessionLabel = 'Session';
+            }
+
             $facultyIds = json_decode($event->faculty_master, true);
             if (!is_array($facultyIds)) {
                 $facultyIds = $event->faculty_master ? [$event->faculty_master] : [];
@@ -882,33 +892,115 @@ class CalendarController extends Controller
                 ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
                 : '';
 
-            return (object) [
-                'date'         => Carbon::parse($event->START_DATE)->format('d M Y'),
-                'day'          => Carbon::parse($event->START_DATE)->format('l'),
-                'session'      => $event->class_session,
-                'topic'        => $event->subject_topic,
-                'faculty_name' => $facultyNames,
-                'venue_name'   => $event->venue_name,
+            $sessionsByDay[$dateKey][$sessionLabel][] = [
+                'topic'   => $event->subject_topic,
+                'faculty' => $facultyNames,
+                'venue'   => $event->venue_name,
             ];
-        });
+
+            if (!empty($event->venue_name)) {
+                $venueCounts[$event->venue_name] = ($venueCounts[$event->venue_name] ?? 0) + 1;
+            }
+        }
+
+        // Sort session labels by their starting time (e.g. "0930 - 1030").
+        $sessionStart = function ($label) {
+            if (preg_match('/(\d{1,2})[:.\s]?(\d{2})?/', $label, $m)) {
+                return ((int) $m[1]) * 100 + ((int) ($m[2] ?? 0));
+            }
+            return 9999;
+        };
 
         $course = null;
         if ($request->filled('course_id')) {
             $course = CourseMaster::where('pk', $request->course_id)
-                ->select('course_name', 'couse_short_name', 'course_year')
+                ->select('course_name', 'couse_short_name', 'course_year', 'start_year', 'end_date')
                 ->first();
         }
 
+        $courseStartWeek = ($course && !empty($course->start_year))
+            ? Carbon::parse($course->start_year)->startOfWeek(Carbon::MONDAY)
+            : null;
+
+        // Group the requested range into Mon–Sun weeks; one grid per week that has events.
+        $weeks   = [];
+        $cursor  = Carbon::parse($start)->startOfWeek(Carbon::MONDAY);
+        $lastDay = Carbon::parse($end)->endOfWeek(Carbon::SUNDAY);
+
+        while ($cursor <= $lastDay) {
+            $weekDays = [];
+            for ($i = 0; $i < 7; $i++) {
+                $d = $cursor->copy()->addDays($i);
+                $weekDays[] = [
+                    'key'     => $d->format('Y-m-d'),
+                    'dayName' => $d->format('l'),
+                    'label'   => $d->format('d.m.Y'),
+                ];
+            }
+
+            $labels = [];
+            foreach ($weekDays as $wd) {
+                foreach (($sessionsByDay[$wd['key']] ?? []) as $label => $ignore) {
+                    $labels[$label] = true;
+                }
+            }
+            $labels = array_keys($labels);
+            usort($labels, fn ($a, $b) => $sessionStart($a) <=> $sessionStart($b));
+
+            $slots = [];
+            foreach ($labels as $label) {
+                $cells = [];
+                foreach ($weekDays as $wd) {
+                    $cells[$wd['key']] = $sessionsByDay[$wd['key']][$label] ?? [];
+                }
+                $slots[] = ['label' => $label, 'cells' => $cells];
+            }
+
+            if (!empty($slots)) {
+                $weekNumber = $courseStartWeek
+                    ? $courseStartWeek->diffInWeeks($cursor) + 1
+                    : (int) $cursor->copy()->addDays(3)->format('W');
+
+                $weeks[] = [
+                    'weekNumber' => $weekNumber,
+                    'days'       => $weekDays,
+                    'slots'      => $slots,
+                ];
+            }
+
+            $cursor->addWeek();
+        }
+
+        $primaryVenue = '';
+        if (!empty($venueCounts)) {
+            arsort($venueCounts);
+            $primaryVenue = array_key_first($venueCounts);
+        }
+
+        $courseDuration = '';
+        if ($course && !empty($course->start_year) && !empty($course->end_date)) {
+            try {
+                $courseDuration = Carbon::parse($course->start_year)->format('j F Y')
+                    . ' to ' . Carbon::parse($course->end_date)->format('j F Y');
+            } catch (\Exception $e) {
+                $courseDuration = '';
+            }
+        }
+
         $data = [
-            'rows'        => $rows,
-            'rangeStart'  => Carbon::parse($start)->format('d M Y'),
-            'rangeEnd'    => Carbon::parse($end)->format('d M Y'),
-            'course'      => $course,
-            'studentName' => auth()->user()->user_name ?? '',
+            'weeks'          => $weeks,
+            'rangeStart'     => Carbon::parse($start)->format('d M Y'),
+            'rangeEnd'       => Carbon::parse($end)->format('d M Y'),
+            'course'         => $course,
+            'courseDuration' => $courseDuration,
+            'primaryVenue'   => $primaryVenue,
+            'studentName'    => auth()->user()->user_name ?? '',
+            'logoLeft'       => public_path('admin_assets/images/logos/logo.png'),
+            'logoRight'      => public_path('admin_assets/images/logos/ashoka.png'),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
-            ->setPaper('a4', 'landscape')
+            ->setPaper('a4', 'portrait')
             ->setOptions([
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
