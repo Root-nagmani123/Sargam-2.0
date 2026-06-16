@@ -253,7 +253,7 @@ class FcFormBuilderSeeder extends Seeder
         ]);
 
         // ── Hobbies ──
-        $gHobbies = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'hobbies', 'group_label'=>'Hobbies & Skills', 'target_table'=>'student_master_hobbies_details', 'save_mode'=>'upsert', 'min_rows'=>0, 'max_rows'=>1, 'display_order'=>7]);
+        $gHobbies = FcFormFieldGroup::create(['step_id'=>$step->id, 'group_name'=>'hobbies', 'group_label'=>'Hobbies & Skills', 'target_table'=>'student_master_hobbies_details', 'save_mode'=>'upsert', 'min_rows'=>0, 'max_rows'=>10, 'display_order'=>7]);
         $this->createGroupFields($gHobbies, [
             ['field_name'=>'hobbies',          'label'=>'Hobbies',              'field_type'=>'textarea', 'target_column'=>'hobbies',          'validation_rules'=>'nullable|string', 'is_required'=>0, 'display_order'=>1, 'css_class'=>'col-md-12'],
             ['field_name'=>'special_skills',   'label'=>'Special Skills',       'field_type'=>'textarea', 'target_column'=>'special_skills',   'validation_rules'=>'nullable|string', 'is_required'=>0, 'display_order'=>2, 'css_class'=>'col-md-12'],
