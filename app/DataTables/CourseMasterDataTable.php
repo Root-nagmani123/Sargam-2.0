@@ -30,7 +30,7 @@ class CourseMasterDataTable extends DataTable
     {
         return DataTableRedisCache::serveCachedAjax(
             $this->request(),
-            'programme_course_master_dt:v1:',
+            'programme_course_master_dt:v3:',
             self::LISTING_CACHE_EPOCH_KEY,
             [
                 'enabled' => 'PROGRAMME_DATATABLE_CACHE_ENABLED',
@@ -65,12 +65,10 @@ class CourseMasterDataTable extends DataTable
                 return $row->end_date ? Carbon::parse($row->end_date)->format('d-m-Y') : '';
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '
-                <div class="form-check form-switch d-inline-block">
-                    <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                        data-table="course_master" data-column="active_inactive" data-id="'.$row->pk.'" '.$checked.'>
-                </div>';
+                $isActive = $row->active_inactive == 1;
+                $label = $isActive ? 'Active' : 'Inactive';
+                $cls = $isActive ? 'pm-status-badge pm-status-active' : 'pm-status-badge pm-status-inactive';
+                return '<span class="'.$cls.'">'.$label.'</span>';
             })
             ->addColumn('action', function ($row) {
                 $editUrl = route('programme.edit', ['id' => encrypt($row->pk)]);
@@ -79,6 +77,8 @@ class CourseMasterDataTable extends DataTable
                 $isActive = $row->active_inactive == 1;
                 $csrf = csrf_token();
                 $btnId = 'dropdown-btn-' . $row->pk;
+                $checked = $isActive ? 'checked' : '';
+                $rowPk = $row->pk;
 
                 $html = <<<HTML
 <td class="text-center">
@@ -112,6 +112,12 @@ class CourseMasterDataTable extends DataTable
             </span>
         </a>
 
+        <!-- Status toggle -->
+        <div class="form-check form-switch d-inline-flex align-items-center m-0 ps-0">
+            <input class="form-check-input status-toggle m-0" type="checkbox" role="switch"
+                data-table="course_master" data-column="active_inactive" data-id="{$rowPk}" {$checked}>
+        </div>
+
         <!-- Delete -->
         <?php if ($isActive): ?>
             <button
@@ -128,7 +134,7 @@ class CourseMasterDataTable extends DataTable
                 </span>
             </button>
         <?php else: ?>
-            <form action="{$deleteUrl}" method="POST" class="d-inline">
+            <form action="{$deleteUrl}" method="POST" class="d-inline js-course-delete">
                 <input type="hidden" name="_token" value="{$csrf}">
                 <input type="hidden" name="_method" value="DELETE">
 
@@ -136,7 +142,6 @@ class CourseMasterDataTable extends DataTable
                     type="submit"
                     class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
                     aria-label="Delete course"
-                    onclick="return confirm('Are you sure you want to delete this course?');"
                 >
                     <span class="material-icons material-symbols-rounded"
                           style="font-size:18px;"
@@ -232,16 +237,32 @@ HTML;
             ->minifiedAjax() // This will use the current route for ajax
             // ->orderBy(1)
             ->selectStyleSingle()
-            ->responsive(true)
+            ->responsive(false)
             ->parameters([
-                'responsive' => true,
+                'responsive' => false,
                 'scrollX' => true,
                 'autoWidth' => false,
                 'ordering' => false,
                 'searching' => true,
                 'lengthChange' => true,
                 'pageLength' => 10,
+                'lengthMenu' => [[10, 25, 50, 100], [10, 25, 50, 100]],
                 'order' => [],
+                'dom' => "<'row mb-2'<'col-12 dt-toolbar-search'f>>" .
+                         "<'row'<'col-12'tr>>" .
+                         "<'row mt-3 align-items-center dt-bottom-bar'" .
+                         "<'col-md-6 dt-bottom-paginate'p>" .
+                         "<'col-md-6 dt-bottom-info d-flex align-items-center justify-content-md-end gap-2'il>>",
+                'language' => [
+                    'info' => 'of _TOTAL_ items',
+                    'infoFiltered' => '',
+                    'infoEmpty' => 'of 0 items',
+                    'lengthMenu' => '_MENU_',
+                    'paginate' => [
+                        'previous' => '‹',
+                        'next' => '›',
+                    ],
+                ],
             ])
             ->buttons([
                 Button::make('excel'),
