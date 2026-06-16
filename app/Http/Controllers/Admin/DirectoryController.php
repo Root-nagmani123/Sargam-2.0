@@ -104,7 +104,7 @@ class DirectoryController extends Controller
             $selectedCourseId = (int) $activeCourses->first()->pk;
         }
 
-        $students = new LengthAwarePaginator([], 0, $perPage);
+        $students = collect();
         if ($selectedCourseId > 0) {
             $studentsQuery = StudentMasterCourseMap::query()
                 ->join('student_master as sm', 'student_master_course__map.student_master_pk', '=', 'sm.pk')
@@ -139,9 +139,8 @@ class DirectoryController extends Controller
                 return $this->streamOtExport($studentsQuery->cursor(), $export);
             }
 
-            $students = $studentsQuery
-                ->paginate($perPage)
-                ->withQueryString();
+            // Load the full filtered set; pagination is handled client-side by DataTables.
+            $students = $studentsQuery->get();
         }
 
         return view('admin.directory.ot', compact('students', 'activeCourses', 'selectedCourseId', 'search', 'sort', 'perPage'));
