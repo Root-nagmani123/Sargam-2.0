@@ -67,19 +67,12 @@ class RoleController extends Controller
     public function show(Request $request, $id)
     {
         $role = Role::findOrFail($id);
-
-        // Permission names stored as "menu.{id}" — extract enabled menu IDs
-        $enabledMenuIds = $role->permissions
-            ->pluck('name')
-            ->filter(fn($name) => str_starts_with($name, 'menu.'))
-            ->map(fn($name) => (int) str_replace('menu.', '', $name))
-            ->toArray();
-
+        $rolePermissions = $role->permissions->pluck('name')->toArray();
         $categories = SidebarCategory::with([
-            'groups.menus.children'
+            'groups.menus'
         ])->get();
-
-        return view('roles-permissions.assign-permission', compact('role', 'enabledMenuIds', 'categories'));
+        // dd($categories);
+        return view('roles-permissions.assign-permission', compact('role', 'rolePermissions', 'categories'));
     }
 
     /**
@@ -125,34 +118,33 @@ class RoleController extends Controller
     public function assignPermission(Request $request, $id)
     {
         $role = Role::findOrFail($id);
-        $menuId = $request->input('menu_id');
-        $status = $request->input('status');
-
-        if (!$menuId) {
+        $permission = $request->permission;
+        $status = $request->status;
+        if (!$permission) {
             return response()->json([
                 'success' => false,
-                'message' => 'Menu ID missing'
+                'message' => 'Permission missing'
             ]);
         }
 
-        // Unique permission name per menu — avoids collision with same permission_name on multiple menus
-        $permissionName = 'menu.' . $menuId;
-
         Permission::firstOrCreate([
-            'name' => $permissionName,
+            'name' => $permission,
             'guard_name' => 'web'
         ]);
 
         if ($status == 1) {
-            if (!$role->hasPermissionTo($permissionName)) {
-                $role->givePermissionTo($permissionName);
+
+            if (!$role->hasPermissionTo($permission)) {
+                $role->givePermissionTo($permission);
             }
+
         } else {
-            if ($role->hasPermissionTo($permissionName)) {
-                $role->revokePermissionTo($permissionName);
+
+            if ($role->hasPermissionTo($permission)) {
+                $role->revokePermissionTo($permission);
             }
         }
-
+        
         return response()->json([
             'success' => true,
             'message' => 'Permission assigned successfully.'
