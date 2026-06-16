@@ -106,13 +106,25 @@
         </div>
     </div>
 
-    {{-- FIELDS SECTION (flat fields — not step 3 groups or documents checklist) --}}
-    @if(! $step->usesFieldGroups() && ! $step->isDocumentsStep())
+    {{-- FIELDS SECTION (flat fields + documents step — not step 3 groups) --}}
+    @if(! $step->usesFieldGroups())
+    @if($step->isDocumentsStep())
+        <div class="alert alert-info small d-flex align-items-start gap-2 mb-3">
+            <i class="bi bi-info-circle mt-1"></i>
+            <div>
+                <strong>Joining Documents step.</strong> Add each document as a <strong>File</strong> field — its storage
+                column is created automatically (named after the Field Name). Set the <em>Section</em> (e.g.
+                <code>Administration Section Related Documents</code> / <code>Accounts Section Related Documents</code>) to group it.
+                To show a downloadable sample, add a row in <strong>Documents → Sample Document Master</strong> using the
+                <em>same Field Name</em>.
+            </div>
+        </div>
+    @endif
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-            <h6 class="mb-0 text-uppercase small fw-bold text-muted" id="fcFieldsCountLabel">Fields ({{ $step->fields->count() }})</h6>
+            <h6 class="mb-0 text-uppercase small fw-bold text-muted" id="fcFieldsCountLabel">{{ $step->isDocumentsStep() ? 'Documents' : 'Fields' }} ({{ $step->fields->count() }})</h6>
             <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addFieldModal">
-                <i class="bi bi-plus-circle me-1"></i>Add Field
+                <i class="bi bi-plus-circle me-1"></i>{{ $step->isDocumentsStep() ? 'Add Document' : 'Add Field' }}
             </button>
         </div>
         <div class="card-body p-0">
@@ -142,8 +154,9 @@
     </div>
     @endif
 
-    {{-- DOCUMENT CHECKLIST SECTION (Documents step) --}}
-    @if($step->isDocumentsStep())
+    {{-- LEGACY DOCUMENT CHECKLIST (retired): joining documents are now managed as File fields above,
+         which auto-create their storage column. Kept disabled to avoid editing the unused legacy master. --}}
+    @if(false)
     <div class="card border-0 shadow-sm mb-4" style="border-radius:10px;">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h6 class="mb-0 text-uppercase small fw-bold text-muted">Document Checklist ({{ $docMasters->count() }})</h6>
@@ -1060,5 +1073,22 @@ if (groupFieldForm) {
         groupFieldForm.action = '{{ url("fc-reg/admin/form-builder/groups") }}/' + groupSelect.value + '/fields';
     });
 }
+
+@if($step->isDocumentsStep())
+// Documents step: default the "Add Document" modal to a File field for convenience.
+(function () {
+    var modal = document.getElementById('addFieldModal');
+    var form = document.getElementById('addFieldForm');
+    if (!modal || !form) return;
+    modal.addEventListener('show.bs.modal', function () {
+        var typeSel = form.querySelector('.fc-field-type-select');
+        if (typeSel && !typeSel.value || (typeSel && typeSel.value !== 'file')) {
+            // only auto-set when opening fresh (not mid-edit); add modal is always fresh
+            typeSel.value = 'file';
+            typeSel.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    });
+})();
+@endif
 </script>
 @endpush
