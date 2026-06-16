@@ -96,7 +96,7 @@
                                                             name="permissions[]"
                                                             data-id="{{ $child->id }}"
                                                             value="{{ $child->permission_name }}"
-                                                            {{ in_array($child->permission_name, $rolePermissions) ? 'checked' : '' }}>
+                                                            {{ in_array($child->id, $enabledMenuIds) ? 'checked' : '' }}>
                                                         <label class="form-check-label"></label>
                                                     </div>
                                                 </td>
@@ -119,7 +119,7 @@
                                                         name="permissions[]"
                                                         data-id="{{ $menu->id }}"
                                                         value="{{ $menu->permission_name }}"
-                                                        {{ in_array($menu->permission_name, $rolePermissions) ? 'checked' : '' }}>
+                                                        {{ in_array($menu->id, $enabledMenuIds) ? 'checked' : '' }}>
                                                     <label class="form-check-label"></label>
                                                 </div>
                                             </td>
