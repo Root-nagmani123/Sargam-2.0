@@ -11,8 +11,10 @@ use App\Models\{
     HostelFloorMaster
 };
 use App\Imports\AssignHostelToStudent;
+use App\Imports\HostelImportPreview;
 use Maatwebsite\Excel\Facades\Excel;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\DB;
 use App\DataTables\OTHostelRoomDetailsDataTable;
 
 class HostelBuildingFloorMappingController extends Controller
@@ -106,6 +108,57 @@ class HostelBuildingFloorMappingController extends Controller
                 'message' => 'Excel import failed.',
                 'error' => $e->getMessage(),
             ], 500);
+        }
+    }
+
+    /**
+     * Read-only preview of an uploaded sheet for the import wizard's step 2.
+     * Parses the file with Excel::toCollection (no DB writes) and returns the
+     * rows as JSON. Does NOT touch the real import/assign flow.
+     */
+    public function assignHostelToStudentPreview(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:xlsx,xls,csv|max:10248',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $sheet = Excel::toCollection(new HostelImportPreview(), $request->file('file'))->first() ?? collect();
+
+            // Resolve course names for nicer display (preview only).
+            $courseIds = $sheet->pluck('course_master_pk')->filter()->unique()->values();
+            $courseNames = $courseIds->isEmpty()
+                ? collect()
+                : DB::table('course_master')->whereIn('pk', $courseIds)->pluck('course_name', 'pk');
+
+            $rows = $sheet->take(100)->map(function ($row) use ($courseNames) {
+                $coursePk = $row['course_master_pk'] ?? null;
+                return [
+                    'course_name'      => $courseNames[$coursePk] ?? ($coursePk ? ('Course #' . $coursePk) : '—'),
+                    'user_name'        => $row['user_name'] ?? '—',
+                    'hostel_room_name' => $row['hostel_room_name'] ?? '—',
+                ];
+            })->values();
+
+            return response()->json([
+                'status' => 'success',
+                'total'  => $sheet->count(),
+                'rows'   => $rows,
+            ]);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unable to read the file for preview.',
+                'error'   => $e->getMessage(),
+            ], 422);
         }
     }
 

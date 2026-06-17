@@ -44,14 +44,20 @@ class OTHostelRoomDetailsDataTable extends DataTable
             ->filterColumn('hostel_room_name', function ($query, $keyword) {
                 $query->where('hostel_room_name', 'like', "%{$keyword}%");
             })
+            ->addColumn('status', function ($row) {
+                // Presentation only: active/inactive flag as a pill badge.
+                return $row->active_inactive == 1
+                    ? '<span class="badge rounded-1 as-badge as-badge-active">Active</span>'
+                    : '<span class="badge rounded-1 as-badge as-badge-inactive">Inactive</span>';
+            })
             ->addColumn('action', function ($row) {
                 $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
+                return '<div class="form-check form-switch d-inline-block as-row-switch ms-2">
                             <input class="form-check-input status-toggle" type="checkbox" role="switch"
                                 data-table="ot_hostel_room_details" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
                         </div>';
             })
-            ->rawColumns(['student_name', 'hostel_room_name', 'course_name', 'action']);
+            ->rawColumns(['student_name', 'hostel_room_name', 'course_name', 'status', 'action']);
     }
 
     /**
@@ -165,10 +171,11 @@ class OTHostelRoomDetailsDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
+            Column::computed('DT_RowIndex')->title('S. No.')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('course_name')->title('Course Name')->addClass('text-center')->orderable(false),
             Column::make('user_name')->title('User Name')->addClass('text-center')->orderable(false),
-            Column::make('hostel_room_name')->title('Hostel Room Name')->addClass('text-center')->orderable(false),
+            Column::make('hostel_room_name')->title('Hotel Room Name')->addClass('text-center')->orderable(false),
+            Column::computed('status')->title('Status')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('action')->title('Action')->addClass('text-center')->orderable(false),
         ];
     }

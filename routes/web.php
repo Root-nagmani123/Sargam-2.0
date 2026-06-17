@@ -915,6 +915,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
 
         Route::get('assign-student', 'assignStudent')->name('assign.student');
         Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
+        Route::post('assign-hostel-student-preview', 'assignHostelToStudentPreview')->name('assign.hostel.to.student.preview');
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
         Route::post('import', 'import')->name('import');
