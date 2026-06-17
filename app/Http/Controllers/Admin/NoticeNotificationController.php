@@ -32,6 +32,24 @@ class NoticeNotificationController extends Controller
         $query->where('active_inactive', $request->status);
     }
 
+    // 🔍 Free-text search across title, type, course name and creator name
+    $search = trim((string) $request->input('search', ''));
+    if ($search !== '') {
+        $like = '%' . $search . '%';
+        $query->where(function ($q) use ($like) {
+            $q->where('notice_title', 'like', $like)
+                ->orWhere('notice_type', 'like', $like)
+                ->orWhereHas('course', function ($c) use ($like) {
+                    $c->where('course_name', 'like', $like);
+                })
+                ->orWhereHas('user', function ($u) use ($like) {
+                    $u->where('first_name', 'like', $like)
+                        ->orWhere('last_name', 'like', $like)
+                        ->orWhereRaw("CONCAT_WS(' ', first_name, last_name) LIKE ?", [$like]);
+                });
+        });
+    }
+
     // Pagination with filters
     $notices = $query->paginate(10)->appends($request->all());
 

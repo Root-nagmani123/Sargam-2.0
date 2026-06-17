@@ -57,7 +57,7 @@
         }
 
         th {
-            background: #f2f2f2;
+            background: #f7f7f7;
             font-weight: bold;
         }
 
@@ -205,7 +205,7 @@
         }
 
         th {
-            background: #f2f2f2;
+            background: #f7f7f7;
             font-weight: bold;
         }
 

@@ -633,8 +633,8 @@ function get_Role_by_course()
         return [];
     }
 
-    // Admin / Super Admin see all courses — no restriction
-    if (hasRole('Admin') || hasRole('Super Admin')) {
+    // Admin / Super Admin / PA see all courses — no restriction
+    if (hasRole('Admin') || hasRole('Super Admin') || hasRole('PA')) {
         return [];
     }
 
