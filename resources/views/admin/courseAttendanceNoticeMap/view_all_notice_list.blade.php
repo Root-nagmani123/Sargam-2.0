@@ -14,7 +14,14 @@
             <input type="hidden" name="topic_id" id="topic_id" value="{{ optional($courseGroup->timetable)->pk }}">
             <input type="hidden" name="venue_id" id="venue_id" value="{{ optional($courseGroup->timetable)->venue_id }}">
             <input type="hidden" name="class_session_master_pk" id="class_session_master_pk" value="{{ optional($courseGroup->timetable)->class_session }}">
-            <input type="hidden" name="faculty_master_pk" id="faculty_master_pk" value="{{ optional($courseGroup->timetable)->faculty_master }}">
+            @php
+                $resolvedFacultyIds = get_timetable_faculty_ids(optional($courseGroup)->timetable);
+                $resolvedFacultyPayload = optional($courseGroup->timetable)->faculty_master;
+                if (empty($resolvedFacultyPayload) && !empty($resolvedFacultyIds)) {
+                    $resolvedFacultyPayload = json_encode($resolvedFacultyIds);
+                }
+            @endphp
+            <input type="hidden" name="faculty_master_pk" id="faculty_master_pk" value="{{ $resolvedFacultyPayload }}">
 
         {{-- Session Summary --}}
         <div class="card shadow mb-4">
@@ -39,7 +46,7 @@
 
                         <div class="col-md-3">
                             <strong>Faculty Name:</strong>
-                            <span class="text-primary">{{ optional($courseGroup->timetable)->faculty->full_name ?? '' }}</span>
+                            <span class="text-primary">{{ get_timetable_faculty_names(optional($courseGroup)->timetable) }}</span>
                         </div>
                         <div class="col-md-3">
                             <strong>Topic Date:</strong>

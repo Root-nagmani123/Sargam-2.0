@@ -28,7 +28,7 @@
                         <td>{{ optional($group->timetable)->classSession->start_time }} - {{ optional($group->timetable)->classSession->end_time }}</td>
                         <td>{{ optional($group->timetable)->venue->venue_name }}</td>
                         <td>{{ optional($group->timetable)->subject_topic }}</td>
-                        <td>{{ optional($group->timetable)->faculty->full_name }}</td>
+                        <td>{{ get_timetable_faculty_names(optional($group)->timetable) }}</td>
                         <th><a href="javascript:void(0);">Mark Attendance</a></th>
                     </tr>
                 @endforeach
