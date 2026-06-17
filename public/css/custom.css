@@ -61,8 +61,8 @@ body.custom-loaded {
 .form-check-input.plain-status-toggle[type="checkbox"]:not(:checked),
 .form-check-input.status-toggle-data[type="checkbox"]:not(:checked),
 .form-check-input.status-toggle-subcategory[type="checkbox"]:not(:checked) {
-    border-color: var(--sargam-toggle-off-border) !important;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%2312B76A'/%3e%3c/svg%3e") !important;
+    border-color: var(--sargam-toggle-on-border) !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23E1B12C'/%3e%3c/svg%3e") !important;
 }
 
 /* Active / on — golden outline, knob right */
@@ -70,9 +70,9 @@ body.custom-loaded {
 .form-check-input.plain-status-toggle[type="checkbox"]:checked,
 .form-check-input.status-toggle-data[type="checkbox"]:checked,
 .form-check-input.status-toggle-subcategory[type="checkbox"]:checked {
-    border-color: var(--sargam-toggle-on-border) !important;
+    border-color: var(--sargam-toggle-off-border) !important;
     background-position: right center;
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%23E1B12C'/%3e%3c/svg%3e") !important;
+    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='-4 -4 8 8'%3e%3ccircle r='3' fill='%2312B76A'/%3e%3c/svg%3e") !important;
 }
 
 .form-check-input.status-toggle[type="checkbox"]:focus,

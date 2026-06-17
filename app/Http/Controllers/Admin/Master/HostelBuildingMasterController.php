@@ -44,7 +44,11 @@ class HostelBuildingMasterController extends Controller
         $buildingMaster->no_of_floors = $request->no_of_floors;
         $buildingMaster->no_of_rooms = $request->no_of_rooms;
         $buildingMaster->building_type = $request->building_type;
-        $buildingMaster->active_inactive = 1;
+        // Respect the Building Status sent from the form when present; otherwise
+        // keep the original default of "active" for backward compatibility.
+        $buildingMaster->active_inactive = $request->filled('active_inactive')
+            ? (int) $request->active_inactive
+            : 1;
 
         $buildingMaster->save();
 
