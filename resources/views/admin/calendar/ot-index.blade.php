@@ -611,19 +611,6 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     display: none;
 }
 
-/* TimeGrid overlapping events */
-.fc-timegrid-event .fc-event-main {
-    border-left: 3px solid var(--primary-color);
-    border-radius: 8px;
-    background: #fff !important;
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-}
-
-.fc-timegrid-event:hover .fc-event-main {
-    box-shadow: var(--shadow);
-}
-
 /* Focus visibility on events (GIGW) */
 .fc-event-card:focus-visible,
 .fc-timegrid-event:focus-visible {
@@ -1212,7 +1199,6 @@ body.compact-mode .fc-event-card {
 body.compact-mode .fc-event-card .event-title { font-size: 0.85rem; }
 body.compact-mode .fc-event-card .event-meta .meta-item { display: none; }
 body.compact-mode .fc-event-card .event-meta .meta-item--time { display: inline-flex; }
-body.compact-mode .fc-timegrid-event .fc-event-main { border-left-width: 3px; }
 body.compact-mode .fc-popover .fc-popover-body .fc-event-card { padding: 0.5rem 0.625rem; }
 
 body.compact-mode .list-event-card { padding: 0.5rem 0.625rem !important; border-radius: 10px; }

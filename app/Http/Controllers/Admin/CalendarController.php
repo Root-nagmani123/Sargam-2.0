@@ -931,6 +931,11 @@ class CalendarController extends Controller
             $weekDays = [];
             for ($i = 0; $i < 7; $i++) {
                 $d = $cursor->copy()->addDays($i);
+                // Show Sat/Sun columns only when those days actually have sessions;
+                // Mon–Fri are always shown.
+                if ($d->isWeekend() && empty($sessionsByDay[$d->format('Y-m-d')])) {
+                    continue;
+                }
                 $weekDays[] = [
                     'key'     => $d->format('Y-m-d'),
                     'dayName' => $d->format('l'),
@@ -987,6 +992,17 @@ class CalendarController extends Controller
             }
         }
 
+        // Embed logos as base64 data URIs — DomPDF can't reliably resolve
+        // Windows filesystem paths used in <img src>.
+        $toDataUri = function (string $path): string {
+            if (!is_file($path)) {
+                return '';
+            }
+            $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = in_array($ext, ['jpg', 'jpeg']) ? 'image/jpeg' : 'image/png';
+            return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+        };
+
         $data = [
             'weeks'          => $weeks,
             'rangeStart'     => Carbon::parse($start)->format('d M Y'),
@@ -995,8 +1011,10 @@ class CalendarController extends Controller
             'courseDuration' => $courseDuration,
             'primaryVenue'   => $primaryVenue,
             'studentName'    => auth()->user()->user_name ?? '',
-            'logoLeft'       => public_path('admin_assets/images/logos/logo.png'),
-            'logoRight'      => public_path('admin_assets/images/logos/ashoka.png'),
+            'logoLeft'       => $toDataUri(public_path('admin_assets/images/logos/logo.png')),
+            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/ashoka.png')),
+            // Pre-shaped Devanagari academy name (DomPDF can't shape Indic text).
+            'titleHindi'     => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
