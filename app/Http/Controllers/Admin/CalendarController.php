@@ -851,9 +851,25 @@ class CalendarController extends Controller
 
         $student_pk = auth()->user()->user_id;
 
-        // Default to the current month when no range supplied.
-        $start = $request->start ?: Carbon::now()->startOfMonth()->toDateString();
-        $end   = $request->end   ?: Carbon::now()->endOfMonth()->toDateString();
+        // Resolve the course up-front so the timetable window can default to the
+        // course's own start/end dates instead of a hard-coded month.
+        $course = null;
+        if ($request->filled('course_id')) {
+            $course = CourseMaster::where('pk', $request->course_id)
+                ->select('course_name', 'couse_short_name', 'course_year', 'start_year', 'end_date')
+                ->first();
+        }
+
+        // Date range: an explicit request range wins; otherwise align to the
+        // course's start/end dates, falling back to the current month.
+        $start = $request->start
+            ?: (($course && !empty($course->start_year))
+                ? Carbon::parse($course->start_year)->toDateString()
+                : Carbon::now()->startOfMonth()->toDateString());
+        $end = $request->end
+            ?: (($course && !empty($course->end_date))
+                ? Carbon::parse($course->end_date)->toDateString()
+                : Carbon::now()->endOfMonth()->toDateString());
 
         $events = DB::table('timetable')
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
@@ -873,16 +889,49 @@ class CalendarController extends Controller
             ->orderBy('timetable.class_session')
             ->get();
 
-        // Build a per-day, per-session map so the PDF can render a weekly grid.
-        $sessionsByDay = [];   // [Y-m-d][sessionLabel] = [ ['topic','faculty','venue'], ... ]
-        $venueCounts   = [];
+        // Resolve the course name for every course referenced by the events, so
+        // each card can show its own course even when the range spans several.
+        $courseNameMap = CourseMaster::whereIn('pk', $events->pluck('course_master_pk')->filter()->unique()->values())
+            ->pluck('course_name', 'pk');
+        $multiCourse = $courseNameMap->count() > 1;
+
+        // Parse a session label ("0930 - 1030", "09:00 AM - 12:00 PM") into
+        // start/end minutes-from-midnight. Returns null when no time is present.
+        $parseTimes = function ($label) {
+            if (!preg_match_all('/(\d{1,2})[:.]?(\d{2})\s*(am|pm)?/i', (string) $label, $mm, PREG_SET_ORDER)) {
+                return null;
+            }
+            $toMin = function ($m) {
+                $h   = (int) $m[1];
+                $min = (int) $m[2];
+                $ap  = isset($m[3]) ? strtolower($m[3]) : '';
+                if ($ap === 'pm' && $h < 12)  { $h += 12; }
+                if ($ap === 'am' && $h === 12) { $h = 0; }
+                return ($h * 60) + $min;
+            };
+            return [
+                'start' => $toMin($mm[0]),
+                'end'   => isset($mm[1]) ? $toMin($mm[1]) : null,
+            ];
+        };
+
+        // Tea Break / Lunch rows get merged into a full-width band.
+        $isBreakTopic = function ($topic) {
+            return (bool) preg_match('/\b(tea\s*break|lunch|break|recess)\b/i', (string) $topic);
+        };
+
+        // Minutes-from-midnight -> 4-digit "0930".
+        $fmt4 = function ($min) {
+            if ($min === null) { return ''; }
+            return sprintf('%02d%02d', intdiv($min, 60) % 24, $min % 60);
+        };
+
+        // Resolve every event to start/end minutes plus display fields, per day.
+        $eventsByDay = [];   // [Y-m-d] => [ ['start','end','topic',...], ... ]
+        $venueCounts = [];
 
         foreach ($events as $event) {
-            $dateKey      = Carbon::parse($event->START_DATE)->format('Y-m-d');
-            $sessionLabel = trim((string) $event->class_session);
-            if ($sessionLabel === '') {
-                $sessionLabel = 'Session';
-            }
+            $dateKey = Carbon::parse($event->START_DATE)->format('Y-m-d');
 
             $facultyIds = json_decode($event->faculty_master, true);
             if (!is_array($facultyIds)) {
@@ -892,10 +941,38 @@ class CalendarController extends Controller
                 ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
                 : '';
 
-            $sessionsByDay[$dateKey][$sessionLabel][] = [
-                'topic'   => $event->subject_topic,
+            $rawLabel = trim((string) $event->class_session);
+            $t = $parseTimes($rawLabel);
+            if ($t === null) {
+                if (strlen((string) $event->START_DATE) > 10) {
+                    $s = Carbon::parse($event->START_DATE);
+                    $e = $event->END_DATE ? Carbon::parse($event->END_DATE) : null;
+                    $t = ['start' => ($s->hour * 60) + $s->minute, 'end' => $e ? (($e->hour * 60) + $e->minute) : null];
+                } else {
+                    $t = ['start' => null, 'end' => null];
+                }
+            }
+            // Without a resolvable start time the event can't be placed on the grid.
+            if (($t['start'] ?? null) === null) {
+                continue;
+            }
+            $st = $t['start'];
+            $en = ($t['end'] !== null && $t['end'] > $st) ? $t['end'] : $st + 60;
+
+            $topic     = $event->subject_topic ?: 'Session';
+            $timeLabel = ($rawLabel !== '' && preg_match('/\d/', $rawLabel))
+                ? $rawLabel
+                : ($fmt4($st) . ' - ' . $fmt4($en));
+
+            $eventsByDay[$dateKey][] = [
+                'start'   => $st,
+                'end'     => $en,
+                'topic'   => $topic,
                 'faculty' => $facultyNames,
                 'venue'   => $event->venue_name,
+                'course'  => $courseNameMap[$event->course_master_pk] ?? '',
+                'time'    => $timeLabel,
+                'isBreak' => $isBreakTopic($topic),
             ];
 
             if (!empty($event->venue_name)) {
@@ -903,75 +980,159 @@ class CalendarController extends Controller
             }
         }
 
-        // Sort session labels by their starting time (e.g. "0930 - 1030").
-        $sessionStart = function ($label) {
-            if (preg_match('/(\d{1,2})[:.\s]?(\d{2})?/', $label, $m)) {
-                return ((int) $m[1]) * 100 + ((int) ($m[2] ?? 0));
-            }
-            return 9999;
-        };
-
-        $course = null;
-        if ($request->filled('course_id')) {
-            $course = CourseMaster::where('pk', $request->course_id)
-                ->select('course_name', 'couse_short_name', 'course_year', 'start_year', 'end_date')
-                ->first();
+        foreach ($eventsByDay as $k => $evs) {
+            usort($evs, fn ($a, $b) => $a['start'] <=> $b['start']);
+            $eventsByDay[$k] = $evs;
         }
 
         $courseStartWeek = ($course && !empty($course->start_year))
             ? Carbon::parse($course->start_year)->startOfWeek(Carbon::MONDAY)
             : null;
 
-        // Group the requested range into Mon–Sun weeks; one grid per week that has events.
+        // Group the range into Mon–Sun weeks; one page per week that has events.
         $weeks   = [];
         $cursor  = Carbon::parse($start)->startOfWeek(Carbon::MONDAY);
         $lastDay = Carbon::parse($end)->endOfWeek(Carbon::SUNDAY);
 
         while ($cursor <= $lastDay) {
-            $weekDays = [];
+            $weekDays   = [];
+            $hasEvents  = false;
+            $boundaries = [];   // distinct start/end minutes across the week
+
             for ($i = 0; $i < 7; $i++) {
-                $d = $cursor->copy()->addDays($i);
-                // Show Sat/Sun columns only when those days actually have sessions;
-                // Mon–Fri are always shown.
-                if ($d->isWeekend() && empty($sessionsByDay[$d->format('Y-m-d')])) {
+                $d   = $cursor->copy()->addDays($i);
+                $key = $d->format('Y-m-d');
+                $evs = $eventsByDay[$key] ?? [];
+                // Show Sat/Sun only when those days have sessions; Mon–Fri always.
+                if ($d->isWeekend() && empty($evs)) {
                     continue;
                 }
+                if (!empty($evs)) {
+                    $hasEvents = true;
+                    foreach ($evs as $e) {
+                        $boundaries[$e['start']] = true;
+                        $boundaries[$e['end']]   = true;
+                    }
+                }
                 $weekDays[] = [
-                    'key'     => $d->format('Y-m-d'),
+                    'key'     => $key,
                     'dayName' => $d->format('l'),
                     'label'   => $d->format('d.m.Y'),
+                    'events'  => $evs,
                 ];
             }
 
-            $labels = [];
-            foreach ($weekDays as $wd) {
-                foreach (($sessionsByDay[$wd['key']] ?? []) as $label => $ignore) {
-                    $labels[$label] = true;
-                }
-            }
-            $labels = array_keys($labels);
-            usort($labels, fn ($a, $b) => $sessionStart($a) <=> $sessionStart($b));
+            if (!$hasEvents) { $cursor->addWeek(); continue; }
 
-            $slots = [];
-            foreach ($labels as $label) {
-                $cells = [];
+            // Canonical rows = intervals that begin at an actual session start.
+            // (Intervals that exist only as a gap inside a long session are dropped,
+            // so we never create unnecessary empty rows.)
+            $bs = array_keys($boundaries);
+            sort($bs);
+            $rowItv = [];
+            for ($c = 0; $c < count($bs) - 1; $c++) {
+                $rs = $bs[$c];
+                $re = $bs[$c + 1];
+                $startsHere = false;
                 foreach ($weekDays as $wd) {
-                    $cells[$wd['key']] = $sessionsByDay[$wd['key']][$label] ?? [];
+                    foreach ($wd['events'] as $e) {
+                        if ($e['start'] === $rs) { $startsHere = true; break 2; }
+                    }
                 }
-                $slots[] = ['label' => $label, 'cells' => $cells];
+                if ($startsHere) {
+                    $rowItv[] = ['start' => $rs, 'end' => $re];
+                }
+            }
+            $rowCount = count($rowItv);
+            if ($rowCount === 0) { $cursor->addWeek(); continue; }
+
+            // Per-day cells with vertical merge (rowspan) over the rows a session covers.
+            $dayCells = [];   // [dayKey][rowIndex] = cell
+            foreach ($weekDays as $wd) {
+                $evs      = $wd['events'];
+                $occupied = array_fill(0, $rowCount, false);
+                $cells    = [];
+                for ($r = 0; $r < $rowCount; $r++) {
+                    if ($occupied[$r]) {
+                        $cells[$r] = ['state' => 'skip'];
+                        continue;
+                    }
+                    $rStart   = $rowItv[$r]['start'];
+                    $rEnd     = $rowItv[$r]['end'];
+                    $starting = array_values(array_filter($evs, fn ($e) => $e['start'] === $rStart && $e['end'] >= $rEnd));
+
+                    if (!empty($starting)) {
+                        $maxEnd = max(array_map(fn ($e) => $e['end'], $starting));
+                        $span   = 0;
+                        for ($k = $r; $k < $rowCount; $k++) {
+                            if ($rowItv[$k]['start'] >= $rStart && $rowItv[$k]['end'] <= $maxEnd) {
+                                $span++;
+                                $occupied[$k] = true;
+                            } else {
+                                break;
+                            }
+                        }
+                        if ($span < 1) { $span = 1; }
+                        $allBreak = true;
+                        foreach ($starting as $e) { if (!$e['isBreak']) { $allBreak = false; break; } }
+                        $cells[$r] = ['state' => 'render', 'rowspan' => $span, 'events' => $starting, 'isBreak' => $allBreak];
+                    } else {
+                        $cells[$r] = ['state' => 'render', 'rowspan' => 1, 'events' => [], 'isBreak' => false];
+                    }
+                }
+                $dayCells[$wd['key']] = $cells;
             }
 
-            if (!empty($slots)) {
-                $weekNumber = $courseStartWeek
-                    ? $courseStartWeek->diffInWeeks($cursor) + 1
-                    : (int) $cursor->copy()->addDays(3)->format('W');
+            // Assemble rows; a row becomes a full-width break band when every day's
+            // cell there is a single-row break or empty (no session crosses it).
+            $rows = [];
+            for ($r = 0; $r < $rowCount; $r++) {
+                $isBand = true; $hasBreak = false; $bandTopic = '';
+                foreach ($weekDays as $wd) {
+                    $c = $dayCells[$wd['key']][$r];
+                    if ($c['state'] === 'skip') { $isBand = false; break; }
+                    if (empty($c['events'])) { continue; }
+                    if (!empty($c['isBreak']) && $c['rowspan'] === 1) {
+                        $hasBreak = true;
+                        if ($bandTopic === '') { $bandTopic = $c['events'][0]['topic']; }
+                    } else {
+                        $isBand = false; break;
+                    }
+                }
+                if (!$hasBreak) { $isBand = false; }
 
-                $weeks[] = [
-                    'weekNumber' => $weekNumber,
-                    'days'       => $weekDays,
-                    'slots'      => $slots,
+                $cellsForRow = [];
+                foreach ($weekDays as $wd) {
+                    $cellsForRow[$wd['key']] = $dayCells[$wd['key']][$r];
+                }
+
+                $rows[] = [
+                    'from'      => $fmt4($rowItv[$r]['start']),
+                    'to'        => $fmt4($rowItv[$r]['end']),
+                    'isBand'    => $isBand,
+                    'bandTopic' => $bandTopic,
+                    'cells'     => $cellsForRow,
                 ];
             }
+
+            $weekNumber = $courseStartWeek
+                ? $courseStartWeek->diffInWeeks($cursor) + 1
+                : (int) $cursor->copy()->addDays(3)->format('W');
+
+            $firstDay = Carbon::parse($weekDays[0]['key']);
+            $lastDayD = Carbon::parse($weekDays[count($weekDays) - 1]['key']);
+
+            $dayHeaders = array_map(
+                fn ($wd) => ['key' => $wd['key'], 'dayName' => $wd['dayName'], 'label' => $wd['label']],
+                $weekDays
+            );
+
+            $weeks[] = [
+                'weekNumber' => $weekNumber,
+                'days'       => $dayHeaders,
+                'rows'       => $rows,
+                'rangeLabel' => $firstDay->format('d M Y') . ' - ' . $lastDayD->format('d M Y'),
+            ];
 
             $cursor->addWeek();
         }
@@ -982,14 +1143,15 @@ class CalendarController extends Controller
             $primaryVenue = array_key_first($venueCounts);
         }
 
+        // Course duration line, e.g. "8 December 2025 to 17 April 2026".
+        $courseStartDate = ($course && !empty($course->start_year))
+            ? Carbon::parse($course->start_year)->format('j F Y') : '';
+        $courseEndDate = ($course && !empty($course->end_date))
+            ? Carbon::parse($course->end_date)->format('j F Y') : '';
+
         $courseDuration = '';
-        if ($course && !empty($course->start_year) && !empty($course->end_date)) {
-            try {
-                $courseDuration = Carbon::parse($course->start_year)->format('j F Y')
-                    . ' to ' . Carbon::parse($course->end_date)->format('j F Y');
-            } catch (\Exception $e) {
-                $courseDuration = '';
-            }
+        if ($courseStartDate && $courseEndDate) {
+            $courseDuration = $courseStartDate . ' to ' . $courseEndDate;
         }
 
         // Embed logos as base64 data URIs — DomPDF can't reliably resolve
@@ -1004,17 +1166,22 @@ class CalendarController extends Controller
         };
 
         $data = [
-            'weeks'          => $weeks,
-            'rangeStart'     => Carbon::parse($start)->format('d M Y'),
-            'rangeEnd'       => Carbon::parse($end)->format('d M Y'),
-            'course'         => $course,
-            'courseDuration' => $courseDuration,
-            'primaryVenue'   => $primaryVenue,
-            'studentName'    => auth()->user()->user_name ?? '',
-            'logoLeft'       => $toDataUri(public_path('admin_assets/images/logos/logo.png')),
-            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/ashoka.png')),
+            'weeks'           => $weeks,
+            'rangeStart'      => Carbon::parse($start)->format('d M Y'),
+            'rangeEnd'        => Carbon::parse($end)->format('d M Y'),
+            'course'          => $course,
+            'courseStartDate' => $courseStartDate,
+            'courseEndDate'   => $courseEndDate,
+            'courseDuration'  => $courseDuration,
+            'multiCourse'     => $multiCourse,
+            'primaryVenue'    => $primaryVenue,
+            // Optional footer note / announcement (no hardcoding — driven by request).
+            'footerNote'      => trim((string) $request->input('note', '')),
+            'studentName'     => auth()->user()->user_name ?? '',
+            'logoLeft'        => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight'       => $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
             // Pre-shaped Devanagari academy name (DomPDF can't shape Indic text).
-            'titleHindi'     => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+            'titleHindi'      => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
@@ -1023,6 +1190,8 @@ class CalendarController extends Controller
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled'      => true,
+                // Enables the <script type="text/php"> page-number block in the view.
+                'isPhpEnabled'         => true,
                 'dpi'                  => 96,
             ]);
 
