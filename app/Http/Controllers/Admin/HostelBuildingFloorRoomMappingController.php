@@ -52,11 +52,16 @@ class HostelBuildingFloorRoomMappingController extends Controller
             });
         }
         
-        $mappings = $query->paginate(10);
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 1) {
+            $perPage = 10;
+        }
+        $mappings = $query->paginate($perPage)->withQueryString();
         $buildings = BuildingMaster::active()->get();
+        $floors = FloorMaster::active()->pluck('floor_name', 'pk');
         $roomTypes = $this->roomTypes;
-        
-        return view('admin.building_floor_room_mapping.index', compact('mappings', 'buildings', 'roomTypes'));
+
+        return view('admin.building_floor_room_mapping.index', compact('mappings', 'buildings', 'floors', 'roomTypes'));
     }
 
     public function create()
@@ -101,6 +106,16 @@ class HostelBuildingFloorRoomMappingController extends Controller
             $mapping->room_name = $room_name;
             $mapping->room_type = $request->room_type;
             $mapping->capacity = $request->capacity;
+            // Only set comment when the form supplies it (the page edit form does
+            // not, so existing comments are preserved); the modal sends it.
+            if ($request->has('comment')) {
+                $mapping->comment = $request->comment;
+            }
+            // Respect Building Status from the form when present; otherwise keep
+            // the existing value (or default to active for new records).
+            $mapping->active_inactive = $request->filled('active_inactive')
+                ? (int) $request->active_inactive
+                : ($mapping->active_inactive ?? 1);
             $mapping->save();
 
             return redirect()->route('hostel.building.floor.room.map.index')->with('success', 'Hostel Floor Room mapping created successfully.');
@@ -182,6 +197,19 @@ class HostelBuildingFloorRoomMappingController extends Controller
             return response()->json(['success' => true, 'message' => 'Comment updated successfully.']);
         } catch (\Exception $e) {
             return response()->json(['success' => false, 'message' => 'Failed to update comment.'], 500);
+        }
+    }
+
+    public function destroy($id)
+    {
+        try {
+            $id = safeDecrypt($id);
+            $mapping = BuildingFloorRoomMapping::findOrFail($id);
+            $mapping->delete();
+
+            return redirect()->route('hostel.building.floor.room.map.index')->with('success', 'Hostel Floor Room mapping deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Something went wrong');
         }
     }
 }
