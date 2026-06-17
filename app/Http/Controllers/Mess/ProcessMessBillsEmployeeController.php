@@ -188,6 +188,15 @@ class ProcessMessBillsEmployeeController extends Controller
                 ]
             );
 
+            $this->warmModalBillSummaryCacheFromCombinedBills(
+                $combinedBills,
+                $dateFrom,
+                $dateTo,
+                $clientTypes,
+                $clientTypePks,
+                $buyerNames
+            );
+
             if ($statusFilter !== null && $statusFilter !== '') {
                 $statusMap = [
                     'unpaid' => 0,
@@ -347,6 +356,8 @@ class ProcessMessBillsEmployeeController extends Controller
         $start = max(0, (int) $request->input('start', 0));
         $length = (int) $request->input('length', 10);
         $forPrint = $request->boolean('for_print') || $request->input('for_print') === '1';
+        $skipLifetimeDue = $request->boolean('skip_lifetime_due');
+        $lifetimeDueOnly = $request->boolean('lifetime_due_only');
 
         $recordsTotal = $combinedBills->count();
 
@@ -401,6 +412,10 @@ class ProcessMessBillsEmployeeController extends Controller
             7 => 'payment_type',
             8 => 'status',
         ];
+        $needsFullLifetimeDueForSort = isset($sortMap[$orderColumn]) && $sortMap[$orderColumn] === 'total_due_amount';
+        if ($needsFullLifetimeDueForSort && ! $skipLifetimeDue && ! $lifetimeDueOnly) {
+            $filteredBills = $this->enrichProcessIndexPageLifetimeDue($filteredBills, $effectiveDateToYmd);
+        }
         if ($orderColumn === 0) {
             $filteredBills = $orderDir === 'desc'
                 ? $filteredBills->reverse()->values()
@@ -417,6 +432,20 @@ class ProcessMessBillsEmployeeController extends Controller
             }, SORT_REGULAR, $orderDir === 'desc')->values();
         }
 
+        if ($lifetimeDueOnly) {
+            $pageRows = $filteredBills->slice($start, $length)->values();
+            $enriched = $this->enrichProcessIndexPageLifetimeDue($pageRows, $effectiveDateToYmd);
+
+            return response()->json([
+                'dues' => $enriched->map(function ($cb) {
+                    return [
+                        'id' => (string) ($cb->combined_id ?? ''),
+                        'total_due_amount' => '₹ ' . number_format((float) ($cb->total_due_amount ?? 0), 2),
+                    ];
+                })->values(),
+            ]);
+        }
+
         $statsPayload = [
             'total_bills' => $combinedBills->count(),
             'paid_count' => $combinedBills->where('status', 2)->count(),
@@ -426,6 +455,10 @@ class ProcessMessBillsEmployeeController extends Controller
         ];
 
         $rows = $filteredBills->slice($start, $length)->values();
+        if (! $skipLifetimeDue && ! $needsFullLifetimeDueForSort) {
+            $rows = $this->enrichProcessIndexPageLifetimeDue($rows, $effectiveDateToYmd);
+        }
+
         $data = [];
         foreach ($rows as $idx => $cb) {
             $status = (int) ($cb->status ?? 0);
@@ -621,14 +654,14 @@ class ProcessMessBillsEmployeeController extends Controller
         $combinedBills = $this->rememberProcessMessBillsCombined(
             $cacheKey,
             function () use ($dateFrom, $dateTo, $dateRangeQuery, $kitchenIssueQuery) {
-                $combined = $this->queryAndGroupBillsForProcessIndexLight(
+                return $this->queryAndGroupBillsForProcessIndexLight(
                     $dateFrom,
                     $dateTo,
                     $dateRangeQuery,
-                    $kitchenIssueQuery
+                    $kitchenIssueQuery,
+                    true,
+                    true
                 )[0];
-
-                return $this->enrichProcessIndexCombinedBillsLifetimeDue($combined, $dateTo);
             }
         );
 
@@ -644,14 +677,14 @@ class ProcessMessBillsEmployeeController extends Controller
      * @param  array<int, string|int>  $clientTypePks
      * @param  array<int, string>  $buyerNames
      */
-    private function modalBillsDatasetCacheKey(
+    private function modalBillsSummaryCacheKey(
         string $dateFrom,
         string $dateTo,
         array $clientTypes,
         array $clientTypePks,
         array $buyerNames
     ): string {
-        return 'process_mess_bills_modal_dataset_v3:'
+        return 'process_mess_bills_modal_summary_v4:'
             . $this->processMessBillsCombinedCacheVersion()
             . ':'
             . md5(json_encode([
@@ -664,14 +697,14 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Cached modal rows (due > 0, notification status included). Pagination/search/sort are in-memory only.
+     * Cached lightweight modal summaries (due > 0). Notifications and lifetime due are resolved per page only.
      *
      * @param  array<int, string>  $clientTypes
      * @param  array<int, string|int>  $clientTypePks
      * @param  array<int, string>  $buyerNames
      * @return \Illuminate\Support\Collection<int, array<string, mixed>>
      */
-    private function getModalBillsDatasetCached(
+    private function getModalBillSummariesCached(
         string $dateFrom,
         string $dateTo,
         $dateRangeQuery,
@@ -680,12 +713,23 @@ class ProcessMessBillsEmployeeController extends Controller
         array $clientTypePks,
         array $buyerNames
     ): Collection {
-        $cacheKey = $this->modalBillsDatasetCacheKey($dateFrom, $dateTo, $clientTypes, $clientTypePks, $buyerNames);
+        $cacheKey = $this->modalBillsSummaryCacheKey($dateFrom, $dateTo, $clientTypes, $clientTypePks, $buyerNames);
 
         $rows = $this->rememberProcessMessBillsCombined(
             $cacheKey,
-            function () use ($dateFrom, $dateTo, $dateRangeQuery, $kitchenIssueQuery) {
-                return $this->buildModalBillsDatasetUncached(
+            function () use ($dateFrom, $dateTo, $dateRangeQuery, $kitchenIssueQuery, $clientTypes, $clientTypePks, $buyerNames) {
+                $fromCombined = $this->modalSummariesFromProcessIndexCombinedCacheIfAvailable(
+                    $dateFrom,
+                    $dateTo,
+                    $clientTypes,
+                    $clientTypePks,
+                    $buyerNames
+                );
+                if ($fromCombined !== null) {
+                    return $fromCombined;
+                }
+
+                return $this->buildModalBillSummariesUncached(
                     $dateFrom,
                     $dateTo,
                     $dateRangeQuery,
@@ -702,11 +746,11 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Build modal listing once (no lifetime FIFO here; no nested combined-bills cache).
+     * Build modal buyer summaries once (no notifications, no line-item keys, no lifetime FIFO).
      *
      * @return list<array<string, mixed>>
      */
-    private function buildModalBillsDatasetUncached(
+    private function buildModalBillSummariesUncached(
         string $dateFrom,
         string $dateTo,
         $dateRangeQuery,
@@ -716,27 +760,257 @@ class ProcessMessBillsEmployeeController extends Controller
             $dateFrom,
             $dateTo,
             $dateRangeQuery,
-            $kitchenIssueQuery
+            $kitchenIssueQuery,
+            true,
+            true
         );
 
-        $groupedRows = $groupedRows->filter(function ($row) {
-            return trim((string) ($row->buyer_name ?? '')) !== ''
-                && (float) ($row->due ?? 0) > 0;
-        })->values();
+        return $groupedRows
+            ->filter(function ($row) {
+                return trim((string) ($row->buyer_name ?? '')) !== ''
+                    && (float) ($row->due ?? 0) > 0;
+            })
+            ->map(fn ($cb) => $this->buildModalBillSummaryFromGroup($cb, $dateFrom, $dateTo))
+            ->values()
+            ->all();
+    }
 
+    /**
+     * @param  array<int, string>  $clientTypes
+     * @param  array<int, string|int>  $clientTypePks
+     * @param  array<int, string>  $buyerNames
+     * @return list<array<string, mixed>>|null
+     */
+    private function modalSummariesFromProcessIndexCombinedCacheIfAvailable(
+        string $dateFrom,
+        string $dateTo,
+        array $clientTypes,
+        array $clientTypePks,
+        array $buyerNames
+    ): ?array {
+        if ($clientTypes !== [] || $clientTypePks !== [] || $buyerNames !== []) {
+            return null;
+        }
+
+        $combinedCacheKey = $this->combinedBillsCacheKey($dateFrom, $dateTo, [
+            'client_types' => [],
+            'client_type_pks' => [],
+            'buyer_names' => [],
+            'status_filter' => null,
+            'invoice_sent_filter' => null,
+            'context' => 'index',
+        ]);
+
+        try {
+            $cached = $this->processMessBillsCacheRepository()->get($combinedCacheKey);
+        } catch (\Throwable $e) {
+            return null;
+        }
+
+        if ($cached === null) {
+            return null;
+        }
+
+        $combinedBills = $cached instanceof Collection ? $cached : collect(is_array($cached) ? $cached : []);
+
+        return $this->modalSummariesFromCombinedBillRows($combinedBills, $dateFrom, $dateTo);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    private function modalSummariesFromCombinedBillRows(
+        Collection $combinedBills,
+        string $dateFrom,
+        string $dateTo
+    ): array {
+        return $combinedBills
+            ->filter(function ($row) {
+                return trim((string) ($row->buyer_name ?? '')) !== ''
+                    && (float) ($row->due ?? 0) > 0;
+            })
+            ->map(fn ($cb) => $this->buildModalBillSummaryFromGroup($cb, $dateFrom, $dateTo))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * After the main grid loads, seed the modal summary cache without a second union query.
+     *
+     * @param  array<int, string>  $clientTypes
+     * @param  array<int, string|int>  $clientTypePks
+     * @param  array<int, string>  $buyerNames
+     */
+    private function warmModalBillSummaryCacheFromCombinedBills(
+        Collection $combinedBills,
+        string $dateFrom,
+        string $dateTo,
+        array $clientTypes,
+        array $clientTypePks,
+        array $buyerNames
+    ): void {
+        if ($clientTypes !== [] || $clientTypePks !== [] || $buyerNames !== []) {
+            return;
+        }
+
+        $cacheKey = $this->modalBillsSummaryCacheKey($dateFrom, $dateTo, $clientTypes, $clientTypePks, $buyerNames);
+
+        try {
+            $repo = $this->processMessBillsCacheRepository();
+            if ($repo->has($cacheKey)) {
+                return;
+            }
+            $summaries = $this->modalSummariesFromCombinedBillRows($combinedBills, $dateFrom, $dateTo);
+            $repo->put($cacheKey, $summaries, max(30, self::COMBINED_BILLS_CACHE_TTL_SECONDS));
+        } catch (\Throwable $e) {
+            Log::debug('ProcessMessBillsEmployeeController: modal summary warm cache skipped.', [
+                'message' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildModalBillSummaryFromGroup(object $cb, string $dateFrom, string $dateTo): array
+    {
+        $invoiceNo = (string) ($cb->combined_invoice_no ?? '');
+        if ($invoiceNo === '') {
+            $invoiceNo = $this->generateCombinedInvoiceNo(
+                trim((string) ($cb->buyer_name ?? '')),
+                (string) ($cb->client_type_slug ?? 'employee')
+            );
+        }
+
+        $periodDue = (float) ($cb->due ?? 0);
+        $clientId = 0;
+        foreach ($cb->bills ?? [] as $bill) {
+            $billClientId = (int) ($bill->client_id ?? 0);
+            if ($billClientId > 0) {
+                $clientId = $billClientId;
+                break;
+            }
+        }
+
+        return [
+            'id' => (string) ($cb->combined_id ?? ''),
+            'bill_id' => (string) ($cb->combined_id ?? ''),
+            'slip_no' => $invoiceNo,
+            'buyer_name' => (string) ($cb->buyer_name ?? ''),
+            'client_type_slug' => (string) ($cb->client_type_slug ?? 'employee'),
+            'invoice_no' => $invoiceNo,
+            'payment_type' => (string) ($cb->payment_type ?? '—'),
+            'total' => (float) ($cb->total ?? 0),
+            'due' => $periodDue,
+            'paid' => (float) ($cb->paid ?? 0),
+            'total_due_amount' => $periodDue,
+            'bill_no' => $invoiceNo,
+            'client_id' => $clientId,
+            'receiver_user_id' => 0,
+            'bill_stub_keys' => array_values(array_filter(
+                (array) ($cb->bill_stub_keys ?? []),
+                fn ($key) => is_string($key) && $key !== ''
+            )),
+            'date_from' => $dateFrom,
+            'date_to' => $dateTo,
+        ];
+    }
+
+    /**
+     * Resolve notifications + line-item keys for the current modal page only.
+     *
+     * @param  \Illuminate\Support\Collection<int, array<string, mixed>>  $pageSummaries
+     * @return \Illuminate\Support\Collection<int, array<string, mixed>>
+     */
+    private function buildModalBillRowsForPageSummaries(
+        Collection $pageSummaries,
+        string $dateFrom,
+        string $dateTo
+    ): Collection {
+        if ($pageSummaries->isEmpty()) {
+            return collect();
+        }
+
+        $stubKeys = [];
         $receiverIds = [];
-        foreach ($groupedRows as $cb) {
-            $receiverId = (int) ($cb->receiver_user_id ?? 0);
+        $pageSummaries = $pageSummaries->map(function (array $summary) use (&$stubKeys, &$receiverIds) {
+            $summary['receiver_user_id'] = $this->resolveReceiverUserIdForModalSummary($summary);
+            foreach ($summary['bill_stub_keys'] ?? [] as $stubKey) {
+                $stubKeys[$stubKey] = true;
+            }
+            $receiverId = (int) ($summary['receiver_user_id'] ?? 0);
             if ($receiverId > 0) {
                 $receiverIds[$receiverId] = true;
             }
-        }
+
+            return $summary;
+        });
+
+        $stubLineKeysMap = $this->batchLineItemKeysByStubKeyStrings(array_keys($stubKeys));
         $this->preloadMessCombinedNotificationsForReceivers(array_keys($receiverIds));
 
-        return $groupedRows
-            ->map(fn ($cb) => $this->buildModalBillCachedRow($cb, $dateFrom, $dateTo, []))
-            ->values()
-            ->all();
+        return $pageSummaries->map(function (array $summary) use ($dateFrom, $dateTo, $stubLineKeysMap) {
+            $lineItemKeys = [];
+            foreach ($summary['bill_stub_keys'] ?? [] as $stubKey) {
+                foreach ($stubLineKeysMap[$stubKey] ?? [] as $lineKey) {
+                    $lineItemKeys[] = $lineKey;
+                }
+            }
+            $lineItemKeys = array_values(array_unique($lineItemKeys));
+
+            $cb = (object) [
+                'combined_id' => $summary['id'],
+                'combined_invoice_no' => $summary['invoice_no'],
+                'buyer_name' => $summary['buyer_name'],
+                'client_type_slug' => $summary['client_type_slug'],
+                'payment_type' => $summary['payment_type'],
+                'total' => $summary['total'],
+                'paid' => $summary['paid'],
+                'due' => $summary['due'],
+                'receiver_user_id' => $summary['receiver_user_id'],
+                'line_item_keys' => $lineItemKeys,
+            ];
+
+            return $this->buildModalBillCachedRow($cb, $dateFrom, $dateTo, []);
+        });
+    }
+
+    /**
+     * Resolve notification receiver for one modal row (deferred from summary cache build).
+     *
+     * @param  array<string, mixed>  $summary
+     */
+    private function resolveReceiverUserIdForModalSummary(array $summary): int
+    {
+        $buyerName = trim((string) ($summary['buyer_name'] ?? ''));
+        $slug = (string) ($summary['client_type_slug'] ?? 'employee');
+        $clientId = (int) ($summary['client_id'] ?? 0);
+
+        if ($buyerName === '' || $buyerName === '—') {
+            return 0;
+        }
+
+        if ($slug === 'employee' && $clientId > 0) {
+            if (FacultyMaster::where('pk', $clientId)->exists()) {
+                return (int) ($this->resolveReceiverUserIdFromFacultyClientId($clientId) ?? 0);
+            }
+
+            return $clientId;
+        }
+
+        if (in_array($slug, ['ot', 'course'], true) && $clientId > 0) {
+            return $clientId;
+        }
+
+        if ($slug === 'employee' || $slug === 'other') {
+            return (int) ($this->resolveReceiverUserIdByClientName($buyerName) ?? 0);
+        }
+
+        if (in_array($slug, ['ot', 'course'], true)) {
+            return (int) ($this->resolveReceiverUserIdByStudentName($buyerName) ?? 0);
+        }
+
+        return 0;
     }
 
     /**
@@ -1119,7 +1393,9 @@ class ProcessMessBillsEmployeeController extends Controller
         string $dateFrom,
         string $dateTo,
         $dateRangeQuery,
-        $kitchenIssueQuery
+        $kitchenIssueQuery,
+        bool $skipLineItemKeys = false,
+        bool $deferReceiverUserId = false
     ): array {
         $unionQuery = $dateRangeQuery->union($kitchenIssueQuery);
         $rows = DB::table(DB::raw("({$unionQuery->toSql()}) as combined_bills"))
@@ -1236,9 +1512,11 @@ class ProcessMessBillsEmployeeController extends Controller
             ];
         })->filter()->values();
 
-        $stubLineKeysMap = $this->batchLineItemKeysByProcessIndexStubKey($voucherStubs);
+        $stubLineKeysMap = $skipLineItemKeys
+            ? []
+            : $this->batchLineItemKeysByProcessIndexStubKey($voucherStubs);
 
-        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo, true, $stubLineKeysMap), $voucherStubs];
+        return [$this->groupProcessIndexVouchersByBuyer($voucherStubs, $dateTo, true, $stubLineKeysMap, $deferReceiverUserId), $voucherStubs];
     }
 
     /**
@@ -1265,9 +1543,36 @@ class ProcessMessBillsEmployeeController extends Controller
             }
         }
 
+        return $this->batchLineItemKeysByDrAndKiIds(array_keys($drIds), array_keys($kiPks));
+    }
+
+    /**
+     * @param  array<int, string>  $stubKeys  e.g. dr-12, ki-34
+     * @return array<string, array<int, string>>
+     */
+    private function batchLineItemKeysByStubKeyStrings(array $stubKeys): array
+    {
+        $drIds = [];
+        $kiPks = [];
+        foreach ($stubKeys as $stubKey) {
+            if (preg_match('/^dr-(\d+)$/i', (string) $stubKey, $matches)) {
+                $drIds[(int) $matches[1]] = true;
+            } elseif (preg_match('/^ki-(\d+)$/i', (string) $stubKey, $matches)) {
+                $kiPks[(int) $matches[1]] = true;
+            }
+        }
+
+        return $this->batchLineItemKeysByDrAndKiIds(array_keys($drIds), array_keys($kiPks));
+    }
+
+    /**
+     * @param  array<int, int>  $drIdList
+     * @param  array<int, int>  $kiPkList
+     * @return array<string, array<int, string>>
+     */
+    private function batchLineItemKeysByDrAndKiIds(array $drIdList, array $kiPkList): array
+    {
         $map = [];
-        $drIdList = array_keys($drIds);
-        $kiPkList = array_keys($kiPks);
 
         foreach (array_chunk($drIdList, 500) as $chunk) {
             foreach (DB::table('sv_date_range_report_items')
@@ -1353,17 +1658,18 @@ class ProcessMessBillsEmployeeController extends Controller
     }
 
     /**
-     * Compute lifetime FIFO due for grid rows (batched buyer loads + cached inside combined-bills Redis key).
+     * Lifetime FIFO due for the current process-index page only (not all buyers).
      *
-     * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
+     * @param  \Illuminate\Support\Collection<int, object>  $pageRows
+     * @return \Illuminate\Support\Collection<int, object>
      */
-    private function enrichProcessIndexCombinedBillsLifetimeDue(Collection $combinedBills, ?string $dateToYmd): Collection
+    private function enrichProcessIndexPageLifetimeDue(Collection $pageRows, ?string $dateToYmd): Collection
     {
-        if (! $dateToYmd || $combinedBills->isEmpty()) {
-            return $combinedBills;
+        if (! $dateToYmd || $pageRows->isEmpty()) {
+            return $pageRows;
         }
 
-        $buyerKeys = $combinedBills
+        $buyerKeys = $pageRows
             ->map(function ($cb) {
                 $buyerName = trim((string) ($cb->buyer_name ?? ''));
 
@@ -1378,7 +1684,7 @@ class ProcessMessBillsEmployeeController extends Controller
 
         $this->preloadBuyerBillsForPaymentAllocationBatch($buyerKeys, $dateToYmd);
 
-        return $combinedBills->map(function ($cb) use ($dateToYmd) {
+        return $pageRows->map(function ($cb) use ($dateToYmd) {
             $buyerName = trim((string) ($cb->buyer_name ?? ''));
             if ($buyerName === '' || $buyerName === '—') {
                 return $cb;
@@ -1388,6 +1694,16 @@ class ProcessMessBillsEmployeeController extends Controller
 
             return $cb;
         });
+    }
+
+    /**
+     * Compute lifetime FIFO due for grid rows (batched buyer loads + cached inside combined-bills Redis key).
+     *
+     * @param  \Illuminate\Support\Collection<int, object>  $combinedBills
+     */
+    private function enrichProcessIndexCombinedBillsLifetimeDue(Collection $combinedBills, ?string $dateToYmd): Collection
+    {
+        return $this->enrichProcessIndexPageLifetimeDue($combinedBills, $dateToYmd);
     }
 
     /**
@@ -1513,14 +1829,19 @@ class ProcessMessBillsEmployeeController extends Controller
         Collection $vouchers,
         ?string $dateToYmd = null,
         bool $deferLifetimeDue = false,
-        array $stubLineKeysMap = []
+        array $stubLineKeysMap = [],
+        bool $deferReceiverUserId = false
     ): Collection {
         $paymentTypeMap = [0 => 'Cash', 1 => 'Deduct From Salary', 2 => 'Online', 5 => 'Deduct From Salary'];
 
-        return $vouchers->groupBy(fn ($bill) => $this->messBillBuyerGroupKey($bill))
-            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap) {
+        return $vouchers->groupBy(fn ($bill) => $deferReceiverUserId
+            ? $this->messBillBuyerGroupKeyFast($bill)
+            : $this->messBillBuyerGroupKey($bill))
+            ->map(function ($group) use ($paymentTypeMap, $dateToYmd, $deferLifetimeDue, $stubLineKeysMap, $deferReceiverUserId) {
             $first = $group->first();
-            $buyerName = $this->resolveMessBillBuyerDisplayName($first, $group);
+            $buyerName = $deferReceiverUserId
+                ? $this->resolveMessBillBuyerDisplayNameFast($first, $group)
+                : $this->resolveMessBillBuyerDisplayName($first, $group);
             $clientTypeSlug = $this->getBillClientTypeSlug($first);
             $combinedId = 'combined-' . rawurlencode($buyerName) . '-' . $clientTypeSlug;
             $combinedInvoiceNo = $this->generateCombinedInvoiceNo($buyerName, $clientTypeSlug);
@@ -1589,10 +1910,20 @@ class ProcessMessBillsEmployeeController extends Controller
                 ? $typeLabel . '(' . strtoupper((string) $categoryName) . ')'
                 : ($typeLabel ?: '—');
 
-            $receiverUserId = $this->resolveReceiverUserIdFromAnyBill($group->all());
+            $receiverUserId = $deferReceiverUserId
+                ? 0
+                : $this->resolveReceiverUserIdFromAnyBill($group->all());
             $lineItemKeys = $stubLineKeysMap !== []
                 ? $this->collectMessBillLineItemKeysWithStubMap($group->all(), $stubLineKeysMap)
                 : $this->collectMessBillLineItemKeys($group->all());
+
+            $billStubKeys = $group->map(function ($b) {
+                return ($b->source_type ?? '') === 'date_range'
+                    ? 'dr-' . (int) ($b->id ?? 0)
+                    : 'ki-' . (int) ($b->pk ?? $b->id ?? 0);
+            })->filter(function (string $key) {
+                return $key !== 'dr-0' && $key !== 'ki-0';
+            })->values()->all();
 
             return (object) [
                 'combined_id' => $combinedId,
@@ -1610,6 +1941,7 @@ class ProcessMessBillsEmployeeController extends Controller
                 'first_receipt_id' => $firstReceiptId,
                 'receiver_user_id' => $receiverUserId,
                 'line_item_keys' => $lineItemKeys,
+                'bill_stub_keys' => $billStubKeys,
                 'bills' => $group->values(),
             ];
         })->values();
@@ -1727,6 +2059,39 @@ class ProcessMessBillsEmployeeController extends Controller
         $name = trim((string) ($bill->client_name ?? ($bill->clientTypeCategory->client_name ?? '')));
 
         return 'name:' . $name . '|' . $slug;
+    }
+
+    /**
+     * Fast buyer group key for modal summary cache (uses stub client_id only, no name lookups).
+     */
+    private function messBillBuyerGroupKeyFast($bill): string
+    {
+        $slug = $this->getBillClientTypeSlug($bill);
+        $clientId = (int) ($bill->client_id ?? 0);
+        if ($clientId > 0 && in_array($slug, self::ALLOWED_CLIENT_SLUGS, true)) {
+            return 'cid:' . $clientId . '|' . $slug;
+        }
+
+        $name = trim((string) ($bill->client_name ?? ''));
+
+        return 'name:' . $name . '|' . $slug;
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, mixed>|null  $group
+     */
+    private function resolveMessBillBuyerDisplayNameFast($bill, $group = null): string
+    {
+        if ($group instanceof Collection) {
+            foreach ($group as $row) {
+                $name = trim((string) ($row->client_name ?? ''));
+                if ($name !== '') {
+                    return $name;
+                }
+            }
+        }
+
+        return trim((string) ($bill->client_name ?? ''));
     }
 
     /**
@@ -3278,6 +3643,8 @@ class ProcessMessBillsEmployeeController extends Controller
         $search = trim((string) $request->input('search', ''));
         $sortColumn = (string) $request->input('sort_column', 'buyer_name');
         $sortDir = strtolower((string) $request->input('sort_dir', 'asc'));
+        $skipLifetimeDue = $request->boolean('skip_lifetime_due');
+        $lifetimeDueOnly = $request->boolean('lifetime_due_only');
         $unionCollation = 'utf8mb4_unicode_ci';
 
         // Query 1: Selling Voucher with Date Range
@@ -3332,7 +3699,7 @@ class ProcessMessBillsEmployeeController extends Controller
             $kitchenIssueQuery->where('issue_date', '<=', $dateTo);
         }
 
-        $groupedRows = $this->getModalBillsDatasetCached(
+        $groupedRows = $this->getModalBillSummariesCached(
             $dateFrom,
             $dateTo,
             $dateRangeQuery,
@@ -3360,8 +3727,31 @@ class ProcessMessBillsEmployeeController extends Controller
             $page = (int) ceil($total / $perPage);
         }
         $offset = ($page - 1) * $perPage;
-        $pageGroups = $groupedRows->slice($offset, $perPage)->values();
-        if (! $forPrint || $pageGroups->count() <= 100) {
+        $pageSummaries = $groupedRows->slice($offset, $perPage)->values();
+
+        if ($lifetimeDueOnly) {
+            $minimalRows = $pageSummaries->map(function (array $summary) {
+                return [
+                    'id' => $summary['id'],
+                    'buyer_name' => $summary['buyer_name'],
+                    'client_type_slug' => $summary['client_type_slug'],
+                    'total_due_amount' => (float) ($summary['due'] ?? 0),
+                ];
+            });
+            $enriched = $this->enrichModalPageRowsLifetimeDue($minimalRows, $dateTo);
+
+            return response()->json([
+                'dues' => $enriched->map(function (array $row) {
+                    return [
+                        'id' => $row['id'],
+                        'total_due_amount' => number_format((float) ($row['total_due_amount'] ?? 0), 2),
+                    ];
+                })->values(),
+            ]);
+        }
+
+        $pageGroups = $this->buildModalBillRowsForPageSummaries($pageSummaries, $dateFrom, $dateTo);
+        if ((! $forPrint || $pageGroups->count() <= 100) && ! $skipLifetimeDue) {
             $pageGroups = $this->enrichModalPageRowsLifetimeDue($pageGroups, $dateTo);
         }
 
@@ -4730,6 +5120,17 @@ class ProcessMessBillsEmployeeController extends Controller
     private function applySellingVoucherDateRangeItemIssueDateFilter($query, ?string $dateFromYmd, ?string $dateToYmd): void
     {
         $table = (new SellingVoucherDateRangeReport())->getTable();
+
+        if ($dateFromYmd && $dateToYmd) {
+            $query->whereIn($table . '.id', function ($sub) use ($dateFromYmd, $dateToYmd) {
+                $sub->select('sv_date_range_report_id')
+                    ->from('sv_date_range_report_items')
+                    ->whereBetween('issue_date', [$dateFromYmd, $dateToYmd])
+                    ->distinct();
+            });
+
+            return;
+        }
 
         if ($dateFromYmd || $dateToYmd) {
             $query->whereExists(function ($sub) use ($dateFromYmd, $dateToYmd, $table) {

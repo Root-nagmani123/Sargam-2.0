@@ -402,6 +402,9 @@
 
         $table.off('xhr.dt.processMessStats').on('xhr.dt.processMessStats', function (e, settings, json) {
             applyProcessMessBillStats(json);
+            if (typeof window.prefetchDefaultModalBillsCacheOnce === 'function') {
+                window.prefetchDefaultModalBillsCacheOnce();
+            }
         });
 
         if ($.fn.DataTable && $.fn.DataTable.isDataTable($table)) {
@@ -1440,6 +1443,65 @@ document.addEventListener('DOMContentLoaded', function() {
     }
     window.buildModalBillsDataUrl = buildModalBillsDataUrl;
 
+    function applyModalLifetimeDuePatch(dues) {
+        if (!dues || !dues.length) {
+            return;
+        }
+        var byId = {};
+        dues.forEach(function (d) {
+            if (d && d.id) {
+                byId[d.id] = d.total_due_amount;
+            }
+        });
+        (modalBillsData || []).forEach(function (b) {
+            if (byId[b.id] !== undefined) {
+                b.total_due_amount = byId[b.id];
+            }
+        });
+        document.querySelectorAll('#modalBillsTableBody tr').forEach(function (tr) {
+            var cb = tr.querySelector('.modal-bill-check');
+            if (!cb) {
+                return;
+            }
+            var id = cb.getAttribute('data-id');
+            if (byId[id] === undefined) {
+                return;
+            }
+            var td = tr.querySelector('td.text-end.fw-semibold');
+            if (td) {
+                td.textContent = byId[id];
+            }
+        });
+    }
+
+    function fetchModalLifetimeDueForCurrentPage() {
+        var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage }) + '&lifetime_due_only=1';
+        return fetch(url)
+            .then(function (r) { return r.json(); })
+            .then(function (data) {
+                applyModalLifetimeDuePatch(data.dues || []);
+            })
+            .catch(function () {});
+    }
+
+    function prefetchDefaultModalBillsCache() {
+        if (typeof fetch !== 'function' || typeof buildModalBillsDataUrl !== 'function') {
+            return;
+        }
+        var url = buildModalBillsDataUrl({ page: 1 }) + '&skip_lifetime_due=1';
+        fetch(url, { credentials: 'same-origin' }).catch(function () {});
+    }
+
+    var modalCachePrefetched = false;
+    function prefetchDefaultModalBillsCacheOnce() {
+        if (modalCachePrefetched) {
+            return;
+        }
+        modalCachePrefetched = true;
+        prefetchDefaultModalBillsCache();
+    }
+    window.prefetchDefaultModalBillsCacheOnce = prefetchDefaultModalBillsCacheOnce;
+
     function updateModalBillsSortHeaderIcons() {
         document.querySelectorAll('#modalBillsTable .mess-sort-th[data-sort]').forEach(function (th) {
             var col = th.getAttribute('data-sort') || '';
@@ -1492,13 +1554,18 @@ document.addEventListener('DOMContentLoaded', function() {
         applyModalBillsColumnVisibility();
     }
 
-    function loadModalBills(page) {
+    function loadModalBills(page, options) {
+        options = options || {};
         var requestedPage = parseInt(page, 10);
         modalBillsCurrentPage = isNaN(requestedPage) ? 1 : Math.max(1, requestedPage);
         var ct = document.getElementById('modal_client_type');
         var clientTypes = getChoicesMultiValues(ct);
         var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
-        var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage });
+        var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage, forPrint: !!options.forPrint });
+        var deferLifetimeDue = !options.forPrint && !options.includeLifetimeDue;
+        if (deferLifetimeDue) {
+            url += '&skip_lifetime_due=1';
+        }
         renderModalBillsSkeleton();
         fetch(url)
             .then(function(r) { return r.json(); })
@@ -1511,6 +1578,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalBillsCurrentPage = parseInt(pagination.page || modalBillsCurrentPage || 1, 10);
                 updateModalBillsSortHeaderIcons();
                 renderModalTable();
+
+                if (deferLifetimeDue && modalBillsData.length) {
+                    fetchModalLifetimeDueForCurrentPage();
+                }
 
                 // Also refresh Buyer Name dropdown in modal based on loaded bills.
                 // IMPORTANT: Only do this when no client type is selected, otherwise it
