@@ -27,14 +27,41 @@ class HostelFloorMasterDataTable extends DataTable
             ->addColumn('floor_name', fn($row) => $row->floor_name ?? '-')
             ->addColumn('action', function ($row) {
                 $editUrl = route('master.hostel.floor.edit', ['id' => encrypt($row->pk)]);
-                return '<a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>';
+                $deleteUrl = route('master.hostel.floor.destroy', ['id' => encrypt($row->pk)]);
+
+                // Presentation only: inline edit / status-toggle / delete icons.
+                // The .status-toggle AJAX hook is preserved; delete is status-gated
+                // (enabled only when inactive), mirroring the Building module.
+                $checked = $row->active_inactive == 1 ? 'checked' : '';
+                $deleteDisabled = $row->active_inactive == 0 ? '' : 'disabled';
+
+                return '
+                    <div class="hf-row-actions d-inline-flex align-items-center justify-content-center gap-2">
+                        <a href="' . $editUrl . '" class="hf-icon-btn hf-icon-edit hf-edit-trigger" title="Edit" aria-label="Edit"
+                            data-pk="' . encrypt($row->pk) . '"
+                            data-name="' . e($row->floor_name) . '"
+                            data-status="' . (int) $row->active_inactive . '">
+                            <i class="material-icons material-symbols-rounded">edit</i>
+                        </a>
+                        <div class="form-check form-switch m-0 hf-row-switch">
+                            <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                data-table="floor_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                        </div>
+                        <form action="' . $deleteUrl . '" method="POST" class="d-inline m-0" onsubmit="return confirm(\'Are you sure you want to delete this floor?\')">
+                            ' . csrf_field() . '
+                            ' . method_field('DELETE') . '
+                            <button type="submit" class="hf-icon-btn hf-icon-delete" title="Delete" aria-label="Delete" ' . $deleteDisabled . '>
+                                <i class="material-icons material-symbols-rounded">delete</i>
+                            </button>
+                        </form>
+                    </div>
+                ';
             })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="floor_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                // Presentation only: render the active/inactive flag as a pill badge.
+                return $row->active_inactive == 1
+                    ? '<span class="badge rounded-1 hf-badge hf-badge-active">Active</span>'
+                    : '<span class="badge rounded-1 hf-badge hf-badge-inactive">Inactive</span>';
             })
 
             ->setRowId('pk')
@@ -91,10 +118,10 @@ class HostelFloorMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('floor_name')->title('Floor Name')->orderable(false)->addClass('text-center'),
-            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center')
         ];
     }
 

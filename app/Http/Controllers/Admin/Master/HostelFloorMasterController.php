@@ -37,7 +37,11 @@ class HostelFloorMasterController extends Controller
             $floorMaster = new FloorMaster();
         }
         $floorMaster->floor_name = $request->floor_name;
-        $floorMaster->active_inactive = 1;
+        // Respect the Floor Status sent from the form when present; otherwise
+        // keep the original default of "active" for backward compatibility.
+        $floorMaster->active_inactive = $request->filled('active_inactive')
+            ? (int) $request->active_inactive
+            : 1;
 
         $floorMaster->save();
 
@@ -56,5 +60,12 @@ class HostelFloorMasterController extends Controller
         } catch (\Exception $th) {
             return redirect()->route('master.hostel.floor.index')->with('error', 'Error exporting data: ' . $th->getMessage());
         }
+    }
+
+    public function destroy($id){
+        $id = decrypt($id);
+        $floorMaster = FloorMaster::findOrFail($id);
+        $floorMaster->delete();
+        return redirect()->route('master.hostel.floor.index')->with('success', 'Floor deleted successfully.');
     }
 }
