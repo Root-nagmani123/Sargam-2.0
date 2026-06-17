@@ -23,6 +23,10 @@ class EstateMigrationReportDataTable extends DataTable
             ->editColumn('employee_name', fn ($row) => $row->employee_name ?? '—')
             ->editColumn('department_name', fn ($row) => $row->department_name ?? '—')
             ->editColumn('employee_type', fn ($row) => $row->employee_type ?? '—')
+            ->editColumn('date_of_allotment', fn ($row) => $row->date_of_allotment ? $row->date_of_allotment->format('d-m-Y') : '—')
+            ->editColumn('date_of_exit', fn ($row) => $row->date_of_exit ? $row->date_of_exit->format('d-m-Y') : '—')
+            ->editColumn('occupancy_status', fn ($row) => $row->occupancy_status ?? '—')
+            ->editColumn('stay_period_text', fn ($row) => $row->stay_period_text ?? '—')
             ->setRowId('id')
             ->filter(function ($query) {
                 $req = request();
@@ -50,6 +54,9 @@ class EstateMigrationReportDataTable extends DataTable
                 if ($req->filled('filter_employee_type')) {
                     $query->where('employee_type', $req->filter_employee_type);
                 }
+                if ($req->filled('filter_stay_period_text')) {
+                    $query->where('stay_period_text', $req->filter_stay_period_text);
+                }
                 $searchValue = $req->input('search.value');
                 if (! empty($searchValue)) {
                     $query->where(function ($q) use ($searchValue) {
@@ -60,7 +67,9 @@ class EstateMigrationReportDataTable extends DataTable
                             ->orWhere('house_no', 'like', "%{$searchValue}%")
                             ->orWhere('employee_name', 'like', "%{$searchValue}%")
                             ->orWhere('department_name', 'like', "%{$searchValue}%")
-                            ->orWhere('employee_type', 'like', "%{$searchValue}%");
+                            ->orWhere('employee_type', 'like', "%{$searchValue}%")
+                            ->orWhere('occupancy_status', 'like', "%{$searchValue}%")
+                            ->orWhere('stay_period_text', 'like', "%{$searchValue}%");
                     });
                 }
             }, true);
@@ -79,6 +88,10 @@ class EstateMigrationReportDataTable extends DataTable
                 'employee_name',
                 'department_name',
                 'employee_type',
+                'date_of_allotment',
+                'date_of_exit',
+                'occupancy_status',
+                'stay_period_text',
                 'created_at',
                 'updated_at',
             ])
@@ -132,6 +145,10 @@ class EstateMigrationReportDataTable extends DataTable
             Column::make('employee_name')->title('Employee Name')->orderable(true)->searchable(true),
             Column::make('department_name')->title('Department')->orderable(true)->searchable(true),
             Column::make('employee_type')->title('Employee Type')->orderable(true)->searchable(true),
+            Column::make('date_of_allotment')->title('Date of Allotment')->orderable(true)->searchable(false),
+            Column::make('date_of_exit')->title('Date of Exit')->orderable(true)->searchable(false),
+            Column::make('occupancy_status')->title('Occupancy Status')->orderable(true)->searchable(true),
+            Column::make('stay_period_text')->title('Stay Period')->orderable(true)->searchable(true),
         ];
     }
 

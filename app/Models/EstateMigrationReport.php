@@ -27,9 +27,21 @@ class EstateMigrationReport extends Model
         'employee_name',
         'department_name',
         'employee_type',
+        'date_of_allotment',
+        'date_of_exit',
+        'occupancy_status',
+        'total_stay_years',
+        'total_stay_months',
+        'total_stay_days',
+        'stay_period_text',
     ];
 
     protected $casts = [
-        'allotment_year' => 'integer',
+        'allotment_year'    => 'integer',
+        'date_of_allotment' => 'date',
+        'date_of_exit'      => 'date',
+        'total_stay_years'  => 'integer',
+        'total_stay_months' => 'integer',
+        'total_stay_days'   => 'integer',
     ];
 }   
