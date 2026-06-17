@@ -482,6 +482,126 @@ function get_auth_faculty_master_pk(): ?int
     return provision_faculty_profile_from_employee_user();
 }
 
+if (!function_exists('extract_faculty_ids_from_raw')) {
+    /**
+     * Parse faculty identifiers from scalar, CSV, or JSON array values.
+     *
+     * @param mixed $raw
+     * @return array<int>
+     */
+    function extract_faculty_ids_from_raw($raw): array
+    {
+        if ($raw === null) {
+            return [];
+        }
+
+        if (is_int($raw)) {
+            return $raw > 0 ? [$raw] : [];
+        }
+
+        if (is_array($raw)) {
+            $ids = [];
+            foreach ($raw as $v) {
+                if (is_numeric($v)) {
+                    $ids[] = (int) $v;
+                }
+            }
+
+            return array_values(array_unique(array_filter($ids)));
+        }
+
+        $text = trim((string) $raw);
+        if ($text === '') {
+            return [];
+        }
+
+        $decoded = json_decode($text, true);
+        if (json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+            $ids = [];
+            foreach ($decoded as $v) {
+                if (is_numeric($v)) {
+                    $ids[] = (int) $v;
+                }
+            }
+
+            return array_values(array_unique(array_filter($ids)));
+        }
+
+        if (strpos($text, ',') !== false) {
+            $ids = [];
+            foreach (explode(',', $text) as $part) {
+                $part = trim($part);
+                if (is_numeric($part)) {
+                    $ids[] = (int) $part;
+                }
+            }
+
+            return array_values(array_unique(array_filter($ids)));
+        }
+
+        return is_numeric($text) ? [(int) $text] : [];
+    }
+}
+
+if (!function_exists('get_timetable_faculty_ids')) {
+    /**
+     * Resolve faculty ids from timetable-like object.
+     *
+     * @param mixed $timetable
+     * @return array<int>
+     */
+    function get_timetable_faculty_ids($timetable): array
+    {
+        if (!$timetable) {
+            return [];
+        }
+
+        $ids = [];
+        $ids = array_merge($ids, extract_faculty_ids_from_raw(data_get($timetable, 'faculty_master')));
+        $ids = array_merge($ids, extract_faculty_ids_from_raw(data_get($timetable, 'internal_faculty')));
+
+        return array_values(array_unique(array_filter($ids)));
+    }
+}
+
+if (!function_exists('get_timetable_faculty_names')) {
+    /**
+     * Resolve displayable faculty names from timetable-like object.
+     *
+     * @param mixed $timetable
+     * @param string $fallback
+     * @return string
+     */
+    function get_timetable_faculty_names($timetable, string $fallback = 'N/A'): string
+    {
+        if (!$timetable) {
+            return $fallback;
+        }
+
+        $ids = get_timetable_faculty_ids($timetable);
+        if (empty($ids)) {
+            $directName = trim((string) data_get($timetable, 'faculty.full_name', ''));
+            return $directName !== '' ? $directName : $fallback;
+        }
+
+        $nameById = \App\Models\FacultyMaster::query()
+            ->whereIn('pk', $ids)
+            ->whereNotNull('full_name')
+            ->pluck('full_name', 'pk')
+            ->toArray();
+
+        $ordered = [];
+        foreach ($ids as $id) {
+            if (!empty($nameById[$id])) {
+                $ordered[] = (string) $nameById[$id];
+            }
+        }
+
+        $ordered = array_values(array_unique(array_filter($ordered)));
+        return !empty($ordered) ? implode(', ', $ordered) : $fallback;
+    }
+}
+
 /**
  * For employee logins (user_category E) with Internal/Guest Faculty role but no faculty_master row:
  * link an existing faculty by mobile/email, or create a minimal faculty_master linked to employee_master.
