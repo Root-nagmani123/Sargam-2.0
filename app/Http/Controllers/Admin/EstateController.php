@@ -12201,8 +12201,15 @@ class EstateController extends Controller
             ->orderBy('employee_type')
             ->pluck('employee_type');
 
+        $stayPeriods = EstateMigrationReport::select('stay_period_text')
+            ->whereNotNull('stay_period_text')
+            ->where('stay_period_text', '!=', '')
+            ->distinct()
+            ->orderBy('stay_period_text')
+            ->pluck('stay_period_text');
+
         return $dataTable->render('admin.estate.estate_migration_report', compact(
-            'years', 'campuses', 'buildings', 'buildingTypes', 'houseNos', 'employeeNames', 'departments', 'employeeTypes'
+            'years', 'campuses', 'buildings', 'buildingTypes', 'houseNos', 'employeeNames', 'departments', 'employeeTypes', 'stayPeriods'
         ));
     }
 
@@ -12223,6 +12230,7 @@ class EstateController extends Controller
         $employeeName = $request->query('employee_name');
         $department = $request->query('department');
         $employeeType = $request->query('employee_type');
+        $stayPeriod = $request->query('stay_period');
 
         $response = [];
 
@@ -12399,6 +12407,39 @@ class EstateController extends Controller
                 ? $response['employeeTypes']
                 : collect($response['employeeTypes'])->push($employeeType)->sort()->values();
         }
+
+        // Stay periods: filtered by all upstream filters
+        $stayPeriodQuery = EstateMigrationReport::query();
+        if ($year !== null && $year !== '') {
+            $stayPeriodQuery->where('allotment_year', (int) $year);
+        }
+        if ($campus !== null && $campus !== '') {
+            $stayPeriodQuery->where('campus_name', $campus);
+        }
+        if ($building !== null && $building !== '') {
+            $stayPeriodQuery->where('building_name', $building);
+        }
+        if ($type !== null && $type !== '') {
+            $stayPeriodQuery->where('type_of_building', $type);
+        }
+        if ($houseNo !== null && $houseNo !== '') {
+            $stayPeriodQuery->where('house_no', $houseNo);
+        }
+        if ($employeeName !== null && $employeeName !== '') {
+            $stayPeriodQuery->where('employee_name', $employeeName);
+        }
+        if ($department !== null && $department !== '') {
+            $stayPeriodQuery->where('department_name', $department);
+        }
+        if ($employeeType !== null && $employeeType !== '') {
+            $stayPeriodQuery->where('employee_type', $employeeType);
+        }
+        $response['stayPeriods'] = $stayPeriodQuery->select('stay_period_text')
+            ->whereNotNull('stay_period_text')
+            ->where('stay_period_text', '!=', '')
+            ->distinct()
+            ->orderBy('stay_period_text')
+            ->pluck('stay_period_text');
 
         return response()->json($response);
     }
