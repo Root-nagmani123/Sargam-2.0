@@ -5,7 +5,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <x-breadcrum title="Meal Rate Master" />
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-header">
             <h5 class="mb-0">
                 <iconify-icon icon="solar:clipboard-list-bold" class="me-2"></iconify-icon>

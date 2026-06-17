@@ -8,7 +8,7 @@
     <x-breadcrum title="Class Session Master" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-body">
             <h4 class="card-title mb-3">
                 {{ !empty($classSessionMaster) ? 'Edit Class Session' : 'Create Class Session' }}

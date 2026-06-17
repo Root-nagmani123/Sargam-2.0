@@ -133,7 +133,7 @@
             Sorry! The page you're looking for doesn't exist. It might have been moved or deleted.
         </p>
         <div class="action-buttons">
-            <a href="{{ url('/') }}" class="btn btn-primary">Go Home</a>
+            <a href="{{ auth()->check() ? route('admin.dashboard') : url('/') }}" class="btn btn-primary">Go to Dashboard</a>
             <button onclick="history.back()" class="btn btn-secondary">Go Back</button>
         </div>
     </div>

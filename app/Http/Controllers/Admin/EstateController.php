@@ -54,7 +54,7 @@ class EstateController extends Controller
      */
     private function authorizeEstateMasterMeterAndReports(): void
     {
-        abort_unless(hasRole('Estate'), 403, 'You do not have permission to access this estate section.');
+        abort_unless(isEstateAuthority(), 403, 'You do not have permission to access this estate section.');
     }
 
     /**
@@ -300,11 +300,11 @@ class EstateController extends Controller
     private function denyIfHacPersonOnly(): void
     {
         if (hasRole('HAC Person')
-            && ! hasRole('Estate')
-            && ! hasRole('Admin')
-            && ! hasRole('Training-Induction')
-            && ! hasRole('Training-MCTP')
-            && ! hasRole('IST')
+            && ! hasRole('Estate Admin')
+            && ! hasRole('Super Admin')
+            && ! hasRole('Training Induction Admin')
+            && ! hasRole('Training MCTP Admin')
+            && ! hasRole('Training IST')
             && ! hasRole('Staff')
             && ! hasRole('Student-OT')
             && ! hasRole('Doctor')
@@ -319,7 +319,7 @@ class EstateController extends Controller
      */
     private function ensureChangeRequestOwnership(int $changeRequestPk): void
     {
-        if (hasRole('Estate')) {
+        if (isEstateAuthority()) {
             return;
         }
         $user = Auth::user();
@@ -365,7 +365,7 @@ class EstateController extends Controller
         // Self-service + Home sidebar (?scope=self): resolve employee_master.pk for prefilled add form.
         $needsSelfEmployeePk = $user && (
             $this->isEstateAuthorityPersonalScope(request())
-            || ! (hasRole('Estate') || hasRole('HAC Person'))
+            || ! (hasRole('Estate Admin') || hasRole('HAC Person') || isEstateAuthority())
         );
         if ($needsSelfEmployeePk) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
@@ -403,7 +403,7 @@ class EstateController extends Controller
      */
     public function putInHacAction(Request $request)
     {
-        if (! (hasRole('HAC Person') || hasRole('Estate'))) {
+        if (! (hasRole('HAC Person') || isEstateAuthority())) {
             abort(403, 'You do not have permission to put requests in HAC.');
         }
 
@@ -415,6 +415,11 @@ class EstateController extends Controller
         $updated = EstateHomeRequestDetails::whereIn('pk', $request->ids)
             ->where('hac_status', 0)
             ->update(['hac_status' => 1, 'f_status' => 1]);
+
+        if ($updated > 0) {
+            EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
+            EstateHacApprovedDataTable::bumpListingCacheEpoch();
+        }
 
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json([
@@ -666,7 +671,7 @@ class EstateController extends Controller
 
         $user = Auth::user();
         // Training roles should behave like normal staff in estate request flow.
-        $isEstateAuthority = $user && hasRole('Estate');
+        $isEstateAuthority = $user && (isEstateAuthority());
         $selfEmployeeIds = [];
         if ($user && ! $isEstateAuthority) {
             $selfEmployeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
@@ -747,14 +752,31 @@ class EstateController extends Controller
             'change_status' => (int) ($request->input('change_status', 0)),
         ];
 
+        if (! $isEdit) {
+            // New requests must enter the Put In HAC queue (ignore any posted workflow flags).
+            $data['status'] = 0;
+            $data['app_status'] = 0;
+            $data['hac_status'] = 0;
+            $data['f_status'] = 0;
+            $data['change_status'] = 0;
+        } else {
+            // Edit modal does not post workflow fields; preserve existing HAC / change flags.
+            $workflow = EstateHomeRequestDetails::findOrFail($request->id);
+            $data['app_status'] = (int) ($workflow->app_status ?? 0);
+            $data['hac_status'] = (int) ($workflow->hac_status ?? 0);
+            $data['f_status'] = (int) ($workflow->f_status ?? 0);
+            $data['change_status'] = (int) ($workflow->change_status ?? 0);
+        }
+
         if ($user && ! $isEstateAuthority) {
             $data['employee_pk'] = !empty($selfEmployeeIds) ? (int) reset($selfEmployeeIds) : 0;
         } else {
             $data['employee_pk'] = (int) ($request->input('employee_pk', 0));
         }
 
-        // Non–Estate/Admin/Super Admin users cannot choose eligibility; force payroll-derived value when available.
-        if ($user && ! $isEstateAuthority && (int) ($data['employee_pk'] ?? 0) > 0) {
+        // Match UI: only Estate / Admin / Super Admin may choose eligibility; others use payroll-derived value.
+        $canChooseEligibility = $user && (isEstateAuthority());
+        if ($user && ! $canChooseEligibility && (int) ($data['employee_pk'] ?? 0) > 0) {
             $resolvedElig = $this->resolveEstateEligibilityTypePkForEmployeeMasterPk((int) $data['employee_pk']);
             if ($resolvedElig > 0) {
                 $data['eligibility_type_pk'] = $resolvedElig;
@@ -832,6 +854,10 @@ class EstateController extends Controller
             $record = EstateHomeRequestDetails::findOrFail($request->id);
             $record->update($data);
             $message = 'Estate request updated successfully.';
+            EstateRequestForEstateDataTable::bumpListingCacheEpoch();
+            if ((int) ($record->hac_status ?? 0) === 0 && (int) ($record->change_status ?? 0) === 0) {
+                EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
+            }
         } else {
             $data['employee_pk'] = $data['employee_pk'] ?: 0;
             $record = EstateHomeRequestDetails::create($data);
@@ -842,66 +868,34 @@ class EstateController extends Controller
                     $notificationService = app(NotificationService::class);
                     $receiverService = app(NotificationReceiverService::class);
                     $approverUserIds = $receiverService->getEstateRequestApproverUserIds();
-                    $hacUserIds = $receiverService->getEstateHacPersonUserIds();
                     $empLabel = trim((string) ($validated['emp_name'] ?? ''));
                     $idLabel = trim((string) ($validated['employee_id'] ?? ''));
                     $who = $empLabel !== '' || $idLabel !== ''
                         ? trim($empLabel . ($idLabel !== '' ? ' (' . $idLabel . ')' : ''))
                         : 'An employee';
                     $senderId = (int) ($user->user_id ?? 0);
-
-                    $hacSet = [];
-                    foreach ($hacUserIds as $rid) {
-                        $hacSet[(int) $rid] = true;
-                    }
-
-                    $titleApprove = 'New estate request';
                     $bodyApprove = "{$who} has submitted an estate request. Please review and approve.";
-                    $titleHac = 'Estate request — Put in HAC';
-                    $bodyHac = "{$who} has submitted an estate request. Please put it in HAC and complete HAC approval.";
-                    $bodyBoth = "{$who} has submitted an estate request. Please review and approve, put it in HAC, and complete HAC approval.";
 
-                    $sent = [];
                     foreach ($approverUserIds as $rid) {
                         $rid = (int) $rid;
                         if ($senderId > 0 && $rid === $senderId) {
                             continue;
                         }
-                        $inHac = isset($hacSet[$rid]);
-                        $body = $inHac ? $bodyBoth : $bodyApprove;
-                        $title = $inHac ? 'New estate request (approve / HAC)' : $titleApprove;
                         $notificationService->create(
                             $rid,
                             'estate_request',
                             'Estate',
                             (int) $record->pk,
-                            $title,
-                            $body
-                        );
-                        $sent[$rid] = true;
-                    }
-
-                    foreach ($hacUserIds as $rid) {
-                        $rid = (int) $rid;
-                        if ($senderId > 0 && $rid === $senderId) {
-                            continue;
-                        }
-                        if (isset($sent[$rid])) {
-                            continue;
-                        }
-                        $notificationService->create(
-                            $rid,
-                            'estate_request',
-                            'EstateHac',
-                            (int) $record->pk,
-                            $titleHac,
-                            $bodyHac
+                            'New estate request',
+                            $bodyApprove
                         );
                     }
                 } catch (\Throwable $e) {
                     Log::error('Failed to send estate request approver notifications: ' . $e->getMessage());
                 }
             }
+            EstateRequestForEstateDataTable::bumpListingCacheEpoch();
+            EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
         }
 
         if ($request->ajax() || $request->wantsJson()) {
@@ -1007,7 +1001,7 @@ class EstateController extends Controller
                 ->map(fn ($v) => (int) $v)
                 ->all();
         }
-
+           
         // Blocked set (raw ids from existing data) = active possession wale + pending request wale.
         // These values may be mixed (employee_master.pk OR employee_master.pk_old) depending on legacy/migration.
         $blockedEmployeePksRaw = array_values(array_unique(array_merge($activeEmployeePks, $pendingRequestEmployeePks)));
@@ -1053,7 +1047,7 @@ class EstateController extends Controller
 
         // Self-service: staff / HAC / etc. see only themselves. Estate role sees full employee list; ?scope=self narrows to self.
         $user = Auth::user();
-        $isEstateAuthority = hasRole('Estate');
+        $isEstateAuthority = isEstateAuthority();
         $restrictToSelf = $user && (! $isEstateAuthority || $this->isEstateAuthorityPersonalScope($request));
         $employeeIds = [];
         if ($restrictToSelf) {
@@ -1290,7 +1284,7 @@ class EstateController extends Controller
 
         // Self-service: non-estate/admin/super-admin users must not fetch details for other employees
         $user = Auth::user();
-        if ($user && ! hasRole('Estate')) {
+        if ($user && ! (isEstateAuthority())) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             // Normalize possible pk_old values to canonical employee_master.pk for correct comparison
             if (!empty($employeeIds)) {
@@ -1497,7 +1491,7 @@ class EstateController extends Controller
         }
 
         $user = Auth::user();
-        $isEstateAuthority = $user && hasRole('Estate');
+        $isEstateAuthority = $user && (isEstateAuthority());
         if ($user && ! $isEstateAuthority) {
             $selfEmployeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (! in_array((string) $record->employee_pk, array_map('strval', $selfEmployeeIds), true)) {
@@ -1510,6 +1504,8 @@ class EstateController extends Controller
         }
 
         $record->delete();
+        EstateRequestForEstateDataTable::bumpListingCacheEpoch();
+        EstateRequestPutInHacDataTable::bumpListingCacheEpoch();
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => true, 'message' => 'Estate request deleted successfully.']);
         }
@@ -1874,7 +1870,7 @@ class EstateController extends Controller
             ->select('ec.pk', 'ec.estate_change_req_ID');
 
         $user = Auth::user();
-        if ($user && ! hasRole('Estate')) {
+        if ($user && ! (isEstateAuthority())) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (! empty($employeeIds)) {
                 $optionsQuery->whereIn('eh.employee_pk', $employeeIds);
@@ -1899,7 +1895,7 @@ class EstateController extends Controller
             ->select('eh.pk', 'eh.req_id', 'eh.emp_name', 'eh.employee_id', 'eh.current_alot')
             ->orderByDesc('eh.pk')
             ->limit(200);
-        if ($user && ! hasRole('Estate')) {
+        if ($user && ! (isEstateAuthority())) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (! empty($employeeIds)) {
                 $homeRequestsQuery->whereIn('eh.employee_pk', $employeeIds);
@@ -2189,7 +2185,7 @@ class EstateController extends Controller
             ->orderByDesc('ec.pk');
 
         $user = Auth::user();
-        if ($user && ! hasRole('Estate')) {
+        if ($user && ! (isEstateAuthority())) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (!empty($employeeIds)) {
                 $query->whereIn('eh.employee_pk', $employeeIds);
@@ -2717,7 +2713,7 @@ class EstateController extends Controller
      */
     public function allotNewRequest(Request $request, $id)
     {
-        if (! (hasRole('HAC Person') || hasRole('Estate'))) {
+        if (! (hasRole('HAC Person') || hasRole('Estate Admin'))) {
             abort(403, 'You do not have permission to allot estate houses.');
         }
 
@@ -2877,7 +2873,7 @@ class EstateController extends Controller
      */
     public function approveChangeRequest(Request $request, $id)
     {
-        if (! (hasRole('HAC Person') || hasRole('Estate'))) {
+        if (! (hasRole('HAC Person') || hasRole('Estate Admin'))) {
             abort(403, 'You do not have permission to approve estate change requests.');
         }
 
@@ -3021,7 +3017,7 @@ class EstateController extends Controller
      */
     public function disapproveChangeRequest(Request $request, $id)
     {
-        if (! (hasRole('HAC Person') || hasRole('Estate'))) {
+        if (! (hasRole('HAC Person') || hasRole('Estate Admin'))) {
             abort(403, 'You do not have permission to disapprove estate change requests.');
         }
 
@@ -4986,7 +4982,7 @@ class EstateController extends Controller
 
         // Self-service: non-estate/admin users should only see their own HAC-approved requester(s) in dropdown.
         $user = Auth::user();
-        $isEstateAuthority = $user && hasRole('Estate');
+        $isEstateAuthority = $user && (isEstateAuthority());
         if ($user && ! $isEstateAuthority) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
             if (!empty($employeeIds)) {
@@ -5038,7 +5034,7 @@ class EstateController extends Controller
             if (\Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2')) {
                 $editRequesterQuery->addSelect('epd.electric_meter_reading_2');
             }
-            if ($user && ! hasRole('Estate')) {
+            if ($user && ! (isEstateAuthority())) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
                 if (! empty($employeeIds)) {
                     $editRequesterQuery->where(function ($q) use ($employeeIds) {
@@ -5135,7 +5131,7 @@ class EstateController extends Controller
         // For Estate/Admin roles, electric meter reading (primary/secondary) is required.
         // For normal users (self-service), meter reading is optional; admin will update later.
         $user = Auth::user();
-        $isEstateAuthority = $user && hasRole('Estate');
+        $isEstateAuthority = $user && (isEstateAuthority());
 
         if ($isEstateAuthority) {
             $validator->after(function ($v) use ($request) {
@@ -5175,7 +5171,7 @@ class EstateController extends Controller
         // Date editability:
         // UI keeps these readonly for non-authority users, but enforce server-side too.
         $user = Auth::user();
-        $canEditDates = $user && hasRole('Estate');
+        $canEditDates = $user && (isEstateAuthority());
         if (! $canEditDates) {
             // When dates already exist on the latest possession record, keep them immutable.
             // If they are empty (legacy/incomplete), fall back to validated input so flow doesn't break.
@@ -5200,7 +5196,7 @@ class EstateController extends Controller
         // Lekin pehli baar possession details fill karne ke liye (electric_meter_reading 0/NULL)
         // unko allow karna hai – warna staff apna first possession complete hi nahi kar paayega.
         $user = Auth::user();
-        $isEstateAuthority = $user && hasRole('Estate');
+        $isEstateAuthority = $user && (isEstateAuthority());
         $hasFinalReading = $existingPossession && (int) ($existingPossession->electric_meter_reading ?? 0) > 0;
         if (! $isEstateAuthority && $hasFinalReading) {
             return redirect()
@@ -5369,7 +5365,7 @@ class EstateController extends Controller
      */
     public function destroyPossessionDetails(Request $request, $id)
     {
-        if (! hasRole('Estate')) {
+        if (! (isEstateAuthority())) {
             $message = 'You are not authorized to delete this possession.';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $message], 403);
@@ -5415,7 +5411,7 @@ class EstateController extends Controller
      */
     public function destroyPossessionDetailsBulk(Request $request)
     {
-        if (! hasRole('Estate')) {
+        if (! (isEstateAuthority())) {
             $message = 'You are not authorized to delete possessions.';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $message], 403);
@@ -5474,7 +5470,7 @@ class EstateController extends Controller
      */
     public function destroyPossession(Request $request, $id)
     {
-        if (! hasRole('Estate')) {
+        if (! (isEstateAuthority())) {
             $message = 'You are not authorized to delete this possession.';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $message], 403);
@@ -5503,7 +5499,7 @@ class EstateController extends Controller
      */
     public function destroyPossessionBulk(Request $request)
     {
-        if (! hasRole('Estate')) {
+        if (! (isEstateAuthority())) {
             $message = 'You are not authorized to delete possessions.';
             if ($request->ajax() || $request->wantsJson()) {
                 return response()->json(['success' => false, 'message' => $message], 403);
@@ -5647,7 +5643,7 @@ class EstateController extends Controller
 
             // LBSNAA: non–Estate-role users see only their own name; Estate sees full list.
             $user = Auth::user();
-            if ($user && ! hasRole('Estate')) {
+            if ($user && ! (isEstateAuthority())) {
                 $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null);
                 if (!empty($employeeIds)) {
                     $query->whereIn('ehrd.employee_pk', $employeeIds);
@@ -5979,7 +5975,7 @@ class EstateController extends Controller
      */
     public function updateMeterReading()
     {
-        if (! hasRole('Estate')) {
+        if (! (isEstateAuthority())) {
             abort(403, 'You do not have permission to update reading and meter no. You can only view the list.');
         }
 
@@ -6423,7 +6419,7 @@ class EstateController extends Controller
 
         $hasSecondaryPossessionReadingCol = \Illuminate\Support\Facades\Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
 
-        $canSeeAll = (hasRole('Estate') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        $canSeeAll = (isEstateAuthority() || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'));
         $restrictedEmployeeIdsSorted = null;
         if (! $canSeeAll) {
             if (\Illuminate\Support\Facades\Auth::check()) {
@@ -6597,7 +6593,7 @@ class EstateController extends Controller
      */
     public function storeMeterReadings(Request $request)
     {
-        if (! hasRole('Estate')) {
+        if (! (isEstateAuthority())) {
             abort(403, 'You do not have permission to update reading and meter no.');
         }
 
@@ -7586,8 +7582,8 @@ class EstateController extends Controller
         $hasEpoReading2 = Schema::hasColumn('estate_possession_other', 'meter_reading_oth1');
         $hasEurTable = Schema::hasTable('estate_update_reading');
 
-        $canSeeAllUpdateMeterNo = hasRole('Estate')
-            || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+        $canSeeAllUpdateMeterNo = isEstateAuthority()
+            || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
 
         $restrictEmployeePksSorted = null;
         if (! $canSeeAllUpdateMeterNo) {
@@ -8919,12 +8915,27 @@ class EstateController extends Controller
     }
 
     /**
-     * Admin / Estate / Super Admin opening estate with ?scope=self (e.g. Home sidebar) should see only their own rows.
+     * Home sidebar / My Estate Bill: ?scope=self means personal (self-service) view, any role.
      */
     private function isEstateAuthorityPersonalScope(\Illuminate\Http\Request $request): bool
     {
-        return $request->get('scope') === 'self'
-            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        return $request->get('scope') === 'self';
+    }
+
+    /**
+     * Generate Bill list / print: restrict to logged-in user's employee_pk(s).
+     * Privileged roles see all unless ?scope=self; everyone else always sees own rows only.
+     */
+    private function shouldApplyGenerateEstateBillSelfFilter(\Illuminate\Http\Request $request): bool
+    {
+        if ($this->isEstateAuthorityPersonalScope($request)) {
+            return true;
+        }
+
+        $hasPrivBill = isEstateAuthority()
+            || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+
+        return ! $hasPrivBill;
     }
 
     /**
@@ -9270,7 +9281,7 @@ class EstateController extends Controller
         $bills = collect();
 
         // Search: Estate role only (not Home ?scope=self). Admin / Super Admin use self-service bill view without global search.
-        $showGenerateEstateBillSearch = hasRole('Estate')
+        $showGenerateEstateBillSearch = (isEstateAuthority())
             && ! $this->isEstateAuthorityPersonalScope($request);
         $search = $showGenerateEstateBillSearch ? $searchRaw : '';
 
@@ -9280,9 +9291,7 @@ class EstateController extends Controller
             [$year, $month] = explode('-', $billMonth);
 
             $hasEpdReading2 = Schema::hasColumn('estate_possession_details', 'electric_meter_reading_2');
-            $hasPrivBill = hasRole('Estate')
-                || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
-            $applySelfFilter = ! $hasPrivBill || $this->isEstateAuthorityPersonalScope($request);
+            $applySelfFilter = $this->shouldApplyGenerateEstateBillSelfFilter($request);
 
             $restrictEmployeePksSorted = null;
             if ($applySelfFilter) {
@@ -9348,11 +9357,11 @@ class EstateController extends Controller
             });
         }
 
-        $showUnitSubTypeFilter = hasRole('Estate')
+        $showUnitSubTypeFilter = (isEstateAuthority())
             && ! $this->isEstateAuthorityPersonalScope($request);
 
         $estateBillIsPersonalView = $this->isEstateAuthorityPersonalScope($request)
-            || ! hasRole('Estate');
+            || ! (isEstateAuthority());
 
         return view('admin.estate.generate_estate_bill', compact(
             'unitSubTypes',
@@ -9372,7 +9381,7 @@ class EstateController extends Controller
      */
     public function verifySelectedBillsLbsna(Request $request)
     {
-        if (! hasRole('Estate') && ! hasRole('Admin') && ! hasRole('Super Admin')) {
+        if (! isEstateAuthority()) {
             abort(403, 'You do not have permission to notify selected bills.');
         }
 
@@ -10176,7 +10185,7 @@ class EstateController extends Controller
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
             }
 
-            if ($this->isEstateAuthorityPersonalScope($request)) {
+            if ($this->shouldApplyGenerateEstateBillSelfFilter($request)) {
                 $this->applyGenerateEstateBillEmployeeSelfFilter($query);
             }
 
@@ -10312,7 +10321,7 @@ class EstateController extends Controller
                 $query->where('ehm.estate_unit_sub_type_master_pk', $unitSubTypePk);
             }
 
-            if ($this->isEstateAuthorityPersonalScope($request)) {
+            if ($this->shouldApplyGenerateEstateBillSelfFilter($request)) {
                 $this->applyGenerateEstateBillEmployeeSelfFilter($query);
             }
 
@@ -10948,7 +10957,7 @@ class EstateController extends Controller
 
         $hasUnitTypeOnSubType = \Illuminate\Support\Facades\Schema::hasColumn('estate_unit_sub_type_master', 'estate_unit_type_master_pk');
 
-        $canSeeAll = (hasRole('Estate') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST'));
+        $canSeeAll = (isEstateAuthority() || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'));
         $restrictedEmployeeIdsSorted = null;
         if (! $canSeeAll) {
             if (Auth::check()) {
@@ -11413,7 +11422,7 @@ class EstateController extends Controller
         $billMonthVariants = array_unique(array_filter($billMonthVariants, fn ($v) => $v !== ''));
 
         // Restrict to current user's bills unless Estate role (full grid)
-        $filterByUser = ! hasRole('Estate');
+        $filterByUser = ! (isEstateAuthority());
         $employeeIds = [];
         $currentUserId = null;
         $currentUserEmail = null;

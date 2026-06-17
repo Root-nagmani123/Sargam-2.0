@@ -5,7 +5,7 @@
     <x-breadcrum title="Employee ID Card Request Details"></x-breadcrum>
     <x-session_message />
     <!-- Header Card - Bootstrap 5.3 -->
-    <div class="card border-0 shadow rounded-3 mb-4 overflow-hidden" style="border-left: 4px solid #004a93;">
+    <div class="card border-0 shadow rounded-3 mb-4 overflow-hidden" >
         <div class="card-body p-4 p-lg-5">
             <div class="d-flex justify-content-between align-items-center">
                 <div>

@@ -10,7 +10,7 @@
         <x-session_message />
 
         <!-- start Vertical Steps Example -->
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-body">
                 <h4 class="card-title mb-0">Edit Member</h4>
                 <h6 class="card-subtitle mb-3"></h6>
@@ -56,7 +56,7 @@
         <!-- end Vertical Steps Example -->
     </div>
 
-    @section('scripts')
+    @push('scripts')
         <script>
             let employeePK = null;
 
@@ -213,6 +213,6 @@
             });
         </script>
 
-@endsection
+@endpush
 
     @endsection

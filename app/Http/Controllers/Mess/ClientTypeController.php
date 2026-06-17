@@ -3,15 +3,35 @@
 namespace App\Http\Controllers\Mess;
 
 use App\Http\Controllers\Controller;
+use App\Support\DataTableRedisCache;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use App\Models\Mess\ClientType;
 
 class ClientTypeController extends Controller
 {
+    private const LIST_CACHE_EPOCH_KEY = 'mess_client_type_master_list_epoch';
+
+    public static function bumpListCacheEpoch(): void
+    {
+        DataTableRedisCache::bumpListEpoch(self::LIST_CACHE_EPOCH_KEY, 'ClientTypeController');
+    }
+
     public function index()
     {
-        $clientTypes = ClientType::orderByDesc('id')->get();
+        $epoch = DataTableRedisCache::readListEpoch(self::LIST_CACHE_EPOCH_KEY);
+        $cacheKey = 'mess_client_type_master_list:v1:' . md5(json_encode(['epoch' => $epoch]));
+
+        $clientTypes = DataTableRedisCache::remember(
+            $cacheKey,
+            [
+                'enabled' => 'MESS_CLIENT_TYPE_MASTER_LIST_CACHE_ENABLED',
+                'seconds' => 'MESS_CLIENT_TYPE_MASTER_LIST_CACHE_SECONDS',
+            ],
+            'ClientTypeController@index',
+            fn () => ClientType::orderByDesc('id')->get()
+        );
+
         return view('mess.client-types.index', compact('clientTypes'));
     }
 
@@ -25,6 +45,8 @@ class ClientTypeController extends Controller
         $data = $this->validatedData($request);
 
         ClientType::create($data);
+
+        self::bumpListCacheEpoch();
 
         return redirect()->route('admin.mess.client-types.index')->with('success', 'Client Type added successfully');
     }
@@ -41,6 +63,9 @@ class ClientTypeController extends Controller
         $data = $this->validatedData($request, $clientType);
 
         $clientType->update($data);
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.client-types.index')->with('success', 'Client Type updated successfully');
     }
 
@@ -48,6 +73,9 @@ class ClientTypeController extends Controller
     {
         $clientType = ClientType::findOrFail($id);
         $clientType->delete();
+
+        self::bumpListCacheEpoch();
+
         return redirect()->route('admin.mess.client-types.index')->with('success', 'Client Type deleted successfully');
     }
 

@@ -30,7 +30,7 @@
     <x-breadcrum title="Course Group Type"></x-breadcrum>
     <div class="datatables">
         <!-- start Zero Configuration -->
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-body">
                 <div class="table-responsive">
                     <div class="row align-items-center">
@@ -74,7 +74,7 @@
 <input type="hidden" id="pk" value="">
 <input type="hidden" id="active_inactive" value="">
 @endsection
-@section('scripts')
+@section('script')
 <script>
 $(function() {
     const tableSelector = '#coursegrouptype';

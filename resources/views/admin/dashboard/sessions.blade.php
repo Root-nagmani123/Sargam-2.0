@@ -6,7 +6,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Sessions"></x-breadcrum>
     
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-body">
             <h4>Session Details</h4>
             <hr class="my-2">

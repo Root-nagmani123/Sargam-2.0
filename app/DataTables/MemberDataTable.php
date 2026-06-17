@@ -57,7 +57,14 @@ class MemberDataTable extends DataTable
             ->addIndexColumn()
             ->addColumn('employee_name',
             function($row) {
-                return '<label class="text-dark">' . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
+                $appellationPrefix = '';
+                if ($row->appellation) {
+                    $appellation = $row->appellationMaster;
+                    if ($appellation) {
+                        $appellationPrefix = $appellation->appettation_name . ' ';
+                    }
+                }
+                return '<label class="text-dark">' . $appellationPrefix . $row->first_name . ' ' . $row->middle_name . ' ' . $row->last_name . '</label>';
             })
             ->addColumn('employee_id', fn($row) => '<label class="text-dark">' . $row->emp_id . '</label>')
             ->addColumn('mobile_no', fn($row) => '<label class="text-dark">' . $row->mobile . '</label>')
@@ -116,7 +123,7 @@ class MemberDataTable extends DataTable
 
     public function query(EmployeeMaster $model): QueryBuilder
     {
-        return $model->newQuery()->orderBy('pk', 'desc');
+        return $model->newQuery()->with('appellationMaster')->orderBy('pk', 'desc');
     }
 
     public function html(): HtmlBuilder

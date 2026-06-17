@@ -37,12 +37,6 @@
     will-change: transform, box-shadow;
 }
 
-.breadcrumb-wrapper .card:hover {
-    box-shadow: var(--breadcrumb-shadow-md),
-                inset 0 1px 0 rgba(255, 255, 255, 0.9);
-    transform: translateY(-2px);
-}
-
 /* Decorative Background */
 .breadcrumb-bg-decoration {
     position: absolute;
@@ -95,19 +89,6 @@
     transition: opacity 0.3s ease;
 }
 
-.btn-back:hover::before {
-    opacity: 1;
-}
-
-.btn-back:hover {
-    background: linear-gradient(135deg, var(--breadcrumb-primary-medium) 0%, rgba(0, 74, 147, 0.1) 100%);
-    color: var(--breadcrumb-primary-hover);
-    transform: translateX(-4px) scale(1.02);
-    box-shadow: 0 6px 20px rgba(0, 74, 147, 0.2), 
-                0 2px 6px rgba(0, 74, 147, 0.15);
-    border-color: rgba(0, 74, 147, 0.2);
-}
-
 .btn-back:active {
     transform: translateX(-2px) scale(0.98);
 }
@@ -115,10 +96,6 @@
 .btn-back .back-icon {
     font-size: 18px;
     transition: transform 0.3s ease;
-}
-
-.btn-back:hover .back-icon {
-    transform: translateX(-2px);
 }
 
 /* Title Section */
@@ -169,12 +146,6 @@
     will-change: transform;
 }
 
-.breadcrumb-link:hover {
-    color: var(--breadcrumb-primary-color);
-    background: var(--breadcrumb-primary-light);
-    transform: translateY(-1px);
-}
-
 .home-icon-wrapper {
     display: flex;
     align-items: center;
@@ -185,11 +156,6 @@
     background: var(--breadcrumb-home-bg);
     transition: var(--breadcrumb-transition);
     will-change: transform;
-}
-
-.breadcrumb-link:hover .home-icon-wrapper {
-    background: var(--breadcrumb-home-bg-hover);
-    transform: scale(1.1) rotate(-5deg);
 }
 
 .home-icon {
@@ -228,12 +194,6 @@
     box-shadow: 0 2px 8px rgba(0, 74, 147, 0.1);
     transition: var(--breadcrumb-transition);
     will-change: transform;
-}
-
-.breadcrumb-item.active:hover .badge-current-page {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(0, 74, 147, 0.15);
-    background: linear-gradient(135deg, var(--breadcrumb-primary-medium) 0%, rgba(0, 74, 147, 0.12) 100%);
 }
 
 /* Enhanced badge styling when using Bootstrap badge classes */

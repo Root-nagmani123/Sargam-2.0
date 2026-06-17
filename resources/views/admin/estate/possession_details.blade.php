@@ -4,10 +4,10 @@
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+        && (isEstateAuthority());
     $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
 @endphp
-@section($estateSelfHomeTab ? 'content' : 'content')
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Possession Details"></x-breadcrum>
     <x-estate-workflow-stepper current="possession-details" />
@@ -21,13 +21,13 @@
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
                     {{-- Home ?scope=self: read-only; bulk/add/update from Setup → Estate --}}
-                    @if((hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin')) && ! $estateSelfHomeTab)
+                    @if((isEstateAuthority()) && ! $estateSelfHomeTab)
                         <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2" id="btnBulkDeletePossessionDetails" title="Delete selected">
                             <i class="material-symbols-rounded">delete</i>
                             <span class="d-none d-md-inline">Delete Selected</span>
                         </button>
                     @endif
-                    @if((hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin')) && ! $estateSelfHomeTab)
+                    @if((isEstateAuthority()) && ! $estateSelfHomeTab)
                     <a href="{{ route('admin.estate.possession-details.create') }}" class="btn btn-success btn-sm d-inline-flex align-items-center gap-2" title="Add possession details">
                         <i class="bi bi-plus-lg"></i>
                         <span>Add Possession</span>

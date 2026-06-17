@@ -1,1649 +1,1692 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Dashboard - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Dashboard')
 
 @section('content')
-<style>
-.admin-dashboard-surface {
-    background: linear-gradient(160deg, #f0f4f9 0%, #e8eef6 50%, #f5f7fb 100%);
-    min-height: 100%;
-}
-.dashboard-panel {
-    border: 0;
-    border-radius: 1rem;
-    background: var(--bs-body-bg);
-    box-shadow: 0 2px 12px rgba(16, 24, 40, 0.06), 0 1px 3px rgba(0, 0, 0, 0.04);
-    overflow: hidden;
-}
-.dashboard-panel .card-header {
-    border-bottom: 1px solid var(--bs-border-color-translucent);
-    background: linear-gradient(180deg, rgba(255,255,255,0.95) 0%, rgba(248,250,252,0.98) 100%);
-    padding-top: 1rem !important;
-    padding-bottom: 1rem !important;
-}
-.dashboard-panel .card-header .material-icons.material-symbols-rounded {
-    width: 2.25rem;
-    height: 2.25rem;
-    border-radius: 0.6rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(var(--bs-primary-rgb), 0.12);
-    color: var(--bs-primary);
-    font-size: 1.2rem !important;
-}
-
-.dashboard-stat-card {
-    border: 0;
-    border-left: 3px solid var(--bs-border-color);
-    border-radius: 0.9rem;
-    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.08);
-    overflow: hidden;
-    transition: transform 0.15s ease, box-shadow 0.15s ease;
-    min-height: 84px;
-}
-
-.dashboard-stat-card:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(16, 24, 40, 0.1);
-}
-
-.dashboard-stat-card .card-body {
-    padding: 0.55rem 0.7rem;
-}
-
-.dashboard-stat-value {
-    font-size: clamp(1.35rem, 1.55vw, 1.85rem);
-    line-height: 1.05;
-    letter-spacing: -0.02em;
-}
-
-.dashboard-stat-card.card-blue {
-    border-left-color: var(--bs-primary);
-    background: var(--bs-primary-bg-subtle);
-}
-
-.dashboard-stat-card.card-green {
-    border-left-color: var(--bs-success);
-    background: var(--bs-success-bg-subtle);
-}
-
-.dashboard-stat-card.card-amber {
-    border-left-color: var(--bs-warning);
-    background: var(--bs-warning-bg-subtle);
-}
-
-.dashboard-stat-card.card-rose {
-    border-left-color: var(--bs-danger);
-    background: var(--bs-danger-bg-subtle);
-}
-
-.dashboard-panel {
-    border: 0;
-    border-radius: 0.9rem;
-    background: var(--bs-body-bg);
-    box-shadow: 0 2px 8px rgba(16, 24, 40, 0.07);
-}
-
-.dashboard-panel .card-header {
-    border-bottom: 1px solid var(--bs-border-color-translucent);
-    background: transparent;
-    padding-top: 0.9rem !important;
-    padding-bottom: 0.9rem !important;
-}
-
-.dashboard-birthday-item {
-    border: 1px solid #b7cdf9;
-    background: #f7f9ff;
-    border-radius: 0.5rem;
-}
-
-.dashboard-birthday-item .card-body {
-    padding: 0.8rem !important;
-}
-
-.dashboard-avatar {
-    width: 2rem;
-    height: 2rem;
-    font-size: 0.8rem;
-}
-
-.dashboard-list-scroll {
-    max-height: 23rem;
-    overflow-y: auto;
-}
-
-@media (max-width: 991.98px) {
-    .dashboard-list-scroll {
-        max-height: none;
-    }
-}
-
-.dashboard-welcome {
-    background: linear-gradient(135deg, #004a93 0%, #003a75 50%, #002d5c 100%) !important;
-    border-radius: 1rem;
-    color: #fff;
-    padding: 1.25rem 1.5rem;
-    margin-bottom: 1.5rem;
-    box-shadow: 0 4px 20px rgba(0, 74, 147, 0.25);
-    position: relative;
-    overflow: hidden;
-}
-.dashboard-welcome::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -10%;
-    width: 40%;
-    height: 200%;
-    background: radial-gradient(ellipse, rgba(255,255,255,0.08) 0%, transparent 70%);
-    pointer-events: none;
-}
-.dashboard-welcome h2 { font-size: 1.3rem; font-weight: 600; margin-bottom: 0.25rem; letter-spacing: -0.01em; }
-.dashboard-welcome .text-white { font-size: 0.9rem; opacity: 0.95; }
-.dashboard-welcome .material-icons { opacity: 0.9; }
-
-.dashboard-stat-card .stat-icon {
-    width: 2.15rem;
-    height: 2.15rem;
-    border-radius: 0.5rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.05rem;
-    opacity: 0.9;
-}
-.dashboard-stat-card.card-blue .stat-icon { background: rgba(var(--bs-primary-rgb), 0.2); color: var(--bs-primary); }
-.dashboard-stat-card.card-green .stat-icon { background: rgba(var(--bs-success-rgb), 0.2); color: var(--bs-success); }
-.dashboard-stat-card.card-amber .stat-icon { background: rgba(var(--bs-warning-rgb), 0.2); color: var(--bs-warning); }
-.dashboard-stat-card.card-rose .stat-icon { background: rgba(var(--bs-danger-rgb), 0.2); color: var(--bs-danger); }
-
-.dashboard-stat-card .stat-link-hint {
-    font-size: 0.7rem;
-    display: inline-flex;
-    align-items: center;
-    gap: 0.1rem;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-.dashboard-stat-card:hover .stat-link-hint { opacity: 1; }
-
-.dashboard-empty-state {
-    text-align: center;
-    padding: 2rem 1.25rem;
-    color: var(--bs-secondary);
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.03) 0%, transparent 100%);
-    border-radius: 0.75rem;
-    border: 1px dashed var(--bs-border-color-translucent);
-}
-.dashboard-empty-state .material-icons {
-    font-size: 2.75rem;
-    margin-bottom: 0.75rem;
-    opacity: 0.4;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 4rem;
-    height: 4rem;
-    border-radius: 50%;
-    background: rgba(var(--bs-primary-rgb), 0.06);
-}
-.dashboard-empty-state p { font-size: 0.875rem; }
-
-.dashboard-tweet-item {
-    padding: 12px 14px 12px 16px;
-    margin-bottom: 10px;
-    border-radius: 10px;
-    border-left: 4px solid var(--bs-primary);
-    background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.05) 0%, transparent 100%);
-    transition: background 0.2s ease, transform 0.15s ease;
-}
-.dashboard-tweet-item:hover {
-    background: linear-gradient(90deg, rgba(var(--bs-primary-rgb), 0.08) 0%, transparent 100%);
-    transform: translateX(2px);
-}
-.dashboard-tweet-item:last-child { margin-bottom: 0; }
-
-/* Today's Classes cards */
-.dashboard-class-card {
-    padding: 14px 16px;
-    margin-bottom: 12px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-left: 4px solid var(--bs-primary);
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.7) 100%);
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-    transition: all 0.2s ease;
-}
-.dashboard-class-card:hover {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-}
-.dashboard-class-icon {
-    width: 2rem;
-    height: 2rem;
-    border-radius: 0.5rem;
-    background: rgba(var(--bs-primary-rgb), 0.12);
-    color: var(--bs-primary);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1rem !important;
-}
-.dashboard-class-topic {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--bs-body-color);
-    margin-bottom: 8px;
-    padding-left: 2.5rem;
-}
-.dashboard-class-meta {
-    font-size: 0.8125rem;
-    color: var(--bs-secondary);
-    padding-left: 2.5rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px 16px;
-}
-.dashboard-class-meta span { white-space: nowrap; }
-
-.dashboard-list-scroll::-webkit-scrollbar { width: 6px; }
-.dashboard-list-scroll::-webkit-scrollbar-track { background: rgba(0,0,0,0.04); border-radius: 3px; }
-.dashboard-list-scroll::-webkit-scrollbar-thumb { background: rgba(var(--bs-primary-rgb), 0.25); border-radius: 3px; }
-.dashboard-list-scroll::-webkit-scrollbar-thumb:hover { background: rgba(var(--bs-primary-rgb), 0.4); }
-
-.dashboard-panel .card-header .badge {
-    font-size: 0.75rem;
-    font-weight: 600;
-    padding: 0.35em 0.65em;
-    min-width: 1.75rem;
-    text-align: center;
-}
-
-/* Notifications panel - item design and blinking "New" tag */
-.dashboard-notification-item {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 14px;
-    width: 100%;
-    padding: 16px 18px;
-    margin-bottom: 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-left: 4px solid transparent;
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.8) 100%);
-    text-align: left;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-    cursor: pointer;
-}
-.dashboard-notification-item:hover {
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,1) 100%);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-    transform: translateY(-1px);
-}
-.dashboard-notification-item-unread {
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%);
-    border-left-color: var(--bs-primary);
-    border-color: rgba(var(--bs-primary-rgb), 0.15);
-}
-.dashboard-notification-item-unread:hover {
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.12) 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
-}
-.dashboard-notification-item .notification-icon-wrap {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.65rem;
-    background: rgba(var(--bs-primary-rgb), 0.12);
-    color: var(--bs-primary);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    font-size: 1.2rem !important;
-}
-.dashboard-notification-body {
-    flex-grow: 1;
-    min-width: 0;
-}
-.dashboard-notification-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--bs-body-color);
-    line-height: 1.35;
-}
-.dashboard-notification-message {
-    font-size: 0.8125rem;
-    color: var(--bs-secondary);
-    margin: 4px 0 0 0;
-    line-height: 1.45;
-}
-.dashboard-notification-time {
-    font-size: 0.6875rem;
-    color: var(--bs-secondary);
-    margin-top: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.dashboard-notification-time::before {
-    content: '';
-    display: inline-block;
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--bs-secondary);
-    opacity: 0.6;
-}
-/* Blinking "New" tag for unread notifications */
-.dashboard-notification-new-tag {
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    padding: 0.3em 0.6em;
-    flex-shrink: 0;
-    animation: dashboard-notification-blink 1s ease-in-out infinite;
-}
-@keyframes dashboard-notification-blink {
-    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.5); }
-    50% { opacity: 0.9; transform: scale(1.03); box-shadow: 0 0 0 6px rgba(var(--bs-danger-rgb), 0); }
-}
-
-/* Notices panel - item design and blinking "New" tag */
-.dashboard-notice-item {
-    display: block;
-    padding: 16px 18px;
-    margin-bottom: 10px;
-    border-radius: 12px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    border-left: 4px solid transparent;
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,0.8) 100%);
-    text-decoration: none;
-    color: inherit;
-    transition: all 0.2s ease;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
-}
-.dashboard-notice-item:hover {
-    background: linear-gradient(180deg, #fff 0%, rgba(248,250,252,1) 100%);
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.07);
-    transform: translateY(-1px);
-}
-.dashboard-notice-item-new {
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.08) 0%, rgba(var(--bs-primary-rgb), 0.02) 100%);
-    border-left-color: var(--bs-primary);
-    border-color: rgba(var(--bs-primary-rgb), 0.15);
-}
-.dashboard-notice-item-new:hover {
-    background: linear-gradient(180deg, rgba(var(--bs-primary-rgb), 0.12) 0%, rgba(var(--bs-primary-rgb), 0.04) 100%);
-}
-.dashboard-notice-item .notice-icon-wrap {
-    width: 2.5rem;
-    height: 2.5rem;
-    border-radius: 0.65rem;
-    background: rgba(var(--bs-primary-rgb), 0.12);
-    color: var(--bs-primary);
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-    font-size: 1.2rem !important;
-}
-.dashboard-notice-title {
-    font-size: 0.9375rem;
-    font-weight: 600;
-    color: var(--bs-body-color);
-    line-height: 1.35;
-}
-.dashboard-notice-date {
-    font-size: 0.8125rem;
-    color: var(--bs-secondary);
-    margin-top: 6px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-}
-.dashboard-notice-date::before {
-    content: '';
-    width: 4px;
-    height: 4px;
-    border-radius: 50%;
-    background: var(--bs-secondary);
-    opacity: 0.6;
-}
-.dashboard-notice-attachment {
-    font-size: 0.8125rem;
-    margin-top: 8px;
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    padding: 4px 8px;
-    border-radius: 6px;
-    background: rgba(var(--bs-danger-rgb), 0.08);
-    transition: background 0.2s ease;
-}
-.dashboard-notice-attachment:hover {
-    background: rgba(var(--bs-danger-rgb), 0.14);
-}
-.dashboard-notice-new-tag {
-    font-size: 0.65rem;
-    font-weight: 600;
-    letter-spacing: 0.02em;
-    padding: 0.3em 0.6em;
-    animation: dashboard-notice-blink 1.2s ease-in-out infinite;
-}
-@keyframes dashboard-notice-blink {
-    0%, 100% { opacity: 1; transform: scale(1); box-shadow: 0 0 0 0 rgba(var(--bs-danger-rgb), 0.45); }
-    50% { opacity: 0.9; transform: scale(1.03); box-shadow: 0 0 0 6px rgba(var(--bs-danger-rgb), 0); }
-}
-
-.dashboard-stat-card:focus-visible {
-    outline: 2px solid var(--bs-primary);
-    outline-offset: 2px;
-}
-table>thead{
-    background-color: transparent !important;
-}
-</style>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+<link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
+<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
+<link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=1">
 
 @php
 $user = Auth::user();
-$isAdminSummary = hasRole('Admin');
+$isAdminSummary = hasRole('Super Admin');
 $daysOld = $isAdminSummary ? 10 : null;
-$notifications = ($user && $user->user_id) ? notification()->getNotifications($user->user_id, 10, false, $daysOld) : collect();
+$notifications = ($user && $user->user_id) ? notification()->getNotifications($user->user_id, 10, false, $daysOld) :
+collect();
 $notificationBadgeCount = ($user && $user->user_id)
-    ? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
-    : 0;
+? ($isAdminSummary ? notification()->getUnreadCount($user->user_id, $daysOld) : $notifications->count())
+: 0;
 $notices = get_notice_notification_by_role();
 $hour = (int) date('G');
-$greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening');
-$userName = $user ? ($user->first_name ?? $user->name ?? 'User') : 'User';
-@endphp
+$greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening' ); $userName=$user ?
+    (trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->name ?? 'User')) : 'User';
 
-<div class="container-fluid px-3 px-lg-4">
-    @if($isMyBirthday ?? false)
-    {{-- Birthday Banner with Confetti --}}
-    <div class="birthday-banner-wrapper mb-3" id="birthday-banner">
-        <canvas id="confetti-canvas"></canvas>
-        <div class="birthday-banner-content">
-            <div class="d-flex align-items-center justify-content-center gap-3 flex-wrap">
-                <span style="font-size:2.5rem;">🎂</span>
-                <div class="text-center">
-                    <h3 class="mb-0 fw-bold text-white">Happy Birthday, {{ $userName }}! 🎉</h3>
-                    <p class="mb-0 text-white-50 small">Wishing you a wonderful year ahead!</p>
-                    @if(($myBirthdayWishCount ?? 0) > 0)
-                    <div class="mt-1">
-                        <span class="badge bg-white text-primary rounded-pill px-3 py-1 fw-semibold" style="font-size:0.85rem;">
-                            🎁 {{ $myBirthdayWishCount }} {{ $myBirthdayWishCount === 1 ? 'wish' : 'wishes' }} received today!
-                        </span>
-                    </div>
-                    @endif
+    $todayBirthdayWishNotifications = collect();
+    $myBirthdayWishesSummary = '';
+    if (($isMyBirthday ?? false) && $user && $user->user_id) {
+    $todayBirthdayWishNotifications = \App\Models\Notification::with('sender')
+    ->where('receiver_user_id', $user->user_id)
+    ->where('type', 'birthday')
+    ->whereDate('created_at', today())
+    ->orderByDesc('created_at')
+    ->get();
+
+    $myBirthdayWishSenderNames = $todayBirthdayWishNotifications->map(function ($notification) {
+    if ($notification->sender) {
+    return trim((string) ($notification->sender->first_name ?? $notification->sender->name ?? ''));
+    }
+    if (!empty($notification->message) && preg_match('/^(.+?)\s+wished you/i', $notification->message, $matches)) {
+    return trim($matches[1]);
+    }
+    return null;
+    })->filter()->unique()->values();
+
+    $wishNameCount = $myBirthdayWishSenderNames->count();
+    $wishTotal = (int) ($myBirthdayWishCount ?? 0);
+
+    if ($wishNameCount === 1) {
+    $myBirthdayWishesSummary = $myBirthdayWishSenderNames->first() . ' has sent their wish.';
+    } elseif ($wishNameCount === 2) {
+    $myBirthdayWishesSummary = $myBirthdayWishSenderNames->implode(' and ') . ' have sent their wishes.';
+    } elseif ($wishNameCount > 2) {
+    $others = $wishNameCount - 2;
+    $myBirthdayWishesSummary = $myBirthdayWishSenderNames->take(2)->implode(', ')
+    . ' and ' . $others . ' ' . ($others === 1 ? 'other' : 'others') . ' have sent their wishes.';
+    } elseif ($wishTotal > 0) {
+    $myBirthdayWishesSummary = $wishTotal === 1
+    ? '1 person has sent their wish.'
+    : $wishTotal . ' people have sent their wishes.';
+    }
+    }
+    @endphp
+
+    <div class="container-fluid">
+        @if($isMyBirthday ?? false)
+        {{-- Birthday Banner with Confetti (reference design) --}}
+        <div class="dashboard-birthday-banner rounded-4 shadow-sm mb-3 position-relative overflow-hidden"
+            id="birthday-banner">
+            <div class="birthday-banner-accent" aria-hidden="true"></div>
+            <canvas id="confetti-canvas" aria-hidden="true"></canvas>
+            <button type="button" class="birthday-banner-close" id="birthday-banner-dismiss"
+                aria-label="Dismiss birthday message">
+                <span aria-hidden="true">&times;</span>
+            </button>
+            <div class="birthday-banner-inner">
+                <div class="birthday-banner-text">
+                    <h2 class="birthday-banner-title mb-2">Happy Birthday {{ $userName }}</h2>
+                    <p class="birthday-banner-subtitle mb-0">
+                        Wishing you a fantastic year ahead 🎉
+                        @if(!empty($myBirthdayWishesSummary))
+                        {{ ' ' . $myBirthdayWishesSummary }}
+                        @endif
+                        @if(($myBirthdayWishCount ?? 0) > 0)
+                        <a href="{{ route('admin.dashboard.feed', ['tab' => 'wishes']) }}" class="birthday-banner-link"
+                            id="btn-view-birthday-wishes">View all wishes →</a>
+                        @endif
+                    </p>
                 </div>
-                <span style="font-size:2.5rem;">🎈</span>
+                <div class="birthday-banner-illustration d-none d-sm-block" aria-hidden="true">
+                    <svg viewBox="0 0 152 88" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="">
+                        <ellipse cx="118" cy="72" rx="28" ry="6" fill="#E8EDF3" opacity="0.9" />
+                        <rect x="98" y="52" width="22" height="18" rx="3" fill="#F4C430" />
+                        <rect x="98" y="52" width="22" height="5" rx="2" fill="#E5A820" />
+                        <path d="M99 52h20v3H99z" fill="#D4921A" />
+                        <rect x="124" y="48" width="18" height="16" rx="3" fill="#E74C3C" />
+                        <rect x="124" y="48" width="18" height="4" rx="2" fill="#C0392B" />
+                        <path d="M108 38c0-8 6-14 14-14s14 6 14 14c0 6-4 11-10 13l-4 10-4-10c-6-2-10-7-10-13z"
+                            fill="#3498DB" />
+                        <path d="M108 38c0-8 6-14 14-14" stroke="#2980B9" stroke-width="1.5" stroke-linecap="round" />
+                        <line x1="122" y1="24" x2="122" y2="14" stroke="#7f8c8d" stroke-width="1.2"
+                            stroke-linecap="round" />
+                        <circle cx="88" cy="30" r="11" fill="#2ECC71" />
+                        <line x1="88" y1="19" x2="88" y2="11" stroke="#7f8c8d" stroke-width="1.2"
+                            stroke-linecap="round" />
+                        <circle cx="72" cy="36" r="10" fill="#F1C40F" />
+                        <line x1="72" y1="26" x2="72" y2="18" stroke="#7f8c8d" stroke-width="1.2"
+                            stroke-linecap="round" />
+                        <circle cx="56" cy="28" r="9" fill="#E74C3C" />
+                        <line x1="56" y1="19" x2="56" y2="12" stroke="#7f8c8d" stroke-width="1.2"
+                            stroke-linecap="round" />
+                        <rect x="78" y="58" width="16" height="14" rx="2.5" fill="#9B59B6" />
+                        <rect x="78" y="58" width="16" height="4" rx="1.5" fill="#8E44AD" />
+                    </svg>
+                </div>
             </div>
         </div>
-    </div>
-    <style>
-    .birthday-banner-wrapper {
-        position: relative;
-        border-radius: 1rem;
-        overflow: hidden;
-        background: linear-gradient(135deg, #e91e63 0%, #9c27b0 40%, #673ab7 70%, #3f51b5 100%);
-        box-shadow: 0 6px 30px rgba(233, 30, 99, 0.35);
-        min-height: 100px;
-    }
-    #confetti-canvas {
-        position: absolute;
-        top: 0; left: 0;
-        width: 100%; height: 100%;
-        pointer-events: none;
-        z-index: 1;
-    }
-    .birthday-banner-content {
-        position: relative;
-        z-index: 2;
-        padding: 1.5rem 2rem;
-    }
-    .birthday-banner-wrapper::before {
-        content: '';
-        position: absolute;
-        top: -50%; right: -20%;
-        width: 60%; height: 200%;
-        background: radial-gradient(ellipse, rgba(255,255,255,0.1) 0%, transparent 70%);
-        pointer-events: none;
-    }
-    </style>
-    @endif
+        @endif
 
-    <div class="dashboard-welcome shadow-sm bg-gradient d-flex flex-wrap align-items-center justify-content-between gap-2">
-        <div>
-            <h2 class="mb-0 text-white">{{ $greeting }}, {{ $userName }}</h2>
-            <div class="text-white">{{ now()->format('l, d F Y') }}</div>
-        </div>
-        <div class="d-none d-sm-block">
-            <span class="material-icons material-symbols-rounded align-middle me-1">calendar_month</span>
-            <span class="small" id="dashboard-live-time">{{ now()->format('h:i A') }}</span>
-        </div>
-    </div>
-
-@if(hasRole('Security Card') || hasRole('Admin Security'))
-            <div class="row g-3 mb-3">
-                <div class="col-xl-3 col-md-6">
-                    @php
-                        $idCardApprovalRoute = hasRole('Admin Security')
-                            ? route('admin.security.employee_idcard_approval.approval3')
-                            : route('admin.security.employee_idcard_approval.approval2');
-                    @endphp
-                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Pending Permanent ID Requests</p>
-                                    <p class="small text-body-secondary mb-1">Today</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingPermanentIdCardRequests ?? 0 }}</div>
-                                    <p class="small text-dark mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
-                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
+        <div class="card dashboard-hero-card shadow-sm rounded-3 border-0 mb-3">
+            <div class="card-body py-3 px-4">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2">
+                    <div class="min-w-0">
+                        <p class="text-body-secondary mb-1 small">
+                            {{ $greeting }},
+                            <span class="text-primary fw-semibold">{{ $userName }}</span>
+                        </p>
+                        <h1 class="h3 fw-bold text-dark mb-0">Dashboard</h1>
+                    </div>
+                    <div class="ms-auto d-flex align-items-center gap-2 gap-sm-3">
+                        <i class="bi bi-clock text-primary lh-1" style="font-size: 1.85rem;" aria-hidden="true"></i>
+                        <div class="lh-sm">
+                            <div class="text-primary fw-bold tabular-nums lh-1"
+                                style="font-size: 1.7rem; letter-spacing: -0.01em;">
+                                <span id="dashboard-live-time">{{ now()->format('H:i') }}</span>
                             </div>
+                            <p class="text-body-secondary mb-0 mt-1" style="font-size: 0.9rem;">
+                                {{ now()->format('l, d F Y') }}
+                            </p>
                         </div>
-                    </a>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Pending Contractual ID Requests</p>
-                                    <p class="small text-body-secondary mb-1">Today</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayPendingContractualIdCardRequests ?? 0 }}</div>
-                                    <p class="small text-dark mb-0">Total pending: {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
-                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Duplicate Permanent ID Requests</p>
-                                    <p class="small text-body-secondary mb-1">Today</p>
-                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicatePermIdCardRequests ?? 0 }}</div>
-                                    <p class="small text-dark mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}</p>
-                                    <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">copy_all</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-3 col-md-6">
-                    <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Duplicate Contractual ID Requests</p>
-                                    <p class="small text-body-secondary mb-1">Today</p>
-                                    <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayDuplicateContractualIdCardRequests ?? 0 }}</div>
-                                    <p class="small text-dark mb-0">Total pending: {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
-                                    <span class="stat-link-hint text-warning">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">content_copy</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-4 col-md-6">
-                    <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Requested Family ID</p>
-                                    <p class="small text-body-secondary mb-1">Today</p>
-                                    <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayFamilyApprovals ?? 0 }}</div>
-                                    <p class="small text-dark mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
-                                    <span class="stat-link-hint text-primary">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">diversity_3</span></span>
-                            </div>
-                        </div>
-                    </a>
-                </div>
-                <div class="col-xl-4 col-md-6">
-                    <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="text-decoration-none">
-                        <div class="card dashboard-stat-card shadow-sm rounded-4 card-green">
-                            <div class="card-body d-flex align-items-center justify-content-between gap-2">
-                                <div>
-                                    <p class="small text-dark mb-1">Requested Vehicle Pass</p>
-                                    <p class="small text-body-secondary mb-1">Today</p>
-                                    <div class="dashboard-stat-value fw-semibold text-success">{{ $todayVehicleApprovals ?? 0 }}</div>
-                                    <p class="small text-dark mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
-                                    <span class="stat-link-hint text-success">Go to approvals <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                                </div>
-                                <span class="stat-icon"><span class="material-icons material-symbols-rounded">directions_car</span></span>
-                            </div>
-                        </div>
-                    </a>
+                    </div>
                 </div>
             </div>
-            @endif
-    @if(!hasRole('Security Card') && !hasRole('Admin Security'))
-    <div class="row g-2 g-md-3 mb-4 row-cols-1 row-cols-sm-2 row-cols-lg-3 row-cols-xl-4 row-cols-xxl-5">
-        <div class="col">
-            <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                        <div class="min-w-0">
-                            <p class="small text-body-secondary mb-1 text-truncate">Total Active Courses</p>
-                            <div class="dashboard-stat-value fw-semibold text-primary">{{ $totalActiveCourses }}</div>
-                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">menu_book</span></span>
-                    </div>
-                </div>
-            </a>
         </div>
 
-        <div class="col">
-            <a href="{{ route('admin.dashboard.incoming_course') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                        <div class="min-w-0">
-                            <p class="small text-body-secondary mb-1 text-truncate">Upcoming Courses</p>
-                            <div class="dashboard-stat-value fw-semibold text-success">{{ $upcomingCourses }}</div>
-                            <span class="stat-link-hint text-success small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">event</span></span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col">
-            <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                        <div class="min-w-0">
-                            <p class="small text-body-secondary mb-1 text-truncate">Upcoming Events</p>
-                            <div class="dashboard-stat-value fw-semibold text-warning-emphasis">2</div>
-                            <span class="stat-link-hint text-warning small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">campaign</span></span>
-                    </div>
-                </div>
-            </a>
-        </div>
-
-        <div class="col">
-            @if(hasRole('Student-OT'))
-            <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                        <div class="min-w-0">
-                            <p class="small text-body-secondary mb-1 text-truncate">Medical Exception</p>
-                            <div class="dashboard-stat-value fw-semibold text-danger">{{ $exemptionCount }}</div>
-                            <span class="stat-link-hint text-danger small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">monitor_heart</span></span>
-                    </div>
-                </div>
-            </a>
-            @else
-            <a href="{{ route('admin.dashboard.guest_faculty') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-rose h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                        <div class="min-w-0">
-                            <p class="small text-body-secondary mb-1 text-truncate">Total Guest Faculty</p>
-                            <div class="dashboard-stat-value fw-semibold text-danger">{{ $total_guest_faculty }}</div>
-                            <span class="stat-link-hint text-danger small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">badge</span></span>
-                    </div>
-                </div>
-            </a>
-            @endif
-        </div>
-
-        @if(($todayApproval1IdCardRequests ?? 0) > 0)
-        <div class="col-xl-3 col-md-6">
-            <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Today's Pending ID Card Requests (Approval I)</p>
-                            <div class="dashboard-stat-value fw-semibold text-primary">{{ $todayApproval1IdCardRequests }}</div>
-                            <span class="stat-link-hint text-primary">Go to approvals
-                                <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span>
-                            </span>
-                        </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">badge</span></span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endif
-        @if(($todayApproval1DuplicateIdCardRequests ?? 0) > 0)
-        <div class="col-xl-3 col-md-6">
-            <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">Today's Pending Duplicate ID Card Requests (Approval I)</p>
-                            <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $todayApproval1DuplicateIdCardRequests }}</div>
-                            <span class="stat-link-hint text-warning">Go to approvals
-                                <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span>
-                            </span>
-                        </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">content_copy</span></span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endif
-
-        <div class="col-xl-3 col-md-6">
-            @if(hasRole('Student-OT'))
-            <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-start justify-content-between gap-2">
-                        <div>
-                            <p class="small text-dark mb-1">OT MDO/Escort</p>
-                            <div class="dashboard-stat-value fw-semibold text-primary">{{ $MDO_count }}</div>
-                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">manage_accounts</span></span>
-                    </div>
-                </div>
-            </a>
-            @else
-            <a href="{{ route('admin.dashboard.inhouse_faculty') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-blue h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                        <div class="min-w-0">
-                            <p class="small text-body-secondary mb-1 text-truncate">Total Inhouse Faculty</p>
-                            <div class="dashboard-stat-value fw-semibold text-primary">{{ $total_internal_faculty }}</div>
-                            <span class="stat-link-hint text-primary small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">groups</span></span>
-                    </div>
-                </div>
-            </a>
-            @endif
-        </div>
-
-        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
-        <div class="col">
-            <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-green h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                        <div class="min-w-0">
-                            <p class="small text-body-secondary mb-1 text-truncate">Session Details</p>
-                            <div class="dashboard-stat-value fw-semibold text-success">{{ $totalSessions }}</div>
-                            <span class="stat-link-hint text-success small">View <span class="material-icons material-symbols-rounded align-middle fs-6">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon flex-shrink-0" aria-hidden="true"><span class="material-icons material-symbols-rounded">history</span></span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endif
-
-        @if(isset($isCCorACC) && $isCCorACC)
-        <div class="col">
-            <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none d-block h-100">
-                <div class="card dashboard-stat-card shadow-sm rounded-4 card-amber h-100">
-                    <div class="card-body d-flex align-items-center justify-content-between gap-3">
-                        <div class="min-w-0">
-                            <p class="small text-body-secondary mb-1 text-truncate">Total Students</p>
-                            <div class="dashboard-stat-value fw-semibold text-warning-emphasis">{{ $totalStudents }}</div>
-                            <span class="stat-link-hint text-warning">View <span class="material-icons material-symbols-rounded align-middle" style="font-size: 1rem;">arrow_forward</span></span>
-                        </div>
-                        <span class="stat-icon"><span class="material-icons material-symbols-rounded">contacts</span></span>
-                    </div>
-                </div>
-            </a>
-        </div>
-        @endif
-    </div>
-    @endif
-
-    <div class="row g-3 g-lg-4">
-        <div class="col-lg-7">
-        @if(hasRole('Admin') || hasRole('Training-Induction'))
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
-                <div class="card-header py-3 px-4 d-flex justify-content-between align-items-center">
-                    <h5 class="mb-0 fw-semibold d-flex align-items-center gap-2">
-                        <span class="material-icons material-symbols-rounded text-primary">notifications</span>
-                        {{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}
-                    </h5>
-                    <span class="badge text-bg-primary rounded-pill">{{ $notificationBadgeCount }}</span>
-                </div>
+        @if(($isMyBirthday ?? false) && ($myBirthdayWishCount ?? 0) > 0)
+        <div class="card dashboard-panel shadow-sm rounded-4 mb-4" id="dashboard-birthday-wishes-panel">
+            <div class="card-header bg-body py-3 px-4 d-flex align-items-center gap-2 border-bottom">
+                <span
+                    class="d-inline-flex align-items-center justify-content-center rounded-3 bg-primary-subtle text-primary p-2">
+                    <i class="bi bi-balloon-heart-fill" aria-hidden="true"></i>
+                </span>
+                <h5 class="mb-0 fw-semibold">Birthday Wishes Received</h5>
+                <span class="badge rounded-pill text-bg-primary">{{ $myBirthdayWishCount }}</span>
+                <button type="button"
+                    class="btn btn-sm btn-outline-primary rounded-pill ms-auto d-none d-md-inline-flex align-items-center gap-1"
+                    data-bs-toggle="collapse" data-bs-target="#dashboard-birthday-wishes-collapse" aria-expanded="false"
+                    aria-controls="dashboard-birthday-wishes-collapse" id="btn-toggle-birthday-wishes">
+                    <i class="bi bi-chevron-down" aria-hidden="true"></i>
+                    <span class="small">Show / Hide</span>
+                </button>
+            </div>
+            <div class="collapse" id="dashboard-birthday-wishes-collapse">
                 <div class="card-body p-3 p-md-4 dashboard-list-scroll">
-                    @if($notifications->isEmpty())
-                    <div class="dashboard-empty-state">
-                        <span class="material-icons material-symbols-rounded">notifications_off</span>
-                        <p class="mb-0 small">No notifications available.</p>
+                    @if($todayBirthdayWishNotifications->isEmpty())
+                    <div class="dashboard-empty-state py-4">
+                        <i class="bi bi-balloon-heart text-primary opacity-50 fs-1 d-block mb-2" aria-hidden="true"></i>
+                        <p class="mb-0 small">Wishes received today will appear here.</p>
                     </div>
                     @else
                     <ul class="list-unstyled mb-0 ps-0">
-                        @foreach($notifications as $notification)
+                        @foreach($todayBirthdayWishNotifications as $wish)
                         <li class="mb-2">
+                            @include('admin.dashboard.partials.wish-received-item', ['wish' => $wish, 'layout' =>
+                            'dashboard'])
+                        </li>
+                        @endforeach
+                    </ul>
+                    @endif
+                </div>
+            </div>
+        </div>
+        @endif
+
+        
+        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 mt-3">
+            @if(hasRole('Security Card') || hasRole('Admin Security') || hasRole('Super Admin'))
+            <div class="col">
+                <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-person-vcard"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Pending Permanent ID Requests</p>
+                                @php $v = (int) ($todayPendingPermanentIdCardRequests ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-person-vcard"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Pending Contractual ID Requests</p>
+                                @php $v = (int) ($todayPendingContractualIdCardRequests ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-copy"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Duplicate Permanent ID Requests</p>
+                                @php $v = (int) ($todayDuplicatePermIdCardRequests ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-files"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Duplicate Contractual ID Requests</p>
+                                @php $v = (int) ($todayDuplicateContractualIdCardRequests ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{{ route('admin.security.family_idcard_approval.index') }}"
+                    class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-people"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Requested Family ID</p>
+                                @php $v = (int) ($todayFamilyApprovals ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            <div class="col">
+                <a href="{{ route('admin.security.vehicle_pass_approval.index') }}"
+                    class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-green">
+                                <i class="bi bi-car-front"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Requested Vehicle Pass</p>
+                                @php $v = (int) ($todayVehicleApprovals ?? 0); @endphp
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            @endif
+        @if(!hasRole('Security Card') && !hasRole('Admin Security'))
+        <div class="col">
+                <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-journal-text"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Total Active Courses</p>
+                                @php $v = (int) $totalActiveCourses; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col">
+                <a href="{{ route('admin.dashboard.incoming_course') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-green">
+                                <i class="bi bi-calendar-event"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Upcoming Courses</p>
+                                @php $v = (int) $upcomingCourses; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col">
+                <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-megaphone"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Upcoming Events</p>
+                                @php $v = 2; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col">
+                @if(hasRole('Student-OT'))
+                <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-rose">
+                                <i class="bi bi-heart-pulse"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Medical Exception</p>
+                                @php $v = (int) $exemptionCount; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                @else
+                <a href="{{ route('admin.dashboard.guest_faculty') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-rose">
+                                <i class="bi bi-person-vcard"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Total Guest Faculty</p>
+                                @php $v = (int) $total_guest_faculty; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                @endif
+            </div>
+
+            @if(($todayApproval1IdCardRequests ?? 0) > 0)
+            <div class="col">
+                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}"
+                    class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-person-badge"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Pending ID Card Requests (Approval I)</p>
+                                @php $v = (int) $todayApproval1IdCardRequests; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            @endif
+
+            @if(($todayApproval1DuplicateIdCardRequests ?? 0) > 0)
+            <div class="col">
+                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}"
+                    class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-copy"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Pending Duplicate ID (Approval I)</p>
+                                @php $v = (int) $todayApproval1DuplicateIdCardRequests; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            @endif
+
+            <div class="col">
+                @if(hasRole('Student-OT'))
+                <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-navy">
+                                <i class="bi bi-person-gear"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">OT MDO/Escort</p>
+                                @php $v = (int) $MDO_count; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                @else
+                <a href="{{ route('admin.dashboard.inhouse_faculty') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-navy">
+                                <i class="bi bi-people-fill"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Total Inhouse Faculty</p>
+                                @php $v = (int) $total_internal_faculty; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+                @endif
+            </div>
+
+            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin'))
+            <div class="col">
+                <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-green">
+                                <i class="bi bi-clock-history"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Session Details</p>
+                                @php $v = (int) $totalSessions; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            @endif
+
+            @if(isset($isCCorACC) && $isCCorACC)
+            <div class="col">
+                <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-person-lines-fill"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Total Students</p>
+                                @php $v = (int) $totalStudents; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+            @endif
+            @endif
+        </div>
+
+        <div class="row g-3 g-lg-4">
+            <div class="col">
+                @php
+                $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
+                $noticeTabLabels = [
+                'office-orders' => 'Office Orders',
+                'work-allocation' => 'Work Allocation',
+                'notice-circular' => 'Notice/ Circular/ Order',
+                ];
+                $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
+                $resolveDashboardNoticeTab = function ($type) {
+                $t = strtolower((string) ($type ?? ''));
+                if (str_contains($t, 'office order')) {
+                return 'office-orders';
+                }
+                if (str_contains($t, 'course notice')) {
+                return 'work-allocation';
+                }
+                return 'notice-circular';
+                };
+                foreach ($notices as $noticeForTab) {
+                $tabKey = $resolveDashboardNoticeTab($noticeForTab->notice_type ?? '');
+                $noticeTabCounts[$tabKey]++;
+                }
+                $defaultNoticeTab = 'office-orders';
+                foreach ($noticeTabKeys as $tabKeyCandidate) {
+                if ($noticeTabCounts[$tabKeyCandidate] > 0) {
+                $defaultNoticeTab = $tabKeyCandidate;
+                break;
+                }
+                }
+                @endphp
+                <div class="card dashboard-panel dashboard-feed-panel mb-3" id="dashboard-notices-panel">
+                    <div class="card-header py-3 px-4">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 gap-md-3">
+                            <h5 class="dashboard-feed-panel__title mb-0">Notices</h5>
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            <a href="{{ route('admin.notice.create') }}"
+                                class="btn btn-sm dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                                <span>Add New Notice</span>
+                            </a>
+                            @endif
+                        </div>
+                        <hr class="dashboard-feed-divider">
+                    </div>
+                    <div class="card-body pt-0 px-4 pb-3 dashboard-list-scroll">
+                        @if(count($notices) === 0)
+                        <div class="dashboard-feed-empty">
+                            <span class="dashboard-feed-empty__icon" aria-hidden="true">
+                                <i class="bi bi-file-earmark-x"></i>
+                            </span>
+                            <p class="mb-3 text-body-secondary">No notices available.</p>
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
+                            <a href="{{ route('admin.notice.create') }}"
+                                class="btn dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
+                                <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
+                                <span>Add New Notice</span>
+                            </a>
+                            @endif
+                        </div>
+                        @else
+                        <div class="dashboard-notice-tabs" role="tablist" aria-label="Notice categories">
+                            @foreach($noticeTabKeys as $tabKey)
                             <button type="button"
-                                class="dashboard-notification-item {{ empty($notification->is_read) ? 'dashboard-notification-item-unread' : '' }}"
-                                data-notification-id="{{ $notification->pk }}">
-                                <div class="d-flex gap-3 flex-grow-1 min-w-0">
-                                    <span class="notification-icon-wrap"><span class="material-icons material-symbols-rounded">notifications</span></span>
+                                class="dashboard-notice-tab {{ $tabKey === $defaultNoticeTab ? 'active' : '' }}{{ $noticeTabCounts[$tabKey] === 0 ? ' dashboard-notice-tab-empty' : '' }}"
+                                role="tab" aria-selected="{{ $tabKey === $defaultNoticeTab ? 'true' : 'false' }}"
+                                data-notice-tab="{{ $tabKey }}" id="dashboard-notice-tab-{{ $tabKey }}">
+                                {{ $noticeTabLabels[$tabKey] }}@if($noticeTabCounts[$tabKey] > 0):
+                                {{ $noticeTabCounts[$tabKey] }}@endif
+                            </button>
+                            @endforeach
+                        </div>
+                        <p class="dashboard-notice-list-empty d-none mb-0" id="dashboard-notice-tab-empty"
+                            role="status">
+                            No notices in this category.
+                        </p>
+                        <ul class="list-unstyled mb-0 ps-0" id="dashboard-notice-list">
+                            @foreach($notices as $notice)
+                            @php
+                            $noticeTab = $resolveDashboardNoticeTab($notice->notice_type ?? '');
+                            $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
+                            $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
+                                $displayFrom=!empty($notice->display_date)
+                                ? \Carbon\Carbon::parse($notice->display_date)->format('j F, Y')
+                                : null;
+                                $displayTo = !empty($notice->expiry_date)
+                                ? \Carbon\Carbon::parse($notice->expiry_date)->format('j F, Y')
+                                : null;
+                                if ($displayFrom && $displayTo) {
+                                $noticeDateLabel = $displayFrom . ' to ' . $displayTo;
+                                } elseif ($displayFrom) {
+                                $noticeDateLabel = $displayFrom;
+                                } elseif ($noticeDate) {
+                                $noticeDateLabel = date('j F, Y', strtotime($noticeDate));
+                                } else {
+                                $noticeDateLabel = '—';
+                                }
+                                @endphp
+                                <li class="mb-2 {{ $noticeTab !== $defaultNoticeTab ? 'd-none' : '' }}"
+                                    data-notice-tab-item="{{ $noticeTab }}">
+                                    <div
+                                        class="dashboard-notice-item {{ $isNewNotice ? 'dashboard-notice-item-new' : '' }}">
+                                        <span class="notice-icon-wrap" aria-hidden="true"><span
+                                                class="material-icons material-symbols-rounded">description</span></span>
+                                        <div class="min-w-0">
+                                            <div
+                                                class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                                <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
+                                                @if($isNewNotice)
+                                                <span
+                                                    class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
+                                                @endif
+                                            </div>
+                                            <small class="dashboard-notice-date">{{ $noticeDateLabel }}</small>
+                                            @if($notice->document)
+                                            <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
+                                                class="dashboard-notice-attachment text-danger text-decoration-none">
+                                                <i class="bi bi-paperclip" aria-hidden="true"></i>View attachment
+                                            </a>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </li>
+                                @endforeach
+                        </ul>
+                        <div class="dashboard-feed-footer">
+                            <a href="{{ route('admin.dashboard.feed', ['tab' => 'notices']) }}"
+                                class="dashboard-feed-see-all">See all</a>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Super Admin'))
+                <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-notifications-panel">
+                    <div class="card-header py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <h5 class="dashboard-feed-panel__title mb-0 d-flex align-items-center gap-2">
+                                @if($notificationBadgeCount > 0)
+                                <i class="bi bi-bell-fill text-primary dashboard-panel-bell--ring"
+                                    aria-hidden="true"></i>
+                                @else
+                                <i class="bi bi-bell text-primary opacity-75" aria-hidden="true"></i>
+                                @endif
+                                <span>{{ hasRole('Admin') || hasRole('Super Admin') ? 'Admin Summary' : 'Notifications' }}</span>
+                            </h5>
+                            <span class="dashboard-feed-count-badge"
+                                aria-label="{{ $notificationBadgeCount }} items">{{ $notificationBadgeCount }}</span>
+                        </div>
+                        <hr class="dashboard-feed-divider">
+                    </div>
+                    <div class="card-body pt-0 px-4 pb-3 dashboard-list-scroll">
+                        @if($notifications->isEmpty())
+                        <div class="dashboard-feed-empty">
+                            <span class="dashboard-feed-empty__icon" aria-hidden="true">
+                                <i class="bi bi-bell-slash"></i>
+                            </span>
+                            <p class="mb-0 text-body-secondary small">No notifications available.</p>
+                        </div>
+                        @else
+                        <ul class="list-unstyled mb-0 ps-0">
+                            @foreach($notifications as $notification)
+                            <li class="mb-0">
+                                <button type="button"
+                                    class="dashboard-notification-item {{ empty($notification->is_read) ? 'dashboard-notification-item-unread' : '' }}"
+                                    data-notification-id="{{ $notification->pk }}">
+                                    <span
+                                        class="notification-icon-wrap dashboard-notification-bell {{ empty($notification->is_read) ? 'dashboard-notification-bell--ring' : '' }}"
+                                        aria-hidden="true">
+                                        <i class="bi bi-bell-fill"></i>
+                                    </span>
                                     <div class="dashboard-notification-body">
                                         <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
-                                            <span class="dashboard-notification-title">{{ $notification->title ?? 'Notification' }}</span>
+                                            <span
+                                                class="dashboard-notification-title">{{ $notification->title ?? 'Notification' }}</span>
                                             @if(empty($notification->is_read))
                                             <span class="badge bg-danger dashboard-notification-new-tag">New</span>
                                             @endif
                                         </div>
-                                        <p class="dashboard-notification-message mb-0">{{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 80) }}</p>
-                                        <span class="dashboard-notification-time">{{ isset($notification->created_at) ? \Carbon\Carbon::parse($notification->created_at)->diffForHumans() : '—' }}</span>
+                                        <span
+                                            class="dashboard-notification-time">{{ isset($notification->created_at) ? \Carbon\Carbon::parse($notification->created_at)->diffForHumans() : '—' }}</span>
+                                        <p class="dashboard-notification-message mb-0">
+                                            {{ Str::limit(\App\Services\NotificationService::stripMessCombinedReceiptPayloadForDisplay($notification->message ?? ''), 120) }}
+                                        </p>
                                     </div>
-                                </div>
-                            </button>
-                        </li>
-                        @endforeach
-                    </ul>
-                    @endif
-                </div>
-            </div>
-
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-primary">campaign</span>
-                    <h5 class="mb-0 fw-semibold">Campus Tweets</h5>
-                </div>
-                <div class="card-body p-3 p-md-4">
-                    <div class="dashboard-tweet-item">
-                        <span class="small text-body-secondary">You have <strong class="text-body">{{ $notifications->count() }}</strong> unread notices and total <strong class="text-body">{{ count($notices) }}</strong> notices.</span>
-                    </div>
-                    <div class="dashboard-tweet-item">
-                        <span class="small text-body-secondary">You have <strong class="text-body">{{ $notifications->count() }}</strong> purchase orders for approval.</span>
-                    </div>
-                    <div class="dashboard-tweet-item">
-                        <span class="small text-body-secondary"><a href="#" class="link-primary text-decoration-none fw-medium">Click Here</a> for menu of departmental canteen for next 2 weeks.</span>
-                    </div>
-                </div>
-            </div>
-            @endif
-
-            @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-primary">fact_check</span>
-                    <h5 class="mb-0 fw-semibold">Today's Classes</h5>
-                </div>
-                <div class="card-body p-3 p-md-4">
-                    @if($todayTimetable && $todayTimetable->isNotEmpty())
-                    <div class="dashboard-list-scroll pe-2">
-                        @foreach($todayTimetable as $entry)
-                        <div class="dashboard-class-card">
-                            <div class="d-flex align-items-center gap-2 mb-2">
-                                <span class="dashboard-class-icon"><span class="material-icons material-symbols-rounded">schedule</span></span>
-                                <span class="text-primary fw-semibold">{{ $entry['session_date'] }} · {{ $entry['session_time'] }}</span>
-                            </div>
-                            <div class="dashboard-class-topic">{{ $entry['topic'] }}</div>
-                            <div class="dashboard-class-meta">
-                                <span>Faculty: {{ $entry['faculty_name'] }}</span>
-                                <span>Group: {{ $entry['group_name'] ?? 'N/A' }}</span>
-                                <span>Venue: {{ $entry['session_venue'] }}</span>
-                            </div>
+                                </button>
+                            </li>
+                            @endforeach
+                        </ul>
+                        <div class="dashboard-feed-footer">
+                            <a href="{{ route('admin.dashboard.feed', ['tab' => 'notifications']) }}"
+                                class="dashboard-feed-see-all">See all</a>
                         </div>
-                        @endforeach
+                        @endif
                     </div>
-                    @else
-                    <div class="dashboard-empty-state">
-                        <span class="material-icons material-symbols-rounded">event_busy</span>
-                        <p class="mb-0 small">No classes scheduled for today.</p>
-                    </div>
-                    @endif
                 </div>
-            </div>
-            @endif
 
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-3">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-primary">push_pin</span>
-                    <h5 class="mb-0 fw-semibold">Notices</h5>
-                </div>
-                <div class="card-body p-3 p-md-4 dashboard-list-scroll">
-                    @if(count($notices) === 0)
-                    <div class="dashboard-empty-state">
-                        <span class="material-icons material-symbols-rounded">description</span>
-                        <p class="mb-0 small">No notices available.</p>
+                @php
+                $campusTweetCount = 3;
+                @endphp
+                <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-campus-tweets-panel">
+                    <div class="card-header py-3 px-4">
+                        <div class="d-flex justify-content-between align-items-center gap-3">
+                            <h5 class="dashboard-feed-panel__title mb-0">Campus Tweets</h5>
+                            <span class="dashboard-feed-count-badge"
+                                aria-label="{{ $campusTweetCount }} items">{{ $campusTweetCount }}</span>
+                        </div>
+                        <hr class="dashboard-feed-divider">
                     </div>
-                    @else
-                    <ul class="list-unstyled mb-0 ps-0">
-                        @foreach($notices as $notice)
-                        @php
-                            $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
-                            $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
-                        @endphp
-                        <li class="mb-2">
-                            <div class="dashboard-notice-item {{ $isNewNotice ? 'dashboard-notice-item-new' : '' }}">
-                                <div class="d-flex align-items-start gap-3">
-                                    <span class="notice-icon-wrap"><span class="material-icons material-symbols-rounded">description</span></span>
-                                    <div class="flex-grow-1 min-w-0">
-                                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
-                                            <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
-                                            @if($isNewNotice)
-                                            <span class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
-                                            @endif
+                    <div class="card-body pt-0 px-4 pb-3">
+                        <div class="dashboard-tweet-item">
+                            <span class="small text-body-secondary">You have <strong
+                                    class="text-body">{{ $notifications->count() }}</strong> unread notices and total
+                                <strong class="text-body">{{ count($notices) }}</strong> notices.</span>
+                        </div>
+                        <div class="dashboard-tweet-item">
+                            <span class="small text-body-secondary">You have <strong
+                                    class="text-body">{{ $notifications->count() }}</strong> purchase orders for
+                                approval.</span>
+                        </div>
+                        <div class="dashboard-tweet-item">
+                            <span class="small text-body-secondary"><a href="#"
+                                    class="link-primary text-decoration-none fw-medium">Click Here</a> for menu of
+                                departmental canteen for next 2 weeks.</span>
+                        </div>
+                        <div class="dashboard-feed-footer">
+                            <a href="{{ route('admin.dashboard.feed', ['tab' => 'notifications']) }}"
+                                class="dashboard-feed-see-all">See all</a>
+                        </div>
+                    </div>
+                </div>
+                @endif
+
+                @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super
+                Admin'))
+                <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-todays-classes-panel">
+                    <div class="card-header py-3 px-4">
+                        <h5 class="dashboard-feed-panel__title mb-0">Today's Classes</h5>
+                        <hr class="dashboard-feed-divider">
+                    </div>
+                    <div class="card-body pt-0 px-4 pb-3">
+                        @if($todayTimetable && $todayTimetable->isNotEmpty())
+                        <div class="dashboard-list-scroll pe-1">
+                            @foreach($todayTimetable as $entry)
+                            <div class="dashboard-class-card">
+                                <div class="d-flex align-items-center gap-2 mb-2">
+                                    <span class="dashboard-class-icon" aria-hidden="true">
+                                        <i class="bi bi-clock"></i>
+                                    </span>
+                                    <span class="fw-semibold text-primary">{{ $entry['session_date'] }} ·
+                                        {{ $entry['session_time'] }}</span>
+                                </div>
+                                <div class="dashboard-class-topic">{{ $entry['topic'] }}</div>
+                                <div class="dashboard-class-meta">
+                                    <span><i class="bi bi-person me-1 opacity-75" aria-hidden="true"></i>Faculty:
+                                        {{ $entry['faculty_name'] }}</span>
+                                    <span><i class="bi bi-people me-1 opacity-75" aria-hidden="true"></i>Group:
+                                        {{ $entry['group_name'] ?? 'N/A' }}</span>
+                                    <span><i class="bi bi-geo-alt me-1 opacity-75" aria-hidden="true"></i>Venue:
+                                        {{ $entry['session_venue'] }}</span>
+                                </div>
+                            </div>
+                            @endforeach
+                        </div>
+                        @else
+                        <div class="dashboard-feed-empty">
+                            <span class="dashboard-feed-empty__icon" aria-hidden="true">
+                                <i class="bi bi-calendar-x"></i>
+                            </span>
+                            <p class="mb-0 text-body-secondary small">No classes scheduled for today.</p>
+                        </div>
+                        @endif
+                    </div>
+                </div>
+                @endif
+
+            </div>
+
+            <div class="col-auto" style="width: 480px; min-width: 480px;">
+                <div class="card dashboard-panel dashboard-birthdays-panel border-0 mb-4">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex align-items-center justify-content-between w-100">
+                            <h5 class="dashboard-birthdays-panel__title mb-0">Today's Birthdays 🎉</h5>
+                            <span
+                                class="dashboard-birthdays-count {{ $emp_dob_data->count() > 9 ? 'dashboard-birthdays-count--wide' : '' }}"
+                                aria-label="{{ $emp_dob_data->count() }} birthdays today">{{ $emp_dob_data->count() }}</span>
+                        </div>
+                        <hr class="dashboard-birthdays-divider">
+                    </div>
+                    <div class="card-body dashboard-list-scroll">
+                        @if($emp_dob_data->isEmpty())
+                        <div class="dashboard-empty-state py-4">
+                            <i class="bi bi-gift text-primary opacity-50 fs-1 d-block mb-2" aria-hidden="true"></i>
+                            <p class="mb-0 small text-body-secondary">No birthdays today.</p>
+                        </div>
+                        @else
+                        <div class="d-flex flex-column gap-2">
+                            @foreach($emp_dob_data as $employee)
+                            @php
+                            $avClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning',
+                            'text-bg-danger', 'text-bg-secondary'];
+                            $avClass = $avClasses[$loop->index % count($avClasses)];
+                            $photo = !empty($employee->profile_picture) ? asset('storage/' . $employee->profile_picture)
+                            : null;
+                            $email = trim((string)($employee->email ?? ''));
+                            $fullName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
+                            $wishCount = $birthdayWishCounts[$employee->pk] ?? 0;
+                            $hasContact = $email !== '' || !empty($employee->mobile) ||
+                            !empty($employee->office_extension_no);
+                            @endphp
+                            <article class="dashboard-birthday-item" @if($hasContact) tabindex="0" @endif>
+                                <div class="dashboard-birthday-row">
+                                    <x-dashboard-birthday-avatar :photo="$photo" :name="$fullName"
+                                        :color-class="$avClass" />
+                                    <div class="dashboard-birthday-info">
+                                        <p class="dashboard-birthday-name text-truncate mb-0">{{ $fullName }}</p>
+                                        <p class="dashboard-birthday-designation text-truncate mb-0">
+                                            {{ $employee->designation_name }}</p>
+                                        @if($wishCount > 0)
+                                        <span
+                                            class="badge rounded-pill bg-success-subtle text-success border border-success-subtle dashboard-birthday-badge mt-1"
+                                            title="{{ $wishCount }} wishes sent">🎁 {{ $wishCount }}</span>
+                                        @endif
+                                    </div>
+                                    <button type="button" class="btn btn-sm dashboard-birthday-wish-btn btn-custom-wish"
+                                        data-name="{{ $fullName }}" data-email="{{ $email }}"
+                                        data-mobile="{{ $employee->mobile ?? '' }}" data-pk="{{ $employee->pk }}"
+                                        title="Send birthday wish to {{ $fullName }}">Wish them</button>
+                                </div>
+                                @if($hasContact)
+                                <div class="dashboard-birthday-detail">
+                                    <div class="d-flex flex-wrap gap-2">
+                                        @if(!empty($employee->mobile))
+                                        <div class="dashboard-birthday-contact-pill">
+                                            <i class="bi bi-telephone" aria-hidden="true"></i>
+                                            <span>{{ $employee->mobile }}</span>
                                         </div>
-                                        <small class="d-block dashboard-notice-date">{{ $noticeDate ? date('d M, Y', strtotime($noticeDate)) : '—' }}</small>
-                                        @if($notice->document)
-                                        <a href="{{ asset('storage/' . $notice->document) }}" target="_blank" class="dashboard-notice-attachment text-danger text-decoration-none">
-                                            <span class="material-icons material-symbols-rounded" style="font-size: 1rem;">attach_file</span>View attachment
-                                        </a>
+                                        @endif
+                                        @if($email !== '')
+                                        <div class="dashboard-birthday-contact-pill">
+                                            <i class="bi bi-envelope" aria-hidden="true"></i>
+                                            <span>{{ $email }}</span>
+                                        </div>
+                                        @endif
+                                        @if(!empty($employee->office_extension_no))
+                                        <div class="dashboard-birthday-contact-pill">
+                                            <i class="bi bi-telephone-outbound" aria-hidden="true"></i>
+                                            <span>Ext {{ $employee->office_extension_no }}</span>
+                                        </div>
                                         @endif
                                     </div>
                                 </div>
-                            </div>
-                        </li>
-                        @endforeach
-                    </ul>
-                    @endif
-                </div>
-            </div>
-
-            
-        </div>
-
-        <div class="col-lg-5">
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-primary">cake</span>
-                    <h4 class="mb-0 fw-semibold text-primary">Today's Birthday</h4>
-                    <span class="ms-auto badge rounded-pill text-bg-primary-subtle text-primary border border-primary-subtle">
-                        {{ $emp_dob_data->count() }}
-                    </span>
+                                @endif
+                            </article>
+                            @endforeach
+                        </div>
+                        @endif
+                    </div>
                     @if($emp_dob_data->isNotEmpty())
-                    <a href="{{ route('admin.birthday-wish.index') }}" class="btn btn-sm btn-primary rounded-pill ms-2 d-inline-flex align-items-center gap-1" title="Send wishes to all">
-                        <span class="material-icons material-symbols-rounded" style="font-size:14px;">send</span>
-                        <span style="font-size:0.75rem;">Send Wishes</span>
-                    </a>
-                    <button type="button" class="btn btn-sm btn-success rounded-pill ms-1 d-inline-flex align-items-center gap-1" id="btn-quick-wish-all" title="Quick wish everyone at once">
-                        <span class="material-icons material-symbols-rounded" style="font-size:14px;">celebration</span>
-                        <span style="font-size:0.75rem;">Wish All</span>
-                    </button>
-                    @endif
-                </div>
-                <div class="card-body p-3 dashboard-list-scroll">
-                    @if($emp_dob_data->isEmpty())
-                    <div class="dashboard-empty-state">
-                        <span class="material-icons material-symbols-rounded">card_giftcard</span>
-                        <p class="mb-0 small">No birthdays today.</p>
-                    </div>
-                    @else
-                    <div class="d-grid gap-2">
-                        @foreach($emp_dob_data as $employee)
-                        @php
-                        $avClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-secondary'];
-                        $avClass = $avClasses[$loop->index % count($avClasses)];
-                        $photo = !empty($employee->profile_picture) ? asset('storage/' . $employee->profile_picture) : null;
-                        $email = trim((string)($employee->email ?? ''));
-                        $fullName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
-                        $subject = rawurlencode('Happy Birthday ' . ($fullName ?: ''));
-                        $body = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday!\n\nRegards,");
-                        @endphp
-                        <div class="card dashboard-birthday-item border-0 shadow-sm rounded-4">
-                            <div class="card-body p-3">
-                                <div class="d-flex align-items-start gap-3">
-                                    @if($photo)
-                                        <img src="{{ $photo }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0 dashboard-avatar">
-                                    @else
-                                        <div class="rounded-circle {{ $avClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0 dashboard-avatar">
-                                            {{ strtoupper(substr($employee->first_name, 0, 1)) }}
-                                        </div>
-                                    @endif
-
-                                    <div class="flex-grow-1 min-w-0">
-                                        <div class="d-flex align-items-start justify-content-between gap-2">
-                                            <div class="min-w-0">
-                                                <div class="dashboard-birthday-name text-truncate">{{ $fullName }}</div>
-                                                <div class="dashboard-birthday-designation text-truncate">{{ $employee->designation_name }}</div>
-                                            </div>
-
-                                            <div class="dashboard-birthday-badge" title="Wish them">
-                                                <span class="material-icons material-symbols-rounded" style="font-size: 16px;">cake</span>
-                                                Birthday
-                                            </div>
-                                            @php $wishCount = $birthdayWishCounts[$employee->pk] ?? 0; @endphp
-                                            @if($wishCount > 0)
-                                            <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle" style="font-size:0.65rem;" title="{{ $wishCount }} wishes sent">
-                                                🎁 {{ $wishCount }} {{ $wishCount === 1 ? 'wish' : 'wishes' }}
-                                            </span>
-                                            @endif
-                                        </div>
-
-                                        <div class="dashboard-birthday-contact">
-                                            @if($email !== '')
-                                                <span class="text-truncate">
-                                                    <span class="material-icons material-symbols-rounded align-middle">mail</span>
-                                                    {{ $email }}
-                                                </span>
-                                            @endif
-                                            @if(!empty($employee->mobile))
-                                                <span class="text-truncate">
-                                                    <span class="material-icons material-symbols-rounded align-middle">call</span>
-                                                    {{ $employee->mobile }}
-                                                </span>
-                                            @endif
-                                            @if(!empty($employee->office_extension_no))
-                                                <span class="text-truncate">
-                                                    <span class="material-icons material-symbols-rounded align-middle">local_phone</span>
-                                                    Ext {{ $employee->office_extension_no }}
-                                                </span>
-                                            @endif
-                                        </div>
-
-                                        <div class="d-flex gap-2 mt-2 flex-wrap">
-                                            @if(!empty($employee->mobile))
-                                            @php
-                                                $whatsappPhone = preg_replace('/[^0-9]/', '', $employee->mobile);
-                                                if(!str_starts_with($whatsappPhone, '91') && strlen($whatsappPhone) == 10) { $whatsappPhone = '91' . $whatsappPhone; }
-                                                $whatsappMsg = rawurlencode("Dear " . ($fullName ?: '') . ",\n\nWishing you a very Happy Birthday! 🎂🎉\n\nRegards,\n" . ($user->first_name ?? $user->name ?? ''));
-                                            @endphp
-                                            <a href="https://wa.me/{{ $whatsappPhone }}?text={{ $whatsappMsg }}"
-                                               target="_blank"
-                                               class="btn btn-sm btn-outline-success rounded-pill d-inline-flex align-items-center gap-1"
-                                               title="Send Birthday WhatsApp">
-                                                <span class="material-icons material-symbols-rounded" style="font-size:14px;">chat</span>
-                                                <span style="font-size:0.75rem;">WhatsApp</span>
-                                            </a>
-                                            @endif
-                                            <button type="button"
-                                                class="btn btn-sm btn-outline-secondary rounded-pill d-inline-flex align-items-center gap-1 btn-custom-wish"
-                                                data-name="{{ $fullName }}"
-                                                data-email="{{ $email }}"
-                                                data-mobile="{{ $employee->mobile ?? '' }}"
-                                                data-pk="{{ $employee->pk }}"
-                                                title="Send Custom Message">
-                                                <span class="material-icons material-symbols-rounded" style="font-size:14px;">edit</span>
-                                                <span style="font-size:0.75rem;">Custom</span>
-                                            </button>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                    <div class="card-footer bg-white border-0">
+                        <div class="dashboard-birthdays-footer w-100">
+                            <span class="visually-hidden">More actions</span>
+                            <a href="{{ route('admin.dashboard.feed', ['tab' => 'birthdays']) }}"
+                                class="dashboard-birthdays-see-all">See all</a>
                         </div>
-                        @endforeach
                     </div>
                     @endif
                 </div>
-            </div>
 
-            @if(($upcomingBirthdays ?? collect())->isNotEmpty())
-            <div class="card dashboard-panel shadow-sm rounded-4 mb-4">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-warning">upcoming</span>
-                    <h6 class="mb-0 fw-semibold">Upcoming Birthdays</h6>
-                    <span class="ms-auto badge rounded-pill text-bg-warning-subtle text-warning border border-warning-subtle">
-                        Next 7 days
-                    </span>
-                </div>
-                <div class="card-body p-3" style="max-height: 16rem; overflow-y: auto;">
-                    <div class="d-grid gap-2">
-                        @foreach($upcomingBirthdays as $upcoming)
-                        @php
-                            $upName = trim(($upcoming->first_name ?? '') . ' ' . ($upcoming->last_name ?? ''));
-                            $upPhoto = !empty($upcoming->profile_picture) ? asset('storage/' . $upcoming->profile_picture) : null;
-                            $upAvClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger'];
-                            $upAvClass = $upAvClasses[$loop->index % count($upAvClasses)];
-                        @endphp
-                        <div class="d-flex align-items-center gap-2 px-2 py-2 rounded-3" style="background: rgba(var(--bs-warning-rgb), 0.05);">
-                            @if($upPhoto)
-                                <img src="{{ $upPhoto }}" alt="" class="rounded-circle object-fit-cover flex-shrink-0" style="width:2rem; height:2rem;">
-                            @else
-                                <div class="rounded-circle {{ $upAvClass }} fw-semibold d-inline-flex align-items-center justify-content-center flex-shrink-0" style="width:2rem; height:2rem; font-size:0.75rem;">
-                                    {{ strtoupper(substr($upcoming->first_name, 0, 1)) }}
-                                </div>
-                            @endif
-                            <div class="min-w-0 flex-grow-1">
-                                <div class="fw-semibold small text-truncate">{{ $upName }}</div>
-                                <div class="text-body-secondary" style="font-size:0.7rem;">{{ $upcoming->designation_name ?? '' }}</div>
-                            </div>
-                            <div class="text-end flex-shrink-0">
-                                <span class="badge rounded-pill bg-warning-subtle text-warning border border-warning-subtle" style="font-size:0.65rem;">
-                                    🎂 {{ $upcoming->birthday_date }}
-                                </span>
-                                <div class="text-body-secondary" style="font-size:0.6rem;">in {{ $upcoming->days_away }} {{ $upcoming->days_away == 1 ? 'day' : 'days' }}</div>
-                            </div>
+                <div class="card dashboard-panel dashboard-birthdays-panel--calendar border-0">
+                    <div class="card-header bg-white border-0">
+                        <div class="d-flex align-items-center justify-content-between w-100">
+                            <h5 class="dashboard-birthdays-panel__title mb-0">Calendar</h5>
+                            <span class="dashboard-calendar-date-badge mb-0">
+                                {{ now()->format('d-m-Y') }}
+                            </span>
                         </div>
-                        @endforeach
+                        <hr class="dashboard-birthdays-divider mb-0">
                     </div>
-                </div>
-            </div>
-            @endif
-
-            <div class="card dashboard-panel shadow-sm rounded-4">
-                <div class="card-header py-3 px-4 d-flex align-items-center gap-2">
-                    <span class="material-icons material-symbols-rounded text-primary">calendar_month</span>
-                    <h5 class="mb-0 fw-semibold">Calendar</h5>
-                    <span class="ms-auto text-body-secondary fw-semibold">
-                        {{ now()->format('d M Y') }}
-                    </span>
-                </div>
-                <div class="card-body p-3 p-md-4">
-                    <div id="dashboard-calendar-container">
-                        <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()" :events="$events" theme="gov-red" />
+                    <div class="card-body">
+                        <div id="dashboard-calendar-container" aria-live="polite">
+                            <x-calendar :year="$year" :month="$month" :selected="now()->toDateString()"
+                                :events="$events" theme="gov-red" />
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-</div>
 
-<!-- Custom Birthday Wish Modal -->
-<div class="modal fade" id="customWishModal" tabindex="-1" aria-labelledby="customWishModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-lg modal-dialog-centered">
-        <div class="modal-content rounded-4 border-0 shadow">
-            <div class="modal-header bg-primary bg-opacity-10 border-0 rounded-top-4 px-4 py-3">
-                <h5 class="modal-title fw-semibold d-flex align-items-center gap-2" id="customWishModalLabel">
-                    <span class="material-icons material-symbols-rounded text-primary">celebration</span>
-                    Send Birthday Wish
-                </h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body px-4 py-3">
-                <div class="mb-3">
-                    <label class="form-label fw-semibold small">To</label>
-                    <input type="text" class="form-control" id="wish-recipient-name" readonly>
+    <!-- Custom Birthday Wish Modal -->
+    <div class="modal fade" id="customWishModal" tabindex="-1" aria-labelledby="customWishModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered dashboard-wish-modal-dialog">
+            <div class="modal-content dashboard-wish-modal">
+                <div class="modal-header dashboard-wish-modal__header">
+                    <h5 class="modal-title dashboard-wish-modal__title mb-0" id="customWishModalLabel">
+                        Wish on their birthday
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <hr class="dashboard-wish-modal__divider">
+                <div class="modal-body dashboard-wish-modal__body">
                     <input type="hidden" id="wish-recipient-email">
                     <input type="hidden" id="wish-recipient-mobile">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold small">Choose Template</label>
-                    <select class="form-select" id="wish-template-select">
-                        <option value="formal">Formal Birthday Wish</option>
-                        <option value="casual">Casual Birthday Wish</option>
-                        <option value="professional">Professional Birthday Wish</option>
-                        <option value="custom">Write Custom Message</option>
-                    </select>
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold small">Subject <small class="text-muted">(for Email)</small></label>
-                    <input type="text" class="form-control" id="wish-subject" value="Happy Birthday!">
-                </div>
-                <div class="mb-3">
-                    <label class="form-label fw-semibold small">Message</label>
-                    <textarea class="form-control" id="wish-message" rows="6"></textarea>
-                </div>
-                <div class="mb-2">
-                    <label class="form-label fw-semibold small">Send via</label>
-                    <div class="d-flex gap-3">
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="send-via-email" checked>
-                            <label class="form-check-label small" for="send-via-email">
-                                <span class="material-icons material-symbols-rounded align-middle text-primary" style="font-size:16px;">mail</span> Email
+                    <input type="hidden" id="wish-modal-mode" value="birthday">
+
+                    <p class="dashboard-wish-intro mb-0" id="wish-modal-intro-birthday">
+                        Wish
+                        <input type="text" class="dashboard-wish-name-inline" id="wish-recipient-name" readonly
+                            aria-label="Recipient name" size="16">
+                        on the occasion of their birthday.
+                    </p>
+                    <p class="dashboard-wish-intro mb-0 d-none" id="wish-modal-intro-reply">
+                        Your reply to
+                        <input type="text" class="dashboard-wish-name-inline" id="wish-reply-name-inline" readonly
+                            aria-label="Recipient name" size="16">
+                        for their birthday wish.
+                    </p>
+
+                    <div class="dashboard-wish-options row g-3 mt-3" id="wish-modal-extra">
+                        <div class="col-sm-6">
+                            <label class="form-label" for="wish-template-select">Message template</label>
+                            <select class="form-select" id="wish-template-select">
+                                <option value="formal">Formal Birthday Wish</option>
+                                <option value="casual">Casual Birthday Wish</option>
+                                <option value="professional">Professional Birthday Wish</option>
+                                <option value="custom">Write Custom Message</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-6">
+                            <label class="form-label" for="wish-subject">
+                                Email subject
+                                <span class="fw-normal text-body-secondary">(for email)</span>
+                            </label>
+                            <input type="text" class="form-control" id="wish-subject" value="Happy Birthday!">
+                        </div>
+                    </div>
+
+                    <div class="mt-4" id="wish-modal-message-wrap">
+                        <label class="form-label dashboard-wish-message-label d-block" for="wish-message"
+                            id="wish-message-label">Your message</label>
+                        <textarea class="form-control dashboard-wish-textarea" id="wish-message" rows="7"
+                            placeholder="Write your birthday wish here…"></textarea>
+                    </div>
+
+                    <div class="d-flex flex-wrap align-items-center dashboard-wish-channels mt-4 opacity-50 pe-none"
+                        id="wish-modal-channels" aria-hidden="true" title="Temporarily unavailable">
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="send-via-whatsapp" disabled>
+                            <label class="form-check-label text-body-secondary" for="send-via-whatsapp">
+                                Via WhatsApp
                             </label>
                         </div>
-                        <div class="form-check">
-                            <input class="form-check-input" type="checkbox" id="send-via-whatsapp">
-                            <label class="form-check-label small" for="send-via-whatsapp">
-                                <span class="material-icons material-symbols-rounded align-middle text-success" style="font-size:16px;">chat</span> WhatsApp
+                        <div class="form-check mb-0">
+                            <input class="form-check-input" type="checkbox" id="send-via-email" disabled>
+                            <label class="form-check-label text-body-secondary" for="send-via-email">
+                                Via Email
                             </label>
                         </div>
                     </div>
+                    <p class="small text-body-secondary mb-0 mt-2" id="wish-modal-hint">
+                        <i class="bi bi-bell me-1" aria-hidden="true"></i>Send delivers an in-app notification with your
+                        message.
+                    </p>
                 </div>
-            </div>
-            <div class="modal-footer border-0 px-4 pb-4">
-                <button type="button" class="btn btn-light rounded-pill px-4" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-pill px-4 d-flex align-items-center gap-2" id="btn-send-wish">
-                    <span class="material-icons material-symbols-rounded" style="font-size:18px;">send</span> Send Wish
-                </button>
+                <div class="modal-footer dashboard-wish-modal__footer d-flex justify-content-end border-0">
+                    <button type="button" class="btn dashboard-wish-btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn dashboard-wish-btn-send" id="btn-send-wish">Send</button>
+                </div>
             </div>
         </div>
     </div>
-</div>
 
-@push('scripts')
-<script>
-// Birthday wish modal logic
-(function() {
-    const templates = {
-        formal: function(name) {
-            return "Dear " + name + ",\n\nOn the occasion of your birthday, I extend my heartfelt wishes for a wonderful year ahead. May this special day bring you joy, success, and good health.\n\nWarm regards,";
-        },
-        casual: function(name) {
-            return "Hey " + name + "! 🎂🎉\n\nWishing you a fantastic birthday! Hope your day is filled with joy, laughter, and all things wonderful. Have an amazing year ahead!\n\nCheers!";
-        },
-        professional: function(name) {
-            return "Dear " + name + ",\n\nWishing you a very Happy Birthday! May this new year of your life bring you continued success and fulfilment in all your endeavours.\n\nBest wishes,";
-        },
-        custom: function(name) {
-            return "Dear " + name + ",\n\n";
-        }
-    };
-
-    var currentRecipient = {};
-
-    document.addEventListener('click', function(e) {
-        var btn = e.target.closest('.btn-custom-wish');
-        if (!btn) return;
-        currentRecipient = {
-            name: btn.dataset.name || '',
-            email: btn.dataset.email || '',
-            mobile: btn.dataset.mobile || '',
-            employee_pk: btn.dataset.pk || ''
+    @push('scripts')
+    <script>
+    // Birthday wish modal logic
+    (function() {
+        const templates = {
+            formal: function(name) {
+                return "Dear " + name +
+                    ",\n\nOn the occasion of your birthday, I extend my heartfelt wishes for a wonderful year ahead. May this special day bring you joy, success, and good health.\n\nWarm regards,";
+            },
+            casual: function(name) {
+                return "Hey " + name +
+                    "! 🎂🎉\n\nWishing you a fantastic birthday! Hope your day is filled with joy, laughter, and all things wonderful. Have an amazing year ahead!\n\nCheers!";
+            },
+            professional: function(name) {
+                return "Dear " + name +
+                    ",\n\nWishing you a very Happy Birthday! May this new year of your life bring you continued success and fulfilment in all your endeavours.\n\nBest wishes,";
+            },
+            custom: function(name) {
+                return "Dear " + name + ",\n\n";
+            }
         };
-        document.getElementById('wish-recipient-name').value = currentRecipient.name;
-        document.getElementById('wish-recipient-email').value = currentRecipient.email;
-        document.getElementById('wish-recipient-mobile').value = currentRecipient.mobile;
 
-        var emailCheckbox = document.getElementById('send-via-email');
-        var whatsappCheckbox = document.getElementById('send-via-whatsapp');
-        emailCheckbox.checked = currentRecipient.email !== '';
-        emailCheckbox.disabled = currentRecipient.email === '';
-        whatsappCheckbox.checked = false;
-        whatsappCheckbox.disabled = currentRecipient.mobile === '';
+        var replyTemplate = function(name) {
+            return "Dear " + name +
+                ",\n\nThank you so much for your lovely birthday wishes! I truly appreciate your thoughtfulness.\n\nWarm regards,";
+        };
 
-        document.getElementById('wish-template-select').value = 'formal';
-        document.getElementById('wish-subject').value = 'Happy Birthday ' + currentRecipient.name + '!';
-        document.getElementById('wish-message').value = templates.formal(currentRecipient.name);
+        var currentRecipient = {
+            mode: 'birthday'
+        };
 
-        var modal = new bootstrap.Modal(document.getElementById('customWishModal'));
-        modal.show();
-    });
+        function setNameFieldSize(input, name) {
+            if (!input) return;
+            input.value = name || '';
+            input.size = Math.max(4, Math.min(28, (name || '').length + 1));
+        }
 
-    var templateSelect = document.getElementById('wish-template-select');
-    if (templateSelect) {
-        templateSelect.addEventListener('change', function() {
-            var name = currentRecipient.name || '';
-            var tpl = templates[this.value] || templates.custom;
-            document.getElementById('wish-message').value = tpl(name);
+        function setWishModalMode(mode, name) {
+            var isReply = mode === 'reply';
+            currentRecipient.mode = mode;
+            var modeInput = document.getElementById('wish-modal-mode');
+            if (modeInput) modeInput.value = mode;
+            document.getElementById('customWishModalLabel').textContent = isReply ? 'Reply to birthday wish' :
+                'Wish on their birthday';
+            var introBirthday = document.getElementById('wish-modal-intro-birthday');
+            var introReply = document.getElementById('wish-modal-intro-reply');
+            if (introBirthday) introBirthday.classList.toggle('d-none', isReply);
+            if (introReply) introReply.classList.toggle('d-none', !isReply);
+            var extra = document.getElementById('wish-modal-extra');
+            var channels = document.getElementById('wish-modal-channels');
+            if (extra) extra.classList.toggle('d-none', isReply);
+            if (channels) channels.classList.toggle('d-none', isReply);
+            var messageLabel = document.getElementById('wish-message-label');
+            var messageField = document.getElementById('wish-message');
+            if (messageLabel) messageLabel.textContent = isReply ? 'Your reply' : 'Your message';
+            if (messageField) {
+                messageField.placeholder = isReply ? 'Write your thank-you reply…' :
+                    'Write your birthday wish here…';
+            }
+            setNameFieldSize(document.getElementById('wish-recipient-name'), name);
+            setNameFieldSize(document.getElementById('wish-reply-name-inline'), name);
+        }
+
+        function openWishModal(recipient, mode) {
+            currentRecipient = Object.assign({}, recipient, {
+                mode: mode
+            });
+            setWishModalMode(mode, currentRecipient.name);
+            document.getElementById('wish-recipient-email').value = currentRecipient.email || '';
+            document.getElementById('wish-recipient-mobile').value = currentRecipient.mobile || '';
+            if (mode === 'reply') {
+                document.getElementById('wish-message').value = replyTemplate(currentRecipient.name || '');
+                document.getElementById('wish-subject').value = 'Thank you for the birthday wishes!';
+            } else {
+                document.getElementById('wish-template-select').value = 'formal';
+                document.getElementById('wish-subject').value = 'Happy Birthday ' + (currentRecipient.name || '') +
+                    '!';
+                document.getElementById('wish-message').value = templates.formal(currentRecipient.name || '');
+            }
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('customWishModal')).show();
+        }
+
+        document.addEventListener('click', function(e) {
+            var replyBtn = e.target.closest('.btn-wish-reply');
+            if (replyBtn) {
+                e.preventDefault();
+                e.stopPropagation();
+                openWishModal({
+                    name: replyBtn.dataset.name || '',
+                    email: replyBtn.dataset.email || '',
+                    mobile: replyBtn.dataset.mobile || '',
+                    employee_pk: replyBtn.dataset.pk || ''
+                }, 'reply');
+                return;
+            }
+            var btn = e.target.closest('.btn-custom-wish');
+            if (!btn) return;
+            openWishModal({
+                name: btn.dataset.name || '',
+                email: btn.dataset.email || '',
+                mobile: btn.dataset.mobile || '',
+                employee_pk: btn.dataset.pk || ''
+            }, 'birthday');
         });
-    }
 
-    var sendBtn = document.getElementById('btn-send-wish');
-    if (sendBtn) {
-        sendBtn.addEventListener('click', function() {
-            var message = document.getElementById('wish-message').value.trim();
-            var subject = document.getElementById('wish-subject').value.trim();
-            var sendEmail = document.getElementById('send-via-email').checked;
-            var sendWhatsapp = document.getElementById('send-via-whatsapp').checked;
+        var templateSelect = document.getElementById('wish-template-select');
+        if (templateSelect) {
+            templateSelect.addEventListener('change', function() {
+                if (currentRecipient.mode === 'reply') return;
+                var name = currentRecipient.name || '';
+                var tpl = templates[this.value] || templates.custom;
+                document.getElementById('wish-message').value = tpl(name);
+            });
+        }
 
-            if (!message) { alert('Please enter a message.'); return; }
-            if (!sendEmail && !sendWhatsapp) { alert('Please select at least one channel (Email or WhatsApp).'); return; }
+        var sendBtn = document.getElementById('btn-send-wish');
+        if (sendBtn) {
+            sendBtn.addEventListener('click', function() {
+                var message = document.getElementById('wish-message').value.trim();
+                var subject = document.getElementById('wish-subject').value.trim();
+                var isReply = currentRecipient.mode === 'reply';
 
-            var sent = false;
+                if (!message) {
+                    alert('Please enter a message.');
+                    return;
+                }
+                if (!currentRecipient.employee_pk) {
+                    alert('Could not identify the recipient. Please try again.');
+                    return;
+                }
 
-            if (sendEmail && currentRecipient.email) {
-                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+                var defaultTitle = isReply ?
+                    'Thank you for the birthday wishes!' :
+                    ('Happy Birthday ' + (currentRecipient.name || '') + '!');
+
+                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
+                    'content') ||
+                    '{{ csrf_token() }}';
                 sendBtn.disabled = true;
                 sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
 
-                fetch('{{ route("admin.birthday-wish.send-email") }}', {
+                fetch('{{ route("admin.birthday-wish.send-notification") }}', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Accept': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        body: JSON.stringify({
+                            employee_pks: [parseInt(currentRecipient.employee_pk, 10)],
+                            message: message,
+                            title: subject || defaultTitle
+                        })
+                    })
+                    .then(function(r) {
+                        return r.json();
+                    })
+                    .then(function(data) {
+                        if (data.success) {
+                            bootstrap.Modal.getInstance(document.getElementById('customWishModal'))
+                                .hide();
+                            showToast(data.message || (isReply ? 'Reply sent!' :
+                                'Birthday wish notification sent!'), 'success');
+                        } else {
+                            alert('Failed to send notification: ' + (data.error || 'Unknown error'));
+                        }
+                    })
+                    .catch(function(err) {
+                        alert('Error sending notification: ' + (err.message || 'Unknown error'));
+                    })
+                    .finally(function() {
+                        sendBtn.disabled = false;
+                        sendBtn.innerHTML = 'Send';
+                    });
+            });
+        }
+
+        function openWhatsApp(mobile, message) {
+            var phone = mobile.replace(/[^0-9]/g, '');
+            if (phone.length === 10) phone = '91' + phone;
+            var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
+            window.open(url, '_blank');
+        }
+
+        function showToast(msg, type) {
+            var toastHtml = '<div class="toast align-items-center text-bg-' + (type || 'primary') +
+                ' border-0 show" role="alert" style="position:fixed;top:20px;right:20px;z-index:9999;">' +
+                '<div class="d-flex"><div class="toast-body">' + msg + '</div>' +
+                '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
+            var div = document.createElement('div');
+            div.innerHTML = toastHtml;
+            document.body.appendChild(div);
+            setTimeout(function() {
+                div.remove();
+            }, 4000);
+        }
+    })();
+
+    window.markAsReadDashboard = function(notificationId, clickedElement) {
+        if (clickedElement && clickedElement.dataset.processing === 'true') {
+            return;
+        }
+        if (clickedElement) {
+            clickedElement.dataset.processing = 'true';
+        }
+
+        const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+            '{{ csrf_token() }}';
+
+        fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                }
+            })
+            .then(response => response.json().then(data => ({
+                ok: response.ok,
+                data
+            })))
+            .then(({
+                ok,
+                data
+            }) => {
+                if (!ok) {
+                    throw new Error(data.error || 'Failed to mark notification as read');
+                }
+                if (data.success && data.redirect_url) {
+                    window.location.href = data.redirect_url;
+                    return;
+                }
+                if (data.success) {
+                    location.reload();
+                    return;
+                }
+                throw new Error(data.error || 'Unknown error occurred');
+            })
+            .catch(error => {
+                if (clickedElement) {
+                    clickedElement.dataset.processing = 'false';
+                }
+                alert('An error occurred: ' + (error.message || 'Unknown error'));
+            });
+    };
+
+    window.markAsRead = window.markAsReadDashboard;
+
+    // Use event delegation to avoid inline onclick (also helps JS linters in Blade).
+    document.addEventListener('click', function(e) {
+        const btn = e.target && e.target.closest ? e.target.closest(
+            '.dashboard-notification-item[data-notification-id]') : null;
+        if (!btn) return;
+        const id = btn.dataset.notificationId;
+        if (!id) return;
+        window.markAsReadDashboard(id, btn);
+    });
+
+    document.addEventListener('click', function(e) {
+        const tabBtn = e.target && e.target.closest ? e.target.closest(
+            '.dashboard-notice-tab[data-notice-tab]') :
+            null;
+        if (!tabBtn) return;
+
+        const activeTab = tabBtn.dataset.noticeTab;
+        if (!activeTab) return;
+
+        document.querySelectorAll('.dashboard-notice-tab[data-notice-tab]').forEach(function(button) {
+            const isActive = button.dataset.noticeTab === activeTab;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+
+        let visibleCount = 0;
+        document.querySelectorAll('[data-notice-tab-item]').forEach(function(item) {
+            const show = item.dataset.noticeTabItem === activeTab;
+            item.classList.toggle('d-none', !show);
+            if (show) {
+                visibleCount++;
+            }
+        });
+
+        const emptyState = document.getElementById('dashboard-notice-tab-empty');
+        if (emptyState) {
+            emptyState.classList.toggle('d-none', visibleCount > 0);
+        }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const liveTimeEl = document.getElementById('dashboard-live-time');
+        if (liveTimeEl) {
+            const formatLiveTime = function(date) {
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return hours + ':' + minutes;
+            };
+
+            const updateLiveTime = function() {
+                liveTimeEl.textContent = formatLiveTime(new Date());
+            };
+
+            updateLiveTime();
+            setInterval(updateLiveTime, 1000);
+        }
+
+        const calendarContainer = document.getElementById('dashboard-calendar-container');
+
+        function loadDashboardCalendar(year, month) {
+            if (!calendarContainer) return;
+
+            const url = new URL("{{ route('admin.dashboard') }}", window.location.origin);
+            url.searchParams.set('year', year);
+            url.searchParams.set('month', month);
+            url.searchParams.set('calendar_only', '1');
+
+            calendarContainer.style.opacity = '0.6';
+            calendarContainer.style.pointerEvents = 'none';
+
+            fetch(url.toString(), {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json',
+                    },
+                })
+                .then(function(response) {
+                    return response.json().then(function(data) {
+                        return {
+                            ok: response.ok,
+                            data: data
+                        };
+                    });
+                })
+                .then(function(result) {
+                    if (!result.ok || !result.data || !result.data.html) {
+                        throw new Error('Failed to load calendar');
+                    }
+
+                    calendarContainer.innerHTML = result.data.html;
+                    const refreshedComponent = calendarContainer.querySelector('.calendar-component');
+                    if (refreshedComponent) {
+                        bindCalendarComponent(refreshedComponent);
+                    }
+                })
+                .catch(function(error) {
+                    console.error(error);
+                })
+                .finally(function() {
+                    calendarContainer.style.opacity = '1';
+                    calendarContainer.style.pointerEvents = 'auto';
+                });
+        }
+
+        function bindCalendarComponent(comp) {
+            if (!comp || comp.dataset.bound === 'true') return;
+            comp.dataset.bound = 'true';
+
+            const yearSel = comp.querySelector('.calendar-year');
+            const monthSel = comp.querySelector('.calendar-month');
+            const monthLabel = comp.querySelector('.calendar-month-year-label');
+            const cells = comp.querySelectorAll('.calendar-cell:not(.calendar-day-other)');
+
+            function updateMonthLabel() {
+                if (!monthLabel || !yearSel || !monthSel) return;
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
+                    'Dec'
+                ];
+                const monthIndex = parseInt(monthSel.value, 10) - 1;
+                monthLabel.textContent = (monthNames[monthIndex] || '') + ' ' + yearSel.value;
+            }
+
+            function shiftMonth(delta) {
+                if (!yearSel || !monthSel) return;
+                let month = parseInt(monthSel.value, 10) + delta;
+                let year = parseInt(yearSel.value, 10);
+                while (month < 1) {
+                    month += 12;
+                    year -= 1;
+                }
+                while (month > 12) {
+                    month -= 12;
+                    year += 1;
+                }
+                monthSel.value = String(month);
+                yearSel.value = String(year);
+                loadDashboardCalendar(year, month);
+            }
+
+            function shiftYear(delta) {
+                if (!yearSel || !monthSel) return;
+                const year = parseInt(yearSel.value, 10) + delta;
+                yearSel.value = String(year);
+                loadDashboardCalendar(year, monthSel.value);
+            }
+
+            comp.addEventListener('click', function(e) {
+                if (e.target.closest('.calendar-nav-year-prev')) {
+                    e.preventDefault();
+                    shiftYear(-1);
+                    return;
+                }
+                if (e.target.closest('.calendar-nav-year-next')) {
+                    e.preventDefault();
+                    shiftYear(1);
+                    return;
+                }
+                if (e.target.closest('.calendar-nav-month-prev')) {
+                    e.preventDefault();
+                    shiftMonth(-1);
+                    return;
+                }
+                if (e.target.closest('.calendar-nav-month-next')) {
+                    e.preventDefault();
+                    shiftMonth(1);
+                    return;
+                }
+
+                const td = e.target.closest('.calendar-cell:not(.calendar-day-other)');
+                if (!td || !td.dataset.date) return;
+                const prev = comp.querySelector('.calendar-cell.is-selected');
+                if (prev) {
+                    prev.classList.remove('is-selected');
+                    prev.setAttribute('aria-pressed', 'false');
+                }
+                td.classList.add('is-selected');
+                td.setAttribute('aria-pressed', 'true');
+                comp.dispatchEvent(new CustomEvent('dateSelected', {
+                    detail: {
+                        date: td.dataset.date
+                    }
+                }));
+            });
+
+            cells.forEach(function(cell) {
+                cell.addEventListener('mousedown', function(e) {
+                    e.preventDefault();
+                });
+
+                cell.addEventListener('keydown', function(ev) {
+                    if (ev.key === 'Enter' || ev.key === ' ') {
+                        ev.preventDefault();
+                        cell.click();
+                    }
+                    const selectable = comp.querySelectorAll(
+                        '.calendar-cell:not(.calendar-day-other)');
+                    const idx = Array.prototype.indexOf.call(selectable, cell);
+                    let targetIdx = null;
+                    if (ev.key === 'ArrowLeft') targetIdx = idx - 1;
+                    if (ev.key === 'ArrowRight') targetIdx = idx + 1;
+                    if (ev.key === 'ArrowUp') targetIdx = idx - 7;
+                    if (ev.key === 'ArrowDown') targetIdx = idx + 7;
+                    if (targetIdx !== null && selectable[targetIdx]) {
+                        selectable[targetIdx].focus();
+                        ev.preventDefault();
+                    }
+                });
+            });
+
+            if (yearSel && monthSel) {
+                yearSel.addEventListener('change', function() {
+                    loadDashboardCalendar(this.value, monthSel.value);
+                });
+
+                monthSel.addEventListener('change', function() {
+                    loadDashboardCalendar(yearSel.value, this.value);
+                });
+            }
+
+            updateMonthLabel();
+
+            const holidaysToggle = comp.querySelector('.calendar-holidays-toggle');
+            const holidaysPanel = comp.querySelector('.calendar-holidays-panel');
+            if (holidaysToggle && holidaysPanel) {
+                holidaysToggle.addEventListener('click', function() {
+                    const isOpen = !holidaysPanel.hidden;
+                    holidaysPanel.hidden = isOpen;
+                    holidaysToggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+                    holidaysToggle.textContent = isOpen ? 'Show holidays this month' :
+                        'Hide holidays this month';
+                });
+            }
+
+            const filterButtons = comp.querySelectorAll('.calendar-holiday-filter');
+            const holidayItems = comp.querySelectorAll('.calendar-holiday-list__item');
+
+            function applyHolidayFilter(type) {
+                filterButtons.forEach(function(btn) {
+                    const active = btn.dataset.filter === type;
+                    btn.classList.toggle('active', active);
+                    btn.setAttribute('aria-selected', active ? 'true' : 'false');
+                });
+                holidayItems.forEach(function(item) {
+                    item.classList.toggle('is-hidden', item.dataset.holidayType !== type);
+                });
+            }
+
+            filterButtons.forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    applyHolidayFilter(btn.dataset.filter || 'gazetted');
+                });
+            });
+
+            if (filterButtons.length && holidayItems.length) {
+                applyHolidayFilter('gazetted');
+            }
+        }
+
+        document.querySelectorAll('.calendar-component').forEach(function(comp) {
+            bindCalendarComponent(comp);
+        });
+    });
+
+    // ── View birthday wishes panel (scroll + expand) ──
+    (function() {
+        var viewLink = document.getElementById('btn-view-birthday-wishes');
+        var panel = document.getElementById('dashboard-birthday-wishes-panel');
+        var collapseEl = document.getElementById('dashboard-birthday-wishes-collapse');
+        var toggleBtn = document.getElementById('btn-toggle-birthday-wishes');
+        if (!panel || !collapseEl) return;
+
+        function expandWishesPanel() {
+            if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
+                var instance = bootstrap.Collapse.getOrCreateInstance(collapseEl, {
+                    toggle: false
+                });
+                instance.show();
+            } else {
+                collapseEl.classList.add('show');
+            }
+            panel.classList.add('is-expanded');
+            if (toggleBtn) {
+                toggleBtn.setAttribute('aria-expanded', 'true');
+            }
+        }
+
+        function scrollToWishesPanel() {
+            window.setTimeout(function() {
+                panel.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'start'
+                });
+            }, 200);
+        }
+
+        if (viewLink && viewLink.getAttribute('href') === '#') {
+            viewLink.addEventListener('click', function(e) {
+                e.preventDefault();
+                expandWishesPanel();
+                scrollToWishesPanel();
+                if (history.replaceState) {
+                    history.replaceState(null, '', '#dashboard-birthday-wishes-panel');
+                } else {
+                    window.location.hash = 'dashboard-birthday-wishes-panel';
+                }
+            });
+        }
+
+        if (window.location.hash === '#dashboard-birthday-wishes-panel') {
+            expandWishesPanel();
+            scrollToWishesPanel();
+        }
+
+        collapseEl.addEventListener('shown.bs.collapse', function() {
+            panel.classList.add('is-expanded');
+            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'true');
+        });
+        collapseEl.addEventListener('hidden.bs.collapse', function() {
+            panel.classList.remove('is-expanded');
+            if (toggleBtn) toggleBtn.setAttribute('aria-expanded', 'false');
+        });
+    })();
+
+    // ── Birthday banner dismiss (session only) ──
+    (function() {
+        var dismissBtn = document.getElementById('birthday-banner-dismiss');
+        var banner = document.getElementById('birthday-banner');
+        if (!banner) return;
+        if (sessionStorage.getItem('dashboardBirthdayBannerDismissed') === '1') {
+            banner.classList.add('is-dismissed');
+            return;
+        }
+        if (!dismissBtn) return;
+        dismissBtn.addEventListener('click', function() {
+            banner.classList.add('is-dismissed');
+            sessionStorage.setItem('dashboardBirthdayBannerDismissed', '1');
+        });
+    })();
+
+    // ── Confetti Effect for Birthday Banner ──
+    (function() {
+        var canvas = document.getElementById('confetti-canvas');
+        var banner = document.getElementById('birthday-banner');
+        if (!canvas || !banner || banner.classList.contains('is-dismissed')) return;
+        var ctx = canvas.getContext('2d');
+        var W, H, particles = [],
+            colors = ['#f44336', '#e91e63', '#9c27b0', '#673ab7', '#3f51b5', '#2196f3', '#00bcd4', '#4caf50',
+                '#ffeb3b', '#ff9800', '#ff5722', '#fff'
+            ];
+
+        function resize() {
+            W = canvas.width = canvas.parentElement.offsetWidth;
+            H = canvas.height = canvas.parentElement.offsetHeight;
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        for (var i = 0; i < 80; i++) {
+            particles.push({
+                x: Math.random() * W,
+                y: Math.random() * H - H,
+                r: Math.random() * 5 + 2,
+                d: Math.random() * 80,
+                color: colors[Math.floor(Math.random() * colors.length)],
+                tilt: Math.random() * 10 - 5,
+                tiltAngle: 0,
+                tiltAngleInc: Math.random() * 0.07 + 0.05
+            });
+        }
+
+        var animFrame;
+
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            particles.forEach(function(p) {
+                ctx.beginPath();
+                ctx.lineWidth = p.r;
+                ctx.strokeStyle = p.color;
+                ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
+                ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
+                ctx.stroke();
+            });
+            update();
+            animFrame = requestAnimationFrame(draw);
+        }
+
+        function update() {
+            particles.forEach(function(p) {
+                p.tiltAngle += p.tiltAngleInc;
+                p.y += (Math.cos(p.d) + 1 + p.r / 2) * 0.6;
+                p.x += Math.sin(p.d) * 0.5;
+                p.tilt = Math.sin(p.tiltAngle) * 12;
+                if (p.y > H) {
+                    p.y = -10;
+                    p.x = Math.random() * W;
+                }
+            });
+        }
+
+        draw();
+        // Stop confetti after 8 seconds
+        setTimeout(function() {
+            cancelAnimationFrame(animFrame);
+            if (ctx) ctx.clearRect(0, 0, W, H);
+        }, 8000);
+    })();
+
+    // ── Quick Wish All Button ──
+    (function() {
+        var btn = document.getElementById('btn-quick-wish-all');
+        if (!btn) return;
+
+        btn.addEventListener('click', function() {
+            if (!confirm('Send birthday wishes (email + notification) to all birthday people today?'))
+                return;
+
+            var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                '';
+            var allCards = document.querySelectorAll('.btn-custom-wish');
+            var recipients = [];
+            allCards.forEach(function(card) {
+                var name = card.dataset.name || '';
+                var email = card.dataset.email || '';
+                var pk = card.dataset.pk || '';
+                if (email && pk) {
+                    recipients.push({
+                        email: email,
+                        name: name,
+                        employee_pk: parseInt(pk)
+                    });
+                }
+            });
+
+            if (recipients.length === 0) {
+                alert('No recipients with email found.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+
+            fetch('{{ route("admin.birthday-wish.send-bulk-email") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                         'X-CSRF-TOKEN': csrfToken
                     },
                     body: JSON.stringify({
-                        email: currentRecipient.email,
-                        subject: subject,
-                        message: message,
-                        employee_pk: currentRecipient.employee_pk ? parseInt(currentRecipient.employee_pk) : null
+                        recipients: recipients,
+                        subject: 'Happy Birthday!',
+                        message_template: "Dear {name},\n\nWishing you a very Happy Birthday! May this special day bring you joy, success, and good health.\n\nWarm regards,\n{{ $userName ?? 'Team' }}"
                     })
                 })
-                .then(function(r) { return r.json(); })
+                .then(function(r) {
+                    return r.json();
+                })
                 .then(function(data) {
                     if (data.success) {
-                        if (sendWhatsapp && currentRecipient.mobile) {
-                            openWhatsApp(currentRecipient.mobile, message);
-                        }
-                        bootstrap.Modal.getInstance(document.getElementById('customWishModal')).hide();
-                        showToast('Birthday wish sent via email!', 'success');
+                        var div = document.createElement('div');
+                        div.innerHTML =
+                            '<div class="toast align-items-center text-bg-success border-0 show" role="alert" style="position:fixed;top:20px;right:20px;z-index:9999;">' +
+                            '<div class="d-flex"><div class="toast-body">🎉 ' + data.message +
+                            '</div>' +
+                            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
+                        document.body.appendChild(div);
+                        setTimeout(function() {
+                            div.remove();
+                        }, 5000);
                     } else {
-                        alert('Failed to send email: ' + (data.error || 'Unknown error'));
+                        alert('Error: ' + (data.error || 'Unknown'));
                     }
                 })
                 .catch(function(err) {
-                    alert('Error sending email: ' + err.message);
+                    alert('Error: ' + err.message);
                 })
                 .finally(function() {
-                    sendBtn.disabled = false;
-                    sendBtn.innerHTML = '<span class="material-icons material-symbols-rounded" style="font-size:18px;">send</span> Send Wish';
+                    btn.disabled = false;
+                    btn.innerHTML =
+                        '<i class="bi bi-stars" aria-hidden="true"></i><span class="small">Wish All</span>';
                 });
-                sent = true;
-            }
-
-            if (sendWhatsapp && currentRecipient.mobile && !sendEmail) {
-                openWhatsApp(currentRecipient.mobile, message);
-                // Send in-app notification for WhatsApp-only
-                if (currentRecipient.employee_pk) {
-                    var csrfToken2 = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-                    fetch('{{ route("admin.birthday-wish.send-notification") }}', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': csrfToken2 },
-                        body: JSON.stringify({ employee_pks: [parseInt(currentRecipient.employee_pk)] })
-                    }).catch(function() {});
-                }
-                bootstrap.Modal.getInstance(document.getElementById('customWishModal')).hide();
-                showToast('Birthday wish sent via WhatsApp!', 'success');
-                sent = true;
-            }
-
-            if (!sent) {
-                alert('No valid email or mobile for the selected channels.');
-            }
         });
-    }
-
-    function openWhatsApp(mobile, message) {
-        var phone = mobile.replace(/[^0-9]/g, '');
-        if (phone.length === 10) phone = '91' + phone;
-        var url = 'https://wa.me/' + phone + '?text=' + encodeURIComponent(message);
-        window.open(url, '_blank');
-    }
-
-    function showToast(msg, type) {
-        var toastHtml = '<div class="toast align-items-center text-bg-' + (type || 'primary') + ' border-0 show" role="alert" style="position:fixed;top:20px;right:20px;z-index:9999;">' +
-            '<div class="d-flex"><div class="toast-body">' + msg + '</div>' +
-            '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
-        var div = document.createElement('div');
-        div.innerHTML = toastHtml;
-        document.body.appendChild(div);
-        setTimeout(function() { div.remove(); }, 4000);
-    }
-})();
-
-window.markAsReadDashboard = function(notificationId, clickedElement) {
-    if (clickedElement && clickedElement.dataset.processing === 'true') {
-        return;
-    }
-    if (clickedElement) {
-        clickedElement.dataset.processing = 'true';
-    }
-
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-
-    fetch('/admin/notifications/mark-read-redirect/' + notificationId, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            }
-        })
-        .then(response => response.json().then(data => ({ ok: response.ok, data })))
-        .then(({ ok, data }) => {
-            if (!ok) {
-                throw new Error(data.error || 'Failed to mark notification as read');
-            }
-            if (data.success && data.redirect_url) {
-                window.location.href = data.redirect_url;
-                return;
-            }
-            if (data.success) {
-                location.reload();
-                return;
-            }
-            throw new Error(data.error || 'Unknown error occurred');
-        })
-        .catch(error => {
-            if (clickedElement) {
-                clickedElement.dataset.processing = 'false';
-            }
-            alert('An error occurred: ' + (error.message || 'Unknown error'));
-        });
-};
-
-window.markAsRead = window.markAsReadDashboard;
-
-// Use event delegation to avoid inline onclick (also helps JS linters in Blade).
-document.addEventListener('click', function (e) {
-    const btn = e.target && e.target.closest ? e.target.closest('.dashboard-notification-item[data-notification-id]') : null;
-    if (!btn) return;
-    const id = btn.dataset.notificationId;
-    if (!id) return;
-    window.markAsReadDashboard(id, btn);
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-    const liveTimeEl = document.getElementById('dashboard-live-time');
-    if (liveTimeEl) {
-        const formatLiveTime = function(date) {
-            let hours = date.getHours();
-            const minutes = String(date.getMinutes()).padStart(2, '0');
-            const ampm = hours >= 12 ? 'PM' : 'AM';
-            hours = hours % 12;
-            hours = hours ? hours : 12;
-            return String(hours).padStart(2, '0') + ':' + minutes + ' ' + ampm;
-        };
-
-        const updateLiveTime = function() {
-            liveTimeEl.textContent = formatLiveTime(new Date());
-        };
-
-        updateLiveTime();
-        setInterval(updateLiveTime, 1000);
-    }
-
-    const calendarContainer = document.getElementById('dashboard-calendar-container');
-
-    function loadDashboardCalendar(year, month) {
-        if (!calendarContainer) return;
-
-        const url = new URL("{{ route('admin.dashboard') }}", window.location.origin);
-        url.searchParams.set('year', year);
-        url.searchParams.set('month', month);
-        url.searchParams.set('calendar_only', '1');
-
-        calendarContainer.style.opacity = '0.6';
-        calendarContainer.style.pointerEvents = 'none';
-
-        fetch(url.toString(), {
-            headers: {
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json',
-            },
-        })
-            .then(function(response) {
-                return response.json().then(function(data) {
-                    return { ok: response.ok, data: data };
-                });
-            })
-            .then(function(result) {
-                if (!result.ok || !result.data || !result.data.html) {
-                    throw new Error('Failed to load calendar');
-                }
-
-                calendarContainer.innerHTML = result.data.html;
-                const refreshedComponent = calendarContainer.querySelector('.calendar-component');
-                if (refreshedComponent) {
-                    bindCalendarComponent(refreshedComponent);
-                }
-            })
-            .catch(function(error) {
-                console.error(error);
-            })
-            .finally(function() {
-                calendarContainer.style.opacity = '1';
-                calendarContainer.style.pointerEvents = 'auto';
-            });
-    }
-
-    function bindCalendarComponent(comp) {
-        if (!comp || comp.dataset.bound === 'true') return;
-        comp.dataset.bound = 'true';
-
-        const yearSel = comp.querySelector('.calendar-year');
-        const monthSel = comp.querySelector('.calendar-month');
-        const cells = comp.querySelectorAll('.calendar-cell');
-
-        comp.addEventListener('click', function(e) {
-            const td = e.target.closest('.calendar-cell');
-            if (!td) return;
-            const prev = comp.querySelector('.calendar-cell.is-selected');
-            if (prev) prev.classList.remove('is-selected');
-            td.classList.add('is-selected');
-            comp.dispatchEvent(new CustomEvent('dateSelected', {
-                detail: { date: td.dataset.date }
-            }));
-        });
-
-        cells.forEach(function(cell) {
-            cell.addEventListener('keydown', function(ev) {
-                if (ev.key === 'Enter' || ev.key === ' ') {
-                    ev.preventDefault();
-                    cell.click();
-                }
-                const idx = Array.prototype.indexOf.call(cells, cell);
-                let targetIdx = null;
-                if (ev.key === 'ArrowLeft') targetIdx = idx - 1;
-                if (ev.key === 'ArrowRight') targetIdx = idx + 1;
-                if (ev.key === 'ArrowUp') targetIdx = idx - 7;
-                if (ev.key === 'ArrowDown') targetIdx = idx + 7;
-                if (targetIdx !== null && cells[targetIdx]) {
-                    cells[targetIdx].focus();
-                    ev.preventDefault();
-                }
-            });
-        });
-
-        if (yearSel && monthSel) {
-            yearSel.addEventListener('change', function() {
-                loadDashboardCalendar(this.value, monthSel.value);
-            });
-
-            monthSel.addEventListener('change', function() {
-                loadDashboardCalendar(yearSel.value, this.value);
-            });
-        }
-    }
-
-    document.querySelectorAll('.calendar-component').forEach(function(comp) {
-        bindCalendarComponent(comp);
-    });
-});
-
-// ── Confetti Effect for Birthday Banner ──
-(function() {
-    var canvas = document.getElementById('confetti-canvas');
-    if (!canvas) return;
-    var ctx = canvas.getContext('2d');
-    var W, H, particles = [], colors = ['#f44336','#e91e63','#9c27b0','#673ab7','#3f51b5','#2196f3','#00bcd4','#4caf50','#ffeb3b','#ff9800','#ff5722','#fff'];
-
-    function resize() {
-        W = canvas.width = canvas.parentElement.offsetWidth;
-        H = canvas.height = canvas.parentElement.offsetHeight;
-    }
-    resize();
-    window.addEventListener('resize', resize);
-
-    for (var i = 0; i < 80; i++) {
-        particles.push({
-            x: Math.random() * W,
-            y: Math.random() * H - H,
-            r: Math.random() * 5 + 2,
-            d: Math.random() * 80,
-            color: colors[Math.floor(Math.random() * colors.length)],
-            tilt: Math.random() * 10 - 5,
-            tiltAngle: 0,
-            tiltAngleInc: Math.random() * 0.07 + 0.05
-        });
-    }
-
-    var animFrame;
-    function draw() {
-        ctx.clearRect(0, 0, W, H);
-        particles.forEach(function(p) {
-            ctx.beginPath();
-            ctx.lineWidth = p.r;
-            ctx.strokeStyle = p.color;
-            ctx.moveTo(p.x + p.tilt + p.r / 2, p.y);
-            ctx.lineTo(p.x + p.tilt, p.y + p.tilt + p.r / 2);
-            ctx.stroke();
-        });
-        update();
-        animFrame = requestAnimationFrame(draw);
-    }
-
-    function update() {
-        particles.forEach(function(p) {
-            p.tiltAngle += p.tiltAngleInc;
-            p.y += (Math.cos(p.d) + 1 + p.r / 2) * 0.6;
-            p.x += Math.sin(p.d) * 0.5;
-            p.tilt = Math.sin(p.tiltAngle) * 12;
-            if (p.y > H) { p.y = -10; p.x = Math.random() * W; }
-        });
-    }
-
-    draw();
-    // Stop confetti after 8 seconds
-    setTimeout(function() {
-        cancelAnimationFrame(animFrame);
-        if (ctx) ctx.clearRect(0, 0, W, H);
-    }, 8000);
-})();
-
-// ── Quick Wish All Button ──
-(function() {
-    var btn = document.getElementById('btn-quick-wish-all');
-    if (!btn) return;
-
-    btn.addEventListener('click', function() {
-        if (!confirm('Send birthday wishes (email + notification) to all birthday people today?')) return;
-
-        var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
-        var allCards = document.querySelectorAll('.btn-custom-wish');
-        var recipients = [];
-        allCards.forEach(function(card) {
-            var name = card.dataset.name || '';
-            var email = card.dataset.email || '';
-            var pk = card.dataset.pk || '';
-            if (email && pk) {
-                recipients.push({ email: email, name: name, employee_pk: parseInt(pk) });
-            }
-        });
-
-        if (recipients.length === 0) {
-            alert('No recipients with email found.');
-            return;
-        }
-
-        btn.disabled = true;
-        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
-
-        fetch('{{ route("admin.birthday-wish.send-bulk-email") }}', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken
-            },
-            body: JSON.stringify({
-                recipients: recipients,
-                subject: 'Happy Birthday!',
-                message_template: "Dear {name},\n\nWishing you a very Happy Birthday! May this special day bring you joy, success, and good health.\n\nWarm regards,\n{{ $userName ?? 'Team' }}"
-            })
-        })
-        .then(function(r) { return r.json(); })
-        .then(function(data) {
-            if (data.success) {
-                var div = document.createElement('div');
-                div.innerHTML = '<div class="toast align-items-center text-bg-success border-0 show" role="alert" style="position:fixed;top:20px;right:20px;z-index:9999;">' +
-                    '<div class="d-flex"><div class="toast-body">🎉 ' + data.message + '</div>' +
-                    '<button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button></div></div>';
-                document.body.appendChild(div);
-                setTimeout(function() { div.remove(); }, 5000);
-            } else {
-                alert('Error: ' + (data.error || 'Unknown'));
-            }
-        })
-        .catch(function(err) { alert('Error: ' + err.message); })
-        .finally(function() {
-            btn.disabled = false;
-            btn.innerHTML = '<span class="material-icons material-symbols-rounded" style="font-size:14px;">celebration</span><span style="font-size:0.75rem;">Wish All</span>';
-        });
-    });
-})();
-</script>
-@endpush
-@endsection
+    })();
+    </script>
+    @endpush
+    @endsection

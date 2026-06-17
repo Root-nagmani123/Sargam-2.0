@@ -14,7 +14,7 @@
     </div>
     @endif
 
-    <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4" style="border-left: 4px solid #004a93;">
+    <div class="card border-0 shadow-sm rounded-3 overflow-hidden mb-4" >
         <div class="card-body py-3">
             <form method="get" action="{{ route('admin.dashboard-statistics.charts') }}"
                 class="row g-2 align-items-end">

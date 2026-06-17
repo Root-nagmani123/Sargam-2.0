@@ -101,6 +101,24 @@
                 <input type="hidden" name="course_id" value="{{ encrypt($courseMasterObj->pk) }}">
                 @endif
 
+                @if ($errors->any())
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    <strong>Please fix the following errors:</strong>
+                    <ul class="mb-0 mt-1">
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @endif
+
+                @if (session('error'))
+                <div class="alert alert-danger alert-dismissible fade show mb-3" role="alert">
+                    {{ session('error') }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+                @endif
 
                 <div class="programme-form-section p-3 p-lg-4">
                     <div class="row g-4" id="course_fields">
@@ -174,7 +192,8 @@
                                 formLabelClass="form-label"
                                 formSelectClass="searchable-dropdown"
                                 value="{{ $selectedSupportingSection ?? '' }}"
-                                :options="$supportingSectionList" />
+                                :options="$supportingSectionList"
+                                labelRequired="true" />
                         </div>
                         <div class="col-md-12">
                             <div class="d-flex flex-wrap align-items-center justify-content-between mb-2 gap-2">
@@ -194,8 +213,7 @@
                                             formLabelClass="form-label"
                                             formSelectClass="searchable-dropdown"
                                             :options="$facultyList"
-                                            value="{{ $coordinator }}"
-                                            required="true" />
+                                            value="{{ $coordinator }}" />
                                     </div>
                                     <div class="col-md-5">
                                         <x-select
@@ -223,8 +241,7 @@
                                             placeholder="Assistant Coordinator"
                                             formLabelClass="form-label"
                                             formSelectClass="searchable-dropdown"
-                                            :options="$facultyList"
-                                            required="true" />
+                                            :options="$facultyList" />
                                     </div>
                                     <div class="col-md-5">
                                         <x-select

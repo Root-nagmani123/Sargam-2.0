@@ -3,7 +3,7 @@
 @section('content')
 @php
     $storeTypes = \App\Models\Mess\Store::storeTypes();
-    $canDeleteStore = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteStore = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Store Master"></x-breadcrum>

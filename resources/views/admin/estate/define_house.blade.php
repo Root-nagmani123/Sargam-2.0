@@ -2,7 +2,7 @@
 
 @section('title', 'Define House - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-3">

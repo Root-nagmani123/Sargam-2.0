@@ -8,7 +8,7 @@
 <x-breadcrum title="Conversation" />
             <x-session_message />
 
-            <div class="bg-white p-4 rounded shadow-sm mt-3" style="border-left: 4px solid #004a93;">
+            <div class="bg-white p-4 rounded shadow-sm mt-3" >
 
                 <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>

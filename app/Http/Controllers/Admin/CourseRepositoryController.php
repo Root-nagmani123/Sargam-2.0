@@ -220,8 +220,9 @@ class CourseRepositoryController extends Controller
                 'full_path' => 'nullable|string|max:255',
                 'course_repository_details' => 'nullable|string|max:1000',
                 'category_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'category_attachment' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,xls,xlsx|max:5120',
             ]);
-            
+
             $validated['created_date'] = now();
             $validated['created_by'] = auth()->id();
             $validated['status'] = 1;
@@ -239,7 +240,15 @@ class CourseRepositoryController extends Controller
                 $image->storeAs('course-repository/categories', $imageName, 'public');
                 $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
-            
+
+            // Handle attachment upload
+            if ($request->hasFile('category_attachment')) {
+                $attachment = $request->file('category_attachment');
+                $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                $attachment->storeAs('course-repository/attachments', $attachmentName, 'public');
+                $validated['category_attachment'] = 'course-repository/attachments/' . $attachmentName;
+            }
+
             $repository = CourseRepositoryMaster::create($validated);
             
             // Check if AJAX request
@@ -307,15 +316,16 @@ class CourseRepositoryController extends Controller
                 'full_path' => 'nullable|string|max:255',
                 'course_repository_details' => 'nullable|string|max:1000',
                 'category_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+                'category_attachment' => 'nullable|file|mimes:jpeg,png,jpg,gif,pdf,doc,docx,xls,xlsx|max:5120',
             ]);
-            
+
             $validated['modify_date'] = now();
             $validated['modify_by'] = auth()->id();
             
             // Handle image upload
             if ($request->hasFile('category_image')) {
                 // Delete old image if exists
-                if ($repository->category_image && \Storage::disk('public')->exists($repository->category_image)) {
+                if (filled($repository->category_image) && \Storage::disk('public')->exists($repository->category_image)) {
                     \Storage::disk('public')->delete($repository->category_image);
                 }
                 
@@ -325,7 +335,21 @@ class CourseRepositoryController extends Controller
                 $image->storeAs('course-repository/categories', $imageName, 'public');
                 $validated['category_image'] = 'course-repository/categories/' . $imageName;
             }
-            
+
+            // Handle attachment upload
+            if ($request->hasFile('category_attachment')) {
+                // Delete old attachment if exists
+                if (filled($repository->category_attachment) && \Storage::disk('public')->exists($repository->category_attachment)) {
+                    \Storage::disk('public')->delete($repository->category_attachment);
+                }
+
+                // Store new attachment
+                $attachment = $request->file('category_attachment');
+                $attachmentName = time() . '_' . uniqid() . '.' . $attachment->getClientOriginalExtension();
+                $attachment->storeAs('course-repository/attachments', $attachmentName, 'public');
+                $validated['category_attachment'] = 'course-repository/attachments/' . $attachmentName;
+            }
+
             $repository->update($validated);
             
             // Check if AJAX request
@@ -515,6 +539,162 @@ class CourseRepositoryController extends Controller
     }
 
     /**
+     * Return a single document plus its shared detail metadata, so the edit
+     * modal (a reuse of the upload form) can be pre-populated.
+     * GET /course-repository/document/{pk}/edit-data
+     */
+    public function getDocument($pk)
+    {
+        try {
+            $document = CourseRepositoryDocument::with([
+                'detail',
+                'detail.course',
+                'detail.subject',
+                'detail.topic',
+                'detail.author',
+                'detail.sector',
+                'detail.ministry',
+            ])->findOrFail($pk);
+            $detail = $document->detail;
+
+            // Map stored detail type back to the upload form's category labels
+            $typeMap = ['CO' => 'Course', 'OT' => 'Other', 'IN' => 'Institutional'];
+            $category = $detail ? ($typeMap[$detail->type] ?? 'Course') : 'Course';
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'pk' => $document->pk,
+                    'file_title' => $document->file_title,
+                    'upload_document' => $document->upload_document,
+                    'category' => $category,
+                    'detail' => $detail ? [
+                        'course_master_pk' => $detail->course_master_pk,
+                        'course_name' => optional($detail->course)->course_name,
+                        'subject_pk' => $detail->subject_pk,
+                        'subject_name' => optional($detail->subject)->subject_name,
+                        'topic_pk' => $detail->topic_pk,
+                        'topic_name' => optional($detail->topic)->subject_topic
+                            ?? optional($detail->topic)->course_repo_topic,
+                        'session_date' => $detail->session_date
+                            ? $detail->session_date->format('Y-m-d')
+                            : null,
+                        'author_name' => $detail->author_name,
+                        'author_label' => optional($detail->author)->full_name,
+                        'sector_master_pk' => $detail->sector_master_pk,
+                        'sector_name' => optional($detail->sector)->sector_name,
+                        'ministry_master_pk' => $detail->ministry_master_pk,
+                        'ministry_name' => optional($detail->ministry)->ministry_name,
+                        'keyword' => $detail->keyword,
+                        'videolink' => $detail->videolink,
+                    ] : null,
+                ],
+            ]);
+        } catch (Exception $e) {
+            Log::error('Error fetching document for edit: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Could not load document',
+            ], 500);
+        }
+    }
+
+    /**
+     * Update a document's title/file and its shared detail metadata.
+     * POST /course-repository/document/{pk}/update
+     */
+    public function updateDocument($pk, Request $request)
+    {
+        try {
+            $validated = $request->validate([
+                'category' => 'nullable|string|in:Course,Other,Institutional',
+                'file_title' => 'nullable|string|max:5000',
+                'document_file' => 'nullable|file|mimes:jpg,jpeg,png,pdf,doc,docx|max:10120', // Max 10MB
+                'course_name' => 'nullable|string',
+                'subject_name' => 'nullable|string',
+                'timetable_name' => 'nullable|string',
+                'session_date' => 'nullable|string',
+                'author_name' => 'nullable|string',
+                'sector_master' => 'nullable|numeric',
+                'ministry_master' => 'nullable|numeric',
+                'keywords' => 'nullable|string|max:4000',
+                'video_link' => 'nullable|string|max:2000',
+            ]);
+
+            $document = CourseRepositoryDocument::findOrFail($pk);
+
+            // ---- Document-level fields (title + optional file replacement) ----
+            $document->file_title = $validated['file_title'] ?? $document->file_title;
+
+            if ($request->hasFile('document_file')) {
+                $file = $request->file('document_file');
+                if ($file->isValid()) {
+                    // Store in the same hierarchical folder used at upload time
+                    $parent = CourseRepositoryMaster::find($document->course_repository_master_pk);
+                    $storageFolder = $parent
+                        ? trim($this->buildFolderPath($parent), '/')
+                        : 'course_repository';
+
+                    $fileName = time() . '_' . uniqid() . '_' . $file->getClientOriginalName();
+                    $filePath = $file->storeAs($storageFolder, $fileName, 'public');
+
+                    // Remove the old physical file if we can resolve it
+                    $oldRelative = $this->resolveDocumentRelativePath($document);
+                    if ($oldRelative && Storage::disk('public')->exists($oldRelative)) {
+                        Storage::disk('public')->delete($oldRelative);
+                    }
+
+                    $document->upload_document = $fileName;
+                    $document->full_path = $filePath;
+                }
+            }
+
+            $document->save();
+
+            // ---- Shared detail-level metadata ----
+            $detail = $document->detail;
+            if ($detail) {
+                $category = $validated['category'] ?? null;
+                $typeMap = ['Course' => 'CO', 'Other' => 'OT', 'Institutional' => 'IN'];
+
+                $detail->course_master_pk = $validated['course_name'] ?? $detail->course_master_pk;
+                $detail->subject_pk = $validated['subject_name'] ?? $detail->subject_pk;
+                $detail->topic_pk = $validated['timetable_name'] ?? $detail->topic_pk;
+                $detail->session_date = $validated['session_date'] ?? $detail->session_date;
+                $detail->author_name = $validated['author_name'] ?? $detail->author_name;
+                $detail->sector_master_pk = $validated['sector_master'] ?? $detail->sector_master_pk;
+                $detail->ministry_master_pk = $validated['ministry_master'] ?? $detail->ministry_master_pk;
+                $detail->keyword = $validated['keywords'] ?? $detail->keyword;
+                $detail->videolink = $validated['video_link'] ?? $detail->videolink;
+                if ($category && isset($typeMap[$category])) {
+                    $detail->type = $typeMap[$category];
+                }
+                $detail->modify_by = auth()->id();
+                $detail->modify_date = now();
+                $detail->save();
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Document updated successfully',
+            ]);
+        } catch (\Illuminate\Validation\ValidationException $e) {
+            Log::error('Validation error in updateDocument: ' . json_encode($e->errors()));
+            return response()->json([
+                'success' => false,
+                'error' => 'Validation failed',
+                'errors' => $e->errors(),
+            ], 422);
+        } catch (Exception $e) {
+            Log::error('Error updating document: ' . $e->getMessage());
+            return response()->json([
+                'success' => false,
+                'error' => 'Update failed: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    /**
      * Download document
      * GET /course-repository/document/{pk}/download
      */
@@ -593,6 +773,9 @@ class CourseRepositoryController extends Controller
         $candidates = array_values(array_unique(array_filter($prefixedCandidates)));
 
         foreach ($candidates as $candidate) {
+            if (!is_string($candidate) || trim($candidate) === '') {
+                continue;
+            }
             if (Storage::disk('public')->exists($candidate)) {
                 return $candidate;
             }
@@ -942,12 +1125,12 @@ class CourseRepositoryController extends Controller
     public function userIndex(Request $request)
     {
         try {
-            // Get filter parameters
-            $date = $request->query('date');
-            $coursePk = $request->query('course');
-            $subjectPk = $request->query('subject');
-            $week = $request->query('week');
-            $facultyPk = $request->query('faculty');
+            $filters = $this->getFilters($request);
+            $date      = $filters['date'];
+            $coursePk  = $filters['course'];
+            $subjectPk = $filters['subject'];
+            $week      = $filters['week'];
+            $facultyPk = $filters['faculty'];
 
             // Get root repositories (main course categories)
             $query = CourseRepositoryMaster::where('del_folder_status', 1)
@@ -984,27 +1167,10 @@ class CourseRepositoryController extends Controller
             
             $repositories = $query->orderBy('created_date', 'desc')->get();
 
-            // Get dropdown data
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
-            return view('admin.course-repository.user.index', [
-                'repositories' => $repositories,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => [
-                    'date' => $date,
-                    'course' => $coursePk,
-                    'subject' => $subjectPk,
-                    'week' => $week,
-                    'faculty' => $facultyPk,
-                ],
-            ]);
+            return view('admin.course-repository.user.index', array_merge(
+                $this->getUserFilterViewData($request),
+                ['repositories' => $repositories]
+            ));
         } catch (Exception $e) {
             Log::error('Error in course repository user index: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load course repository');
@@ -1017,14 +1183,6 @@ class CourseRepositoryController extends Controller
     public function foundationCourse(Request $request)
     {
         try {
-            $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
             // Get Foundation Course repositories
             $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
                 ->where('course_repository_name', 'like', 'Foundation Course%')
@@ -1033,13 +1191,10 @@ class CourseRepositoryController extends Controller
                 ->orderBy('created_date', 'desc')
                 ->get();
 
-            return view('admin.course-repository.user.foundation-course', [
-                'repositories' => $repositories,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => $filters,
-            ]);
+            return view('admin.course-repository.user.foundation-course', array_merge(
+                $this->getUserFilterViewData($request),
+                ['repositories' => $repositories]
+            ));
         } catch (Exception $e) {
             Log::error('Error in foundation course: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load foundation course');
@@ -1052,14 +1207,6 @@ class CourseRepositoryController extends Controller
     public function foundationCourseDetail(Request $request, $courseCode)
     {
         try {
-            $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
             // Get course repositories for this course code
             $repositories = CourseRepositoryMaster::where('del_folder_status', 1)
                 ->where('course_repository_name', 'like', '%' . $courseCode . '%')
@@ -1067,14 +1214,13 @@ class CourseRepositoryController extends Controller
                 ->orderBy('created_date', 'desc')
                 ->get();
 
-            return view('admin.course-repository.user.foundation-course-detail', [
-                'courseCode' => $courseCode,
-                'repositories' => $repositories,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => $filters,
-            ]);
+            return view('admin.course-repository.user.foundation-course-detail', array_merge(
+                $this->getUserFilterViewData($request),
+                [
+                    'courseCode' => $courseCode,
+                    'repositories' => $repositories,
+                ]
+            ));
         } catch (Exception $e) {
             Log::error('Error in foundation course detail: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load course detail');
@@ -1087,14 +1233,6 @@ class CourseRepositoryController extends Controller
     public function classMaterialSubjectWise(Request $request, $courseCode)
     {
         try {
-            $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
             // Get material cards
             $materialCards = CourseRepositoryMaster::where('del_folder_status', 1)
                 ->where('course_repository_name', 'like', '%' . $courseCode . '%')
@@ -1106,15 +1244,14 @@ class CourseRepositoryController extends Controller
                 ->orderBy('subject_name')
                 ->get();
 
-            return view('admin.course-repository.user.class-material-subject-wise', [
-                'courseCode' => $courseCode,
-                'materialCards' => $materialCards,
-                'subjectsList' => $subjectsList,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => $filters,
-            ]);
+            return view('admin.course-repository.user.class-material-subject-wise', array_merge(
+                $this->getUserFilterViewData($request),
+                [
+                    'courseCode' => $courseCode,
+                    'materialCards' => $materialCards,
+                    'subjectsList' => $subjectsList,
+                ]
+            ));
         } catch (Exception $e) {
             Log::error('Error in class material subject wise: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load class materials');
@@ -1127,14 +1264,6 @@ class CourseRepositoryController extends Controller
     public function classMaterialWeekWise(Request $request, $courseCode)
     {
         try {
-            $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-
             // Get material cards
             $materialCards = CourseRepositoryMaster::where('del_folder_status', 1)
                 ->where('course_repository_name', 'like', '%' . $courseCode . '%')
@@ -1150,15 +1279,14 @@ class CourseRepositoryController extends Controller
                 ];
             }
 
-            return view('admin.course-repository.user.class-material-week-wise', [
-                'courseCode' => $courseCode,
-                'materialCards' => $materialCards,
-                'weeks' => $weeks,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => $filters,
-            ]);
+            return view('admin.course-repository.user.class-material-week-wise', array_merge(
+                $this->getUserFilterViewData($request),
+                [
+                    'courseCode' => $courseCode,
+                    'materialCards' => $materialCards,
+                    'weeks' => $weeks,
+                ]
+            ));
         } catch (Exception $e) {
             Log::error('Error in class material week wise: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load class materials');
@@ -1172,29 +1300,29 @@ class CourseRepositoryController extends Controller
     {
         try {
             $filters = $this->getFilters($request);
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
 
             // Get documents for this week
-            $documents = CourseRepositoryDetail::whereHas('master', function($query) use ($courseCode) {
+            $documentsQuery = CourseRepositoryDetail::whereHas('master', function ($query) use ($courseCode) {
                     $query->where('course_repository_name', 'like', '%' . $courseCode . '%');
                 })
-                ->with(['master', 'documents', 'author', 'subject', 'course'])
-                ->get();
+                ->with(['master', 'documents', 'author', 'subject', 'course', 'topic']);
 
-            return view('admin.course-repository.user.week-detail', [
-                'courseCode' => $courseCode,
-                'weekNumber' => $weekNumber,
-                'documents' => $documents,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => $filters,
-            ]);
+            if ($this->hasActiveUserFilters($filters)) {
+                $documentsQuery->where(function ($query) use ($filters) {
+                    $this->applyUserDetailFilters($query, $filters);
+                });
+            }
+
+            $documents = $documentsQuery->get();
+
+            return view('admin.course-repository.user.week-detail', array_merge(
+                $this->getUserFilterViewData($request),
+                [
+                    'courseCode' => $courseCode,
+                    'weekNumber' => $weekNumber,
+                    'documents' => $documents,
+                ]
+            ));
         } catch (Exception $e) {
             Log::error('Error in week detail: ' . $e->getMessage());
             return redirect()->back()->with('error', 'Failed to load week details');
@@ -1239,9 +1367,15 @@ class CourseRepositoryController extends Controller
                 return redirect()->back()->with('error', 'Document not found');
             }
 
+            $pdfRelativePath = $this->resolveDocumentRelativePath($pdfDocument);
+            $pdfViewUrl = $pdfRelativePath
+                ? Storage::disk('public')->url($pdfRelativePath)
+                : $pdfDocument->public_file_url;
+
             return view('admin.course-repository.user.document-view', [
                 'document' => $document,
                 'pdfDocument' => $pdfDocument,
+                'pdfViewUrl' => $pdfViewUrl,
             ]);
         } catch (Exception $e) {
             Log::error('Error viewing document: ' . $e->getMessage());
@@ -1299,25 +1433,26 @@ class CourseRepositoryController extends Controller
                 $documents_count_array[$child->pk] = $documents_count;
             }
           
-            // Get all documents linked through details with course_repository_details_pk
-            // Also include documents directly linked to master via course_repository_master_pk
-            $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
-                ->where(function($query) use ($pk) {
-                    $query->where('course_repository_master_pk', $pk)
-                        ->orWhereIn('course_repository_details_pk', 
-                            CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
-                        );
-                });
-
             // Apply filters if provided
-            $date = $request->query('date');
-            $coursePk = $request->query('course');
+            $date      = $request->query('date');
+            $coursePk  = $request->query('course');
             $subjectPk = $request->query('subject');
-            $week = $request->query('week');
+            $week      = $request->query('week');
             $facultyPk = $request->query('faculty');
 
+            // Query CourseRepositoryDocument so the view can access $doc->upload_document,
+            // $doc->file_title, $doc->detail->course, $doc->public_file_url, etc.
+            $documentsQuery = CourseRepositoryDocument::where('del_type', 1)
+                ->where(function ($query) use ($pk) {
+                    $query->where('course_repository_master_pk', $pk)
+                        ->orWhereIn('course_repository_details_pk',
+                            CourseRepositoryDetail::where('course_repository_master_pk', $pk)->pluck('pk')
+                        );
+                })
+                ->with(['detail.course', 'detail.subject', 'detail.topic', 'detail.author']);
+
             if ($date || $coursePk || $subjectPk || $week || $facultyPk) {
-                $documentsQuery->whereHas('detail', function($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
+                $documentsQuery->whereHas('detail', function ($detailQuery) use ($date, $coursePk, $subjectPk, $week, $facultyPk) {
                     if ($coursePk) {
                         $detailQuery->where('course_master_pk', $coursePk);
                     }
@@ -1336,7 +1471,9 @@ class CourseRepositoryController extends Controller
                 });
             }
 
-            $documents = $documentsQuery->orderBy('pk', 'desc')->get();
+            $documents = $documentsQuery
+                ->orderBy('pk', 'desc')
+                ->get();
 
             // Build ancestor chain for breadcrumb
             $ancestors = [];
@@ -1346,30 +1483,15 @@ class CourseRepositoryController extends Controller
                 $current = $current->parent;
             }
 
-            // Get dropdown data for filters
-            $courses = CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get();
-            $subjects = SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get();
-            $faculties = FacultyMaster::select('pk', 'full_name')
-                ->whereNotNull('full_name')
-                ->orderBy('full_name')
-                ->get();
-           
-            return view('admin.course-repository.user.show', [
-                'repository' => $repository,
-                'documents' => $documents,
-                'ancestors' => $ancestors,
-                'documents_count_array' => $documents_count_array,
-                'courses' => $courses,
-                'subjects' => $subjects,
-                'faculties' => $faculties,
-                'filters' => [
-                    'date' => $date,
-                    'course' => $coursePk,
-                    'subject' => $subjectPk,
-                    'week' => $week,
-                    'faculty' => $facultyPk,
-                ],
-            ]);
+            return view('admin.course-repository.user.show', array_merge(
+                $this->getUserFilterViewData($request),
+                [
+                    'repository' => $repository,
+                    'documents' => $documents,
+                    'ancestors' => $ancestors,
+                    'documents_count_array' => $documents_count_array,
+                ]
+            ));
         } catch (Exception $e) {
             Log::error('Error in course repository user show: ' . $e->getMessage());
             return redirect()->route('admin.course-repository.user.index')->with('error', 'Repository not found');
@@ -1387,6 +1509,93 @@ class CourseRepositoryController extends Controller
             'subject' => $request->query('subject'),
             'week' => $request->query('week'),
             'faculty' => $request->query('faculty'),
+            'sector' => $request->query('sector'),
+            'ministry' => $request->query('ministry'),
+            'search' => $request->query('search'),
         ];
+    }
+
+    /**
+     * Dropdown data and filter state for user-facing course repository views.
+     */
+    private function getUserFilterViewData(Request $request): array
+    {
+        $filters = $this->getFilters($request);
+        $sectorPk = $filters['sector'] ?? null;
+
+        $ministries = collect();
+        if ($sectorPk) {
+            $ministries = MinistryMaster::where('sector_master_pk', $sectorPk)
+                ->where('status', 1)
+                ->orderBy('ministry_name')
+                ->get(['pk', 'ministry_name']);
+        }
+
+        return [
+            'courses' => CourseMaster::where('active_inactive', 1)->orderBy('course_name')->get(),
+            'subjects' => SubjectMaster::where('active_inactive', 1)->orderBy('subject_name')->get(),
+            'faculties' => FacultyMaster::select('pk', 'full_name')
+                ->whereNotNull('full_name')
+                ->orderBy('full_name')
+                ->get(),
+            'sectors' => SectorMaster::active()->get(),
+            'ministries' => $ministries,
+            'filters' => $filters,
+        ];
+    }
+
+    private function hasActiveUserFilters(array $filters): bool
+    {
+        return !empty($filters['date'])
+            || !empty($filters['course'])
+            || !empty($filters['subject'])
+            || !empty($filters['week'])
+            || !empty($filters['faculty'])
+            || !empty($filters['sector'])
+            || !empty($filters['ministry'])
+            || !empty($filters['search']);
+    }
+
+    /**
+     * @param  \Illuminate\Database\Eloquent\Builder  $detailQuery
+     */
+    private function applyUserDetailFilters($detailQuery, array $filters): void
+    {
+        if (!empty($filters['course'])) {
+            $detailQuery->where('course_master_pk', $filters['course']);
+        }
+        if (!empty($filters['subject'])) {
+            $detailQuery->where('subject_pk', $filters['subject']);
+        }
+        if (!empty($filters['date'])) {
+            $detailQuery->whereDate('session_date', $filters['date']);
+        }
+        if (!empty($filters['faculty'])) {
+            $detailQuery->where('author_name', $filters['faculty']);
+        }
+        if (!empty($filters['sector'])) {
+            $detailQuery->where('sector_master_pk', $filters['sector']);
+        }
+        if (!empty($filters['ministry'])) {
+            $detailQuery->where('ministry_master_pk', $filters['ministry']);
+        }
+        if (!empty($filters['search'])) {
+            $term = '%' . $filters['search'] . '%';
+            $detailQuery->where(function ($q) use ($term) {
+                $q->where('keyword', 'like', $term)
+                    ->orWhereHas('course', function ($c) use ($term) {
+                        $c->where('course_name', 'like', $term);
+                    })
+                    ->orWhereHas('subject', function ($s) use ($term) {
+                        $s->where('subject_name', 'like', $term);
+                    })
+                    ->orWhereHas('topic', function ($t) use ($term) {
+                        $t->where('subject_topic', 'like', $term);
+                    })
+                    ->orWhereHas('author', function ($a) use ($term) {
+                        $a->where('full_name', 'like', $term);
+                    });
+            });
+        }
     }
 }

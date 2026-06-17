@@ -44,7 +44,7 @@
 
     </div>
     <!-- Main Content Card -->
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="card-title mb-0">Memo/Notice Templates</h5>
             <a href="{{ route('admin.memo-notice.create') }}" class="btn btn-primary">

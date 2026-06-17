@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Requested Vehicle Pass')
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     @include('components.breadcrum', ['title' => 'Requested Vehicle Pass'])
     <div class="card">

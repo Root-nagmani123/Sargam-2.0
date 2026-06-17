@@ -1,4 +1,3 @@
-
 <!-- Tab Content Container -->
 
 <!-- //admin tabs -->
@@ -12,19 +11,8 @@
         <div class="tab-pane fade" id="sidebar-communications" role="tabpanel" aria-labelledby="communications-tab">
             @include('admin.layouts.sidebar.communication') 
         </div>
-        <div class="tab-pane fade" id="sidebar-academics" role="tabpanel" aria-labelledby="academics-tab">
-            @include('admin.layouts.sidebar.academics')
-        </div>
-        <div class="tab-pane fade" id="sidebar-purchase-order" role="tabpanel" aria-labelledby="purchase-order-tab">
-            @include('admin.layouts.sidebar.material')
-        </div>
     </div>
-
-
     <!-- //faculty & OTs tabs -->
-
-
-
 <script>
 const sidebar = document.querySelector('.sidebarmenu .simplebar-content-wrapper');
 
@@ -41,7 +29,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 // Function to sync sidebar tabs with main content tabs
 function syncSidebarWithMainTabs() {
-    const mainTabLinks = document.querySelectorAll('#mainNavbar .nav-link[data-bs-toggle="tab"]');
+    const mainTabLinks = document.querySelectorAll(
+        '#mainNavbar .nav-link[data-bs-toggle="tab"], .header-main-nav .nav-link[data-bs-toggle="tab"]'
+    );
     const sidebarTabPanes = document.querySelectorAll('#sidebarTabContent .tab-pane');
     
     // Map main tab IDs to sidebar tab IDs
@@ -85,7 +75,9 @@ function syncSidebarWithMainTabs() {
     });
     
     // Activate sidebar tab based on initial active main tab
-    const activeMainTab = document.querySelector('#mainNavbar .nav-link[data-bs-toggle="tab"].active');
+    const activeMainTab = document.querySelector(
+        '#mainNavbar .nav-link[data-bs-toggle="tab"].active, .header-main-nav .nav-link[data-bs-toggle="tab"].active'
+    );
     if (activeMainTab) {
         const targetTab = activeMainTab.getAttribute('href');
         activateSidebarTab(targetTab);
@@ -103,7 +95,4 @@ window.addEventListener('beforeunload', function() {
 });
 // Mini-nav state is managed centrally by sidebar-navigation-fixed.js
 </script>
-
-
-
 <!--  Sidebar End -->

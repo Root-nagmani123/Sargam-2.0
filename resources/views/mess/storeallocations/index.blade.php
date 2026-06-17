@@ -1,9 +1,6 @@
 @extends('admin.layouts.master')
 @section('title', 'Mess Store Allocation')
 @section('content')
-@php
-    $canDeleteStoreAllocation = hasRole('Admin') || hasRole('Mess-Admin');
-@endphp
 <div class="container-fluid mess-store-allocation-page">
     <x-breadcrum title="Mess Store Allocation"></x-breadcrum>
 
@@ -30,87 +27,46 @@
     {{-- DataTables-style top: length (left) + search (right) --}}
 
     <div class="table-responsive">
-        <table class="table datatable" data-export="false" id="storeAllocationTable">
+        <table class="table align-middle mb-0 w-100" id="storeAllocationTable">
             <thead>
                 <tr>
                     <th style="width: 60px;">S.No</th>
-                    <th class="store-alloc-sort" data-sort="store">Store Name <span class="sort-icon"></span></th>
-                    <th class="store-alloc-sort" data-sort="item">Item Name <span class="sort-icon"></span></th>
-                    <th class="store-alloc-sort" data-sort="type">Item Type <span class="sort-icon"></span></th>
-                    <th class="store-alloc-sort" data-sort="quantity">Number of Items <span class="sort-icon"></span></th>
-                    <th class="store-alloc-sort" data-sort="date">Date <span class="sort-icon"></span></th>
+                    <th>Store Name</th>
+                    <th>Item Name</th>
+                    <th>Item Type</th>
+                    <th>Number of Items</th>
+                    <th>Date</th>
                     <th class="text-center">Action</th>
                 </tr>
             </thead>
-            <tbody id="storeAllocationTbody">
-            @php $sn = 0; @endphp
-            @foreach($allocations as $allocation)
-                @foreach($allocation->items as $item)
-                <tr class="store-allocation-row" data-store="{{ strtolower($allocation->subStore->sub_store_name ?? '') }}" data-item="{{ strtolower($item->itemSubcategory->item_name ?? '') }}" data-type="{{ strtolower(optional(optional($item->itemSubcategory)->category)->category_name ?? '') }}" data-quantity="{{ $item->quantity }}" data-date="{{ $allocation->allocation_date ? $allocation->allocation_date->format('Y-m-d') : '' }}">
-                    <td class="col-sno">{{ ++$sn }}</td>
-                    <td>{{ $allocation->subStore->sub_store_name ?? 'N/A' }}</td>
-                    <td>{{ $item->itemSubcategory->item_name ?? 'N/A' }}</td>
-                    <td>{{ optional(optional($item->itemSubcategory)->category)->category_name ?? 'N/A' }}</td>
-                    <td>{{ $item->quantity }}</td>
-                    <td>{{ $allocation->allocation_date ? $allocation->allocation_date->format('d-m-Y') : '—' }}</td>
-                    <td class="text-center align-middle store-alloc-actions-cell">
-                        <div class="d-inline-flex align-items-center justify-content-center gap-2">
-                            <button type="button" class="btn btn-sm btn-info btn-edit-allocation text-primary bg-transparent border-0 p-0 d-inline-flex align-items-center justify-content-center" data-allocation-id="{{ $allocation->id }}" title="Edit allocation">
-                                <span class="material-symbols-rounded" style="font-size: 1.1rem;">edit</span>
-                            </button>
-                            @if($canDeleteStoreAllocation)
-                                <form action="{{ route('admin.mess.storeallocations.destroy', $allocation->id) }}" method="POST" class="d-inline-flex align-items-center justify-content-center m-0" onsubmit="return confirm('Are you sure you want to delete this store allocation?');">
-                                    @csrf
-                                    @method('DELETE')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger bg-transparent border-0 p-0 text-primary d-inline-flex align-items-center justify-content-center" title="Delete allocation">
-                                        <span class="material-symbols-rounded" style="font-size: 1.1rem;">delete</span>
-                                    </button>
-                                </form>
-                            @endif
-                        </div>
-                    </td>
-                </tr>
-                @endforeach
-            @endforeach
-            @if($allocations->isEmpty())
-                <tr id="storeAllocationEmptyRow">
-                    <td class="border-0"></td>
-                    <td class="border-0"></td>
-                    <td class="border-0"></td>
-                    <td class="text-center text-muted py-4 border-0">No store allocations found. Click "Add Mess Store Allocation" to add one.</td>
-                    <td class="border-0"></td>
-                    <td class="border-0"></td>
-                    <td class="border-0"></td>
-                </tr>
-            @endif
-            <tr id="storeAllocationNoMatchRow" class="d-none">
-                <td class="border-0"></td>
-                <td class="border-0"></td>
-                <td class="border-0"></td>
-                <td class="text-center text-muted py-4 border-0">No matching records.</td>
-                <td class="border-0"></td>
-                <td class="border-0"></td>
-                <td class="border-0"></td>
-            </tr>
-            </tbody>
+            <tbody></tbody>
         </table>
     </div>
     </div>
    </div>
 </div>
 
-{{-- Create Store Allocation Modal + DataTables-style --}}
+@include('components.mess-master-datatables', [
+    'tableId' => 'storeAllocationTable',
+    'searchPlaceholder' => 'Search store allocations...',
+    'orderColumn' => 5,
+    'orderDir' => 'desc',
+    'actionColumnIndex' => 6,
+    'infoLabel' => 'store allocations',
+    'searchDelay' => 0,
+    'searchSmart' => false,
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.storeallocations.index'),
+    'serverSideColumnDefs' => [
+        ['className' => 'text-center align-middle store-alloc-actions-cell', 'targets' => [6]],
+    ],
+])
+@include('mess.partials.modal-dropdown-stability')
+
+{{-- Create Store Allocation Modal --}}
 <style>
-/* DataTables-style: sortable header */
 .mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell { vertical-align: middle !important; }
 .mess-store-allocation-page #storeAllocationTable .store-alloc-actions-cell .d-inline-flex { min-height: 2rem; }
-.store-alloc-sort { cursor: pointer; user-select: none; white-space: nowrap; }
-.store-alloc-sort:hover { opacity: 0.9; }
-.store-alloc-sort .sort-icon { color: rgba(255,255,255,0.9); font-size: 0.7em; margin-left: 2px; }
-/* Bottom info + pagination bar */
-#storeAllocationCount { font-size: 0.875rem; }
-#storeAllocationPaginationNav .pagination { gap: 2px; }
-#storeAllocationPaginationNav .page-link { padding: 0.35rem 0.6rem; }
 #createStoreAllocationModal .modal-dialog { max-height: calc(100vh - 2rem); margin: 1rem auto; }
 #createStoreAllocationModal .modal-content { max-height: calc(100vh - 2rem); display: flex; flex-direction: column; }
 #createStoreAllocationModal .modal-body { overflow-y: auto; max-height: calc(100vh - 10rem); scrollbar-gutter: stable; overscroll-behavior: contain; }
@@ -397,156 +353,6 @@
 
 <script>
 (function() {
-    // --- Store allocation table: search, sort, pagination, count (client-side) ---
-    const tbody = document.getElementById('storeAllocationTbody');
-    const searchInput = document.getElementById('storeAllocationSearch');
-    const perPageSelect = document.getElementById('storeAllocationPerPage');
-    const countEl = document.getElementById('storeAllocationCount');
-    const paginationEl = document.getElementById('storeAllocationPagination');
-    const emptyRow = document.getElementById('storeAllocationEmptyRow');
-    const noMatchRow = document.getElementById('storeAllocationNoMatchRow');
-
-    let currentSort = { col: null, dir: 1 }; // 1 asc, -1 desc
-
-    function getDataRows() {
-        return Array.from(document.querySelectorAll('#storeAllocationTbody tr.store-allocation-row'));
-    }
-
-    function getFilteredRows() {
-        const q = (searchInput && searchInput.value) ? searchInput.value.trim().toLowerCase() : '';
-        const rows = getDataRows();
-        if (!q) return rows;
-        return rows.filter(function(tr) {
-            const store = (tr.dataset.store || '').toLowerCase();
-            const item = (tr.dataset.item || '').toLowerCase();
-            const type = (tr.dataset.type || '').toLowerCase();
-            const quantity = String(tr.dataset.quantity || '');
-            const date = (tr.dataset.date || '').toLowerCase();
-            return store.includes(q) || item.includes(q) || type.includes(q) || quantity.includes(q) || date.includes(q);
-        });
-    }
-
-    function sortRows(rows, col, dir) {
-        const key = col === 'store' ? 'store' : col === 'item' ? 'item' : col === 'type' ? 'type' : col === 'quantity' ? 'quantity' : 'date';
-        return rows.slice().sort(function(a, b) {
-            let va = a.dataset[key];
-            let vb = b.dataset[key];
-            if (key === 'quantity') {
-                va = parseFloat(va) || 0;
-                vb = parseFloat(vb) || 0;
-                return dir * (va - vb);
-            }
-            if (key === 'date') {
-                return dir * ((va || '').localeCompare(vb || ''));
-            }
-            return dir * ((va || '').localeCompare(vb || ''));
-        });
-    }
-
-    function renderTable() {
-        const filtered = getFilteredRows();
-        const perPage = parseInt(perPageSelect && perPageSelect.value ? perPageSelect.value : 10, 10) || 10;
-        const sorted = currentSort.col ? sortRows(filtered, currentSort.col, currentSort.dir) : filtered;
-        const total = sorted.length;
-        let page = parseInt(document.body.getAttribute('data-store-alloc-page') || '1', 10) || 1;
-        const totalPages = Math.max(1, Math.ceil(total / perPage));
-        page = Math.min(page, totalPages);
-
-        const start = (page - 1) * perPage;
-        const end = start + perPage;
-        const pageRows = sorted.slice(start, end);
-
-        // Hide empty / no-match rows when we have data rows
-        if (emptyRow) emptyRow.classList.add('d-none');
-        if (noMatchRow) noMatchRow.classList.add('d-none');
-        if (total === 0 && getDataRows().length === 0 && emptyRow) emptyRow.classList.remove('d-none');
-        if (total === 0 && getDataRows().length > 0 && noMatchRow) noMatchRow.classList.remove('d-none');
-
-        // Re-append data rows in sorted order (appendChild moves nodes from current parent to fragment)
-        const fragment = document.createDocumentFragment();
-        sorted.forEach(function(r) { fragment.appendChild(r); });
-        // Insert sorted rows at start of tbody (before empty/noMatch placeholder rows)
-        const first = tbody.firstChild;
-        tbody.insertBefore(fragment, first);
-
-        getDataRows().forEach(function(tr, i) {
-            const globalIndex = sorted.indexOf(tr);
-            const onPage = globalIndex >= start && globalIndex < end;
-            tr.classList.toggle('d-none', !onPage);
-            const snoCell = tr.querySelector('.col-sno');
-            if (snoCell) snoCell.textContent = globalIndex + 1;
-        });
-
-        document.body.setAttribute('data-store-alloc-page', String(page));
-
-        // Count text (DataTables style: "Showing X to Y of Z entries")
-        if (countEl) {
-            if (total === 0) {
-                const totalRows = getDataRows().length;
-                countEl.textContent = 'Showing 0 to 0 of ' + totalRows + ' entries';
-            } else {
-                countEl.textContent = 'Showing ' + (start + 1) + ' to ' + Math.min(end, total) + ' of ' + total + ' entries';
-            }
-        }
-
-        // Pagination UI (DataTables-style: First, Previous, numbers, Next, Last)
-        const nav = document.getElementById('storeAllocationPaginationNav');
-        if (nav) nav.classList.remove('d-none');
-        if (paginationEl) {
-            paginationEl.innerHTML = '';
-            if (total === 0) return;
-            const ul = paginationEl;
-            function addPageItem(label, pageNum, disabled, active) {
-                const li = document.createElement('li');
-                li.className = 'page-item' + (disabled ? ' disabled' : '') + (active ? ' active' : '');
-                const a = document.createElement('a');
-                a.className = 'page-link';
-                a.href = '#';
-                a.setAttribute('tabindex', disabled ? '-1' : '0');
-                a.textContent = label;
-                a.addEventListener('click', function(e) { e.preventDefault(); if (!disabled && pageNum) { document.body.setAttribute('data-store-alloc-page', String(pageNum)); renderTable(); } });
-                li.appendChild(a);
-                ul.appendChild(li);
-            }
-            addPageItem('First', 1, page <= 1);
-            addPageItem('Previous', page - 1, page <= 1);
-            for (let i = 1; i <= totalPages; i++) addPageItem(String(i), i, false, i === page);
-            addPageItem('Next', page + 1, page >= totalPages);
-            addPageItem('Last', totalPages, page >= totalPages);
-        }
-    }
-
-    function updateSortIcons() {
-        document.querySelectorAll('.store-alloc-sort .sort-icon').forEach(function(span) {
-            span.textContent = '';
-            const th = span.closest('th');
-            if (th && th.dataset.sort === currentSort.col) span.textContent = currentSort.dir === 1 ? ' ▲' : ' ▼';
-        });
-    }
-
-    if (searchInput) searchInput.addEventListener('input', function() { document.body.setAttribute('data-store-alloc-page', '1'); renderTable(); });
-    if (perPageSelect) perPageSelect.addEventListener('change', function() { document.body.setAttribute('data-store-alloc-page', '1'); renderTable(); });
-    document.querySelectorAll('.store-alloc-sort').forEach(function(th) {
-        th.style.cursor = 'pointer';
-        th.addEventListener('click', function() {
-            const col = th.dataset.sort;
-            if (!col) return;
-            currentSort.dir = (currentSort.col === col ? -currentSort.dir : 1);
-            currentSort.col = col;
-            updateSortIcons();
-            renderTable();
-        });
-    });
-
-    if (tbody && getDataRows().length) {
-        renderTable();
-        updateSortIcons();
-    } else if (countEl) {
-        countEl.textContent = 'Showing 0 to 0 of 0 entries';
-    }
-})();
-
-(function() {
     const itemSubcategories = @json($itemSubcategories);
     const editBaseUrl = "{{ url('admin/mess/storeallocations') }}";
     let createRowIndex = 1;
@@ -595,17 +401,6 @@
             base.searchChoices = true;
             base.searchFloor = 0;
             base.searchResultLimit = 500;
-            base.classNames = Object.assign({}, CHOICES_DEFAULT_CLASSNAMES, {
-                containerOuter: 'choices form-select form-select-sm w-100 alloc-item-choices-outer',
-                containerInner: 'choices__inner d-flex align-items-center flex-nowrap overflow-hidden border-0 rounded-0 bg-transparent px-2',
-                listSingle: 'choices__list--single flex-grow-1 min-w-0 text-start',
-                listDropdown: 'choices__list--dropdown border rounded-2 shadow-sm bg-body mt-1 p-0',
-                item: 'choices__item text-truncate min-w-0',
-                itemSelectable: 'choices__item--selectable px-3 py-2 text-truncate d-block w-100',
-                itemChoice: 'choices__item--choice px-3 py-2 text-truncate d-block w-100',
-                placeholder: 'choices__placeholder text-truncate text-body-secondary mb-0 w-100 small',
-                button: 'choices__button flex-shrink-0 align-self-center',
-            });
         }
         return base;
     }

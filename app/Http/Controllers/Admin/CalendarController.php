@@ -11,22 +11,60 @@ use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\User;
 use Illuminate\Support\Facades\Session;
+use App\Services\FacultyFeedbackReportService;
 
 
 
 
 class CalendarController extends Controller
 {
+    /**
+     * Limit timetable rows to sessions assigned to the given faculty.
+     */
+    private function scopeTimetableForFaculty($query, int $facultyPk)
+    {
+        return $query->where(function ($q) use ($facultyPk) {
+            $q->where('timetable.faculty_master', $facultyPk)
+                ->orWhereRaw('JSON_CONTAINS(COALESCE(NULLIF(timetable.faculty_master, ""), "[]"), ?)', ['"'.$facultyPk.'"'])
+                ->orWhereRaw('FIND_IN_SET(?, timetable.faculty_master)', [$facultyPk])
+                ->orWhereRaw('JSON_CONTAINS(COALESCE(NULLIF(timetable.internal_faculty, ""), "[]"), ?)', ['"'.$facultyPk.'"'])
+                ->orWhereRaw('FIND_IN_SET(?, timetable.internal_faculty)', [$facultyPk]);
+        });
+    }
+
     public function index(Request $request)
     {
-        
+        // OT (Officer Trainee) users get their own dedicated calendar page.
+        if (hasRole('Student-OT')) {
+            return redirect()->route('calendar.ot.index');
+        }
+
+        \Log::info('CalendarController index: User authenticated via middleware', [
+            'user' => auth()->user()->user_name,
+            'user_id' => auth()->id(),
+            'session_id' => session()->getId()
+        ]);
 
         $data_course_id = get_Role_by_course();
 
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->whereDate('end_date', '>=', today());
 
-        if (!empty($data_course_id)) {
+        // Faculty see courses from their timetable / coordinator assignments, not role mapping.
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $facultyCourseIds = app(FacultyFeedbackReportService::class)->getAccessibleCourseIds($facultyPk);
+                $courseMaster = $facultyCourseIds->isNotEmpty()
+                    ? $courseMaster->whereIn('course_master.pk', $facultyCourseIds)
+                    : $courseMaster->whereRaw('1 = 0');
+            } else {
+                $courseMaster = $courseMaster->whereRaw('1 = 0');
+            }
+        } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
+            // Students are scoped by enrolment (the join below), not by role. Skipping the
+            // role-course filter for them avoids get_Role_by_course()'s [-1] (students have
+            // no Spatie role), which would otherwise wipe out their course list.
             $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
         }
 
@@ -82,6 +120,75 @@ class CalendarController extends Controller
             'internal_faculty'
         ));
     }
+
+    /**
+     * Dedicated OT (Officer Trainee / Student-OT) calendar page.
+     * Mirrors index() but is always scoped to the logged-in student and
+     * renders its own blade with its own (OT) data endpoints.
+     */
+    public function otIndex(Request $request)
+    {
+        \Log::info('CalendarController otIndex: OT calendar accessed', [
+            'user' => auth()->user()->user_name,
+            'user_id' => auth()->id(),
+            'session_id' => session()->getId()
+        ]);
+
+        // The OT page is always for a Student-OT, who has no Spatie role — so
+        // get_Role_by_course() would return [-1] and wipe out the list. Scope by
+        // enrolment (the join below) only, never by the role-course filter.
+        //
+        // No end_date restriction: a student must still see their enrolled
+        // course timetable after the course has ended (to review past sessions,
+        // give feedback, etc.). The enrolment mapping is the only scope.
+        $courseMaster = CourseMaster::where('course_master.active_inactive', 1);
+
+        // OT page is always scoped to the student's active course mappings.
+        $courseMaster = $courseMaster->leftJoin(
+            'student_master_course__map',
+            'student_master_course__map.course_master_pk',
+            '=',
+            'course_master.pk'
+        )
+            ->where('student_master_course__map.student_master_pk', auth()->user()->user_id)
+            ->where('student_master_course__map.active_inactive', 1);
+
+        $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
+            ->get();
+
+        $facultyMaster = FacultyMaster::where('active_inactive', 1)
+            ->select('pk', 'faculty_type', 'full_name')
+            ->orderby('full_name', 'ASC')
+            ->get();
+
+        $internal_faculty = FacultyMaster::where('active_inactive', 1)
+            ->where('faculty_type', 1)
+            ->select('pk', 'faculty_type', 'full_name')
+            ->orderby('full_name', 'ASC')
+            ->get();
+
+        $subjects = SubjectModuleMaster::where('active_inactive', 1)
+            ->select('pk', 'module_name')
+            ->get();
+
+        $venueMaster = VenueMaster::where('active_inactive', 1)
+            ->select('venue_id', 'venue_name')
+            ->orderby('venue_name', 'ASC')
+            ->get();
+
+        $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
+            ->select('pk', 'shift_name', 'shift_time', 'start_time', 'end_time')
+            ->get();
+
+        return view('admin.calendar.ot-index', compact(
+            'courseMaster',
+            'facultyMaster',
+            'subjects',
+            'venueMaster',
+            'classSessionMaster',
+            'internal_faculty'
+        ));
+    }
     public function weeklyTimetable(Request $request)
     {
         // Determine weekStart (Monday) from request or default to current week
@@ -105,8 +212,21 @@ class CalendarController extends Controller
         // Fetch events from timetable table for the week
         $events = DB::table('timetable')
             ->leftJoin('faculty_master', 'timetable.faculty_master', '=', 'faculty_master.pk')
-            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-            ->whereBetween('timetable.START_DATE', [$weekStart->toDateString(), $weekEnd->toDateString()])
+            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
+
+        $data_course_id = get_Role_by_course();
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $events = $this->scopeTimetableForFaculty($events, $facultyPk);
+            } else {
+                $events = $events->whereRaw('1 = 0');
+            }
+        } elseif (!hasRole('Student-OT') && !empty($data_course_id)) {
+            $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
+        }
+
+        $events = $events->whereBetween('timetable.START_DATE', [$weekStart->toDateString(), $weekEnd->toDateString()])
             ->select(
                 'timetable.pk',
                 'timetable.subject_topic',
@@ -248,6 +368,22 @@ class CalendarController extends Controller
                 ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
                 ->where('student_course_group_map.student_master_pk', $student_pk);
         }
+
+        // Scope events by user type (faculty assignments vs training-admin course alignment).
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $events = $this->scopeTimetableForFaculty($events, $facultyPk);
+            } else {
+                $events = $events->whereRaw('1 = 0');
+            }
+        } else {
+            $data_course_id = get_Role_by_course();
+            if (!hasRole('Student-OT') && !empty($data_course_id)) {
+                $events = $events->whereIn('timetable.course_master_pk', $data_course_id);
+            }
+        }
+
         $cuurent_month_start_date = Carbon::now()->startOfMonth()->toDateString();
         $cuurent_month_end_date = Carbon::now()->endOfMonth()->toDateString();
         if (($request->start) && ($request->end)) {
@@ -270,32 +406,6 @@ class CalendarController extends Controller
                 'venue_master.venue_name as venue_name'
             )
             ->get();
-
-        // Internal / Guest Faculty - Filter after fetching to handle JSON
-        if (hasRole('Internal Faculty') || hasRole('Guest Faculty')) {
-            $faculty_pk = auth()->user()->user_id;
-            $faculty_master_pk = DB::table('faculty_master')
-                ->where('employee_master_pk', $faculty_pk)
-                ->value('pk');
-
-            if ($faculty_master_pk) {
-                $events = $events->filter(function ($event) use ($faculty_master_pk) {
-                    $facultyIds = json_decode($event->faculty_master, true);
-                    // Handle both old integer format and new JSON array format
-                    if (is_array($facultyIds)) {
-                        return in_array($faculty_master_pk, $facultyIds);
-                    } else {
-                        // Old format: integer value
-                        return $event->faculty_master == $faculty_master_pk;
-                    }
-                });
-            } else {
-                $events = collect([]);
-            }
-        }
-
-
-
 
         // Array of some sample colors
         $colors = ['#ffffff'];
@@ -435,10 +545,25 @@ class CalendarController extends Controller
     {
         $eventId = $request->id;
 
-        $event = DB::table('timetable')
+        $eventQuery = DB::table('timetable')
             ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-            ->where('timetable.pk', $eventId)
-            ->select(
+            ->where('timetable.pk', $eventId);
+
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $eventQuery = $this->scopeTimetableForFaculty($eventQuery, $facultyPk);
+            } else {
+                $eventQuery->whereRaw('1 = 0');
+            }
+        } else {
+            $data_course_id = get_Role_by_course();
+            if (!hasRole('Student-OT') && !empty($data_course_id)) {
+                $eventQuery->whereIn('timetable.course_master_pk', $data_course_id);
+            }
+        }
+
+        $event = $eventQuery->select(
                 'timetable.pk',
                 'timetable.class_session',
                 'timetable.subject_topic',
@@ -488,6 +613,312 @@ class CalendarController extends Controller
             'class_session' => $event->class_session ?? '',
             'group_name' => $groupNames->implode(', ') ?? '',
         ]);
+    }
+    /**
+     * OT calendar events feed. Always scoped to the logged-in student's groups.
+     * Independent endpoint for the dedicated OT calendar page.
+     */
+    public function otFullCalendarDetails(Request $request)
+    {
+        $student_pk = auth()->user()->user_id;
+
+        $events = DB::table('timetable')
+            ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+            ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
+            ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
+            ->where('student_course_group_map.student_master_pk', $student_pk);
+
+        $cuurent_month_start_date = Carbon::now()->startOfMonth()->toDateString();
+        $cuurent_month_end_date = Carbon::now()->endOfMonth()->toDateString();
+        if (($request->start) && ($request->end)) {
+        } else {
+            $request->start = $cuurent_month_start_date;
+            $request->end = $cuurent_month_end_date;
+        }
+
+        // Filter by course if provided
+        if ($request->has('course_id') && $request->course_id) {
+            $events = $events->where('timetable.course_master_pk', $request->course_id);
+        }
+
+        $events = $events
+            ->whereDate('START_DATE', '>=', $request->start)
+            ->whereDate('END_DATE', '<=', $request->end)
+            ->select(
+                'timetable.*',
+                'venue_master.venue_name as venue_name'
+            )
+            ->get();
+
+        // Array of some sample colors
+        $colors = ['#ffffff'];
+
+        // Assign color to each event
+        $events = $events->map(function ($event) use ($colors) {
+            $startDateTime = $event->START_DATE;
+            $endDateTime = $event->END_DATE;
+            $allDay = false;
+
+            // Get faculty names from JSON (handle both old integer and new JSON array format)
+            $facultyIds = json_decode($event->faculty_master, true);
+            $facultyNames = '';
+            if (is_array($facultyIds) && !empty($facultyIds)) {
+                $facultyNames = DB::table('faculty_master')
+                    ->whereIn('pk', $facultyIds)
+                    ->pluck('full_name')
+                    ->implode(', ');
+            } elseif (!is_array($facultyIds) && !empty($event->faculty_master)) {
+                $facultyNames = DB::table('faculty_master')
+                    ->where('pk', $event->faculty_master)
+                    ->value('full_name') ?? '';
+            }
+
+            // Check if class_session exists and contains a time range with dash
+            if (!empty($event->class_session) && strpos($event->class_session, '-') !== false) {
+                $timeRange = trim($event->class_session);
+                $parts = explode('-', $timeRange);
+
+                if (count($parts) === 2) {
+                    $startTime = trim($parts[0]);
+                    $endTime = trim($parts[1]);
+
+                    $startTimestamp = strtotime($startTime);
+                    $endTimestamp = strtotime($endTime);
+
+                    if ($startTimestamp !== false && $endTimestamp !== false) {
+                        $startTime24 = date('H:i', $startTimestamp);
+                        $endTime24 = date('H:i', $endTimestamp);
+
+                        $startDateTime = $event->START_DATE . 'T' . $startTime24 . ':00';
+                        $endDateTime = $event->END_DATE . 'T' . $endTime24 . ':00';
+                        $allDay = false;
+                    } else {
+                        $allDay = true;
+                    }
+                } else {
+                    $allDay = true;
+                }
+            } else {
+                $allDay = true;
+            }
+
+            if ($allDay) {
+                try {
+                    $startDateTime = Carbon::parse($event->START_DATE)->format('Y-m-d');
+                    $endDateTime = Carbon::parse($event->END_DATE ?: $event->START_DATE)
+                        ->addDay()
+                        ->format('Y-m-d');
+                } catch (\Exception $e) {
+                    $startDateTime = $event->START_DATE;
+                    $endDateTime = Carbon::parse($event->START_DATE)->addDay()->format('Y-m-d');
+                }
+            }
+
+            return [
+                'id' => $event->pk,
+                'title' => $event->subject_topic,
+                'start' => $startDateTime,
+                'end'   => $endDateTime,
+                'vanue'   => $event->venue_name,
+                'faculty_name'   => $facultyNames,
+                'backgroundColor' => $colors[array_rand($colors)],
+                'borderColor' => $colors[array_rand($colors)],
+                'textColor' => '#111827',
+                'allDay' => $allDay,
+                'display' => 'block',
+                'class_session_debug' => $event->class_session,
+            ];
+        });
+
+        // Fetch holidays
+        $holidays = Holiday::active()
+            ->whereBetween('holiday_date', [$request->start, $request->end])
+            ->get()
+            ->map(function ($holiday) {
+                $backgroundColor = '';
+                $textColor = '#fff';
+
+                switch ($holiday->holiday_type) {
+                    case 'gazetted':
+                        $backgroundColor = '#dc3545';
+                        break;
+                    case 'restricted':
+                        $backgroundColor = '#ffc107';
+                        $textColor = '#000';
+                        break;
+                    case 'optional':
+                        $backgroundColor = '#17a2b8';
+                        break;
+                }
+
+                return [
+                    'id' => 'holiday_' . $holiday->id,
+                    'title' => $holiday->holiday_name . ' (' . ucfirst($holiday->holiday_type) . ')',
+                    'start' => $holiday->holiday_date->format('Y-m-d'),
+                    'end' => $holiday->holiday_date->copy()->addDay()->format('Y-m-d'),
+                    'backgroundColor' => $backgroundColor,
+                    'borderColor' => $backgroundColor,
+                    'textColor' => $textColor,
+                    'display' => 'block',
+                    'type' => 'holiday',
+                    'holiday_type' => $holiday->holiday_type,
+                    'description' => $holiday->description,
+                    'allDay' => true
+                ];
+            });
+
+        $allEvents = $events->merge($holidays);
+
+        return response()->json($allEvents);
+    }
+
+    /**
+     * OT single event details. Separate endpoint for the OT calendar page;
+     * shares the read-only detail logic with SingleCalendarDetails().
+     */
+    public function otSingleCalendarDetails(Request $request)
+    {
+        $eventId = $request->id;
+
+        $event = DB::table('timetable')
+            ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+            ->leftJoin('subject_master', 'timetable.subject_master_pk', '=', 'subject_master.pk')
+            ->leftJoin('subject_module_master', 'timetable.subject_module_master_pk', '=', 'subject_module_master.pk')
+            ->where('timetable.pk', $eventId)
+            ->select(
+                'timetable.pk',
+                'timetable.class_session',
+                'timetable.subject_topic',
+                'timetable.START_DATE',
+                'timetable.END_DATE',
+                'timetable.faculty_master',
+                'timetable.group_name',
+                'timetable.internal_faculty',
+                'venue_master.venue_name as venue_name',
+                'subject_master.subject_name as subject_name',
+                'subject_module_master.module_name as module_name'
+            )
+            ->first();
+
+        if (!$event) {
+            return response()->json(['error' => 'Event not found'], 404);
+        }
+
+        $groupIds = json_decode($event->group_name, true) ?? [];
+        $internalFacultyIds = json_decode($event->internal_faculty, true) ?? [];
+
+        $facultyIds = json_decode($event->faculty_master, true);
+        if (!is_array($facultyIds)) {
+            $facultyIds = $event->faculty_master ? [$event->faculty_master] : [];
+        }
+
+        $groupNames = DB::table('group_type_master_course_master_map')
+            ->whereIn('pk', $groupIds ?: [])
+            ->pluck('group_name');
+
+        $internalFacultyNames = DB::table('faculty_master')
+            ->whereIn('pk', $internalFacultyIds ?: [])
+            ->pluck('full_name');
+
+        $facultyNames = DB::table('faculty_master')
+            ->whereIn('pk', $facultyIds ?: [])
+            ->pluck('full_name');
+
+        return response()->json([
+            'id' => $event->pk,
+            // Card header = subject/module name; falls back to topic when missing.
+            'title' => $event->subject_name ?: ($event->module_name ?: $event->subject_topic),
+            'subject_name' => $event->subject_name ?? '',
+            'module_name' => $event->module_name ?? '',
+            'topic' => $event->subject_topic ?? '',
+            'start' => $event->START_DATE,
+            'faculty_name' => $facultyNames->implode(', '),
+            'internal_faculty' => $internalFacultyNames->implode(', '),
+            'venue_name' => $event->venue_name ?? '',
+            'class_session' => $event->class_session ?? '',
+            'group_name' => $groupNames->implode(', ') ?? '',
+        ]);
+    }
+
+    /**
+     * Download the OT timetable as a PDF for the currently viewed range.
+     * Always scoped to the logged-in student's groups.
+     */
+    public function otDownloadPdf(Request $request)
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(120);
+
+        $student_pk = auth()->user()->user_id;
+
+        // Default to the current month when no range supplied.
+        $start = $request->start ?: Carbon::now()->startOfMonth()->toDateString();
+        $end   = $request->end   ?: Carbon::now()->endOfMonth()->toDateString();
+
+        $events = DB::table('timetable')
+            ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+            ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
+            ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
+            ->where('student_course_group_map.student_master_pk', $student_pk)
+            ->whereDate('timetable.START_DATE', '>=', $start)
+            ->whereDate('timetable.END_DATE', '<=', $end);
+
+        if ($request->filled('course_id')) {
+            $events = $events->where('timetable.course_master_pk', $request->course_id);
+        }
+
+        $events = $events
+            ->select('timetable.*', 'venue_master.venue_name as venue_name')
+            ->orderBy('timetable.START_DATE')
+            ->orderBy('timetable.class_session')
+            ->get();
+
+        $rows = $events->map(function ($event) {
+            $facultyIds = json_decode($event->faculty_master, true);
+            if (!is_array($facultyIds)) {
+                $facultyIds = $event->faculty_master ? [$event->faculty_master] : [];
+            }
+            $facultyNames = !empty($facultyIds)
+                ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
+                : '';
+
+            return (object) [
+                'date'         => Carbon::parse($event->START_DATE)->format('d M Y'),
+                'day'          => Carbon::parse($event->START_DATE)->format('l'),
+                'session'      => $event->class_session,
+                'topic'        => $event->subject_topic,
+                'faculty_name' => $facultyNames,
+                'venue_name'   => $event->venue_name,
+            ];
+        });
+
+        $course = null;
+        if ($request->filled('course_id')) {
+            $course = CourseMaster::where('pk', $request->course_id)
+                ->select('course_name', 'couse_short_name', 'course_year')
+                ->first();
+        }
+
+        $data = [
+            'rows'        => $rows,
+            'rangeStart'  => Carbon::parse($start)->format('d M Y'),
+            'rangeEnd'    => Carbon::parse($end)->format('d M Y'),
+            'course'      => $course,
+            'studentName' => auth()->user()->user_name ?? '',
+        ];
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
+            ->setPaper('a4', 'landscape')
+            ->setOptions([
+                'defaultFont'          => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled'      => true,
+                'dpi'                  => 96,
+            ]);
+
+        $fileName = 'time-table-' . now()->format('Y-m-d_His') . '.pdf';
+
+        return $pdf->download($fileName);
     }
     public function getGroupTypes(Request $request)
     {
@@ -739,12 +1170,15 @@ class CalendarController extends Controller
                     'v.venue_name',
                     DB::raw('t.START_DATE as from_date'),
                     't.class_session',
-                    // Add field to extract session end time for sorting
+                    // Add field to extract session end time for sorting (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
                     DB::raw("
-                    STR_TO_DATE(
-                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-                        '%h:%i %p'
-                    ) as session_end_time
+                    CASE
+                        WHEN t.class_session LIKE '% - %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                        WHEN t.class_session LIKE '% to %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                        ELSE NULL
+                    END as session_end_time
                 ")
                 ])
                 ->leftJoin('faculty_master as f', function ($join) {
@@ -784,15 +1218,18 @@ class CalendarController extends Controller
                         ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
                         ->where('tf.is_submitted', 1);
                 })
-                // Modified: Show past sessions OR today's sessions if end time has passed
+                // Show only sessions whose end time has passed (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
                 ->whereRaw("
                 TIMESTAMP(
                     t.END_DATE,
-                    STR_TO_DATE(
-                        TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
-                        '%h:%i %p'
-                    )
-                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+                    CASE
+                        WHEN t.class_session LIKE '% - %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                        WHEN t.class_session LIKE '% to %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                        ELSE NULL
+                    END
+                ) <= NOW()
             ");
 
             if (hasRole('Student-OT')) {
@@ -958,7 +1395,7 @@ class CalendarController extends Controller
                         TRIM(SUBSTRING_INDEX(t.class_session, '-', -1)),
                         '%h:%i %p'
                     )
-                ) <= CONVERT_TZ(NOW(), '+00:00', '+05:30')
+                ) <= NOW()
             ");
 
             // ===== OT GROUP FILTER =====
@@ -1150,6 +1587,13 @@ class CalendarController extends Controller
             $ratingCheckbox = $request->Ratting_checkbox[$i] ?? 0;
             $remarkCheckbox = $request->Remark_checkbox[$i] ?? 0;
 
+            // On a bulk submit, rows the student left untouched are silently
+            // skipped — they are not errors, just sessions with no feedback yet.
+            $isBulk = !$request->has('submit_index');
+            if ($isBulk && !$content && !$presentation && empty(trim((string) $remarks))) {
+                continue;
+            }
+
             // Validate that ratings are provided if rating checkbox is enabled
             if ($ratingCheckbox == 1) {
                 if (!$content && !$presentation) {
@@ -1192,8 +1636,18 @@ class CalendarController extends Controller
             $inserted++;
         }
 
+        // Summarise errors: show each distinct reason once with a count, so the
+        // flash message stays short instead of repeating the same line per row.
+        $errorSummary = '';
+        if (!empty($errors)) {
+            $errorSummary = collect($errors)
+                ->countBy()
+                ->map(fn($count, $reason) => $count > 1 ? "$reason ($count)" : $reason)
+                ->implode('; ');
+        }
+
         if ($inserted === 0) {
-            $errorMessage = !empty($errors) ? implode(', ', $errors) : 'Please submit at least one feedback.';
+            $errorMessage = $errorSummary !== '' ? $errorSummary : 'Please submit at least one feedback.';
             return back()->withErrors([
                 'error' => $errorMessage
             ]);
@@ -1201,8 +1655,9 @@ class CalendarController extends Controller
 
         // If some succeeded but some failed
         if (!empty($errors) && $inserted > 0) {
+            $failedCount = count($errors);
             $successMessage = "Successfully submitted $inserted feedback(s). " .
-                (!empty($errors) ? 'Some items failed: ' . implode(', ', $errors) : '');
+                "$failedCount item(s) failed: $errorSummary";
             return back()->with('success', $successMessage);
         }
 

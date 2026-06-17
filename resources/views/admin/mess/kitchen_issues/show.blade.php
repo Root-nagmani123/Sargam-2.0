@@ -6,7 +6,7 @@
 
 <div class="container-fluid">
     <x-breadcrum title="Material Management Details" />
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h4 class="card-title mb-0">Material Management #{{ $kitchenIssue->pk }}</h4>

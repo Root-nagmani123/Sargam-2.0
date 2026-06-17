@@ -4,13 +4,13 @@
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+        && (isEstateAuthority());
     $requestForEstateEmployeesListUrl = route('admin.estate.request-for-estate.employees');
     if (request('scope') === 'self') {
         $requestForEstateEmployeesListUrl .= (str_contains($requestForEstateEmployeesListUrl, '?') ? '&' : '?') . 'scope=self';
     }
 @endphp
-@section($estateSelfHomeTab ? 'content' : 'content')
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
    <x-breadcrum title="Request For Estate" />
    <x-estate-workflow-stepper current="request-for-estate" />
@@ -34,8 +34,8 @@
             <div id="request-for-estate-card-body">
             @php
                 $showUserActionHelp = request('scope') === 'self' || ! (
-                    hasRole('Estate') ||
-                    hasRole('Admin') ||
+                    hasRole('Estate Admin') ||
+                    hasRole('Super Admin') ||
                     hasRole('Super Admin')
                 );
             @endphp
@@ -286,7 +286,7 @@
 @push('scripts')
     <script>
         window.requestEstateSelfEmployeePk = @json($selfEmployeePk ?? null);
-        window.requestEstateCanChooseEligibilityOnAdd = @json(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        window.requestEstateCanChooseEligibilityOnAdd = @json(isEstateAuthority());
         window.requestEstateLockEligibilityOnSelfScopeAdd = @json(request('scope') === 'self');
     </script>
     {!! $dataTable->scripts() !!}
@@ -505,6 +505,12 @@
             e.preventDefault();
             var selVal = getSelectVal(document.getElementById('modal_employee_pk'));
             $('#request_employee_pk').val(selVal || '0');
+            var eligVal = getSelectVal(document.getElementById('modal_eligibility_type_pk'));
+            if (!eligibilityLocked) {
+                $('#modal_eligibility_type_pk_hidden').val(eligVal || '');
+            } else {
+                $('#modal_eligibility_type_pk_hidden').val(eligVal || $('#modal_eligibility_type_pk_hidden').val() || '');
+            }
             var $form = $(this);
             var $errors = $('#addEditRequestEstateFormErrors');
             var $btn = $('#btnSubmitRequestEstate');
@@ -520,7 +526,8 @@
                 success: function(res) {
                     if (addEditModal) addEditModal.hide();
                     if (res.success && res.message) {
-                        $('#requestForEstateTable').DataTable().ajax.reload(null, false);
+                        var isNew = !$('#request_estate_id').val();
+                        $('#requestForEstateTable').DataTable().ajax.reload(null, isNew);
                         var alertHtml = '<div class="alert alert-success alert-dismissible fade show d-flex align-items-center rounded-3 shadow-sm" role="alert"><i class="bi bi-check-circle-fill me-2"></i><span class="flex-grow-1">' + res.message + '</span><button type="button" class="btn-close" data-bs-dismiss="alert"></button></div>';
                         $('#request-for-estate-card-body').find('.alert-success').remove();
                         $('#request-for-estate-card-body').prepend(alertHtml);

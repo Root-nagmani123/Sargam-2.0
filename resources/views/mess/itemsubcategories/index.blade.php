@@ -1,65 +1,9 @@
 @extends('admin.layouts.master')
 @section('title', 'Subcategory Item Master')
-@push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css">
-<style>
-    /* Choices.js + Bootstrap for filter category select */
-    .itemsubcategories-filter-form .choices__inner {
-        min-height: 31px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border-radius: var(--bs-border-radius, 0.375rem);
-        border: 1px solid var(--bs-border-color);
-        background-color: var(--bs-body-bg);
-    }
-    .itemsubcategories-filter-form .choices__list--single .choices__item {
-        padding: 2px 0;
-    }
-    .itemsubcategories-filter-form .choices.is-focused .choices__inner,
-    .itemsubcategories-filter-form .choices.is-open .choices__inner {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    .itemsubcategories-filter-form .choices__list--dropdown .choices__item--selectable.is-highlighted,
-    .itemsubcategories-filter-form .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-        background-color: var(--bs-primary);
-        color: #fff;
-    }
-
-    /* Choices.js + Bootstrap for create/edit modal selects */
-    #createItemSubcategoryModal .choices__inner,
-    #editItemSubcategoryModal .choices__inner {
-        min-height: 31px;
-        padding: 0.25rem 0.5rem;
-        font-size: 0.875rem;
-        border-radius: var(--bs-border-radius, 0.375rem);
-        border: 1px solid var(--bs-border-color);
-        background-color: var(--bs-body-bg);
-    }
-    #createItemSubcategoryModal .choices__list--single .choices__item,
-    #editItemSubcategoryModal .choices__list--single .choices__item {
-        padding: 2px 0;
-    }
-    #createItemSubcategoryModal .choices.is-focused .choices__inner,
-    #createItemSubcategoryModal .choices.is-open .choices__inner,
-    #editItemSubcategoryModal .choices.is-focused .choices__inner,
-    #editItemSubcategoryModal .choices.is-open .choices__inner {
-        border-color: #86b7fe;
-        box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
-    }
-    #createItemSubcategoryModal .choices__list--dropdown .choices__item--selectable.is-highlighted,
-    #createItemSubcategoryModal .choices__list[aria-expanded] .choices__item--selectable.is-highlighted,
-    #editItemSubcategoryModal .choices__list--dropdown .choices__item--selectable.is-highlighted,
-    #editItemSubcategoryModal .choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
-        background-color: var(--bs-primary);
-        color: #fff;
-    }
-</style>
-@endpush
 @section('content')
 @php
     $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
-    $canDeleteItemSubcategory = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteItemSubcategory = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid">
     <x-breadcrum title="Subcategory Item Master"></x-breadcrum>
@@ -119,44 +63,7 @@
                             <th>Action</th>
                         </tr>
                     </thead>
-                    <tbody>
-                        @foreach($itemsubcategories as $itemsubcategory)
-                            <tr>
-                                    <td>{{ $itemsubcategory->category ? $itemsubcategory->category->category_name : '-' }}</td>
-                                <td><div class="fw-semibold">{{ $itemsubcategory->item_name }}</div></td>
-                                <td>{{ $itemsubcategory->item_code ?? '-' }}</td>
-                                <td>{{ $itemsubcategory->unit_measurement ?? '-' }}</td>
-                                <td>{{ isset($itemsubcategory->alert_quantity) && $itemsubcategory->alert_quantity !== null && $itemsubcategory->alert_quantity !== '' ? number_format($itemsubcategory->alert_quantity, 2) : '-' }}</td>
-                                <td>
-                                    <span class="badge bg-{{ $itemsubcategory->status_badge_class }}">
-                                        {{ $itemsubcategory->status_label }}
-                                    </span>
-                                </td>
-                                <td>
-                                    <div class="d-flex gap-2 flex-wrap">
-                                        <button type="button" class="text-primary btn-edit-itemsubcategory bg-transparent border-0"
-                                                data-id="{{ $itemsubcategory->id }}"
-                                                data-category-id="{{ $itemsubcategory->category_id ?? '' }}"
-                                                data-item-name="{{ e($itemsubcategory->item_name) }}"
-                                                data-item-code="{{ e($itemsubcategory->item_code ?? '') }}"
-                                                data-unit-measurement="{{ e($itemsubcategory->unit_measurement ?? '') }}"
-                                                data-alert-quantity="{{ $itemsubcategory->alert_quantity ?? '' }}"
-                                                data-description="{{ e($itemsubcategory->description ?? '') }}"
-                                                data-status="{{ e($itemsubcategory->status ?? 'active') }}"
-                                                title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
-                                        @if($canDeleteItemSubcategory)
-                                            <form method="POST" action="{{ route('admin.mess.itemsubcategories.destroy', $itemsubcategory->id) }}" class="d-inline"
-                                                  onsubmit="return confirm('Are you sure you want to delete this item?');">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="text-primary btn-delete-itemsubcategory bg-transparent border-0" title="Delete"><i class="material-icons material-symbol-rounded">delete</i></button>
-                                            </form>
-                                        @endif
-                                    </div>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
+                    <tbody></tbody>
                 </table>
             </div>
         </div>
@@ -304,7 +211,15 @@
     </div>
 </div>
 
-@include('components.mess-master-datatables', ['tableId' => 'itemSubcategoriesTable', 'searchPlaceholder' => 'Search items...', 'orderColumn' => 1, 'actionColumnIndex' => 6, 'infoLabel' => 'subcategory items'])
+@include('components.mess-master-datatables', [
+    'tableId' => 'itemSubcategoriesTable',
+    'searchPlaceholder' => 'Search items...',
+    'orderColumn' => 1,
+    'actionColumnIndex' => 6,
+    'infoLabel' => 'subcategory items',
+    'serverSide' => true,
+    'ajaxUrlBase' => route('admin.mess.itemsubcategories.index'),
+])
 @push('scripts')
 <script>
 (function () {
@@ -501,26 +416,6 @@ function initItemSubcategoryScripts() {
             });
         });
     }
-
-    // Initialize Choices.js on create & edit modal selects
-    var choicesInstances = {};
-    function createChoicesInstance(selectEl, key) {
-        if (!window.Choices || !selectEl) return null;
-        if (choicesInstances[key]) {
-            choicesInstances[key].destroy();
-        }
-        choicesInstances[key] = new Choices(selectEl, {
-            searchEnabled: true,
-            itemSelectText: '',
-            shouldSort: false
-        });
-        return choicesInstances[key];
-    }
-
-    // Initial setup for filter + create modal selects
-    createChoicesInstance(document.getElementById('filter_category_id'), 'filterCategory');
-    createChoicesInstance(document.getElementById('create_category_id'), 'createCategory');
-    createChoicesInstance(document.getElementById('create_status'), 'createStatus');
 
     document.addEventListener('mousedown', function(e) {
         var btn = e.target.closest('.btn-edit-itemsubcategory');

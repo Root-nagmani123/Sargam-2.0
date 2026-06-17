@@ -17,6 +17,7 @@
 <!-- Core Css -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
 <link rel="stylesheet" href="{{asset('css/custom.css')}}">
+<link rel="stylesheet" href="{{ asset('css/admin-header.css') }}?v={{ @filemtime(public_path('css/admin-header.css')) ?: time() }}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
 <!-- CRITICAL: Force light mode CSS - must load AFTER Bootstrap CSS -->
 
@@ -24,10 +25,14 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
+<!-- Unified Spacing System -->
+<link rel="stylesheet" href="{{asset('css/spacing-system.css')}}?v={{ @filemtime(public_path('css/spacing-system.css')) ?: time() }}">
 <!-- Breadcrumb Component CSS -->
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <!-- Sidebar Menu Enhanced CSS -->
 <link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
+<!-- Sargam Design System (tokens + refinements + components) — must load LAST -->
+<link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:
@@ -36,27 +41,6 @@
   'GRAD' 0,
   'opsz' 24
 }
-
-/* Force light mode - prevent dark mode styles */
-html[data-bs-theme="dark"],
-html:not([data-bs-theme])[data-bs-theme="dark"],
-html {
-  color-scheme: light !important;
-  --bs-body-bg: #fff !important;
-  --bs-body-color: #212529 !important;
-  --bs-emphasis-color: #000 !important;
-  --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
-  --bs-secondary-bg: #e9ecef !important;
-  --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
-  --bs-tertiary-bg: #f8f9fa !important;
-  --bs-border-color: #dee2e6 !important;
-  --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
-}
-
-/* Prevent Bootstrap dark mode CSS variables from being applied */
-[data-bs-theme="dark"] {
-  color-scheme: light !important;
-}
 </style>
 
 <!-- FINAL OVERRIDE: Force light mode after ALL CSS loads -->
@@ -64,31 +48,6 @@ html {
 /* This MUST be the last style block to override everything */
 * {
   color-scheme: light !important;
-}
-
-html,
-html[data-bs-theme],
-html[data-bs-theme="light"],
-html[data-bs-theme="dark"],
-body,
-body[data-bs-theme],
-body[data-bs-theme="light"],
-body[data-bs-theme="dark"] {
-  color-scheme: light !important;
-  --bs-body-bg: #fff !important;
-  --bs-body-color: #212529 !important;
-  --bs-emphasis-color: #000 !important;
-  --bs-secondary-color: rgba(33, 37, 41, 0.75) !important;
-  --bs-secondary-bg: #e9ecef !important;
-  --bs-tertiary-color: rgba(33, 37, 41, 0.5) !important;
-  --bs-tertiary-bg: #f8f9fa !important;
-  --bs-border-color: #dee2e6 !important;
-  --bs-border-color-translucent: rgba(0, 0, 0, 0.175) !important;
-  --bs-link-color: #0d6efd !important;
-  --bs-link-hover-color: #0a58ca !important;
-  --bs-heading-color: inherit !important;
-  background-color: #fff !important;
-  color: #212529 !important;
 }
 </style>
 

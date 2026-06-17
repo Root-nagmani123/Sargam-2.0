@@ -2,7 +2,7 @@
 @section('title', 'Selling Voucher')
 @section('content')
 @php
-    $canDeleteSellingVoucher = hasRole('Admin') || hasRole('Mess-Admin');
+    $canDeleteSellingVoucher = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid py-3">
     <x-breadcrum title="Selling Voucher" />
@@ -99,8 +99,12 @@
                             <select name="buyer_name" id="filter_buyer_name" class="form-select w-100">
                                 <option value="">All Buyers</option>
                                 @foreach(($filterBuyerNames ?? collect()) as $buyerName)
-                                    <option value="{{ $buyerName }}" {{ (string) ($selectedBuyerName ?? '') === (string) $buyerName ? 'selected' : '' }}>
-                                        {{ $buyerName }}
+                                @php
+                                    $buyerValue = is_array($buyerName) ? (string) ($buyerName['value'] ?? '') : (string) $buyerName;
+                                    $buyerLabel = is_array($buyerName) ? (string) ($buyerName['text'] ?? $buyerValue) : (string) $buyerName;
+                                @endphp
+                                    <option value="{{ $buyerValue }}" {{ (string) ($selectedBuyerName ?? '') === $buyerValue ? 'selected' : '' }}>
+                                        {{ $buyerLabel }}
                                     </option>
                                 @endforeach
                             </select>
@@ -504,6 +508,7 @@
                 @csrf
                 {{-- Forces JSON response from store() so the modal can reset without a full page redirect --}}
                 <input type="hidden" name="respond_json" value="1">
+                <input type="hidden" name="client_id" id="modalClientId" value="">
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="addSellingVoucherModalLabel">Add Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -578,19 +583,19 @@
                                     <select id="modalFacultySelect" class="form-select" style="display:none;">
                                         <option value="">Select Faculty</option>
                                         @foreach($faculties ?? [] as $f)
-                                            <option value="{{ e($f->full_name) }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
+                                            <option value="{{ e($f->full_name) }}" data-pk="{{ $f->pk }}">{{ e($f->full_name_with_code ?? $f->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalAcademyStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Academy Staff</option>
                                         @foreach($employees ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalMessStaffSelect" class="form-select" style="display:none;">
                                         <option value="">Select Mess Staff</option>
                                         @foreach($messStaff ?? [] as $e)
-                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
+                                            <option value="{{ e($e->full_name_with_department ?? $e->full_name) }}" data-pk="{{ $e->pk }}">{{ e($e->full_name_with_department ?? $e->full_name) }}</option>
                                         @endforeach
                                     </select>
                                     <select id="modalOtStudentSelect" class="form-select" style="display:none;">
@@ -702,6 +707,7 @@
             <form id="editSellingVoucherForm" method="POST" action="" enctype="multipart/form-data">
                 @csrf
                 @method('PUT')
+                <input type="hidden" name="client_id" id="editModalClientId" value="">
                 <div class="modal-header border-bottom bg-light">
                     <h5 class="modal-title fw-semibold" id="editSellingVoucherModalLabel">Edit Selling Voucher</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
@@ -1737,9 +1743,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var selectedTypePk = @json((string) ($selectedClientTypePk ?? ''));
         var selectedBuyer = @json((string) ($selectedBuyerName ?? ''));
         var isRestoringSellingVoucherFilters = false;
-        var employees = @json(($employees ?? collect())->pluck('full_name_with_department')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
-        var faculties = @json(($faculties ?? collect())->pluck('full_name')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
-        var messStaff = @json(($messStaff ?? collect())->pluck('full_name_with_department')->filter()->values()->all(), JSON_UNESCAPED_UNICODE);
+        var employees = @json($filterEmployeeBuyerOptions ?? [], JSON_UNESCAPED_UNICODE);
+        var faculties = @json($filterFacultyBuyerOptions ?? [], JSON_UNESCAPED_UNICODE);
+        var messStaff = @json($filterMessStaffBuyerOptions ?? [], JSON_UNESCAPED_UNICODE);
 
         var typeSlugMap = {
             '{{ (string) \App\Models\KitchenIssueMaster::CLIENT_EMPLOYEE }}': 'employee',
@@ -1781,7 +1787,17 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
         function setBuyerOptions(options, preserveSelection) {
-            fillSelect(buyerEl, (options || []).map(function (name) { return { value: name, text: name }; }), 'All Buyers', preserveSelection ? selectedBuyer : '');
+            fillSelect(buyerEl, (options || []).map(function (option) {
+                if (typeof option === 'string') {
+                    return { value: option, text: option };
+                }
+                return {
+                    value: String((option && option.value) || ''),
+                    text: String((option && option.text) || ''),
+                };
+            }).filter(function (option) {
+                return option.value !== '' && option.text !== '';
+            }), 'All Buyers', preserveSelection ? selectedBuyer : '');
         }
 
         function loadBuyerOptions(preserveSelection) {
@@ -2981,6 +2997,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         const opt = document.createElement('option');
                         opt.value = s.display_name || '';
                         opt.textContent = s.display_name || '—';
+                        opt.dataset.pk = s.pk || '';
                         otStudentSelect.appendChild(opt);
                     });
                     reinitNameSelectTomSelect(otStudentSelect, 'Select Student');
@@ -2999,6 +3016,11 @@ document.addEventListener('DOMContentLoaded', function() {
         modalOtStudentSelect.addEventListener('change', function() {
             const inp = document.getElementById('modalClientNameInput');
             if (inp) inp.value = this.value || '';
+            const clientIdField = document.getElementById('modalClientId');
+            const selectedOpt = this.options[this.selectedIndex];
+            if (clientIdField && selectedOpt) {
+                clientIdField.value = (selectedOpt.dataset.pk || '');
+            }
         });
     }
     
@@ -3043,17 +3065,32 @@ document.addEventListener('DOMContentLoaded', function() {
         modalFacultySelect.addEventListener('change', function() {
             const inp = document.getElementById('modalClientNameInput');
             if (inp) inp.value = this.value || '';
+            const clientIdField = document.getElementById('modalClientId');
+            const selectedOpt = this.options[this.selectedIndex];
+            if (clientIdField && selectedOpt) {
+                clientIdField.value = (selectedOpt.dataset.pk || '');
+            }
         });
     }
     const modalAcademyEl = document.getElementById('modalAcademyStaffSelect');
     if (modalAcademyEl) modalAcademyEl.addEventListener('change', function() {
         const inp = document.getElementById('modalClientNameInput');
         if (inp) inp.value = this.value || '';
+        const clientIdField = document.getElementById('modalClientId');
+        const selectedOpt = this.options[this.selectedIndex];
+        if (clientIdField && selectedOpt) {
+            clientIdField.value = (selectedOpt.dataset.pk || '');
+        }
     });
     const modalMessEl = document.getElementById('modalMessStaffSelect');
     if (modalMessEl) modalMessEl.addEventListener('change', function() {
         const inp = document.getElementById('modalClientNameInput');
         if (inp) inp.value = this.value || '';
+        const clientIdField = document.getElementById('modalClientId');
+        const selectedOpt = this.options[this.selectedIndex];
+        if (clientIdField && selectedOpt) {
+            clientIdField.value = (selectedOpt.dataset.pk || '');
+        }
     });
     const checked = document.querySelector('#addSellingVoucherModal .client-type-radio:checked');
     if (checked) checked.dispatchEvent(new Event('change'));
@@ -3250,17 +3287,32 @@ document.addEventListener('DOMContentLoaded', function() {
         editModalFacultySelect.addEventListener('change', function() {
             const inp = document.getElementById('editModalClientNameInput');
             if (inp) inp.value = this.value || '';
+            const clientIdField = document.getElementById('editModalClientId');
+            const selectedOpt = this.options[this.selectedIndex];
+            if (clientIdField && selectedOpt) {
+                clientIdField.value = (selectedOpt.dataset.pk || '');
+            }
         });
     }
     const editModalAcademyEl = document.getElementById('editModalAcademyStaffSelect');
     if (editModalAcademyEl) editModalAcademyEl.addEventListener('change', function() {
         const inp = document.getElementById('editModalClientNameInput');
         if (inp) inp.value = this.value || '';
+        const clientIdField = document.getElementById('editModalClientId');
+        const selectedOpt = this.options[this.selectedIndex];
+        if (clientIdField && selectedOpt) {
+            clientIdField.value = (selectedOpt.dataset.pk || '');
+        }
     });
     const editModalMessEl = document.getElementById('editModalMessStaffSelect');
     if (editModalMessEl) editModalMessEl.addEventListener('change', function() {
         const inp = document.getElementById('editModalClientNameInput');
         if (inp) inp.value = this.value || '';
+        const clientIdField = document.getElementById('editModalClientId');
+        const selectedOpt = this.options[this.selectedIndex];
+        if (clientIdField && selectedOpt) {
+            clientIdField.value = (selectedOpt.dataset.pk || '');
+        }
     });
 
     function getEditRowHtml(index, item) {

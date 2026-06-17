@@ -3,12 +3,11 @@
 namespace App\DataTables;
 
 use App\Models\EstateHacApprovedRow;
-use App\Support\RedisBackedCache;
+use App\Support\DataTableRedisCache;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
@@ -20,91 +19,43 @@ use Yajra\DataTables\Services\DataTable;
  */
 class EstateHacApprovedDataTable extends DataTable
 {
-    /**
-     * Server-side JSON (ESTATE_UPDATE_METER_READING_CACHE_*). Keys: estate_hacap:v2:…
-     */
-    public function ajax(): JsonResponse
+    public const LISTING_CACHE_EPOCH_KEY = 'estate_hacap_list_epoch';
+
+    public static function bumpListingCacheEpoch(): void
     {
-        $draw = (int) $this->request()->input('draw', 0);
-        $fingerprint = $this->hacApprovedDataTableCacheFingerprint();
-        $cacheKey = 'estate_hacap:v2:' . md5(json_encode($fingerprint));
-
-        $payload = $this->rememberEstateListingCache($cacheKey, function () {
-            $resp = parent::ajax();
-            $data = $resp->getData(true);
-            if (! is_array($data)) {
-                return ['__passthrough' => true, 'body' => $resp->getContent()];
-            }
-            unset($data['draw']);
-
-            return $data;
-        });
-
-        if (isset($payload['__passthrough']) && $payload['__passthrough']) {
-            $decoded = json_decode((string) ($payload['body'] ?? ''), true);
-
-            return is_array($decoded)
-                ? new JsonResponse(array_merge($decoded, ['draw' => $draw]))
-                : parent::ajax();
-        }
-
-        $payload['draw'] = $draw;
-
-        return new JsonResponse($payload);
+        DataTableRedisCache::bumpListEpoch(self::LISTING_CACHE_EPOCH_KEY, 'EstateHacApprovedDataTable');
     }
 
     /**
-     * @template T
-     *
-     * @param  callable(): T  $callback
-     * @return T
+     * Server-side JSON (.env: ESTATE_UPDATE_METER_READING_CACHE_*).
      */
-    private function rememberEstateListingCache(string $cacheKey, callable $callback)
+    public function ajax(): JsonResponse
     {
-        $enabled = ! in_array(strtolower((string) env('ESTATE_UPDATE_METER_READING_CACHE_ENABLED', 'true')), ['0', 'false', 'no', 'off'], true);
-        $ttl = max(30, (int) env('ESTATE_UPDATE_METER_READING_CACHE_SECONDS', 300));
-        $storeName = RedisBackedCache::estateUpdateMeterReadingStoreName();
-        $repository = RedisBackedCache::repositoryForStore($storeName);
-        if (! $enabled) {
-            return $callback();
-        }
-        try {
-            return $repository->remember($cacheKey, $ttl, $callback);
-        } catch (\Throwable $e) {
-            Log::warning('HAC approved DataTable: cache store failed, using DB only.', [
-                'store' => $storeName,
-                'message' => $e->getMessage(),
-            ]);
-
-            return $callback();
-        }
+        return DataTableRedisCache::serveCachedAjax(
+            $this->request(),
+            'estate_hacap:v2:',
+            self::LISTING_CACHE_EPOCH_KEY,
+            [
+                'enabled' => 'ESTATE_UPDATE_METER_READING_CACHE_ENABLED',
+                'seconds' => 'ESTATE_UPDATE_METER_READING_CACHE_SECONDS',
+            ],
+            'EstateHacApprovedDataTable',
+            fn () => parent::ajax(),
+            $this->hacApprovedListingCacheExtra()
+        );
     }
 
     /**
      * @return array<string, mixed>
      */
-    private function hacApprovedDataTableCacheFingerprint(): array
+    private function hacApprovedListingCacheExtra(): array
     {
         $r = $this->request();
-        $columns = $r->input('columns', []);
-        $colSearch = [];
-        if (is_array($columns)) {
-            foreach ($columns as $c) {
-                if (! is_array($c)) {
-                    continue;
-                }
-                $colSearch[] = [
-                    'data' => $c['data'] ?? '',
-                    'sv' => trim((string) data_get($c, 'search.value', '')),
-                ];
-            }
-        }
-
         $user = Auth::user();
-        $canSeeHacApproved = $user && (hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+        $canSeeHacApproved = $user && (hasRole('HAC Person') || isEstateHacAuthority());
 
         $authorityPersonalScope = $r->input('scope') === 'self'
-            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+            && isEstateHacAuthority();
 
         $empScope = ['t' => 'all'];
         if ($authorityPersonalScope && $user) {
@@ -119,11 +70,6 @@ class EstateHacApprovedDataTable extends DataTable
         }
 
         return [
-            'start' => (int) $r->input('start', 0),
-            'len' => $r->input('length', 10),
-            'q' => trim((string) data_get($r->all(), 'search.value', '')),
-            'order' => $r->input('order', []),
-            'cols' => $colSearch,
             'type_filter' => trim((string) $r->input('type_filter', '')),
             'scope' => (string) $r->input('scope', ''),
             'emp' => $empScope,
@@ -251,10 +197,10 @@ class EstateHacApprovedDataTable extends DataTable
 
     public function query(EstateHacApprovedRow $model): EloquentBuilder
     {
-        $canSeeHacApproved = hasRole('HAC Person') || hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $canSeeHacApproved = hasRole('HAC Person') || isEstateHacAuthority();
 
         $authorityPersonalScope = request('scope') === 'self'
-            && (hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'));
+            && isEstateHacAuthority();
         $selfEmployeePks = [];
         if ($authorityPersonalScope && Auth::check()) {
             $selfEmployeePks = array_values(array_filter(
@@ -369,6 +315,7 @@ class EstateHacApprovedDataTable extends DataTable
             ->columns($this->getColumns())
             ->minifiedAjax('', null, [
                 'type_filter' => '$("#hacApprovedTypeFilter").val()',
+                'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
             ])
             ->parameters([
                 'responsive' => false,
