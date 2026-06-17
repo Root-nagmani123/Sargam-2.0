@@ -7,6 +7,7 @@
     $tz = 'Asia/Kolkata';
     $currentDateKey = null;
     $isStudentView = $type == 'student';
+    // Treat stored created_date as UTC (OT/DB) and display in India time
 @endphp
 
 <style>
@@ -32,6 +33,10 @@
     .chat-attachment{margin-top:.4rem}
     .chat-attachment a{font-size:.78rem;text-decoration:none;color:#ff6b35;display:inline-flex;align-items:center;gap:.25rem;padding:.15rem .4rem;border-radius:999px;background:rgba(255,107,53,.06)}
     .chat-attachment a:hover{background:rgba(255,107,53,.15)}
+    .chat-attachment .file-meta{font-size:.7rem;color:#94a3b8;margin-left:.35rem}
+    .file-preview-chip{display:inline-flex;align-items:center;gap:.4rem;background:#f0f4ff;border:1px solid #c7d7fc;border-radius:8px;padding:.25rem .55rem;font-size:.75rem;color:#1e3a8a;margin:.25rem 0}
+    .file-preview-chip .chip-remove{cursor:pointer;font-size:.8rem;color:#64748b;line-height:1}
+    .file-preview-chip .chip-remove:hover{color:#ef4444}
     .date-separator{display:flex;align-items:center;gap:.75rem;margin:1rem 0;position:relative}
     .date-separator::before,.date-separator::after{content:"";flex:1;height:1px;background:linear-gradient(90deg,transparent 0,#cbd5e1 20%,#cbd5e1 80%,transparent 100%)}
     .date-chip{font-size:.72rem;color:#334155;background:#e2e8f0;border-radius:999px;padding:.15rem .6rem}
@@ -54,6 +59,8 @@
     .text-muted-2{color:#94a3b8}
     .text-muted-inv{color:#dbeafe}
     .visually-hidden{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+    .chat-send-toast{position:absolute;top:0;left:0;right:0;z-index:10;padding:.5rem .75rem;margin:.5rem;border-radius:12px;background:#004a93;color:#fff;font-size:.8rem;font-weight:500;text-align:center;box-shadow:0 2px 8px rgba(0,74,147,.35);animation:chatToastIn .25s ease}
+    @keyframes chatToastIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
   </style>
 
 <div class="chat-wrapper" data-memo-id="{{ $id }}" data-type="{{ $type }}" data-user-type="{{ $user_type }}">
@@ -61,7 +68,7 @@
 
 @forelse ($conversations as $msg)
     @php
-        $msgTime = Carbon::parse($msg->created_date)->timezone($tz);
+        $msgTime = Carbon::parse($msg->created_date ?? 'now', 'UTC')->timezone($tz);
         $dateKey = $msgTime->toDateString();
         $label = $msgTime->isSameDay(Carbon::now($tz))
             ? 'Today'
@@ -81,7 +88,7 @@
     @endif
 
     <div class="chat-row {{ $isOwn ? 'chat-right' : 'chat-left' }}">
-      <div class="chat-bubble flash-new" data-message-id="{{ data_get($msg, 'id', data_get($msg, 'pk', '')) }}">
+      <div class="chat-bubble" data-message-id="{{ data_get($msg, 'id', data_get($msg, 'pk', '')) }}">
         <div class="chat-header">
           <span class="chat-user">{{ $msg->display_name }}</span>
           <span class="chat-meta">
@@ -103,10 +110,21 @@
         <div class="chat-text">{{ $msg->student_decip_incharge_msg }}</div>
 
         @if ($hasAttachment)
+          @php
+            $fileName = basename($msg->doc_upload);
+            $ext = strtoupper(pathinfo($fileName, PATHINFO_EXTENSION));
+            $filePath = storage_path('app/public/' . $msg->doc_upload);
+            $rawSize = @filesize($filePath);
+            $fileSize = $rawSize !== false ? round($rawSize / 1024, 1) . ' KB' : '';
+          @endphp
           <div class="chat-attachment">
             <a href="{{ asset('storage/' . $msg->doc_upload) }}" target="_blank" rel="noopener">
-              📎 View Attachment
+              📎 {{ $fileName }}
             </a>
+            <span class="file-meta">
+              @if($ext) {{ $ext }} @endif
+              @if($fileSize) · {{ $fileSize }} @endif
+            </span>
           </div>
         @endif
       </div>
@@ -133,7 +151,9 @@
               method="POST"
               enctype="multipart/form-data"
               action="{{ route('memo.notice.management.memo_notice_conversation_model') }}"
-              class="chat-composer" novalidate>
+              class="chat-composer"
+              novalidate
+              onsubmit="return false;">
 
             @csrf
 
@@ -150,7 +170,7 @@
             @endif
 
             <label class="chat-attach-btn" for="memo_notice_attachment" title="Attach file" aria-label="Attach file">📎</label>
-            <input id="memo_notice_attachment" type="file" name="attachment" hidden>
+            <input id="memo_notice_attachment" type="file" name="document" hidden>
 
             <textarea name="student_decip_incharge_msg"
                       class="chat-input"
@@ -158,10 +178,11 @@
                       placeholder="Type your message..."
                       required></textarea>
 
-            <button type="submit" class="chat-send-btn">
+            <button type="button" class="chat-send-btn" aria-label="Send">
                 <span class="visually-hidden">Send</span>➤
             </button>
         </form>
+        <div id="file-preview-area" style="padding:.15rem .75rem;background:#fff;"></div>
 
     @elseif($conversations->last()->notice_status == 2)
 
@@ -190,116 +211,205 @@
 
 <script>
     (function() {
-        const root = document.currentScript.closest('.chat-wrapper') || document.querySelector('.chat-wrapper');
-        const container = root ? root.querySelector('#conversationScroll') : document.querySelector('#conversationScroll');
-        const form = root ? root.querySelector('#memo_notice_conversation') : document.querySelector('#memo_notice_conversation');
-        const memoId = root ? root.dataset.memoId : '{{ $id }}';
-        const type = root ? root.dataset.type : '{{ $type }}';
-        const userType = root ? root.dataset.userType : '{{ $user_type }}';
+        const root = document.currentScript ? document.currentScript.closest('.chat-wrapper') : null
+                     || document.querySelector('.chat-wrapper');
 
-        const scrollToBottom = () => { if (container) { container.scrollTop = container.scrollHeight; }};
+        const chatBody = document.getElementById('chatBody');
+        const csrfToken = '{{ csrf_token() }}';
+
+        const scrollToBottom = () => {
+            const c = document.querySelector('#conversationScroll');
+            if (c) c.scrollTop = c.scrollHeight;
+        };
         scrollToBottom();
 
-        // Auto-resize textarea
-        if (form) {
+        // ─── Prevent duplicate listener registration ───────────────────
+        // jQuery re-executes scripts on each $.ajax load; guard against it
+        if (document._memoNoticeListenersRegistered) {
+            return; // listeners already on document, just scrolled above
+        }
+        document._memoNoticeListenersRegistered = true;
+
+        // ─── Send lock ─────────────────────────────────────────────────
+        let isSending = false;
+
+        // ─── Helpers ───────────────────────────────────────────────────
+        function getCurrentWrapper() {
+            return document.querySelector('#chatBody .chat-wrapper');
+        }
+
+        function doSend(wrapper) {
+            if (!wrapper || isSending) return;
+            const form = wrapper.querySelector('#memo_notice_conversation');
+            if (!form) return;
             const ta = form.querySelector('.chat-input');
             const sendBtn = form.querySelector('.chat-send-btn');
             const fileBtn = form.querySelector('#memo_notice_attachment');
-            const attachLabel = form.querySelector('label[for="memo_notice_attachment"]');
+            if (!ta.value.trim() && !(fileBtn && fileBtn.files && fileBtn.files.length)) return;
 
-            const resize = () => { ta.style.height = 'auto'; ta.style.height = Math.min(ta.scrollHeight, 120) + 'px'; };
-            ta && (ta.addEventListener('input', resize), resize());
+            // Block send if file input was cleared due to validation error
+            if (fileBtn && fileBtn.files && fileBtn.files.length === 0 && !ta.value.trim()) return;
 
-            // Submit via AJAX to keep UX smooth
-            form.addEventListener('submit', function(e) {
-                e.preventDefault();
-                if (!ta.value.trim() && !(fileBtn && fileBtn.files && fileBtn.files.length)) return;
+            isSending = true;
+            if (sendBtn) sendBtn.disabled = true;
 
-                sendBtn.disabled = true;
-                const fd = new FormData(form);
-
-                fetch(form.action, {
-                    method: 'POST',
-                    headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': '{{ csrf_token() }}' },
-                    body: fd
-                }).then(r => {
-                    // Try JSON first; fall back to text
-                    const ct = r.headers.get('content-type') || '';
-                    return ct.includes('application/json') ? r.json() : r.text();
-                }).then(() => {
-                    ta.value = '';
+            const fd = new FormData(form);
+            fetch(form.action, {
+                method: 'POST',
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRF-TOKEN': csrfToken },
+                body: fd
+            }).then(r => {
+                const ct = r.headers.get('content-type') || '';
+                if (ct.includes('application/json')) return r.json();
+                return r.text().then(t => ({ success: false, message: t || 'Request failed.' }));
+            }).then(data => {
+                const ok = data && data.success;
+                if (ok) {
+                    const hadAttachment = !!(fileBtn && fileBtn.files && fileBtn.files.length);
+                    if (ta) { ta.value = ''; ta.style.height = 'auto'; }
                     if (fileBtn) fileBtn.value = '';
-                    resize();
+                    // Clear file preview chip
+                    const previewArea = wrapper.querySelector('#file-preview-area');
+                    if (previewArea) previewArea.innerHTML = '';
+                    showSendSuccess(hadAttachment);
                     reloadConversation(true);
-                }).catch(() => {
-                    // Fallback: still try to reload
-                    reloadConversation(true);
-                }).finally(() => {
-                    sendBtn.disabled = false;
-                });
+                } else {
+                    const msg = (data && data.message) ? data.message : 'Failed to send message.';
+                    alert(msg);
+                }
+            }).catch(() => {
+                alert('Failed to send message.');
+            }).finally(() => {
+                isSending = false;
+                if (sendBtn) sendBtn.disabled = false;
             });
+        }
 
-            if (attachLabel && fileBtn) {
-                attachLabel.addEventListener('click', () => fileBtn.click());
-            }
+        function showSendSuccess(hadAttachment) {
+            const container = chatBody || document.getElementById('chatBody');
+            if (!container) return;
+            const msg = hadAttachment ? 'Message and attachment sent.' : 'Message sent.';
+            const el = document.createElement('div');
+            el.className = 'chat-send-toast';
+            el.setAttribute('role', 'status');
+            el.textContent = msg;
+            container.style.position = container.style.position || 'relative';
+            container.insertBefore(el, container.firstChild);
+            setTimeout(() => { if (el.parentNode) el.remove(); }, 2500);
         }
 
         function reloadConversation(flashNew) {
-            const target = document.getElementById('chatBody') || (root ? root.parentElement : null);
-            if (!target) { scrollToBottom(); return; }
-            const url = '/admin/memo-notice-management/get_conversation_model/' + encodeURIComponent(memoId) + '/' + encodeURIComponent(type) + '/' + encodeURIComponent(userType);
+            // Always read current memoId/type/userType from live DOM, not stale closure
+            const w = getCurrentWrapper();
+            if (!w) return;
+            const memoId   = w.dataset.memoId;
+            const type     = w.dataset.type;
+            const userType = w.dataset.userType;
+            const target   = chatBody || document.getElementById('chatBody');
+            if (!target || !memoId) return;
+
+            const url = '/admin/memo-notice-management/get_conversation_model/'
+                + encodeURIComponent(memoId) + '/' + encodeURIComponent(type) + '/' + encodeURIComponent(userType);
+
             fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } })
               .then(r => r.text())
               .then(html => {
                   target.innerHTML = html;
-                  // Mark last bubble as new for a quick flash
                   if (flashNew) {
                       const last = target.querySelector('.chat-bubble:last-child');
                       if (last) last.classList.add('flash-new');
                   }
+                  scrollToBottom();
               })
               .catch(() => {});
         }
 
-        // Laravel Echo / Pusher real-time polish (if available)
-        try {
-            if (window.Echo) {
-                // Use a generic public channel name pattern; adjust if you already have specific ones
-                const channelName = 'memo.notice.' + memoId;
-                const channel = (window.Echo.private ? window.Echo.private(channelName) : window.Echo.channel(channelName));
-
-                channel.listen('.MemoNoticeMessageCreated', (e) => {
-                    reloadConversation(true);
-                    setTimeout(scrollToBottom, 150);
-                });
-
-                channel.listen('.MemoNoticeMessageRead', (e) => {
-                    // Update read receipts if message id provided
-                    if (e && e.message_id) {
-                        document.querySelectorAll('[data-message-id="' + e.message_id + '"] .read-receipt .tick')
-                          .forEach(el => { el.className = 'tick tick-double tick-blue'; el.title = 'Seen'; });
-                    } else {
-                        reloadConversation(false);
-                    }
-                });
-            }
-        } catch (err) { /* no-op */ }
-
-        // Custom DOM events as fallback (can be dispatched from elsewhere)
-        window.addEventListener('memo:notice:new', function(ev){
-            if (!ev.detail || String(ev.detail.memoId) !== String(memoId)) return;
-            reloadConversation(true); setTimeout(scrollToBottom, 125);
+        // ─── Event delegation (registered once) ───────────────────────
+        document.addEventListener('submit', function(e) {
+            if (!e.target.matches('#memo_notice_conversation')) return;
+            e.preventDefault();
+            const wrap = e.target.closest('.chat-wrapper');
+            if (wrap) doSend(wrap);
         });
-        window.addEventListener('memo:notice:read', function(ev){
-            if (!ev.detail || String(ev.detail.memoId) !== String(memoId)) return;
-            if (ev.detail.messageId) {
-                document.querySelectorAll('[data-message-id="' + ev.detail.messageId + '"] .read-receipt .tick')
-                  .forEach(el => { el.className = 'tick tick-double tick-blue'; el.title = 'Seen'; });
-            }
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.chat-send-btn')) return;
+            const wrap = e.target.closest('.chat-wrapper');
+            if (wrap && wrap.querySelector('#memo_notice_conversation')) doSend(wrap);
+        });
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Enter' || e.shiftKey || !e.target.matches('.chat-input')) return;
+            const wrap = e.target.closest('.chat-wrapper');
+            if (wrap) { e.preventDefault(); doSend(wrap); }
+        });
+        document.addEventListener('input', function(e) {
+            if (!e.target.matches('.chat-input')) return;
+            const ta = e.target;
+            ta.style.height = 'auto';
+            ta.style.height = Math.min(ta.scrollHeight, 120) + 'px';
         });
 
-        // Ensure scroll to bottom on images/attachments load
-        const imgs = container ? container.querySelectorAll('img') : [];
-        imgs.forEach(img => img.addEventListener('load', scrollToBottom));
+        // ─── File preview chip + client-side validation ───────────────
+        const ALLOWED_TYPES = ['image/jpeg','image/png','application/pdf'];
+        const MAX_SIZE_BYTES = 2 * 1024 * 1024; // 2 MB
+
+        document.addEventListener('change', function(e) {
+            if (!e.target.matches('#memo_notice_attachment')) return;
+            const file = e.target.files && e.target.files[0];
+            const form = e.target.closest('form');
+            const area = form && form.closest('.chat-wrapper') && form.closest('.chat-wrapper').querySelector('#file-preview-area');
+            if (!area) return;
+            if (!file) { area.innerHTML = ''; return; }
+
+            // Validate type
+            if (!ALLOWED_TYPES.includes(file.type)) {
+                area.innerHTML = `<span class="file-preview-chip" style="border-color:#fca5a5;background:#fef2f2;color:#b91c1c;">
+                    ⚠️ Only JPG, PNG, PDF allowed.
+                    <span class="chip-remove" title="Remove">✕</span>
+                </span>`;
+                e.target.value = '';
+                return;
+            }
+            // Validate size
+            if (file.size > MAX_SIZE_BYTES) {
+                const sizeMB = (file.size / 1048576).toFixed(1);
+                area.innerHTML = `<span class="file-preview-chip" style="border-color:#fca5a5;background:#fef2f2;color:#b91c1c;">
+                    ⚠️ File too large (${sizeMB} MB). Max 2 MB.
+                    <span class="chip-remove" title="Remove">✕</span>
+                </span>`;
+                e.target.value = '';
+                return;
+            }
+
+            const ext = file.name.split('.').pop().toUpperCase();
+            const sizeLabel = file.size >= 1048576
+                ? (file.size / 1048576).toFixed(1) + ' MB'
+                : (file.size / 1024).toFixed(1) + ' KB';
+            area.innerHTML = `<span class="file-preview-chip">
+                <span>📄 ${escHtml(file.name)}</span>
+                <span style="color:#64748b;">${ext} · ${sizeLabel}</span>
+                <span class="chip-remove" title="Remove">✕</span>
+            </span>`;
+        });
+
+        document.addEventListener('click', function(e) {
+            if (!e.target.matches('.chip-remove')) return;
+            const form = e.target.closest('form');
+            if (!form) return;
+            const fi = form.querySelector('#memo_notice_attachment');
+            if (fi) fi.value = '';
+            const area = form.closest('.chat-wrapper') ? form.closest('.chat-wrapper').querySelector('#file-preview-area') : null;
+            if (area) area.innerHTML = '';
+        });
+
+        function escHtml(str) {
+            return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+        }
+
+        // Clear send lock when offcanvas closes (safety reset)
+        const offcanvasEl = document.getElementById('chatOffcanvas');
+        if (offcanvasEl) {
+            offcanvasEl.addEventListener('hide.bs.offcanvas', () => { isSending = false; });
+        }
+
     })();
 </script>

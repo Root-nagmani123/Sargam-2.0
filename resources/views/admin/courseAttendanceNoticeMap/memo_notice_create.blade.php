@@ -11,7 +11,7 @@
                 <h4 class="card-title mb-3">Create Memo / Notice</h4>
                 <hr>
 
-                <form action="{{ route('admin.memo-notice.store') }}" method="POST">
+                <form action="{{ route('admin.memo-notice.store') }}" method="POST" enctype="multipart/form-data">
                     @csrf
 
                     <div class="row">
@@ -58,6 +58,12 @@
                         <div class="col-12">
                             <label class="form-label">Memo / Notice Content <span class="text-danger">*</span></label>
                             <textarea name="content" class="form-control" id="content" rows="3" required></textarea>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label">Signature Image <small class="text-muted">(jpeg/png/gif, max 2MB)</small></label>
+                            <input type="file" name="signature_image" class="form-control" accept="image/jpeg,image/png,image/gif">
+                            <small class="text-muted">Upload the authorised signatory's signature. It will appear on the printed memo/notice.</small>
                         </div>
                     </div>
 

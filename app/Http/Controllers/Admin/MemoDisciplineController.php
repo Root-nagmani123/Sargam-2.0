@@ -8,7 +8,7 @@ use App\Models\MemoNoticeTemplate;
 use App\Models\CourseMaster;
 use App\Models\MemoDiscipline;
 use App\Models\DisciplineMaster;
-
+use App\Services\NotificationService;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -37,13 +37,14 @@ class MemoDisciplineController extends Controller
     $programNameFilter = $request->program_name;
     $statusFilter      = $request->status;
     $searchFilter      = $request->search;
-    $fromDateFilter    = $request->get('from_date');
-    $toDateFilter      = $request->get('to_date');
 
-    // Default today date
-    if (!$fromDateFilter && !$toDateFilter) {
+    // First load (no date params in URL) = show today's data; Clear Filters (empty date params) = show all data
+    if (!$request->has('from_date') && !$request->has('to_date')) {
         $fromDateFilter = Carbon::today()->toDateString();
         $toDateFilter   = Carbon::today()->toDateString();
+    } else {
+        $fromDateFilter = $request->get('from_date') ?: null;
+        $toDateFilter   = $request->get('to_date') ?: null;
     }
 
     $memos = MemoDiscipline::with([
@@ -234,16 +235,32 @@ class MemoDisciplineController extends Controller
 
         if ($validated) {
             $memo = MemoDiscipline::find($request->discipline_pk);
-            if ($memo && $memo->status != 2) { // Ensure memo is not already sent
-                $memo->status = 2; // Update status to 'sent'
+            if ($memo && $memo->status != 2) {
+                $memo->status = 2;
                 $memo->modified_date = now();
                 $memo->save();
+
+                // Notify the OT student
+                $credential = DB::table('user_credentials')
+                    ->where('user_id', $memo->student_master_pk)
+                    ->where('user_category', 'S')
+                    ->first();
+
+                if ($credential) {
+                    app(NotificationService::class)->create(
+                        $credential->pk,
+                        'memo',
+                        'MemoDiscipline',
+                        $memo->pk,
+                        'Discipline Memo Generated',
+                        'A discipline memo has been issued to you. Please review and respond.'
+                    );
+                }
 
                 return response()->json([
                     'status' => true,
                     'message' => 'Memo sent successfully.'
                 ]);
-                
 
             } else {
                 return response()->json([
@@ -257,7 +274,6 @@ class MemoDisciplineController extends Controller
                 'message' => 'Validation failed.'
             ]);
         }
-        
     }
     function getConversationModel(Request $request, $memoId,$type){
         // $memo = MemoDiscipline::with([
@@ -340,12 +356,56 @@ class MemoDisciplineController extends Controller
      
         DB::table('discipline_message_student_decip_incharge')->insert([
             'discipline_memo_status_pk' => $request->memo_discipline_id,
-            'created_by' => Auth::user()->user_id, // 🔐 SAFE
+            'created_by' => Auth::user()->user_id,
             'role_type' => $request->role_type,
             'student_decip_incharge_msg' => $request->student_decip_incharge_msg,
             'doc_upload' => $attachmentPath,
             'created_date' => now(),
         ]);
+
+        // Notify the other party about the new chat message
+        $memo = MemoDiscipline::find($request->memo_discipline_id);
+        if ($memo) {
+            if ($request->role_type === 's') {
+                // OT sent a message → notify admins (sender_user_id = current OT credential pk)
+                // Find admin users who manage this course — notify a general admin channel via reference
+                // For now: notify the sender's counterpart (incharge) — stored as Admin role users
+                // We create a notification for the Admin group using receiver_user_id = 0 as broadcast placeholder
+                // Better approach: notify all active admin users watching this memo
+                $adminCredentials = DB::table('user_credentials')
+                    ->where('user_category', '!=', 'S')
+                    ->whereIn('user_category', ['F', 'A'])
+                    ->limit(20)
+                    ->pluck('pk')
+                    ->toArray();
+                if (!empty($adminCredentials)) {
+                    app(NotificationService::class)->createMultiple(
+                        $adminCredentials,
+                        'memo',
+                        'MemoDiscipline',
+                        $memo->pk,
+                        'OT Replied to Discipline Memo',
+                        'A student has replied to a discipline memo.'
+                    );
+                }
+            } else {
+                // Admin/Faculty sent a message → notify the OT student
+                $credential = DB::table('user_credentials')
+                    ->where('user_id', $memo->student_master_pk)
+                    ->where('user_category', 'S')
+                    ->first();
+                if ($credential) {
+                    app(NotificationService::class)->create(
+                        $credential->pk,
+                        'memo',
+                        'MemoDiscipline',
+                        $memo->pk,
+                        'New Message on Your Discipline Memo',
+                        'The incharge has replied to your discipline memo.'
+                    );
+                }
+            }
+        }
 
         // Close memo if required
         if ($request->status == 2) {
@@ -397,6 +457,34 @@ class MemoDisciplineController extends Controller
         compact('memo','memo_conclusion_master')
     );
 }
-    
+
+public function getNewMessages(Request $request, $id)
+{
+    $lastPk = (int) $request->query('last_pk', 0);
+
+    $messages = DB::table('discipline_message_student_decip_incharge')
+        ->where('discipline_memo_status_pk', $id)
+        ->where('pk', '>', $lastPk)
+        ->orderBy('pk', 'asc')
+        ->get();
+
+    $messages = $messages->map(function ($msg) {
+        if ($msg->role_type === 'f') {
+            $user = DB::table('users')->find($msg->created_by);
+            $msg->display_name = $user->name ?? 'Admin';
+        } elseif ($msg->role_type === 's') {
+            $student = DB::table('student_master')->where('pk', $msg->created_by)->first();
+            $msg->display_name = $student->display_name ?? 'Student';
+        } else {
+            $msg->display_name = 'Unknown';
+        }
+        $msg->formatted_date = $msg->created_date
+            ? \Carbon\Carbon::parse($msg->created_date)->format('d-m-Y h:i A')
+            : '';
+        return $msg;
+    });
+
+    return response()->json($messages);
+}
 
 }
