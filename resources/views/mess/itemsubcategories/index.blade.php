@@ -2,13 +2,8 @@
 @section('title', 'Subcategory Item Master')
 @section('content')
 @php
-$selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
-$canDeleteItemSubcategory = hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin');
-$isItemSubcategoryActive = static function ($item) {
-return ($item->status ?? 'active') === 'active';
-};
-$openCreateModal = request('open') === 'create' || ($errors->any() && old('_method') !== 'PUT');
-$openEditModal = request('open') === 'edit' || ($errors->any() && old('_method') === 'PUT');
+    $selectedCategoryId = $categoryIdFilter ?? request('category_id', '');
+    $canDeleteItemSubcategory = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid mess-master-page">
     <x-breadcrum title="Subcategory Item Master">

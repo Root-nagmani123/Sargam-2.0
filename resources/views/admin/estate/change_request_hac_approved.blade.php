@@ -4,9 +4,9 @@
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+        && (isEstateAuthority());
 @endphp
-@section($estateSelfHomeTab ? 'content' : 'content')
+@section($estateSelfHomeTab ? 'content' : 'setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Change Requests (HAC Approval)"></x-breadcrum>
     <x-estate-workflow-stepper current="hac-approved" />

@@ -1,6 +1,25 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Topic wise Attendance')
+@section('title', 'Attendance')
+@section('css')
+<style>
+table.table-bordered.dataTable td:nth-child(4) {
+    padding: 0 !important;
+}
+</style>
+@endsection
+@section('setup_content')
+<form action="{{ route('attendance.save') }}" method="post">
+    @csrf
+    <div class="container-fluid">
+        @if(hasRole('Super Admin') || hasRole('Training Induction Admin'))
+        <x-breadcrum title="Mark Attendance Of Officer Trainees" />
+        <x-session_message />
+        @endif 
+        @if(hasRole('Internal Faculty'))
+        <x-breadcrum title="Mark Attendance Of Your Assigned Officer Trainees" />
+        <x-session_message />
+        @endif
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/mark-attendance-admin.css') }}?v={{ @filemtime(public_path('css/mark-attendance-admin.css')) ?: time() }}">
@@ -58,19 +77,20 @@
                     <div class="d-flex flex-wrap align-items-center gap-3">
                         <span class="programme-dt-filters-label">Filters</span>
 
-                        <div class="programme-dt-filter-select mark-att-course-filter">
-                            <label for="mark_att_course_display" class="visually-hidden">Course Name</label>
-                            <select id="mark_att_course_display" class="form-select form-select-sm" disabled aria-label="Course Name">
-                                <option value="" selected>{{ $courseName }}</option>
-                            </select>
-                        </div>
-
-                        <div class="programme-dt-filter-select mark-att-period-filter">
-                            <label for="mark_att_period_display" class="visually-hidden">Time Period</label>
-                            <select id="mark_att_period_display" class="form-select form-select-sm" disabled aria-label="Time Period">
-                                <option value="" selected>{{ $sessionDate }}</option>
-                            </select>
-                        </div>
+        {{-- Session Summary --}}
+        <div class="card shadow mb-4">
+            <div class="card-body">
+                @if(hasRole('Super Admin') || hasRole('Training Induction Admin'))
+                <h5 class="mb-3">Through this page you can manage Attendance of Officer Trainees</h5>
+                
+                <hr>
+@endif
+                <div class="row g-3">
+                    <div class="col-md-3">
+                        <strong>Course Name:</strong>
+                        <span class="text-primary">
+                            {{ optional($courseGroup->course)->course_name }}
+                        </span>
                     </div>
 
                     <div class="mark-att-table-search-slot ms-xl-auto flex-shrink-0">
@@ -103,181 +123,7 @@
             </div>
         </div>
     </div>
-
-    @include('admin.attendance.partials.mark-attendance-row-modal', ['allMarked' => $allMarked ?? false])
-</form>
-@endsection
-
-@push('scripts')
-{!! $dataTable->scripts() !!}
-<script>
-(function () {
-    var activeStudentId = null;
-    var $modal = $('#markAttendanceRowModal');
-    var isLocked = String($modal.data('mark-att-locked')) === '1';
-
-    function statusBadgeHtml(val) {
-        var map = {
-            '1': ['Present', 'mark-att-status-badge--present'],
-            '2': ['Late', 'mark-att-status-badge--late'],
-            '3': ['Absent', 'mark-att-status-badge--absent']
-        };
-        var item = map[String(val)] || ['Not Marked', 'mark-att-status-badge--neutral'];
-        return '<span class="mark-att-status-badge ' + item[1] + '">' + item[0] + '</span>';
-    }
-
-    function mdoLabelForValue(val) {
-        if (String(val) === '4') {
-            return 'Yes';
-        }
-        if (val === '0' || val === '' || val == null) {
-            return 'NA';
-        }
-        return 'No';
-    }
-
-    function updateMdoColumn($tr, val) {
-        $tr.find('.mark-att-mdo-text').text(mdoLabelForValue(val));
-    }
-
-    function getStudentRow(studentId) {
-        return $('#studentAttendanceTable')
-            .find('input[type=radio][name="student[' + studentId + ']"]')
-            .first()
-            .closest('tr');
-    }
-
-    function getRowCheckedValue($tr) {
-        var $checked = $tr.find('input[type=radio][name^="student["]:checked');
-        return $checked.length ? String($checked.val()) : '0';
-    }
-
-    function setModalLockedState(locked) {
-        $modal.find('input, button#markAttModalApplyBtn').prop('disabled', locked);
-        if (locked) {
-            $('#markAttModalApplyBtn').addClass('disabled');
-        } else {
-            $('#markAttModalApplyBtn').removeClass('disabled');
-        }
-    }
-
-    function resetExemptionToggles() {
-        $('#markAttModalMdo, #markAttModalMedical, #markAttModalOther').prop('checked', false);
-    }
-
-    function populateModalFromRow(studentId) {
-        var $tr = getStudentRow(studentId);
-        if (!$tr.length) {
-            return;
-        }
-
-        var val = getRowCheckedValue($tr);
-        resetExemptionToggles();
-
-        if (val === '4') {
-            $('#markAttModalMdo').prop('checked', true);
-            $('input[name="mark_att_modal_status"][value="1"]').prop('checked', true);
-        } else if (val === '6') {
-            $('#markAttModalMedical').prop('checked', true);
-            $('input[name="mark_att_modal_status"][value="1"]').prop('checked', true);
-        } else if (val === '7') {
-            $('#markAttModalOther').prop('checked', true);
-            $('input[name="mark_att_modal_status"][value="1"]').prop('checked', true);
-        } else if (['1', '2', '3'].includes(val)) {
-            $('input[name="mark_att_modal_status"][value="' + val + '"]').prop('checked', true);
-        } else {
-            $('input[name="mark_att_modal_status"][value="1"]').prop('checked', true);
-        }
-    }
-
-    function resolveApplyValue() {
-        if ($('#markAttModalOther').is(':checked')) {
-            return '7';
-        }
-        if ($('#markAttModalMedical').is(':checked')) {
-            return '6';
-        }
-        if ($('#markAttModalMdo').is(':checked')) {
-            return '4';
-        }
-        return $('input[name="mark_att_modal_status"]:checked').val() || '1';
-    }
-
-    function applyModalToRow() {
-        if (!activeStudentId || isLocked) {
-            return;
-        }
-
-        var $tr = getStudentRow(activeStudentId);
-        if (!$tr.length) {
-            return;
-        }
-
-        var status = resolveApplyValue();
-        var $radio = $tr.find('input[type=radio][name="student[' + activeStudentId + ']"][value="' + status + '"]');
-
-        if ($radio.length) {
-            $radio.prop('checked', true).trigger('change');
-        }
-
-        if (['1', '2', '3'].includes(String(status))) {
-            $tr.find('td.mark-att-current-col').html(statusBadgeHtml(status));
-        }
-
-        updateMdoColumn($tr, status);
-
-        var modalEl = document.getElementById('markAttendanceRowModal');
-        if (modalEl && window.bootstrap && bootstrap.Modal) {
-            bootstrap.Modal.getInstance(modalEl)?.hide();
-        }
-    }
-
-    $(document).on('change', '#studentAttendanceTable input[type=radio][name^="student["]', function () {
-        var val = String($(this).val());
-        var $tr = $(this).closest('tr');
-
-        if (['1', '2', '3'].includes(val)) {
-            $tr.find('td.mark-att-current-col').html(statusBadgeHtml(val));
-        }
-
-        updateMdoColumn($tr, val);
-    });
-
-    $(document).on('click', '#markAttModalMdo, #markAttModalMedical, #markAttModalOther', function () {
-        if (!$(this).is(':checked')) {
-            return;
-        }
-        $('#markAttModalMdo, #markAttModalMedical, #markAttModalOther').not(this).prop('checked', false);
-    });
-
-    $(document).on('click', '.mark-att-fingerprint-btn', function (e) {
-        e.preventDefault();
-
-        if (isLocked) {
-            return;
-        }
-
-        activeStudentId = $(this).data('student-id');
-        var studentName = $(this).data('student-name') || 'Student';
-        $('#markAttModalStudentContext').text('Editing attendance for ' + studentName);
-
-        populateModalFromRow(activeStudentId);
-        setModalLockedState(false);
-
-        var modalEl = document.getElementById('markAttendanceRowModal');
-        if (modalEl && window.bootstrap && bootstrap.Modal) {
-            bootstrap.Modal.getOrCreateInstance(modalEl).show();
-        }
-    });
-
-    $(document).on('hidden.bs.modal', '#markAttendanceRowModal', function () {
-        activeStudentId = null;
-    });
-
-    $('#markAttModalApplyBtn').on('click', function (e) {
-        e.preventDefault();
-        applyModalToRow();
-    });
-})();
-</script>
-@endpush
+    @endsection
+    @section('script')
+    {!! $dataTable->scripts() !!}
+    @endsection

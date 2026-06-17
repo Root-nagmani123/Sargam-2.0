@@ -8,12 +8,7 @@
 
 @section('content')
 @php
-    $canDeleteSubStore = hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin');
-    $isSubStoreActive = static function ($subStore) {
-        return ($subStore->status ?? 'active') === 'active';
-    };
-    $openCreateModal = request('open') === 'create' || ($errors->any() && old('_method') !== 'PUT');
-    $openEditModal = request('open') === 'edit' || ($errors->any() && old('_method') === 'PUT');
+    $canDeleteSubStore = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid mess-master-page py-4">
     <x-breadcrum title="Sub Store Master">

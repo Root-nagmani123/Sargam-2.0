@@ -18,15 +18,13 @@
         <span>The document size exceeds the maximum limit of 1 MB or invalid file type. Please upload a valid document.</span>
     </div>
     @endif
-    <div class="card mnm-doc-card border-0 shadow-sm rounded-3">
-        <div class="card-body p-3 p-md-4">
-            <div class="d-flex justify-content-end mb-3">
-                <a href="{{ route('memo.notice.management.index') }}" class="btn btn-outline-secondary rounded-2 px-3">
-                    <i class="bi bi-arrow-left me-1" aria-hidden="true"></i> Back
-                </a>
-            </div>
-            <h5 class="text-center mnm-doc-heading mb-2">{{ $template_details->course_name ?? 'Course Name' }}</h5>
-            <p class="text-center mnm-doc-subtitle mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+    <div class="card" >
+        <div class="card-body">
+            <div class="gap-2 text-end">
+                    <a href="{{route('memo.notice.management.index')}}" class="btn btn-outline-secondary">Back</a>
+                </div>
+            <h5 class="text-center fw-bold mb-3">{{ $template_details->course_name ?? 'Course Name' }}</h5>
+            <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
 
             <p class="mb-1">SHOW CAUSE NOTICE</p>

@@ -7,17 +7,27 @@
 @endpush
 
 @section('setup_content')
-<div class="container-fluid sm-module-page">
-    <x-breadcrum title="Subject Module">
-        <button type="button"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm"
-            data-bs-toggle="modal"
-            data-bs-target="#smAddModuleModal"
-            id="smOpenAddModuleBtn">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add Subject Module</span>
-        </button>
-    </x-breadcrum>
+<div class="container-fluid">
+    <x-breadcrum title="Subject module" />
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" >
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-6">
+                            <h4>Subject module</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <a href="{{route('subject-module.create')}}" class="btn btn-primary">+ Add Subject
+                                    module</a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div id="zero_config_table">
+                        <div class="table-responsive" style="overflow-x: auto">
 
     <x-session_message />
 

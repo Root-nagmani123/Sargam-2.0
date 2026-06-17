@@ -21,7 +21,7 @@
             </dContact Informationiv>
         @endif
 
-        <div class="card" style="border-left: 4px solid #004a93;">
+        <div class="card" >
             <div class="card-header d-flex justify-content-between align-items-center bg-primary-subtle">
                 <h5 class="mb-0">Student Details</h5>
                 <span class="badge bg-primary">ID: {{ $student->pk }}</span>
@@ -262,7 +262,7 @@
     </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
     <script>
         // Run this BEFORE any other scripts
         (function() {
@@ -398,7 +398,7 @@
             });
         });
     </script>
-@endsection
+@endpush
 
 <style>
     .form-label.required:after {

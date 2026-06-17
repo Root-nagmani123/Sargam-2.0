@@ -54,28 +54,12 @@
 
     <x-session_message />
 
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white mb-0" role="group"
-            aria-label="Filter group mappings by course status">
-            <li class="nav-item" role="presentation">
-                <button type="button"
-                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
-                    id="filterGroupActive"
-                    aria-pressed="true"
-                    aria-current="true">
-                    Active
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button type="button"
-                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
-                    id="filterGroupArchive"
-                    aria-pressed="false">
-                    Archived
-                </button>
-            </li>
-        </ul>
-    </div>
+    <div class="datatables">
+        <div class="card" >
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row mb-3">
+                        <div class="row align-items-center mb-4">
 
     <div class="card gm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">

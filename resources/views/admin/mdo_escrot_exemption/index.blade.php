@@ -78,11 +78,80 @@
     </div>
 
     <div class="datatables">
-        <div class="card mee-dt-card border-0 shadow-sm rounded-1 overflow-hidden">
-            <div class="card-body p-3 p-md-4">
-                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-                        <span class="programme-dt-filters-label">Filters</span>
+        <div class="card" >
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-4">
+                            <h4>MDO/Escort Exemption</h4>
+                        </div>
+                        <div class="col-4 text-end">
+                             <div class="btn-group shadow-sm rounded-pill overflow-hidden" role="group"
+                                aria-label="Course Status Filter">
+                                @php
+                                    $activeParams = ['filter' => 'active'];
+                                    $archiveParams = ['filter' => 'archive'];
+                                    // Preserve other filters if they exist in request
+                                    if (request('course_filter')) {
+                                        $activeParams['course_filter'] = request('course_filter');
+                                        $archiveParams['course_filter'] = request('course_filter');
+                                    }
+                                    if (request('year_filter')) {
+                                        $activeParams['year_filter'] = request('year_filter');
+                                        $archiveParams['year_filter'] = request('year_filter');
+                                    }
+                                    if (request('duty_type_filter')) {
+                                        $activeParams['duty_type_filter'] = request('duty_type_filter');
+                                        $archiveParams['duty_type_filter'] = request('duty_type_filter');
+                                    }
+                                    if (request('time_from_filter')) {
+                                        $activeParams['time_from_filter'] = request('time_from_filter');
+                                        $archiveParams['time_from_filter'] = request('time_from_filter');
+                                    }
+                                    if (request('time_to_filter')) {
+                                        $activeParams['time_to_filter'] = request('time_to_filter');
+                                        $archiveParams['time_to_filter'] = request('time_to_filter');
+                                    }
+                                    if (request('from_date_filter')) {
+                                        $activeParams['from_date_filter'] = request('from_date_filter');
+                                        $archiveParams['from_date_filter'] = request('from_date_filter');
+                                    }
+                                    if (request('to_date_filter')) {
+                                        $activeParams['to_date_filter'] = request('to_date_filter');
+                                        $archiveParams['to_date_filter'] = request('to_date_filter');
+                                    }
+                                @endphp
+                                <a href="{{ route('mdo-escrot-exemption.index', $activeParams) }}"
+                                    class="btn {{ ($filter ?? 'active') === 'active' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
+                                    id="filterActive" aria-pressed="{{ ($filter ?? 'active') === 'active' ? 'true' : 'false' }}">
+                                    <i class="bi bi-check-circle me-1"></i> Active
+                                </a>
+                                <a href="{{ route('mdo-escrot-exemption.index', $archiveParams) }}"
+                                    class="btn {{ ($filter ?? 'active') === 'archive' ? 'btn-success active' : 'btn-outline-secondary' }} px-4 fw-semibold"
+                                    id="filterArchive" aria-pressed="{{ ($filter ?? 'active') === 'archive' ? 'true' : 'false' }}">
+                                    <i class="bi bi-archive me-1"></i> Archive
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="d-flex justify-content-end align-items-end mb-3 gap-2">
+                                <!-- Print / Download Button -->
+                                <button type="button" id="printDownloadBtn"
+                                    class="btn btn-outline-info px-3 py-2 rounded shadow-sm">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 20px; vertical-align: middle;">print</i>
+                                    Print / Download
+                                </button>
+                                <!-- Add New Button -->
+                                <a href="{{ route('mdo-escrot-exemption.create') }}"
+                                    class="btn btn-primary px-3 py-2 rounded shadow-sm">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 20px; vertical-align: middle;">add</i>
+                                    Add New MDO/Escort Exemption
+                                </a>
+                            </div>
+                        </div>
+                    </div>
 
                         <div class="programme-dt-filter-select">
                             <label for="course_filter" class="visually-hidden">Course Name</label>

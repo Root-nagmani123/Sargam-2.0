@@ -90,6 +90,21 @@
                 </div>
             </form>
 
+        <!-- Buttons -->
+
+
+        </form>
+
+    </div>
+    <!-- Main Content Card -->
+    <div class="card" >
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="card-title mb-0">Memo/Notice Templates</h5>
+            <a href="{{ route('admin.memo-notice.create') }}" class="btn btn-primary">
+                <i class="fas fa-plus me-1"></i> Create New Template
+            </a>
+        </div>
+        <div class="card-body">
             @if ($templates->isEmpty())
             <div class="mnm-empty-state rounded-3 border bg-light">
                 <i class="bi bi-inbox" aria-hidden="true"></i>

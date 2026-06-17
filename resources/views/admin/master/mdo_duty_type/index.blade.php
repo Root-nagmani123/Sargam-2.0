@@ -3,15 +3,31 @@
 @section('title', 'MDO Duty Type')
 
 @section('setup_content')
-<div class="container-fluid mdt-master-page">
-    <x-breadcrum title="MDO Duty Type">
-        <button type="button"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm add-btn"
-            aria-controls="mdtDutyTypeModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add MDO Duty Type</span>
-        </button>
-    </x-breadcrum>
+<div class="container-fluid">
+    <x-breadcrum title="MDO Duty Type"></x-breadcrum>
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" >
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-6">
+                            <!-- left column empty or header title above -->
+                            <h4>MDO Duty Type</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex justify-content-end align-items-center gap-2">
+                                <!-- Add Group Mapping -->
+                                <a href="javascript:void(0)" 
+                                    class="btn btn-primary add-btn d-flex align-items-center" data-bs-toggle="modal" data-bs-target="#mdoDutyTypeModal">
+                                    <i class="material-icons menu-icon material-symbols-rounded"
+                                        style="font-size: 24px;">add</i>
+                                    Add MDO Duty Type
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
 
     <div class="card mdt-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">

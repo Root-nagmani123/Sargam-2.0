@@ -57,7 +57,7 @@
                                                     <span class="mini-nav-title sidebar-mini-squircle-label">General</span>
                                                 </a>
                                             </li>
-                                            @if(hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Student-OT') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
+                                            @if(hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Estate') || hasRole('HAC Person') || hasRole('Staff') || hasRole('Officer Trainee') || hasRole('Doctor') || hasRole('Guest Faculty') || hasRole('Internal Faculty'))
                                             <li class="mini-nav-item {{ request()->is('admin/estate*') ? 'selected' : '' }}" id="mini-11">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
@@ -79,7 +79,7 @@
                                                 </a>
                                             </li>
                                             @endif
-                                            @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                                            @if(! hasRole('Officer Trainee') && ! $isContractualEmployee)
                                             <li class="mini-nav-item {{ request()->is('security*') ? 'selected' : '' }}" id="mini-9">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">
@@ -125,7 +125,7 @@
                     <x-menu.general />
                     <x-menu.setup_estate_management />
                     <x-menu.setup_mess_management />
-                    @if(! hasRole('Student-OT') && ! $isContractualEmployee)
+                    @if(! hasRole('Officer Trainee') && ! $isContractualEmployee)
                     <x-menu.setup_security_management />
                     <x-menu.setup_issue_management />
                     @endif

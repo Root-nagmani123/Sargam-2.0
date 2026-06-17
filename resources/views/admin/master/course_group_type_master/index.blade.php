@@ -16,7 +16,20 @@
                 <div id="cgtDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="coursegrouptype"></div>
             </div>
 
-            <div class="programme-dt-panel">
+.dropdown-item:hover {
+    background-color: #f5f6f8;
+}
+
+.dropdown-item i {
+    font-size: 18px;
+}
+</style>
+<div class="container-fluid">
+    <x-breadcrum title="Course Group Type"></x-breadcrum>
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" >
+            <div class="card-body">
                 <div class="table-responsive">
                     <table class="table align-middle mb-0 w-100 programme-dt-table" id="coursegrouptype">
                         <thead>
@@ -132,8 +145,7 @@
     </div>
 </div>
 @endsection
-
-@section('scripts')
+@section('script')
 <script>
 $(function() {
     const tableSelector = '#coursegrouptype';

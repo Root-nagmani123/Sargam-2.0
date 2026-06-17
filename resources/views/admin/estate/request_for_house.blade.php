@@ -2,7 +2,7 @@
 
 @section('title', 'Change Request For House - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid py-4">
     {{-- Breadcrumb: Home > My Requests / Complaints > Request For House --}}
     <nav aria-label="breadcrumb" class="mb-3">
@@ -57,7 +57,7 @@
                             <td>{{ $row->possession_to ?? '—' }}</td>
                             <td class="text-nowrap">
                                 @php
-                                    $isAuthority = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+                                    $isAuthority = isEstateAuthority();
                                     $changeStatus = (int) ($row->change_status ?? 0); // 0=pending, 1=approved, 2=disapproved
                                 @endphp
 

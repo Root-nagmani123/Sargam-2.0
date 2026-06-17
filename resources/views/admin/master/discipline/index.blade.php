@@ -3,14 +3,27 @@
 @section('title', 'Discipline Master')
 
 @section('setup_content')
-<div class="container-fluid dmc-master-page">
-    <x-breadcrum title="Discipline Master">
-        <a href="{{ route('master.discipline.create') }}"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm text-nowrap">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add Discipline</span>
-        </a>
-    </x-breadcrum>
+<div class="container-fluid">
+<x-breadcrum title="Discipline Master"></x-breadcrum>
+    <div class="card" >
+        <div class="card-body">
+            <div class="row">
+                <div class="col-6">
+                    <h4>Discipline Master</h4>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex justify-content-end align-items-center gap-2">
+                        <!-- Add Group Mapping -->
+                        <a href="{{ route('master.discipline.create') }}"
+                            class="btn btn-primary d-flex align-items-center">
+                            <i class="material-icons menu-icon material-symbols-rounded"
+                                style="font-size: 24px;">add</i>
+                            Add Discipline
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr>
 
     <div class="card dmc-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">

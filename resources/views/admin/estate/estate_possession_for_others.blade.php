@@ -2,7 +2,7 @@
 
 @section('title', 'Estate Possession for Other - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid py-4">
     <x-breadcrum title="Estate Possession for Other"></x-breadcrum>
 
@@ -16,7 +16,7 @@
                     <p class="text-muted small mb-0">This page displays all Possession added in the system, and provides options to manage records such as add, edit, delete, excel upload, excel download, print etc.</p>
                 </div>
                 <div class="d-flex flex-wrap gap-2 flex-shrink-0">
-                    @if(hasRole('Admin') || hasRole('Estate') || hasRole('Super Admin'))
+                    @if(isEstateAuthority())
                         <button type="button" class="btn btn-outline-danger btn-sm d-inline-flex align-items-center gap-2" id="btnBulkDeletePossessionOthers" title="Delete selected">
                             <i class="material-symbols-rounded">delete</i>
                             <span class="d-none d-md-inline">Delete Selected</span>

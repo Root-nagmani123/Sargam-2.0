@@ -9,12 +9,7 @@
 @section('content')
 @php
     $clientTypeOptions = \App\Models\Mess\ClientType::clientTypes();
-    $canDeleteClientType = hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin');
-    $isClientTypeActive = static function ($clientType) {
-        return ($clientType->status ?? 'active') === 'active';
-    };
-    $openCreateModal = request('open') === 'create' || ($errors->any() && old('_method') !== 'PUT');
-    $openEditModal = request('open') === 'edit' || ($errors->any() && old('_method') === 'PUT');
+    $canDeleteClientType = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid mess-master-page py-4">
     <x-breadcrum title="Client Master">

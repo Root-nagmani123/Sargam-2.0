@@ -5,8 +5,10 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\HomeController;
+use App\Http\Controllers\{RoleController,SidebarController};
+use App\Models\User;
+use Spatie\Permission\Models\Role;
 use App\Http\Controllers\Admin\{
-    RoleController,
     PermissionController,
     UserController,
     MemberController,
@@ -68,6 +70,23 @@ use App\Http\Controllers\Admin\DuplicateIDCardRequestController;
 use App\Http\Controllers\Admin\FamilyIDCardRequestController;
 use App\Http\Controllers\Admin\BirthdayWishController;
 
+use App\Http\Controllers\SidebarMenu\{
+    SidebarCategoryController,MenuGroupController,MenuController
+};
+
+Route::get('assign-role', function () {
+    $user = User::find(2);
+    $permissions = $user->getAllPermissions();
+    foreach ($permissions as $permission) {
+        echo $permission->name . "<br>";
+    }
+})->name('admin.assign-role');
+
+Route::get('test-menus', function () {
+    
+    $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
+    dd($menus);
+});
 
 Route::get('clear-cache', function () {
     Artisan::call('cache:clear');
@@ -80,9 +99,22 @@ Route::get('clear-cache', function () {
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
 
+// Allow GET logout (for redirect/link-based logout)
+Route::get('/logout', function () {
+    Auth::logout();
+    request()->session()->invalidate();
+    request()->session()->regenerateToken();
+    return redirect('/');
+})->name('get.logout');
+
 // Public Routes
 Route::get('/', [LoginController::class, 'showLoginForm'])->name('login');
 Route::post('/login', [LoginController::class, 'authenticate'])->name('post_login');
+
+
+
+Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
+Route::resource('roles', RoleController::class);
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
@@ -112,6 +144,8 @@ Route::middleware(['auth'])->group(function () {
 
 
     Route::get('/dashboard', [UserController::class, 'dashboard'])->name('admin.dashboard');
+    Route::get('/admin/navigation-error', [\App\Http\Controllers\Admin\NavigationErrorController::class, 'show'])
+        ->name('admin.navigation.error');
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
@@ -301,6 +335,9 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', 'index')->name('index');
         Route::get('create', 'create')->name('create');
         Route::get('edit/{id}', 'edit')->name('edit');
+        Route::get('profile/edit', function () {
+            return redirect()->route('member.profile.edit', Auth::user()->user_id);
+        })->name('profile.edit.self');
         Route::get('profile/edit/{id}', 'editProfile')->name('profile.edit');
         Route::get('show/{id}', 'show')->name('show');
         Route::get('/step/{step}', 'loadStep')->name('load-step');
@@ -443,12 +480,13 @@ Route::middleware(['auth'])->group(function () {
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
 
-        // Whole-week timetable — printable / downloadable PDF
-        Route::get('/weekly-timetable/pdf', [CalendarController::class, 'weeklyTimetablePdf'])->name('weekly-timetable.pdf');
-        // Course Information + Resource Persons (Faculty for the Week) — printable / downloadable PDF
-        Route::get('/weekly-info/pdf', [CalendarController::class, 'weeklyInfoPdf'])->name('weekly-info.pdf');
-        Route::get('/weekly-info/meta', [CalendarController::class, 'weeklyInfoMeta'])->name('weekly-info.meta');
-        Route::post('/weekly-info/save', [CalendarController::class, 'saveWeeklyInfo'])->name('weekly-info.save');
+        // Dedicated OT (Officer Trainee / Student-OT) calendar with its own data flow
+        Route::prefix('ot')->name('ot.')->group(function () {
+            Route::get('/', [CalendarController::class, 'otIndex'])->name('index');
+            Route::get('/full-calendar-details', [CalendarController::class, 'otFullCalendarDetails'])->name('event.calendar-details');
+            Route::get('/single-calendar-details', [CalendarController::class, 'otSingleCalendarDetails'])->name('event.Singlecalendar-details');
+            Route::get('/download', [CalendarController::class, 'otDownloadPdf'])->name('download');
+        });
     });
 
     // Timetable Report
@@ -769,6 +807,12 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
 
     // OT MDO/Escort Exception View
     Route::get('/ot-mdo-escrot-exemption-view', [OTMDOEscrotExemptionController::class, 'index'])->name('ot.mdo.escrot.exemption.view');
+    // OT acknowledges a duty (Pending -> Completed)
+    Route::post('/ot-mdo-escrot-acknowledge', [OTMDOEscrotExemptionController::class, 'acknowledge'])->name('ot.mdo.escrot.acknowledge');
+    // OT duty sub-pages (Today's / Pending / Completed)
+    Route::get('/ot-mdo-escrot-today', [OTMDOEscrotExemptionController::class, 'today'])->name('ot.mdo.escrot.today');
+    Route::get('/ot-mdo-escrot-pending', [OTMDOEscrotExemptionController::class, 'pending'])->name('ot.mdo.escrot.pending');
+    Route::get('/ot-mdo-escrot-completed', [OTMDOEscrotExemptionController::class, 'completed'])->name('ot.mdo.escrot.completed');
 
     // Faculty MDO/Escort Exception View
     Route::get('/faculty-mdo-escort-exception-view', [FacultyMDOEscortExceptionViewController::class, 'index'])->name('faculty.mdo.escort.exception.view');
@@ -1120,6 +1164,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Custom routes for document operations
     Route::post('course-repository/{pk}/upload-document', [CourseRepositoryController::class, 'uploadDocument'])->name('course-repository.upload-document');
+    Route::get('course-repository/document/{pk}/edit-data', [CourseRepositoryController::class, 'getDocument'])->name('course-repository.document.edit-data');
+    Route::post('course-repository/document/{pk}/update', [CourseRepositoryController::class, 'updateDocument'])->name('course-repository.document.update');
     Route::delete('course-repository/document/{pk}', [CourseRepositoryController::class, 'deleteDocument'])->name('course-repository.document.delete');
     Route::get('course-repository/document/{pk}/download', [CourseRepositoryController::class, 'downloadDocument'])->name('course-repository.document.download');
 
@@ -1624,7 +1670,7 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
 
         Route::get('bill-report-grid/data', [EstateController::class, 'getBillReportGridData'])->name('bill-report-grid.data');
         Route::get('bill-report-grid', function () {
-            abort_unless(hasRole('Estate'), 403, 'You do not have permission to access this estate section.');
+            abort_unless(isEstateAuthority(), 403, 'You do not have permission to access this estate section.');
 
             return view('admin.estate.estate_bill_report_grid');
         })->name('bill-report-grid');
@@ -1639,3 +1685,16 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
     });
 });
 Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);
+
+Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function () {
+    Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');
+    Route::resource('categories', SidebarCategoryController::class);
+    Route::get('menu-groups/status/{id}', [MenuGroupController::class, 'status'])->name('menu-groups.status');
+    Route::resource('menu-groups', MenuGroupController::class);
+    Route::get('menus/status/{id}', [MenuController::class, 'status'])->name('menus.status');
+    Route::resource('menus', MenuController::class);
+    Route::get('groups', [SidebarController::class, 'getGroups'])->name('groups');
+    Route::get('menu', [SidebarController::class, 'sidebarMenus'])->name('menu');
+    Route::get('getGroups/{category_id}', [SidebarController::class, 'getCategoryGroups'])->name('getGroups');
+    Route::get('getMenus/{group_id}', [SidebarController::class, 'getGroupMenus'])->name('getMenus');
+});

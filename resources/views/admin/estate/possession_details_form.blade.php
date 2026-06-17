@@ -4,7 +4,7 @@
 
 @php
     $estateSelfHomeTab = request('scope') === 'self'
-        && (hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate'));
+        && (isEstateAuthority());
     $estateSelfQuery = $estateSelfHomeTab ? ['scope' => 'self'] : [];
 @endphp
 @section($estateSelfHomeTab ? 'content' : 'setup_content')
@@ -15,7 +15,7 @@
 
     @php
         // Only these roles should be able to manually edit allotment/possession dates.
-        $canEditDates = hasRole('Admin') || hasRole('Super Admin') || hasRole('Estate');
+        $canEditDates = isEstateAuthority();
     @endphp
 
     <div class="card border-0 shadow-sm rounded-3 border-start border-4 border-primary">
@@ -127,7 +127,7 @@
                         <input type="date" class="form-control" id="possession_date" name="possession_date" value="{{ old('possession_date') }}" required>
                         <div class="text-danger small field-error" data-field="possession_date" role="alert">@error('possession_date'){{ $message }}@enderror</div>
                     </div>
-                    @if(hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin'))
+                    @if(isEstateAuthority())
                         <div class="col-12 col-md-6">
                             <div class="row g-3 align-items-end">
                                 <div class="col-12 col-md-6">

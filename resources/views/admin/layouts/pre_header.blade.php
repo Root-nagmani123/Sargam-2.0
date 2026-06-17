@@ -19,6 +19,8 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <!-- Core theme (base) -->
 <link rel="stylesheet" href="{{asset('admin_assets/css/styles.css')}}">
+<link rel="stylesheet" href="{{asset('css/custom.css')}}">
+<link rel="stylesheet" href="{{ asset('css/admin-header.css') }}?v={{ @filemtime(public_path('css/admin-header.css')) ?: time() }}">
 <link rel="stylesheet" href="{{asset('admin_assets/css/dashboard-enhanced.css')}}">
 
 <!-- DataTables (vendor) -->
@@ -26,14 +28,14 @@
 <link rel="stylesheet" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
 <link rel="stylesheet" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
-
-{{-- Global app bundle (built by Mix from tokens + custom + admin-header + spacing
-     + breadcrumb + sidebar-menu-enhanced). One minified request instead of six.
-     Loads AFTER the base theme so the project's own styles remain authoritative.
-     Edit the source files in public/css then run `npm run dev` to rebuild. --}}
-<link rel="stylesheet" href="{{ asset('css/app-global.css') }}?v={{ @filemtime(public_path('css/app-global.css')) ?: time() }}">
-
-<link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}?v=7">
+<!-- Unified Spacing System -->
+<link rel="stylesheet" href="{{asset('css/spacing-system.css')}}?v={{ @filemtime(public_path('css/spacing-system.css')) ?: time() }}">
+<!-- Breadcrumb Component CSS -->
+<link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
+<!-- Sidebar Menu Enhanced CSS -->
+<link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
+<!-- Sargam Design System (tokens + refinements + components) — must load LAST -->
+<link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
 <style>
 .material-symbols-rounded {
   font-variation-settings:
@@ -42,14 +44,13 @@
   'GRAD' 0,
   'opsz' 24
 }
+</style>
 
-/* Light-only lock. App always renders <html data-bs-theme="light">, so
-   Bootstrap's [data-bs-theme="dark"] rules never match. We only need to
-   neutralise any prefers-color-scheme: dark leakage — no universal
-   selector, no !important war. (See public/css/tokens.css for color-scheme.) */
-:root[data-bs-theme="dark"] {
-  --bs-body-bg: #fff;
-  --bs-body-color: #212529;
+<!-- FINAL OVERRIDE: Force light mode after ALL CSS loads -->
+<style id="final-light-mode-override">
+/* This MUST be the last style block to override everything */
+* {
+  color-scheme: light !important;
 }
 </style>
 

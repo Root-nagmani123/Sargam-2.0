@@ -1,8 +1,17 @@
-<div class="row g-3 mw-step-grid">
+<div class="row">
+    @php
+        $appellationMasterList = $appellationMasterList ?? [];
+    @endphp
     <div class="col-md-6">
         <div class="mb-3">
-            @php $titleOptions = App\Models\EmployeeMaster::title; @endphp
-            <x-select name="title" label="Title" :options="$titleOptions" :value="old('title')" formLabelClass="form-label" formSelectClass="form-select" labelRequired="true" />
+            <x-select
+                name="appellation"
+                label="Appellation :"
+                placeholder="Select Appellation"
+                formLabelClass="form-label"
+                :options="$appellationMasterList"
+                :value="old('appellation')"
+            />
         </div>
     </div>
     <div class="col-md-6">
@@ -45,7 +54,9 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-            <x-input name="height" label="Exact Height by Measurement (Without Shoes)" type="text" value="{{ old('height') }}" placeholder="eg. 170 cm" formLabelClass="form-label" formInputClass="form-control only-numbers" />
+
+            <x-input name="height" label="Exact Height by Measurement (Without Shoes) - in cm:" type="text" value="{{ old('height') }}" formLabelClass="form-label" formInputClass="form-control only-numbers" />
+
         </div>
     </div>
     <div class="col-md-6">

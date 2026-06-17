@@ -281,31 +281,106 @@ function safeDecrypt($value, $default = null)
         return $default;
     }
 }
+// function hasRole($role)
+// {
+//     $user = Auth::user();
+//     if (!$user) return false;
+
+//     // Step 1: Check session roles first (Student static role bhi yahi me milega)
+//     $sessionRoles = Session::get('user_roles', []);
+//     if (in_array($role, $sessionRoles)) {
+//         return true;
+//     }
+
+//     // Step 2: Check database roles + cache
+//     $roles = Cache::remember('user_roles_' . $user->pk, 10, function () use ($user) {
+//         return $user->roles()->pluck('user_role_name')->toArray();
+//     });
+
+//     return in_array($role, $roles);
+// }
+
+
 function hasRole($role)
 {
     $user = Auth::user();
     if (!$user) return false;
 
-    // Step 1: Check session roles first (Student static role bhi yahi me milega)
+    // Session roles take precedence. Students get the 'Student-OT' pseudo-role only
+    // in the session (it is never assigned as a Spatie role), and admin/faculty
+    // session roles are derived from their Spatie roles at login. Checking the
+    // session first keeps both flows working — including Moodle token logins,
+    // where the middleware logs the user in and sets user_roles in the session.
     $sessionRoles = Session::get('user_roles', []);
-    if (in_array($role, $sessionRoles)) {
+    if (is_array($sessionRoles) && in_array($role, $sessionRoles, true)) {
         return true;
     }
 
-    // Step 2: Check database roles + cache
-    $roles = Cache::remember('user_roles_' . $user->pk, 10, function () use ($user) {
-        return $user->roles()->pluck('user_role_name')->toArray();
-    });
+    // Backward-compatible alias: old code may use "SuperAdmin" while DB role is "Super Admin".
+    if ($role === 'SuperAdmin' || $role === 'Super Admin') {
+        return $user->hasRole('Super Admin') || $user->hasRole('SuperAdmin');
+    }
 
-    return in_array($role, $roles);
+    // Spatie already has hasRole() method
+    return $user->hasRole($role);
 }
 
+/**
+ * Whether the user has at least one Spatie role (user management → assign role).
+ */
+function userHasAssignedRoles(): bool
+{
+    $user = Auth::user();
+    if (! $user) {
+        return false;
+    }
+
+    return $user->roles()->exists();
+}
+
+/**
+ * Full sidebar / setup category access (all groups without per-menu permission checks).
+ * Actual DB role names: 'Super Admin' (id:1). 'Admin' does not exist in DB.
+ */
+function isSidebarPrivilegedUser(): bool
+{
+    return hasRole('Super Admin');
+}
+
+/**
+ * Estate authority: can manage all estate records (Estate Admin role or Super Admin).
+ * DB role names: 'Estate Admin' (id:8), 'Super Admin' (id:1).
+ */
+function isEstateAuthority(): bool
+{
+    return hasRole('Estate Admin') || hasRole('Super Admin');
+}
+
+/**
+ * Estate HAC authority: can perform HAC-related actions.
+ * DB role names: 'Estate HAC' (id:9), 'Estate Admin' (id:8), 'Super Admin' (id:1).
+ */
+function isEstateHacAuthority(): bool
+{
+    return hasRole('Estate HAC') || hasRole('Estate Admin') || hasRole('Super Admin');
+}
+
+/**
+ * Training authority: Training Induction Admin, Training MCTP Admin, Training IST, or Estate Admin / Super Admin.
+ * DB role names match exactly.
+ */
+function isTrainingOrEstateAuthority(): bool
+{
+    return hasRole('Estate Admin') || hasRole('Super Admin')
+        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+}
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
  */
 function is_faculty_portal_user(): bool
 {
     $user = Auth::user();
+    // print_r($user);die;
     if (! $user) {
         return false;
     }
@@ -314,7 +389,7 @@ function is_faculty_portal_user(): bool
         return true;
     }
 
-    return hasRole('Internal Faculty') || hasRole('Guest Faculty');
+    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty');
 }
 
 /**
@@ -545,7 +620,8 @@ function canSeeMessSelfServiceSetup(): bool
         || hasRole('Internal Faculty')
         || hasRole('Training-Induction')
         || hasRole('Training-MCTP')
-        || hasRole('IST');
+        || hasRole('IST')
+        || hasRole('Employee');
 }
 
 function get_Role_by_course()
@@ -557,18 +633,36 @@ function get_Role_by_course()
         return [];
     }
 
-    $sessionRoles = Session::get('user_roles', []);
-    if (empty($sessionRoles)) {
+    // Admin / Super Admin / PA see all courses — no restriction
+    if (hasRole('Admin') || hasRole('Super Admin') || hasRole('PA')) {
         return [];
     }
-    $cacheKey = 'role_by_course_' . $user->user_id;
-    $role_course = Cache::remember($cacheKey, 600, function () use ($user, $sessionRoles) {
+
+    // Get Spatie role IDs assigned to this user
+    $userRoleIds = DB::table('model_has_roles')
+        ->where('model_id', $user->pk)
+        ->where('model_type', \App\Models\User::class)
+        ->pluck('role_id')
+        ->toArray();
+
+    if (empty($userRoleIds)) {
+        // Non-admin user without assigned roles should see no course-scoped data.
+        return [-1];
+    }
+
+    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds));
+    $role_course = Cache::remember($cacheKey, 600, function () use ($userRoleIds) {
         return DB::table('course_master as cm')
-            ->join('user_role_master as urm', 'cm.user_role_master_pk', '=', 'urm.pk')
-            ->whereIn('urm.user_role_name', $sessionRoles)
+            ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
+            ->whereIn('r.id', $userRoleIds)
             ->pluck('cm.pk')
             ->toArray();
     });
+    if (empty($role_course)) {
+        // Non-admin user with roles but no mapped courses should see no data.
+        return [-1];
+    }
+
     return $role_course;
 }
 

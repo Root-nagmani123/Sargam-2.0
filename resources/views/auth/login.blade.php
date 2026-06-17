@@ -1248,6 +1248,7 @@
                             <span>&copy; {{ date('Y') }} LBSNAA Mussoorie, Government of India. All Rights Reserved</span>
                             <span class="d-none d-md-inline mx-2">|</span>
                             <span class="d-none d-sm-inline">Support: <a href="mailto:support.lbsnaa@nic.in">support[dot]lbsnaa[at]nic[dot]in</a></span>
+                            <span class="d-none d-sm-inline mx-2">|</span> <span>Phone: 135-2222346 (Mon–Fri, 9:00 AM–5:30 PM)</span>
                         </div>
                         <div class="footer-badge d-inline-flex align-items-center gap-1">
                             <i class="bi bi-people-fill" aria-hidden="true"></i>

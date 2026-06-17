@@ -3,16 +3,27 @@
 @section('title', 'Memo Conclusion Master')
 
 @section('setup_content')
-<div class="container-fluid mcm-master-page">
-    <x-breadcrum title="Memo Conclusion Master">
-        <button type="button"
-            id="showConclusionAlert"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm"
-            aria-controls="mcmConclusionModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add Memo Conclusion</span>
-        </button>
-    </x-breadcrum>
+<div class="container-fluid">
+<x-breadcrum title="Memo Conclusion Master" />
+    <div class="card" >
+        <div class="card-body">
+            <div class="row">
+                <div class="col-6">
+                    <h4>Memo Conclusion Master</h4>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex justify-content-end align-items-center gap-2">
+                        <!-- Add Group Mapping -->
+                        <a href="javascript:void(0)" id="showConclusionAlert"
+                            class="btn btn-primary d-flex align-items-center">
+                            <i class="material-icons menu-icon material-symbols-rounded"
+                                style="font-size: 24px;">add</i>
+                            Add Memo Conclusion
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr>
 
     <div class="card mcm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">

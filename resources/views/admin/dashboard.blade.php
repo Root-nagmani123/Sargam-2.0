@@ -5,12 +5,12 @@
 @section('content')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <link rel="stylesheet" href="{{ asset('admin_assets/css/dashboard-calendar.css') }}?v=4">
-<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=1">
+<link rel="stylesheet" href="{{ asset('css/dashboard-stat-cards.css') }}?v=2">
 <link rel="stylesheet" href="{{ asset('css/dashboard-main.css') }}?v=1">
 
 @php
 $user = Auth::user();
-$isAdminSummary = hasRole('Admin');
+$isAdminSummary = hasRole('Super Admin');
 $daysOld = $isAdminSummary ? 10 : null;
 $notifications = ($user && $user->user_id) ? notification()->getNotifications($user->user_id, 10, false, $daysOld) :
 collect();
@@ -19,7 +19,8 @@ $notificationBadgeCount = ($user && $user->user_id)
 : 0;
 $notices = get_notice_notification_by_role();
 $hour = (int) date('G');
-$greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening' ); $userName=$user ? (trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->name ?? 'User')) : 'User';
+$greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good evening' ); $userName=$user ?
+    (trim(($user->first_name ?? '') . ' ' . ($user->last_name ?? '')) ?: ($user->name ?? 'User')) : 'User';
 
     $todayBirthdayWishNotifications = collect();
     $myBirthdayWishesSummary = '';
@@ -80,8 +81,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         {{ ' ' . $myBirthdayWishesSummary }}
                         @endif
                         @if(($myBirthdayWishCount ?? 0) > 0)
-                        <a href="{{ route('admin.dashboard.feed', ['tab' => 'wishes']) }}"
-                            class="birthday-banner-link" id="btn-view-birthday-wishes">View all wishes →</a>
+                        <a href="{{ route('admin.dashboard.feed', ['tab' => 'wishes']) }}" class="birthday-banner-link"
+                            id="btn-view-birthday-wishes">View all wishes →</a>
                         @endif
                     </p>
                 </div>
@@ -123,17 +124,19 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             {{ $greeting }},
                             <span class="text-primary fw-semibold">{{ $userName }}</span>
                         </p>
-                        <h1 class="h4 fw-bold text-dark mb-0">Dashboard</h1>
+                        <h1 class="h3 fw-bold text-dark mb-0">Dashboard</h1>
                     </div>
-                    <div class="ms-auto text-end">
-                        <div class="d-flex align-items-center justify-content-end gap-2 text-primary">
-                            <i class="bi bi-clock" aria-hidden="true"></i>
-                            <span class="fs-5 fw-semibold tabular-nums"
-                                id="dashboard-live-time">{{ now()->format('H:i') }}</span>
+                    <div class="ms-auto d-flex align-items-center gap-2 gap-sm-3">
+                        <i class="bi bi-clock text-primary lh-1" style="font-size: 1.85rem;" aria-hidden="true"></i>
+                        <div class="lh-sm">
+                            <div class="text-primary fw-bold tabular-nums lh-1"
+                                style="font-size: 1.7rem; letter-spacing: -0.01em;">
+                                <span id="dashboard-live-time">{{ now()->format('H:i') }}</span>
+                            </div>
+                            <p class="text-body-secondary mb-0 mt-1" style="font-size: 0.9rem;">
+                                {{ now()->format('l, d F Y') }}
+                            </p>
                         </div>
-                        <p class="text-body-secondary mb-0 mt-1" style="font-size: 0.8125rem;">
-                            {{ now()->format('l, d F Y') }}
-                        </p>
                     </div>
                 </div>
             </div>
@@ -167,7 +170,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <ul class="list-unstyled mb-0 ps-0">
                         @foreach($todayBirthdayWishNotifications as $wish)
                         <li class="mb-2">
-                            @include('admin.dashboard.partials.wish-received-item', ['wish' => $wish, 'layout' => 'dashboard'])
+                            @include('admin.dashboard.partials.wish-received-item', ['wish' => $wish, 'layout' =>
+                            'dashboard'])
                         </li>
                         @endforeach
                     </ul>
@@ -177,23 +181,20 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         </div>
         @endif
 
-        @if(hasRole('Security Card') || hasRole('Admin Security'))
-        @php
-        $idCardApprovalRoute = hasRole('Admin Security')
-        ? route('admin.security.employee_idcard_approval.approval3')
-        : route('admin.security.employee_idcard_approval.approval2');
-        @endphp
-        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3 mb-4">
+        
+        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 mt-3">
+            @if(hasRole('Security Card') || hasRole('Admin Security') || hasRole('Super Admin'))
             <div class="col">
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-blue"><i class="bi bi-person-badge"></i></div>
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-person-vcard"></i>
+                            </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">Pending Permanent ID Requests</p>
                                 @php $v = (int) ($todayPendingPermanentIdCardRequests ?? 0); @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-meta mb-0">Total pending: {{ $fullPendingPermanentIdCardRequests ?? 0 }}</p>
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>
                     </div>
@@ -203,12 +204,13 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-blue"><i class="bi bi-person-vcard"></i></div>
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-person-vcard"></i>
+                            </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">Pending Contractual ID Requests</p>
                                 @php $v = (int) ($todayPendingContractualIdCardRequests ?? 0); @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-meta mb-0">Total pending: {{ $fullPendingContractualIdCardRequests ?? 0 }}</p>
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>
                     </div>
@@ -218,12 +220,13 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-amber"><i class="bi bi-copy"></i></div>
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-copy"></i>
+                            </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">Duplicate Permanent ID Requests</p>
                                 @php $v = (int) ($todayDuplicatePermIdCardRequests ?? 0); @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-meta mb-0">Total pending: {{ $fullDuplicatePermIdCardRequests ?? 0 }}</p>
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>
                     </div>
@@ -233,52 +236,55 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-amber"><i class="bi bi-files"></i></div>
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-files"></i>
+                            </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">Duplicate Contractual ID Requests</p>
                                 @php $v = (int) ($todayDuplicateContractualIdCardRequests ?? 0); @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-meta mb-0">Total pending: {{ $fullDuplicateContractualIdCardRequests ?? 0 }}</p>
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
-                <a href="{{ route('admin.security.family_idcard_approval.index') }}" class="text-decoration-none d-block h-100">
+                <a href="{{ route('admin.security.family_idcard_approval.index') }}"
+                    class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-blue"><i class="bi bi-people"></i></div>
+                            <div class="stat-icon-wrapper stat-icon-blue">
+                                <i class="bi bi-people"></i>
+                            </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">Requested Family ID</p>
                                 @php $v = (int) ($todayFamilyApprovals ?? 0); @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-meta mb-0">Total pending: {{ $fullFamilyApprovals ?? 0 }}</p>
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>
                     </div>
                 </a>
             </div>
             <div class="col">
-                <a href="{{ route('admin.security.vehicle_pass_approval.index') }}" class="text-decoration-none d-block h-100">
+                <a href="{{ route('admin.security.vehicle_pass_approval.index') }}"
+                    class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-green"><i class="bi bi-car-front"></i></div>
+                            <div class="stat-icon-wrapper stat-icon-green">
+                                <i class="bi bi-car-front"></i>
+                            </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">Requested Vehicle Pass</p>
                                 @php $v = (int) ($todayVehicleApprovals ?? 0); @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                                <p class="stat-meta mb-0">Total pending: {{ $fullVehicleApprovals ?? 0 }}</p>
+                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>
                     </div>
                 </a>
             </div>
-        </div>
-        @endif
+            @endif
         @if(!hasRole('Security Card') && !hasRole('Admin Security'))
-        <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-4 g-3 mb-3">
-            <div class="col">
+        <div class="col">
                 <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
@@ -305,6 +311,23 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">Upcoming Courses</p>
                                 @php $v = (int) $upcomingCourses; @endphp
+                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
+                            </div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+
+            <div class="col">
+                <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
+                    <div class="card stat-card h-100 p-3">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="stat-icon-wrapper stat-icon-amber">
+                                <i class="bi bi-megaphone"></i>
+                            </div>
+                            <div class="flex-grow-1 min-w-0">
+                                <p class="stat-title">Upcoming Events</p>
+                                @php $v = 2; @endphp
                                 <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>
@@ -348,7 +371,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
             @if(($todayApproval1IdCardRequests ?? 0) > 0)
             <div class="col">
-                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="text-decoration-none d-block h-100">
+                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}"
+                    class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
                             <div class="stat-icon-wrapper stat-icon-blue">
@@ -367,7 +391,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
             @if(($todayApproval1DuplicateIdCardRequests ?? 0) > 0)
             <div class="col">
-                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}" class="text-decoration-none d-block h-100">
+                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}"
+                    class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
                             <div class="stat-icon-wrapper stat-icon-amber">
@@ -418,7 +443,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 @endif
             </div>
 
-            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin'))
             <div class="col">
                 <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
                     <div class="card stat-card h-100 p-3">
@@ -455,46 +480,46 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 </a>
             </div>
             @endif
+            @endif
         </div>
-        @endif
 
         <div class="row g-3 g-lg-4">
             <div class="col">
                 @php
                 $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
                 $noticeTabLabels = [
-                    'office-orders' => 'Office Orders',
-                    'work-allocation' => 'Work Allocation',
-                    'notice-circular' => 'Notice/ Circular/ Order',
+                'office-orders' => 'Office Orders',
+                'work-allocation' => 'Work Allocation',
+                'notice-circular' => 'Notice/ Circular/ Order',
                 ];
                 $noticeTabCounts = ['office-orders' => 0, 'work-allocation' => 0, 'notice-circular' => 0];
                 $resolveDashboardNoticeTab = function ($type) {
-                    $t = strtolower((string) ($type ?? ''));
-                    if (str_contains($t, 'office order')) {
-                        return 'office-orders';
-                    }
-                    if (str_contains($t, 'course notice')) {
-                        return 'work-allocation';
-                    }
-                    return 'notice-circular';
+                $t = strtolower((string) ($type ?? ''));
+                if (str_contains($t, 'office order')) {
+                return 'office-orders';
+                }
+                if (str_contains($t, 'course notice')) {
+                return 'work-allocation';
+                }
+                return 'notice-circular';
                 };
                 foreach ($notices as $noticeForTab) {
-                    $tabKey = $resolveDashboardNoticeTab($noticeForTab->notice_type ?? '');
-                    $noticeTabCounts[$tabKey]++;
+                $tabKey = $resolveDashboardNoticeTab($noticeForTab->notice_type ?? '');
+                $noticeTabCounts[$tabKey]++;
                 }
                 $defaultNoticeTab = 'office-orders';
                 foreach ($noticeTabKeys as $tabKeyCandidate) {
-                    if ($noticeTabCounts[$tabKeyCandidate] > 0) {
-                        $defaultNoticeTab = $tabKeyCandidate;
-                        break;
-                    }
+                if ($noticeTabCounts[$tabKeyCandidate] > 0) {
+                $defaultNoticeTab = $tabKeyCandidate;
+                break;
+                }
                 }
                 @endphp
                 <div class="card dashboard-panel dashboard-feed-panel mb-3" id="dashboard-notices-panel">
                     <div class="card-header py-3 px-4">
                         <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 gap-md-3">
                             <h5 class="dashboard-feed-panel__title mb-0">Notices</h5>
-                            @if(hasRole('Admin'))
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
                             <a href="{{ route('admin.notice.create') }}"
                                 class="btn btn-sm dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
@@ -511,7 +536,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 <i class="bi bi-file-earmark-x"></i>
                             </span>
                             <p class="mb-3 text-body-secondary">No notices available.</p>
-                            @if(hasRole('Admin'))
+                            @if(hasRole('Admin') || hasRole('Super Admin'))
                             <a href="{{ route('admin.notice.create') }}"
                                 class="btn dashboard-feed-btn-primary d-inline-flex align-items-center gap-2">
                                 <i class="bi bi-file-earmark-plus" aria-hidden="true"></i>
@@ -525,14 +550,14 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             <button type="button"
                                 class="dashboard-notice-tab {{ $tabKey === $defaultNoticeTab ? 'active' : '' }}{{ $noticeTabCounts[$tabKey] === 0 ? ' dashboard-notice-tab-empty' : '' }}"
                                 role="tab" aria-selected="{{ $tabKey === $defaultNoticeTab ? 'true' : 'false' }}"
-                                data-notice-tab="{{ $tabKey }}"
-                                id="dashboard-notice-tab-{{ $tabKey }}">
+                                data-notice-tab="{{ $tabKey }}" id="dashboard-notice-tab-{{ $tabKey }}">
                                 {{ $noticeTabLabels[$tabKey] }}@if($noticeTabCounts[$tabKey] > 0):
                                 {{ $noticeTabCounts[$tabKey] }}@endif
                             </button>
                             @endforeach
                         </div>
-                        <p class="dashboard-notice-list-empty d-none mb-0" id="dashboard-notice-tab-empty" role="status">
+                        <p class="dashboard-notice-list-empty d-none mb-0" id="dashboard-notice-tab-empty"
+                            role="status">
                             No notices in this category.
                         </p>
                         <ul class="list-unstyled mb-0 ps-0" id="dashboard-notice-list">
@@ -541,47 +566,48 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                             $noticeTab = $resolveDashboardNoticeTab($notice->notice_type ?? '');
                             $noticeDate = $notice->created_at ?? $notice->display_date ?? null;
                             $isNewNotice = $noticeDate && \Carbon\Carbon::parse($noticeDate)->diffInDays(now()) < 7;
-                            $displayFrom = !empty($notice->display_date)
+                                $displayFrom=!empty($notice->display_date)
                                 ? \Carbon\Carbon::parse($notice->display_date)->format('j F, Y')
                                 : null;
-                            $displayTo = !empty($notice->expiry_date)
+                                $displayTo = !empty($notice->expiry_date)
                                 ? \Carbon\Carbon::parse($notice->expiry_date)->format('j F, Y')
                                 : null;
-                            if ($displayFrom && $displayTo) {
+                                if ($displayFrom && $displayTo) {
                                 $noticeDateLabel = $displayFrom . ' to ' . $displayTo;
-                            } elseif ($displayFrom) {
+                                } elseif ($displayFrom) {
                                 $noticeDateLabel = $displayFrom;
-                            } elseif ($noticeDate) {
+                                } elseif ($noticeDate) {
                                 $noticeDateLabel = date('j F, Y', strtotime($noticeDate));
-                            } else {
+                                } else {
                                 $noticeDateLabel = '—';
-                            }
-                            @endphp
-                            <li class="mb-2 {{ $noticeTab !== $defaultNoticeTab ? 'd-none' : '' }}"
-                                data-notice-tab-item="{{ $noticeTab }}">
-                                <div
-                                    class="dashboard-notice-item {{ $isNewNotice ? 'dashboard-notice-item-new' : '' }}">
-                                    <span class="notice-icon-wrap" aria-hidden="true"><span
-                                            class="material-icons material-symbols-rounded">description</span></span>
-                                    <div class="min-w-0">
-                                        <div class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
-                                            <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
-                                            @if($isNewNotice)
-                                            <span
-                                                class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
+                                }
+                                @endphp
+                                <li class="mb-2 {{ $noticeTab !== $defaultNoticeTab ? 'd-none' : '' }}"
+                                    data-notice-tab-item="{{ $noticeTab }}">
+                                    <div
+                                        class="dashboard-notice-item {{ $isNewNotice ? 'dashboard-notice-item-new' : '' }}">
+                                        <span class="notice-icon-wrap" aria-hidden="true"><span
+                                                class="material-icons material-symbols-rounded">description</span></span>
+                                        <div class="min-w-0">
+                                            <div
+                                                class="d-flex align-items-start justify-content-between gap-2 flex-wrap">
+                                                <span class="dashboard-notice-title">{{ $notice->notice_title }}</span>
+                                                @if($isNewNotice)
+                                                <span
+                                                    class="badge bg-danger dashboard-notice-new-tag flex-shrink-0">New</span>
+                                                @endif
+                                            </div>
+                                            <small class="dashboard-notice-date">{{ $noticeDateLabel }}</small>
+                                            @if($notice->document)
+                                            <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
+                                                class="dashboard-notice-attachment text-danger text-decoration-none">
+                                                <i class="bi bi-paperclip" aria-hidden="true"></i>View attachment
+                                            </a>
                                             @endif
                                         </div>
-                                        <small class="dashboard-notice-date">{{ $noticeDateLabel }}</small>
-                                        @if($notice->document)
-                                        <a href="{{ asset('storage/' . $notice->document) }}" target="_blank"
-                                            class="dashboard-notice-attachment text-danger text-decoration-none">
-                                            <i class="bi bi-paperclip" aria-hidden="true"></i>View attachment
-                                        </a>
-                                        @endif
                                     </div>
-                                </div>
-                            </li>
-                            @endforeach
+                                </li>
+                                @endforeach
                         </ul>
                         <div class="dashboard-feed-footer">
                             <a href="{{ route('admin.dashboard.feed', ['tab' => 'notices']) }}"
@@ -590,7 +616,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         @endif
                     </div>
                 </div>
-                @if(hasRole('Admin') || hasRole('Training-Induction'))
+                @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Super Admin'))
                 <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-notifications-panel">
                     <div class="card-header py-3 px-4">
                         <div class="d-flex justify-content-between align-items-center gap-3">
@@ -601,7 +627,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                                 @else
                                 <i class="bi bi-bell text-primary opacity-75" aria-hidden="true"></i>
                                 @endif
-                                <span>{{ hasRole('Admin') ? 'Admin Summary' : 'Notifications' }}</span>
+                                <span>{{ hasRole('Admin') || hasRole('Super Admin') ? 'Admin Summary' : 'Notifications' }}</span>
                             </h5>
                             <span class="dashboard-feed-count-badge"
                                 aria-label="{{ $notificationBadgeCount }} items">{{ $notificationBadgeCount }}</span>
@@ -690,7 +716,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 </div>
                 @endif
 
-                @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super
+                Admin'))
                 <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-todays-classes-panel">
                     <div class="card-header py-3 px-4">
                         <h5 class="dashboard-feed-panel__title mb-0">Today's Classes</h5>
@@ -739,7 +766,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <div class="card-header bg-white border-0">
                         <div class="d-flex align-items-center justify-content-between w-100">
                             <h5 class="dashboard-birthdays-panel__title mb-0">Today's Birthdays 🎉</h5>
-                            <span class="dashboard-birthdays-count {{ $emp_dob_data->count() > 9 ? 'dashboard-birthdays-count--wide' : '' }}"
+                            <span
+                                class="dashboard-birthdays-count {{ $emp_dob_data->count() > 9 ? 'dashboard-birthdays-count--wide' : '' }}"
                                 aria-label="{{ $emp_dob_data->count() }} birthdays today">{{ $emp_dob_data->count() }}</span>
                         </div>
                         <hr class="dashboard-birthdays-divider">
@@ -754,31 +782,34 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         <div class="d-flex flex-column gap-2">
                             @foreach($emp_dob_data as $employee)
                             @php
-                            $avClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning', 'text-bg-danger', 'text-bg-secondary'];
+                            $avClasses = ['text-bg-primary', 'text-bg-info', 'text-bg-success', 'text-bg-warning',
+                            'text-bg-danger', 'text-bg-secondary'];
                             $avClass = $avClasses[$loop->index % count($avClasses)];
-                            $photo = !empty($employee->profile_picture) ? asset('storage/' . $employee->profile_picture) : null;
+                            $photo = !empty($employee->profile_picture) ? asset('storage/' . $employee->profile_picture)
+                            : null;
                             $email = trim((string)($employee->email ?? ''));
                             $fullName = trim(($employee->first_name ?? '') . ' ' . ($employee->last_name ?? ''));
                             $wishCount = $birthdayWishCounts[$employee->pk] ?? 0;
-                            $hasContact = $email !== '' || !empty($employee->mobile) || !empty($employee->office_extension_no);
+                            $hasContact = $email !== '' || !empty($employee->mobile) ||
+                            !empty($employee->office_extension_no);
                             @endphp
                             <article class="dashboard-birthday-item" @if($hasContact) tabindex="0" @endif>
                                 <div class="dashboard-birthday-row">
-                                    <x-dashboard-birthday-avatar :photo="$photo" :name="$fullName" :color-class="$avClass" />
+                                    <x-dashboard-birthday-avatar :photo="$photo" :name="$fullName"
+                                        :color-class="$avClass" />
                                     <div class="dashboard-birthday-info">
                                         <p class="dashboard-birthday-name text-truncate mb-0">{{ $fullName }}</p>
-                                        <p class="dashboard-birthday-designation text-truncate mb-0">{{ $employee->designation_name }}</p>
+                                        <p class="dashboard-birthday-designation text-truncate mb-0">
+                                            {{ $employee->designation_name }}</p>
                                         @if($wishCount > 0)
-                                        <span class="badge rounded-pill bg-success-subtle text-success border border-success-subtle dashboard-birthday-badge mt-1"
+                                        <span
+                                            class="badge rounded-pill bg-success-subtle text-success border border-success-subtle dashboard-birthday-badge mt-1"
                                             title="{{ $wishCount }} wishes sent">🎁 {{ $wishCount }}</span>
                                         @endif
                                     </div>
-                                    <button type="button"
-                                        class="btn btn-sm dashboard-birthday-wish-btn btn-custom-wish"
-                                        data-name="{{ $fullName }}"
-                                        data-email="{{ $email }}"
-                                        data-mobile="{{ $employee->mobile ?? '' }}"
-                                        data-pk="{{ $employee->pk }}"
+                                    <button type="button" class="btn btn-sm dashboard-birthday-wish-btn btn-custom-wish"
+                                        data-name="{{ $fullName }}" data-email="{{ $email }}"
+                                        data-mobile="{{ $employee->mobile ?? '' }}" data-pk="{{ $employee->pk }}"
                                         title="Send birthday wish to {{ $fullName }}">Wish them</button>
                                 </div>
                                 @if($hasContact)
@@ -892,7 +923,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     </div>
 
                     <div class="mt-4" id="wish-modal-message-wrap">
-                        <label class="form-label dashboard-wish-message-label d-block" for="wish-message" id="wish-message-label">Your message</label>
+                        <label class="form-label dashboard-wish-message-label d-block" for="wish-message"
+                            id="wish-message-label">Your message</label>
                         <textarea class="form-control dashboard-wish-textarea" id="wish-message" rows="7"
                             placeholder="Write your birthday wish here…"></textarea>
                     </div>
@@ -913,7 +945,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         </div>
                     </div>
                     <p class="small text-body-secondary mb-0 mt-2" id="wish-modal-hint">
-                        <i class="bi bi-bell me-1" aria-hidden="true"></i>Send delivers an in-app notification with your message.
+                        <i class="bi bi-bell me-1" aria-hidden="true"></i>Send delivers an in-app notification with your
+                        message.
                     </p>
                 </div>
                 <div class="modal-footer dashboard-wish-modal__footer d-flex justify-content-end border-0">
@@ -947,10 +980,13 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
         };
 
         var replyTemplate = function(name) {
-            return "Dear " + name + ",\n\nThank you so much for your lovely birthday wishes! I truly appreciate your thoughtfulness.\n\nWarm regards,";
+            return "Dear " + name +
+                ",\n\nThank you so much for your lovely birthday wishes! I truly appreciate your thoughtfulness.\n\nWarm regards,";
         };
 
-        var currentRecipient = { mode: 'birthday' };
+        var currentRecipient = {
+            mode: 'birthday'
+        };
 
         function setNameFieldSize(input, name) {
             if (!input) return;
@@ -963,7 +999,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             currentRecipient.mode = mode;
             var modeInput = document.getElementById('wish-modal-mode');
             if (modeInput) modeInput.value = mode;
-            document.getElementById('customWishModalLabel').textContent = isReply ? 'Reply to birthday wish' : 'Wish on their birthday';
+            document.getElementById('customWishModalLabel').textContent = isReply ? 'Reply to birthday wish' :
+                'Wish on their birthday';
             var introBirthday = document.getElementById('wish-modal-intro-birthday');
             var introReply = document.getElementById('wish-modal-intro-reply');
             if (introBirthday) introBirthday.classList.toggle('d-none', isReply);
@@ -976,14 +1013,17 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
             var messageField = document.getElementById('wish-message');
             if (messageLabel) messageLabel.textContent = isReply ? 'Your reply' : 'Your message';
             if (messageField) {
-                messageField.placeholder = isReply ? 'Write your thank-you reply…' : 'Write your birthday wish here…';
+                messageField.placeholder = isReply ? 'Write your thank-you reply…' :
+                    'Write your birthday wish here…';
             }
             setNameFieldSize(document.getElementById('wish-recipient-name'), name);
             setNameFieldSize(document.getElementById('wish-reply-name-inline'), name);
         }
 
         function openWishModal(recipient, mode) {
-            currentRecipient = Object.assign({}, recipient, { mode: mode });
+            currentRecipient = Object.assign({}, recipient, {
+                mode: mode
+            });
             setWishModalMode(mode, currentRecipient.name);
             document.getElementById('wish-recipient-email').value = currentRecipient.email || '';
             document.getElementById('wish-recipient-mobile').value = currentRecipient.mobile || '';
@@ -992,7 +1032,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 document.getElementById('wish-subject').value = 'Thank you for the birthday wishes!';
             } else {
                 document.getElementById('wish-template-select').value = 'formal';
-                document.getElementById('wish-subject').value = 'Happy Birthday ' + (currentRecipient.name || '') + '!';
+                document.getElementById('wish-subject').value = 'Happy Birthday ' + (currentRecipient.name || '') +
+                    '!';
                 document.getElementById('wish-message').value = templates.formal(currentRecipient.name || '');
             }
             bootstrap.Modal.getOrCreateInstance(document.getElementById('customWishModal')).show();
@@ -1047,11 +1088,12 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     return;
                 }
 
-                var defaultTitle = isReply
-                    ? 'Thank you for the birthday wishes!'
-                    : ('Happy Birthday ' + (currentRecipient.name || '') + '!');
+                var defaultTitle = isReply ?
+                    'Thank you for the birthday wishes!' :
+                    ('Happy Birthday ' + (currentRecipient.name || '') + '!');
 
-                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+                var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute(
+                    'content') ||
                     '{{ csrf_token() }}';
                 sendBtn.disabled = true;
                 sendBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
@@ -1075,8 +1117,10 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     })
                     .then(function(data) {
                         if (data.success) {
-                            bootstrap.Modal.getInstance(document.getElementById('customWishModal')).hide();
-                            showToast(data.message || (isReply ? 'Reply sent!' : 'Birthday wish notification sent!'), 'success');
+                            bootstrap.Modal.getInstance(document.getElementById('customWishModal'))
+                                .hide();
+                            showToast(data.message || (isReply ? 'Reply sent!' :
+                                'Birthday wish notification sent!'), 'success');
                         } else {
                             alert('Failed to send notification: ' + (data.error || 'Unknown error'));
                         }
@@ -1172,7 +1216,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
     });
 
     document.addEventListener('click', function(e) {
-        const tabBtn = e.target && e.target.closest ? e.target.closest('.dashboard-notice-tab[data-notice-tab]') :
+        const tabBtn = e.target && e.target.closest ? e.target.closest(
+            '.dashboard-notice-tab[data-notice-tab]') :
             null;
         if (!tabBtn) return;
 
@@ -1275,7 +1320,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
             function updateMonthLabel() {
                 if (!monthLabel || !yearSel || !monthSel) return;
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov',
+                    'Dec'
+                ];
                 const monthIndex = parseInt(monthSel.value, 10) - 1;
                 monthLabel.textContent = (monthNames[monthIndex] || '') + ' ' + yearSel.value;
             }
@@ -1352,7 +1399,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         ev.preventDefault();
                         cell.click();
                     }
-                    const selectable = comp.querySelectorAll('.calendar-cell:not(.calendar-day-other)');
+                    const selectable = comp.querySelectorAll(
+                        '.calendar-cell:not(.calendar-day-other)');
                     const idx = Array.prototype.indexOf.call(selectable, cell);
                     let targetIdx = null;
                     if (ev.key === 'ArrowLeft') targetIdx = idx - 1;
@@ -1385,7 +1433,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     const isOpen = !holidaysPanel.hidden;
                     holidaysPanel.hidden = isOpen;
                     holidaysToggle.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
-                    holidaysToggle.textContent = isOpen ? 'Show holidays this month' : 'Hide holidays this month';
+                    holidaysToggle.textContent = isOpen ? 'Show holidays this month' :
+                        'Hide holidays this month';
                 });
             }
 
@@ -1573,7 +1622,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 return;
 
             var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
-            '';
+                '';
             var allCards = document.querySelectorAll('.btn-custom-wish');
             var recipients = [];
             allCards.forEach(function(card) {

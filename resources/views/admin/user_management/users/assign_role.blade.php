@@ -111,15 +111,14 @@ function loadRoles() {
                 html = '<div class="col-12"><div class="alert alert-light border text-muted mb-0 rounded-3">No roles available.</div></div>';
             } else {
                 data.forEach(role => {
-                    let checked = userRoles.includes(role.pk) ? "checked" : "";
+                    let checked = userRoles.includes(role.id) ? "checked" : "";
                     html += `
-                        <div class="col-12 col-sm-6 col-lg-4 col-xl-3 role-item">
-                            <label class="role-option">
+                        <div class="col-12 col-sm-3 col-lg-2 col-xl-2 role-item">
+                            <label class="w-100 border rounded-3 p-3 h-100 bg-white shadow-sm role-option">
                                 <div class="form-check m-0">
-                                    <input class="form-check-input me-2" type="checkbox" name="roles[]" value="${role.pk}" ${checked}>
-                                    <span class="form-check-label">${role.user_role_name}</span>
+                                    <input class="form-check-input me-2" type="checkbox" name="roles[]" value="${role.id}" ${checked}>
+                                    <span class="form-check-label fw-semibold text-dark">${role.name}</span>
                                 </div>
-                                <small class="d-block mt-2 ms-4">${role.user_role_display_name}</small>
                             </label>
                         </div>
                     `;

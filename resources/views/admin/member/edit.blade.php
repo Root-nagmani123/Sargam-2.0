@@ -13,20 +13,25 @@
 
     <x-session_message />
 
-    <input type="hidden" name="emp_id" id="emp_id" value="{{ $member->pk ?? '' }}">
-
-    <div class="mw-wizard-shell wizard-content">
-        <form id="member-form" enctype="multipart/form-data">
-            @csrf
-            <div id="wizard" class="wizard clearfix vertical">
-                <h3>Member Information</h3>
-                <section id="step-1" class="step-section">
-                    <div class="text-center mw-step-loading">
-                        <div class="spinner-border" role="status">
-                            <span class="visually-hidden">Loading...</span>
-                        </div>
-                    </div>
-                </section>
+        <!-- start Vertical Steps Example -->
+        <div class="card" >
+            <div class="card-body">
+                <h4 class="card-title mb-0">Edit Member</h4>
+                <h6 class="card-subtitle mb-3"></h6>
+                <hr>
+                <input type="hidden" name="emp_id" id="emp_id" value="{{ ($member->pk) ?? '' }}">
+                <form id="member-form" enctype="multipart/form-data">
+                    @csrf
+                    <div id="wizard" class="wizard clearfix vertical">
+                        <h3>Member Information</h3>
+                        <section id="step-1" class="step-section">
+                            <!-- Content will be loaded via AJAX -->
+                            <div class="text-center py-5">
+                                <div class="spinner-border" role="status">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                            </div>
+                        </section>
 
                 <h3>Employment Details</h3>
                 <section id="step-2" class="step-section"></section>
@@ -45,9 +50,9 @@
 </div>
 @endsection
 
-@push('scripts')
-<script>
-let employeePK = {{ $member->pk ?? 'null' }};
+    @push('scripts')
+        <script>
+            let employeePK = null;
 
 $(document).ready(function () {
     const form = $("#member-form");
@@ -242,11 +247,13 @@ $(document).ready(function () {
         stepElement.find(".is-invalid").removeClass("is-invalid");
     }
 
-    styleWizardActions();
-    loadStepContent(1);
+                // Initial step loads
+                loadStepContent(1);
+                $("#wizard .steps li").removeClass('disabled').addClass("done");
+                $("#wizard .steps li:nth-child(1)").removeClass('done');
+            });
+        </script>
 
-    $("#wizard .steps li").removeClass('disabled').addClass("done");
-    $("#wizard .steps li:nth-child(1)").removeClass('done');
-});
-</script>
 @endpush
+
+    @endsection

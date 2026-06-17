@@ -7,14 +7,20 @@
 @endpush
 
 @section('setup_content')
-<div class="container-fluid vm-master-page py-4">
-    <x-breadcrum title="Venue Master">
-        <a href="{{ route('Venue-Master.create') }}" id="openCreateVenue"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add Venue</span>
-        </a>
-    </x-breadcrum>
+<div class="container-fluid">
+    <x-breadcrum title="Venue Master" />
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" >
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-6">
+                            <h4>Venue Master</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex justify-content-end align-items-end mb-3">
+                                <div class="d-flex align-items-center gap-2">
 
     <x-session_message />
 

@@ -19,13 +19,14 @@
             || request()->routeIs('mdo-escrot-exemption.*')
             || request()->routeIs('mdo-escort-exemption.*')
             || request()->routeIs('master.exemption.*')
-            || request()->routeIs('master.word.of.day.master.*')
             || request()->routeIs('master.mdo_duty_type.*')
             || request()->routeIs('master.memo.*')
             || request()->routeIs('course.memo.*')
             || request()->routeIs('master.discipline.*')
             || request()->routeIs('admin.feedback.*')
             || request()->routeIs('feedback.*')
+            || request()->routeIs('calendar.*')
+            || request()->routeIs('attendance.*')
             || request()->routeIs('faculty.*')
             || request()->routeIs('medical.exception.*')
             || request()->routeIs('ot.*')
@@ -33,20 +34,6 @@
             || request()->routeIs('peer.*')
             || request()->routeIs('admin.course-repository.user.*')
             || request()->is('academic*');
-        $setupTimetableActive = request()->routeIs('calendar.*')
-            || request()->routeIs('attendance.*')
-            || request()->routeIs('timetable-report.*')
-            || request()->routeIs('send.notice.management.*')
-            || request()->routeIs('notice.direct.save')
-            || request()->routeIs('memo.notice.management.*')
-            || request()->routeIs('memo.discipline.*')
-            || request()->routeIs('admin.memo-notice.*')
-            || request()->routeIs('mdo-escrot-exemption.*')
-            || request()->routeIs('mdo-escort-exemption.*')
-            || request()->routeIs('subject.*')
-            || request()->routeIs('subject-module.*')
-            || request()->routeIs('feedback.get.feedbackList')
-            || request()->routeIs('feedback.get.studentFeedback');
     @endphp
     <div class="vh-100 d-flex flex-column overflow-hidden">
         <!-- ---------------------------------- -->
@@ -93,10 +80,10 @@
                                             </li>
 
                                             @if(
-                                                hasRole('Admin')
-                                                || hasRole('Training-Induction')
-                                                || hasRole('Training-MCTP')
-                                                || hasRole('IST')
+                                                hasRole('Super Admin')
+                                                || hasRole('Training Induction Admin')
+                                                || hasRole('Training MCTP Admin')
+                                                || hasRole('Training IST')
                                             )
                                             <li class="mini-nav-item {{ $setupTimetableActive ? 'selected' : '' }}" id="setup-mini-5">
                                                 <a href="javascript:void(0)"
@@ -118,8 +105,8 @@
                                                 </a>
                                             </li>
                                             @endif
-                                            @if(hasRole('Admin') || hasRole('Training-Induction') ||  hasRole('Training-MCTP') || hasRole('IST'))
-                                            @if(! hasRole('Training-MCTP') && ! hasRole('IST'))
+                                            @if(hasRole('Super Admin') || hasRole('Training Induction Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST'))
+                                            @if(! hasRole('Training MCTP Admin') && ! hasRole('Training IST'))
                                             <li class="mini-nav-item {{ request()->is('master*') ? 'selected' : '' }}" id="setup-mini-7">
                                                 <a href="javascript:void(0)"
                                                     class="mini-nav-link sidebar-google-item sidebar-mini-squircle-item">

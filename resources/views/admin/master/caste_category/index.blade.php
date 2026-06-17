@@ -7,27 +7,22 @@
 @endpush
 
 @section('setup_content')
-<div class="container-fluid ccm-master-page">
-    <x-breadcrum title="Caste Category Master">
-        <button type="button"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm ccm-open-add-btn"
-            aria-controls="ccmCasteModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add Caste Category</span>
-        </button>
-    </x-breadcrum>
-
-    <x-session_message />
-
-    <div class="card ccm-dt-card shadow-sm rounded-3 overflow-hidden">
-        <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="ccmDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="castecategorymaster-table"></div>
-            </div>
-
-            <div class="programme-dt-panel ccm-dt-panel">
-                <div class="table-responsive ccm-dt-scroll">
-                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table border-0']) !!}
+<div class="container-fluid">
+<x-breadcrum title="Caste Master"></x-breadcrum>
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" >
+            <div class="card-body">
+                
+                <div class="row">
+                    <div class="col-6">
+                        <h4>Caste Master</h4>
+                    </div>
+                    <div class="col-6">
+                        <div class="float-end gap-2">
+                            <a href="{{route('master.caste.category.create')}}" class="btn btn-primary">+ Add Caste</a>
+                        </div>
+                    </div>
                 </div>
                 <div id="ccmDtFooter"
                     class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"

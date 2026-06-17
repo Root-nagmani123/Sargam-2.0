@@ -1,155 +1,78 @@
-@extends('admin.layouts.timetable')
+@extends('admin.layouts.master')
 
-@section('title', 'Central Course Repository of LBSNAA | Lal Bahadur')
+@section('title', 'Central Course Repository of LBSNAA')
 
-@section('content')
+@section('setup_content')
+<div class="cru-page">
+    <div class="container-fluid" id="main-content">
+        <x-breadcrum title="Course Repository"></x-breadcrum>
 
-<!-- Main Content -->
-<div class="container-fluid px-4 py-4" id="main-content">
+        {{-- Filters --}}
 
-    <!-- Filter Card -->
-    <div class="card filter-card shadow-sm mb-4">
-        <div class="card-body p-4" style="background-color: #FBF8F8;">
-            <form method="GET" action="{{ route('admin.course-repository.user.index') }}" id="filterForm">
-                <div class="row g-3 align-items-end">
-                    <!-- Date Filter -->
-                    <div class="col-md-2">
-                        <label for="filter_date" class="form-label fw-semibold mb-2">Date</label>
-                        <div class="input-group">
-                            <input type="date" 
-                                   class="form-control" 
-                                   id="filter_date" 
-                                   name="date" 
-                                   value="{{ $filters['date'] ?? '' }}">
-                            <span class="input-group-text bg-white">
-                                <span class="material-icons material-symbols-rounded">calendar_today</span>
-                            </span>
-                        </div>
-                    </div>
-
-                    <!-- Course Filter -->
-                    <div class="col-md-2">
-                        <label for="filter_course" class="form-label fw-semibold mb-2">Course</label>
-                        <select class="form-select" id="filter_course" name="course">
-                            <option value="">Select Course</option>
-                            @foreach($courses as $course)
-                                <option value="{{ $course->pk }}" {{ $filters['course'] == $course->pk ? 'selected' : '' }}>
-                                    {{ $course->course_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <!-- Subject Filter -->
-                    <div class="col-md-2">
-                        <label for="filter_subject" class="form-label fw-semibold mb-2">Subject</label>
-                        <select class="form-select" id="filter_subject" name="subject">
-                            <option value="">Select Subject</option>
-                            @foreach($subjects as $subject)
-                                <option value="{{ $subject->pk }}" {{ $filters['subject'] == $subject->pk ? 'selected' : '' }}>
-                                    {{ $subject->subject_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <!-- Week Filter -->
-                    <div class="col-md-2">
-                        <label for="filter_week" class="form-label fw-semibold mb-2">Week</label>
-                        <select class="form-select" id="filter_week" name="week">
-                            <option value="">Select Week</option>
-                            @for($i = 1; $i <= 52; $i++)
-                                <option value="{{ $i }}" {{ $filters['week'] == $i ? 'selected' : '' }}>
-                                    {{ $i }}
-                                </option>
-                            @endfor
-                        </select>
-                    </div>
-
-                    <!-- Faculty Filter -->
-                    <div class="col-md-2">
-                        <label for="filter_faculty" class="form-label fw-semibold mb-2">Faculty</label>
-                        <select class="form-select" id="filter_faculty" name="faculty">
-                            <option value="">Select Faculty</option>
-                            @foreach($faculties as $faculty)
-                                <option value="{{ $faculty->pk }}" {{ $filters['faculty'] == $faculty->pk ? 'selected' : '' }}>
-                                    {{ $faculty->full_name }}
-                                </option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <!-- Apply Button -->
-                    <div class="col-md-2">
-                        <button type="submit" class="btn btn-primary w-100 fw-semibold">
-                            Apply Filters
-                        </button>
-                    </div>
-                </div>
-            </form>
+        @if($repositories->count() > 0)
+        @php
+            $cruGridListTableId = 'cruRepoListTableIndex';
+            $cruGridColumnStorageKey = 'cru-repo-list-' . $cruGridListTableId;
+            $cruGridColumns = [
+                ['key' => 'sno', 'label' => 'S. No.', 'locked' => true],
+                ['key' => 'name', 'label' => 'Course Name', 'default' => true],
+                ['key' => 'subcount', 'label' => 'Sub Categories', 'default' => true],
+            ];
+        @endphp
+        <div class="d-flex flex-wrap align-items-end justify-content-end gap-3 mb-3">
+            @include('admin.course-repository.user.partials.page-toolbar', ['showViewToggle' => true])
         </div>
-    </div>
 
-    <!-- Course Cards Grid -->
-    <div class="course-cards-grid">
-        <div class="row g-4">
-            @forelse($repositories as $repository)
-                    <div class="col-md-4 col-lg-4">
-                    <div class="card course-card shadow-sm h-100">
-                        <div class="card-img-wrapper">
-                            @php
-                                $imageUrl = null;
-                                // Check if category has an image
-                                if($repository->category_image && \Storage::disk('public')->exists($repository->category_image)) {
-                                    $imageUrl = asset('storage/' . $repository->category_image);
-                                }
-                                // Use placeholder if no image found
-                                if(!$imageUrl) {
-                                    $imageUrl = 'https://via.placeholder.com/400x200/004a93/ffffff?text=' . urlencode($repository->course_repository_name);
-                                }
-                            @endphp
-                            <img src="{{ $imageUrl }}" 
-                                 alt="{{ $repository->course_repository_name }}"
-                                 class="card-img-top"
-                                 loading="lazy"
-                                 onerror="this.src='https://via.placeholder.com/400x200/004a93/ffffff?text={{ urlencode($repository->course_repository_name) }}'">
-                        </div>
-                        <div class="card-body d-flex flex-column" style="background-color: #f7f7f7;">
-                            <h5 class="card-title text-center fw-bold mb-3">{{ $repository->course_repository_name }}</h5>
-                            <div class="mt-auto">
-                                @php
-                                    // Determine the appropriate route based on repository name
-                                    $repositoryName = strtolower($repository->course_repository_name);
-                                    $routeUrl = '#';
-                                    
-                                    if (strpos($repositoryName, 'foundation course') !== false) {
-                                        // Route to Foundation Course listing page
-                                        $routeUrl = route('admin.course-repository.user.foundation-course');
-                                    } else {
-                                        // Use user-specific repository view route
-                                        $routeUrl = route('admin.course-repository.user.show', $repository->pk);
-                                    }
-                                @endphp
-                                <a href="{{ $routeUrl }}" 
-                                   class="btn btn-outline-primary w-100 fw-semibold">
-                                    Click Here
-                                </a>
-                            </div>
-                        </div>
-                    </div>
+        {{-- Shared filter toolbar (with inline column show/hide) — stays visible across both card and grid views --}}
+        @if(isset($courses) && isset($subjects) && isset($faculties))
+        @include('admin.course-repository.user.partials.filter-card', [
+        'route' => route('admin.course-repository.user.index'),
+        'courses' => $courses,
+        'subjects' => $subjects,
+        'faculties' => $faculties,
+        'sectors' => $sectors ?? collect(),
+        'ministries' => $ministries ?? collect(),
+        'filters' => $filters ?? [],
+        'columnToggle' => [
+        'tableId' => $cruGridListTableId,
+        'storageKey' => $cruGridColumnStorageKey,
+        'columns' => $cruGridColumns,
+        ],
+        ])
+        @endif
+
+        <div class="course-cards-grid mb-4 mb-md-5" id="courseCardsGrid">
+            <div class="cru-view-cards card card-body">
+                <div class="row g-3 g-md-4">
+                    @foreach($repositories as $repository)
+                        @include('admin.course-repository.user.partials.repository-card', ['repository' => $repository])
+                    @endforeach
                 </div>
-            @empty
-                <div class="col-12">
-                    <div class="alert alert-info text-center">
-                        <span class="material-icons material-symbols-rounded me-2">info</span>
-                        No course repositories found.
-                    </div>
-                </div>
-            @endforelse
+            </div>
+            @include('admin.course-repository.user.partials.repository-list-table', [
+            'items' => $repositories,
+            'listTableId' => $cruGridListTableId,
+            'cruColumns' => $cruGridColumns,
+            'cruColumnStorageKey' => $cruGridColumnStorageKey,
+            ])
         </div>
+        @else
+        <div class="card border-0 shadow-sm rounded-4 text-center py-5 px-3">
+            <div class="card-body">
+                <span
+                    class="d-inline-flex align-items-center justify-content-center rounded-circle bg-light text-secondary mb-3 cru-empty-icon">
+                    <i class="bi bi-folder2-open fs-2" aria-hidden="true"></i>
+                </span>
+                <h3 class="h5 fw-semibold text-dark mb-2">No categories found</h3>
+                <p class="text-muted small mb-0 mx-auto" style="max-width: 28rem;">
+                    Try adjusting your filters or check back later for new course repository categories.
+                </p>
+            </div>
+        </div>
+        @endif
     </div>
 </div>
 
-<!-- Link to CSS -->
-<link rel="stylesheet" href="{{ asset('css/course-repository-user.css') }}">
+@include('admin.course-repository.user.partials.assets')
+@include('admin.course-repository.partials.single-click-links')
 @endsection

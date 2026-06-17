@@ -103,7 +103,7 @@ class EstateReturnHouseDataTable extends DataTable
         }
 
         $user = Auth::user();
-        $isPrivileged = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $isPrivileged = isEstateAuthority();
         $empScope = ['t' => 'all'];
         if (! $isPrivileged && $user) {
             $ids = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null) ?: [];
@@ -194,7 +194,7 @@ class EstateReturnHouseDataTable extends DataTable
         }
 
         $user = \Illuminate\Support\Facades\Auth::user();
-        $isPrivileged = hasRole('Estate') || hasRole('Admin') || hasRole('Super Admin');
+        $isPrivileged = isEstateAuthority();
         $employeeIds = [];
         if (! $isPrivileged && $user) {
             $employeeIds = getEmployeeIdsForUser($user->user_id ?? $user->pk ?? null) ?: [];
@@ -373,7 +373,9 @@ class EstateReturnHouseDataTable extends DataTable
             ->setTableId('returnHouseTable')
             ->addTableClass('table table-striped table-hover align-middle mb-0 text-nowrap w-100')
             ->columns($this->getColumns())
-            ->minifiedAjax()
+            ->minifiedAjax('', null, [
+                'scope' => 'new URLSearchParams(window.location.search).get("scope") || ""',
+            ])
             ->parameters([
                 'responsive' => true,
                 'autoWidth' => false,

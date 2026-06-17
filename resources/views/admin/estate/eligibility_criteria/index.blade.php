@@ -2,7 +2,7 @@
 
 @section('title', 'Eligibility - Criteria - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid px-2 px-sm-3 px-md-4">
 <x-breadcrum title="Eligibility - Criteria" />
 

@@ -16,7 +16,18 @@
         </a>
     </x-breadcrum>
 
-    <x-session_message />
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" >
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-6">
+                            <h4>City</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex justify-content-end align-items-end mb-3">
+                                <div class="d-flex align-items-center gap-2">
 
     <div class="card cty-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">

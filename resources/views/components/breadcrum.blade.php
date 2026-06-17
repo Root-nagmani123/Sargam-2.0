@@ -7,7 +7,6 @@
     'showBack' => null,
     'buttonText' => null,
     'buttonUrl' => null,
-    'buttonId' => null,
     'buttonIcon' => 'add',
     'buttonClass' => 'btn btn-primary btn-sm d-inline-flex align-items-center gap-2',
 ])
@@ -211,7 +210,7 @@
 @endphp
 
 <div class="modern-breadcrumb-wrapper mb-4" data-variant="{{ $variant }}">
-    <div class="modern-breadcrumb-shell rounded-1 px-3 px-md-4 py-3">
+    <div class="modern-breadcrumb-shell rounded-4 px-3 px-md-4 py-3">
         <div class="d-flex flex-wrap justify-content-between align-items-end gap-3">
             <div class="min-w-0 flex-grow-1 d-flex align-items-center gap-2 gap-md-3">
                 @if($showBackButton)
@@ -242,7 +241,7 @@
                             @endforeach
                         </ol>
                     </nav>
-                    <h4 class="modern-breadcrumb-title mb-0 text-dark">{{ $title }}</h4>
+                    <h1 class="modern-breadcrumb-title mb-0 text-dark">{{ $title }}</h1>
                 </div>
             </div>
 
@@ -252,9 +251,7 @@
                         {{ $slot }}
                     @else
                         <a href="{{ $buttonUrl ?: 'javascript:void(0)' }}"
-                           @if(filled($buttonId)) id="{{ $buttonId }}" @endif
-                           class="{{ $buttonClass }}"
-                           @if(filled($buttonId) && !filled($buttonUrl)) role="button" @endif>
+                           class="{{ $buttonClass }}">
                             @if(filled($buttonIcon))
                                 <i class="material-icons material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">{{ $buttonIcon }}</i>
                             @endif
@@ -293,7 +290,7 @@
     }
 
     .modern-breadcrumb-title {
-        font-size: 1.25rem;
+        font-size: clamp(1.35rem, 2vw, 2rem);
         font-weight: 700;
         line-height: 1.15;
         letter-spacing: -0.01em;

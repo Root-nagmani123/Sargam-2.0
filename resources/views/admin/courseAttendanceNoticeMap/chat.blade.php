@@ -13,8 +13,7 @@
 <x-breadcrum title="Conversation" />
             <x-session_message />
 
-            <div class="card mnm-doc-card border-0 shadow-sm rounded-3 mt-3">
-            <div class="card-body p-3 p-md-4">
+            <div class="bg-white p-4 rounded shadow-sm mt-3" >
 
                 <h5 class="text-center mnm-doc-heading mb-2">{{ $template_details->course_name ?? 'Course Name' }}</h5>
             <p class="text-center mnm-doc-subtitle mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>

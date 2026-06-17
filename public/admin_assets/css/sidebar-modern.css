@@ -4,7 +4,7 @@
  */
 :root {
     --sargam-header-offset: 122px;
-    --sargam-mini-nav-width: 90px;
+    --sargam-mini-nav-width: 92px;
     --sargam-mini-squircle-size: 56px;
     --sargam-mini-squircle-radius: 0.75rem;
     --sargam-mini-nav-gap: 0.75rem;
@@ -27,7 +27,7 @@
         background: #fff !important;
         transition: width 0.25s ease, max-width 0.25s ease !important;
         overflow: hidden !important;
-        box-shadow: none !important;
+        box-shadow: 1px 0 0 rgba(15, 23, 42, 0.04) !important;
     }
 
     html[data-layout="vertical"] body[data-sidebartype="full"] aside.side-mini-panel.sidebar-google-style {

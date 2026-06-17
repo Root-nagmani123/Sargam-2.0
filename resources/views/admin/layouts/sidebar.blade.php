@@ -12,12 +12,7 @@
             @include('admin.layouts.sidebar.communication') 
         </div>
     </div>
-
-
     <!-- //faculty & OTs tabs -->
-
-
-
 <script>
 const sidebar = document.querySelector('.sidebarmenu .simplebar-content-wrapper');
 
@@ -103,7 +98,4 @@ window.addEventListener('beforeunload', function() {
 });
 // Mini-nav state is managed centrally by sidebar-navigation-fixed.js
 </script>
-
-
-
 <!--  Sidebar End -->

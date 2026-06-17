@@ -2,9 +2,27 @@
 
 @section('title', 'Appellation Master')
 
-@push('styles')
-<link rel="stylesheet" href="{{ asset('css/appellation-master-admin.css') }}?v={{ @filemtime(public_path('css/appellation-master-admin.css')) ?: time() }}">
-@endpush
+@section('setup_content')
+<div class="container-fluid">
+    <x-breadcrum title="Appellation Master"></x-breadcrum>
+    <div class="card" >
+        <div class="card-body">
+            <div class="row">
+                <div class="col-6">
+                    <h4>Appellation Master</h4>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex justify-content-end align-items-center gap-2">
+                        <a href="{{ route('master.appellation.create') }}"
+                            class="btn btn-primary d-flex align-items-center">
+                            <i class="material-icons menu-icon material-symbols-rounded"
+                                style="font-size: 24px;">add</i>
+                            Add Appellation
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <hr>
 
 @section('setup_content')
 <div class="container-fluid apm-master-page">

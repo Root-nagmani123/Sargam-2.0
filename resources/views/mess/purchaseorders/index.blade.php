@@ -8,7 +8,7 @@
 
 @section('content')
 @php
-$canDeletePurchaseOrder = hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin');
+$canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid mess-master-page po-ux py-4">
     <div class="no-print">

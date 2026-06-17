@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Support\FeedbackReportRouteRegistry;
 use App\Support\HtmlSanitizer;
 use App\Services\NotificationService;
+use App\Services\SidebarMenu\BreadcrumbResolver;
+use App\Services\SidebarMenu\MenuService;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\View;
@@ -30,14 +32,37 @@ class AppServiceProvider extends ServiceProvider
      *
      * @return void
      */
-    public function boot()
+    public function boot(MenuService $menuService)
     {
         Paginator::useBootstrap();
 
-        // @clean($html) — echoes sanitised rich text. Use instead of {!! $html !!}
-        // for any user/DB-authored HTML (notice descriptions, chat templates).
-        Blade::directive('clean', function ($expression) {
-            return "<?php echo \App\Support\HtmlSanitizer::clean($expression); ?>";
+        view()->composer('*', function ($view) use ($menuService) {
+            if (! auth()->check()) {
+                return;
+            }
+
+            if ($view->offsetExists('sidebarMenus')) {
+                return;
+            }
+
+            $view->with('sidebarMenus', $menuService->getMenus());
+        });
+
+        view()->composer(['admin.*', 'components.breadcrum'], function ($view) {
+            if (! auth()->check()) {
+                return;
+            }
+
+            if ($view->offsetExists('breadcrumbTrail')) {
+                return;
+            }
+
+            try {
+                $resolver = app(BreadcrumbResolver::class);
+                $view->with('breadcrumbTrail', $resolver->resolve());
+            } catch (\Throwable) {
+                $view->with('breadcrumbTrail', null);
+            }
         });
 
         View::composer([

@@ -7,7 +7,7 @@
 <div class="container-fluid">
     <x-breadcrum title="Add New Column to Table" />
     <!-- Start Form Card -->
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-body">
             <h4 class="card-title mb-3">Add New Column to Table</h4>
             <hr>

@@ -5,17 +5,17 @@
 ])
                             {{-- ESTATE MANAGEMENT (same visibility rules as main Setup menu) --}}
                             @php
-                                $showUserManagement = hasRole('Admin') || hasRole('Super Admin') || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST');
+                                $showUserManagement = hasRole('Super Admin') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
                                 // Staff/self-service: Request For Estate + My Estate Bill.
                                 // Training roles should behave like normal staff (self-service), not like estate authorities.
                                 $estateSelfServiceRoles = hasRole('Staff')
-                                    || hasRole('Student-OT')
+                                    || hasRole('Officer Trainee')
                                     || hasRole('Doctor')
                                     || hasRole('Guest Faculty')
                                     || hasRole('Internal Faculty')
-                                    || hasRole('Training-Induction')
-                                    || hasRole('Training-MCTP')
-                                    || hasRole('IST');
+                                    || hasRole('Training Induction Admin')
+                                    || hasRole('Training MCTP Admin')
+                                    || hasRole('Training IST');
                                 // Check permanent LBSNAA employee (payroll = 0)
                                 $isPermanentEstateEmployee = false;
                                 $user = Auth::user();
@@ -52,8 +52,8 @@
                                 // HAC menus (Put In HAC / HAC Approved) visible ONLY to HAC Person + Estate/Admin.
                                 $canSeeHAC = $isHACPerson || $canSeeAllEstate;
                                 // Staff/self-service: Request For Estate + Generate Estate Bill only. HAC Person (without Staff) sees only Put In HAC + HAC Approved.
-                                $canSeeRequestAndBill = $canSeeAllEstate || $estateSelfServiceRoles || hasRole('Admin') || hasRole('Super Admin');
-                                $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles || hasRole('Admin') || hasRole('Super Admin');
+                                $canSeeRequestAndBill = $canSeeAllEstate || $estateSelfServiceRoles || hasRole('Super Admin') || hasRole('Super Admin');
+                                $canSeeSelfOnly = $canSeeAllEstate || $isHACPerson || $estateSelfServiceRoles || hasRole('Super Admin') || hasRole('Super Admin');
                                 // Meter menus: Estate role only (Admin / Super Admin follow staff estate menu).
                                 $canSeeUpdateMeterNo = hasRole('Estate');
                                 $canSeeListMeterReading = hasRole('Estate');

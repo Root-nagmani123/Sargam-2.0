@@ -2,7 +2,7 @@
 
 @section('title', 'House Status - Sargam')
 
-@section('content')
+@section('setup_content')
 <div class="container-fluid">
     <!-- Breadcrumb -->
 <x-breadcrum title="House Status"></x-breadcrum>

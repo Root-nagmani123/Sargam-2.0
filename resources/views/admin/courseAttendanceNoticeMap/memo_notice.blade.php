@@ -12,9 +12,10 @@
 <div class="container-fluid mnm-master-page py-3 px-3 px-lg-4">
     <x-breadcrum title="Notice /Memo Admin Management" />
     <x-session_message />
-    <div class="card mnm-form-card border-0 shadow-sm rounded-3">
-        <div class="card-body p-3 p-md-4">
-            <h2 class="mnm-page-title mb-4">Create Memo / Notice</h2>
+    <div class="card" >
+        <div class="card-body">
+            <h4 class="card-title mb-3">Create Memo / Notice</h4>
+            <hr>
             <form action="" method="POST">
                 @csrf
                 <div class="row g-3">

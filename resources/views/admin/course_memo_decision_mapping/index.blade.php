@@ -3,16 +3,40 @@
 @section('title', 'Course Memo Decision Mapping')
 
 @section('setup_content')
-<div class="container-fluid cmdm-master-page">
-    <x-breadcrum title="Course Memo Decision Mapping">
-        <button type="button"
-            id="showConclusionAlert"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm"
-            aria-controls="conclusionModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add New Mapping</span>
-        </button>
-    </x-breadcrum>
+<div class="container-fluid">
+    <x-breadcrum title="Course Memo Decision Mapping" />
+    <div class="datatables">
+        <div class="card" >
+            <div class="card-body">
+                <div class="table-responsive">
+                    <div class="row">
+                        <div class="col-6">
+                            <h4>Course Memo Decision Mapping</h4>
+                        </div>
+                        <div class="col-6">
+                            <div class="float-end gap-2">
+                                <!-- <a href="{{ route('course.memo.decision.create') }}" class="btn btn-primary">+Add New
+                                    Mapping</a> -->
+                                <button type="button" id="showConclusionAlert" class="btn btn-primary">
+                                    +Add New Mapping
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <hr>
+                    <div>
+                        <table class="table w-100" id="memoDecisionTable">
+                            <thead style="background-color: #af2910;">
+                                <tr>
+                                    <th>S.No.</th>
+                                    <th>Course Name</th>
+                                    <th>Memo Decision</th>
+                                    <th>Memo Conclusion</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                        </table>
 
     <div class="card cmdm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">

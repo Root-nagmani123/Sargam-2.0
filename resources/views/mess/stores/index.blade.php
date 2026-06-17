@@ -9,12 +9,7 @@
 @section('content')
 @php
     $storeTypes = \App\Models\Mess\Store::storeTypes();
-    $canDeleteStore = hasRole('Admin') || hasRole('Mess-Admin') || hasRole('Mess Admin') || hasRole('mess admin');
-    $isStoreActive = static function ($store) {
-        return ($store->status ?? 'active') === 'active';
-    };
-    $openCreateModal = request('open') === 'create' || ($errors->any() && old('_method') !== 'PUT');
-    $openEditModal = request('open') === 'edit' || ($errors->any() && old('_method') === 'PUT');
+    $canDeleteStore = hasRole('Super Admin') || hasRole('Mess-Admin');
 @endphp
 <div class="container-fluid str-master-page">
     <x-breadcrum title="Store Master">

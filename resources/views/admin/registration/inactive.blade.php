@@ -58,7 +58,7 @@
         </div>
     @endsection
 
-    @section('scripts')
+    @push('scripts')
         <script>
             $(document).on('change', '.toggle-visible-switch', function() {
                 const id = $(this).data('id');
@@ -86,4 +86,4 @@
                     });
             });
         </script>
-    @endsection
+    @endpush

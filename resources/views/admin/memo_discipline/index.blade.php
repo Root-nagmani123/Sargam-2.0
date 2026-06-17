@@ -26,11 +26,31 @@
     </x-breadcrum>
 
     <x-session_message />
-    <div class="d-flex justify-content-end mb-3 md-toolbar-top">
-                <button type="button" class="btn md-btn-download" id="mdExportCsvBtn" aria-label="Download table data">
-                    <i class="bi bi-download" aria-hidden="true"></i>
-                    <span>Download</span>
-                </button>
+
+    <!-- start Zero Configuration -->
+    <div class="card" style="border-left:4px solid #004a93;">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-6">
+                    <h4 class="card-title">Discipline Memo</h4>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex justify-content-end align-items-center gap-2">
+
+                        <!-- Add Group Mapping -->
+                        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') ||
+                        hasRole('Training Induction Admin'))
+                        <a href="{{ route('memo.discipline.create') }}"
+                            class="btn btn-primary d-flex align-items-center">
+                            <i class="material-icons menu-icon material-symbols-rounded"
+                                style="font-size: 24px;">add</i>
+                            Discipline Memo
+                        </a>
+                        @endif
+
+
+                    </div>
+                </div>
             </div>
     <div class="card md-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
@@ -145,17 +165,17 @@
                     <table id="mdDisciplineTable" class="table table-hover align-middle mb-0 programme-dt-table md-dt-table">
                     <thead>
                         <tr>
-                            <th scope="col" class="text-nowrap">#</th>
-                            <th scope="col">Program Name</th>
-                            <th scope="col">Participant Name</th>
-                            <th scope="col" class="text-nowrap">Date</th>
-                            <th scope="col">Discipline</th>
-                            <th scope="col" class="text-center text-nowrap">Submitted</th>
-                            <th scope="col" class="text-center text-nowrap">Final</th>
-                            <th scope="col">Remarks</th>
-                            <th scope="col" class="text-nowrap">Status</th>
-                            @if(! hasRole('Student-OT'))
-                            <th scope="col" class="text-end text-nowrap">Action</th>
+                            <th width="60">#</th>
+                            <th>Program</th>
+                            <th>Participant</th>
+                            <th>Date</th>
+                            <th>Discipline</th>
+                            <th class="text-center">Submitted</th>
+                            <th class="text-center">Final</th>
+                            <th>Remarks</th>
+                            <th>Status</th>
+                            @if(! hasRole('Officer Trainee'))
+                            <th class="text-end">Action</th>
                             @endif
                         </tr>
                     </thead>
@@ -224,14 +244,14 @@
 
                                     <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                         data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
+                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
                                         <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                     </a>
                                 </div>
                                 @else
                                 <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                     data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                    data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
+                                    data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
                                     <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                 </a>
                                 <span class="badge bg-danger-subtle text-danger">
@@ -241,10 +261,10 @@
                             </td>
 
                             <!-- Action -->
-                            @if(! hasRole('Student-OT'))
+                            @if(! hasRole('Officer Trainee'))
                             <td class="text-end">
-                                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Admin')
-                                || hasRole('Training-Induction'))
+                                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin')
+                                || hasRole('Training Induction Admin'))
                                 @if($memo->status == 1)
                                 <button class="btn btn-sm btn-outline-primary" data-discipline="{{ $memo->pk }}"
                                     id="sendMemoBtn">

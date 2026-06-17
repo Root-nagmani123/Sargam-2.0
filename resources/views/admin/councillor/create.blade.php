@@ -7,7 +7,7 @@
 
     <x-breadcrum title="Councillor Group - Create" />
     <x-session_message />
-    <div class="card" style="border-left: 4px solid #004a93;">
+    <div class="card" >
         <div class="card-body">
             <h4 class="card-title mb-3">Create Councillor Group</h4>
             <hr>

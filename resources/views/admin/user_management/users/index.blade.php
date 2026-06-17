@@ -149,20 +149,19 @@
                                 $typeLabel = \App\Http\Controllers\Admin\UserController::userTypeLabel($user->User_type);
                             @endphp
                             <tr>
-                                <td class="col-sno">{{ $users->firstItem() + $index }}</td>
-                                <td class="col-username">{{ $user->user_name }}</td>
-                                <td class="col-name">{{ trim($user->first_name . ' ' . $user->last_name) }}</td>
-                                <td class="col-email">{{ $user->email_id }}</td>
-                                <td class="col-mobile">{{ $user->mobile_no ?: '—' }}</td>
-                                <td class="col-usertype">
-                                    <span class="badge rounded-pill {{ $typeBadge }}">{{ $typeLabel }}</span>
-                                </td>
-                                <td class="col-roles">
-                                    @if(!empty($user->roles))
-                                        <span class="badge rounded-pill users-role-badge">{{ $user->roles }}</span>
-                                    @else
-                                        <span class="badge rounded-pill users-role-badge users-role-badge--empty">No Role</span>
-                                    @endif
+                                <td>{{ $users->firstItem() + $index }}</td>
+                                <td>{{ $user->user_name }}</td>
+                                <td>{{ $user->first_name }} {{ $user->last_name }}</td>
+                                <td>{{ $user->email_id }}</td>
+                                <td>{{ $user->mobile_no }}</td>
+                                <td>
+                                    <span class="badge bg-success">
+                                      {{ DB::table('model_has_roles')
+                                        ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
+                                        ->where('model_has_roles.model_id', $user->pk)
+                                        ->pluck('name')
+                                        ->implode(', ') ?: 'No Role' }}
+                                    </span>
                                 </td>
                                 <td class="text-center col-action">
                                     <a href="{{ route('admin.users.assignRole', encrypt($user->pk)) }}"

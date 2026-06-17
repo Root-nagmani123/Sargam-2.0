@@ -41,8 +41,7 @@
         };
     @endphp
 
-    <div class="container-fluid" id="programme-show-top">
- <x-breadcrum title="{{ $course->course_name }}" />
+    <main class="container-fluid pb-3" id="main-content" role="main" tabindex="-1">
 
         <div class="row g-3 mb-4">
             <div class="col-6 col-md-4 col-xl">

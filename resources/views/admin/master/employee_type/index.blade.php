@@ -7,27 +7,22 @@
 @endpush
 
 @section('setup_content')
-<div class="container-fluid etm-master-page">
-    <x-breadcrum title="Employee Type Master">
-        <button type="button"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm etm-open-add-btn"
-            aria-controls="etmTypeModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add Employee Type</span>
-        </button>
-    </x-breadcrum>
-
-    <x-session_message />
-
-    <div class="card etm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
-        <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="etmDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="employeetypemaster-table"></div>
-            </div>
-
-            <div class="programme-dt-panel etm-dt-panel">
-                <div class="table-responsive etm-dt-scroll">
-                    {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+<div class="container-fluid">
+    <x-breadcrum title="Employee Type Master" />
+    <div class="datatables">
+        <!-- start Zero Configuration -->
+        <div class="card" >
+            <div class="card-body">
+                
+                <div class="row">
+                    <div class="col-6">
+                        <h4>Employee Type Master</h4>
+                    </div>
+                    <div class="col-6">
+                        <div class="float-end gap-2">
+                            <a href="{{route('master.employee.type.create')}}" class="btn btn-primary">+ Add Employee Type</a>
+                        </div>
+                    </div>
                 </div>
                 <div id="etmDtFooter"
                     class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"

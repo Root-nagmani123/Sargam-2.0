@@ -127,9 +127,9 @@
                         <div class="notice-description-content mt-2">
                             @if($needsTruncation)
                             <span class="notice-desc-preview">{{ $truncatedText }}<span class="notice-desc-ellipsis">... </span><button type="button" class="btn btn-link btn-sm p-0 notice-desc-toggle align-baseline">See more</button></span>
-                            <span class="notice-desc-full d-none">@clean($feedNotice->description)<button type="button" class="btn btn-link btn-sm p-0 ms-1 notice-desc-toggle align-baseline">See less</button></span>
+                            <span class="notice-desc-full d-none">{!! $feedNotice->description !!}<button type="button" class="btn btn-link btn-sm p-0 ms-1 notice-desc-toggle align-baseline">See less</button></span>
                             @else
-                            @clean($feedNotice->description)
+                            {!! $feedNotice->description !!}
                             @endif
                         </div>
                         @endif

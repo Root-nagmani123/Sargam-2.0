@@ -12,7 +12,7 @@
                             <!-- ---------------------------------- -->
                             <!-- Issue Management / CENTCOM -->
                             <!-- ---------------------------------- -->
-                            @if (!hasRole('Student-OT'))
+                            @if (!hasRole('Officer Trainee'))
                             <li class="sidebar-item mb-2">
                                 <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-management.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">All Issues</span>
@@ -29,7 +29,7 @@
                                 </a>
                             </li>
                             @endif
-                            @if(hasRole('Admin') || hasRole('SuperAdmin'))
+                            @if(hasRole('Super Admin') || hasRole('SuperAdmin'))
                             <li class="sidebar-item mb-2">
                                 <a class="sidebar-link d-flex align-items-center rounded-pill px-3 py-2 text-decoration-none" href="{{ route('admin.issue-categories.index') }}">
                                     <span class="hide-menu small small-sm-normal text-nowrap">Manage Categories</span>

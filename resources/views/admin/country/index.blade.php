@@ -7,14 +7,17 @@
 @endpush
 
 @section('setup_content')
-<div class="container-fluid cty-master-page py-4">
-    <x-breadcrum title="Country List">
-        <a href="{{ route('master.country.create') }}" id="openCreateCountry"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold text-nowrap shadow-sm">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add Country</span>
-        </a>
-    </x-breadcrum>
+<div class="container-fluid">
+    <x-breadcrum title="Country List" />
+    <div class="card" >
+        <div class="card-body">
+            <div class="row">
+                <div class="col-6">
+                    <h4>Country List</h4>
+                </div>
+                <div class="col-6">
+                    <div class="d-flex justify-content-end align-items-end mb-3">
+                        <div class="d-flex align-items-center gap-2">
 
     <x-session_message />
 
