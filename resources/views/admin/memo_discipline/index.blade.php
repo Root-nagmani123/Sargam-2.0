@@ -781,14 +781,20 @@
                                     </a>
                                 </div>
                                 @else
-                                <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                    data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                    data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
-                                    <i class="material-icons material-symbols-rounded fs-5">chat</i>
-                                </a>
                                 <span class="badge bg-secondary-subtle text-secondary">
                                     <i class="bi bi-lock me-1"></i> Closed
                                 </span>
+                                <div class="mt-1 d-flex gap-2">
+                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                        class="link-primary small fw-medium">
+                                        View Memo
+                                    </a>
+                                    <a class="text-success view-conversation" data-bs-toggle="offcanvas"
+                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
+                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
+                                        <i class="material-icons material-symbols-rounded fs-5">chat</i>
+                                    </a>
+                                </div>
                                 @endif
                             </td>
 

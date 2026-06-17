@@ -159,9 +159,12 @@ class AttendanceController extends Controller
 
     function getAttendanceList(Request $request)
     {
-        $backUrl = url()->previous();        // Full previous URL
-$segments = explode('/', trim($backUrl, '/')); // Split by '/'
- $currentPath = end($segments);   
+        $currentPath = $request->input('page_context', '');
+        if (empty($currentPath)) {
+            $backUrl = url()->previous();
+            $segments = explode('/', trim($backUrl, '/'));
+            $currentPath = end($segments);
+        }
         
         try {
             $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;

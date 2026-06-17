@@ -112,8 +112,8 @@ class CourseController extends Controller
             'Club Society' => 'Club Society'
         ];
         
-        $isSuperAdmin = hasRole('Super Admin');
-        if ($isSuperAdmin) {
+        $isPrivileged = hasRole('Super Admin') || hasRole('Admin');
+        if ($isPrivileged) {
             $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
             $selectedSupportingSection = old('supportingsection', '');
         } else {
@@ -158,8 +158,8 @@ class CourseController extends Controller
                 'Discipline' => 'Discipline',
                 'Club Society' => 'Club Society'
             ];
-            $isSuperAdmin = hasRole('Super Admin');
-            if ($isSuperAdmin) {
+            $isPrivileged = hasRole('Super Admin') || hasRole('Admin');
+            if ($isPrivileged) {
                 $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
             } else {
                 $userRoleIds = \Illuminate\Support\Facades\DB::table('model_has_roles')

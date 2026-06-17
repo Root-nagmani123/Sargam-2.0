@@ -204,11 +204,31 @@
                     </div>
                 </form>
                 @endif
-               @if($memo->status == 3)
-                <div class="alert alert-warning mt-3">
-                    <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
-                    @endif
+            @if($memo->status == 3)
+            <div class="alert alert-secondary mt-3">
+                <strong><i class="bi bi-lock me-1"></i> Memo Closed</strong>
+            </div>
+
+            <div class="card border mt-3">
+                <div class="card-header bg-light fw-semibold">Conclusion Details</div>
+                <div class="card-body">
+                    <div class="row g-3">
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small mb-1">Conclusion Type</label>
+                            <div class="fw-semibold">{{ $conclusion_type_name ?? '—' }}</div>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label text-muted small mb-1">Final Mark Deduction</label>
+                            <div class="fw-semibold text-danger">{{ $memo->final_mark_deduction ?? '—' }}</div>
+                        </div>
+                        <div class="col-md-12">
+                            <label class="form-label text-muted small mb-1">Conclusion Remark</label>
+                            <div class="fw-semibold">{{ $memo->conclusion_remark ?? '—' }}</div>
+                        </div>
+                    </div>
                 </div>
+            </div>
+            @endif
             </div>
         </div>
     </div>

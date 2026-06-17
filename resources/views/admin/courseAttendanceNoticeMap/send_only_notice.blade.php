@@ -103,12 +103,12 @@
                         <thead>
                             <tr>
                                 <th class="col">#</th>
-                                <th class="col">Course Name</th>
+                                <th class="col">Topic</th>
                                 <th class="col">Date</th>
                                 <th class="col">Session</th>
                                 <th class="col">Venue</th>
                                 <th class="col">Group</th>
-                                <th class="col">Topic</th>
+                                <th class="col">Course Name</th>
                                 <th class="col">Faculty</th>
                                 <th class="col">Action</th>
                             </tr>
@@ -126,6 +126,12 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
+    window.attendancePageContext = 'send_notice';
+
+    $(document).on('click', '#searchAttendance', function () {
+        performAttendanceSearch();
+    });
+
     (function() {
         function initChoicesDropdowns() {
             var selects = document.querySelectorAll('.js-choice');
