@@ -3,7 +3,140 @@
 @section('title', 'OT Student Attendance Details')
 
 @section('content')
-<div class="container-fluid">
+<style>
+/* ===================== Attendance Details — UI ===================== */
+.attendance-details .attn-card {
+    background: #fff;
+    border: 1px solid #eef0f3;
+    border-radius: 14px;
+    box-shadow: 0 1px 3px rgba(16, 24, 40, .06), 0 1px 2px rgba(16, 24, 40, .04);
+}
+.attendance-details .page-title { font-size: 24px; font-weight: 700; color: #101828; }
+
+/* Info cards */
+.attendance-details .info-card { position: relative; overflow: hidden; }
+.attendance-details .info-card::before {
+    content: ''; position: absolute; left: 0; top: 0; bottom: 0; width: 4px;
+    border-radius: 14px 0 0 14px;
+}
+.attendance-details .info-card.accent-blue::before { background: #2f6fed; }
+.attendance-details .info-card.accent-green::before { background: #16a34a; }
+.attendance-details .info-card.accent-teal::before { background: #0ea5e9; }
+.attendance-details .info-label { font-size: 12px; font-weight: 600; color: #8a93a2; letter-spacing: .2px; margin-bottom: 6px; }
+.attendance-details .info-value { font-size: 15px; font-weight: 600; color: #1e293b; line-height: 1.45; }
+
+/* View-mode buttons */
+.attendance-details .view-btn {
+    border: 1px solid #e3e8ef; background: #fff; color: #5a6a7e;
+    font-weight: 600; font-size: 14px; padding: 8px 22px; border-radius: 10px;
+    cursor: pointer; transition: background .15s ease, color .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.attendance-details .view-btn:hover:not(.active) { background: #f5f7fa; color: #1a3255; }
+.attendance-details .view-btn.active { background: #0d47a1; border-color: #0d47a1; color: #fff; box-shadow: 0 2px 8px rgba(13, 71, 161, .25); }
+
+/* Download button */
+.attendance-details .download-btn {
+    border: 1px solid #cfe0f5; background: #fff; color: #1565c0;
+    font-weight: 600; font-size: 14px; padding: 9px 18px; border-radius: 10px;
+    cursor: pointer; transition: background .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.attendance-details .download-btn:hover { background: #f3f8ff; border-color: #9cc2ee; box-shadow: 0 2px 8px rgba(13, 71, 161, .12); }
+.attendance-details .download-btn .dl-caret { font-size: 12px; transition: transform .15s ease; }
+
+/* Download hover dropdown */
+.attendance-details .download-dropdown { position: relative; display: inline-block; }
+.attendance-details .download-menu {
+    position: absolute; right: 0; top: calc(100% + 6px);
+    min-width: 170px; margin: 0; padding: 6px; list-style: none;
+    background: #fff; border: 1px solid #eaecf0; border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, .12);
+    opacity: 0; visibility: hidden; transform: translateY(-4px);
+    transition: opacity .15s ease, transform .15s ease, visibility .15s ease;
+    z-index: 1050;
+}
+.attendance-details .download-menu::before { content: ''; position: absolute; top: -8px; left: 0; right: 0; height: 8px; }
+.attendance-details .download-dropdown:hover .download-menu,
+.attendance-details .download-dropdown.open .download-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+.attendance-details .download-dropdown:hover .dl-caret,
+.attendance-details .download-dropdown.open .dl-caret { transform: rotate(180deg); }
+.attendance-details .download-item {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    background: transparent; border: none; border-radius: 7px; padding: 9px 12px;
+    font-size: 14px; font-weight: 500; color: #344054; cursor: pointer; text-align: left;
+    transition: background .15s ease, color .15s ease;
+}
+.attendance-details .download-item:hover { background: #f4f7fb; color: #0d47a1; }
+.attendance-details .download-item i { font-size: 16px; }
+
+/* Toolbar */
+.attendance-details .toolbar-label { font-size: 14px; font-weight: 500; color: #8a93a2; }
+.attendance-details .toolbar-control {
+    width: auto;
+    min-width: 160px;
+    max-width: 220px;
+    flex: 0 0 auto;
+    border: 1px solid #d8dde5; border-radius: 8px; font-size: 14px; color: #344054;
+}
+.attendance-details .toolbar-control:focus { border-color: #86b7fe; box-shadow: 0 0 0 3px rgba(13, 110, 253, .12); }
+/* select2 (Course filter in Archive mode) — keep it compact, not full width */
+.attendance-details .select2-container { width: auto !important; min-width: 200px; }
+.attendance-details .select2-container .select2-selection--single { height: calc(1.5em + .5rem + 2px); border-color: #d8dde5; border-radius: 8px; }
+.attendance-details .btn-reset { border: 1px solid #e35d6a; color: #d6293e; background: #fff; font-weight: 600; border-radius: 8px; white-space: nowrap; }
+.attendance-details .btn-reset:hover { background: #fdecee; color: #b71d2b; border-color: #d6293e; }
+.attendance-details .btn-tool { border: 1px solid #d8dde5; color: #475467; background: #fff; font-weight: 500; border-radius: 8px; white-space: nowrap; }
+.attendance-details .btn-tool:hover { border-color: #b6bfca; background: #f8fafc; }
+
+/* Expandable client-side search */
+.attendance-details #tableSearchWrap #tableSearchInput {
+    width: 0; opacity: 0; padding: 0; margin: 0; border: 1px solid transparent;
+    transition: width .25s ease, opacity .2s ease, padding .25s ease, margin .2s ease, border-color .15s ease;
+}
+.attendance-details #tableSearchWrap.open #tableSearchInput {
+    width: 200px; opacity: 1; padding: .3rem .65rem; margin-right: 6px; border-color: #d8dde5; border-radius: 8px;
+}
+
+/* Table */
+.attendance-details #attendanceTable thead th {
+    font-size: 13px; font-weight: 500; color: #8a93a2; background: #f8f9fb;
+    border-bottom: 1px solid #eef0f3; text-transform: none; vertical-align: middle;
+}
+.attendance-details #attendanceTable tbody td {
+    font-size: 14px; color: #475467; border-bottom: 1px solid #f2f4f7;
+    padding-top: 14px; padding-bottom: 14px; vertical-align: middle;
+}
+.attendance-details #attendanceTable tbody tr:last-child td { border-bottom: none; }
+.attendance-details #attendanceTable.table-hover tbody tr:hover { background: #f9fafb; }
+.attendance-details #attendanceTable .sub { font-size: 12.5px; color: #98a2b3; font-weight: 400; }
+.attendance-details .dash { color: #c3c9d2; }
+.attendance-details .status-badge { border-radius: 999px; padding: 6px 14px; font-weight: 600; font-size: 13px; }
+
+/* Pagination footer */
+.attendance-details .pagination .page-link {
+    border: 1px solid transparent; border-radius: 8px; margin: 0 3px;
+    color: #667085; font-size: 13px; min-width: 34px; text-align: center;
+}
+.attendance-details .pagination .page-item.active .page-link { background: #fff; border-color: #2f6fed; color: #2f6fed; font-weight: 600; }
+.attendance-details .pagination .page-link:hover { background: #f2f4f7; }
+.attendance-details .pagination .page-item.disabled .page-link { color: #c3c9d2; background: transparent; }
+.attendance-details .per-page { border: 1px solid #d8dde5; border-radius: 8px; font-size: 13px; color: #344054; }
+
+/* Column-visibility modal */
+.col-vis-modal { border: none; border-radius: 16px; box-shadow: 0 24px 48px rgba(16, 24, 40, .18); }
+.col-vis-modal .modal-title { font-size: 22px; font-weight: 700; color: #101828; }
+.col-vis-chip {
+    border: 1px solid #d5dae1; border-radius: 12px; padding: 14px 16px; cursor: pointer; background: #fff;
+    transition: border-color .15s ease, background .15s ease;
+}
+.col-vis-chip:hover { border-color: #9cc2ee; background: #f7faff; }
+.col-vis-chip .form-check-input { width: 18px; height: 18px; border-radius: 5px; }
+.col-vis-chip .form-check-input:checked { background-color: #2f6fed; border-color: #2f6fed; }
+
+@media (max-width: 575.98px) {
+    .attendance-details .toolbar-control { min-width: 0; max-width: none; width: 100%; }
+    .attendance-details #tableSearchWrap.open #tableSearchInput { width: 140px; }
+}
+</style>
+<div class="container-fluid attendance-details">
      @if(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST'))
     <x-breadcrum title="My Attendance Record" />
     <x-session_message />
@@ -19,19 +152,17 @@
     </div>
 
     {{-- Student Information Header --}}
-    <div class="card shadow mb-4" >
-        <div class="card-body">
-            <div class="row g-3">
-                <div class="col-md-4">
-                    <strong>Course Name:</strong>
-                    <span class="text-primary">
-                        {{ $course->course_name ?? 'N/A' }}
-                    </span>
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="attn-card info-card accent-blue h-100">
+                <div class="p-4">
+                    <div class="info-label">Course Name</div>
+                    <div class="info-value text-break">{{ $course->course_name ?? 'N/A' }}</div>
                 </div>
             </div>
         </div>
         <div class="col-md-4">
-            <div class="attn-card info-card accent-blue h-100">
+            <div class="attn-card info-card accent-green h-100">
                 <div class="p-4">
                     <div class="info-label">Student Name</div>
                     <div class="info-value text-break">{{ $student->display_name ?? 'N/A' }}</div>
@@ -39,7 +170,7 @@
             </div>
         </div>
         <div class="col-md-4">
-            <div class="attn-card info-card accent-blue h-100">
+            <div class="attn-card info-card accent-teal h-100">
                 <div class="p-4">
                     <div class="info-label">OT Code</div>
                     <div class="info-value text-break">{{ $student->generated_OT_code ?? 'N/A' }}</div>
@@ -60,9 +191,25 @@
                 Archive{{ $isArchive ? ': '.$recordCount : '' }}
             </button>
         </div>
-        <button type="button" id="downloadBtn" class="download-btn d-inline-flex align-items-center gap-2">
-            <i class="bi bi-download"></i> Download
-        </button>
+        <div class="download-dropdown" id="downloadWrap">
+            <button type="button" id="downloadBtn" class="download-btn d-inline-flex align-items-center gap-2"
+                aria-haspopup="true" aria-expanded="false">
+                <i class="bi bi-download"></i> Download
+                <i class="bi bi-chevron-down dl-caret"></i>
+            </button>
+            <ul class="download-menu" role="menu" aria-label="Download format">
+                <li>
+                    <button type="button" class="download-item" id="downloadCsv" role="menuitem">
+                        <i class="bi bi-filetype-csv"></i> CSV
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="download-item" id="downloadPdf" role="menuitem">
+                        <i class="bi bi-filetype-pdf"></i> PDF
+                    </button>
+                </li>
+            </ul>
+        </div>
     </div>
 
     {{-- Attendance Details Table --}}
@@ -334,6 +481,24 @@
             });
         })();
 
+        // ---- Download dropdown: opens on hover (CSS); click toggles for touch ----
+        (function() {
+            var wrap = document.getElementById('downloadWrap');
+            var btn = document.getElementById('downloadBtn');
+            if (!wrap || !btn) return;
+            btn.addEventListener('click', function(e) {
+                e.stopPropagation();
+                var open = wrap.classList.toggle('open');
+                btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+            });
+            document.addEventListener('click', function(e) {
+                if (!wrap.contains(e.target)) {
+                    wrap.classList.remove('open');
+                    btn.setAttribute('aria-expanded', 'false');
+                }
+            });
+        })();
+
         var table = document.getElementById('attendanceTable');
         if (!table) return;
 
@@ -466,38 +631,103 @@
             });
         });
 
-        // ---- Download (CSV export of full table, current filtered view) ----
-        var downloadBtn = document.getElementById('downloadBtn');
-        if (downloadBtn) {
-            downloadBtn.addEventListener('click', function() {
-                var csv = [];
-                table.querySelectorAll('tr').forEach(function(tr) {
-                    var cells = Array.prototype.slice.call(tr.children).filter(function(c) {
-                        return c.style.display !== 'none';
-                    });
-                    var line = cells.map(function(c) {
-                        var t = (c.innerText || '').replace(/\s+/g, ' ').trim();
-                        return '"' + t.replace(/"/g, '""') + '"';
-                    });
-                    csv.push(line.join(','));
-                });
-                var blob = new Blob(["﻿" + csv.join('\n')], { type: 'text/csv;charset=utf-8;' });
-                var url = URL.createObjectURL(blob);
-                var a = document.createElement('a');
-                a.href = url;
-                a.download = 'attendance-details.csv';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
+        // ---- Download (CSV / PDF export of the full table, respecting hidden columns) ----
+        function getExportMatrix() {
+            var headCells = table.querySelectorAll('thead th');
+            var visibleIdx = [], headers = [];
+            headCells.forEach(function(th, i) {
+                if (th.style.display !== 'none') {
+                    visibleIdx.push(i);
+                    headers.push((th.innerText || '').replace(/\s+/g, ' ').trim());
+                }
+            });
+            var body = [];
+            tbody.querySelectorAll('tr').forEach(function(tr) {
+                if (tr.id === 'noSearchResultRow') return;
+                var cells = tr.children;
+                body.push(visibleIdx.map(function(i) {
+                    var c = cells[i];
+                    return c ? (c.innerText || '').replace(/\s+/g, ' ').trim() : '';
+                }));
+            });
+            return { headers: headers, body: body };
+        }
+
+        function triggerDownload(blob, filename) {
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url; a.download = filename;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function escapeHtml(s) {
+            return String(s).replace(/[&<>"']/g, function(ch) {
+                return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
             });
         }
+
+        function exportCsv() {
+            var m = getExportMatrix();
+            function cell(t) { return '"' + String(t).replace(/"/g, '""') + '"'; }
+            var lines = [m.headers.map(cell).join(',')];
+            m.body.forEach(function(r) { lines.push(r.map(cell).join(',')); });
+            triggerDownload(new Blob(["﻿" + lines.join('\n')], { type: 'text/csv;charset=utf-8;' }), 'attendance-details.csv');
+        }
+
+        function exportPdf() {
+            var m = getExportMatrix();
+            if (typeof pdfMake !== 'undefined' && pdfMake.createPdf) {
+                var bodyArr = [m.headers.map(function(h) { return { text: h, style: 'th' }; })];
+                m.body.forEach(function(r) { bodyArr.push(r.map(function(c) { return { text: c, style: 'td' }; })); });
+                pdfMake.createPdf({
+                    pageOrientation: 'landscape', pageSize: 'A4', pageMargins: [20, 24, 20, 24],
+                    content: [
+                        { text: 'Attendance Details', style: 'title' },
+                        { table: { headerRows: 1, widths: m.headers.map(function() { return 'auto'; }), body: bodyArr }, layout: 'lightHorizontalLines' }
+                    ],
+                    styles: {
+                        title: { fontSize: 15, bold: true, margin: [0, 0, 0, 10] },
+                        th: { bold: true, fontSize: 9, fillColor: '#f3f4f6', color: '#1f2937' },
+                        td: { fontSize: 8, color: '#374151' }
+                    },
+                    defaultStyle: { fontSize: 8 }
+                }).download('attendance-details.pdf');
+                return;
+            }
+            // Fallback when pdfMake is unavailable: print window (Save as PDF)
+            var w = window.open('', '_blank');
+            if (!w) return;
+            var th = m.headers.map(function(h) { return '<th>' + escapeHtml(h) + '</th>'; }).join('');
+            var rows = m.body.map(function(r) {
+                return '<tr>' + r.map(function(c) { return '<td>' + escapeHtml(c) + '</td>'; }).join('') + '</tr>';
+            }).join('');
+            w.document.write(
+                '<html><head><title>Attendance Details</title><style>' +
+                'body{font-family:Arial,sans-serif;padding:20px;}h2{margin:0 0 14px;}' +
+                'table{border-collapse:collapse;width:100%;font-size:11px;}' +
+                'th,td{border:1px solid #d0d5dd;padding:6px 8px;text-align:left;}th{background:#f3f4f6;}' +
+                '</style></head><body><h2>Attendance Details</h2><table><thead><tr>' + th + '</tr></thead><tbody>' + rows + '</tbody></table>' +
+                '<scr' + 'ipt>window.onload=function(){window.print();}</scr' + 'ipt></body></html>'
+            );
+            w.document.close();
+        }
+
+        function closeDownloadMenu() {
+            var wrap = document.getElementById('downloadWrap');
+            if (wrap) wrap.classList.remove('open');
+        }
+
+        var csvBtn = document.getElementById('downloadCsv');
+        var pdfBtn = document.getElementById('downloadPdf');
+        if (csvBtn) csvBtn.addEventListener('click', function() { exportCsv(); closeDownloadMenu(); });
+        if (pdfBtn) pdfBtn.addEventListener('click', function() { exportPdf(); closeDownloadMenu(); });
     });
     </script>
 </div>
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
 $(document).ready(function() {
     // Initialize select2 if available
@@ -577,4 +807,4 @@ $(document).ready(function() {
     });
 });
 </script>
-@endsection
+@endpush

@@ -189,9 +189,6 @@
                         <button type="submit" form="vertical-wizard"
                             class="btn btn-primary rounded-1">Bulk Feedback Submit
                         </button>
-                        <button type="button" class="btn btn-outline-primary rounded-1 d-inline-flex align-items-center border-0 bg-white text-primary">
-                            <i class="bi bi-download me-1"></i> Download
-                        </button>
                     </div>
                 </div>
             </div>
@@ -317,7 +314,7 @@
                                                         <td style="min-width: 220px;">
                                                             @if ($feedback->Remark_checkbox == 1)
                                                                 <textarea class="form-control form-control-sm rounded-1 sf-remark" name="remarks[{{ $loop->index }}]" rows="1"
-                                                                    placeholder="eg. Lorem Ipsum dolor sit">{{ old('remarks.' . $loop->index) }}</textarea>
+                                                                    placeholder="Enter remark">{{ old('remarks.' . $loop->index) }}</textarea>
                                                             @else
                                                                 <span class="text-muted small">—</span>
                                                             @endif
