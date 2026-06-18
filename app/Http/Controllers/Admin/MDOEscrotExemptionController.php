@@ -53,31 +53,8 @@ class MDOEscrotExemptionController extends Controller
                 ->orderBy('mdo_duty_type_name')
                 ->pluck('mdo_duty_type_name', 'pk')
                 ->toArray();
-
-        $formCourseQuery = CourseMaster::where('active_inactive', '1');
-        if (!empty($data_course_id)) {
-            $formCourseQuery->whereIn('pk', $data_course_id);
-        }
-        $formCourses = $formCourseQuery
-            ->where('end_date', '>', $currentDate)
-            ->orderBy('course_name')
-            ->pluck('course_name', 'pk')
-            ->toArray();
-
-        $MDODutyTypeMaster = MDODutyTypeMaster::where('active_inactive', 1)
-            ->orderBy('mdo_duty_type_name')
-            ->pluck('mdo_duty_type_name', 'pk')
-            ->toArray();
-
-        $facultyMaster = FacultyMaster::where('active_inactive', 1)
-            ->orderBy('full_name')
-            ->pluck('full_name', 'pk')
-            ->toArray();
-
-        return $dataTable->render(
-            'admin.mdo_escrot_exemption.index',
-            compact('courseMaster', 'years', 'dutyTypes', 'filter', 'formCourses', 'MDODutyTypeMaster', 'facultyMaster')
-        );
+                    
+        return $dataTable->render('admin.mdo_escrot_exemption.index', compact('courseMaster', 'years', 'dutyTypes', 'filter'));
     }
 
     public function create()
@@ -116,29 +93,6 @@ class MDOEscrotExemptionController extends Controller
         $mdoDutyType = MDOEscotDutyMap::with(['studentMaster'])->findOrFail($id);
 
         return view('admin.mdo_escrot_exemption.edit', compact('id', 'MDODutyTypeMaster', 'mdoDutyType', 'facultyMaster'));
-    }
-
-    public function editData($id)
-    {
-        $mdoDutyType = MDOEscotDutyMap::with(['studentMaster', 'courseMaster'])->findOrFail($id);
-
-        $mdoDate = $mdoDutyType->mdo_date;
-        if ($mdoDate) {
-            $mdoDate = format_date($mdoDate, 'Y-m-d') ?: (is_string($mdoDate) ? substr($mdoDate, 0, 10) : $mdoDate);
-        }
-
-        return response()->json([
-            'record' => [
-                'pk' => encrypt($mdoDutyType->pk),
-                'mdo_duty_type_master_pk' => $mdoDutyType->mdo_duty_type_master_pk,
-                'mdo_date' => $mdoDate,
-                'Time_from' => $mdoDutyType->Time_from ? substr($mdoDutyType->Time_from, 0, 5) : '',
-                'Time_to' => $mdoDutyType->Time_to ? substr($mdoDutyType->Time_to, 0, 5) : '',
-                'faculty_master_pk' => $mdoDutyType->faculty_master_pk,
-                'student_name' => optional($mdoDutyType->studentMaster)->display_name ?? '—',
-                'course_name' => optional($mdoDutyType->courseMaster)->course_name ?? '—',
-            ],
-        ]);
     }
 
     function store(MDOEscrotExemptionRequest $request)
@@ -208,23 +162,10 @@ class MDOEscrotExemptionController extends Controller
                 \Log::error('Failed to send MDO/Escort exemption notifications: ' . $e->getMessage());
             }
 
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => true,
-                    'message' => 'MDO/Escort Exemption created successfully.',
-                ]);
-            }
-
             return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO/Escort Exemption created successfully.');
         } catch (\Exception $e) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Error occurred while creating MDO/Escort Exemption.',
-                ], 500);
-            }
-
-            return redirect()->route('mdo-escrot-exemption.index')->with('error', 'Error occurred while creating MDO/Escort Exemption.');
+            dd($e->getMessage());
+            return response()->json(['status' => false, 'message' => 'Error occurred while creating MDO/Escort Exemption.']);
         }
     }
 
@@ -287,23 +228,9 @@ class MDOEscrotExemptionController extends Controller
             
             $mdoDutyType->update($updateData);
 
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => true,
-                    'message' => 'MDO/Escort Exemption updated successfully.',
-                ]);
-            }
-
             return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO/Escort Exemption updated successfully.');
         } catch (\Exception $e) {
-            if ($request->ajax() || $request->wantsJson()) {
-                return response()->json([
-                    'status' => false,
-                    'message' => 'Error occurred while updating MDO/Escort Exemption.',
-                ], 500);
-            }
-
-            return redirect()->route('mdo-escrot-exemption.index')->with('error', 'Error occurred while updating MDO/Escort Exemption.');
+            return response()->json(['status' => false, 'message' => 'Error occurred while updating MDO/Escort Exemption.']);
         }
     }
 
