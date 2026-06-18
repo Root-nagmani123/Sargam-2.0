@@ -42,6 +42,7 @@ use Illuminate\Support\Facades\Schema;
 use App\Models\StudentMedicalExemption;
 use App\Models\MDOEscotDutyMap;
 use App\Models\StudentCourseGroupMap;
+use App\Models\DashboardCard;
 use App\Models\CalendarEvent;
 use App\Models\ClassSessionMaster;
 use App\Models\VenueMaster;
@@ -211,6 +212,7 @@ class UserController extends Controller
 
       $totalActiveCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '<', now())->where('end_date', '>=', now())->count();
       $upcomingCourses = CourseMaster::where('active_inactive', 1)->where('start_year', '>', now())->count();
+      $upcomingEventsCount = Holiday::active()->where('holiday_date', '>', now())->count();
 
 
 
@@ -358,6 +360,71 @@ class UserController extends Controller
         $fullDuplicateContractualIdCardRequests = $this->getTodayDuplicateContractualIdCardRequestsCount(false);
         $idCardApprovalRoute = route('admin.security.employee_idcard_approval.all');
 
+        // Role flags used for card visibility
+        $isSecurityRole = hasRole('Security Card') || hasRole('Admin Security');
+        $isSuperAdmin   = hasRole('Super Admin');
+        $isStudentOT    = hasRole('Student-OT');
+        $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
+
+        // Hardcoded card definitions: count, link, visibility
+        $cardDefinitions = [
+            'pending_permanent_id'    => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'pending_contractual_id'  => ['count' => $todayPendingContractualIdCardRequests ?? 0,  'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'duplicate_permanent_id'  => ['count' => $todayDuplicatePermIdCardRequests ?? 0,       'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'duplicate_contractual_id'=> ['count' => $todayDuplicateContractualIdCardRequests ?? 0,'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
+            'requested_family_id'     => ['count' => $todayFamilyApprovals ?? 0,                   'link' => route('admin.security.family_idcard_approval.index'),          'visible' => $isSecurityRole || $isSuperAdmin],
+            'requested_vehicle_pass'  => ['count' => $todayVehicleApprovals ?? 0,                  'link' => route('admin.security.vehicle_pass_approval.index'),           'visible' => $isSecurityRole || $isSuperAdmin],
+            'total_active_courses'    => ['count' => $totalActiveCourses,                          'link' => route('admin.dashboard.active_course'),                        'visible' => !$isSecurityRole],
+            'upcoming_courses'        => ['count' => $upcomingCourses,                             'link' => route('admin.dashboard.incoming_course'),                      'visible' => !$isSecurityRole],
+            'upcoming_events'         => ['count' => $upcomingEventsCount,                         'link' => route('admin.dashboard.upcoming_events'),                      'visible' => !$isSecurityRole],
+            'medical_exception'       => ['count' => $exemptionCount ?? 0,                         'link' => route('medical.exception.ot.view'),                            'visible' => !$isSecurityRole && $isStudentOT],
+            'total_guest_faculty'     => ['count' => $total_guest_faculty,                         'link' => route('admin.dashboard.guest_faculty'),                        'visible' => !$isSecurityRole && !$isStudentOT],
+            'pending_id_approval1'    => ['count' => $todayApproval1IdCardRequests ?? 0,           'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1IdCardRequests ?? 0) > 0],
+            'pending_dup_id_approval1'=> ['count' => $todayApproval1DuplicateIdCardRequests ?? 0,  'link' => route('admin.security.employee_idcard_approval.approval1'),    'visible' => !$isSecurityRole && ($todayApproval1DuplicateIdCardRequests ?? 0) > 0],
+            'ot_mdo_escort'           => ['count' => $MDO_count ?? 0,                              'link' => route('ot.mdo.escrot.exemption.view'),                         'visible' => !$isSecurityRole && $isStudentOT],
+            'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
+            'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
+            'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
+        ];
+
+        // Count map for custom cards added via UI.
+        // Add an entry here when a custom card needs a real count.
+        $cardCounts = [
+            // 'my_card_key' => SomeModel::where('status', 'pending')->count(),
+        ];
+
+        // Fetch which cards are enabled for this user's role
+        $userRoles = Auth::user()->roles ?? collect();
+        if ($userRoles->isNotEmpty()) {
+            $roleIds = $userRoles->pluck('id')->toArray();
+            $enabledCards = DashboardCard::whereHas('roles', function ($q) use ($roleIds) {
+                    $q->whereIn('roles.id', $roleIds);
+                })
+                ->orderBy('sort_order')
+                ->get();
+        } else {
+            $enabledCards = collect();
+        }
+
+        $baseCards = $enabledCards;
+
+        $enabledWidgetKeys = $baseCards->filter(fn($c) => str_starts_with($c->key, 'widget_'))->pluck('key')->toArray();
+
+        $cardsToRender = $baseCards->filter(fn($c) => !str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
+            $def = $cardDefinitions[$card->key] ?? null;
+            if ($def !== null && !$def['visible']) {
+                return null;
+            }
+            return [
+                'key'         => $card->key,
+                'label'       => $card->label,
+                'icon'        => $card->icon,
+                'color_class' => $card->color_class,
+                'link'        => $def['link'] ?? null,
+                'count'       => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
+            ];
+        })->filter()->values();
+
         return view('admin.dashboard', compact(
             'year',
             'month',
@@ -369,6 +436,7 @@ class UserController extends Controller
             'upcomingBirthdays',
             'totalActiveCourses',
             'upcomingCourses',
+            'upcomingEventsCount',
             'total_guest_faculty',
             'total_internal_faculty',
             'exemptionCount',
@@ -392,7 +460,9 @@ class UserController extends Controller
             'todayDuplicateContractualIdCardRequests',
             'fullDuplicatePermIdCardRequests',
             'fullDuplicateContractualIdCardRequests',
-            'idCardApprovalRoute'
+            'idCardApprovalRoute',
+            'cardsToRender',
+            'enabledWidgetKeys'
         ));
     }
 
