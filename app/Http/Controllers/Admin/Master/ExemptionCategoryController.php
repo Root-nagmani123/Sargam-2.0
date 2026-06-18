@@ -316,7 +316,7 @@ public function store(Request $request)
                         <!-- Edit Action -->
                         <a href="javascript:void(0)"
                         data-id="' . $row->pk . '"
-                        data-speciality_name="' . e($row->speciality_name) . '"
+                        data-speciality_name="' . $row->speciality_name . '"
                         data-created_date="' . $row->created_date . '"
                         data-active_inactive="' . $row->active_inactive . '"
                         class="btn btn-sm edit-btn btn-outline-primary d-inline-flex align-items-center gap-1"
