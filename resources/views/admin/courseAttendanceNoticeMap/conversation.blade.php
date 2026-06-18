@@ -1,11 +1,11 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Notice Conversation - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', ($type == 'memo' ? 'Memo Conversation' : 'Notice Conversation') . ' - Sargam | Lal Bahadur Shastri National Academy of Administration')
 
 @section('setup_content')
 <div class="container-fluid">
 
-    <x-breadcrum title="Notice Conversation" />
+    <x-breadcrum title="{{ $type == 'memo' ? 'Memo Conversation' : 'Notice Conversation' }}" />
     <x-session_message />
     @if(session('error') == 'document_error')
     <div class="alert alert-danger">
@@ -21,8 +21,8 @@
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
 
-            <p class="mb-1">SHOW CAUSE NOTICE</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::now()->format('d/m/Y') }} </p>
+            <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
+            <p><strong>Date:</strong> {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
             <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
                 from
@@ -43,7 +43,7 @@
                     </thead>
                     <tbody>
                         <tr>
-                            <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
+                            <td>{{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}</td>
                             <td>1</td>
                             <td>{{ $template_details->subject_topic ?? 'Topic Name' }}</td>
                             <td>{{ $template_details->venue_name ?? 'Venue' }}</td>
@@ -54,18 +54,20 @@
             </div>
 
             <div class="mb-4">
-                <p class="fw-bold">You are advised to do the following:</p>
-                <ul>
-                    <li>Reply to this Memo online through this <a href="#">conversation</a></li>
-                    <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
-                </ul>
-                <p>{!! $template_details->content ?? '' !!}</p>
+                {!! $template_details->content ?? '<p>It has been brought to the notice of the undersigned that you were absent without prior authorization from following session(s).</p>' !!}
             </div>
 
-            <p><strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: Show Cause Notice for {{ \Carbon\Carbon::now()->format('d/m/Y') }}</p>
+            <p>
+                <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
+                Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
+            </p>
 
-            <p class="text-end"><strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}</p>
+            <div class="text-end">
+                @if(!empty($template_details->signature_image))
+                    <img src="{{ Storage::url($template_details->signature_image) }}" alt="Signature" style="max-height:60px;display:block;margin-left:auto;margin-bottom:4px;">
+                @endif
+                <strong>{{ $template_details->director_name ?? 'Director Name' }}</strong><br>{{ $template_details->director_designation ?? 'Director Designation' }}
+            </div>
 
             <!-- Exemption Table -->
             <div class="table-responsive mb-4">
@@ -92,7 +94,7 @@
             <!-- Conversation Section -->
             <h6 class="fw-bold">Conversation</h6>
             <div class="table-responsive mb-4">
-                <table class="table">
+                <table class="table" id="conversationTable">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -102,26 +104,15 @@
                             <th>Document</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="conversationBody">
                         @forelse ($memoNotice as $row)
-                        <tr>
-                            <td class="{{ $loop->first ? ' ' : '' }}">
-                                {{ $row->display_name ?? 'N/A' }}
-                            </td>
-
-                            <td class="{{ $loop->first ? '' : '' }}">
-                                {{ $row->student_decip_incharge_msg }}
-                            </td>
-
+                        <tr data-pk="{{ $row->pk }}">
+                            <td>{{ $row->display_name ?? 'N/A' }}</td>
+                            <td>{{ $row->student_decip_incharge_msg }}</td>
+                            <td>{{ \Carbon\Carbon::parse($row->created_date ?? 'now', 'UTC')->timezone('Asia/Kolkata')->format('d-m-Y h:i A') }}</td>
                             <td>
-                                {{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}
-                            </td>
-
-                            <td>
-                                {{-- Add delete button here if needed --}}
                                 @if($row->notice_status == 1)
-                                <form
-                                    action="{{ route('memo.notice.management.noticedeleteMessage', ['id' => $row->pk, 'type' =>  $type ]) }}"
+                                <form action="{{ route('memo.notice.management.noticedeleteMessage', ['id' => $row->pk, 'type' => $type]) }}"
                                     method="POST" onsubmit="return confirm('Are you sure?')">
                                     @csrf
                                     @method('DELETE')
@@ -131,22 +122,17 @@
                                 <span class="text-muted">N/A</span>
                                 @endif
                             </td>
-
                             <td>
                                 @if ($row->doc_upload)
                                 <a href="{{ asset('storage/' . $row->doc_upload) }}" target="_blank">View</a>
-                                @else
-                                ---
+                                @else ---
                                 @endif
                             </td>
                         </tr>
                         @empty
-                        <tr>
-                            <td colspan="5" class="text-center text-muted">No conversation found.</td>
-                        </tr>
+                        <tr id="emptyRow"><td colspan="5" class="text-center text-muted">No conversation found.</td></tr>
                         @endforelse
                     </tbody>
-
                 </table>
             </div>
 
@@ -187,7 +173,9 @@
                         <!-- Upload -->
                         <div class="col-6">
                             <label class="form-label">Upload Document</label>
-                            <input type="file" class="form-control" name="document" accept=".jpg,.jpeg,.png,.pdf">
+                            <input type="file" class="form-control" id="conv_doc_input" name="document" accept=".jpg,.jpeg,.png,.pdf">
+                            <div id="conv_file_preview" class="mt-1"></div>
+                            <small class="text-muted">Allowed: JPG, PNG, PDF · Max 2 MB</small>
                         </div>
 
                         <!-- Status -->
@@ -249,6 +237,7 @@
                     <hr>
                     <div class="text-end">
                         <button type="submit" class="btn btn-primary">Send</button>
+
                         <a href="{{ route('memo.notice.management.index') }}" class="btn btn-secondary">Back</a>
                     </div>
 
@@ -264,12 +253,104 @@
                     <strong>Notice Closed:</strong> This notice has been closed. You cannot reply to it.
                 </div>
                  @endif
+
+                @php
+                    $isClosed = (isset($memoNotice->first()->communication_status) && $memoNotice->first()->communication_status == 2)
+                             || (isset($memoNotice->first()->notice_status) && $memoNotice->first()->notice_status == 2);
+                    $conclusionTypeName = '';
+                    if (!empty($template_details->conclusion_type_pk)) {
+                        $conclusionTypeName = $memo_conclusion_master->firstWhere('pk', $template_details->conclusion_type_pk)->discussion_name ?? '';
+                    }
+                @endphp
+
+                @if($isClosed && (!empty($template_details->conclusion_type_pk) || !empty($template_details->conclusion_remark)))
+                <div class="card border-secondary mt-3">
+                    <div class="card-header fw-semibold bg-light">Conclusion Details</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            @if($conclusionTypeName)
+                            <div class="col-md-6">
+                                <label class="form-label text-muted mb-1">Conclusion Type</label>
+                                <p class="mb-0 fw-semibold">{{ $conclusionTypeName }}</p>
+                            </div>
+                            @endif
+                            @if(!empty($template_details->mark_of_deduction))
+                            <div class="col-md-6">
+                                <label class="form-label text-muted mb-1">Mark of Deduction</label>
+                                <p class="mb-0 fw-semibold">{{ $template_details->mark_of_deduction }}</p>
+                            </div>
+                            @endif
+                            @if(!empty($template_details->conclusion_remark))
+                            <div class="col-12">
+                                <label class="form-label text-muted mb-1">Conclusion Remark</label>
+                                <p class="mb-0">{{ $template_details->conclusion_remark }}</p>
+                            </div>
+                            @endif
+                        </div>
+                    </div>
+                </div>
+                @endif
             </div>
         </div>
     </div>
     @endsection
     @section('scripts')
 <script>
+/* ── Real-time chat polling ── */
+(function () {
+    var pollUrl  = "{{ route('memo.notice.management.getNewMessages', [$id, $type]) }}";
+    var body     = document.getElementById('conversationBody');
+    var lastPk   = 0;
+
+    // Seed lastPk from currently rendered rows
+    body.querySelectorAll('tr[data-pk]').forEach(function (r) {
+        var pk = parseInt(r.getAttribute('data-pk'), 10);
+        if (pk > lastPk) lastPk = pk;
+    });
+
+    function escHtml(s) {
+        return String(s)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    }
+
+    function appendMessage(msg) {
+        var emptyRow = document.getElementById('emptyRow');
+        if (emptyRow) emptyRow.remove();
+
+        var tr = document.createElement('tr');
+        tr.setAttribute('data-pk', msg.pk);
+
+        var docCell = msg.doc_upload
+            ? '<a href="/storage/' + escHtml(msg.doc_upload) + '" target="_blank">View</a>'
+            : '---';
+
+        tr.innerHTML =
+            '<td>' + escHtml(msg.display_name || 'N/A') + '</td>' +
+            '<td>' + escHtml(msg.student_decip_incharge_msg || '') + '</td>' +
+            '<td>' + escHtml(msg.formatted_date || '') + '</td>' +
+            '<td><span class="text-muted">N/A</span></td>' +
+            '<td>' + docCell + '</td>';
+
+        body.appendChild(tr);
+        if (lastPk < msg.pk) lastPk = msg.pk;
+    }
+
+    function poll() {
+        fetch(pollUrl + '?last_pk=' + lastPk, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        })
+        .then(function (r) { return r.json(); })
+        .then(function (msgs) {
+            msgs.forEach(appendMessage);
+        })
+        .catch(function () {}); // silent on network error
+    }
+
+    setInterval(poll, 4000);
+})();
+/* ── end polling ── */
+
 document.addEventListener('DOMContentLoaded', function () {
 
     const status = document.getElementById('status');
@@ -307,6 +388,42 @@ document.addEventListener('DOMContentLoaded', function () {
     // On page load
     toggleConclusion();
     toggleDeduction();
+
+    // File preview with type & size
+    const convDocInput = document.getElementById('conv_doc_input');
+    const convFilePreview = document.getElementById('conv_file_preview');
+    const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'application/pdf'];
+    const MAX_SIZE = 2 * 1024 * 1024;
+
+    if (convDocInput) {
+        convDocInput.addEventListener('change', function () {
+            convFilePreview.innerHTML = '';
+            const file = this.files[0];
+            if (!file) return;
+
+            const ext = file.name.split('.').pop().toUpperCase();
+            const sizeKB = (file.size / 1024).toFixed(1);
+            const sizeLabel = file.size >= 1024 * 1024
+                ? (file.size / (1024 * 1024)).toFixed(2) + ' MB'
+                : sizeKB + ' KB';
+            const isValidType = ALLOWED_TYPES.includes(file.type);
+            const isValidSize = file.size <= MAX_SIZE;
+
+            if (!isValidType || !isValidSize) {
+                const msg = !isValidType
+                    ? 'Invalid file type. Only JPG, PNG, PDF allowed.'
+                    : 'File too large. Max 2 MB allowed.';
+                convFilePreview.innerHTML = `<span class="badge bg-danger mt-1">⚠ ${msg}</span>`;
+                convDocInput.value = '';
+                return;
+            }
+
+            convFilePreview.innerHTML = `
+                <span class="badge bg-light border text-dark mt-1" style="font-size:.78rem;">
+                    📎 ${file.name} &nbsp;|&nbsp; <strong>${ext}</strong> &nbsp;|&nbsp; ${sizeLabel}
+                </span>`;
+        });
+    }
 
     // Set current date & time
     const now = new Date();

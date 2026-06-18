@@ -611,19 +611,6 @@ body.calendar-suppress-course-filter-dropdown .calendar-choices-bootstrap .choic
     display: none;
 }
 
-/* TimeGrid overlapping events */
-.fc-timegrid-event .fc-event-main {
-    border-left: 3px solid var(--primary-color);
-    border-radius: 8px;
-    background: #fff !important;
-    box-shadow: var(--shadow-sm);
-    overflow: hidden;
-}
-
-.fc-timegrid-event:hover .fc-event-main {
-    box-shadow: var(--shadow);
-}
-
 /* Focus visibility on events (GIGW) */
 .fc-event-card:focus-visible,
 .fc-timegrid-event:focus-visible {
@@ -1212,7 +1199,6 @@ body.compact-mode .fc-event-card {
 body.compact-mode .fc-event-card .event-title { font-size: 0.85rem; }
 body.compact-mode .fc-event-card .event-meta .meta-item { display: none; }
 body.compact-mode .fc-event-card .event-meta .meta-item--time { display: inline-flex; }
-body.compact-mode .fc-timegrid-event .fc-event-main { border-left-width: 3px; }
 body.compact-mode .fc-popover .fc-popover-body .fc-event-card { padding: 0.5rem 0.625rem; }
 
 body.compact-mode .list-event-card { padding: 0.5rem 0.625rem !important; border-radius: 10px; }
@@ -3017,6 +3003,9 @@ class CalendarManager {
             });
             console.log('Events after filtering:', filteredData.length);
             successCallback(filteredData);
+            // Reveal Saturday/Sunday columns deterministically from the fetched
+            // data (more reliable than reading getEvents() on the loading event).
+            this.revealWeekendsForData(filteredData);
         })
         .catch(error => {
             console.error('Error fetching events:', error);
@@ -3033,15 +3022,14 @@ class CalendarManager {
             return;
         }
         
-        // Check if any events fall on Saturday (day 6)
-        const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6; // 6 = Saturday
-        });
+        // Sunday event => show Saturday + Sunday; only-Saturday event => Saturday only.
+        const hasSaturdayEvents = events.some(event => new Date(event.start).getDay() === 6); // 6 = Saturday
+        const hasSundayEvents = events.some(event => new Date(event.start).getDay() === 0);   // 0 = Sunday
 
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const hiddenDays = hasSaturdayEvents ? [0] : [0, 6];
-        
+        const hiddenDays = [];
+        if (!(hasSaturdayEvents || hasSundayEvents)) hiddenDays.push(6);
+        if (!hasSundayEvents) hiddenDays.push(0);
+
         // Use setTimeout to ensure calendar is fully rendered
         setTimeout(() => {
             this.calendar.setOption('hiddenDays', hiddenDays);
@@ -3049,18 +3037,38 @@ class CalendarManager {
         }, 50);
     }
 
+    // Reveal weekend columns based on a concrete event dataset (raw feed objects
+    // with a `start` field). Saturday/Sunday show only when an event falls on them.
+    revealWeekendsForData(data) {
+        if (!this.calendar) return;
+        try {
+            const hasSat = (data || []).some(e => new Date(e.start).getDay() === 6);
+            const hasSun = (data || []).some(e => new Date(e.start).getDay() === 0);
+            // Sunday can only show if Saturday also shows (no gap after Friday):
+            // Sunday event => show Saturday + Sunday; only Saturday event => Saturday only.
+            const showSat = hasSat || hasSun;
+            const showSun = hasSun;
+            const hidden = [];
+            if (!showSat) hidden.push(6);
+            if (!showSun) hidden.push(0);
+            const cur = this.calendar.getOption('hiddenDays') || [];
+            if (JSON.stringify([...hidden].sort()) !== JSON.stringify([...cur].sort())) {
+                this.calendar.setOption('hiddenDays', hidden);
+            }
+        } catch (e) { /* noop */ }
+    }
+
     updateWeekendVisibility() {
         // Get all events currently in the calendar
         const events = this.calendar.getEvents();
         
-        // Check if any events fall on Saturday (day 6)
-        const hasSaturdayEvents = events.some(event => {
-            const eventDate = new Date(event.start);
-            return eventDate.getDay() === 6;
-        });
+        // Sunday event => show Saturday + Sunday; only-Saturday event => Saturday only.
+        const hasSaturdayEvents = events.some(event => new Date(event.start).getDay() === 6);
+        const hasSundayEvents = events.some(event => new Date(event.start).getDay() === 0);
 
-        // Update hiddenDays: always hide Sunday (0), conditionally hide Saturday (6)
-        const newHiddenDays = hasSaturdayEvents ? [0] : [0, 6];
+        const newHiddenDays = [];
+        if (!(hasSaturdayEvents || hasSundayEvents)) newHiddenDays.push(6);
+        if (!hasSundayEvents) newHiddenDays.push(0);
         const currentHiddenDays = this.calendar.getOption('hiddenDays') || [];
         
         // Only update if changed to prevent unnecessary re-renders
@@ -4388,9 +4396,10 @@ async setInternalFaculty(internalFacultyIds) {
         // Apply week offset
         weekStart.setDate(weekStart.getDate() + (weekOffset * 7));
 
-        // Set week end (Friday)
+        // Set week end (Sunday). Weekend days are included so Saturday/Sunday
+        // events surface; their columns are only rendered when such events exist.
         const weekEnd = new Date(weekStart);
-        weekEnd.setDate(weekEnd.getDate() + 4); // Monday to Friday
+        weekEnd.setDate(weekEnd.getDate() + 6); // Monday to Sunday
 
         // Filter events that fall within this week
         return events.filter(event => {
@@ -4458,18 +4467,21 @@ async setInternalFaculty(internalFacultyIds) {
                 weekElement.textContent = weekNum;
             }
 
-            // Update table header with week dates
-            this.updateTableHeader(weekStart);
+            // Filter events for the week first, so we know whether the
+            // weekend columns need to be shown.
+            const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
+            const activeDays = this.computeActiveDays(filteredEvents, weekStart);
+
+            // Update table header with week dates (weekend columns appear only if used)
+            this.updateTableHeader(weekStart, activeDays);
 
             // Debug: Log the week being displayed
             console.log('List view - Week offset:', this.listViewWeekOffset);
             console.log('Week start:', weekStart);
             console.log('Total events:', events.length);
-
-            // Filter and render events
-            const filteredEvents = this.getEventsForWeek(events, this.listViewWeekOffset);
             console.log('Filtered events for this week:', filteredEvents.length);
-            this.renderListView(filteredEvents);
+
+            this.renderListView(filteredEvents, activeDays);
             this.renderWeekCards(events, weekStart);
             this.updateWeekRangeText(weekStart);
         } catch (error) {
@@ -4477,7 +4489,44 @@ async setInternalFaculty(internalFacultyIds) {
         }
     }
 
-    updateTableHeader(weekStart) {
+    // Weekdays are always shown; Saturday/Sunday only when an event falls on them.
+    computeActiveDays(events, weekStart) {
+        const days = [
+            { label: 'Monday', short: 'Mon', offset: 0 },
+            { label: 'Tuesday', short: 'Tue', offset: 1 },
+            { label: 'Wednesday', short: 'Wed', offset: 2 },
+            { label: 'Thursday', short: 'Thu', offset: 3 },
+            { label: 'Friday', short: 'Fri', offset: 4 }
+        ];
+        const ws = new Date(weekStart.getFullYear(), weekStart.getMonth(), weekStart.getDate());
+        const hasEventOnOffset = (offset) => {
+            const target = new Date(ws);
+            target.setDate(target.getDate() + offset);
+            return (events || []).some(evt => {
+                const d = new Date(evt.start);
+                if (isNaN(d)) return false;
+                return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() === target.getTime();
+            });
+        };
+        const hasSat = hasEventOnOffset(5);
+        const hasSun = hasEventOnOffset(6);
+        // Sunday event => show Saturday + Sunday; only-Saturday event => Saturday only.
+        if (hasSat || hasSun) days.push({ label: 'Saturday', short: 'Sat', offset: 5 });
+        if (hasSun) days.push({ label: 'Sunday', short: 'Sun', offset: 6 });
+        return days;
+    }
+
+    defaultWeekdays() {
+        return [
+            { label: 'Monday', short: 'Mon', offset: 0 },
+            { label: 'Tuesday', short: 'Tue', offset: 1 },
+            { label: 'Wednesday', short: 'Wed', offset: 2 },
+            { label: 'Thursday', short: 'Thu', offset: 3 },
+            { label: 'Friday', short: 'Fri', offset: 4 }
+        ];
+    }
+
+    updateTableHeader(weekStart, activeDays) {
         // Get the table and its header
         const table = document.getElementById('timetableTable');
         if (!table) {
@@ -4491,27 +4540,27 @@ async setInternalFaculty(internalFacultyIds) {
             return;
         }
 
-        const days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'];
-        const headers = thead.querySelectorAll('th:not(.time-column)');
+        const days = activeDays || this.defaultWeekdays();
 
-        headers.forEach((header, index) => {
+        let html = '<th scope="col" class="time-column">Time</th>';
+        days.forEach(day => {
             const date = new Date(weekStart);
-            date.setDate(date.getDate() + index);
-            const dateStr = date.toLocaleDateString('en-US', {
-                month: 'short',
-                day: 'numeric'
-            });
-            header.innerHTML = `${days[index]}<br><small class="text-muted">${dateStr}</small>`;
+            date.setDate(date.getDate() + day.offset);
+            const dateStr = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+            html += `<th scope="col">${day.label}<br><small class="text-muted">${dateStr}</small></th>`;
         });
+        thead.innerHTML = html;
     }
 
-    renderListView(events) {
+    renderListView(events, activeDays) {
         const tbody = document.getElementById('timetableBody');
+        const days = activeDays || this.defaultWeekdays();
+        const colCount = days.length + 1; // + Time column
 
         if (!events.length) {
             tbody.innerHTML = `
                 <tr>
-                    <td colspan="6" class="text-center p-5">
+                    <td colspan="${colCount}" class="text-center p-5">
                         <div class="empty-state">
                             <i class="bi bi-calendar-x display-5 text-muted mb-3"></i>
                             <p class="text-muted mb-3">No events scheduled</p>
@@ -4530,9 +4579,9 @@ async setInternalFaculty(internalFacultyIds) {
             html += `
                 <tr>
                     <th scope="row" class="time-slot">${time}</th>
-                    ${['Mon', 'Tue', 'Wed', 'Thu', 'Fri'].map(day => `
+                    ${days.map(day => `
                         <td class="event-cell">
-                            ${dayEvents[day] ? this.renderListEvent(dayEvents[day]) : ''}
+                            ${dayEvents[day.short] ? this.renderListEvent(dayEvents[day.short]) : ''}
                         </td>
                     `).join('')}
                 </tr>
@@ -4653,11 +4702,15 @@ async setInternalFaculty(internalFacultyIds) {
     renderListEvent(events) {
         const arr = Array.isArray(events) ? events : [events];
         return arr.map(event => {
-            const groupName = event.extendedProps.group_name || event.extendedProps.group || '';
-            const title = event.title || event.extendedProps.topic || '';
-            const faculty = event.extendedProps.faculty_name || '';
-            const venue = event.extendedProps.vanue || event.extendedProps.venue_name || '';
-            const classSession = event.extendedProps.class_session || '';
+            // The list view receives raw feed objects (flat fields); the calendar
+            // path provides FullCalendar objects (fields under extendedProps).
+            // Support both shapes so a missing extendedProps never throws.
+            const ep = event.extendedProps || event;
+            const groupName = ep.group_name || ep.group || '';
+            const title = event.title || ep.topic || '';
+            const faculty = ep.faculty_name || '';
+            const venue = ep.vanue || ep.venue_name || '';
+            const classSession = ep.class_session || ep.class_session_debug || '';
             const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
             const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
             const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';

@@ -89,6 +89,15 @@
                         @endforeach
                     </select>
                 </div>
+                <div class="col-12 col-sm-6 col-md-4 col-lg-2">
+                    <label for="filter_stay_period_text" class="form-label fw-medium">Stay Period</label>
+                    <select class="form-select" id="filter_stay_period_text">
+                        <option value="">— All Periods —</option>
+                        @foreach($stayPeriods ?? [] as $sp)
+                            <option value="{{ $sp }}">{{ $sp }}</option>
+                        @endforeach
+                    </select>
+                </div>
                 <div class="col-12 col-sm-6 col-md-4 col-lg-4 d-flex flex-wrap gap-2">
                     <button type="button" id="btnApplyFilters" class="btn btn-primary d-inline-flex align-items-center gap-2">
                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">search</i>
@@ -133,7 +142,7 @@
 <script src="https://cdn.jsdelivr.net/npm/tom-select@2.3.1/dist/js/tom-select.complete.min.js"></script>
 <script>
 $(document).ready(function() {
-    var filterSelectIds = ['filter_allotment_year', 'filter_campus_name', 'filter_building_name', 'filter_type_of_building', 'filter_house_no', 'filter_employee_name', 'filter_department_name', 'filter_employee_type'];
+    var filterSelectIds = ['filter_allotment_year', 'filter_campus_name', 'filter_building_name', 'filter_type_of_building', 'filter_house_no', 'filter_employee_name', 'filter_department_name', 'filter_employee_type', 'filter_stay_period_text'];
 
     function initTomSelects() {
         if (typeof TomSelect !== 'undefined') {
@@ -202,6 +211,7 @@ $(document).ready(function() {
                 d.filter_employee_name = $('#filter_employee_name').val();
                 d.filter_department_name = $('#filter_department_name').val();
                 d.filter_employee_type = $('#filter_employee_type').val();
+                d.filter_stay_period_text = $('#filter_stay_period_text').val();
             }
         },
         columns: [
@@ -213,7 +223,11 @@ $(document).ready(function() {
             { data: 'house_no', name: 'house_no' },
             { data: 'employee_name', name: 'employee_name' },
             { data: 'department_name', name: 'department_name' },
-            { data: 'employee_type', name: 'employee_type' }
+            { data: 'employee_type', name: 'employee_type' },
+            { data: 'date_of_allotment', name: 'date_of_allotment', orderable: true, searchable: false },
+            { data: 'date_of_exit', name: 'date_of_exit', orderable: true, searchable: false },
+            { data: 'occupancy_status', name: 'occupancy_status' },
+            { data: 'stay_period_text', name: 'stay_period_text' }
         ],
         dom: '<"row flex-wrap align-items-center gap-2 mb-3"<"col-12 col-sm-6 col-md-4"l><"col-12 col-sm-6 col-md-5"f>>rt<"row align-items-center mt-3"<"col-12 col-sm-6 col-md-5"i><"col-12 col-sm-6 col-md-7"p>>'
     });
@@ -239,7 +253,8 @@ $(document).ready(function() {
             house_no: $('#filter_house_no').val(),
             employee_name: $('#filter_employee_name').val(),
             department: $('#filter_department_name').val(),
-            employee_type: $('#filter_employee_type').val()
+            employee_type: $('#filter_employee_type').val(),
+            stay_period: $('#filter_stay_period_text').val()
         };
     }
 
@@ -271,6 +286,10 @@ $(document).ready(function() {
         if (resetFrom <= 7) {
             $('#filter_employee_type').val('');
             fillSelect($('#filter_employee_type'), opts.employeeTypes || [], '— All Types —');
+        }
+        if (resetFrom <= 8) {
+            $('#filter_stay_period_text').val('');
+            fillSelect($('#filter_stay_period_text'), opts.stayPeriods || [], '— All Periods —');
         }
         if (reloadTable) {
             table.ajax.reload(null, false);
@@ -305,6 +324,9 @@ $(document).ready(function() {
         fetchAndUpdateFilters(7, true);
     });
     $('#filter_employee_type').on('change', function() {
+        fetchAndUpdateFilters(8, true);
+    });
+    $('#filter_stay_period_text').on('change', function() {
         table.ajax.reload(null, false);
     });
 
@@ -314,7 +336,7 @@ $(document).ready(function() {
 
     $('#btnResetFilters').on('click', function() {
         destroyTomSelects();
-        $('#filter_allotment_year, #filter_campus_name, #filter_building_name, #filter_type_of_building, #filter_house_no, #filter_employee_name, #filter_department_name, #filter_employee_type').val('');
+        $('#filter_allotment_year, #filter_campus_name, #filter_building_name, #filter_type_of_building, #filter_house_no, #filter_employee_name, #filter_department_name, #filter_employee_type, #filter_stay_period_text').val('');
         $.get(filterOptionsUrl, {}, function(opts) {
             fillSelect($('#filter_allotment_year'), opts.years || [], '— All Years —');
             fillSelect($('#filter_campus_name'), opts.campuses || [], '— All Campuses —');
@@ -324,6 +346,7 @@ $(document).ready(function() {
             fillSelect($('#filter_employee_name'), opts.employeeNames || [], '— All Employees —');
             fillSelect($('#filter_department_name'), opts.departments || [], '— All Departments —');
             fillSelect($('#filter_employee_type'), opts.employeeTypes || [], '— All Types —');
+            fillSelect($('#filter_stay_period_text'), opts.stayPeriods || [], '— All Periods —');
             initTomSelects();
             table.ajax.reload(null, false);
         });
