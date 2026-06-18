@@ -462,6 +462,7 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
+        Route::get('/event/create', [CalendarController::class, 'createEvent'])->name('event.create');
         Route::get('/get-subject-Name', [CalendarController::class, 'getSubjectName'])->name('get.subject.name');
         Route::post('/events', [CalendarController::class, 'store'])->name('event.store');
         Route::get('/full-calendar-details', [CalendarController::class, 'fullCalendarDetails'])->name('event.calendar-details');
@@ -486,6 +487,8 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/single-calendar-details', [CalendarController::class, 'otSingleCalendarDetails'])->name('event.Singlecalendar-details');
             Route::get('/download', [CalendarController::class, 'otDownloadPdf'])->name('download');
         });
+        // Academic time table (flat session list) — printable / downloadable PDF
+        Route::get('/timetable/pdf', [CalendarController::class, 'downloadTimetablePdf'])->name('timetable.pdf');
         // Whole-week timetable — printable / downloadable PDF
         Route::get('/weekly-timetable/pdf', [CalendarController::class, 'weeklyTimetablePdf'])->name('weekly-timetable.pdf');
         // Course Information + Resource Persons (Faculty for the Week) — printable / downloadable PDF

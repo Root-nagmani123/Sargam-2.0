@@ -36,6 +36,13 @@ class CalendarEvent extends Model
         'remark_checkbox',
         'bio_attendance',
         'Faculty_feedback',
+        // Redesigned full-page Add Event form
+        'sector_pk',
+        'is_break',
+        'break_type',
+        'break_start_time',
+        'break_end_time',
+        'faculty_details',
         'active_inactive',
         'created_date',
         'modified_date',

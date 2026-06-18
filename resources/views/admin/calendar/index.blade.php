@@ -27,15 +27,20 @@
     <x-breadcrum title="Calendar Creation">
    @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'))
         <a id="createEventButton"
-                data-bs-toggle="modal"
-                data-bs-target="#eventModal"
-            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
+                href="{{ route('calendar.event.create') }}"
+            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
             <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
             <span>Add Event</span>
         </a>
         @endif
     </x-breadcrum>
+<div class="d-flex justify-content-end mb-3">
+    <a href="#" id="btnTimetablePdf" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap" style="background-color: #fff; border:0;color:#004a93;" title="Download the visible timetable as a PDF">
+        <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">download</i>
+        <span>Download</span>
+    </a>
 
+</div>
     <div class="course-header cal-course-context d-none" aria-live="polite">
         <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
         <p class="mb-0 text-secondary small">
@@ -46,82 +51,73 @@
     </div>
 
     <main id="main-content" role="main">
-        <!-- Action Controls with proper semantics -->
-         @if(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'))
-        <section
-    class="control-panel bg-white p-3 p-md-4 rounded-3 shadow-sm border mb-3"
-    role="region"
-    aria-labelledby="controlPanelHeading"
-    
->
-    <h2 id="controlPanelHeading" class="visually-hidden">
-        Calendar Control Panel
-    </h2>
-
-    <div class="d-flex flex-column flex-xl-row justify-content-between align-items-stretch align-items-xl-center gap-3 gap-xl-4">
-
-        <!-- Filters & View Controls -->
-        <fieldset class="d-flex flex-column flex-md-row align-items-stretch align-items-md-end gap-3 mb-0">
-            <legend class="visually-hidden">View and Filter Controls</legend>
-
-            <!-- Density Toggle -->
-            <div class="btn-group shadow-sm" role="group" aria-label="Toggle calendar density">
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-2"
-                    id="toggleDensityBtn"
-                    aria-pressed="false"
-                    aria-expanded="false"
-                >
-                    <i class="bi bi-arrows-collapse" aria-hidden="true"></i>
-                    <span class="fw-medium">Compact View</span>
-                </button>
-            </div>
-
-            <!-- Course Filter -->
-            <div class="calendar-choices-bootstrap d-flex flex-column gap-1 min-w-0" style="min-width: 260px;z-index: 0;">
-                <label for="courseFilter" class="form-label mb-0 fw-semibold text-secondary small">Filter by Course</label>
-                <select
-                    class="form-select js-calendar-course-choice"
-                    id="courseFilter"
-                    aria-describedby="courseFilterHelp"
-                >
-                    <option value="">All Courses</option>
-                    @foreach($courseMaster as $course)
-                        <option value="{{ $course->pk }}"
-                            {{ $courseMaster->first() && $course->pk == $courseMaster->first()->pk ? 'selected' : '' }}>
-                            {{ $course->course_name }} ({{ $course->couse_short_name }})
-                        </option>
-                    @endforeach
-                </select>
-            </div>
-        </fieldset>
-
-        <!-- Primary Actions -->
-        @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST')  || hasRole('Training-Induction'))
-        <div class="d-flex align-items-center justify-content-start justify-content-xl-end gap-2">
-            <button
-                type="button"
-                class="btn btn-primary px-4 py-2 d-inline-flex align-items-center gap-2 shadow-sm rounded-2"
-                id="createEventButton"
-                data-bs-toggle="modal"
-                data-bs-target="#eventModal"
-            >
-                <i class="bi bi-plus-circle" aria-hidden="true"></i>
-                <span>Add New Event</span>
-            </button>
-        </div>
-        @endif
-
-    </div>
-</section>
-
-        @endif
-
-        <!-- Calendar Container -->
         <section class="calendar-container" aria-label="Academic calendar">
-            <div class="card border-start-4 border-primary shadow-sm">
-                <div class="card-body p-3 p-md-4 position-relative">
+            <div class="card cal-portal-card border-0 shadow-sm rounded-3">
+                <div class="card-body position-relative p-4">
+                    <h2 id="controlPanelHeading" class="visually-hidden">Calendar filters and navigation</h2>
+
+                    {{-- Reference: Filters | Course Name | Reset Filters — left; month nav + view toggles — right --}}
+                    <div class="cal-portal-toolbar-row programme-dt-toolbar d-flex flex-column flex-xl-row align-items-stretch align-items-xl-center justify-content-between gap-3 mb-4 w-100">
+                        <div class="d-flex flex-wrap align-items-center gap-3 cal-filters-group">
+                            <span class="programme-dt-filters-label mb-0">Filters</span>
+                            <div class="programme-dt-filter-select" id="courseFilterWrap">
+                                <label for="courseFilter" class="visually-hidden">Course Name</label>
+                                <select
+                                    class="form-select cal-filter-select cal-filter-empty"
+                                    id="courseFilter"
+                                    name="course_id"
+                                    aria-label="Course name"
+                                >
+                                    <option value="">Course Name</option>
+                                    @foreach($courseMaster as $course)
+                                        <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <button type="button" class="btn btn-outline-secondary cal-filter-reset ms-2 " id="btnResetCalendarFilters">
+                                Reset Filters
+                            </button>
+                        </div>
+
+                        <div id="calPortalToolbar" class="cal-toolbar-nav d-flex flex-wrap align-items-center justify-content-xl-end gap-3 ms-xl-auto" aria-label="Calendar navigation">
+                            <div class="cal-portal-nav-cluster d-flex align-items-center gap-1">
+                                <button type="button" class="cal-portal-nav-btn" id="calPortalPrev" aria-label="Previous period">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">chevron_left</i>
+                                </button>
+                                <h2 class="cal-portal-title mb-0" id="calPortalTitle" aria-live="polite"></h2>
+                                <button type="button" class="cal-portal-nav-btn" id="calPortalNext" aria-label="Next period">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">chevron_right</i>
+                                </button>
+                            </div>
+                            <div class="btn-group cal-view-switch" role="group" aria-label="Calendar view mode">
+                                <button type="button" class="btn" data-view="week" aria-pressed="false" title="Week schedule view">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">list_alt</i>
+                                    <span class="visually-hidden">Week schedule</span>
+                                </button>
+                                <button type="button" class="btn active" data-view="month" aria-pressed="true" title="Month calendar view">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">cards</i>
+                                    <span class="visually-hidden">Month calendar</span>
+                                </button>
+                            </div>
+                            <div class="dropdown cal-toolbar-more">
+                                <button type="button" class="btn cal-toolbar-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More calendar options">
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">more_vert</i>
+                                </button>
+                                <ul class="dropdown-menu dropdown-menu-end shadow-sm border rounded-2 py-1">
+                                    <li>
+                                        <button type="button" class="dropdown-item py-2" id="btnTimetableListView" data-view="list">
+                                            <i class="material-icons material-symbols-rounded me-2" aria-hidden="true">table_view</i>Weekly Timetable
+                                        </button>
+                                    </li>
+                                    <li>
+                                        <button type="button" class="dropdown-item py-2" id="toggleDensityBtn" aria-pressed="false">
+                                            <i class="material-icons material-symbols-rounded me-2" aria-hidden="true">density_medium</i>Compact View
+                                        </button>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
                     
                     <!-- Loading overlay -->
                     <div id="calendarLoadingOverlay" class="position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center bg-white bg-opacity-90 rounded-2" style="min-height: 400px; z-index: 50;">
@@ -289,6 +285,7 @@ const CalendarConfig = {
         groupTypes: "{{ route('calendar.get.group.types') }}",
         subjectNames: "{{ route('calendar.get.subject.name') }}",
         eventCard: "{{ route('calendar.event.card', ['id' => 'EVENT_ID']) }}",
+        timetablePdf: "{{ route('calendar.timetable.pdf') }}",
         weeklyTimetablePdf: "{{ route('calendar.weekly-timetable.pdf') }}",
         weeklyInfoPdf: "{{ route('calendar.weekly-info.pdf') }}",
         weeklyInfoMeta: "{{ route('calendar.weekly-info.meta') }}",
@@ -1317,6 +1314,12 @@ class CalendarManager {
         document.getElementById('nextWeekBtn')?.addEventListener('click', () => this.navigateWeek(1));
         document.getElementById('currentWeekBtn')?.addEventListener('click', () => this.navigateWeek(0));
 
+        // Academic time table PDF — main page Download button (visible range + course filter)
+        document.getElementById('btnTimetablePdf')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.openTimetablePdf(true);
+        });
+
         // Whole-week timetable PDF (download / print) — list-view panel + main toolbar
         document.getElementById('btnWeekTimetablePdf')?.addEventListener('click', () => this.openWeeklyTimetablePdf(true));
         document.getElementById('btnWeekTimetablePrint')?.addEventListener('click', () => this.openWeeklyTimetablePdf(false));
@@ -2286,6 +2289,34 @@ async setInternalFaculty(internalFacultyIds) {
     /** Open the whole-week timetable PDF for the current week + course filter. */
     openWeeklyTimetablePdf(download) {
         window.open(`${CalendarConfig.api.weeklyTimetablePdf}?${this.weeklyExportParams(download).toString()}`, '_blank', 'noopener');
+    }
+
+    /** Open the academic time table PDF for the calendar's visible range + course filter. */
+    openTimetablePdf(download) {
+        const params = new URLSearchParams();
+
+        // Use the calendar's currently visible date range.
+        if (this.calendar) {
+            const view = this.calendar.view;
+            if (view?.activeStart) {
+                params.append('start', view.activeStart.toISOString().split('T')[0]);
+            }
+            if (view?.activeEnd) {
+                // activeEnd is exclusive in FullCalendar — step back one day for an inclusive range.
+                const end = new Date(view.activeEnd);
+                end.setDate(end.getDate() - 1);
+                params.append('end', end.toISOString().split('T')[0]);
+            }
+        }
+
+        if (this.selectedCourseId) {
+            params.append('course_id', this.selectedCourseId);
+        }
+        if (download) {
+            params.append('download', '1');
+        }
+
+        window.open(`${CalendarConfig.api.timetablePdf}?${params.toString()}`, '_blank', 'noopener');
     }
 
     /** Open the Course Information / Faculty-for-the-week PDF for the current week + course filter. */
