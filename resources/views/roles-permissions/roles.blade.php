@@ -2,27 +2,18 @@
 @section('title', 'Role & Permission')
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Role & Permission" />
+    <x-breadcrum title="Role & Permission">
+  <a onclick="RoleModal()"
+            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
+            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+            <span>Add Role & Permission</span>
+        </a>        
+</x-breadcrum>
     <x-session_message />
     <div class="datatables">
         <div class="card" >
             <div class="card-body">
                 <div class="table-responsive">
-                    <div class="row">
-                        <div class="col-6">
-                            <h4>Role & Permission</h4>
-                        </div>
-                        <div class="col-6">
-                            <div class="d-flex justify-content-end align-items-center gap-2">
-                                <a href="#" class="btn btn-primary d-flex align-items-center" onclick="RoleModal()">
-                                    <i class="material-icons menu-icon material-symbols-rounded"
-                                        style="font-size: 20px; vertical-align: middle;">add</i>
-                                    Add Role
-                                </a>
-                            </div>
-                        </div>
-                    </div>
-                    <hr>
                     <x-data-table.table 
                         :columns="$columns"
                         :filters="[]" 
@@ -50,7 +41,7 @@
                         <label class="form-label" for="name">Name <span class="text-danger">*</span></label>
                         <input type="text" class="form-control" name="name" id="name" placeholder="Enter role name" value="{{old('name')}}">
                     </div>
-                    <div class="d-flex gap-2 mt-4">
+                    <div class="d-flex gap-2 mt-4 justify-content-end">
                         <button type="submit" class="btn btn-success" id="SubmitRoleForm"><i class="bi bi-save me-2"></i>Save</button>
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><i class="bi bi-x-circle me-2"></i>Cancel</button>
                     </div>

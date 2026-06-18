@@ -1,0 +1,230 @@
+/* User Management Roles — programme-dt reference layout */
+.roles-page {
+    --roles-primary: #004a93;
+    --roles-primary-dark: #003366;
+    --roles-border: #e4e7ec;
+    --roles-text: #344054;
+    --roles-heading: #101828;
+    --roles-muted: #667085;
+    --roles-danger: #d92d20;
+    --roles-info: #1570ef;
+}
+
+.roles-page .roles-dt-card {
+    border-radius: 12px;
+    border: 1px solid var(--roles-border) !important;
+}
+
+.roles-page .roles-dt-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.roles-page #role-table_wrapper .dt-buttons,
+.roles-page #role-table_wrapper .dataTables_length {
+    display: none !important;
+}
+
+.roles-page #role-table_wrapper .dataTables_filter:not(.programme-dt-search .dataTables_filter) {
+    display: none !important;
+}
+
+.roles-page #role-table_wrapper .dataTables_info,
+.roles-page #role-table_wrapper .dataTables_paginate:not(.programme-dt-footer .dataTables_paginate) {
+    display: none !important;
+}
+
+.roles-page #role-table_wrapper .dataTables_scrollBody thead,
+.roles-page #role-table_wrapper .dataTables_scrollBody thead tr {
+    display: none !important;
+}
+
+.roles-page #role-table_wrapper .dataTables_scrollHead thead th,
+.roles-page #role-table thead th {
+    background-color: #f2f4f7 !important;
+    color: #475467;
+    font-weight: 600;
+    font-size: 0.8125rem;
+    border-bottom: 1px solid var(--roles-border);
+    border-top: 0;
+    padding: 0.875rem 1rem;
+    vertical-align: middle;
+    white-space: nowrap;
+}
+
+.roles-page #role-table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
+.roles-page #role-table tbody td {
+    padding: 0.9375rem 1rem;
+    vertical-align: middle;
+    border-bottom: 1px solid #f2f4f7;
+    border-top: 0;
+    color: var(--roles-text);
+    font-size: 0.9375rem;
+    background: #fff;
+}
+
+.roles-page #role-table tbody tr:hover td {
+    background-color: #fafbfc;
+}
+
+.roles-page #role-table_wrapper .dataTables_scrollHead thead th:first-child,
+.roles-page #role-table thead th:first-child,
+.roles-page #role-table tbody td:first-child {
+    text-align: left !important;
+    color: var(--roles-muted);
+    font-weight: 500;
+    width: 5.5rem;
+}
+
+.roles-page #role-table_wrapper .dataTables_scrollHead thead th:nth-child(2),
+.roles-page #role-table_wrapper .dataTables_scrollHead thead th:nth-child(3),
+.roles-page #role-table thead th:nth-child(2),
+.roles-page #role-table thead th:nth-child(3),
+.roles-page #role-table tbody td:nth-child(2),
+.roles-page #role-table tbody td:nth-child(3) {
+    text-align: center !important;
+}
+
+.roles-page #role-table tbody td:nth-child(2) label,
+.roles-page #role-table tbody td:nth-child(3) label {
+    margin-bottom: 0;
+    font-weight: 600;
+    color: var(--roles-heading);
+}
+
+.roles-page #role-table_wrapper .dataTables_scrollHead thead th:nth-child(4),
+.roles-page #role-table_wrapper .dataTables_scrollHead thead th:nth-child(5),
+.roles-page #role-table thead th:nth-child(4),
+.roles-page #role-table thead th:nth-child(5),
+.roles-page #role-table tbody td:nth-child(4),
+.roles-page #role-table tbody td:nth-child(5) {
+    text-align: center !important;
+}
+
+.roles-page #role-table tbody td .programme-status-badge {
+    font-size: 0.8125rem;
+    font-weight: 600;
+    padding: 0.35rem 0.75rem;
+}
+
+.roles-page .roles-action-switch-wrap .form-check-input:checked {
+    background-color: #f0b429;
+    border-color: #f0b429;
+}
+
+.roles-page .roles-action-switch-wrap .form-check-input:not(:checked) {
+    background-color: #12b76a;
+    border-color: #12b76a;
+}
+
+.roles-page .roles-action-switch-wrap .form-check-input:focus {
+    box-shadow: none;
+}
+
+.roles-page .roles-role-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.625rem;
+    flex-wrap: nowrap;
+}
+
+.roles-page .roles-action-btn {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+    transition: background 0.2s ease, color 0.2s ease, transform 0.15s ease;
+    flex-shrink: 0;
+    line-height: 1;
+    font-size: 0;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.roles-page .roles-action-btn:hover {
+    transform: translateY(-1px);
+}
+
+.roles-page .roles-action-btn .bi {
+    font-size: 1.0625rem;
+    line-height: 1;
+}
+
+.roles-page .roles-action-edit {
+    color: var(--roles-info);
+}
+
+.roles-page .roles-action-edit:hover {
+    background: #eff8ff;
+    color: #175cd3;
+}
+
+.roles-page .roles-action-delete {
+    color: var(--roles-danger);
+}
+
+.roles-page .roles-action-delete:hover {
+    background: #fef3f2;
+    color: #b42318;
+}
+
+.roles-page .roles-action-switch-wrap .form-check-input {
+    width: 2.25rem;
+    height: 1.25rem;
+    margin: 0;
+    cursor: pointer;
+}
+
+.roles-page .roles-action-switch-wrap {
+    display: inline-flex;
+    align-items: center;
+    margin-bottom: 0 !important;
+}
+
+.roles-page .roles-dt-panel .programme-dt-footer {
+    border-top: 1px solid var(--roles-border);
+    padding-top: 0.875rem;
+    margin-top: 0;
+}
+
+.roles-page .programme-dt-footer .pagination .page-item.active .page-link,
+.roles-page .programme-dt-footer .pagination .page-link.current-page {
+    background: #fff !important;
+    border-color: #7367f0 !important;
+    color: #344054 !important;
+    font-weight: 600;
+}
+
+.roles-role-modal-dialog {
+    max-width: 32rem;
+    width: calc(100% - 1.5rem);
+}
+
+@media (max-width: 767.98px) {
+    .roles-page .programme-dt-footer {
+        flex-direction: column;
+        align-items: stretch !important;
+        text-align: center;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .roles-page .roles-action-btn {
+        transition: none;
+    }
+
+    .roles-page .roles-action-btn:hover {
+        transform: none;
+    }
+}
