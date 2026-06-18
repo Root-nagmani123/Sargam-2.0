@@ -120,10 +120,6 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body pt-3">
-                <div class="alert alert-info border-0 py-2 small mb-3">
-                    <i class="bi bi-info-circle me-1"></i>
-                    Card ke appear hone ke baad, <strong>count logic</strong> developer ko <code>UserController@dashboard</code> mein add karni hogi.
-                </div>
                 <form id="addCardForm">
                     @csrf
                     <div class="form-group mb-3">

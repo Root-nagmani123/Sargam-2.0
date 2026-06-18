@@ -166,7 +166,7 @@ class RoleController extends Controller
     public function showDashboard($id)
     {
         $role = Role::findOrFail($id);
-        $allCards = DashboardCard::orderBy('sort_order')->get();
+        $allCards = DashboardCard::orderBy('id', 'desc')->get();
         $assignedCardIds = $role->belongsToMany(DashboardCard::class, 'role_dashboard_cards', 'role_id', 'dashboard_card_id')
             ->pluck('dashboard_cards.id')
             ->toArray();
