@@ -1,12 +1,12 @@
 {{-- Dynamic form sections for admin student overview (mirrors PDF structure). --}}
 @foreach($sections as $sec)
     <div class="col-12">
-        <div class="card border-0 shadow-sm" style="border-radius:8px;">
-            <div class="card-header py-2 px-3 fw-semibold small d-flex justify-content-between align-items-center"
-                 style="background:#f8fafd;color:#1a3c6e;">
+        <div class="card dyn-section border-0 shadow-sm" style="border-radius:8px;overflow:hidden;">
+            <div class="card-header dyn-section-hd py-2 px-3 fw-semibold small d-flex justify-content-between align-items-center"
+                 style="background:#0a3d6b;color:#fff;">
                 <span><i class="bi bi-journal-text me-1"></i>{{ $sec['title_en'] ?? 'Section' }}</span>
                 @if(!empty($sec['title_hi']))
-                    <span class="text-muted fw-normal" style="font-size:10px;">{{ $sec['title_hi'] }}</span>
+                    <span class="fw-normal" style="font-size:10px;opacity:.85;">{{ $sec['title_hi'] }}</span>
                 @endif
             </div>
 

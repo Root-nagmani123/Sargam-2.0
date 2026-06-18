@@ -29,6 +29,11 @@
             <a href="{{ route('admin.reports.form.export', $form) }}{{ $exportQuery ? '?'.$exportQuery : '' }}" class="btn btn-sm btn-success">
                 <i class="bi bi-file-earmark-spreadsheet me-1"></i>Export CSV
             </a>
+            <a href="{{ route('admin.reports.form.export.pdf-zip', $form) }}{{ $exportQuery ? '?'.$exportQuery : '' }}" class="btn btn-sm btn-danger"
+               title="Download a ZIP of every listed student's registration profile PDF (respects the current filters)"
+               onclick="(function(a){var i=a.querySelector('i'),o=i.className;i.className='spinner-border spinner-border-sm me-1';a.style.pointerEvents='none';a.style.opacity='.7';setTimeout(function(){i.className=o;a.style.pointerEvents='';a.style.opacity='';},8000);})(this);">
+                <i class="bi bi-file-earmark-zip me-1"></i>Bulk PDF (ZIP)
+            </a>
             <a href="{{ route('fc-reg.admin.forms.edit', $form) }}" class="btn btn-sm btn-outline-secondary">
                 <i class="bi bi-pencil-square me-1"></i>Edit Form
             </a>
@@ -42,32 +47,31 @@
     <div class="row g-2 mb-3">
         {{-- Fixed cards --}}
         <div class="col-6 col-sm-4 col-md-3 col-xl-auto" style="flex:1 1 100px">
+            <a href="{{ request()->url() }}?{{ http_build_query(array_merge(request()->except('status','page'), [])) }}"
+               class="text-decoration-none">
             <div class="card border-0 shadow-sm text-center py-2 px-2 h-100" style="border-radius:8px;">
                 <div><i class="bi bi-people-fill fs-4" style="color:#1a3c6e;"></i></div>
                 <div class="fw-bold" style="font-size:1.3rem;color:#1a3c6e;">{{ number_format($summary['total']) }}</div>
                 <div class="text-muted" style="font-size:.68rem;line-height:1.2;">Total Registered</div>
-            </div>
+            </div></a>
         </div>
         <div class="col-6 col-sm-4 col-md-3 col-xl-auto" style="flex:1 1 100px">
-            <div class="card border-0 shadow-sm text-center py-2 px-2 h-100" style="border-radius:8px;">
-                <div><i class="bi bi-send-check-fill fs-4" style="color:#16a34a;"></i></div>
-                <div class="fw-bold" style="font-size:1.3rem;color:#16a34a;">{{ number_format($summary['submitted']) }}</div>
-                <div class="text-muted" style="font-size:.68rem;line-height:1.2;">Submitted</div>
-            </div>
-        </div>
-        <div class="col-6 col-sm-4 col-md-3 col-xl-auto" style="flex:1 1 100px">
-            <div class="card border-0 shadow-sm text-center py-2 px-2 h-100" style="border-radius:8px;">
+            <a href="{{ request()->url() }}?{{ http_build_query(array_merge(request()->except('status','page'), ['status'=>'COMPLETE'])) }}"
+               class="text-decoration-none">
+            <div class="card border-0 shadow-sm text-center py-2 px-2 h-100" style="border-radius:8px; {{ request('status')==='COMPLETE' ? 'border:2px solid #059669 !important;' : '' }}">
                 <div><i class="bi bi-check-circle-fill fs-4" style="color:#059669;"></i></div>
-                <div class="fw-bold" style="font-size:1.3rem;color:#059669;">{{ number_format($summary['complete'] ?? 0) }}</div>
+                <div class="fw-bold" style="font-size:1.3rem;color:#059669;">{{ number_format($summary['complete']) }}</div>
                 <div class="text-muted" style="font-size:.68rem;line-height:1.2;">Complete</div>
-            </div>
+            </div></a>
         </div>
         <div class="col-6 col-sm-4 col-md-3 col-xl-auto" style="flex:1 1 100px">
-            <div class="card border-0 shadow-sm text-center py-2 px-2 h-100" style="border-radius:8px;">
+            <a href="{{ request()->url() }}?{{ http_build_query(array_merge(request()->except('status','page'), ['status'=>'INCOMPLETE'])) }}"
+               class="text-decoration-none">
+            <div class="card border-0 shadow-sm text-center py-2 px-2 h-100" style="border-radius:8px; {{ request('status')==='INCOMPLETE' ? 'border:2px solid #d97706 !important;' : '' }}">
                 <div><i class="bi bi-hourglass-split fs-4" style="color:#d97706;"></i></div>
                 <div class="fw-bold" style="font-size:1.3rem;color:#d97706;">{{ number_format($summary['incomplete']) }}</div>
                 <div class="text-muted" style="font-size:.68rem;line-height:1.2;">Incomplete</div>
-            </div>
+            </div></a>
         </div>
         {{-- One card per step --}}
         @foreach($steps as $step)
@@ -91,7 +95,7 @@
                     <label class="form-label small mb-1">Status</label>
                     <select name="status" class="form-select form-select-sm">
                         <option value="">All Status</option>
-                        <option value="SUBMITTED"  {{ request('status')=='SUBMITTED'?'selected':'' }}>Submitted</option>
+                        <option value="COMPLETE"   {{ request('status')=='COMPLETE'  ?'selected':'' }}>Complete</option>
                         <option value="INCOMPLETE" {{ request('status')=='INCOMPLETE'?'selected':'' }}>Incomplete</option>
                     </select>
                 </div>
