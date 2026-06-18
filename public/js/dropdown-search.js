@@ -249,7 +249,7 @@
         });
 
         // Initialize dropdowns with .select2 class (if not already initialized)
-        const select2Dropdowns = document.querySelectorAll('select.select2:not(.select2-hidden-accessible):not([data-sme-no-global-select2])');
+        const select2Dropdowns = document.querySelectorAll('select.select2:not(.select2-hidden-accessible)');
         select2Dropdowns.forEach(function(element) {
             const placeholder = element.getAttribute('data-placeholder') || element.getAttribute('placeholder') || 'Search and select...';
             const allowClear = element.getAttribute('data-allow-clear') === 'true';

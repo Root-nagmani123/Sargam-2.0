@@ -992,7 +992,7 @@ $(document).ready(function () {
         });
     });
 
-    $(".select2").not('#smeAddModal select, [data-sme-no-global-select2]').select2();
+    $(".select2").select2();
 });
 
 
