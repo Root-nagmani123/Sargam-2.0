@@ -94,6 +94,7 @@ input.is-invalid {
                             placeholder="Select Appellation"
                             formLabelClass="form-label"
                             :options="$appellationMasterList"
+                             labelRequired="true"
                             value="{{ old('appellation', $faculty->appellation ?? '') }}"
                             />
                             </div>
