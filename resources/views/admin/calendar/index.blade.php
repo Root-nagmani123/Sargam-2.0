@@ -27,15 +27,20 @@
     <x-breadcrum title="Calendar Creation">
    @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'))
         <a id="createEventButton"
-                data-bs-toggle="modal"
-                data-bs-target="#eventModal"
-            class="btn btn-sm btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
+                href="{{ route('calendar.event.create') }}"
+            class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">
             <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
             <span>Add Event</span>
         </a>
         @endif
     </x-breadcrum>
+<div class="d-flex justify-content-end mb-3">
+    <a href="#" id="btnTimetablePdf" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap" style="background-color: #fff; border:0;color:#004a93;" title="Download the visible timetable as a PDF">
+        <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">download</i>
+        <span>Download</span>
+    </a>
 
+</div>
     <div class="course-header cal-course-context d-none" aria-live="polite">
         <h1>{{ $courseMaster->first()->course_name ?? 'Course Name' }}</h1>
         <p class="mb-0 text-secondary small">
@@ -69,7 +74,7 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <button type="button" class="btn programme-dt-btn-reset flex-shrink-0" id="btnResetCalendarFilters">
+                            <button type="button" class="btn btn-outline-secondary cal-filter-reset ms-2 " id="btnResetCalendarFilters">
                                 Reset Filters
                             </button>
                         </div>
@@ -280,6 +285,7 @@ const CalendarConfig = {
         groupTypes: "{{ route('calendar.get.group.types') }}",
         subjectNames: "{{ route('calendar.get.subject.name') }}",
         eventCard: "{{ route('calendar.event.card', ['id' => 'EVENT_ID']) }}",
+        timetablePdf: "{{ route('calendar.timetable.pdf') }}",
         weeklyTimetablePdf: "{{ route('calendar.weekly-timetable.pdf') }}",
         weeklyInfoPdf: "{{ route('calendar.weekly-info.pdf') }}",
         weeklyInfoMeta: "{{ route('calendar.weekly-info.meta') }}",
@@ -1308,6 +1314,12 @@ class CalendarManager {
         document.getElementById('nextWeekBtn')?.addEventListener('click', () => this.navigateWeek(1));
         document.getElementById('currentWeekBtn')?.addEventListener('click', () => this.navigateWeek(0));
 
+        // Academic time table PDF — main page Download button (visible range + course filter)
+        document.getElementById('btnTimetablePdf')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.openTimetablePdf(true);
+        });
+
         // Whole-week timetable PDF (download / print) — list-view panel + main toolbar
         document.getElementById('btnWeekTimetablePdf')?.addEventListener('click', () => this.openWeeklyTimetablePdf(true));
         document.getElementById('btnWeekTimetablePrint')?.addEventListener('click', () => this.openWeeklyTimetablePdf(false));
@@ -2277,6 +2289,34 @@ async setInternalFaculty(internalFacultyIds) {
     /** Open the whole-week timetable PDF for the current week + course filter. */
     openWeeklyTimetablePdf(download) {
         window.open(`${CalendarConfig.api.weeklyTimetablePdf}?${this.weeklyExportParams(download).toString()}`, '_blank', 'noopener');
+    }
+
+    /** Open the academic time table PDF for the calendar's visible range + course filter. */
+    openTimetablePdf(download) {
+        const params = new URLSearchParams();
+
+        // Use the calendar's currently visible date range.
+        if (this.calendar) {
+            const view = this.calendar.view;
+            if (view?.activeStart) {
+                params.append('start', view.activeStart.toISOString().split('T')[0]);
+            }
+            if (view?.activeEnd) {
+                // activeEnd is exclusive in FullCalendar — step back one day for an inclusive range.
+                const end = new Date(view.activeEnd);
+                end.setDate(end.getDate() - 1);
+                params.append('end', end.toISOString().split('T')[0]);
+            }
+        }
+
+        if (this.selectedCourseId) {
+            params.append('course_id', this.selectedCourseId);
+        }
+        if (download) {
+            params.append('download', '1');
+        }
+
+        window.open(`${CalendarConfig.api.timetablePdf}?${params.toString()}`, '_blank', 'noopener');
     }
 
     /** Open the Course Information / Faculty-for-the-week PDF for the current week + course filter. */

@@ -5,7 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
-use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, Holiday};
+use App\Models\{ClassSessionMaster, CourseGroupTimetableMapping, CourseMaster, FacultyMaster, VenueMaster, SubjectMaster, SubjectModuleMaster, CalendarEvent, Holiday, SectorMaster};
 use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
@@ -120,6 +120,75 @@ class CalendarController extends Controller
             'venueMaster',
             'classSessionMaster',
             'internal_faculty'
+        ));
+    }
+
+    /**
+     * Dedicated full-page "Add Event" form (replaces the in-calendar modal for
+     * creating events). Loads the same masters the modal used, plus sectors and
+     * the static faculty-role list, and renders admin.calendar.create-event.
+     */
+    public function createEvent(Request $request)
+    {
+        $data_course_id = get_Role_by_course();
+
+        $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
+            ->whereDate('end_date', '>=', today());
+
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $facultyCourseIds = app(FacultyFeedbackReportService::class)->getAccessibleCourseIds($facultyPk);
+                $courseMaster = $facultyCourseIds->isNotEmpty()
+                    ? $courseMaster->whereIn('course_master.pk', $facultyCourseIds)
+                    : $courseMaster->whereRaw('1 = 0');
+            } else {
+                $courseMaster = $courseMaster->whereRaw('1 = 0');
+            }
+        } elseif (!empty($data_course_id)) {
+            $courseMaster = $courseMaster->whereIn('course_master.pk', $data_course_id);
+        }
+
+        $courseMaster = $courseMaster->select('course_master.pk', 'course_name', 'couse_short_name', 'course_year')
+            ->get();
+
+        $facultyMaster = FacultyMaster::where('active_inactive', 1)
+            ->select('pk', 'faculty_type', 'full_name')
+            ->orderby('full_name', 'ASC')
+            ->get();
+
+        $subjects = SubjectModuleMaster::where('active_inactive', 1)
+            ->select('pk', 'module_name')
+            ->get();
+
+        $venueMaster = VenueMaster::where('active_inactive', 1)
+            ->select('venue_id', 'venue_name')
+            ->orderby('venue_name', 'ASC')
+            ->get();
+
+        $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
+            ->select('pk', 'shift_name', 'shift_time', 'start_time', 'end_time')
+            ->get();
+
+        $sectors = SectorMaster::query()->active()->get(['pk', 'sector_name']);
+
+        // No roles master exists yet — fixed list per product decision.
+        $facultyRoles = ['Teaching', 'Sectional', 'Administration'];
+
+        // Optional date prefill (e.g. arriving from a calendar day click).
+        $prefillDate = $request->filled('date')
+            ? Carbon::parse($request->date)->format('Y-m-d')
+            : null;
+
+        return view('admin.calendar.create-event', compact(
+            'courseMaster',
+            'facultyMaster',
+            'subjects',
+            'venueMaster',
+            'classSessionMaster',
+            'sectors',
+            'facultyRoles',
+            'prefillDate'
         ));
     }
 
@@ -285,11 +354,18 @@ class CalendarController extends Controller
             'type_names.*' => 'required|integer',
             'faculty' => 'required|array|min:1',
             'faculty.*' => 'required|integer',
-            'faculty_type' => 'required|integer',
+            'faculty_type' => 'nullable|integer',
+            'faculty_row_type' => 'nullable|array',
+            'faculty_role' => 'nullable|array',
+            'faculty_feedback' => 'nullable|array',
+            'sector' => 'nullable|integer',
             'vanue' => 'required|integer',
             'shift' => 'required_if:shift_type,1',
             'start_time' => 'required_if:shift_type,2',
             'end_time' => 'required_if:shift_type,2',
+            'break_type' => 'nullable|in:tea,lunch,snacks',
+            'break_start_time' => 'nullable',
+            'break_end_time' => 'nullable',
         ], [
             'type_names.required' => 'The Group type names field is required.',
             'type_names.min' => 'Please select at least one Group type name.',
@@ -297,16 +373,34 @@ class CalendarController extends Controller
             'faculty.min' => 'Please select at least one Faculty.',
         ]);
 
+        // Per-faculty rows from the full-page form (null for the legacy modal).
+        $facultyDetails = $this->buildFacultyDetails($request);
+
         $event = new CalendarEvent();
         $event->course_master_pk = $request->Course_name;
         $event->subject_master_pk = $request->subject_name;
         $event->subject_module_master_pk = $request->subject_module;
         $event->subject_topic = $request->topic;
         $event->course_group_type_master = $request->group_type;
-        $event->group_name = json_encode($request->type_names ?? []);
-        $event->faculty_master = json_encode($request->faculty ?? []);
-        $event->faculty_type = $request->faculty_type;
-        $event->internal_faculty = json_encode($request->internal_faculty ?? []);
+        $event->group_name = json_encode(array_values($request->type_names ?? []));
+        // array_values: dynamic faculty rows submit keyed arrays (faculty[2] etc.)
+        // — store a clean sequential JSON array for existing reads.
+        $event->faculty_master = json_encode(array_values($request->input('faculty', [])));
+        // Keep the single faculty_type column populated for existing reads:
+        // explicit value (modal) or the first faculty row's type (new form).
+        $event->faculty_type = $request->faculty_type
+            ?? ($facultyDetails[0]['faculty_type'] ?? null);
+        // Internal faculty: explicit list (modal) or rows flagged Internal (type 1).
+        $internalFaculty = $request->internal_faculty
+            ?? collect($facultyDetails)->where('faculty_type', 1)->pluck('faculty_pk')->values()->all();
+        $event->internal_faculty = json_encode($internalFaculty ?? []);
+        $event->faculty_details = $facultyDetails ? json_encode($facultyDetails) : null;
+        $event->sector_pk = $request->sector ?: null;
+        // Break section: a break is present when a break type is chosen.
+        $event->break_type = $request->break_type ?: null;
+        $event->break_start_time = $request->break_start_time ?: null;
+        $event->break_end_time = $request->break_end_time ?: null;
+        $event->is_break = ($request->break_type || $request->boolean('is_break')) ? 1 : 0;
         $event->venue_id = $request->vanue;
         // $event->START_DATE = $request->start_datetime;
         $event->START_DATE = Carbon::parse($request->start_datetime)
@@ -327,10 +421,22 @@ class CalendarController extends Controller
             $endTime = Carbon::parse($request->end_time)->format('h:i A');
             $event->class_session = $startTime . ' - ' . $endTime;
         }
-        $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
-        $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
-        $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
-        $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
+
+        if ($facultyDetails) {
+            // Per-faculty feedback (new form) — keep event-level flags in sync.
+            $feedbacks = collect($facultyDetails)->pluck('feedback');
+            $hasRemark = $feedbacks->contains('remark');
+            $hasRating = $feedbacks->contains('rating');
+            $event->feedback_checkbox = ($hasRemark || $hasRating) ? 1 : 0;
+            $event->Ratting_checkbox = $hasRating ? 1 : 0;
+            $event->Remark_checkbox = $hasRemark ? 1 : 0;
+            $event->Faculty_feedback = json_encode($facultyDetails);
+        } else {
+            $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
+            $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
+            $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
+        }
+        $event->Bio_attendance = $request->boolean('bio_attendanceCheckbox') ? 1 : 0;
         $event->active_inactive = $request->active_inactive ?? 1;
 
         $event->save();
@@ -346,7 +452,47 @@ class CalendarController extends Controller
             ]);
         }
 
-        return response()->json(['status' => 'success', 'message' => 'Event created successfully']);
+        if ($request->expectsJson()) {
+            return response()->json(['status' => 'success', 'message' => 'Event created successfully']);
+        }
+
+        return redirect()->route('calendar.index')->with('success', 'Event created successfully.');
+    }
+
+    /**
+     * Assemble the per-faculty detail rows from the full-page Add Event form's
+     * parallel arrays (faculty[], faculty_row_type[], faculty_role[],
+     * faculty_feedback[]). Returns [] when those arrays are absent (legacy modal).
+     */
+    private function buildFacultyDetails(Request $request): array
+    {
+        $facultyIds = $request->input('faculty', []);
+        $rowTypes   = $request->input('faculty_row_type', []);
+        $roles      = $request->input('faculty_role', []);
+        $feedbacks  = $request->input('faculty_feedback', []);
+
+        // Only treat as the new format when at least one per-row attribute is sent.
+        if (empty($rowTypes) && empty($roles) && empty($feedbacks)) {
+            return [];
+        }
+
+        $details = [];
+        foreach ($facultyIds as $i => $facultyPk) {
+            if ($facultyPk === null || $facultyPk === '') {
+                continue;
+            }
+            $role = $roles[$i] ?? null;
+            // Feedback is only valid for the Teaching role; force 'none' otherwise.
+            $feedback = ($role === 'Teaching') ? ($feedbacks[$i] ?? 'none') : 'none';
+            $details[] = [
+                'faculty_pk'   => (int) $facultyPk,
+                'faculty_type' => isset($rowTypes[$i]) && $rowTypes[$i] !== '' ? (int) $rowTypes[$i] : null,
+                'role'         => $role,
+                'feedback'     => $feedback,
+            ];
+        }
+
+        return $details;
     }
 
 
@@ -1059,6 +1205,120 @@ class CalendarController extends Controller
         $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
 
         return $this->cardHttpToDataUri($url, 'image/png') ?? $url;
+    }
+
+    /**
+     * Academic time table as a print-ready A4 portrait PDF (flat session list).
+     * Renders admin.calendar.pdf.ot-timetable-pdf for the calendar's visible range.
+     * ?start & ?end (YYYY-MM-DD) bound the period, ?course_id filters (same as the
+     * calendar filter), ?download=1 forces an attachment.
+     */
+    public function downloadTimetablePdf(Request $request)
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(120);
+
+        $rangeStartDate = $request->filled('start')
+            ? Carbon::parse($request->start)
+            : Carbon::now()->startOfMonth();
+        $rangeEndDate = $request->filled('end')
+            ? Carbon::parse($request->end)
+            : Carbon::now()->endOfMonth();
+
+        $courseId = $request->query('course_id') ?: null;
+
+        $events = DB::table('timetable')
+            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id');
+
+        // Scope events by user type — mirror fullCalendarDetails().
+        if (hasRole('Student-OT')) {
+            $studentPk = auth()->user()->user_id;
+            $events = $events
+                ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
+                ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
+                ->where('student_course_group_map.student_master_pk', $studentPk);
+        } elseif (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if ($facultyPk) {
+                $events = $this->scopeTimetableForFaculty($events, $facultyPk);
+            } else {
+                $events = $events->whereRaw('1 = 0');
+            }
+        } else {
+            $dataCourseId = get_Role_by_course();
+            if (!empty($dataCourseId)) {
+                $events = $events->whereIn('timetable.course_master_pk', $dataCourseId);
+            }
+        }
+
+        if ($courseId) {
+            $events = $events->where('timetable.course_master_pk', $courseId);
+        }
+
+        $events = $events
+            ->whereDate('timetable.START_DATE', '>=', $rangeStartDate->toDateString())
+            ->whereDate('timetable.START_DATE', '<=', $rangeEndDate->toDateString())
+            ->select(
+                'timetable.subject_topic',
+                'timetable.class_session',
+                'timetable.START_DATE',
+                'timetable.faculty_master',
+                'venue_master.venue_name as venue_name'
+            )
+            ->orderBy('timetable.START_DATE')
+            ->orderBy('timetable.class_session')
+            ->get();
+
+        $rows = $events->map(function ($e) {
+            $facultyIds = json_decode($e->faculty_master, true);
+            if (!is_array($facultyIds)) {
+                $facultyIds = !empty($e->faculty_master) ? [$e->faculty_master] : [];
+            }
+            $faculty = $facultyIds
+                ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
+                : '';
+
+            $date = Carbon::parse($e->START_DATE);
+
+            return (object) [
+                'date'         => $date->format('d M Y'),
+                'day'          => $date->format('D'),
+                'session'      => trim((string) $e->class_session),
+                'topic'        => trim((string) $e->subject_topic) ?: 'Session',
+                'faculty_name' => $faculty,
+                'venue_name'   => trim((string) ($e->venue_name ?? '')),
+            ];
+        });
+
+        $course = $courseId
+            ? DB::table('course_master')
+                ->where('pk', $courseId)
+                ->select('course_name', 'couse_short_name', 'course_year')
+                ->first()
+            : null;
+
+        $data = [
+            'rows'        => $rows,
+            'course'      => $course,
+            'rangeStart'  => $rangeStartDate->format('d M Y'),
+            'rangeEnd'    => $rangeEndDate->format('d M Y'),
+            'studentName' => hasRole('Student-OT') ? (auth()->user()->user_name ?? null) : null,
+        ];
+
+        $pdf = Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont'          => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled'      => true,
+                'dpi'                  => 110,
+            ]);
+
+        $fileName = 'time-table-' . $rangeStartDate->format('Y-m-d') . '.pdf';
+
+        return $request->boolean('download')
+            ? $pdf->download($fileName)
+            : $pdf->stream($fileName);
     }
 
     /**
