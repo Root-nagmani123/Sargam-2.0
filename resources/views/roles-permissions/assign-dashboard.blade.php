@@ -30,7 +30,7 @@
                             <label for="cardSearch" class="form-label small fw-semibold text-secondary mb-1">Search</label>
                             <div class="input-group shadow-sm">
                                 <span class="input-group-text bg-white border-end-0"><i class="material-icons material-symbols-rounded text-muted">search</i></span>
-                                <input type="text" id="cardSearch" class="form-control border-start-0 ps-0" placeholder="Search by card name...">
+                                <input type="text" id="cardSearch" class="form-control border-start-0 ps-0" placeholder="Search by name...">
                             </div>
                         </div>
                         <div class="col-9 col-lg-2">

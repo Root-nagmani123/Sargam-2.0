@@ -412,9 +412,6 @@ class UserController extends Controller
 
         $cardsToRender = $baseCards->filter(fn($c) => !str_starts_with($c->key, 'widget_'))->map(function ($card) use ($cardDefinitions, $cardCounts) {
             $def = $cardDefinitions[$card->key] ?? null;
-            if ($def !== null && !$def['visible']) {
-                return null;
-            }
             return [
                 'key'         => $card->key,
                 'label'       => $card->label,
@@ -423,7 +420,7 @@ class UserController extends Controller
                 'link'        => $def['link'] ?? null,
                 'count'       => $def['count'] ?? ($cardCounts[$card->key] ?? 0),
             ];
-        })->filter()->values();
+        })->values();
 
         return view('admin.dashboard', compact(
             'year',
