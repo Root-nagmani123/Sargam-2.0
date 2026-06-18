@@ -4,6 +4,7 @@ namespace App\DataTables\FC;
 
 use App\Models\FC\FcForm;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
@@ -48,12 +49,46 @@ class FcFormOverviewDataTable extends DataTable
 
         $query = DB::table($t);
 
+        // Scope to this form only when the tracker table supports form_id
+        if (Schema::hasColumn($t, 'form_id')) {
+            $query->where("{$t}.form_id", $this->form->id);
+        }
+
         fc_report_apply_tracker_user_resolution($query, $t, $t);
         fc_report_join_student_master_firsts($query, $t, $t);
 
         $query->leftJoin('service_master as svc', 's1.service_id', '=', 'svc.pk')
             ->leftJoin('state_masters as st', 's1.allotted_state_id', '=', 'st.id');
 
+        // Secondary service/state lookups via fc_registration_master (frm) when available
+        $hasFrm = Schema::hasTable('fc_registration_master');
+        if ($hasFrm) {
+            $query->leftJoin('service_master as svc_frm', DB::raw('CAST(frm.service_master_pk AS UNSIGNED)'), '=', 'svc_frm.pk')
+                  ->leftJoin('state_masters as st_frm',   DB::raw('CAST(frm.state_master_pk   AS UNSIGNED)'), '=', 'st_frm.id');
+        }
+
+        $serviceExpr = $hasFrm
+            ? "COALESCE(NULLIF(TRIM(svc.service_short_name),''), NULLIF(TRIM(svc.service_name),''), NULLIF(TRIM(svc_frm.service_short_name),''), NULLIF(TRIM(svc_frm.service_name),''), NULLIF(TRIM(`{$t}`.service_code),''))"
+            : "COALESCE(NULLIF(TRIM(svc.service_short_name),''), NULLIF(TRIM(svc.service_name),''), NULLIF(TRIM(`{$t}`.service_code),''))";
+
+        $stateExpr = $hasFrm
+            ? "COALESCE(NULLIF(TRIM(st.state_name),''), NULLIF(TRIM(st_frm.state_name),''))"
+            : "NULLIF(TRIM(st.state_name),'')";
+
+        $cadreExpr = "COALESCE(NULLIF(TRIM(s1.cadre),''), NULLIF(TRIM(`{$t}`.cadre),''))";
+
+        $query->select([
+                "{$t}.{$u}",
+                "{$t}.status",
+                DB::raw("NULLIF(TRIM(COALESCE(NULLIF(TRIM(s1.full_name),''), CONCAT(COALESCE(s1.first_name,''),' ',COALESCE(s1.last_name,'')))), '') as full_name"),
+                's1.mobile_no',
+                DB::raw("{$serviceExpr} as service_code"),
+                DB::raw("{$cadreExpr} as cadre"),
+                DB::raw("{$stateExpr} as allotted_state"),
+                DB::raw("({$stepsDoneExpr}) as steps_done"),
+            ]);
+
+        // route_user_id and login_username must be addSelect'd AFTER select() to avoid being replaced
         if ($u === 'user_id') {
             $query->addSelect([
                 DB::raw(fc_report_route_user_id_sql($t, $t).' as route_user_id'),
@@ -65,17 +100,6 @@ class FcFormOverviewDataTable extends DataTable
                 DB::raw("`{$t}`.`{$u}` as login_username"),
             ]);
         }
-
-        $query->select([
-                "{$t}.{$u}",
-                "{$t}.status",
-                's1.full_name',
-                's1.mobile_no',
-                DB::raw('COALESCE(svc.service_short_name, svc.service_name) as service_code'),
-                's1.cadre',
-                'st.state_name as allotted_state',
-                DB::raw("({$stepsDoneExpr}) as steps_done"),
-            ]);
 
         // Add one boolean column per trackable step
         foreach ($this->steps as $step) {

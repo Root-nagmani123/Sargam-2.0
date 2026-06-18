@@ -19,6 +19,7 @@
 
     <tr>
         <th>S.No.</th>
+        <th>Username</th>
         <th>Name</th>
         <th>Code</th>
         <th>Mobile</th>
@@ -36,6 +37,7 @@
     @forelse($tableRows as $row)
         <tr>
             <td>{{ $row['sno'] }}</td>
+            <td>{{ $row['username'] }}</td>
             <td>{{ $row['name'] }}</td>
             <td>{{ $row['code'] }}</td>
             <td>{{ $row['mobile'] }}</td>
