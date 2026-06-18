@@ -264,6 +264,9 @@
             }
         }
 
+        // Surface the real reason instead of DataTables' generic alert popup.
+        $.fn.dataTable.ext.errMode = 'none';
+
         if ($.fn.DataTable.isDataTable(tableSelector)) {
             table = $(tableSelector).DataTable();
         } else {
@@ -279,6 +282,25 @@
                     data: function(d) {
                         d.pk = $('#pk').val();
                         d.active_inactive = $('#active_inactive').val();
+                    },
+                    error: function(xhr) {
+                        if (xhr.status === 401 || xhr.status === 419) {
+                            Swal.fire({
+                                icon: 'warning',
+                                title: 'Session expired',
+                                text: 'Your session has timed out. Please log in again.',
+                                confirmButtonText: 'Log in'
+                            }).then(function() {
+                                window.location.href = "{{ route('login') }}";
+                            });
+                        } else {
+                            Swal.fire(
+                                'Could not load data',
+                                'The server returned ' + (xhr.status || 'an error') +
+                                '. Please refresh the page and try again.',
+                                'error'
+                            );
+                        }
                     }
                 },
                 columns: [{
