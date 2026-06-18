@@ -915,206 +915,90 @@ class CalendarController extends Controller
         @ini_set('memory_limit', '512M');
         @set_time_limit(120);
 
-        $event = $this->buildEventCardData($id);
-        abort_if(!$event, 404, 'Event not found');
+        $student_pk = auth()->user()->user_id;
 
-        $orientation = $request->query('orientation') === 'landscape' ? 'landscape' : 'portrait';
-
-        $data = [
-            'event'         => $event,
-            'bannerSrc'     => $this->cardBannerSrc($event['event_banner']),
-            'qrSrc'         => $this->cardQrSrc($event['qr_code_data']),
-            'lbsnaaLogoSrc' => $this->cardLbsnaaLogo(),
-            'emblemSrc'     => $this->cardIndiaEmblem(),
-            'orientation'   => $orientation,
-        ];
-
-        $pdf = Pdf::loadView('admin.calendar.pdf.event-card-pdf', $data)
-            ->setPaper('a4', $orientation)
-            ->setOptions([
-                'defaultFont'          => 'DejaVu Sans',
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
-                'dpi'                  => 110,
-            ]);
-
-        $slug = Str::slug($event['topic'] ?: 'event-card') ?: 'event-card';
-        $fileName = 'event-card-' . $slug . '-' . $id . '.pdf';
-
-        return $request->boolean('download')
-            ? $pdf->download($fileName)
-            : $pdf->stream($fileName);
-    }
-
-    /**
-     * Read a local image file into a data URI for Dompdf (avoids broken remote loads).
-     */
-    private function cardFileToDataUri(?string $path): ?string
-    {
-        if (!$path || !is_file($path) || !is_readable($path)) {
-            return null;
-        }
-        $raw = @file_get_contents($path);
-        if ($raw === false || $raw === '') {
-            return null;
-        }
-        $ext = strtolower(pathinfo($path, PATHINFO_EXTENSION));
-        $mime = match ($ext) {
-            'png'  => 'image/png',
-            'webp' => 'image/webp',
-            'gif'  => 'image/gif',
-            'svg'  => 'image/svg+xml',
-            default => 'image/jpeg',
-        };
-
-        return 'data:' . $mime . ';base64,' . base64_encode($raw);
-    }
-
-    /**
-     * Fetch a remote image and return it as a data URI for Dompdf embedding.
-     */
-    private function cardHttpToDataUri(string $url, string $mime = 'image/png'): ?string
-    {
-        try {
-            $response = Http::timeout(20)->connectTimeout(8)->get($url);
-            if ($response->successful()) {
-                $body = $response->body();
-                if ($body !== '' && strlen($body) > 100) {
-                    return 'data:' . $mime . ';base64,' . base64_encode($body);
-                }
-            }
-        } catch (\Throwable $e) {
-            // ignore — caller falls back gracefully
+        // Resolve the course up-front so the timetable window can default to the
+        // course's own start/end dates instead of a hard-coded month.
+        $course = null;
+        if ($request->filled('course_id')) {
+            $course = CourseMaster::where('pk', $request->course_id)
+                ->select('course_name', 'couse_short_name', 'course_year', 'start_year', 'end_date')
+                ->first();
         }
 
-        return null;
-    }
+        // Date range: an explicit request range wins; otherwise align to the
+        // course's start/end dates, falling back to the current month.
+        $start = $request->start
+            ?: (($course && !empty($course->start_year))
+                ? Carbon::parse($course->start_year)->toDateString()
+                : Carbon::now()->startOfMonth()->toDateString());
+        $end = $request->end
+            ?: (($course && !empty($course->end_date))
+                ? Carbon::parse($course->end_date)->toDateString()
+                : Carbon::now()->endOfMonth()->toDateString());
 
-    /**
-     * Resolve the event banner (stored path or URL) to a Dompdf-safe source.
-     */
-    private function cardBannerSrc(?string $banner): ?string
-    {
-        if (!$banner) {
-            return null;
-        }
-        if (preg_match('#^https?://#i', $banner)) {
-            return $this->cardHttpToDataUri($banner, 'image/jpeg') ?? $banner;
-        }
-        $rel = ltrim(str_replace('\\', '/', $banner), '/');
-        foreach ([
-            storage_path('app/public/' . $rel),
-            public_path('storage/' . $rel),
-            public_path($rel),
-        ] as $candidate) {
-            $uri = $this->cardFileToDataUri($candidate);
-            if ($uri !== null) {
-                return $uri;
-            }
+        $events = DB::table('timetable')
+            ->join('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+            ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
+            ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
+            ->where('student_course_group_map.student_master_pk', $student_pk)
+            ->whereDate('timetable.START_DATE', '>=', $start)
+            ->whereDate('timetable.END_DATE', '<=', $end);
+
+        if ($request->filled('course_id')) {
+            $events = $events->where('timetable.course_master_pk', $request->course_id);
         }
 
-        return null;
-    }
-
-    /**
-     * Build a QR code image (data URI) from arbitrary text/URL using a public
-     * QR rendering service. Returns null if the value is empty or fetch fails.
-     */
-    private function cardQrSrc(?string $data): ?string
-    {
-        $data = trim((string) $data);
-        if ($data === '') {
-            return null;
-        }
-        $url = 'https://api.qrserver.com/v1/create-qr-code/?size=260x260&margin=0&data=' . urlencode($data);
-
-        return $this->cardHttpToDataUri($url, 'image/png');
-    }
-
-    /**
-     * LBSNAA header logo for the Event Card PDF (local asset first, then official site).
-     */
-    private function cardLbsnaaLogo(): string
-    {
-        foreach ([
-            public_path('images/lbsnaa_logo.jpg'),
-            public_path('images/lbsnaa_logo.png'),
-        ] as $path) {
-            $uri = $this->cardFileToDataUri($path);
-            if ($uri !== null) {
-                return $uri;
-            }
-        }
-
-        $official = 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
-
-        return $this->cardHttpToDataUri($official, 'image/png') ?? $official;
-    }
-
-    /**
-     * India emblem for the Event Card PDF header.
-     */
-    private function cardIndiaEmblem(): string
-    {
-        $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
-
-        return $this->cardHttpToDataUri($url, 'image/png') ?? $url;
-    }
-
-    /**
-     * Whole-week timetable as a print-ready A4 landscape PDF (Time × Mon–Fri grid).
-     * Mirrors the on-screen "Weekly Timetable" list view. ?week_start=YYYY-MM-DD
-     * selects the week, ?course_id filters (same as the calendar filter),
-     * ?download=1 forces an attachment.
-     */
-    public function weeklyTimetablePdf(Request $request)
-    {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(120);
-
-        $weekStart = $request->filled('week_start')
-            ? Carbon::parse($request->week_start)->startOfWeek(Carbon::MONDAY)
-            : Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $weekEnd = $weekStart->copy()->addDays(6);
-
-        $courseId = $request->query('course_id') ?: null;
-
-        $rows = DB::table('timetable')
-            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-            ->whereBetween('timetable.START_DATE', [$weekStart->toDateString(), $weekEnd->toDateString()])
-            ->when($courseId, function ($q) use ($courseId) {
-                $q->where('timetable.course_master_pk', $courseId);
-            })
-            ->select(
-                'timetable.pk',
-                'timetable.subject_topic',
-                'timetable.class_session',
-                'timetable.START_DATE',
-                'timetable.faculty_master',
-                'venue_master.venue_name as venue_name'
-            )
+        $events = $events
+            ->select('timetable.*', 'venue_master.venue_name as venue_name')
             ->orderBy('timetable.START_DATE')
             ->get();
 
-        // Build grid[timeSlot][isoWeekday 1..5] = list of session cells, ordered by start time.
-        $grid = [];
-        $slotOrder = [];
-        foreach ($rows as $r) {
-            $dow = (int) Carbon::parse($r->START_DATE)->dayOfWeekIso; // 1=Mon .. 7=Sun
-            if ($dow < 1 || $dow > 5) {
-                continue; // Mon–Fri grid (matches the on-screen weekly view)
-            }
+        // Resolve the course name for every course referenced by the events, so
+        // each card can show its own course even when the range spans several.
+        $courseNameMap = CourseMaster::whereIn('pk', $events->pluck('course_master_pk')->filter()->unique()->values())
+            ->pluck('course_name', 'pk');
+        $multiCourse = $courseNameMap->count() > 1;
 
-            $slot = trim((string) $r->class_session);
-            if ($slot === '') {
-                $slot = 'Unscheduled';
+        // Parse a session label ("0930 - 1030", "09:00 AM - 12:00 PM") into
+        // start/end minutes-from-midnight. Returns null when no time is present.
+        $parseTimes = function ($label) {
+            if (!preg_match_all('/(\d{1,2})[:.]?(\d{2})\s*(am|pm)?/i', (string) $label, $mm, PREG_SET_ORDER)) {
+                return null;
             }
-            if (!isset($grid[$slot])) {
-                $grid[$slot] = [];
-                $slotOrder[$slot] = $this->timetableSlotSortKey($slot);
-            }
+            $toMin = function ($m) {
+                $h   = (int) $m[1];
+                $min = (int) $m[2];
+                $ap  = isset($m[3]) ? strtolower($m[3]) : '';
+                if ($ap === 'pm' && $h < 12)  { $h += 12; }
+                if ($ap === 'am' && $h === 12) { $h = 0; }
+                return ($h * 60) + $min;
+            };
+            return [
+                'start' => $toMin($mm[0]),
+                'end'   => isset($mm[1]) ? $toMin($mm[1]) : null,
+            ];
+        };
 
-            $facultyIds = json_decode($r->faculty_master, true);
+        // Tea Break / Lunch rows get merged into a full-width band.
+        $isBreakTopic = function ($topic) {
+            return (bool) preg_match('/\b(tea\s*break|lunch|break|recess)\b/i', (string) $topic);
+        };
+
+        // Minutes-from-midnight -> 4-digit "0930".
+        $fmt4 = function ($min) {
+            if ($min === null) { return ''; }
+            return sprintf('%02d%02d', intdiv($min, 60) % 24, $min % 60);
+        };
+
+        // Resolve every event to start/end minutes plus display fields, per day.
+        $eventsByDay = [];   // [Y-m-d] => [ ['start','end','topic',...], ... ]
+        $venueCounts = [];
+
+        foreach ($events as $event) {
+            $dateKey = Carbon::parse($event->START_DATE)->format('Y-m-d');
+
+            $facultyIds = json_decode($event->faculty_master, true);
             if (!is_array($facultyIds)) {
                 $facultyIds = !empty($r->faculty_master) ? [$r->faculty_master] : [];
             }
@@ -1122,311 +1006,261 @@ class CalendarController extends Controller
                 ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
                 : '';
 
-            $grid[$slot][$dow][] = [
-                'topic'   => trim((string) $r->subject_topic) ?: 'Session',
-                'faculty' => $faculty,
-                'venue'   => trim((string) ($r->venue_name ?? '')),
+            $rawLabel = trim((string) $event->class_session);
+            $t = $parseTimes($rawLabel);
+            if ($t === null) {
+                if (strlen((string) $event->START_DATE) > 10) {
+                    $s = Carbon::parse($event->START_DATE);
+                    $e = $event->END_DATE ? Carbon::parse($event->END_DATE) : null;
+                    $t = ['start' => ($s->hour * 60) + $s->minute, 'end' => $e ? (($e->hour * 60) + $e->minute) : null];
+                } else {
+                    $t = ['start' => null, 'end' => null];
+                }
+            }
+            // Without a resolvable start time the event can't be placed on the grid.
+            if (($t['start'] ?? null) === null) {
+                continue;
+            }
+            $st = $t['start'];
+            $en = ($t['end'] !== null && $t['end'] > $st) ? $t['end'] : $st + 60;
+
+            $topic     = $event->subject_topic ?: 'Session';
+            $timeLabel = ($rawLabel !== '' && preg_match('/\d/', $rawLabel))
+                ? $rawLabel
+                : ($fmt4($st) . ' - ' . $fmt4($en));
+
+            $eventsByDay[$dateKey][] = [
+                'start'   => $st,
+                'end'     => $en,
+                'topic'   => $topic,
+                'faculty' => $facultyNames,
+                'venue'   => $event->venue_name,
+                'course'  => $courseNameMap[$event->course_master_pk] ?? '',
+                'time'    => $timeLabel,
+                'isBreak' => $isBreakTopic($topic),
             ];
-        }
 
-        uksort($grid, function ($a, $b) use ($slotOrder) {
-            return ($slotOrder[$a] ?? PHP_INT_MAX) <=> ($slotOrder[$b] ?? PHP_INT_MAX);
-        });
-
-        // Build ordered row descriptors: stacked time + full-width break/lunch detection.
-        $rows = [];
-        $venueCounts = [];
-        foreach ($grid as $slot => $byDay) {
-            $allCells = [];
-            foreach ($byDay as $cells) {
-                foreach ($cells as $c) {
-                    $allCells[] = $c;
-                    if ($c['venue'] !== '') {
-                        $venueCounts[$c['venue']] = ($venueCounts[$c['venue']] ?? 0) + 1;
-                    }
-                }
-            }
-
-            $isBreak = !empty($allCells);
-            foreach ($allCells as $c) {
-                if (!preg_match('/\b(tea\s*break|lunch|break|recess|hi[\s-]?tea)\b/i', $c['topic'])) {
-                    $isBreak = false;
-                    break;
-                }
-            }
-
-            [$startLbl, $endLbl] = $this->splitSessionTime($slot);
-
-            $rows[] = [
-                'slot'       => $slot,
-                'startLbl'   => $startLbl,
-                'endLbl'     => $endLbl,
-                'byDay'      => $byDay,
-                'isBreak'    => $isBreak,
-                'breakLabel' => $isBreak ? $allCells[0]['topic'] : null,
-            ];
-        }
-
-        arsort($venueCounts);
-        $topVenue = !empty($venueCounts) ? array_key_first($venueCounts) : null;
-
-        // Programme details (subtitle, period, programme-relative week) from the course.
-        $programmeName = null;
-        $period = null;
-        $programmeWeek = $weekStart->isoWeek;
-        if ($courseId) {
-            $course = DB::table('course_master')->where('pk', $courseId)->first();
-            if ($course) {
-                $programmeName = $course->course_name ?? null;
-                $start = !empty($course->start_year) ? Carbon::parse($course->start_year) : null;
-                $end   = !empty($course->end_date) ? Carbon::parse($course->end_date) : null;
-                if ($start) {
-                    $courseMonday = $start->copy()->startOfWeek(Carbon::MONDAY);
-                    $relWeek = intdiv((int) $courseMonday->diffInDays($weekStart, false), 7) + 1;
-                    if ($relWeek >= 1) {
-                        $programmeWeek = $relWeek;
-                    }
-                }
-                if ($start && $end) {
-                    $period = $start->format('jS M Y') . ' to ' . $end->format('jS M Y');
-                } elseif ($start) {
-                    $period = 'Commencing ' . $start->format('jS M Y');
-                }
+            if (!empty($event->venue_name)) {
+                $venueCounts[$event->venue_name] = ($venueCounts[$event->venue_name] ?? 0) + 1;
             }
         }
 
-        $data = [
-            'rows'          => $rows,
-            'weekStart'     => $weekStart,
-            'weekEnd'       => $weekEnd,
-            'weekNumber'    => $programmeWeek,
-            'days'          => [1 => 'Monday', 2 => 'Tuesday', 3 => 'Wednesday', 4 => 'Thursday', 5 => 'Friday'],
-            'programmeName' => $programmeName,
-            'period'        => $period,
-            'topVenue'      => $topVenue,
-            'lbsnaaLogoSrc' => $this->cardLbsnaaLogo(),
-            'emblemSrc'     => $this->cardIndiaEmblem(),
-        ];
-
-        $pdf = Pdf::loadView('admin.calendar.pdf.weekly-timetable-pdf', $data)
-            ->setPaper('a4', 'landscape')
-            ->setOptions([
-                'defaultFont'          => 'DejaVu Sans',
-                'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
-                'dpi'                  => 110,
-            ]);
-
-        $fileName = 'weekly-timetable-' . $weekStart->format('Y-m-d') . '.pdf';
-
-        return $request->boolean('download')
-            ? $pdf->download($fileName)
-            : $pdf->stream($fileName);
-    }
-
-    /**
-     * Derive a chronological sort key (minutes from midnight) from a class_session
-     * label such as "09:30 AM - 10:30 AM" or "0930 - 1030". Unparseable slots sort last.
-     */
-    private function timetableSlotSortKey(string $slot): int
-    {
-        if (preg_match('/(\d{1,2}):(\d{2})\s*([AaPp][Mm])?/', $slot, $m)) {
-            $h = (int) $m[1];
-            $min = (int) $m[2];
-            $mer = strtolower($m[3] ?? '');
-            if ($mer === 'pm' && $h < 12) {
-                $h += 12;
-            }
-            if ($mer === 'am' && $h === 12) {
-                $h = 0;
-            }
-            return $h * 60 + $min;
-        }
-        if (preg_match('/\b(\d{2})(\d{2})\b/', $slot, $m)) {
-            return ((int) $m[1]) * 60 + (int) $m[2];
+        foreach ($eventsByDay as $k => $evs) {
+            usort($evs, fn ($a, $b) => $a['start'] <=> $b['start']);
+            $eventsByDay[$k] = $evs;
         }
 
-        return PHP_INT_MAX;
-    }
+        $courseStartWeek = ($course && !empty($course->start_year))
+            ? Carbon::parse($course->start_year)->startOfWeek(Carbon::MONDAY)
+            : null;
 
-    /**
-     * Split a class_session label such as "09:45 AM - 10:45 AM" or "0930 to 1030"
-     * into [start, end] for the stacked Time column. Returns [label, null] if not a range.
-     */
-    private function splitSessionTime(string $slot): array
-    {
-        $parts = preg_split('/\s*(?:to|\-|–|—)\s*/i', $slot, 2);
-        if (is_array($parts) && count($parts) === 2) {
-            return [trim($parts[0]), trim($parts[1])];
-        }
+        // Group the range into Mon–Sun weeks; one page per week that has events.
+        $weeks   = [];
+        $cursor  = Carbon::parse($start)->startOfWeek(Carbon::MONDAY);
+        $lastDay = Carbon::parse($end)->endOfWeek(Carbon::SUNDAY);
 
-        return [trim($slot), null];
-    }
+        while ($cursor <= $lastDay) {
+            $weekDays   = [];
+            $hasEvents  = false;
+            $boundaries = [];   // distinct start/end minutes across the week
 
-    /**
-     * Course Information + "Resource Persons / Faculty for the Week" sheet as a
-     * print-ready A4 portrait PDF. Resource persons are derived from the week's
-     * sessions. ?week_start, ?course_id, ?download=1 behave as for the timetable PDF.
-     */
-    public function weeklyInfoPdf(Request $request)
-    {
-        @ini_set('memory_limit', '512M');
-        @set_time_limit(120);
-
-        $weekStart = $request->filled('week_start')
-            ? Carbon::parse($request->week_start)->startOfWeek(Carbon::MONDAY)
-            : Carbon::now()->startOfWeek(Carbon::MONDAY);
-        $weekEnd = $weekStart->copy()->addDays(6);
-
-        $courseId = $request->query('course_id') ?: null;
-
-        $sessions = DB::table('timetable')
-            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
-            ->whereBetween('timetable.START_DATE', [$weekStart->toDateString(), $weekEnd->toDateString()])
-            ->when($courseId, function ($q) use ($courseId) {
-                $q->where('timetable.course_master_pk', $courseId);
-            })
-            ->select(
-                'timetable.pk',
-                'timetable.subject_topic',
-                'timetable.START_DATE',
-                'timetable.faculty_master',
-                'venue_master.venue_name as venue_name'
-            )
-            ->orderBy('timetable.START_DATE')
-            ->get();
-
-        // Bulk-load faculty referenced this week.
-        $allFacultyIds = [];
-        foreach ($sessions as $s) {
-            $ids = json_decode($s->faculty_master, true);
-            if (!is_array($ids)) {
-                $ids = !empty($s->faculty_master) ? [$s->faculty_master] : [];
-            }
-            foreach ($ids as $id) {
-                $allFacultyIds[$id] = true;
-            }
-        }
-        $facultyMap = DB::table('faculty_master')
-            ->whereIn('pk', array_keys($allFacultyIds) ?: [0])
-            ->get()
-            ->keyBy('pk');
-
-        // One resource-person row per (faculty, session).
-        $facultyRows = [];
-        $venueCounts = [];
-        foreach ($sessions as $s) {
-            if (!empty($s->venue_name)) {
-                $venueCounts[$s->venue_name] = ($venueCounts[$s->venue_name] ?? 0) + 1;
-            }
-            $ids = json_decode($s->faculty_master, true);
-            if (!is_array($ids)) {
-                $ids = !empty($s->faculty_master) ? [$s->faculty_master] : [];
-            }
-            foreach ($ids as $id) {
-                $f = $facultyMap->get($id);
-                if (!$f) {
+            for ($i = 0; $i < 7; $i++) {
+                $d   = $cursor->copy()->addDays($i);
+                $key = $d->format('Y-m-d');
+                $evs = $eventsByDay[$key] ?? [];
+                // Show Sat/Sun only when those days have sessions; Mon–Fri always.
+                if ($d->isWeekend() && empty($evs)) {
                     continue;
                 }
-                $desig = trim((string) ($f->current_designation ?? ''));
-                $org   = trim((string) ($f->current_department ?? ''));
-                $designation = trim($desig . ($desig !== '' && $org !== '' ? ', ' : '') . $org);
-                $facultyRows[] = [
-                    'name'        => trim((string) ($f->full_name ?? '')) ?: trim(($f->first_name ?? '') . ' ' . ($f->last_name ?? '')),
-                    'designation' => $designation,
-                    'topic'       => trim((string) $s->subject_topic) ?: 'Session',
-                    'date'        => Carbon::parse($s->START_DATE),
-                ];
-            }
-        }
-        usort($facultyRows, function ($a, $b) {
-            return [$a['date']->timestamp, $a['name']] <=> [$b['date']->timestamp, $b['name']];
-        });
-
-        arsort($venueCounts);
-        $topVenue = !empty($venueCounts) ? array_key_first($venueCounts) : null;
-
-        // Course Information.
-        $programmeName = null;
-        $shortName = null;
-        $period = null;
-        $programmeWeek = $weekStart->isoWeek;
-        $participants = null;
-        $coordinator = null;
-        $assistantCoordinator = null;
-        $director = null;
-        $jointDirector = null;
-        $participantsProfile = null;
-        $mentionOfWeek = null;
-
-        if ($courseId) {
-            $course = DB::table('course_master')->where('pk', $courseId)->first();
-            if ($course) {
-                $programmeName = $course->course_name ?? null;
-                $shortName = $course->couse_short_name ?? null;
-                $participantsProfile = $course->participants_profile ?? null;
-                $start = !empty($course->start_year) ? Carbon::parse($course->start_year) : null;
-                $end   = !empty($course->end_date) ? Carbon::parse($course->end_date) : null;
-                if ($start) {
-                    $courseMonday = $start->copy()->startOfWeek(Carbon::MONDAY);
-                    $relWeek = intdiv((int) $courseMonday->diffInDays($weekStart, false), 7) + 1;
-                    if ($relWeek >= 1) {
-                        $programmeWeek = $relWeek;
+                if (!empty($evs)) {
+                    $hasEvents = true;
+                    foreach ($evs as $e) {
+                        $boundaries[$e['start']] = true;
+                        $boundaries[$e['end']]   = true;
                     }
                 }
-                if ($start && $end) {
-                    $period = $start->format('jS M Y') . ' to ' . $end->format('jS M Y');
-                } elseif ($start) {
-                    $period = 'Commencing ' . $start->format('jS M Y');
+                $weekDays[] = [
+                    'key'     => $key,
+                    'dayName' => $d->format('l'),
+                    'label'   => $d->format('d.m.Y'),
+                    'events'  => $evs,
+                ];
+            }
+
+            if (!$hasEvents) { $cursor->addWeek(); continue; }
+
+            // Canonical rows = intervals that begin at an actual session start.
+            // (Intervals that exist only as a gap inside a long session are dropped,
+            // so we never create unnecessary empty rows.)
+            $bs = array_keys($boundaries);
+            sort($bs);
+            $rowItv = [];
+            for ($c = 0; $c < count($bs) - 1; $c++) {
+                $rs = $bs[$c];
+                $re = $bs[$c + 1];
+                $startsHere = false;
+                foreach ($weekDays as $wd) {
+                    foreach ($wd['events'] as $e) {
+                        if ($e['start'] === $rs) { $startsHere = true; break 2; }
+                    }
+                }
+                if ($startsHere) {
+                    $rowItv[] = ['start' => $rs, 'end' => $re];
                 }
             }
-            $participants = DB::table('student_master_course__map')
-                ->where('course_master_pk', $courseId)
-                ->where('active_inactive', 1)
-                ->count();
-            $cc = DB::table('course_coordinator_master')->where('courses_master_pk', $courseId)->first();
-            if ($cc) {
-                $coordinator = $cc->Coordinator_name ?? null;
-                $assistantCoordinator = $cc->Assistant_Coordinator_name ?? null;
-                $director = $cc->director_name ?? null;
-                $jointDirector = $cc->joint_director_name ?? null;
+            $rowCount = count($rowItv);
+            if ($rowCount === 0) { $cursor->addWeek(); continue; }
+
+            // Per-day cells with vertical merge (rowspan) over the rows a session covers.
+            $dayCells = [];   // [dayKey][rowIndex] = cell
+            foreach ($weekDays as $wd) {
+                $evs      = $wd['events'];
+                $occupied = array_fill(0, $rowCount, false);
+                $cells    = [];
+                for ($r = 0; $r < $rowCount; $r++) {
+                    if ($occupied[$r]) {
+                        $cells[$r] = ['state' => 'skip'];
+                        continue;
+                    }
+                    $rStart   = $rowItv[$r]['start'];
+                    $rEnd     = $rowItv[$r]['end'];
+                    $starting = array_values(array_filter($evs, fn ($e) => $e['start'] === $rStart && $e['end'] >= $rEnd));
+
+                    if (!empty($starting)) {
+                        $maxEnd = max(array_map(fn ($e) => $e['end'], $starting));
+                        $span   = 0;
+                        for ($k = $r; $k < $rowCount; $k++) {
+                            if ($rowItv[$k]['start'] >= $rStart && $rowItv[$k]['end'] <= $maxEnd) {
+                                $span++;
+                                $occupied[$k] = true;
+                            } else {
+                                break;
+                            }
+                        }
+                        if ($span < 1) { $span = 1; }
+                        $allBreak = true;
+                        foreach ($starting as $e) { if (!$e['isBreak']) { $allBreak = false; break; } }
+                        $cells[$r] = ['state' => 'render', 'rowspan' => $span, 'events' => $starting, 'isBreak' => $allBreak];
+                    } else {
+                        $cells[$r] = ['state' => 'render', 'rowspan' => 1, 'events' => [], 'isBreak' => false];
+                    }
+                }
+                $dayCells[$wd['key']] = $cells;
             }
-            $mentionOfWeek = DB::table('course_week_notes')
-                ->where('course_master_pk', $courseId)
-                ->where('week_start', $weekStart->toDateString())
-                ->value('mention_of_week');
+
+            // Assemble rows; a row becomes a full-width break band when every day's
+            // cell there is a single-row break or empty (no session crosses it).
+            $rows = [];
+            for ($r = 0; $r < $rowCount; $r++) {
+                $isBand = true; $hasBreak = false; $bandTopic = '';
+                foreach ($weekDays as $wd) {
+                    $c = $dayCells[$wd['key']][$r];
+                    if ($c['state'] === 'skip') { $isBand = false; break; }
+                    if (empty($c['events'])) { continue; }
+                    if (!empty($c['isBreak']) && $c['rowspan'] === 1) {
+                        $hasBreak = true;
+                        if ($bandTopic === '') { $bandTopic = $c['events'][0]['topic']; }
+                    } else {
+                        $isBand = false; break;
+                    }
+                }
+                if (!$hasBreak) { $isBand = false; }
+
+                $cellsForRow = [];
+                foreach ($weekDays as $wd) {
+                    $cellsForRow[$wd['key']] = $dayCells[$wd['key']][$r];
+                }
+
+                $rows[] = [
+                    'from'      => $fmt4($rowItv[$r]['start']),
+                    'to'        => $fmt4($rowItv[$r]['end']),
+                    'isBand'    => $isBand,
+                    'bandTopic' => $bandTopic,
+                    'cells'     => $cellsForRow,
+                ];
+            }
+
+            $weekNumber = $courseStartWeek
+                ? $courseStartWeek->diffInWeeks($cursor) + 1
+                : (int) $cursor->copy()->addDays(3)->format('W');
+
+            $firstDay = Carbon::parse($weekDays[0]['key']);
+            $lastDayD = Carbon::parse($weekDays[count($weekDays) - 1]['key']);
+
+            $dayHeaders = array_map(
+                fn ($wd) => ['key' => $wd['key'], 'dayName' => $wd['dayName'], 'label' => $wd['label']],
+                $weekDays
+            );
+
+            $weeks[] = [
+                'weekNumber' => $weekNumber,
+                'days'       => $dayHeaders,
+                'rows'       => $rows,
+                'rangeLabel' => $firstDay->format('d M Y') . ' - ' . $lastDayD->format('d M Y'),
+            ];
+
+            $cursor->addWeek();
         }
 
+        $primaryVenue = '';
+        if (!empty($venueCounts)) {
+            arsort($venueCounts);
+            $primaryVenue = array_key_first($venueCounts);
+        }
+
+        // Course duration line, e.g. "8 December 2025 to 17 April 2026".
+        $courseStartDate = ($course && !empty($course->start_year))
+            ? Carbon::parse($course->start_year)->format('j F Y') : '';
+        $courseEndDate = ($course && !empty($course->end_date))
+            ? Carbon::parse($course->end_date)->format('j F Y') : '';
+
+        $courseDuration = '';
+        if ($courseStartDate && $courseEndDate) {
+            $courseDuration = $courseStartDate . ' to ' . $courseEndDate;
+        }
+
+        // Embed logos as base64 data URIs — DomPDF can't reliably resolve
+        // Windows filesystem paths used in <img src>.
+        $toDataUri = function (string $path): string {
+            if (!is_file($path)) {
+                return '';
+            }
+            $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = in_array($ext, ['jpg', 'jpeg']) ? 'image/jpeg' : 'image/png';
+            return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+        };
+
         $data = [
-            'facultyRows'          => $facultyRows,
-            'weekStart'            => $weekStart,
-            'weekEnd'              => $weekEnd,
-            'weekNumber'           => $programmeWeek,
-            'programmeName'        => $programmeName,
-            'shortName'            => $shortName,
-            'period'               => $period,
-            'topVenue'             => $topVenue,
-            'participants'         => $participants,
-            'coordinator'          => $coordinator,
-            'assistantCoordinator' => $assistantCoordinator,
-            'director'             => $director,
-            'jointDirector'        => $jointDirector,
-            'participantsProfile'  => $participantsProfile,
-            'mentionOfWeek'        => $mentionOfWeek,
-            'lbsnaaLogoSrc'        => $this->cardLbsnaaLogo(),
-            'emblemSrc'            => $this->cardIndiaEmblem(),
+            'weeks'           => $weeks,
+            'rangeStart'      => Carbon::parse($start)->format('d M Y'),
+            'rangeEnd'        => Carbon::parse($end)->format('d M Y'),
+            'course'          => $course,
+            'courseStartDate' => $courseStartDate,
+            'courseEndDate'   => $courseEndDate,
+            'courseDuration'  => $courseDuration,
+            'multiCourse'     => $multiCourse,
+            'primaryVenue'    => $primaryVenue,
+            // Optional footer note / announcement (no hardcoding — driven by request).
+            'footerNote'      => trim((string) $request->input('note', '')),
+            'studentName'     => auth()->user()->user_name ?? '',
+            'logoLeft'        => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight'       => $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            // Pre-shaped Devanagari academy name (DomPDF can't shape Indic text).
+            'titleHindi'      => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
 
-        $pdf = Pdf::loadView('admin.calendar.pdf.weekly-info-pdf', $data)
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
             ->setPaper('a4', 'portrait')
             ->setOptions([
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled'      => true,
-                'dpi'                  => 110,
+                // Enables the <script type="text/php"> page-number block in the view.
+                'isPhpEnabled'         => true,
+                'dpi'                  => 96,
             ]);
 
-        $fileName = 'faculty-for-the-week-' . $weekStart->format('Y-m-d') . '.pdf';
+        $fileName = 'time-table-' . now()->format('Y-m-d_His') . '.pdf';
 
         return $request->boolean('download')
             ? $pdf->download($fileName)

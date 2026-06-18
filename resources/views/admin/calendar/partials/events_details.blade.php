@@ -8,7 +8,22 @@
                         <h3 class="h5 fw-bold mb-1" id="eventDetailsTitle">
                             <span id="eventTitle">Event</span>
                         </h3>
-                        <p class="mb-0 small text-secondary">
+                        <div class="d-flex gap-2 align-items-center">
+                            @if(hasRole('Training Induction Admin') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'))
+                            <button type="button" class="btn btn-sm btn-primary" id="editEventBtn">
+                                <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
+                            </button>
+                            <button type="button" class="btn btn-sm btn-danger" id="deleteEventBtn">
+                                <i class="bi bi-trash me-1" aria-hidden="true"></i> Delete
+                            </button>
+                            @endif
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
+                                aria-label="Close"></button>
+                        </div>
+                    </div>
+                    <div class="mt-2">
+                        <p class="mb-0 small fw-medium text-white">
+                            <i class="material-icons me-1" aria-hidden="true">date_range</i><i class="bi bi-calendar me-1" aria-hidden="true"></i>
                             <span id="eventDate"></span>
                         </p>
                     </div>

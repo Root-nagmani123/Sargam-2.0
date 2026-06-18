@@ -1562,10 +1562,9 @@ document.addEventListener('DOMContentLoaded', function() {
         var clientTypes = getChoicesMultiValues(ct);
         var modalSearch = (document.getElementById('modalSearch') || {}).value || '';
         var url = buildModalBillsDataUrl({ page: modalBillsCurrentPage, forPrint: !!options.forPrint });
-        var deferLifetimeDue = !options.forPrint && !options.includeLifetimeDue;
-        if (deferLifetimeDue) {
-            url += '&skip_lifetime_due=1';
-        }
+        // Always request lifetime due in the primary payload so the table
+        // does not flash interim period due values before async patching.
+        var deferLifetimeDue = false;
         renderModalBillsSkeleton();
         fetch(url)
             .then(function(r) { return r.json(); })
@@ -1578,10 +1577,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 modalBillsCurrentPage = parseInt(pagination.page || modalBillsCurrentPage || 1, 10);
                 updateModalBillsSortHeaderIcons();
                 renderModalTable();
-
-                if (deferLifetimeDue && modalBillsData.length) {
-                    fetchModalLifetimeDueForCurrentPage();
-                }
 
                 // Also refresh Buyer Name dropdown in modal based on loaded bills.
                 // IMPORTANT: Only do this when no client type is selected, otherwise it
