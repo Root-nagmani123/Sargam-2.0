@@ -178,6 +178,54 @@
 
     /* Screen-only helpers */
     .print-masthead, .print-doc-title { display: none; }
+
+    /* ── Screen-only: compact "Descriptive Roll" layout matching the downloaded PDF.
+         Wrapped in @media screen so print output (already PDF-matched above) is untouched. ── */
+    @media screen {
+        .student-report-page .dyn-section { border: 1px solid #cdd9e6 !important; }
+        .student-report-page .dyn-section-hd {
+            background: #0a3d6b !important;
+            color: #fff !important;
+            border-bottom: 1px solid #0a3d6b !important;
+        }
+        .student-report-page .section-fields {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0;
+        }
+        .student-report-page .section-fields .field-group-hd {
+            grid-column: 1 / -1;
+            background: #dce6f0 !important;
+            color: #0a3d6b !important;
+            font-weight: 600;
+        }
+        .student-report-page .section-fields .field-row {
+            display: flex;
+            border-bottom: 1px solid #e2e8f0;
+            border-right: 1px solid #e2e8f0;
+            font-size: 12px;
+        }
+        .student-report-page .section-fields .field-row:nth-child(odd) {
+            border-left: 1px solid #e2e8f0;
+        }
+        .student-report-page .section-fields .field-lbl {
+            width: 42%;
+            padding: 5px 8px !important;
+            background: #f0f4f9 !important;
+            color: #0a2a50 !important;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+        .student-report-page .section-fields .field-val {
+            padding: 5px 8px !important;
+            word-break: break-word;
+        }
+    }
+    /* Stack to single column on small screens */
+    @media screen and (max-width: 575.98px) {
+        .student-report-page .section-fields { grid-template-columns: 1fr; }
+        .student-report-page .section-fields .field-row { border-left: 1px solid #e2e8f0; }
+    }
 </style>
 @endpush
 
@@ -194,7 +242,7 @@
             </ol>
         </nav>
         <div class="d-flex gap-2 flex-wrap">
-            <a href="{{ route('admin.reports.student.pdf', ['username' => $userId]) }}" class="btn btn-sm btn-primary" target="_blank" rel="noopener">
+            <a href="{{ route('admin.reports.student.pdf', ['username' => $userId]) }}" class="btn btn-sm btn-primary">
                 <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
             </a>
             <button type="button" onclick="window.print()" class="btn btn-sm btn-outline-secondary">
@@ -307,7 +355,7 @@
                                 );
                                 $verifyAction = ($documentSource ?? 'legacy') === 'dynamic' && !empty($doc->form_field_id)
                                     ? route('admin.reports.student.form-documents.verify', ['userId' => $userId, 'formFieldId' => $doc->form_field_id])
-                                    : route('admin.reports.student.documents.verify', ['userId' => $userId, 'documentMasterId' => $doc->documentMaster?->id]);
+                                    : route('admin.reports.student.documents.verify', ['username' => $userId, 'documentMasterId' => $doc->documentMaster?->id]);
                             @endphp
                             <tr>
                                 <td>{{ $i+1 }}</td>

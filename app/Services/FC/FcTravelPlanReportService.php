@@ -24,8 +24,10 @@ class FcTravelPlanReportService
             ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "tp.{$tpCol}")
             ->leftJoin('fc_travel_arrival_slots as fslot', 'tp.fc_travel_arrival_slot_id', '=', 'fslot.id')
             ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id')
+            ->leftJoin('user_credentials as uc', 'uc.pk', '=', "tp.{$tpCol}")
             ->select([
                 "tp.{$tpCol} as user_id",
+                DB::raw("COALESCE(NULLIF(TRIM(uc.user_name),''), CAST(tp.{$tpCol} AS CHAR)) as login_username"),
                 'tp.joining_date',
                 'tp.mode_of_journey',
                 'tp.journey_vehicle_no',
@@ -88,6 +90,7 @@ class FcTravelPlanReportService
             $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $search) . '%';
             $query->where(function ($q) use ($like) {
                 $q->where('tp.' . fc_user_col('student_travel_plan_masters'), 'like', $like)
+                    ->orWhere('uc.user_name', 'like', $like)
                     ->orWhere('s1.full_name', 'like', $like)
                     ->orWhere('sm.full_name', 'like', $like)
                     ->orWhere('s1.roll_no', 'like', $like)
