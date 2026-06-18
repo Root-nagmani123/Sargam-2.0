@@ -15,6 +15,11 @@ class FcTravelPlanReportDataTable extends DataTable
         return datatables()
             ->query($query)
             ->addIndexColumn()
+            ->editColumn('login_username', function ($row) {
+                $showUrl = route('admin.travel.show', $row->user_id);
+                $label   = e($row->login_username ?? $row->user_id);
+                return '<a href="' . e($showUrl) . '" style="font-family:monospace;font-size:11px;font-weight:600;color:#1a3c6e;text-decoration:none;" title="User ID: ' . e($row->user_id) . '">' . $label . '</a>';
+            })
             ->editColumn('full_name', function ($row) {
                 $name = trim((string) ($row->full_name ?? ''));
                 if ($name !== '') {
@@ -24,8 +29,12 @@ class FcTravelPlanReportDataTable extends DataTable
                 if ($smName !== '') {
                     return e($smName);
                 }
+                $fallback = trim((string) ($row->login_username ?? $row->user_id ?? ''));
+                if ($fallback !== '') {
+                    return '<span class="text-muted fst-italic" title="No name on record">' . e($fallback) . '</span>';
+                }
 
-                return '<span class="text-muted" title="No student_master_firsts row">' . e($row->user_id ?? '—') . '</span>';
+                return '<span class="text-muted">—</span>';
             })
             ->editColumn('mobile_no', fn ($row) => ($row->mobile_no !== null && (string) $row->mobile_no !== '') ? e($row->mobile_no) : '—')
             ->editColumn('roll_no', fn ($row) => ($row->roll_no !== null && (string) $row->roll_no !== '') ? $row->roll_no : '—')
@@ -65,7 +74,7 @@ class FcTravelPlanReportDataTable extends DataTable
                     .'<a href="'.e($editUrl).'" class="btn btn-xs btn-outline-success py-0 px-2" style="font-size:11px" title="Edit"><i class="bi bi-pencil"></i></a>'
                     .'</div>';
             })
-            ->rawColumns(['full_name', 'slot_display', 'require_academy_vehicle', 'is_submitted', 'action'])
+            ->rawColumns(['login_username', 'full_name', 'slot_display', 'require_academy_vehicle', 'is_submitted', 'action'])
             ->orderColumn('full_name', 'COALESCE(NULLIF(TRIM(s1.full_name), \'\'), NULLIF(TRIM(sm.full_name), \'\'), tp.user_id) $1')
             ->orderColumn('roll_no', 'COALESCE(NULLIF(TRIM(s1.roll_no), \'\'), sm.roll_no, s1.roll_no) $1')
             ->orderColumn('mobile_no', 'COALESCE(s1.mobile_no, \'\') $1')
@@ -126,6 +135,7 @@ class FcTravelPlanReportDataTable extends DataTable
     {
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false)->width('48px'),
+            Column::make('login_username')->title('Username'),
             Column::make('full_name')->title('Name'),
             Column::make('roll_no')->title('Code'),
             Column::make('mobile_no')->title('Mobile'),

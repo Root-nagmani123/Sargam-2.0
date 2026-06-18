@@ -18,7 +18,7 @@ use PhpOffice\PhpSpreadsheet\Worksheet\Worksheet;
 
 class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, WithTitle
 {
-    public const COL_COUNT = 13;
+    public const COL_COUNT = 14;
 
     /** Rows before the table column-header row (titles + blank spacer). */
     protected int $headerRows = 6;
@@ -54,13 +54,11 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
             if ($name === '') {
                 $name = trim((string) ($r->sm_full_name ?? ''));
             }
-            if ($name === '') {
-                $name = (string) ($r->username ?? '');
-            }
 
             return [
                 'sno'              => $idx + 1,
-                'name'             => $name,
+                'username'         => (string) ($r->login_username ?? $r->user_id ?? ''),
+                'name'             => $name !== '' ? $name : (string) ($r->login_username ?? $r->user_id ?? ''),
                 'code'             => (string) ($r->roll_no ?? ''),
                 'mobile'           => (string) ($r->mobile_no ?? ''),
                 'arrival_date'     => $r->joining_date ? \Carbon\Carbon::parse($r->joining_date)->format('Y-m-d') : '',
@@ -121,8 +119,8 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
             ]);
         }
 
-        // S.No., dates, slot time, mode, require vehicle, submitted
-        $centerCols = ['A', 'E', 'G', 'H', 'K', 'M'];
+        // S.No., arrival date, slot time, mode, require vehicle, submitted
+        $centerCols = ['A', 'F', 'H', 'I', 'L', 'N'];
         foreach ($centerCols as $col) {
             if ($lastRow >= $dataStart) {
                 $sheet->getStyle("{$col}{$dataStart}:{$col}{$lastRow}")
@@ -132,7 +130,7 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
 
         $sheet->getStyle("A{$dataRowStart}:{$lastCol}{$lastRow}")->getFont()->setSize(10);
 
-        $widths = [6, 22, 12, 14, 13, 20, 16, 16, 24, 24, 26, 12, 10];
+        $widths = [6, 16, 22, 12, 14, 13, 20, 16, 16, 24, 24, 26, 12, 10];
         foreach ($widths as $i => $w) {
             $sheet->getColumnDimension(Coordinate::stringFromColumnIndex($i + 1))->setWidth($w);
         }
@@ -151,12 +149,25 @@ class FcTravelJoiningReportExport implements FromView, WithStyles, WithEvents, W
                 $sheet = $event->sheet->getDelegate();
                 $lastRow = $sheet->getHighestRow();
                 $lastCol = Coordinate::stringFromColumnIndex(self::COL_COUNT);
-                $dataStart = $headerRows + 1;
+                $dataStart  = $headerRows + 1;
+                $dataRowStart = $dataStart + 1;
 
                 $sheet->getPageSetup()
                     ->setRowsToRepeatAtTopByStartAndEnd(1, $dataStart)
                     ->setOrientation(\PhpOffice\PhpSpreadsheet\Worksheet\PageSetup::ORIENTATION_LANDSCAPE)
                     ->setPrintArea("A1:{$lastCol}{$lastRow}");
+
+                // Force Username (B), Name (C), Code (D) to text so numeric-looking
+                // values like "3200" stay left-aligned and are not treated as numbers.
+                for ($row = $dataRowStart; $row <= $lastRow; $row++) {
+                    foreach (['B', 'C', 'D'] as $col) {
+                        $cell = $sheet->getCell("{$col}{$row}");
+                        $cell->setValueExplicit(
+                            (string) $cell->getValue(),
+                            \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING
+                        );
+                    }
+                }
             },
         ];
     }

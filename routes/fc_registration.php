@@ -240,11 +240,13 @@ Route::middleware(['auth'])->prefix('admin/reports')->name('admin.reports.')->gr
     // Form-specific dynamic report (works for any form, any number of steps)
     Route::get('/form/{form}',        [ReportController::class, 'formOverview'])->name('form');
     Route::get('/form/{form}/export', [ReportController::class, 'formExportCsv'])->name('form.export');
+    Route::get('/form/{form}/export-pdf-zip', [ReportController::class, 'formExportPdfZip'])->name('form.export.pdf-zip');
 
     // Aggregated reports
     Route::get('/by-service',   [ReportController::class, 'byService'])->name('service');
     Route::get('/by-state',     [ReportController::class, 'byState'])->name('state');
-    Route::get('/documents',    [ReportController::class, 'documents'])->name('documents');
+    Route::get('/documents',            [ReportController::class, 'documents'])->name('documents');
+    Route::get('/documents/export-zip', [ReportController::class, 'documentsExportZip'])->name('documents.export');
     Route::get('/bank-details', [ReportController::class, 'bankDetails'])->name('bank');
 
     // CSV exports
