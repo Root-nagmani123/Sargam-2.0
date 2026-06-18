@@ -7,7 +7,7 @@
                 <p class="cal-event-hover-card__datetime small text-secondary mb-0" id="calHoverEventDate"></p>
             </div>
             <div class="d-flex gap-2 flex-shrink-0 align-items-start">
-                @if(hasRole('Training-Induction') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+                @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'))
                 <button type="button" class="btn cal-event-action-btn cal-event-action-btn--danger" id="calHoverDeleteBtn" title="Delete event" aria-label="Delete event">
                     <i class="bi bi-trash" aria-hidden="true"></i>
                 </button>

@@ -471,11 +471,11 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/event-card/{id}', [CalendarController::class, 'eventCard'])->name('event.card');
         Route::get('/event-card/{id}/pdf', [CalendarController::class, 'eventCardPdf'])->name('event.card.pdf');
 
-        Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
-        Route::post('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
+        Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('event.show');
+        Route::post('/event-update/{id}', [CalendarController::class, 'update_event'])->name('event.update');
         Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
 
-        Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
+        Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
 

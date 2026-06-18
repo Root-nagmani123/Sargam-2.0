@@ -25,7 +25,7 @@
         </div>
     @endif
     <x-breadcrum title="Calendar Creation">
-    @if(hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST'))
+   @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'))
         <a id="createEventButton"
                 data-bs-toggle="modal"
                 data-bs-target="#eventModal"
@@ -77,36 +77,36 @@
                         <div id="calPortalToolbar" class="cal-toolbar-nav d-flex flex-wrap align-items-center justify-content-xl-end gap-3 ms-xl-auto" aria-label="Calendar navigation">
                             <div class="cal-portal-nav-cluster d-flex align-items-center gap-1">
                                 <button type="button" class="cal-portal-nav-btn" id="calPortalPrev" aria-label="Previous period">
-                                    <i class="bi bi-chevron-left" aria-hidden="true"></i>
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">chevron_left</i>
                                 </button>
                                 <h2 class="cal-portal-title mb-0" id="calPortalTitle" aria-live="polite"></h2>
                                 <button type="button" class="cal-portal-nav-btn" id="calPortalNext" aria-label="Next period">
-                                    <i class="bi bi-chevron-right" aria-hidden="true"></i>
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">chevron_right</i>
                                 </button>
                             </div>
                             <div class="btn-group cal-view-switch" role="group" aria-label="Calendar view mode">
                                 <button type="button" class="btn" data-view="week" aria-pressed="false" title="Week schedule view">
-                                    <i class="bi bi-list-ul" aria-hidden="true"></i>
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">list_alt</i>
                                     <span class="visually-hidden">Week schedule</span>
                                 </button>
                                 <button type="button" class="btn active" data-view="month" aria-pressed="true" title="Month calendar view">
-                                    <i class="bi bi-calendar3" aria-hidden="true"></i>
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">cards</i>
                                     <span class="visually-hidden">Month calendar</span>
                                 </button>
                             </div>
                             <div class="dropdown cal-toolbar-more">
                                 <button type="button" class="btn cal-toolbar-more-btn" data-bs-toggle="dropdown" aria-expanded="false" aria-label="More calendar options">
-                                    <i class="bi bi-three-dots" aria-hidden="true"></i>
+                                    <i class="material-icons material-symbols-rounded" aria-hidden="true">more_vert</i>
                                 </button>
                                 <ul class="dropdown-menu dropdown-menu-end shadow-sm border rounded-2 py-1">
                                     <li>
                                         <button type="button" class="dropdown-item py-2" id="btnTimetableListView" data-view="list">
-                                            <i class="bi bi-table me-2" aria-hidden="true"></i>Weekly Timetable
+                                            <i class="material-icons material-symbols-rounded me-2" aria-hidden="true">table_view</i>Weekly Timetable
                                         </button>
                                     </li>
                                     <li>
                                         <button type="button" class="dropdown-item py-2" id="toggleDensityBtn" aria-pressed="false">
-                                            <i class="bi bi-arrows-collapse me-2" aria-hidden="true"></i>Compact View
+                                            <i class="material-icons material-symbols-rounded me-2" aria-hidden="true">density_medium</i>Compact View
                                         </button>
                                     </li>
                                 </ul>
@@ -274,8 +274,9 @@ const CalendarConfig = {
         events: "{{ route('calendar.event.calendar-details') }}",
         eventDetails: "{{ route('calendar.event.Singlecalendar-details') }}",
         store: "{{ route('calendar.event.store') }}",
-        update: '/calendar/event-update/',
-        delete: '/calendar/event-delete/',
+        edit: "{{ route('calendar.event.show', ['id' => 'EVENT_ID']) }}",
+        update: "{{ route('calendar.event.update', ['id' => 'EVENT_ID']) }}",
+        delete: "{{ route('calendar.event.delete', ['id' => 'EVENT_ID']) }}",
         groupTypes: "{{ route('calendar.get.group.types') }}",
         subjectNames: "{{ route('calendar.get.subject.name') }}",
         eventCard: "{{ route('calendar.event.card', ['id' => 'EVENT_ID']) }}",
@@ -1753,7 +1754,7 @@ class CalendarManager {
         const formData = new FormData(e.target);
         const action = document.getElementById('submitEventBtn').dataset.action;
         const url = action === 'edit' ?
-            `${CalendarConfig.api.update}${this.currentEventId}` :
+            CalendarConfig.api.update.replace('EVENT_ID', this.currentEventId) :
             CalendarConfig.api.store;
 
         try {
@@ -1874,7 +1875,10 @@ class CalendarManager {
             || this.currentEventId;
 
         try {
-            const response = await fetch(`/calendar/event-edit/${eventId}`);
+            const response = await fetch(CalendarConfig.api.edit.replace('EVENT_ID', eventId));
+            if (!response.ok) {
+                throw new Error(`Request failed: HTTP ${response.status} for event id "${eventId}"`);
+            }
             const event = await response.json();
 
             await this.populateEditForm(event);
@@ -1885,13 +1889,13 @@ class CalendarManager {
             document.getElementById('submitEventBtn').dataset.action = 'edit';
             document.getElementById('start_datetime').removeAttribute('readonly');
 
-            // Show modal
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
+            // Show modal — eventDetails may not have an instance when editing from the hover card
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
             const modal = new bootstrap.Modal(document.getElementById('eventModal'));
             modal.show();
 
         } catch (error) {
-            this.showNotification('Error loading event for editing', 'danger');
+            this.showNotification('Error loading event for editing: ' + (error?.message || error), 'danger');
             console.error('Edit load error:', error);
         }
     }
@@ -2145,7 +2149,7 @@ async setInternalFaculty(internalFacultyIds) {
 
     async deleteEvent(eventId) {
         try {
-            const response = await fetch(`${CalendarConfig.api.delete}${eventId}`, {
+            const response = await fetch(CalendarConfig.api.delete.replace('EVENT_ID', eventId), {
                 method: 'DELETE',
                 headers: {
                     'X-CSRF-TOKEN': '{{ csrf_token() }}'
@@ -2156,9 +2160,9 @@ async setInternalFaculty(internalFacultyIds) {
 
             this.showNotification('Event deleted successfully', 'success');
 
-            // Close modals and refresh
-            bootstrap.Modal.getInstance(document.getElementById('eventDetails')).hide();
-            bootstrap.Modal.getInstance(document.getElementById('confirmModal')).hide();
+            // Close modals and refresh — eventDetails may not have an instance when deleting from the hover card
+            bootstrap.Modal.getInstance(document.getElementById('eventDetails'))?.hide();
+            bootstrap.Modal.getInstance(document.getElementById('confirmModal'))?.hide();
             this.calendar.refetchEvents();
 
         } catch (error) {
