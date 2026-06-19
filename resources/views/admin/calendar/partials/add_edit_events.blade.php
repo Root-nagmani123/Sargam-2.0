@@ -31,7 +31,7 @@
                         aria-labelledby="eventModalStepLabel" id="eventModalProgressWrap">
                         <div class="progress-bar rounded-pill" id="eventModalProgressBar" style="width: 30%;"></div>
                     </div>
-                    <span id="eventModalStepLabel" class="visually-hidden">Basic Information</span>
+                    <span id="eventModalStepLabel" class="visually-hidden">Basic Information.</span>
                 </div>
 
                 <div class="modal-body cal-event-modal-body">
@@ -90,6 +90,15 @@
                                     <option value="">Select Subject Name</option>
                                 </select>
                             </div>
+                            <div class="col-md-6">
+                                <label for="sector" class="form-label mb-2">Sector Name</label>
+                                <select name="sector" id="sector" class="form-select form-control cal-modal-input">
+                                    <option value="">Select Sector</option>
+                                    @foreach($sectors as $sector)
+                                    <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="col-12">
                                 <label for="topic" class="form-label required mb-2">Topic</label>
                                 <input type="text" name="topic" id="topic" class="form-control cal-modal-input"
@@ -101,27 +110,7 @@
                     <section class="cal-modal-step d-none" data-cal-step="2" aria-labelledby="facultyVenueHeading">
                         <h3 id="facultyVenueHeading" class="cal-modal-section-title h6 fw-bold mb-0 pb-3">Faculty &amp; Venue</h3>
                         <div class="row g-3 cal-modal-fields pt-1">
-                            <div class="col-md-6">
-                                <label for="faculty" class="form-label required mb-2">Faculty</label>
-                                <select name="faculty[]" id="faculty" class="form-select form-control cal-modal-input" required aria-required="true" multiple>
-                                    @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                        {{ $faculty->full_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label for="faculty_type" class="form-label required mb-2">Faculty Type</label>
-                                <select name="faculty_type" id="faculty_type" class="form-select form-control cal-modal-input" required
-                                    aria-required="true">
-                                    <option value="">Select Faculty Type</option>
-                                    <option value="1">Internal</option>
-                                    <option value="2">Guest</option>
-                                    <option value="3">Research</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
+                            <div class="col-12">
                                 <label for="vanue" class="form-label required mb-2">Location</label>
                                 <select name="vanue" id="vanue" class="form-select form-control cal-modal-input" required aria-required="true">
                                     <option value="">Select Location</option>
@@ -130,16 +119,24 @@
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-6" id="internalFacultyDiv">
-                                <label for="internal_faculty" class="form-label required mb-2">Internal Faculty</label>
-                                <select name="internal_faculty[]" id="internal_faculty" class="form-select form-control cal-modal-input" required
-                                    aria-required="true" multiple>
-                                    @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                        {{ $faculty->full_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
+                            <div class="col-12">
+                                <div id="modalFacultyRows"></div>
+                                <div class="d-flex justify-content-end mt-2">
+                                    <button type="button" id="btnModalAddFaculty"
+                                        class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 rounded-2">
+                                        <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+                                        <span>Add Faculty</span>
+                                    </button>
+                                </div>
+                                {{-- hidden inputs for backward-compat (populated by JS from rows) --}}
+                                <input type="hidden" name="faculty_type" id="faculty_type" value="">
+                                <div id="internalFacultyDiv" style="display:none">
+                                    <select name="internal_faculty[]" id="internal_faculty" class="form-select form-control cal-modal-input" multiple style="display:none">
+                                        @foreach($facultyMaster as $faculty)
+                                        <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">{{ $faculty->full_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </section>
@@ -200,6 +197,36 @@
                             </div>
                         </div>
 
+                        <hr class="my-3">
+                        <h3 class="cal-modal-section-title h6 fw-bold mb-0 pb-3">Break (Tea/Lunch/Snacks)</h3>
+                        <div class="row g-3 cal-modal-fields pt-1 mb-3">
+                            <div class="col-12">
+                                <span class="form-label d-block mb-2">Break Type</span>
+                                <div class="d-flex flex-wrap gap-4">
+                                    <div class="form-check mb-0">
+                                        <input type="radio" name="break_type" id="modal_breakTea" value="tea" class="form-check-input">
+                                        <label class="form-check-label" for="modal_breakTea">Tea</label>
+                                    </div>
+                                    <div class="form-check mb-0">
+                                        <input type="radio" name="break_type" id="modal_breakLunch" value="lunch" class="form-check-input">
+                                        <label class="form-check-label" for="modal_breakLunch">Lunch</label>
+                                    </div>
+                                    <div class="form-check mb-0">
+                                        <input type="radio" name="break_type" id="modal_breakSnacks" value="snacks" class="form-check-input">
+                                        <label class="form-check-label" for="modal_breakSnacks">Snacks</label>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="modal_break_start_time" class="form-label mb-2">Break Start Time</label>
+                                <input type="time" name="break_start_time" id="modal_break_start_time" class="form-control cal-modal-input">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="modal_break_end_time" class="form-label mb-2">Break End Time</label>
+                                <input type="time" name="break_end_time" id="modal_break_end_time" class="form-control cal-modal-input">
+                            </div>
+                        </div>
+
                         <h3 id="additionalOptionsHeading" class="cal-modal-section-title h6 fw-bold mb-0 pb-3 mt-2">Additional Options</h3>
                         <div class="cal-modal-options-list pt-1">
                             <div class="cal-modal-option-row">
@@ -247,6 +274,61 @@
         </div>
     </div>
 </div>
+
+{{-- Faculty row template for modal --}}
+<template id="modalFacultyRowTemplate">
+    <div class="border rounded-3 p-3 mb-3" data-modal-faculty-row>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label required">Faculty Name</label>
+                <select name="faculty[__IDX__]" class="form-select modal-ce-faculty-select" required>
+                    <option value="">Select Faculty</option>
+                    @foreach($facultyMaster as $faculty)
+                        <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">{{ $faculty->full_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label required">Faculty Type</label>
+                <select name="faculty_row_type[__IDX__]" class="form-select" required>
+                    <option value="">Select Type</option>
+                    <option value="1">Internal</option>
+                    <option value="2">Guest</option>
+                    <option value="3">Research</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label required">Role</label>
+                <select name="faculty_role[__IDX__]" class="form-select" required>
+                    <option value="">Select Role</option>
+                    @foreach($facultyRoles as $role)
+                        <option value="{{ $role }}">{{ $role }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-12">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="text-muted small fw-medium">Feedback</span>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="mfb_remark___IDX__" value="remark">
+                        <label class="form-check-label" for="mfb_remark___IDX__">Remark</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="mfb_rating___IDX__" value="rating">
+                        <label class="form-check-label" for="mfb_rating___IDX__">Rating</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="mfb_none___IDX__" value="none" checked>
+                        <label class="form-check-label" for="mfb_none___IDX__">None</label>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm ms-auto modal-remove-faculty d-inline-flex align-items-center justify-content-center" aria-label="Remove faculty">
+                        <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">remove</i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -430,24 +512,51 @@ document.addEventListener('DOMContentLoaded', function() {
         goToStep(1);
     })();
 
-    if (faculty_type && internalFacultyDiv) {
-        faculty_type.addEventListener('change', function() {
-            updateinternal_faculty_data(this.value);
-        });
+    // ── Modal faculty rows ──────────────────────────────────────────────────
+    const modalFacultyRows = document.getElementById('modalFacultyRows');
+    const modalFacultyTemplate = document.getElementById('modalFacultyRowTemplate');
+    let modalFacultyIdx = 0;
 
-        function updateinternal_faculty_data(facultyType) {
-            switch (facultyType) {
-                case '1':
-                case 1:
-                    break;
-                case '2':
-                case 2:
-                    internalFacultyDiv.style.display = 'block';
-                    break;
-                default:
-                    break;
+    function addModalFacultyRow(data) {
+        if (!modalFacultyTemplate || !modalFacultyRows) return;
+        const idx = modalFacultyIdx++;
+        const html = modalFacultyTemplate.innerHTML
+            .replace(/__IDX__/g, idx);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        const row = wrapper.firstElementChild;
+
+        if (data) {
+            const facultySelect = row.querySelector('select[name^="faculty["]');
+            const typeSelect    = row.querySelector('select[name^="faculty_row_type["]');
+            const roleSelect    = row.querySelector('select[name^="faculty_role["]');
+            if (facultySelect) facultySelect.value = String(data.faculty_pk ?? '');
+            if (typeSelect)    typeSelect.value    = String(data.faculty_type ?? '');
+            if (roleSelect)    roleSelect.value    = String(data.role ?? '');
+            if (data.feedback) {
+                const fb = row.querySelector(`input[name^="faculty_feedback["][value="${data.feedback}"]`);
+                if (fb) fb.checked = true;
             }
         }
+
+        row.querySelector('.modal-remove-faculty')?.addEventListener('click', () => row.remove());
+        modalFacultyRows.appendChild(row);
     }
+
+    document.getElementById('btnModalAddFaculty')?.addEventListener('click', () => addModalFacultyRow(null));
+
+    // Ensure at least one row when modal opens for create
+    $('#eventModal').on('shown.bs.modal', function() {
+        if (modalFacultyRows && modalFacultyRows.children.length === 0) {
+            addModalFacultyRow(null);
+        }
+    });
+
+    // Expose so populateEditForm can call it
+    window.addModalFacultyRow = addModalFacultyRow;
+    window.clearModalFacultyRows = function() {
+        if (modalFacultyRows) modalFacultyRows.innerHTML = '';
+        modalFacultyIdx = 0;
+    };
 });
 </script>

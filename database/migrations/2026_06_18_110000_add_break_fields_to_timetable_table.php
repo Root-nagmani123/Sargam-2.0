@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{
+{ 
     /**
      * Break details for the redesigned Add Event form's Schedule section:
      *  - break_type        : tea | lunch | snacks

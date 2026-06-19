@@ -5,7 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
-{
+{ 
     /**
      * Fields backing the redesigned full-page "Add Event" form:
      *  - sector_pk        : optional sector_master reference for the session

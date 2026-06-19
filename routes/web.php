@@ -473,7 +473,8 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/event-card/{id}/pdf', [CalendarController::class, 'eventCardPdf'])->name('event.card.pdf');
 
         Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('event.show');
-        Route::post('/event-update/{id}', [CalendarController::class, 'update_event'])->name('event.update');
+        Route::get('/event/{hash}/edit', [CalendarController::class, 'editEventPage'])->name('event.edit.page');
+        Route::post('/event-update/{hash}', [CalendarController::class, 'update_event'])->name('event.update');
         Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
 
         Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('event.delete');

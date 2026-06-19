@@ -108,6 +108,9 @@ class CalendarController extends Controller
             ->select('pk', 'shift_name', 'shift_time', 'start_time', 'end_time')
             ->get();
 
+        $sectors = SectorMaster::query()->active()->get(['pk', 'sector_name']);
+        $facultyRoles = ['Teaching', 'Sectoral', 'Administration'];
+
         \Log::info('Calendar data loaded successfully', [
             'courses_count' => $courseMaster->count(),
             'user' => auth()->user()->user_name
@@ -119,7 +122,9 @@ class CalendarController extends Controller
             'subjects',
             'venueMaster',
             'classSessionMaster',
-            'internal_faculty'
+            'internal_faculty',
+            'sectors',
+            'facultyRoles'
         ));
     }
 
@@ -173,7 +178,7 @@ class CalendarController extends Controller
         $sectors = SectorMaster::query()->active()->get(['pk', 'sector_name']);
 
         // No roles master exists yet — fixed list per product decision.
-        $facultyRoles = ['Teaching', 'Sectional', 'Administration'];
+        $facultyRoles = ['Teaching', 'Sectoral', 'Administration'];
 
         // Optional date prefill (e.g. arriving from a calendar day click).
         $prefillDate = $request->filled('date')
@@ -452,6 +457,8 @@ class CalendarController extends Controller
             ]);
         }
 
+        $this->syncSupportingFacultyFeedback($event, $facultyDetails);
+
         if ($request->expectsJson()) {
             return response()->json(['status' => 'success', 'message' => 'Event created successfully']);
         }
@@ -464,6 +471,82 @@ class CalendarController extends Controller
      * parallel arrays (faculty[], faculty_row_type[], faculty_role[],
      * faculty_feedback[]). Returns [] when those arrays are absent (legacy modal).
      */
+    /**
+     * Sync supporting_faculty_feedback rows whenever a timetable event is saved.
+     *
+     * Logic:
+     *   - Guest (type 2) / Research (type 3) faculty  → main faculty (gets rated)
+     *   - Internal (type 1) faculty                   → supporting faculty (gives rating)
+     *   - For every Internal × External pair, insert a pending row (is_submitted = 0).
+     *   - Already-submitted rows (is_submitted = 1) are never touched.
+     *   - Pairs removed from the timetable get soft-deleted (active_inactive = 0).
+     */
+    private function syncSupportingFacultyFeedback(CalendarEvent $event, array $facultyDetails): void
+    {
+        if (empty($facultyDetails)) {
+            return;
+        }
+
+        // Teaching role + feedback != none → main faculty (gets rated)
+        // Sectional / Administration → supporting faculty (gives rating)
+        $mainFaculty       = collect($facultyDetails)
+            ->where('role', 'Teaching')
+            ->where('feedback', '!=', 'none')
+            ->filter(fn($d) => !empty($d['feedback']))
+            ->pluck('faculty_pk')->all();
+        $supportingFaculty = collect($facultyDetails)->whereIn('role', ['Sectional', 'Administration'])->pluck('faculty_pk')->all();
+
+        $now = now();
+
+        // Soft-delete pending rows whose faculty pairs are no longer valid.
+        // Runs even when one side is empty (e.g. all roles set to none).
+        $deleteQuery = DB::table('supporting_faculty_feedback')
+            ->where('timetable_pk', $event->pk)
+            ->where('is_submitted', 0);
+
+        if (empty($supportingFaculty) || empty($mainFaculty)) {
+            // One side is completely gone — soft-delete all pending rows for this timetable
+            $deleteQuery->update(['active_inactive' => 0, 'modified_date' => $now]);
+            return;
+        }
+
+        // Partial removal — only rows whose faculty is no longer in either list
+        $deleteQuery->where(function ($q) use ($supportingFaculty, $mainFaculty) {
+            $q->whereNotIn('supporting_faculty_master_pk', $supportingFaculty)
+              ->orWhereNotIn('main_faculty_master_pk', $mainFaculty);
+        })->update(['active_inactive' => 0, 'modified_date' => $now]);
+
+        // Insert or reactivate pairs
+        foreach ($supportingFaculty as $supportingPk) {
+            foreach ($mainFaculty as $mainPk) {
+                // Reactivate soft-deleted pending row if it exists
+                $reactivated = DB::table('supporting_faculty_feedback')
+                    ->where('timetable_pk', $event->pk)
+                    ->where('main_faculty_master_pk', $mainPk)
+                    ->where('supporting_faculty_master_pk', $supportingPk)
+                    ->where('is_submitted', 0)
+                    ->where('active_inactive', 0)
+                    ->update(['active_inactive' => 1, 'modified_date' => $now]);
+
+                // No existing row — insert fresh
+                if (!$reactivated) {
+                    DB::table('supporting_faculty_feedback')->insertOrIgnore([
+                        'timetable_pk'                 => $event->pk,
+                        'course_master_pk'             => $event->course_master_pk,
+                        'session_type'                 => $event->session_type,
+                        'main_faculty_master_pk'       => $mainPk,
+                        'supporting_faculty_master_pk' => $supportingPk,
+                        'is_submitted'                 => 0,
+                        'active_inactive'              => 1,
+                        'created_by'                   => auth()->id(),
+                        'created_date'                 => $now,
+                        'modified_date'                => $now,
+                    ]);
+                }
+            }
+        }
+    }
+
     private function buildFacultyDetails(Request $request): array
     {
         $facultyIds = $request->input('faculty', []);
@@ -597,6 +680,7 @@ class CalendarController extends Controller
                 'display' => 'block',
                 'class_session_debug' => $event->class_session,
                 'session_type' => $event->session_type ?? null,
+                'edit_url'     => route('calendar.event.edit.page', encrypt($event->pk)),
             ];
         });
 
@@ -672,6 +756,7 @@ class CalendarController extends Controller
                 'timetable.START_DATE',
                 'timetable.END_DATE',
                 'timetable.faculty_master',
+                'timetable.faculty_details',
                 'venue_master.venue_name as venue_name',
                 'timetable.group_name',
                 'timetable.internal_faculty'
@@ -700,20 +785,30 @@ class CalendarController extends Controller
             ->whereIn('pk', $internalFacultyIds ?: [])
             ->pluck('full_name');
 
-        $facultyNames = DB::table('faculty_master')
+        // Build faculty name list with role in parentheses if available
+        $facultyDetails = json_decode($event->faculty_details, true) ?? [];
+        $facultyDetailMap = collect($facultyDetails)->keyBy('faculty_pk'); // pk => detail row
+
+        $facultyRows = DB::table('faculty_master')
             ->whereIn('pk', $facultyIds ?: [])
-            ->pluck('full_name');
+            ->get(['pk', 'full_name']);
+
+        $facultyNames = $facultyRows->map(function ($f) use ($facultyDetailMap) {
+            $detail = $facultyDetailMap->get($f->pk);
+            $role   = $detail['role'] ?? null;
+            return $role ? $f->full_name . ' (' . $role . ')' : $f->full_name;
+        })->implode(', ');
 
         return response()->json([
-            'id' => $event->pk,
-            'topic' => $event->subject_topic ?? '', // if topic exists
-            'start' => $event->START_DATE,
-            // 'end' => $event->END_DATE,
-            'faculty_name' => $facultyNames->implode(', '),
+            'id'               => $event->pk,
+            'topic'            => $event->subject_topic ?? '',
+            'start'            => $event->START_DATE,
+            'faculty_name'     => $facultyNames,
             'internal_faculty' => $internalFacultyNames->implode(', '),
-            'venue_name' => $event->venue_name ?? '',
-            'class_session' => $event->class_session ?? '',
-            'group_name' => $groupNames->implode(', ') ?? '',
+            'venue_name'       => $event->venue_name ?? '',
+            'class_session'    => $event->class_session ?? '',
+            'group_name'       => $groupNames->implode(', ') ?? '',
+            'edit_url'         => route('calendar.event.edit.page', encrypt($event->pk)),
         ]);
     }
     /**
@@ -1418,122 +1513,25 @@ class CalendarController extends Controller
             ];
         }
 
-        arsort($venueCounts);
-        $topVenue = !empty($venueCounts) ? array_key_first($venueCounts) : null;
-
         // Programme details (subtitle, period, programme-relative week) from the course.
         $programmeName = null;
         $period = null;
         $programmeWeek = $weekStart->isoWeek;
+        $course = null;
+        $multiCourse = false;
         if ($courseId) {
             $course = DB::table('course_master')->where('pk', $courseId)->first();
             if ($course) {
                 $programmeName = $course->course_name ?? null;
-                $start = !empty($course->start_year) ? Carbon::parse($course->start_year) : null;
-                $end   = !empty($course->end_date) ? Carbon::parse($course->end_date) : null;
-                if ($start) {
-                    $courseMonday = $start->copy()->startOfWeek(Carbon::MONDAY);
+                $courseStart = !empty($course->start_year) ? Carbon::parse($course->start_year) : null;
+                if ($courseStart) {
+                    $courseMonday = $courseStart->copy()->startOfWeek(Carbon::MONDAY);
                     $relWeek = intdiv((int) $courseMonday->diffInDays($weekStart, false), 7) + 1;
                     if ($relWeek >= 1) {
                         $programmeWeek = $relWeek;
                     }
                 }
-                if ($startsHere) {
-                    $rowItv[] = ['start' => $rs, 'end' => $re];
-                }
             }
-            $rowCount = count($rowItv);
-            if ($rowCount === 0) { $cursor->addWeek(); continue; }
-
-            // Per-day cells with vertical merge (rowspan) over the rows a session covers.
-            $dayCells = [];   // [dayKey][rowIndex] = cell
-            foreach ($weekDays as $wd) {
-                $evs      = $wd['events'];
-                $occupied = array_fill(0, $rowCount, false);
-                $cells    = [];
-                for ($r = 0; $r < $rowCount; $r++) {
-                    if ($occupied[$r]) {
-                        $cells[$r] = ['state' => 'skip'];
-                        continue;
-                    }
-                    $rStart   = $rowItv[$r]['start'];
-                    $rEnd     = $rowItv[$r]['end'];
-                    $starting = array_values(array_filter($evs, fn ($e) => $e['start'] === $rStart && $e['end'] >= $rEnd));
-
-                    if (!empty($starting)) {
-                        $maxEnd = max(array_map(fn ($e) => $e['end'], $starting));
-                        $span   = 0;
-                        for ($k = $r; $k < $rowCount; $k++) {
-                            if ($rowItv[$k]['start'] >= $rStart && $rowItv[$k]['end'] <= $maxEnd) {
-                                $span++;
-                                $occupied[$k] = true;
-                            } else {
-                                break;
-                            }
-                        }
-                        if ($span < 1) { $span = 1; }
-                        $allBreak = true;
-                        foreach ($starting as $e) { if (!$e['isBreak']) { $allBreak = false; break; } }
-                        $cells[$r] = ['state' => 'render', 'rowspan' => $span, 'events' => $starting, 'isBreak' => $allBreak];
-                    } else {
-                        $cells[$r] = ['state' => 'render', 'rowspan' => 1, 'events' => [], 'isBreak' => false];
-                    }
-                }
-                $dayCells[$wd['key']] = $cells;
-            }
-
-            // Assemble rows; a row becomes a full-width break band when every day's
-            // cell there is a single-row break or empty (no session crosses it).
-            $rows = [];
-            for ($r = 0; $r < $rowCount; $r++) {
-                $isBand = true; $hasBreak = false; $bandTopic = '';
-                foreach ($weekDays as $wd) {
-                    $c = $dayCells[$wd['key']][$r];
-                    if ($c['state'] === 'skip') { $isBand = false; break; }
-                    if (empty($c['events'])) { continue; }
-                    if (!empty($c['isBreak']) && $c['rowspan'] === 1) {
-                        $hasBreak = true;
-                        if ($bandTopic === '') { $bandTopic = $c['events'][0]['topic']; }
-                    } else {
-                        $isBand = false; break;
-                    }
-                }
-                if (!$hasBreak) { $isBand = false; }
-
-                $cellsForRow = [];
-                foreach ($weekDays as $wd) {
-                    $cellsForRow[$wd['key']] = $dayCells[$wd['key']][$r];
-                }
-
-                $rows[] = [
-                    'from'      => $fmt4($rowItv[$r]['start']),
-                    'to'        => $fmt4($rowItv[$r]['end']),
-                    'isBand'    => $isBand,
-                    'bandTopic' => $bandTopic,
-                    'cells'     => $cellsForRow,
-                ];
-            }
-
-            $weekNumber = $courseStartWeek
-                ? $courseStartWeek->diffInWeeks($cursor) + 1
-                : (int) $cursor->copy()->addDays(3)->format('W');
-
-            $firstDay = Carbon::parse($weekDays[0]['key']);
-            $lastDayD = Carbon::parse($weekDays[count($weekDays) - 1]['key']);
-
-            $dayHeaders = array_map(
-                fn ($wd) => ['key' => $wd['key'], 'dayName' => $wd['dayName'], 'label' => $wd['label']],
-                $weekDays
-            );
-
-            $weeks[] = [
-                'weekNumber' => $weekNumber,
-                'days'       => $dayHeaders,
-                'rows'       => $rows,
-                'rangeLabel' => $firstDay->format('d M Y') . ' - ' . $lastDayD->format('d M Y'),
-            ];
-
-            $cursor->addWeek();
         }
 
         $primaryVenue = '';
@@ -1565,9 +1563,9 @@ class CalendarController extends Controller
         };
 
         $data = [
-            'weeks'           => $weeks,
-            'rangeStart'      => Carbon::parse($start)->format('d M Y'),
-            'rangeEnd'        => Carbon::parse($end)->format('d M Y'),
+            'weeks'           => [],
+            'rangeStart'      => $weekStart->format('d M Y'),
+            'rangeEnd'        => $weekEnd->format('d M Y'),
             'course'          => $course,
             'courseStartDate' => $courseStartDate,
             'courseEndDate'   => $courseEndDate,
@@ -1723,72 +1721,153 @@ class CalendarController extends Controller
         $event->START_DATE = \Carbon\Carbon::parse($event->START_DATE)->format('Y-m-d');
         $event->END_DATE   = \Carbon\Carbon::parse($event->END_DATE)->format('Y-m-d');
 
-        // Decode faculty_master JSON to array for edit form (handle both old integer and new JSON array format)
         $facultyMaster = json_decode($event->faculty_master, true);
-        if (!is_array($facultyMaster)) {
-            // Old format: integer value, convert to array
-            $event->faculty_master = $event->faculty_master ? [$event->faculty_master] : [];
-        } else {
-            $event->faculty_master = $facultyMaster;
-        }
+        $event->faculty_master = is_array($facultyMaster)
+            ? $facultyMaster
+            : ($event->faculty_master ? [$event->faculty_master] : []);
+
+        $event->internal_faculty = json_decode($event->internal_faculty, true) ?? [];
+        $event->faculty_details  = json_decode($event->faculty_details, true)  ?? [];
+        $event->Faculty_feedback = json_decode($event->Faculty_feedback, true)  ?? [];
 
         return response()->json($event);
 
         // return response()->json($event);
     }
-    public function update_event(Request $request, $id)
+    public function editEventPage($hash)
     {
+        $id    = decrypt($hash);
+        $event = CalendarEvent::findOrFail($id);
+        $event->START_DATE = Carbon::parse($event->START_DATE)->format('Y-m-d');
+        $event->END_DATE   = Carbon::parse($event->END_DATE)->format('Y-m-d');
+
+        $fm = json_decode($event->faculty_master, true);
+        $event->faculty_master   = is_array($fm) ? $fm : ($event->faculty_master ? [$event->faculty_master] : []);
+        $event->internal_faculty = json_decode($event->internal_faculty, true) ?? [];
+        $event->faculty_details  = json_decode($event->faculty_details,  true) ?? [];
+        $event->Faculty_feedback = json_decode($event->Faculty_feedback,  true) ?? [];
+        $event->group_name       = json_decode($event->group_name,        true) ?? [];
+
+        $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
+            ->select('pk', 'course_name')
+            ->get();
+
+        $facultyMaster = FacultyMaster::where('active_inactive', 1)
+            ->select('pk', 'faculty_type', 'full_name')
+            ->orderBy('full_name')
+            ->get();
+
+        $subjects = SubjectModuleMaster::where('active_inactive', 1)
+            ->select('pk', 'module_name')
+            ->get();
+
+        $venueMaster = VenueMaster::where('active_inactive', 1)
+            ->select('venue_id', 'venue_name')
+            ->orderBy('venue_name')
+            ->get();
+
+        $classSessionMaster = ClassSessionMaster::where('active_inactive', 1)
+            ->select('pk', 'shift_name', 'shift_time', 'start_time', 'end_time')
+            ->get();
+
+        $sectors      = SectorMaster::query()->active()->get(['pk', 'sector_name']);
+        $facultyRoles = ['Teaching', 'Sectional', 'Administration'];
+
+        return view('admin.calendar.edit-event', compact(
+            'event',
+            'courseMaster',
+            'facultyMaster',
+            'subjects',
+            'venueMaster',
+            'classSessionMaster',
+            'sectors',
+            'facultyRoles'
+        ));
+    }
+
+    public function update_event(Request $request, $hash)
+    {
+        $id = decrypt($hash);
         $validated = $request->validate([
-            'Course_name' => 'required|integer',
-            'subject_name' => 'required|integer',
-            'subject_module' => 'required|integer',
-            'topic' => 'nullable|string',
-            'group_type' => 'required|string',
-            'type_names' => 'required|array|min:1',
-            'type_names.*' => 'required|integer',
-            'faculty' => 'required|array|min:1',
-            'faculty.*' => 'required|integer',
-            'faculty_type' => 'required|integer',
-            'vanue' => 'required|integer',
-            'shift' => 'required_if:shift_type,1',
-            'start_time' => 'required_if:shift_type,2',
-            'end_time' => 'required_if:shift_type,2',
-            'start_datetime' => 'nullable|date',
-            'end_datetime' => 'nullable|date',
+            'Course_name'      => 'required|integer',
+            'subject_name'     => 'required|integer',
+            'subject_module'   => 'required|integer',
+            'topic'            => 'nullable|string',
+            'group_type'       => 'required|string',
+            'type_names'       => 'required|array|min:1',
+            'type_names.*'     => 'required|integer',
+            'faculty'          => 'required|array|min:1',
+            'faculty.*'        => 'required|integer',
+            'faculty_type'     => 'nullable|integer',
+            'faculty_row_type' => 'nullable|array',
+            'faculty_role'     => 'nullable|array',
+            'faculty_feedback' => 'nullable|array',
+            'sector'           => 'nullable|integer',
+            'vanue'            => 'required|integer',
+            'shift'            => 'required_if:shift_type,1',
+            'start_time'       => 'required_if:shift_type,2',
+            'end_time'         => 'required_if:shift_type,2',
+            'start_datetime'   => 'nullable|date',
+            'end_datetime'     => 'nullable|date',
+            'break_type'       => 'nullable|in:tea,lunch,snacks',
+            'break_start_time' => 'nullable',
+            'break_end_time'   => 'nullable',
         ], [
             'type_names.required' => 'The Group type names field is required.',
-            'type_names.min' => 'Please select at least one Group type name.',
-            'faculty.required' => 'The Faculty field is required.',
-            'faculty.min' => 'Please select at least one Faculty.',
+            'type_names.min'      => 'Please select at least one Group type name.',
+            'faculty.required'    => 'The Faculty field is required.',
+            'faculty.min'         => 'Please select at least one Faculty.',
         ]);
 
+        $facultyDetails = $this->buildFacultyDetails($request);
+
         $event = CalendarEvent::findOrFail($id);
-        $event->course_master_pk = $request->Course_name;
-        $event->subject_master_pk = $request->subject_name;
-        $event->subject_module_master_pk = $request->subject_module;
-        $event->subject_topic = $request->topic;
-        $event->course_group_type_master = $request->group_type;
-        $event->group_name = json_encode($request->type_names ?? []);
-        $event->faculty_master = json_encode($request->faculty ?? []);
-        $event->faculty_type = $request->faculty_type;
-        $event->venue_id = $request->vanue;
-        $event->START_DATE = $request->start_datetime;
-        $event->END_DATE = $request->start_datetime;
-        $event->session_type = $request->shift_type;
+        $event->course_master_pk          = $request->Course_name;
+        $event->subject_master_pk         = $request->subject_name;
+        $event->subject_module_master_pk  = $request->subject_module;
+        $event->subject_topic             = $request->topic;
+        $event->course_group_type_master  = $request->group_type;
+        $event->group_name                = json_encode(array_values($request->type_names ?? []));
+        $event->faculty_master            = json_encode(array_values($request->input('faculty', [])));
+        $event->faculty_type              = $request->faculty_type ?? ($facultyDetails[0]['faculty_type'] ?? null);
+        $internalFaculty = $request->internal_faculty
+            ?? collect($facultyDetails)->where('faculty_type', 1)->pluck('faculty_pk')->values()->all();
+        $event->internal_faculty          = json_encode($internalFaculty ?? []);
+        $event->faculty_details           = $facultyDetails ? json_encode($facultyDetails) : null;
+        $event->sector_pk                 = $request->sector ?: null;
+        $event->break_type                = $request->break_type ?: null;
+        $event->break_start_time          = $request->break_start_time ?: null;
+        $event->break_end_time            = $request->break_end_time ?: null;
+        $event->is_break                  = ($request->break_type || $request->boolean('is_break')) ? 1 : 0;
+        $event->venue_id                  = $request->vanue;
+        $event->START_DATE                = Carbon::parse($request->start_datetime)->timezone('Asia/Kolkata')->format('Y-m-d');
+        $event->END_DATE                  = Carbon::parse($request->start_datetime)->timezone('Asia/Kolkata')->format('Y-m-d');
+        $event->session_type              = $request->shift_type;
 
         if ($request->shift_type == 1) {
-            $event->full_day =  0;
+            $event->full_day      = 0;
             $event->class_session = $request->shift;
         } else {
-            $event->full_day = $request->fullDayCheckbox;
+            $event->full_day      = $request->has('fullDayCheckbox') ? 1 : 0;
             $startTime = Carbon::parse($request->start_time)->format('h:i A');
-            $endTime = Carbon::parse($request->end_time)->format('h:i A');
+            $endTime   = Carbon::parse($request->end_time)->format('h:i A');
             $event->class_session = $startTime . ' - ' . $endTime;
         }
-        $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
-        $event->Ratting_checkbox = $request->has('ratingCheckbox') ? 1 : 0;
-        $event->Remark_checkbox = $request->has('remarkCheckbox') ? 1 : 0;
-        $event->Bio_attendance = $request->has('bio_attendanceCheckbox') ? 1 : 0;
+
+        if ($facultyDetails) {
+            $feedbacks = collect($facultyDetails)->pluck('feedback');
+            $hasRemark = $feedbacks->contains('remark');
+            $hasRating = $feedbacks->contains('rating');
+            $event->feedback_checkbox = ($hasRemark || $hasRating) ? 1 : 0;
+            $event->Ratting_checkbox  = $hasRating ? 1 : 0;
+            $event->Remark_checkbox   = $hasRemark ? 1 : 0;
+            $event->Faculty_feedback  = json_encode($facultyDetails);
+        } else {
+            $event->feedback_checkbox = $request->has('feedback_checkbox') ? 1 : 0;
+            $event->Ratting_checkbox  = $request->has('ratingCheckbox') ? 1 : 0;
+            $event->Remark_checkbox   = $request->has('remarkCheckbox') ? 1 : 0;
+        }
+        $event->Bio_attendance  = $request->boolean('bio_attendanceCheckbox') ? 1 : 0;
         $event->active_inactive = $request->active_inactive ?? 1;
 
         $event->save();
@@ -1806,7 +1885,9 @@ class CalendarController extends Controller
             ]);
         }
 
-        return response()->json(['status' => 'success', 'message' => 'Event updated successfully']);
+        $this->syncSupportingFacultyFeedback($event, $facultyDetails);
+
+        return redirect()->route('calendar.index')->with('success', 'Event updated successfully.');
     }
     public function delete_event($id)
     {

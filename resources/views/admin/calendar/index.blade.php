@@ -280,7 +280,7 @@ const CalendarConfig = {
         eventDetails: "{{ route('calendar.event.Singlecalendar-details') }}",
         store: "{{ route('calendar.event.store') }}",
         edit: "{{ route('calendar.event.show', ['id' => 'EVENT_ID']) }}",
-        update: "{{ route('calendar.event.update', ['id' => 'EVENT_ID']) }}",
+        update: "{{ route('calendar.event.update', ['hash' => 'EVENT_ID']) }}",
         delete: "{{ route('calendar.event.delete', ['id' => 'EVENT_ID']) }}",
         groupTypes: "{{ route('calendar.get.group.types') }}",
         subjectNames: "{{ route('calendar.get.subject.name') }}",
@@ -1045,9 +1045,9 @@ class CalendarManager {
         const deleteBtn = document.getElementById('calHoverDeleteBtn');
         const modalEdit = document.getElementById('editEventBtn');
         const modalDelete = document.getElementById('deleteEventBtn');
-        if (editBtn) editBtn.dataset.id = data.id;
+        if (editBtn) editBtn.dataset.editUrl = data.edit_url || '';
         if (deleteBtn) deleteBtn.dataset.id = data.id;
-        if (modalEdit) modalEdit.dataset.id = data.id;
+        if (modalEdit) { modalEdit.dataset.editUrl = data.edit_url || ''; modalEdit.dataset.id = data.id; }
         if (modalDelete) modalDelete.dataset.id = data.id;
     }
 
@@ -1122,12 +1122,9 @@ class CalendarManager {
 
         document.getElementById('calHoverEditBtn')?.addEventListener('click', (e) => {
             e.stopPropagation();
-            const btn = document.getElementById('editEventBtn');
-            if (btn && document.getElementById('calHoverEditBtn')?.dataset.id) {
-                btn.dataset.id = document.getElementById('calHoverEditBtn').dataset.id;
-            }
+            const url = document.getElementById('calHoverEditBtn')?.dataset.editUrl;
             this.hideEventHoverCard();
-            this.loadEventForEdit();
+            if (url) window.location.href = url;
         });
 
         document.getElementById('calHoverDeleteBtn')?.addEventListener('click', (e) => {
@@ -1235,13 +1232,8 @@ class CalendarManager {
     }
 
     handleDateSelect(info) {
-        if (!@json(hasRole('Training') || hasRole('Super Admin') ||  hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'))) return;
-
-        this.resetEventForm();
-        this.setFormDate(info.start);
-
-        const modal = bootstrap.Modal.getOrCreateInstance(document.getElementById('eventModal'));
-        modal.show();
+        // Calendar date click should not open any modal.
+        // Use the "Add Event" button to create a new event.
     }
 
     resetEventForm() {
@@ -1355,7 +1347,10 @@ class CalendarManager {
         });
 
         // Edit/Delete buttons
-        document.getElementById('editEventBtn')?.addEventListener('click', () => this.loadEventForEdit());
+        document.getElementById('editEventBtn')?.addEventListener('click', () => {
+            const url = document.getElementById('editEventBtn')?.dataset.editUrl;
+            if (url) window.location.href = url;
+        });
         document.getElementById('deleteEventBtn')?.addEventListener('click', () => this.confirmDelete());
 
         // Create event button
@@ -1919,26 +1914,16 @@ class CalendarManager {
         document.getElementById('subject_name').value = event.subject_master_pk;
         document.getElementById('topic').value = event.subject_topic;
         document.getElementById('start_datetime').value = event.START_DATE;
-        // Handle multiple faculty selection
-        const facultyIds = Array.isArray(event.faculty_master) ? event.faculty_master : [event.faculty_master];
-        const facultySelectEl = document.getElementById('faculty');
-        if (facultySelectEl) {
-            const normalizedFacultyIds = facultyIds.map(id => String(id));
-            Array.from(facultySelectEl.options).forEach(option => {
-                option.selected = normalizedFacultyIds.includes(String(option.value));
-            });
-            facultySelectEl.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-        document.getElementById('faculty_type').value = event.faculty_type;
+        const ftEl = document.getElementById('faculty_type');
+        if (ftEl) ftEl.value = event.faculty_type ?? '';
         document.getElementById('vanue').value = event.venue_id;
 
         if (window.calendarModalChoices?.syncById) {
             window.calendarModalChoices.syncById('Course_name');
             window.calendarModalChoices.syncById('subject_module');
             window.calendarModalChoices.syncById('subject_name');
-            window.calendarModalChoices.syncById('faculty');
-            window.calendarModalChoices.syncById('faculty_type');
             window.calendarModalChoices.syncById('vanue');
+            window.calendarModalChoices.syncById('sector');
             window.calendarModalChoices.syncById('shift');
         }
 
@@ -1995,6 +1980,37 @@ class CalendarManager {
             }
         }
 
+        // Sector
+        const sectorEl = document.getElementById('sector');
+        if (sectorEl) sectorEl.value = event.sector_pk ?? '';
+
+        // Break section
+        if (event.break_type) {
+            const breakRadio = document.querySelector(`input[name="break_type"][value="${event.break_type}"]`);
+            if (breakRadio) breakRadio.checked = true;
+        } else {
+            document.querySelectorAll('input[name="break_type"]').forEach(r => r.checked = false);
+        }
+        const bStart = document.getElementById('modal_break_start_time');
+        const bEnd   = document.getElementById('modal_break_end_time');
+        if (bStart) bStart.value = event.break_start_time ?? '';
+        if (bEnd)   bEnd.value   = event.break_end_time   ?? '';
+
+        // Faculty rows
+        if (typeof window.clearModalFacultyRows === 'function') window.clearModalFacultyRows();
+        const facultyDetails = Array.isArray(event.faculty_details) && event.faculty_details.length
+            ? event.faculty_details
+            : (Array.isArray(event.Faculty_feedback) && event.Faculty_feedback.length
+                ? event.Faculty_feedback
+                : null);
+        if (facultyDetails && facultyDetails.length && typeof window.addModalFacultyRow === 'function') {
+            facultyDetails.forEach(row => window.addModalFacultyRow(row));
+        } else if (typeof window.addModalFacultyRow === 'function') {
+            // Fallback: one row per faculty_master entry
+            const fIds = Array.isArray(event.faculty_master) ? event.faculty_master : [];
+            fIds.forEach(fId => window.addModalFacultyRow({ faculty_pk: fId, faculty_type: event.faculty_type, role: '', feedback: 'none' }));
+        }
+
         // Trigger dependent loads (await group types to ensure it completes)
         await this.loadGroupTypesForEdit(event);
         this.loadSubjectNamesForEdit(event);
@@ -2002,8 +2018,8 @@ class CalendarManager {
         // Store current event ID
         this.currentEventId = event.pk;
         await this.updateinternal_faculty(event.faculty_type);
-        if(event.faculty_type == 2){
-                await this.setInternalFaculty(event.internal_faculty);
+        if (event.faculty_type == 2) {
+            await this.setInternalFaculty(event.internal_faculty);
         }
     }
 async updateinternal_faculty(facultyType) {
@@ -2915,5 +2931,19 @@ liveRegion.setAttribute('aria-atomic', 'true');
 liveRegion.className = 'visually-hidden';
 document.body.appendChild(liveRegion);
 </script>
+
+@if(session('success'))
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        Swal.fire({
+            icon: 'success',
+            title: 'Success',
+            text: @json(session('success')),
+            timer: 3000,
+            showConfirmButton: false,
+        });
+    });
+</script>
+@endif
 
 @endsection
