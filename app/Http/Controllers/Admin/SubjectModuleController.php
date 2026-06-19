@@ -10,7 +10,19 @@ class SubjectModuleController extends Controller
 {
     public function index()
     {
-        $modules = SubjectModuleMaster::orderBy('created_date', 'desc')->paginate(10);
+        $search = request('search');
+
+        $perPage = (int) request('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100, 200], true)) {
+            $perPage = 10;
+        }
+
+        $modules = SubjectModuleMaster::when($search, function ($q) use ($search) {
+                $q->where('module_name', 'like', "%$search%");
+            })
+            ->orderBy('created_date', 'desc')
+            ->paginate($perPage)
+            ->appends(['search' => $search, 'per_page' => $perPage]);
 
         $smModuleEditData = [];
         foreach ($modules as $module) {

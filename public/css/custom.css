@@ -238,21 +238,27 @@ body.custom-loaded {
 
 #programmeColumnToggleGrid .colvis-item,
 #cgtColumnToggleGrid .colvis-item,
-#gmColumnToggleGrid .colvis-item {
+#gmColumnToggleGrid .colvis-item,
+#smColumnToggleGrid .colvis-item,
+#smModuleColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 #programmeColumnToggleGrid .colvis-item:hover,
 #cgtColumnToggleGrid .colvis-item:hover,
-#gmColumnToggleGrid .colvis-item:hover {
+#gmColumnToggleGrid .colvis-item:hover,
+#smColumnToggleGrid .colvis-item:hover,
+#smModuleColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
 }
 
 #programmeColumnToggleGrid .colvis-item .form-check-input,
 #cgtColumnToggleGrid .colvis-item .form-check-input,
-#gmColumnToggleGrid .colvis-item .form-check-input {
+#gmColumnToggleGrid .colvis-item .form-check-input,
+#smColumnToggleGrid .colvis-item .form-check-input,
+#smModuleColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
 }

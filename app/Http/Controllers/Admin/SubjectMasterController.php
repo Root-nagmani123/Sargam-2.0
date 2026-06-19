@@ -12,13 +12,18 @@ class SubjectMasterController extends Controller
     {
         $search = request('search');
 
+        $perPage = (int) request('per_page', 10);
+        if (!in_array($perPage, [10, 25, 50, 100, 200], true)) {
+            $perPage = 10;
+        }
+
         $subjects = SubjectMaster::when($search, function ($q) use ($search) {
             $q->where('subject_name', 'like', "%$search%")
               ->orWhere('sub_short_name', 'like', "%$search%");
         })
         ->orderBy('created_date', 'desc')
-        ->paginate(10)
-        ->appends(['search' => $search]);
+        ->paginate($perPage)
+        ->appends(['search' => $search, 'per_page' => $perPage]);
 
         $smSubjectEditData = [];
         foreach ($subjects as $subject) {

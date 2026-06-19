@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Subject - Sargam | Lal Bahadur')
+@section('title', 'Subject Master')
 
 @push('styles')
 <link rel="stylesheet" href="{{ asset('css/subject-master-admin.css') }}?v={{ @filemtime(public_path('css/subject-master-admin.css')) ?: time() }}">
@@ -10,7 +10,7 @@
 <div class="container-fluid sm-subject-page">
     <x-breadcrum title="Subject Master">
         <button type="button"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold text-nowrap shadow-sm"
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold text-nowrap shadow-sm"
             data-bs-toggle="modal"
             data-bs-target="#smAddSubjectModal"
             id="smOpenAddSubjectBtn">
@@ -23,6 +23,25 @@
 
     <div class="card sm-dt-card overflow-hidden">
         <div class="card-body p-3 p-md-4">
+
+            <div class="d-flex flex-wrap align-items-center justify-content-end gap-2 mb-4">
+                <button type="button" class="btn programme-dt-btn-columns" id="smBtnColumns"
+                    data-bs-toggle="modal" data-bs-target="#smColumnVisibilityModal"
+                    title="Show / hide columns">
+                    <span>Columns</span>
+                    <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                </button>
+                <form method="GET" id="smSearchForm" class="programme-dt-search m-0" role="search">
+                    <div class="dataTables_filter">
+                        <label class="mb-0 w-100">
+                            <input type="search" name="search" id="smCustomSearch"
+                                class="form-control shadow-none" placeholder="Search"
+                                value="{{ request('search') }}"
+                                aria-label="Search subjects" autocomplete="off">
+                        </label>
+                    </div>
+                </form>
+            </div>
 
             <div id="zero_config_table">
                 <div class="programme-dt-panel sm-dt-panel">
@@ -45,9 +64,9 @@
                                     <td class="sm-col-short">{{ $subject->sub_short_name }}</td>
                                     <td class="sm-subject-status-cell">
                                         @if ($subject->active_inactive == 1)
-                                        <span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>
+                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>
                                         @else
-                                        <span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>
+                                        <span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>
                                         @endif
                                     </td>
                                     <td class="text-end sm-col-actions">
@@ -111,18 +130,43 @@
                         <div class="sm-pagination-nav">
                             {{ $subjects->appends(request()->query())->links('vendor.pagination.custom') }}
                         </div>
-                        <div class="programme-dt-count mb-0">
-                            Showing
-                            <select class="form-select form-select-sm sm-per-page-select d-inline-block"
-                                disabled
-                                aria-label="Items per page">
-                                <option selected>{{ $subjects->perPage() }}</option>
+                        <form method="GET" id="smPerPageForm" class="programme-dt-count mb-0 d-inline-flex align-items-center gap-2">
+                            @if (request('search'))
+                            <input type="hidden" name="search" value="{{ request('search') }}">
+                            @endif
+                            <span>Showing</span>
+                            <select name="per_page"
+                                class="form-select form-select-sm sm-per-page-select d-inline-block"
+                                aria-label="Items per page"
+                                onchange="this.form.submit()">
+                                @foreach ([10, 25, 50, 100, 200] as $pp)
+                                <option value="{{ $pp }}" {{ (int) $subjects->perPage() === $pp ? 'selected' : '' }}>{{ $pp }}</option>
+                                @endforeach
                             </select>
-                            of {{ $subjects->total() }} items
-                        </div>
+                            <span>of {{ $subjects->total() }} items</span>
+                        </form>
                     </div>
                     @endif
                 </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="smColumnVisibilityModal" tabindex="-1" aria-labelledby="smColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="smColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="smColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -152,7 +196,7 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
         }
 
         if ($table.length && $.fn.DataTable) {
-            $table.DataTable({
+            var subjectTable = $table.DataTable({
                 responsive: true,
                 paging: false,
                 searching: false,
@@ -163,7 +207,95 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
                 dom: 't',
                 autoWidth: false
             });
+            setupSubjectColumns(subjectTable);
         }
+
+        bindSubjectSearch();
+    }
+
+    /* ---------- Column show / hide (DataTables API) ---------- */
+    var subjectColStorageKey = 'subjectGrid:hiddenColumns:v1';
+
+    function subjectGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(subjectColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function subjectPersistHiddenCols(arr) {
+        try { localStorage.setItem(subjectColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupSubjectColumns(dt) {
+        var $ = jQuery;
+        if (!dt) {
+            return;
+        }
+        var hidden = subjectGetHiddenCols();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
+        });
+        dt.columns.adjust();
+
+        var $grid = $('#smColumnToggleGrid');
+        if (!$grid.length) {
+            return;
+        }
+        $grid.empty();
+
+        dt.columns().every(function () {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) {
+                return;
+            }
+
+            var inputId = 'subjectcolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function () {
+                var h = subjectGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(idx);
+                }
+                subjectPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
+        });
+    }
+
+    /* ---------- Search (server-side via existing ?search= param) ---------- */
+    function bindSubjectSearch() {
+        var $ = jQuery;
+        var $input = $('#smCustomSearch');
+        var form = document.getElementById('smSearchForm');
+        if (!$input.length || !form) {
+            return;
+        }
+        var timer = null;
+        $input.off('input.sm').on('input.sm', function () {
+            clearTimeout(timer);
+            timer = setTimeout(function () { form.submit(); }, 600);
+        });
     }
 
     function parseAjaxData(data) {
@@ -190,9 +322,9 @@ window.statusToggleUrl = "{{ route('admin.toggleStatus') }}";
         }
         var $cell = $row.find('.sm-subject-status-cell');
         if (String(status) === '1') {
-            $cell.html('<span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>');
+            $cell.html('<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>');
         } else {
-            $cell.html('<span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>');
+            $cell.html('<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>');
         }
     }
 
