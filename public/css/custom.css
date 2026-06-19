@@ -186,9 +186,51 @@ body.custom-loaded {
     color: #7a271a;
 }
 
+.programme-dt-btn-columns {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    white-space: nowrap;
+}
+
+.programme-dt-btn-columns:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+    color: #101828;
+}
+
+.programme-dt-btn-columns i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+#programmeColumnToggleGrid .colvis-item {
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+#programmeColumnToggleGrid .colvis-item:hover {
+    border-color: #004a93 !important;
+    background-color: rgba(0, 74, 147, 0.04);
+}
+
+#programmeColumnToggleGrid .colvis-item .form-check-input {
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 .programme-dt-search {
     flex: 0 0 auto;
-    width: min(100%, 360px);
+    width: 300px;
+    max-width: 100%;
 }
 
 .programme-dt-search .dataTables_filter {
@@ -392,7 +434,9 @@ body.custom-loaded {
     min-height: auto;
 }
 
-.programme-action-switch .form-check-input {
+/* Specificity must beat `.form-check.form-switch:has(.status-toggle) .form-check-input`
+   (line ~107) which otherwise pulls the toggle left over the edit button. */
+.form-check.form-switch.programme-action-switch .form-check-input {
     margin: 0;
 }
 
