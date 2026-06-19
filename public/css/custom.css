@@ -1289,7 +1289,7 @@ body.custom-loaded {
 
 .cgt-master-page #coursegrouptype .edit-btn .material-icons,
 .cgt-master-page #coursegrouptype .delete-btn .material-icons {
-    display: none !important;
+    display: inline-flex !important;
 }
 
 .cgt-master-page #coursegrouptype .edit-btn .bi,
@@ -1307,12 +1307,12 @@ body.custom-loaded {
 }
 
 .cgt-master-page #coursegrouptype .programme-action-switch .form-check-input:checked {
-    background-color: #12b76a;
-    border-color: #12b76a;
+    background-color: #f0a500;
+    border-color: #f0a500;
 }
 
 .cgt-master-page #coursegrouptype .programme-action-switch .form-check-input:focus {
-    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+    box-shadow: 0 0 0 0.2rem rgba(240, 165, 0, 0.25);
 }
 
 .cgt-master-page #coursegrouptype tbody td:nth-child(3),
@@ -1379,7 +1379,7 @@ body.custom-loaded {
 
 .eccm-master-page #exceptiongetcategory .edit-btn .material-icons,
 .eccm-master-page #exceptiongetcategory .delete-btn .material-icons {
-    display: none !important;
+    display: inline-flex !important;
 }
 
 .eccm-master-page #exceptiongetcategory .edit-btn .bi,
@@ -1397,12 +1397,12 @@ body.custom-loaded {
 }
 
 .eccm-master-page #exceptiongetcategory .programme-action-switch .form-check-input:checked {
-    background-color: #12b76a;
-    border-color: #12b76a;
+    background-color: #f0a500;
+    border-color: #f0a500;
 }
 
 .eccm-master-page #exceptiongetcategory .programme-action-switch .form-check-input:focus {
-    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+    box-shadow: 0 0 0 0.2rem rgba(240, 165, 0, 0.25);
 }
 
 .eccm-master-page #exceptiongetcategory tbody td:nth-child(4),
@@ -1474,7 +1474,7 @@ body.custom-loaded {
 
 .ems-master-page #exemptionMedicalSpecialityTable .edit-btn .material-icons,
 .ems-master-page #exemptionMedicalSpecialityTable .delete-btn .material-icons {
-    display: none !important;
+    display: inline-flex !important;
 }
 
 .ems-master-page #exemptionMedicalSpecialityTable .edit-btn .bi,
@@ -1492,12 +1492,12 @@ body.custom-loaded {
 }
 
 .ems-master-page #exemptionMedicalSpecialityTable .programme-action-switch .form-check-input:checked {
-    background-color: #12b76a;
-    border-color: #12b76a;
+    background-color: #f0a500;
+    border-color: #f0a500;
 }
 
 .ems-master-page #exemptionMedicalSpecialityTable .programme-action-switch .form-check-input:focus {
-    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+    box-shadow: 0 0 0 0.2rem rgba(240, 165, 0, 0.25);
 }
 
 .ems-master-page #exemptionMedicalSpecialityTable tbody td:nth-child(3),
@@ -1589,7 +1589,7 @@ body.custom-loaded {
 
 .mdt-master-page #mdodutytypemaster-table .edit-btn .material-icons,
 .mdt-master-page #mdodutytypemaster-table .delete-btn .material-icons {
-    display: none !important;
+    display: inline-flex !important;
 }
 
 .mdt-master-page #mdodutytypemaster-table .edit-btn .bi,
@@ -1607,12 +1607,12 @@ body.custom-loaded {
 }
 
 .mdt-master-page #mdodutytypemaster-table .programme-action-switch .form-check-input:checked {
-    background-color: #12b76a;
-    border-color: #12b76a;
+    background-color: #f0a500;
+    border-color: #f0a500;
 }
 
 .mdt-master-page #mdodutytypemaster-table .programme-action-switch .form-check-input:focus {
-    box-shadow: 0 0 0 0.2rem rgba(18, 183, 106, 0.2);
+    box-shadow: 0 0 0 0.2rem rgba(240, 165, 0, 0.25);
 }
 
 .mdt-master-page #mdodutytypemaster-table tbody td:nth-child(1) label,

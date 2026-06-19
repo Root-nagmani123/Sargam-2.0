@@ -3,6 +3,81 @@
 @section('title', 'Exemption medical speciality')
 
 @section('setup_content')
+<style>
+/* ===== Exemption Medical Speciality — reference-matched polish (presentation only) ===== */
+.ems-toolbar { gap: 0.5rem; }
+.ems-tool-btn {
+    height: 42px; display: inline-flex; align-items: center; gap: 8px;
+    padding: 0 14px; font-size: 0.875rem; font-weight: 600; color: #1f2937;
+    background: #fff; border: 1px solid #d0d5dd; border-radius: 8px; line-height: 1;
+}
+.ems-tool-btn:hover { border-color: #b6c0cc; }
+.ems-search-box { position: relative; display: inline-flex; align-items: center; }
+.ems-search-ico { position: absolute; left: 14px; color: #667085; font-size: 16px; pointer-events: none; }
+.ems-search-input {
+    height: 42px; width: 300px; max-width: 100%; padding-left: 40px;
+    border: 1px solid #d0d5dd; border-radius: 8px; font-size: 0.9rem; background: #fff;
+}
+.ems-search-input:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.18); outline: none; }
+
+/* Table header */
+.ems-master-page .programme-dt-table thead th {
+    background: #f8fafc; color: #667085; text-transform: uppercase;
+    font-size: 0.75rem; letter-spacing: 0.02em; font-weight: 600;
+    border-bottom: 1px solid #e5e7eb; padding: 12px 14px;
+}
+.ems-master-page .programme-dt-table tbody td { padding: 14px; vertical-align: middle; }
+
+/* Status pills */
+.ems-master-page .programme-status-badge,
+.ems-master-page .ems-status-badge {
+    display: inline-block; padding: 0.35rem 0.95rem; border-radius: 50rem;
+    font-size: 0.8125rem; font-weight: 600; line-height: 1.2;
+}
+.ems-master-page .programme-status-badge--active { color: #0f7b3e; background: #e3f5ea; }
+.ems-master-page .programme-status-badge--inactive { color: #c0392b; background: #fde6e4; }
+
+/* Row action icons: edit (indigo) · toggle (amber) · delete (red) */
+.ems-master-page .edit-btn,
+.ems-master-page .delete-btn {
+    border: 0 !important; background: transparent !important; box-shadow: none !important;
+    padding: 4px 6px !important; line-height: 1;
+}
+.ems-master-page .edit-btn { color: #4f46e5 !important; }
+.ems-master-page .delete-btn { color: #dc3545 !important; }
+.ems-master-page .edit-btn .bi,
+.ems-master-page .delete-btn .bi { font-size: 18px; }
+.ems-master-page .programme-action-switch .form-check-input { cursor: pointer; }
+.ems-master-page .programme-action-switch .form-check-input:checked { background-color: #f0a500; border-color: #f0a500; }
+
+/* Bottom bar: pagination (left) + "Showing [n] of N items" (right) */
+.ems-master-page .ems-count,
+.ems-master-page .ems-count .dataTables_info,
+.ems-master-page .ems-count .dataTables_length { color: #667085; font-size: 0.875rem; }
+.ems-master-page .ems-count .dataTables_length,
+.ems-master-page .ems-count .dataTables_info { margin: 0; padding: 0; white-space: nowrap; }
+.ems-master-page .ems-count .dataTables_length label { margin: 0; display: inline-flex; align-items: center; gap: 0.5rem; }
+.ems-master-page .ems-count .dataTables_length select { width: auto; min-width: 76px; display: inline-block; border-radius: 6px; margin: 0 0.25rem; }
+.ems-master-page .pagination { gap: 4px; margin: 0; flex-wrap: wrap; }
+.ems-master-page .pagination .page-link {
+    border: 1px solid #e2e8f0; border-radius: 8px; min-width: 36px; height: 36px;
+    display: inline-flex; align-items: center; justify-content: center; color: #1f2937; margin-left: 0; background: #fff;
+}
+.ems-master-page .pagination .page-link:hover { background: #f8fafc; }
+.ems-master-page .pagination .page-item.active .page-link { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
+.ems-master-page .pagination .page-item.disabled .page-link { color: #98a2b3; background: #f8fafc; }
+
+/* Column Visibility modal grid */
+.ems-col-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+.ems-col-chip {
+    display: flex; align-items: center; gap: 8px; margin: 0; padding: 0.6rem 0.85rem;
+    border: 1px solid #e2e8f0; border-radius: 8px; background: #fff; cursor: pointer;
+    font-size: 0.9rem; font-weight: 500; color: #1f2937; user-select: none;
+}
+.ems-col-chip:hover { border-color: #b6c0cc; background: #f8fafc; }
+.ems-col-chip.is-checked { border-color: var(--bs-primary); box-shadow: inset 0 0 0 1px var(--bs-primary); }
+@media (max-width: 479.98px) { .ems-col-grid { grid-template-columns: 1fr; } }
+</style>
 <div class="container-fluid ems-master-page">
     <x-breadcrum title="Exemption medical speciality">
         <button type="button"
@@ -11,15 +86,24 @@
             data-bs-toggle="modal"
             data-bs-target="#emsAddModal"
             aria-controls="emsAddModal">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
+            <i class="material-icons material-symbols-rounded" aria-hidden="true">add</i>
             <span>Add Exemption medical speciality</span>
         </button>
     </x-breadcrum>
 
     <div class="card ems-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="emsDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="exemptionMedicalSpecialityTable"></div>
+            <div class="ems-toolbar d-flex flex-wrap align-items-center justify-content-end mb-4">
+                <button type="button" class="ems-tool-btn" id="emsColumnsToggle"
+                    data-bs-toggle="modal" data-bs-target="#emsColumnsModal">
+                    <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">view_column</i>
+                    <span class="d-none d-sm-inline">Columns</span>
+                </button>
+                <div class="ems-search-box">
+                    <i class="material-icons material-symbols-rounded ems-search-ico" aria-hidden="true">search</i>
+                    <input type="text" id="emsTableSearch" class="form-control ems-search-input"
+                        placeholder="Search" autocomplete="off" aria-label="Search medical specialities">
+                </div>
             </div>
 
             <div class="programme-dt-panel">
@@ -27,7 +111,7 @@
                     <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="exemptionMedicalSpecialityTable">
                         <thead>
                             <tr>
-                                <th scope="col" class="text-nowrap" style="width: 5.5rem;">S.No.</th>
+                                <th scope="col" class="text-nowrap" style="width: 5.5rem;">S. No.</th>
                                 <th scope="col">Speciality Name</th>
                                 <th scope="col" class="text-center text-nowrap" style="width: 8.5rem;">Created Date</th>
                                 <th scope="col" class="text-center text-nowrap" style="width: 7.5rem;">Status</th>
@@ -36,7 +120,6 @@
                         </thead>
                     </table>
                 </div>
-                <div id="emsDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="exemptionMedicalSpecialityTable"></div>
             </div>
         </div>
     </div>
@@ -137,11 +220,29 @@
     </div>
 </div>
 
+<!-- Column Visibility -->
+<div class="modal fade" id="emsColumnsModal" tabindex="-1" aria-labelledby="emsColumnsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 shadow-lg">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold mb-0" id="emsColumnsModalLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="ems-col-grid" id="emsColumnsGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <input type="hidden" id="pk" value="">
 <input type="hidden" id="active_inactive" value="">
 @endsection
 
-@section('scripts')
+@push('scripts')
 <script>
     $(function() {
         const tableSelector = '#exemptionMedicalSpecialityTable';
@@ -218,7 +319,7 @@
                     const $editBtn = $actionGroup.find('.edit-btn').first();
 
                     if ($switchWrap.length && $actionGroup.length) {
-                        $switchWrap.addClass('programme-action-switch m-0 d-inline-flex align-items-center');
+                        $switchWrap.addClass('programme-action-switch m-0 d-inline-flex align-items-center p-0');
                         if ($editBtn.length) {
                             $editBtn.after($switchWrap);
                         } else {
@@ -234,22 +335,10 @@
                     );
                 }
 
-                $actionCell.find('.edit-btn').each(function() {
-                    const $btn = $(this);
-                    if (!$btn.find('.bi').length) {
-                        $btn.find('.material-icons').remove();
-                        $btn.find('span.d-none').remove();
-                        $btn.append('<i class="bi bi-pencil" aria-hidden="true"></i>');
-                    }
-                });
-
-                $actionCell.find('.delete-btn').each(function() {
-                    const $btn = $(this);
-                    if (!$btn.find('.bi').length) {
-                        $btn.find('.material-icons').remove();
-                        $btn.find('span.d-none').remove();
-                        $btn.append('<i class="bi bi-trash3" aria-hidden="true"></i>');
-                    }
+                // Keep the server's material-icons (Bootstrap Icons font isn't
+                // loaded on this layout); just drop the text label for icon-only.
+                $actionCell.find('.edit-btn, .delete-btn').each(function() {
+                    $(this).find('span.d-none').remove();
                 });
             });
         }
@@ -274,6 +363,11 @@
                 pageLength: 10,
                 lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
                 order: [[0, 'desc']],
+                dom: "<'row'<'col-12'tr>>" +
+                     "<'row mt-3 align-items-center'" +
+                         "<'col-12 col-md-auto me-md-auto'p>" +
+                         "<'col-12 col-md-auto d-flex justify-content-md-end align-items-center ems-count'li>" +
+                     ">",
                 ajax: {
                     url: "{{ route('master.exemption.medical.speciality.exemption_med_spec_mst') }}",
                     data: function(d) {
@@ -326,9 +420,17 @@
                     }
                 ],
                 language: {
+                    lengthMenu: 'Showing _MENU_',
+                    info: 'of _TOTAL_ items',
+                    infoEmpty: 'of 0 items',
+                    infoFiltered: '',
                     processing: '<span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>Loading…',
                     emptyTable: 'No medical specialities found.',
-                    zeroRecords: 'No matching medical specialities found.'
+                    zeroRecords: 'No matching medical specialities found.',
+                    paginate: {
+                        previous: '<span aria-hidden="true">&lsaquo;</span>',
+                        next: '<span aria-hidden="true">&rsaquo;</span>'
+                    }
                 },
                 initComplete: function() {
                     decorateEmsRows();
@@ -338,6 +440,34 @@
                 }
             });
         }
+
+        // 🔍 Toolbar search → server-side global search
+        var emsSearchTimer;
+        $('#emsTableSearch').on('keyup', function() {
+            var value = this.value;
+            clearTimeout(emsSearchTimer);
+            emsSearchTimer = setTimeout(function() {
+                table.search(value).draw();
+            }, 400);
+        });
+
+        // 🧱 Column Visibility modal (chips built from the live DataTable)
+        var $emsColGrid = $('#emsColumnsGrid');
+        table.columns().every(function(idx) {
+            var title = $.trim($(this.header()).text()) || ('Column ' + (idx + 1));
+            var visible = this.visible();
+            $emsColGrid.append(
+                '<label class="ems-col-chip' + (visible ? ' is-checked' : '') + '" for="emsColToggle' + idx + '">' +
+                    '<input class="form-check-input ems-col-toggle" type="checkbox" ' + (visible ? 'checked ' : '') +
+                           'id="emsColToggle' + idx + '" data-column="' + idx + '">' +
+                    '<span>' + title + '</span>' +
+                '</label>'
+            );
+        });
+        $emsColGrid.on('change', '.ems-col-toggle', function() {
+            table.column($(this).data('column')).visible(this.checked);
+            $(this).closest('.ems-col-chip').toggleClass('is-checked', this.checked);
+        });
 
         $('#emsAddSubmit').on('click', function() {
             const $form = $('#exemptionCategoryForm');
@@ -613,4 +743,4 @@
     });
 </script>
 @endif
-@endsection
+@endpush
