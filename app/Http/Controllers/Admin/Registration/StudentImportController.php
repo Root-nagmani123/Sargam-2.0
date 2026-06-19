@@ -673,6 +673,13 @@ class StudentImportController extends Controller
             'student_sports_fitness_teach_masters',
             'student_sports_trg_teach_masters',
             'fc_joining_related_documents_details_masters',
+            // Joining documents uploaded via the dynamic registration form. Missing
+            // from this list previously, which orphaned trainees' uploaded documents
+            // under the roster pk after migration (invisible in the documents report).
+            'fc_joining_documents_user_uploads',
+            // Other dynamic-form target tables keyed by user_id.
+            'student_iosr_reasonable_adjust_masters',
+            'student_cloth_size_master_details',
             'fc_ot_details',
             'fc_otactivity_details',
             'fc_pre_history',
