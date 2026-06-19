@@ -11,6 +11,70 @@
     #usersColumnToggleGrid .colvis-item { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
     #usersColumnToggleGrid .colvis-item:hover { border-color: #004a93 !important; background-color: rgba(0,74,147,.04); }
     #usersColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
+
+    /* ===== Reference-matched polish (presentation only) ===== */
+    /* Print / Download utility buttons */
+    .users-page .users-util-btn {
+        height: 44px; display: inline-flex; align-items: center; gap: 8px;
+        padding: 0 18px; font-weight: 600; font-size: 0.9rem; color: #004a93;
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .users-page .users-util-btn:hover { border-color: #004a93; box-shadow: 0 1px 3px rgba(16,24,40,.08); }
+
+    /* Filter toolbar */
+    .users-page .users-filters-label { font-weight: 600; color: #1f2937; font-size: 0.9rem; }
+    .users-page .users-filter-select {
+        height: 42px; min-width: 150px; border: 1px solid #d0d5dd; border-radius: 8px;
+        font-size: 0.875rem; color: #1f2937;
+    }
+    .users-page .users-reset-btn {
+        height: 42px; border: 1px solid var(--bs-danger); color: var(--bs-danger);
+        border-radius: 8px; font-weight: 600; font-size: 0.875rem; padding: 0 16px; background: #fff;
+    }
+    .users-page .users-reset-btn:hover { background: var(--bs-danger); color: #fff; }
+    .users-page .users-tool-btn {
+        height: 42px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px;
+        font-size: 0.875rem; font-weight: 600; color: #344054; background: #fff;
+        border: 1px solid #d0d5dd; border-radius: 8px;
+    }
+    .users-page .users-tool-btn:hover { border-color: #b6c0cc; }
+    .users-page .users-search-icon-btn {
+        height: 42px; width: 42px; display: inline-flex; align-items: center; justify-content: center;
+        border: 1px solid #d0d5dd; border-radius: 8px; background: #f3f4f6; color: #475467;
+    }
+    .users-page .users-search-icon-btn:hover { background: #e9eaee; }
+    .users-page .users-search-box { position: relative; display: none; }
+    .users-page .users-search-box.is-open { display: inline-flex; align-items: center; }
+    .users-page .users-search-box .users-search-input {
+        height: 42px; width: 240px; padding-left: 38px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 0.875rem;
+    }
+    .users-page .users-search-box .users-search-ico {
+        position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 18px; pointer-events: none;
+    }
+
+    /* Table */
+    .users-page .users-table thead th {
+        background: #f3f4f6; color: #667085; text-transform: none;
+        font-weight: 600; font-size: 0.8125rem; padding: 14px; border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+    }
+    .users-page .users-table tbody td { padding: 14px; vertical-align: middle; font-size: 0.9rem; color: #1f2937; border-bottom: 1px solid #f0f1f3; }
+    .users-page .users-usertype { color: #475467; }
+    .users-page .users-assign-link {
+        display: inline-flex; align-items: center; gap: 6px; color: var(--bs-primary);
+        font-weight: 600; font-size: 0.9rem; text-decoration: none;
+    }
+    .users-page .users-assign-link:hover { text-decoration: underline; }
+
+    /* Footer pagination */
+    .users-page .pagination { gap: 4px; margin: 0; flex-wrap: wrap; }
+    .users-page .pagination .page-link {
+        border: 1px solid #e2e8f0; border-radius: 8px; min-width: 36px; height: 36px;
+        display: inline-flex; align-items: center; justify-content: center; color: #1f2937; margin-left: 0;
+    }
+    .users-page .pagination .page-item.active .page-link { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
+    .users-page .pagination .page-item.disabled .page-link { color: #98a2b3; background: #f8fafc; }
+    .users-page .users-per-page-select { width: auto; min-width: 72px; border-radius: 6px; }
 </style>
 @endpush
 
@@ -19,6 +83,18 @@
     <x-breadcrum title="Users"></x-breadcrum>
 
     <x-session_message />
+
+    {{-- Print / Download --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+        <button type="button" id="usersPrintBtn" class="users-util-btn">
+            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">print</i>
+            <span>Print</span>
+        </button>
+        <button type="button" id="usersDownloadBtn" class="users-util-btn">
+            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">download</i>
+            <span>Download</span>
+        </button>
+    </div>
 
     <div class="card users-dt-card shadow-sm rounded-3 overflow-hidden border-0">
         <div class="card-body p-3 p-md-4">
@@ -37,29 +113,32 @@
                         <option value="E" {{ $user_type === 'E' ? 'selected' : '' }}>Employee</option>
                     </select>
 
-                    <button type="button" class="btn users-reset-btn" id="resetUsersFilters">
+                    <button type="button" class="users-reset-btn" id="resetUsersFilters">
                         Reset Filters
                     </button>
 
-                    <button type="button"
-                        class="btn btn-outline-secondary rounded-1 d-inline-flex align-items-center ms-md-auto"
-                        id="btnUsersColumns" data-bs-toggle="modal" data-bs-target="#usersColumnVisibilityModal"
-                        title="Show / hide columns" style="border:1px solid #C6C6C6; color:#727272;background-color:#fff;">
-                        <span class="ms-1">Columns</span>
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px; color:#727272;" aria-hidden="true">view_column</i>
-                    </button>
+                    <div class="ms-md-auto d-flex align-items-center gap-2">
+                        <button type="button" class="users-tool-btn"
+                            id="btnUsersColumns" data-bs-toggle="modal" data-bs-target="#usersColumnVisibilityModal"
+                            title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">view_column</i>
+                        </button>
 
-                    <div class="users-search-wrap is-open" id="usersSearchWrap">
-                        <label for="usersSearch" class="visually-hidden">Search users</label>
-                        <input type="text"
-                            name="search"
-                            id="usersSearch"
-                            class="form-control users-search-input"
-                            placeholder="Search..."
-                            value="{{ $search }}"
-                            autocomplete="off">
-                        <button type="submit" class="btn users-search-btn" id="usersSearchBtn" aria-label="Search users">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
+                        <div class="users-search-box" id="usersSearchWrap">
+                            <i class="material-icons material-symbols-rounded users-search-ico" aria-hidden="true">search</i>
+                            <label for="usersSearch" class="visually-hidden">Search users</label>
+                            <input type="text"
+                                name="search"
+                                id="usersSearch"
+                                class="form-control users-search-input"
+                                placeholder="Search..."
+                                value="{{ $search }}"
+                                autocomplete="off">
+                        </div>
+
+                        <button type="button" class="users-search-icon-btn" id="usersSearchToggle" aria-label="Toggle search">
+                            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">search</i>
                         </button>
                     </div>
                 </div>
@@ -251,6 +330,69 @@ document.addEventListener('DOMContentLoaded', function () {
 
     buildColumnsModal();
     applyColumnVisibility();
+
+    /* ---------------- Search icon toggle ---------------- */
+    var searchToggle = document.getElementById('usersSearchToggle');
+    var searchWrap = document.getElementById('usersSearchWrap');
+    if (searchWrap && searchInput && searchInput.value.trim() !== '') {
+        searchWrap.classList.add('is-open');
+    }
+    if (searchToggle && searchWrap) {
+        searchToggle.addEventListener('click', function () {
+            searchWrap.classList.toggle('is-open');
+            if (searchWrap.classList.contains('is-open') && searchInput) searchInput.focus();
+        });
+    }
+
+    /* ---------------- Print (current table) ---------------- */
+    var printBtn = document.getElementById('usersPrintBtn');
+    if (printBtn) {
+        printBtn.addEventListener('click', function () {
+            var table = container.querySelector('#zero_config_table');
+            if (!table) return;
+            var clone = table.cloneNode(true);
+            clone.querySelectorAll('tr').forEach(function (tr) {
+                if (tr.children.length > 1) tr.removeChild(tr.children[tr.children.length - 1]); // drop Action
+            });
+            var w = window.open('', '_blank');
+            if (!w) return;
+            w.document.write('<!DOCTYPE html><html><head><title>Users</title>' +
+                '<style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}' +
+                'th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:12px}th{background:#004a93;color:#fff}h2{color:#004a93}</style>' +
+                '</head><body><h2>Users</h2>' + clone.outerHTML + '</body></html>');
+            w.document.close();
+            w.onload = function () { w.print(); };
+        });
+    }
+
+    /* ---------------- Download (current table → CSV) ---------------- */
+    var downloadBtn = document.getElementById('usersDownloadBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function () {
+            var table = container.querySelector('#zero_config_table');
+            if (!table) return;
+            var rows = [];
+            table.querySelectorAll('tr').forEach(function (tr) {
+                if (tr.children.length <= 1) return; // skip empty-state row
+                var cells = [];
+                for (var i = 0; i < tr.children.length - 1; i++) { // exclude Action column
+                    var txt = (tr.children[i].innerText || '').replace(/\s+/g, ' ').trim().replace(/"/g, '""');
+                    cells.push('"' + txt + '"');
+                }
+                rows.push(cells.join(','));
+            });
+            if (!rows.length) return;
+            var blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'users_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        });
+    }
 });
 </script>
 @endpush
