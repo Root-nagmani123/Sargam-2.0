@@ -212,20 +212,47 @@ body.custom-loaded {
     line-height: 1;
 }
 
+.gm-search-toggle {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #475467;
+}
+
+.gm-search-toggle:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+    color: #101828;
+}
+
+.gm-download-btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
 #programmeColumnToggleGrid .colvis-item,
-#cgtColumnToggleGrid .colvis-item {
+#cgtColumnToggleGrid .colvis-item,
+#gmColumnToggleGrid .colvis-item {
     cursor: pointer;
     transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 #programmeColumnToggleGrid .colvis-item:hover,
-#cgtColumnToggleGrid .colvis-item:hover {
+#cgtColumnToggleGrid .colvis-item:hover,
+#gmColumnToggleGrid .colvis-item:hover {
     border-color: #004a93 !important;
     background-color: rgba(0, 74, 147, 0.04);
 }
 
 #programmeColumnToggleGrid .colvis-item .form-check-input,
-#cgtColumnToggleGrid .colvis-item .form-check-input {
+#cgtColumnToggleGrid .colvis-item .form-check-input,
+#gmColumnToggleGrid .colvis-item .form-check-input {
     cursor: pointer;
     flex-shrink: 0;
 }

@@ -233,6 +233,10 @@ $courseQuery->whereNotNull('end_date')
     'processing' => '<span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>Loading…',
     'emptyTable' => 'No group mappings found.',
     'zeroRecords' => 'No matching group mappings found.',
+    'lengthMenu' => 'Showing _MENU_',
+    'info' => 'of _TOTAL_ items',
+    'infoEmpty' => 'of 0 items',
+    'infoFiltered' => 'of _MAX_ items',
     'paginate' => [
     'previous' => '&laquo;',
     'next' => '&raquo;',
