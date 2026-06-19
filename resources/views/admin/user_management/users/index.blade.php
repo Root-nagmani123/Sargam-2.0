@@ -44,11 +44,12 @@
         border: 1px solid #d0d5dd; border-radius: 8px; background: #f3f4f6; color: #475467;
     }
     .users-page .users-search-icon-btn:hover { background: #e9eaee; }
-    .users-page .users-search-box { position: relative; display: none; }
-    .users-page .users-search-box.is-open { display: inline-flex; align-items: center; }
+    .users-page .users-search-box { position: relative; display: inline-flex; align-items: center; }
     .users-page .users-search-box .users-search-input {
-        height: 42px; width: 240px; padding-left: 38px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 0.875rem;
+        height: 42px; width: 240px; max-width: 100%; padding-left: 38px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 0.875rem;
     }
+    .users-page .users-search-box .users-search-input:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.18); outline: none; }
+    @media (max-width: 575.98px) { .users-page .users-search-box .users-search-input { width: 160px; } }
     .users-page .users-search-box .users-search-ico {
         position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 18px; pointer-events: none;
     }
@@ -136,10 +137,6 @@
                                 value="{{ $search }}"
                                 autocomplete="off">
                         </div>
-
-                        <button type="button" class="users-search-icon-btn" id="usersSearchToggle" aria-label="Toggle search">
-                            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">search</i>
-                        </button>
                     </div>
                 </div>
             </form>
@@ -330,19 +327,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     buildColumnsModal();
     applyColumnVisibility();
-
-    /* ---------------- Search icon toggle ---------------- */
-    var searchToggle = document.getElementById('usersSearchToggle');
-    var searchWrap = document.getElementById('usersSearchWrap');
-    if (searchWrap && searchInput && searchInput.value.trim() !== '') {
-        searchWrap.classList.add('is-open');
-    }
-    if (searchToggle && searchWrap) {
-        searchToggle.addEventListener('click', function () {
-            searchWrap.classList.toggle('is-open');
-            if (searchWrap.classList.contains('is-open') && searchInput) searchInput.focus();
-        });
-    }
 
     /* ---------------- Print (current table) ---------------- */
     var printBtn = document.getElementById('usersPrintBtn');
