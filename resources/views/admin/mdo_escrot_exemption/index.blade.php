@@ -7,11 +7,101 @@
 @endpush
 
 @section('setup_content')
+<style>
+/* Filter toolbar (matches updated design) */
+.mee-filters-label { font-weight: 600; font-size: 0.9rem; color: #1f2937; margin-right: 4px; }
+.mee-filter-control {
+    height: 44px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 14px;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: #1f2937;
+    background: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    line-height: 1;
+}
+.mee-filter-control:hover { border-color: #b6c0cc; }
+.mee-filter-control:focus { outline: none; border-color: #86b7fe; box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.18); }
+select.mee-filter-control {
+    display: inline-block;
+    min-width: 160px;
+    max-width: 220px;
+    padding-right: 34px;
+    text-overflow: ellipsis;
+}
+.mee-icon-btn { width: 44px; padding: 0; justify-content: center; }
+
+/* Time Period chip */
+.mee-time-period-filter { display: inline-flex; }
+.mee-tp-input {
+    min-width: 170px;
+    padding-left: 38px;
+    padding-right: 32px;
+    background: #fff;
+    cursor: pointer;
+}
+.mee-tp-input::placeholder { color: #1f2937; opacity: 1; }
+.mee-tp-ico { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 16px; pointer-events: none; }
+.mee-tp-caret { position: absolute; right: 14px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 12px; pointer-events: none; }
+
+/* +3 Filters link */
+.mee-more-filters { color: var(--bs-primary); font-weight: 600; text-decoration: underline; white-space: nowrap; }
+.mee-more-filters.mee-more-filters-active { font-weight: 700; }
+.mee-extra-menu { min-width: 240px; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,0.12); }
+
+/* Reset Filters = red outline */
+.mee-reset { color: var(--bs-danger); border-color: var(--bs-danger); font-weight: 600; }
+.mee-reset:hover { background: var(--bs-danger); color: #fff; border-color: var(--bs-danger); }
+
+/* Search dropdown */
+.mee-search-menu { min-width: 260px; border: 1px solid #e2e8f0; border-radius: 10px; box-shadow: 0 8px 24px rgba(16,24,40,0.12); }
+
+/* Column Visibility modal — grid of bordered checkbox chips */
+.mee-col-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+.mee-col-chip {
+    display: flex; align-items: center; gap: 8px; margin: 0;
+    padding: 0.65rem 0.85rem; border: 1px solid #e2e8f0; border-radius: 8px;
+    background: #fff; cursor: pointer; font-size: 0.9rem; font-weight: 500; color: #1f2937; user-select: none;
+}
+.mee-col-chip:hover { border-color: #b6c0cc; background: #f8fafc; }
+.mee-col-chip.is-checked { border-color: var(--bs-primary); box-shadow: inset 0 0 0 1px var(--bs-primary); }
+@media (max-width: 767.98px) { .mee-col-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 479.98px) { .mee-col-grid { grid-template-columns: 1fr; } }
+
+/* Bottom bar: pagination (left) + "Showing [n] of N items" (right) */
+.mee-master-page .mee-dt-bottom { margin-top: 1rem; }
+.mee-master-page .mee-dt-count,
+.mee-master-page .mee-dt-count .dataTables_info,
+.mee-master-page .mee-dt-count .dataTables_length {
+    color: #667085;
+    font-size: 0.875rem;
+}
+.mee-master-page .mee-dt-count .dataTables_length,
+.mee-master-page .mee-dt-count .dataTables_info { margin: 0; padding: 0; }
+.mee-master-page .mee-dt-count .dataTables_length label {
+    margin: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.mee-master-page .mee-dt-count .dataTables_length select.form-select,
+.mee-master-page .mee-dt-count .dataTables_length select {
+    width: auto;
+    min-width: 76px;
+    display: inline-block;
+    border-radius: 6px;
+    margin: 0 0.25rem;
+}
+</style>
 <div class="container-fluid mee-master-page">
     <x-breadcrum title="Escort/ Moderator Duty">
         <button type="button"
             id="meeAddExemptionBtn"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold shadow-sm text-nowrap">
+            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm text-nowrap">
             <i class="bi bi-plus-lg" aria-hidden="true"></i>
             <span>Add New MDO/ Escort Exemption</span>
         </button>
@@ -41,11 +131,11 @@
     @endphp
 
     <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-between gap-3 mb-4">
-        <ul class="nav nav-pills gap-2 p-1 rounded-2 programme-status-tabs bg-white shadow-sm mb-0" role="group"
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs bg-white shadow-sm mb-0" role="group"
             aria-label="Course Status Filter">
             <li class="nav-item" role="presentation">
                 <a href="{{ route('mdo-escrot-exemption.index', $activeParams) }}"
-                    class="nav-link rounded-2 px-4 py-2 fw-semibold programme-status-pill {{ ($filter ?? 'active') === 'active' ? 'active' : '' }}"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ ($filter ?? 'active') === 'active' ? 'active' : '' }}"
                     id="filterActive"
                     aria-pressed="{{ ($filter ?? 'active') === 'active' ? 'true' : 'false' }}"
                     {{ ($filter ?? 'active') === 'active' ? 'aria-current=true' : '' }}>
@@ -54,7 +144,7 @@
             </li>
             <li class="nav-item" role="presentation">
                 <a href="{{ route('mdo-escrot-exemption.index', $archiveParams) }}"
-                    class="nav-link rounded-2 px-4 py-2 fw-semibold programme-status-pill {{ ($filter ?? 'active') === 'archive' ? 'active' : '' }}"
+                    class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill {{ ($filter ?? 'active') === 'archive' ? 'active' : '' }}"
                     id="filterArchive"
                     aria-pressed="{{ ($filter ?? 'active') === 'archive' ? 'true' : 'false' }}"
                     {{ ($filter ?? 'active') === 'archive' ? 'aria-current=true' : '' }}>
@@ -65,13 +155,13 @@
 
         <div class="d-flex flex-wrap align-items-center justify-content-lg-end gap-2">
             <button type="button" id="printDownloadBtn"
-                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-2 fw-semibold shadow-sm">
-                <i class="bi bi-printer" aria-hidden="true"></i>
+                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" style="border:0;background:#fff;color:#004a93;">
+                <i class="material-icons material-symbols-rounded" aria-hidden="true">print</i>
                 <span>Print</span>
             </button>
             <button type="button" id="downloadBtn"
-                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-2 fw-semibold shadow-sm">
-                <i class="bi bi-download" aria-hidden="true"></i>
+                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm" style="border:0;background:#fff;color:#004a93;">
+                <i class="material-icons material-symbols-rounded" aria-hidden="true">download</i>
                 <span>Download</span>
             </button>
         </div>
@@ -80,104 +170,94 @@
     <div class="datatables">
         <div class="card mee-dt-card border-0 shadow-sm rounded-1 overflow-hidden">
             <div class="card-body p-3 p-md-4">
-                <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
-                    <div class="d-flex flex-wrap align-items-center gap-3">
-                        <span class="programme-dt-filters-label">Filters</span>
 
-                        <div class="programme-dt-filter-select">
-                            <label for="course_filter" class="visually-hidden">Course Name</label>
-                            <select id="course_filter" class="form-select " aria-label="Filter by course name">
-                                <option value="">Course Name</option>
-                                @foreach ($courseMaster as $id => $name)
-                                <option value="{{ $id }}" {{ (string) request('course_filter') === (string) $id ? 'selected' : '' }}>{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                {{-- Filter toolbar (matches updated design) --}}
+                <div class="mee-toolbar d-flex flex-wrap align-items-center gap-2 mb-4">
+                    <span class="mee-filters-label">Filters</span>
 
-                        <div class="programme-dt-filter-select">
-                            <label for="year_filter" class="visually-hidden">Year</label>
-                            <select id="year_filter" class="form-select " aria-label="Filter by year">
-                                <option value="">Year</option>
-                                @foreach ($years as $year => $yearValue)
-                                <option value="{{ $year }}" {{ (string) request('year_filter') === (string) $year ? 'selected' : '' }}>{{ $year }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                    {{-- Course Name --}}
+                    <select id="course_filter" class="form-select mee-filter-control" aria-label="Filter by course name">
+                        <option value="">Course Name</option>
+                        @foreach ($courseMaster as $id => $name)
+                        <option value="{{ $id }}" {{ (string) request('course_filter') === (string) $id ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
 
-                        <div class="programme-dt-filter-select">
-                            <label for="duty_type_filter" class="visually-hidden">Duty Type</label>
-                            <select id="duty_type_filter" class="form-select " aria-label="Filter by duty type">
-                                <option value="">Duty Type</option>
-                                @foreach ($dutyTypes as $id => $name)
-                                <option value="{{ $id }}" {{ (string) request('duty_type_filter') === (string) $id ? 'selected' : '' }}>{{ $name }}</option>
-                                @endforeach
-                            </select>
-                        </div>
+                    {{-- Duty Type --}}
+                    <select id="duty_type_filter" class="form-select mee-filter-control" aria-label="Filter by duty type">
+                        <option value="">Duty Type</option>
+                        @foreach ($dutyTypes as $id => $name)
+                        <option value="{{ $id }}" {{ (string) request('duty_type_filter') === (string) $id ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
 
-                        <div class="programme-dt-filter-select mee-time-period-filter position-relative">
-                            <input type="hidden" id="from_date_filter" value="{{ request('from_date_filter') }}">
-                            <input type="hidden" id="to_date_filter" value="{{ request('to_date_filter') }}">
-                            <label for="mee_time_period_picker" class="visually-hidden">Time Period</label>
-                            <input type="text"
-                                id="mee_time_period_picker"
-                                class="form-control form-control-sm mee-time-period-input"
-                                placeholder="Time Period"
-                                value="{{ $timePeriodLabel }}"
-                                readonly
-                                autocomplete="off"
-                                aria-label="Filter by time period">
-                            <i class="bi bi-calendar3 mee-time-period-icon" aria-hidden="true"></i>
-                        </div>
+                    {{-- Time Period (flatpickr range) --}}
+                    <div class="mee-time-period-filter position-relative">
+                        <input type="hidden" id="from_date_filter" value="{{ request('from_date_filter') }}">
+                        <input type="hidden" id="to_date_filter" value="{{ request('to_date_filter') }}">
+                        <i class="bi bi-calendar3 mee-tp-ico" aria-hidden="true"></i>
+                        <input type="text" id="mee_time_period_picker"
+                            class="mee-filter-control mee-tp-input"
+                            placeholder="Time Period" value="{{ $timePeriodLabel }}"
+                            readonly autocomplete="off" aria-label="Filter by time period">
+                        <i class="bi bi-chevron-down mee-tp-caret" aria-hidden="true"></i>
+                    </div>
 
-                        <div class="dropdown mee-extra-filters-dropdown flex-shrink-0">
-                            <button type="button"
-                                class="btn btn-link p-0 text-decoration-none fw-semibold mee-more-filters-toggle dropdown-toggle"
-                                id="meeExtraFiltersToggle"
-                                data-bs-toggle="dropdown"
-                                data-bs-auto-close="outside"
-                                aria-expanded="false"
-                                aria-haspopup="true"
-                                aria-controls="meeExtraFiltersMenu">
-                                <span class="mee-more-filters-count">+2</span> Filters
-                            </button>
-                            <div class="dropdown-menu dropdown-menu-start p-0 border-0 shadow-sm rounded-1 mee-extra-filters-menu"
-                                id="meeExtraFiltersMenu"
-                                aria-labelledby="meeExtraFiltersToggle">
-                                <div class="mee-extra-filters-card p-3 p-md-4">
-                                    <h6 class="fw-semibold text-secondary mb-0">Filters</h6>
-                                    <hr class="my-3 opacity-50">
-                                    <div class="d-flex flex-column gap-3">
-                                        <div>
-                                            <label for="time_from_filter" class="form-label small text-secondary mb-1">Time From</label>
-                                            <div class="mee-extra-filter-field position-relative">
-                                                <input type="time" id="time_from_filter"
-                                                    class="form-control form-control-sm rounded-1"
-                                                    value="{{ request('time_from_filter') }}"
-                                                    aria-label="Filter by time from">
-                                                <i class="bi bi-chevron-down mee-extra-filter-chevron" aria-hidden="true"></i>
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label for="time_to_filter" class="form-label small text-secondary mb-1">Time To</label>
-                                            <div class="mee-extra-filter-field position-relative">
-                                                <input type="time" id="time_to_filter"
-                                                    class="form-control form-control-sm rounded-1"
-                                                    value="{{ request('time_to_filter') }}"
-                                                    aria-label="Filter by time to">
-                                                <i class="bi bi-chevron-down mee-extra-filter-chevron" aria-hidden="true"></i>
-                                            </div>
-                                        </div>
-                                    </div>
+                    {{-- +3 Filters popover (Year, Time From, Time To) --}}
+                    <div class="dropdown">
+                        <button type="button" class="btn btn-link p-0 mee-more-filters" id="meeExtraFiltersToggle"
+                            data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">
+                            +3 Filters
+                        </button>
+                        <div class="dropdown-menu p-3 mee-extra-menu" aria-labelledby="meeExtraFiltersToggle">
+                            <h6 class="fw-semibold mb-0">Filters</h6>
+                            <hr class="my-3 opacity-50">
+                            <div class="d-flex flex-column gap-3">
+                                <div>
+                                    <label for="year_filter" class="form-label small fw-medium mb-1">Year</label>
+                                    <select id="year_filter" class="form-select form-select-sm" aria-label="Filter by year">
+                                        <option value="">Year</option>
+                                        @foreach ($years as $year => $yearValue)
+                                        <option value="{{ $year }}" {{ (string) request('year_filter') === (string) $year ? 'selected' : '' }}>{{ $year }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                                <div>
+                                    <label for="time_from_filter" class="form-label small fw-medium mb-1">Time From</label>
+                                    <input type="time" id="time_from_filter" class="form-control form-control-sm"
+                                        value="{{ request('time_from_filter') }}" aria-label="Filter by time from">
+                                </div>
+                                <div>
+                                    <label for="time_to_filter" class="form-label small fw-medium mb-1">Time To</label>
+                                    <input type="time" id="time_to_filter" class="form-control form-control-sm"
+                                        value="{{ request('time_to_filter') }}" aria-label="Filter by time to">
                                 </div>
                             </div>
                         </div>
-
-                        <button type="button" class="btn programme-dt-btn-reset flex-shrink-0" id="resetFilters">
-                            Reset Filters
-                        </button>
                     </div>
 
-                    <div id="meeDtSearch" class="programme-dt-search ms-xl-auto" data-dt-search-for="mdoescot-table"></div>
+                    {{-- Reset --}}
+                    <button type="button" class="mee-filter-control mee-reset" id="resetFilters">Reset Filters</button>
+
+                    {{-- Right cluster: Columns + Search --}}
+                    <div class="ms-auto d-flex align-items-center gap-2">
+                        <button type="button" class="mee-filter-control" id="meeColumnsToggle"
+                            data-bs-toggle="modal" data-bs-target="#meeColumnsModal">
+                            <span class="d-none d-md-inline">Columns</span>
+                            <i class="material-icons material-symbols-rounded" aria-hidden="true">view_column</i>
+                        </button>
+
+                        <div class="dropdown">
+                            <button type="button" class="mee-filter-control mee-icon-btn" id="meeSearchToggle"
+                                data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-label="Search">
+                                <i class="material-icons material-symbols-rounded" aria-hidden="true">search</i>
+                            </button>
+                            <div class="dropdown-menu dropdown-menu-end p-2 mee-search-menu">
+                                <input type="text" id="meeTableSearch" class="form-control"
+                                    placeholder="Search records..." autocomplete="off" aria-label="Search records">
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <input type="hidden" id="filter_status" value="{{ $filter ?? 'active' }}">
@@ -186,9 +266,6 @@
                     <div class="table-responsive mee-dt-scroll">
                         {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                     </div>
-                    <div id="meeDtFooter"
-                        class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"
-                        data-dt-footer-for="mdoescot-table"></div>
                 </div>
             </div>
         </div>
@@ -196,7 +273,26 @@
 </div>
 
 @include('admin.mdo_escrot_exemption.partials.add_modal')
+@include('admin.mdo_escrot_exemption.partials.edit_modal')
 @include('admin.mdo_escrot_exemption.partials.student_list_modal')
+
+<!-- Column Visibility modal -->
+<div class="modal fade" id="meeColumnsModal" tabindex="-1" aria-labelledby="meeColumnsModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-semibold" id="meeColumnsModalLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mee-col-grid" id="meeColumnsGrid"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-primary px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- Delete confirmation -->
 <div class="modal fade programme-confirm-modal-root" id="meeDeleteConfirmModal" tabindex="-1"
@@ -242,7 +338,34 @@ $(document).ready(function() {
     var meeDeleteModal = meeDeleteModalEl ? bootstrap.Modal.getOrCreateInstance(meeDeleteModalEl) : null;
 
     initMeeAddModal(table);
+    initMeeEditModal(table);
 
+    function meeBindDeleteActions() {
+        $('#mdoescot-table form[id^="delete-form-"] button[type="submit"]').removeAttr('onclick');
+    }
+
+    table.on('draw.dt', function() {
+        var info = table.page.info();
+        $('#total-records-count').text(info.recordsFiltered || info.recordsTotal || 0);
+        meeBindDeleteActions();
+    });
+
+    meeBindDeleteActions();
+
+    // 🔍 Search (icon dropdown) → server-side global search
+    var meeSearchTimer;
+    $('#meeTableSearch').on('keyup', function() {
+        var value = this.value;
+        clearTimeout(meeSearchTimer);
+        meeSearchTimer = setTimeout(function() {
+            table.search(value).draw();
+        }, 400);
+    });
+    $('#meeSearchToggle').on('shown.bs.dropdown', function() {
+        setTimeout(function() { $('#meeTableSearch').trigger('focus'); }, 50);
+    });
+
+    // 📅 Time Period range picker
     if (typeof flatpickr !== 'undefined') {
         var fpDefaults = [];
         @if(request('from_date_filter') && request('to_date_filter'))
@@ -256,11 +379,8 @@ $(document).ready(function() {
             altFormat: 'd/m/Y',
             showMonths: 2,
             defaultDate: fpDefaults.length ? fpDefaults : null,
-            static: false,
             locale: { rangeSeparator: ' - ' },
-            onReady: function (_selectedDates, _dateStr, instance) {
-                instance.calendarContainer.classList.add('mee-flatpickr-theme');
-            },
+            onReady: function (_d, _s, instance) { instance.calendarContainer.classList.add('mee-flatpickr-theme'); },
             onChange: function (selectedDates) {
                 if (selectedDates.length === 2) {
                     $('#from_date_filter').val(meeTimePeriodPicker.formatDate(selectedDates[0], 'Y-m-d'));
@@ -281,32 +401,42 @@ $(document).ready(function() {
         });
     }
 
-    function meeBindDeleteActions() {
-        $('#mdoescot-table form[id^="delete-form-"] button[type="submit"]').removeAttr('onclick');
+    // +3 Filters active indicator
+    function meeUpdateExtraFiltersIndicator() {
+        var hasExtra = $('#year_filter').val() || $('#time_from_filter').val() || $('#time_to_filter').val();
+        $('#meeExtraFiltersToggle').toggleClass('mee-more-filters-active', !!hasExtra);
     }
+    meeUpdateExtraFiltersIndicator();
 
-    table.on('draw.dt', function() {
-        var info = table.page.info();
-        $('#total-records-count').text(info.recordsFiltered || info.recordsTotal || 0);
-        meeBindDeleteActions();
-    });
-
-    meeBindDeleteActions();
-
-    $('#course_filter, #year_filter, #duty_type_filter').on('change', function() {
+    $('#course_filter, #duty_type_filter, #year_filter').on('change', function() {
+        meeUpdateExtraFiltersIndicator();
         table.ajax.reload();
     });
-
-    $('#time_from_filter, #time_to_filter').on('change input', function() {
-        meeUpdateExtraFiltersIndicator();
-    });
-
     $('#time_from_filter, #time_to_filter').on('change', function() {
+        meeUpdateExtraFiltersIndicator();
         table.ajax.reload();
     });
 
     $('#resetFilters').on('click', function() {
         window.location.href = '{{ route("mdo-escrot-exemption.index", ["filter" => "active"]) }}';
+    });
+
+    // 🧱 Column Visibility modal (chips built from the live DataTable)
+    var $meeColGrid = $('#meeColumnsGrid');
+    table.columns().every(function(idx) {
+        var title = $.trim($(this.header()).text()) || ('Column ' + (idx + 1));
+        var visible = this.visible();
+        $meeColGrid.append(
+            '<label class="mee-col-chip' + (visible ? ' is-checked' : '') + '" for="meeColToggle' + idx + '">' +
+                '<input class="form-check-input mee-col-toggle" type="checkbox" ' + (visible ? 'checked ' : '') +
+                       'id="meeColToggle' + idx + '" data-column="' + idx + '">' +
+                '<span>' + title + '</span>' +
+            '</label>'
+        );
+    });
+    $meeColGrid.on('change', '.mee-col-toggle', function() {
+        table.column($(this).data('column')).visible(this.checked);
+        $(this).closest('.mee-col-chip').toggleClass('is-checked', this.checked);
     });
 
     $('#mdoescot-table').on('preXhr.dt', function(e, settings, data) {
@@ -358,13 +488,6 @@ $(document).ready(function() {
         html = html.replace(/<td[^>]*>[\s\S]*?(edit|delete|Actions)[\s\S]*?<\/td>/gi, '');
         return html;
     }
-
-    function meeUpdateExtraFiltersIndicator() {
-        var hasExtra = $('#time_from_filter').val() || $('#time_to_filter').val();
-        $('#meeExtraFiltersToggle').toggleClass('mee-more-filters-active', !!hasExtra);
-    }
-
-    meeUpdateExtraFiltersIndicator();
 
     $('#printDownloadBtn').on('click', function() {
         var printWindow = window.open('', '_blank');
@@ -713,48 +836,7 @@ $(document).ready(function() {
             meeAddModal.show();
         });
 
-        $(document).on('click', '.mee-edit-btn', function(e) {
-            e.preventDefault();
-
-            var editId = $(this).data('edit-id');
-            if (!editId) {
-                return;
-            }
-
-            clearMeeFormErrors();
-            resetMeeAddForm();
-            prepareEditMode();
-
-            var $editBtn = $(this);
-            $editBtn.prop('disabled', true);
-
-            $.ajax({
-                url: editDataBaseUrl + '/' + editId,
-                type: 'GET',
-                headers: { 'Accept': 'application/json' },
-                success: function(res) {
-                    var record = res.record;
-
-                    $('#meeRecordPk').val(record.pk);
-                    $('#mdo_duty_type_master_pk').val(record.mdo_duty_type_master_pk);
-                    $('#mdo_date').val(record.mdo_date || '');
-                    $('#Time_from').val(record.Time_from || '');
-                    $('#Time_to').val(record.Time_to || '');
-                    $('#faculty_master_pk').val(record.faculty_master_pk || '');
-                    $('#meeEditStudentName').text(record.student_name || '—');
-                    $('#meeEditCourseName').text(record.course_name || '—');
-
-                    toggleFacultyField();
-                    meeAddModal.show();
-                },
-                error: function() {
-                    Swal.fire('Error', 'Unable to load record for editing.', 'error');
-                },
-                complete: function() {
-                    $editBtn.prop('disabled', false);
-                }
-            });
-        });
+        // Editing is handled by the dedicated #meeEditModal (see initMeeEditModal).
 
         addModalEl.addEventListener('hidden.bs.modal', function() {
             resetMeeAddForm();
@@ -893,6 +975,142 @@ $(document).ready(function() {
                     }
 
                     showMeeFormError(message, errors);
+                },
+                complete: function() {
+                    $submit.prop('disabled', false).text(defaultText);
+                }
+            });
+        });
+    }
+
+    // ===== Dedicated Edit modal (separate from Add) =====
+    function initMeeEditModal(table) {
+        var editModalEl = document.getElementById('meeEditModal');
+        if (!editModalEl) {
+            return;
+        }
+
+        var meeEditModal = bootstrap.Modal.getOrCreateInstance(editModalEl);
+        var updateUrl = @json(route('mdo-escrot-exemption.update'));
+        var editDataBaseUrl = @json(url('mdo-escrot-exemption/edit-data'));
+        var csrfToken = $('meta[name="csrf-token"]').attr('content');
+
+        // Resolve the "Escort" duty-type id from the edit modal's own select
+        var editEscortDutyTypeId = null;
+        $('#meeEditDutyType option').each(function() {
+            if ($(this).text().trim().toLowerCase() === 'escort') {
+                editEscortDutyTypeId = $(this).val();
+            }
+        });
+
+        function clearEditErrors() {
+            $('#meeEditFormAlert').addClass('d-none').removeClass('alert-success alert-danger').empty();
+            $('#meeEditForm .text-danger[id^="meeEditError"]').addClass('d-none');
+            $('#meeEditForm .form-select, #meeEditForm .form-control').removeClass('is-invalid');
+        }
+
+        function toggleEditFaculty() {
+            var dutyType = $('#meeEditDutyType').val();
+            if (editEscortDutyTypeId && dutyType === editEscortDutyTypeId) {
+                $('#meeEditFacultyContainer').removeClass('d-none');
+                $('#meeEditFaculty').prop('required', true);
+            } else {
+                $('#meeEditFacultyContainer').addClass('d-none');
+                $('#meeEditFaculty').prop('required', false);
+            }
+        }
+
+        function validateEditForm() {
+            clearEditErrors();
+            var valid = true;
+            if (!$('#meeEditDutyType').val()) { $('#meeEditErrorDutyType').removeClass('d-none'); $('#meeEditDutyType').addClass('is-invalid'); valid = false; }
+            if (!$('#meeEditDate').val()) { $('#meeEditErrorDate').removeClass('d-none'); $('#meeEditDate').addClass('is-invalid'); valid = false; }
+            if (!$('#meeEditTimeFrom').val()) { $('#meeEditErrorTimeFrom').removeClass('d-none'); $('#meeEditTimeFrom').addClass('is-invalid'); valid = false; }
+            if (!$('#meeEditTimeTo').val()) { $('#meeEditErrorTimeTo').removeClass('d-none'); $('#meeEditTimeTo').addClass('is-invalid'); valid = false; }
+            if ($('#meeEditTimeFrom').val() && $('#meeEditTimeTo').val() && $('#meeEditTimeTo').val() <= $('#meeEditTimeFrom').val()) {
+                $('#meeEditErrorTimeTo').removeClass('d-none').text('End time must be after start time.');
+                $('#meeEditTimeTo').addClass('is-invalid'); valid = false;
+            }
+            if (editEscortDutyTypeId && $('#meeEditDutyType').val() === editEscortDutyTypeId && !$('#meeEditFaculty').val()) {
+                $('#meeEditErrorFaculty').removeClass('d-none'); $('#meeEditFaculty').addClass('is-invalid'); valid = false;
+            }
+            return valid;
+        }
+
+        $('#meeEditDutyType').on('change', toggleEditFaculty);
+
+        // Open + populate from edit-data endpoint
+        $(document).on('click', '.mee-edit-btn', function(e) {
+            e.preventDefault();
+            var editId = $(this).data('edit-id');
+            if (!editId) { return; }
+
+            clearEditErrors();
+            var $btn = $(this).prop('disabled', true);
+
+            $.ajax({
+                url: editDataBaseUrl + '/' + editId,
+                type: 'GET',
+                headers: { 'Accept': 'application/json' },
+                success: function(res) {
+                    var record = res.record || {};
+                    $('#meeEditRecordPk').val(record.pk);
+                    $('#meeEditDutyType').val(record.mdo_duty_type_master_pk);
+                    $('#meeEditDate').val(record.mdo_date || '');
+                    $('#meeEditTimeFrom').val(record.Time_from || '');
+                    $('#meeEditTimeTo').val(record.Time_to || '');
+                    $('#meeEditFaculty').val(record.faculty_master_pk || '');
+                    $('#meeEditStudentDisplay').text(record.student_name || '—');
+                    $('#meeEditCourseDisplay').text(record.course_name || '—');
+                    toggleEditFaculty();
+                    meeEditModal.show();
+                },
+                error: function() {
+                    Swal.fire('Error', 'Unable to load record for editing.', 'error');
+                },
+                complete: function() {
+                    $btn.prop('disabled', false);
+                }
+            });
+        });
+
+        $('#meeEditForm').on('submit', function(e) {
+            e.preventDefault();
+            if (!validateEditForm()) { return; }
+
+            var $submit = $('#meeEditSubmitBtn');
+            var defaultText = $submit.text();
+            var formData = new FormData(this);
+
+            $submit.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...');
+
+            $.ajax({
+                url: $(this).attr('action'),
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                success: function(response) {
+                    meeEditModal.hide();
+                    table.ajax.reload(null, false);
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: (response && response.message) ? response.message : 'MDO/Escort Exemption updated successfully.',
+                        timer: 2200,
+                        showConfirmButton: false
+                    });
+                },
+                error: function(xhr) {
+                    var message = 'Something went wrong. Please try again.';
+                    var errors = xhr.responseJSON && xhr.responseJSON.errors ? xhr.responseJSON.errors : null;
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        message = xhr.responseJSON.message;
+                    } else if (errors) {
+                        message = Object.values(errors).flat().join('<br>');
+                    }
+                    $('#meeEditFormAlert').removeClass('d-none alert-success').addClass('alert-danger').html(message);
                 },
                 complete: function() {
                     $submit.prop('disabled', false).text(defaultText);

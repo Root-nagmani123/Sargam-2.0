@@ -199,7 +199,21 @@ public function html(): HtmlBuilder
             'searching' => true,
             'lengthChange' => true,
             'pageLength' => 10,
+            'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+            // Page-scoped search bar drives the table, so no default search box.
+            // Bottom bar = pagination (left) + "Showing [n] of N items" (right).
+            'dom' => "<'row'<'col-12'tr>>" .
+                     "<'row mt-3 align-items-center mee-dt-bottom'" .
+                         "<'col-12 col-md-auto me-md-auto mee-dt-paginate'p>" .
+                         "<'col-12 col-md-auto d-flex justify-content-md-end align-items-center mee-dt-count'li>" .
+                     ">",
             'language' => [
+                'lengthMenu' => 'Showing _MENU_',
+                'info' => 'of _TOTAL_ items',
+                'infoEmpty' => 'of 0 items',
+                'infoFiltered' => '',
+                'zeroRecords' => 'No matching records found',
+                'emptyTable' => 'No records available',
                 'paginate' => [
                     'previous' => ' <i class="material-icons menu-icon material-symbols-rounded"
                                         style="font-size: 24px;">chevron_left</i>',
@@ -212,18 +226,19 @@ public function html(): HtmlBuilder
 
     public function getColumns(): array
     {
+        // Column order mirrors the reference mockup exactly.
         return [
             Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_date')->title('Date')->orderable(false)->searchable(false),
-            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('ot_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::make('mdo_name')->title('Duty type')->addClass('text-center')->searchable(true)->orderable(false),
+            Column::make('mdo_name')->title('Duty Type')->addClass('text-center')->searchable(true)->orderable(false),
             Column::make('faculty_name')->title('Faculty Name')->addClass('text-center')->searchable(true)->orderable(false),
             Column::make('Remark')->title('Remarks')->addClass('text-center')->searchable(true)->orderable(false),
-            Column::computed('actions')->title('Actions')->addClass('text-center')->orderable(false),
+            Column::computed('actions')->title('Action')->addClass('text-center')->orderable(false),
         ];
 
     }
