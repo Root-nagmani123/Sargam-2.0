@@ -3,6 +3,11 @@ document.addEventListener('DOMContentLoaded', function () {
     const addBtn = document.getElementById('add-coordinator');
     const coordinatorSelect = document.querySelector('select[name="coursecoordinator"]');
     const rowTemplate = container ? container.querySelector('.assistant-coordinator-row')?.cloneNode(true) : null;
+    if (rowTemplate) {
+        rowTemplate.querySelectorAll('#add-coordinator, .programme-coord-btn--add').forEach(function (btn) {
+            btn.remove();
+        });
+    }
     const choicesInstances = new WeakMap();
     let isUpdating = false; // Flag to prevent infinite loops
     let updateTimeout = null; // For debouncing
@@ -139,9 +144,24 @@ document.addEventListener('DOMContentLoaded', function () {
         debounceUpdateOptions();
     }
 
+    function moveAddButtonToLastRow() {
+        if (!addBtn || !container) {
+            return;
+        }
+        const rows = container.querySelectorAll('.assistant-coordinator-row');
+        if (!rows.length) {
+            return;
+        }
+        const actions = rows[rows.length - 1].querySelector('.programme-coord-actions');
+        if (actions) {
+            actions.appendChild(addBtn);
+        }
+    }
+
     initAllDropdownChoices(document);
 
     if (container && addBtn && rowTemplate) {
+        moveAddButtonToLastRow();
         let coordinatorIndex = container.querySelectorAll('.assistant-coordinator-row').length || 1;
 
         addBtn.addEventListener('click', function () {
@@ -163,6 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
             coordinatorIndex += 1;
 
             initAllDropdownChoices(newRow);
+            moveAddButtonToLastRow();
             debounceUpdateOptions();
         });
 
@@ -187,6 +208,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     }
                 });
                 row.remove();
+                moveAddButtonToLastRow();
                 debounceUpdateOptions();
             } else {
                 alert('At least one assistant coordinator is required.');

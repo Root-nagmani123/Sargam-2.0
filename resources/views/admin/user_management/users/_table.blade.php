@@ -5,56 +5,36 @@
             <thead>
                 <tr>
                     <th scope="col">S. No.</th>
-                    <th scope="col">Username</th>
+                    <th scope="col">User Name</th>
                     <th scope="col">Name</th>
                     <th scope="col">Email</th>
-                    <th scope="col">Mobile</th>
+                    <th scope="col">Contact Number</th>
                     <th scope="col">User Type</th>
-                    <th scope="col">Roles</th>
                     <th scope="col">Action</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($users as $index => $user)
-                @php
-                    $typeBadgeClasses = [
-                        'S' => 'bg-primary',
-                        'E' => 'bg-success',
-                        'F' => 'bg-info',
-                        'A' => 'bg-danger',
-                    ];
-                    $typeBadge = $typeBadgeClasses[$user->User_type] ?? 'bg-secondary';
-                    $typeLabel = \App\Http\Controllers\Admin\UserController::userTypeLabel($user->User_type);
-                @endphp
                 <tr>
                     <td>{{ $users->firstItem() + $index }}</td>
                     <td>{{ $user->user_name }}</td>
                     <td>{{ trim($user->first_name . ' ' . $user->last_name) }}</td>
                     <td>{{ $user->email_id }}</td>
                     <td>{{ $user->mobile_no ?: '—' }}</td>
-                    <td>
-                        <span class="badge rounded-1 {{ $typeBadge }}">{{ $typeLabel }}</span>
-                    </td>
-                    <td>
-                        @if(!empty($user->roles))
-                            <span class="badge rounded-1 users-role-badge">{{ $user->roles }}</span>
-                        @else
-                            <span class="badge rounded-1 users-role-badge users-role-badge--empty">No Role</span>
-                        @endif
-                    </td>
+                    <td class="users-usertype">{{ !empty($user->roles) ? $user->roles : 'No Role' }}</td>
                     <td>
                         <a href="{{ route('admin.users.assignRole', encrypt($user->pk)) }}"
-                            class="btn btn-outline-primary users-assign-btn d-inline-flex align-items-center gap-2"
+                            class="users-assign-link"
                             aria-label="Assign role to {{ $user->user_name }}">
-                            <i class="bi bi-person-gear" aria-hidden="true"></i>
-                            <span>Assign Role</span>
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">assignment_ind</i>
+                            <span>Assign</span>
                         </a>
                     </td>
                 </tr>
                 @empty
                 <tr>
-                    <td colspan="8" class="users-empty-state text-center">
-                        <i class="bi bi-people display-4 text-secondary opacity-50 d-block mb-3" aria-hidden="true"></i>
+                    <td colspan="7" class="users-empty-state text-center">
+                        <i class="material-icons material-symbols-rounded text-secondary opacity-50 d-block mb-2" style="font-size:48px;" aria-hidden="true">groups</i>
                         <h5 class="fw-semibold text-dark mb-1">No Users Found</h5>
                         <p class="text-secondary mb-0">Try adjusting your search or filters.</p>
                     </td>

@@ -7,82 +7,95 @@
 @endpush
 
 @section('setup_content')
+<style>
+/* ===== Assign Role — reference-matched (presentation only) ===== */
+.uar-page .uar-search { position: relative; width: 340px; max-width: 100%; }
+.uar-page .uar-search .uar-search-ico {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    color: #667085; font-size: 18px; pointer-events: none;
+}
+.uar-page .uar-search-input {
+    height: 44px; padding-left: 42px; border: 1px solid #d0d5dd;
+    border-radius: 8px; font-size: 0.9rem; background: #fff;
+}
+.uar-page .uar-search-input:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.18); }
 
-<div class="container-fluid users-assign-page py-4">
-    <x-breadcrum title="Assign Role" :showBack="true" />
+.uar-page .uar-section-head {
+    display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    border-bottom: 1px solid #e5e7eb; padding-bottom: 12px; margin-bottom: 20px;
+}
+.uar-page .uar-section-title { font-size: 1.05rem; font-weight: 600; color: #1f2937; }
+.uar-page .uar-count { font-size: 0.8125rem; color: #667085; white-space: nowrap; }
+
+/* Role chips */
+.uar-page .uar-chip-grid { display: flex; flex-wrap: wrap; gap: 12px; }
+.uar-page .role-item { display: inline-flex; }
+.uar-page .role-option {
+    display: inline-flex; align-items: center; gap: 10px; margin: 0;
+    padding: 12px 16px; min-height: 48px;
+    border: 1px solid #d0d5dd; border-radius: 8px; background: #fff;
+    cursor: pointer; transition: background-color .15s ease, border-color .15s ease, color .15s ease;
+    color: #344054;
+}
+.uar-page .role-option:hover { border-color: #9aa7b8; background: #fcfdff; }
+.uar-page .role-option .form-check-input { margin: 0; flex-shrink: 0; cursor: pointer; }
+.uar-page .role-option .role-option-label { font-size: 0.9rem; font-weight: 500; white-space: nowrap; line-height: 1.2; }
+.uar-page .role-option.is-selected { background: #e8f1fd; border-color: var(--bs-primary); }
+.uar-page .role-option.is-selected .role-option-label { color: var(--bs-primary); }
+
+/* Footer */
+.uar-page .uar-footer { border-top: 1px solid #e5e7eb; padding-top: 20px; margin-top: 28px; }
+.uar-page .uar-footer .btn { min-width: 110px; height: 44px; border-radius: 8px; font-weight: 600; }
+
+.uar-page .uar-loading { color: #667085; display: inline-flex; align-items: center; }
+</style>
+
+<div class="container-fluid users-assign-page uar-page py-4">
+    <x-breadcrum title="{{ trim($user->first_name . ' ' . $user->last_name) }}'s Assigned Role" :showBack="true" />
 
     <x-session_message />
 
-    <div class="card users-assign-card shadow-sm border-0 overflow-hidden">
-        <div class="users-assign-user-strip">
-            <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
-                <div>
-                    <div class="users-assign-user-name">
-                        Assign Role to: {{ trim($user->first_name . ' ' . $user->last_name) }}
-                    </div>
-                    <div class="users-assign-user-meta">
-                        @if(!empty($user->user_name))
-                            <span>{{ $user->user_name }}</span>
-                            @if(!empty($user->email_id))
-                                <span class="mx-1">·</span>
-                            @endif
-                        @endif
-                        @if(!empty($user->email_id))
-                            <span>{{ $user->email_id }}</span>
-                        @endif
-                    </div>
-                </div>
-                <span id="selectedRoleCount" class="badge rounded-pill users-assign-count-badge">0 selected</span>
-            </div>
-        </div>
-
+    <div class="card shadow-sm border-0 rounded-3 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <form action="{{ route('admin.users.assignRoleSave') }}" method="POST">
                 @csrf
 
                 <input type="hidden" name="user_id" value="{{ $user->pk }}">
 
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
-                    <label class="users-assign-section-label mb-0">Select Roles</label>
-                    <span class="badge rounded-pill users-assign-section-badge">User Access Management</span>
-                </div>
-
-                {{-- Search Filter --}}
-                <div class="d-flex flex-wrap align-items-center gap-2 gap-md-3 mb-2">
-                    <div class="users-assign-search-wrap flex-grow-1">
-                        <i class="bi bi-search" aria-hidden="true"></i>
+                {{-- Search (top-right) --}}
+                <div class="d-flex justify-content-end mb-4">
+                    <div class="uar-search">
+                        <i class="material-icons material-symbols-rounded uar-search-ico" aria-hidden="true">search</i>
                         <input type="text"
                             id="searchRole"
-                            class="form-control users-assign-search-input"
-                            placeholder="Search roles by name or display name"
+                            class="form-control uar-search-input"
+                            placeholder="Search"
                             autocomplete="off"
                             aria-label="Search roles">
                     </div>
-                    <button class="btn users-assign-clear-btn" type="button" id="clearSearchBtn">Clear</button>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-4">
-                    <small class="users-assign-tip">Tip: Select multiple roles to combine permissions.</small>
-                    <small id="visibleRoleCount" class="users-assign-visible-count"></small>
+                {{-- Section heading --}}
+                <div class="uar-section-head">
+                    <span class="uar-section-title">Basic Information</span>
+                    <span id="selectedRoleCount" class="uar-count">0 selected</span>
                 </div>
 
-                {{-- Roles grid --}}
-                <div class="row g-3" id="roleContainer">
-                    <div class="col-12">
-                        <div class="users-assign-loading">
-                            <div class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></div>
-                            Loading roles... please wait.
-                        </div>
+                {{-- Roles --}}
+                <div class="uar-chip-grid" id="roleContainer">
+                    <div class="uar-loading">
+                        <div class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></div>
+                        Loading roles... please wait.
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-end users-assign-footer gap-2">
-                    <a href="{{ route('admin.users.index') }}" class="btn users-assign-cancel-btn d-inline-flex align-items-center justify-content-center">
+                {{-- Footer --}}
+                <div class="d-flex justify-content-end uar-footer gap-2">
+                    <a href="{{ route('admin.users.index') }}" class="btn btn-outline-primary d-inline-flex align-items-center justify-content-center">
                         Cancel
                     </a>
-                    <button type="submit" class="btn btn-primary users-assign-save-btn d-inline-flex align-items-center gap-2">
-                        <i class="bi bi-check-lg" aria-hidden="true"></i>
-                        <span>Save Roles</span>
+                    <button type="submit" class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-2">
+                        <span>Save Role</span>
                     </button>
                 </div>
             </form>
@@ -108,18 +121,16 @@ function loadRoles() {
             let html = "";
 
             if (data.length === 0) {
-                html = '<div class="col-12"><div class="alert alert-light border text-muted mb-0 rounded-3">No roles available.</div></div>';
+                html = '<div class="alert alert-light border text-muted mb-0 rounded-3 w-100">No roles available.</div>';
             } else {
                 data.forEach(role => {
+                    let label = role.display_name || role.name || ('Role #' + role.id);
                     let checked = userRoles.includes(role.id) ? "checked" : "";
                     html += `
-                        <div class="col-12 col-sm-6 col-lg-4 col-xl-3 role-item">
-                            <label class="role-option">
-                                <div class="form-check m-0">
-                                    <input class="form-check-input me-2" type="checkbox" name="roles[]" value="${role.pk}" ${checked}>
-                                    <span class="form-check-label">${role.user_role_name}</span>
-                                </div>
-                                <small class="d-block mt-2 ms-4">${role.user_role_display_name}</small>
+                        <div class="role-item">
+                            <label class="role-option" title="${label}">
+                                <input class="form-check-input" type="checkbox" name="roles[]" value="${role.id}" ${checked}>
+                                <span class="role-option-label">${label}</span>
                             </label>
                         </div>
                     `;
@@ -132,7 +143,7 @@ function loadRoles() {
         })
         .catch(error => {
             console.error('Error loading roles:', error);
-            document.getElementById("roleContainer").innerHTML = '<div class="col-12"><div class="alert alert-danger mb-0 rounded-3">Error loading roles. Please refresh the page.</div></div>';
+            document.getElementById("roleContainer").innerHTML = '<div class="alert alert-danger mb-0 rounded-3 w-100">Error loading roles. Please refresh the page.</div>';
             updateRoleCounters();
         });
 }
