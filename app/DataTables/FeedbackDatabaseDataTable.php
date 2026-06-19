@@ -127,14 +127,18 @@ class FeedbackDatabaseDataTable extends DataTable
         // Conditional HAVING filter
         $request = request();
         if ($request->filled('cond_field') && $request->filled('cond_operator') && $request->filled('cond_value')) {
-            $allowedFields = ['content', 'presentation'];
+            $allowedFields = ['content', 'presentation', 'average'];
             $allowedOperators = ['>=', '<=', '>', '<', '='];
             $field = $request->cond_field;
             $operator = $request->cond_operator;
             $value = (float) $request->cond_value;
 
             if (in_array($field, $allowedFields) && in_array($operator, $allowedOperators)) {
-                $query->havingRaw("ROUND(AVG(tf.{$field}) * 20, 2) {$operator} ?", [$value]);
+                if ($field === 'average') {
+                    $query->havingRaw("ROUND((AVG(tf.content) * 20 + AVG(tf.presentation) * 20) / 2, 2) {$operator} ?", [$value]);
+                } else {
+                    $query->havingRaw("ROUND(AVG(tf.{$field}) * 20, 2) {$operator} ?", [$value]);
+                }
             }
         }
 
