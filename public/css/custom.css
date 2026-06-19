@@ -186,9 +186,87 @@ body.custom-loaded {
     color: #7a271a;
 }
 
+.programme-dt-btn-columns {
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0 1rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: #344054;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    white-space: nowrap;
+}
+
+.programme-dt-btn-columns:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+    color: #101828;
+}
+
+.programme-dt-btn-columns i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+.gm-search-toggle {
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    background: #fff;
+    color: #475467;
+}
+
+.gm-search-toggle:hover {
+    background: #f9fafb;
+    border-color: #98a2b3;
+    color: #101828;
+}
+
+.gm-download-btn i {
+    font-size: 1rem;
+    line-height: 1;
+}
+
+#programmeColumnToggleGrid .colvis-item,
+#cgtColumnToggleGrid .colvis-item,
+#gmColumnToggleGrid .colvis-item,
+#smColumnToggleGrid .colvis-item,
+#smModuleColumnToggleGrid .colvis-item {
+    cursor: pointer;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+#programmeColumnToggleGrid .colvis-item:hover,
+#cgtColumnToggleGrid .colvis-item:hover,
+#gmColumnToggleGrid .colvis-item:hover,
+#smColumnToggleGrid .colvis-item:hover,
+#smModuleColumnToggleGrid .colvis-item:hover {
+    border-color: #004a93 !important;
+    background-color: rgba(0, 74, 147, 0.04);
+}
+
+#programmeColumnToggleGrid .colvis-item .form-check-input,
+#cgtColumnToggleGrid .colvis-item .form-check-input,
+#gmColumnToggleGrid .colvis-item .form-check-input,
+#smColumnToggleGrid .colvis-item .form-check-input,
+#smModuleColumnToggleGrid .colvis-item .form-check-input {
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
 .programme-dt-search {
     flex: 0 0 auto;
-    width: min(100%, 360px);
+    width: 300px;
+    max-width: 100%;
 }
 
 .programme-dt-search .dataTables_filter {
@@ -239,37 +317,15 @@ body.custom-loaded {
     box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12) !important;
 }
 
-/* Global DataTables UI — hide controls in wrapper (shown in toolbar/footer slots) */
-.dataTables_wrapper.sargam-dt-ui .dataTables_length,
-.dataTables_wrapper.sargam-dt-ui .dataTables_filter,
-.dataTables_wrapper.sargam-dt-ui .dataTables_info,
-.dataTables_wrapper.sargam-dt-ui .dataTables_paginate,
-.dataTables_wrapper.sargam-dt-ui > .row.sargam-dt-hidden-controls,
-.dataTables_wrapper.sargam-dt-ui > .row:first-child.sargam-dt-hidden-controls {
-    display: none !important;
-}
-
-.programme-dt-search .dataTables_filter,
-[data-dt-search-for] .dataTables_filter {
-    display: block !important;
-}
-
-.programme-dt-footer .dataTables_paginate,
-[data-dt-footer-for] .dataTables_paginate {
-    display: flex !important;
-}
-
-.programme-dt-footer .dataTables_length,
-[data-dt-footer-for] .dataTables_length {
-    display: inline-flex !important;
-}
-
-.programme-dt-footer .dataTables_info,
-[data-dt-footer-for] .dataTables_info {
-    display: block !important;
-}
-
-#coursemaster-table_wrapper .dt-buttons {
+#coursemaster-table_wrapper .dt-buttons,
+#coursemaster-table_wrapper .dataTables_length,
+#coursemaster-table_wrapper .dataTables_filter,
+#coursemaster-table_wrapper .dataTables_info,
+#coursemaster-table_wrapper .dataTables_paginate,
+#coursegrouptype_wrapper .dataTables_length,
+#coursegrouptype_wrapper .dataTables_filter,
+#coursegrouptype_wrapper .dataTables_info,
+#coursegrouptype_wrapper .dataTables_paginate {
     display: none !important;
 }
 
@@ -414,7 +470,9 @@ body.custom-loaded {
     min-height: auto;
 }
 
-.programme-action-switch .form-check-input {
+/* Specificity must beat `.form-check.form-switch:has(.status-toggle) .form-check-input`
+   (line ~107) which otherwise pulls the toggle left over the edit button. */
+.form-check.form-switch.programme-action-switch .form-check-input {
     margin: 0;
 }
 
@@ -1369,6 +1427,18 @@ body.custom-loaded {
 }
 
 /* ── Group Mapping (Course Group Mapping list) ── */
+#group-mapping-table_wrapper .dataTables_length,
+#group-mapping-table_wrapper .dataTables_filter,
+#group-mapping-table_wrapper .dataTables_info,
+#group-mapping-table_wrapper .dataTables_paginate {
+    display: none !important;
+}
+
+#group-mapping-table_wrapper .row:first-child,
+#group-mapping-table_wrapper > .row {
+    display: none !important;
+}
+
 .gm-master-page .gm-dt-card {
     border: 1px solid #e4e7ec;
     box-shadow: 0 1px 3px rgba(16, 24, 40, 0.06);

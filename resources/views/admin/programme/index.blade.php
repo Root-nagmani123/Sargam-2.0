@@ -14,7 +14,7 @@
         buttonText="Add Course"
         :buttonUrl="route('programme.create')"
         buttonIcon="add"
-        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm" />
+        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm" />
 
     <div id="status-msg" class="mb-3"></div>
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
@@ -56,7 +56,15 @@
                         Reset Filters
                     </button>
                 </div>
-                <div id="programmeDtSearch" class="programme-dt-search"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="btnProgrammeColumns"
+                        data-bs-toggle="modal" data-bs-target="#programmeColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="programmeDtSearch" class="programme-dt-search"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel">
@@ -66,9 +74,7 @@
                 <div id="programmeDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
             </div>
 
-            </div>
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
@@ -121,6 +127,25 @@
             </div>
             <div class="modal-footer border-top bg-body-tertiary px-4 py-3">
                 <button type="button" class="btn btn-outline-primary rounded-3 px-4 fw-semibold" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="programmeColumnVisibilityModal" tabindex="-1" aria-labelledby="programmeColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="programmeColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="programmeColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -485,6 +510,7 @@
             initCourseFilterChoices();
             enhanceProgrammeDtControls();
             updateProgrammeDtCount();
+            setupProgrammeColumns(table);
 
             // Initialize dropdowns after table loads
             initializeDropdowns();
@@ -637,6 +663,77 @@
                 loadCourseDetails(courseId);
             });
         }, 100);
+
+        /* ---------------- Column show / hide (DataTables API) ---------------- */
+        var programmeColStorageKey = 'programmeGrid:hiddenColumns:v1';
+
+        function programmeGetHiddenCols() {
+            try {
+                var raw = localStorage.getItem(programmeColStorageKey);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function programmePersistHiddenCols(arr) {
+            try { localStorage.setItem(programmeColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function setupProgrammeColumns(dt) {
+            if (!dt) {
+                return;
+            }
+            var hidden = programmeGetHiddenCols();
+
+            // Apply saved visibility — DataTables keeps this across redraws / ajax reloads.
+            dt.columns().every(function() {
+                var idx = this.index();
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
+            dt.columns.adjust();
+
+            // Build the modal checkboxes once from the live table headers.
+            var $grid = $('#programmeColumnToggleGrid');
+            if (!$grid.length) {
+                return;
+            }
+            $grid.empty();
+
+            dt.columns().every(function() {
+                var idx = this.index();
+                var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+                if (!title) {
+                    return;
+                }
+
+                var inputId = 'programmecolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function() {
+                    var h = programmeGetHiddenCols();
+                    var pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    programmePersistHiddenCols(h);
+                    dt.column(idx).visible(this.checked, false);
+                    dt.columns.adjust();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
 
         // Function to load course details
         function loadCourseDetails(courseId) {

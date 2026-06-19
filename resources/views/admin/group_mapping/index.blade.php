@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Course Group Mapping - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Course Group Mapping')
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js@10.2.0/public/assets/styles/choices.min.css" />
@@ -12,7 +12,7 @@
         <div class="d-flex flex-wrap justify-content-end align-items-center gap-2">
             <div class="dropdown gm-add-student-hover">
                 <button type="button"
-                    class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-2 fw-semibold shadow-sm"
+                    class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-3 py-2 rounded-1 fw-semibold shadow-sm"
                     id="gmAddStudentTrigger"
                     aria-expanded="false"
                     aria-haspopup="true">
@@ -24,7 +24,7 @@
                     aria-labelledby="gmAddStudentTrigger">
                     <li>
                         <button type="button"
-                            class="dropdown-item d-flex align-items-center gap-2 rounded-2 mx-2 py-2"
+                            class="dropdown-item d-flex align-items-center gap-2 rounded-1 mx-2 py-2"
                             data-bs-toggle="modal"
                             data-bs-target="#addStudentModal">
                             <i class="bi bi-person-plus text-primary" aria-hidden="true"></i>
@@ -33,7 +33,7 @@
                     </li>
                     <li>
                         <button type="button"
-                            class="dropdown-item d-flex align-items-center gap-2 rounded-2 mx-2 py-2"
+                            class="dropdown-item d-flex align-items-center gap-2 rounded-1 mx-2 py-2"
                             data-bs-toggle="modal"
                             data-bs-target="#importModal">
                             <i class="bi bi-people text-primary" aria-hidden="true"></i>
@@ -43,7 +43,7 @@
                 </ul>
             </div>
             <button type="button"
-                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-2 fw-semibold shadow-sm"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm"
                 data-bs-toggle="modal"
                 data-bs-target="#gmAddGroupMappingModal">
                 <i class="bi bi-plus-lg" aria-hidden="true"></i>
@@ -75,9 +75,14 @@
                 </button>
             </li>
         </ul>
+
+        <button type="button" class="btn programme-dt-btn-columns gm-download-btn" id="gmDownloadBtn">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </button>
     </div>
 
-    <div class="card gm-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card gm-dt-card border-0 shadow-sm rounded-1 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4 programme-dt-toolbar">
                 <div class="d-flex flex-wrap align-items-center gap-3">
@@ -102,14 +107,33 @@
                         Reset Filters
                     </button>
                 </div>
-                <div id="gmDtSearch" class="programme-dt-search ms-xl-auto" data-dt-search-for="group-mapping-table"></div>
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-xl-auto" id="gmSearchWrap">
+                    <button type="button" class="btn programme-dt-btn-columns" id="gmBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#gmColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <button type="button" class="btn gm-search-toggle" id="gmSearchToggle"
+                        aria-label="Search" title="Search">
+                        <i class="bi bi-search" aria-hidden="true"></i>
+                    </button>
+                    <div id="gmDtSearch" class="programme-dt-search d-none">
+                        <div class="dataTables_filter">
+                            <label class="mb-0 w-100">
+                                <input type="search" id="gmCustomSearch" class="form-control shadow-none"
+                                    placeholder="Search" aria-label="Search group mappings" autocomplete="off">
+                            </label>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="programme-dt-panel gm-dt-panel">
-                <div class="table-responsive gm-dt-scroll">
+                <div class="table-responsive">
                     {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
                 </div>
-                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="group-mapping-table"></div>
+                <div id="gmDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
             </div>
         </div>
     </div>
@@ -170,8 +194,8 @@
                     </div>
                 </div>
                 <div class="modal-footer border-0 gap-2 justify-content-end">
-                    <button type="button" class="btn btn-outline-primary rounded-3 btn-cancel" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" class="btn btn-primary rounded-3 px-4" id="saveClassSessionForm">
+                    <button type="button" class="btn btn-outline-primary rounded-1 btn-cancel" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-1 px-4" id="saveClassSessionForm">
                         Create Group Mapping
                     </button>
                 </div>
@@ -197,19 +221,19 @@
 
                     <div class="mb-3">
                         <label for="studentOtCode" class="form-label cgt-field-label">OT Code <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control rounded-2" id="studentOtCode" name="otcode"
+                        <input type="text" class="form-control rounded-1" id="studentOtCode" name="otcode"
                             placeholder="eg. OT1344" required maxlength="255">
                     </div>
 
                     <div class="mb-3">
                         <label for="studentName" class="form-label cgt-field-label">OT Name <span class="text-danger">*</span></label>
-                        <input type="text" class="form-control rounded-2" id="studentName" name="name"
+                        <input type="text" class="form-control rounded-1" id="studentName" name="name"
                             placeholder="eg. John Doe" required maxlength="255">
                     </div>
 
                     <div class="mb-3">
                         <label for="studentCourse" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
-                        <select class="form-select rounded-2" id="studentCourse" name="course_master_pk" required>
+                        <select class="form-select rounded-1" id="studentCourse" name="course_master_pk" required>
                             <option value="">Select Course Name</option>
                             @foreach($courses ?? [] as $pk => $name)
                             <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -219,7 +243,7 @@
 
                     <div class="mb-3">
                         <label for="studentGroupType" class="form-label cgt-field-label">Group Type <span class="text-danger">*</span></label>
-                        <select class="form-select rounded-2" id="studentGroupType" name="group_type" required>
+                        <select class="form-select rounded-1" id="studentGroupType" name="group_type" required>
                             <option value="">Select Group Type</option>
                             @foreach($groupTypes ?? [] as $pk => $name)
                             <option value="{{ $name }}" data-type-id="{{ $pk }}">{{ $name }}</option>
@@ -229,7 +253,7 @@
 
                     <div class="mb-0">
                         <label for="studentGroupName" class="form-label cgt-field-label">Group Name</label>
-                        <select class="form-select rounded-2" id="studentGroupName" name="group_name" required disabled>
+                        <select class="form-select rounded-1" id="studentGroupName" name="group_name" required disabled>
                             <option value="">Select</option>
                         </select>
                         <small class="text-muted d-block mt-1" id="groupNameHelp">Please select a group type first</small>
@@ -260,9 +284,9 @@
                 </div>
                 <div class="modal-body">
                     <div class="gm-import-progress-wrap mb-4">
-                        <div class="progress rounded-pill" style="height: 6px;" role="progressbar"
+                        <div class="progress rounded-1" style="height: 6px;" role="progressbar"
                             aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">
-                            <div class="progress-bar bg-primary rounded-pill" id="gmImportProgress" style="width: 50%;"></div>
+                            <div class="progress-bar bg-primary rounded-1" id="gmImportProgress" style="width: 50%;"></div>
                         </div>
                     </div>
 
@@ -288,7 +312,7 @@
                         </div>
                         <div class="mb-0">
                             <label for="course_master_pk_model" class="form-label cgt-field-label">Course Name <span class="text-danger">*</span></label>
-                            <select name="course_master_pk" id="course_master_pk_model" class="form-select rounded-2" required>
+                            <select name="course_master_pk" id="course_master_pk_model" class="form-select rounded-1" required>
                                 <option value="">Select</option>
                                 @foreach($courses ?? [] as $pk => $name)
                                 <option value="{{ $pk }}" {{ count($courses) === 1 ? 'selected' : '' }}>{{ $name }}</option>
@@ -378,7 +402,7 @@
                                     Message <span class="text-danger">*</span>
                                 </label>
                                 <textarea id="bulkMessageText" rows="4" maxlength="1000"
-                                    class="form-control rounded-2"
+                                    class="form-control rounded-1"
                                     aria-describedby="bulkMessageCharHelp"
                                     placeholder="Type your message here..."></textarea>
                                 <div id="bulkMessageCharHelp" class="form-text text-end text-secondary small">
@@ -410,6 +434,25 @@
     </div>
 </div>
 
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="gmColumnVisibilityModal" tabindex="-1" aria-labelledby="gmColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="gmColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="gmColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <!-- Edit Student Modal -->
 <div class="modal fade" id="editStudentModal" tabindex="-1"
     aria-labelledby="editStudentModalLabel" aria-hidden="true">
@@ -426,17 +469,17 @@
                     <input type="hidden" name="student_id" id="editStudentId">
                     <div class="mb-3">
                         <label for="editStudentName" class="form-label cgt-field-label">Display Name</label>
-                        <input type="text" class="form-control rounded-2" id="editStudentName"
+                        <input type="text" class="form-control rounded-1" id="editStudentName"
                             name="display_name" required maxlength="255">
                     </div>
                     <div class="mb-3">
                         <label for="editStudentEmail" class="form-label cgt-field-label">Email</label>
-                        <input type="email" class="form-control rounded-2" id="editStudentEmail"
+                        <input type="email" class="form-control rounded-1" id="editStudentEmail"
                             name="email" maxlength="255">
                     </div>
                     <div class="mb-0">
                         <label for="editStudentContact" class="form-label cgt-field-label">Contact No</label>
-                        <input type="text" class="form-control rounded-2" id="editStudentContact"
+                        <input type="text" class="form-control rounded-1" id="editStudentContact"
                             name="contact_no" maxlength="20">
                     </div>
                 </div>
@@ -484,12 +527,163 @@ $(document).ready(function() {
             .attr('aria-current', 'true');
     }
 
+    function enhanceGmDtControls() {
+        var $wrapper = $('#group-mapping-table_wrapper');
+        if (!$wrapper.length) {
+            return;
+        }
+
+        var $footer = $('#gmDtFooter');
+
+        if ($footer.data('dtReady')) {
+            updateGmDtCount();
+            return;
+        }
+
+        var $paginate = $wrapper.find('.dataTables_paginate').first();
+        var $length = $wrapper.find('.dataTables_length').first();
+
+        // Don't build (and don't lock in dtReady) until DataTables has actually
+        // rendered its controls — otherwise we'd cache an empty footer forever.
+        if (!$footer.length || (!$paginate.length && !$length.length)) {
+            return;
+        }
+
+        var $pagCol = $('<div class="programme-dt-pagination"></div>');
+        var $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+        if ($paginate.length) {
+            $paginate.find('.pagination').addClass('mb-0');
+            $pagCol.append($paginate);
+        }
+
+        if ($length.length) {
+            var $select = $length.find('select').addClass('form-select form-select-sm');
+            $length.find('label')
+                .empty()
+                .append(document.createTextNode('Showing '))
+                .append($select)
+                .append(document.createTextNode(' '));
+            $countCol.append($length);
+        }
+
+        // Self-managed count text — does NOT rely on relocating DataTables' own
+        // .dataTables_info node (which was the fragile part that kept failing).
+        $countCol.append('<span class="gm-count-text text-muted mb-0"></span>');
+
+        $footer.append($pagCol).append($countCol);
+        $footer.data('dtReady', true);
+        updateGmDtCount();
+    }
+
+    function updateGmDtCount() {
+        if (!$.fn.DataTable.isDataTable('#group-mapping-table')) {
+            return;
+        }
+        var info = $('#group-mapping-table').DataTable().page.info();
+        var $countText = $('#gmDtFooter .gm-count-text');
+        if ($countText.length && info && info.recordsDisplay !== undefined) {
+            $countText.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
+        }
+    }
+
+    /* ---------- Column show / hide (DataTables API) ---------- */
+    var gmColStorageKey = 'gmGrid:hiddenColumns:v1';
+
+    function gmGetHiddenCols() {
+        try {
+            var raw = localStorage.getItem(gmColStorageKey);
+            var arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function gmPersistHiddenCols(arr) {
+        try { localStorage.setItem(gmColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupGmColumns(dt) {
+        if (!dt) {
+            return;
+        }
+        var hidden = gmGetHiddenCols();
+
+        // Apply saved visibility — DataTables keeps this across redraws / ajax reloads.
+        dt.columns().every(function() {
+            var idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
+        });
+        dt.columns.adjust();
+
+        // Build the modal checkboxes once from the live table headers.
+        var $grid = $('#gmColumnToggleGrid');
+        if (!$grid.length) {
+            return;
+        }
+        $grid.empty();
+
+        dt.columns().every(function() {
+            var idx = this.index();
+            var title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) {
+                return;
+            }
+
+            var inputId = 'gmcolvis_' + idx;
+            var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+            var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-1 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function() {
+                var h = gmGetHiddenCols();
+                var pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(idx);
+                }
+                gmPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
+        });
+    }
+
+    function bindGmTableUi(table) {
+        enhanceGmDtControls();
+        updateGmDtCount();
+        setupGmColumns(table);
+
+        table.on('draw.dt', function() {
+            var $wrapper = $('#group-mapping-table_wrapper');
+            if ($wrapper.find('.dataTables_paginate').length && !$('#gmDtFooter .dataTables_paginate').length) {
+                $('#gmDtFooter').empty().data('dtReady', false);
+            }
+            enhanceGmDtControls();
+            updateGmDtCount();
+        });
+    }
+
+    $('#group-mapping-table').on('init.dt', function() {
+        bindGmTableUi($(this).DataTable());
+    });
+
     setTimeout(function() {
         if (!$.fn.DataTable.isDataTable('#group-mapping-table')) {
             return;
         }
 
         var table = $('#group-mapping-table').DataTable();
+        bindGmTableUi(table);
 
         setActiveFilterButton($('#filterGroupActive'));
 
@@ -517,6 +711,85 @@ $(document).ready(function() {
             table.ajax.reload();
         });
     }, 150);
+
+    /* ---------- Search collapse-to-icon ---------- */
+    var $gmSearchToggle = $('#gmSearchToggle');
+    var $gmSearchSlot = $('#gmDtSearch');
+
+    $gmSearchToggle.on('click', function() {
+        $gmSearchSlot.removeClass('d-none');
+        $gmSearchToggle.addClass('d-none');
+        $gmSearchSlot.find('input').trigger('focus');
+    });
+
+    // Collapse back to the icon when the field is left empty.
+    $(document).on('blur', '#gmDtSearch input', function() {
+        if (!$(this).val().trim()) {
+            $gmSearchSlot.addClass('d-none');
+            $gmSearchToggle.removeClass('d-none');
+        }
+    });
+
+    // Drive the DataTable search from the custom input (debounced).
+    var gmSearchTimer = null;
+    $('#gmCustomSearch').on('input', function() {
+        var value = this.value;
+        clearTimeout(gmSearchTimer);
+        gmSearchTimer = setTimeout(function() {
+            if ($.fn.DataTable.isDataTable('#group-mapping-table')) {
+                $('#group-mapping-table').DataTable().search(value).draw();
+            }
+        }, 300);
+    });
+
+    /* ---------- Download current table as CSV ---------- */
+    $('#gmDownloadBtn').on('click', function() {
+        var tableEl = document.getElementById('group-mapping-table');
+        if (!tableEl) {
+            return;
+        }
+
+        var lines = [];
+
+        // Header row (exclude the trailing Action column).
+        var $headers = $(tableEl).find('thead th');
+        var headerCells = [];
+        $headers.each(function(i) {
+            if (i === $headers.length - 1) {
+                return; // skip Action
+            }
+            headerCells.push('"' + ($(this).text() || '').replace(/\s+/g, ' ').trim().replace(/"/g, '""') + '"');
+        });
+        lines.push(headerCells.join(','));
+
+        // Body rows currently rendered (current page).
+        $(tableEl).find('tbody tr').each(function() {
+            var tr = this;
+            if (tr.children.length <= 1) {
+                return; // empty-state row
+            }
+            var cells = [];
+            for (var i = 0; i < tr.children.length - 1; i++) { // exclude Action
+                var txt = (tr.children[i].innerText || '').replace(/\s+/g, ' ').trim().replace(/"/g, '""');
+                cells.push('"' + txt + '"');
+            }
+            lines.push(cells.join(','));
+        });
+
+        if (lines.length <= 1) {
+            return;
+        }
+
+        var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'course_group_mapping_' + new Date().toISOString().slice(0, 10) + '.csv';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+    });
 
     $('#studentGroupType').on('change', function() {
         const groupTypeSelect = $(this);

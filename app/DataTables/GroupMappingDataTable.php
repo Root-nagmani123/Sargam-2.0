@@ -222,11 +222,25 @@ $courseQuery->whereNotNull('end_date')
     'ordering' => false,
     'searching' => true,
     'lengthChange' => true,
+    'pageLength' => 10,
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
     'order' => [],
+    'dom' => 'rt<"row d-none"<"col-sm-12"ilp>>',
+    'pagingType' => 'full_numbers',
     'language' => [
+    'search' => '',
+    'searchPlaceholder' => 'Search',
     'processing' => '<span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>Loading…',
     'emptyTable' => 'No group mappings found.',
     'zeroRecords' => 'No matching group mappings found.',
+    'lengthMenu' => 'Showing _MENU_',
+    'info' => 'of _TOTAL_ items',
+    'infoEmpty' => 'of 0 items',
+    'infoFiltered' => 'of _MAX_ items',
+    'paginate' => [
+    'previous' => '&laquo;',
+    'next' => '&raquo;',
+    ],
     ],
     ]);
     }
