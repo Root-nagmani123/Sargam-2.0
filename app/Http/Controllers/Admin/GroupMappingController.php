@@ -34,7 +34,7 @@ class GroupMappingController extends Controller
         $data_course_id = get_Role_by_course();
 
         $epoch = DataTableRedisCache::readListEpoch(GroupMappingDataTable::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'group_mapping_index_dropdowns:v1:' . md5(json_encode([
+        $cacheKey = 'group_mapping_index_dropdowns:v2:' . md5(json_encode([
             'epoch' => $epoch,
             'data_course_id' => $data_course_id,
             'date' => now()->toDateString(),
@@ -64,14 +64,20 @@ class GroupMappingController extends Controller
                     ->pluck('type_name', 'pk')
                     ->toArray();
 
-                return compact('courses', 'groupTypes');
+                $facilities = FacultyMaster::where('active_inactive', 1)
+                    ->orderBy('full_name')
+                    ->pluck('full_name', 'pk')
+                    ->toArray();
+
+                return compact('courses', 'groupTypes', 'facilities');
             }
         );
 
         $courses = $dropdowns['courses'];
         $groupTypes = $dropdowns['groupTypes'];
+        $facilities = $dropdowns['facilities'] ?? [];
 
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes'));
+        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes', 'facilities'));
     }
 
 
@@ -264,8 +270,16 @@ class GroupMappingController extends Controller
 
             GroupMappingDataTable::bumpListingCacheEpoch();
 
+            if ($request->expectsJson()) {
+                return response()->json(['status' => 'success', 'message' => $message]);
+            }
+
             return redirect()->route('group.mapping.index')->with('success', $message);
         } catch (\Exception $e) {
+            if ($request->expectsJson()) {
+                return response()->json(['message' => $e->getMessage()], 500);
+            }
+
             return redirect()->back()->with('error', $e->getMessage())->withInput();
         }
     }

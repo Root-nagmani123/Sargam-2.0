@@ -1,0 +1,96 @@
+/* =====================================================================
+   Choices.js — Sargam theme override
+   ---------------------------------------------------------------------
+   MUST be loaded AFTER choices.min.css (the CDN base), otherwise the
+   library defaults (grey fill, 2.5px radius, solid triangle) win the
+   cascade. Makes every Choices dropdown match the reference UI:
+   white surface · soft 8px hairline border · roomy padding · thin caret.
+   ===================================================================== */
+
+.choices { margin-bottom: 0; }
+.choices:focus { outline: none; }
+
+/* Closed control */
+.choices__inner {
+    min-height: 44px;
+    padding: 0.5rem 2.25rem 0.5rem 0.875rem;   /* room for chevron */
+    background-color: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    display: flex;
+    align-items: center;
+    transition: border-color .15s ease, box-shadow .15s ease;
+}
+.choices.is-focused .choices__inner,
+.choices.is-open .choices__inner {
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.2rem rgba(13, 110, 253, 0.18);
+}
+/* Choices rounds only the top when open — keep it fully rounded */
+.choices.is-open .choices__inner { border-radius: 8px; }
+
+/* Selected value + placeholder */
+.choices__list--single { padding: 0; }
+.choices__list--single .choices__item { color: #1f2937; }
+.choices__placeholder { color: #667085; opacity: 1; }
+
+/* Thin caret chevron (replaces Choices' solid triangle) */
+.choices[data-type*="select-one"]::after {
+    content: "";
+    height: 9px;
+    width: 9px;
+    border: solid #667085;
+    border-width: 0 2px 2px 0;
+    border-radius: 1px;
+    transform: rotate(45deg);
+    margin-top: -7px;
+    right: 16px;
+    left: auto;
+    pointer-events: none;
+}
+.choices[data-type*="select-one"].is-open::after {
+    transform: rotate(-135deg);
+    margin-top: -3px;
+}
+.choices[data-type*="select-one"] .choices__button { right: 38px; }
+
+/* Dropdown panel */
+.choices__list--dropdown,
+.choices__list[aria-expanded] {
+    border: 1px solid #d0d5dd;
+    border-radius: 8px;
+    box-shadow: 0 8px 24px rgba(16, 24, 40, 0.12);
+    margin-top: 4px;
+    z-index: 1060;                 /* above Bootstrap modals (~1055) */
+    overflow: hidden;
+}
+.choices__list--dropdown .choices__item,
+.choices__list[aria-expanded] .choices__item {
+    font-size: 0.9rem;
+    padding: 0.55rem 0.875rem;
+    color: #1f2937;
+}
+.choices__list--dropdown .choices__item--selectable.is-highlighted,
+.choices__list[aria-expanded] .choices__item--selectable.is-highlighted {
+    background-color: rgba(0, 74, 147, 0.08);
+    color: #1f2937;
+}
+
+/* Search box inside the dropdown */
+.choices__list--dropdown .choices__input {
+    background-color: #fff;
+    border: 1px solid #d0d5dd;
+    border-radius: 6px;
+    margin: 0.5rem;
+    padding: 0.45rem 0.65rem;
+    font-size: 0.9rem;
+    width: calc(100% - 1rem);
+}
+
+/* Disabled / readonly look */
+.choices.is-disabled .choices__inner {
+    background-color: #f8fafc;
+    cursor: not-allowed;
+}

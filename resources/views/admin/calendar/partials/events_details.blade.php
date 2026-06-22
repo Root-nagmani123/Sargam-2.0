@@ -9,7 +9,7 @@
                             <span id="eventTitle">Event</span>
                         </h3>
                         <div class="d-flex gap-2 align-items-center">
-                            @if(hasRole('Training Induction Admin') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'))
+                            @if(hasRole('Training Induction Admin') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'))
                             <button type="button" class="btn btn-sm btn-primary" id="editEventBtn">
                                 <i class="bi bi-pencil me-1" aria-hidden="true"></i> Edit
                             </button>

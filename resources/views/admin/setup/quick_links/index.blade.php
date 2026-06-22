@@ -2,21 +2,19 @@
 @section('title', 'Quick Links')
 @section('setup_content')
     <div class="container-fluid">
-        <x-breadcrum title="Quick Links" />
-        <div class="card" style="border-left:4px solid #004a93;">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
-                    <h4 class="mb-0">Quick Links</h4>
-                    <div class="d-flex align-items-center gap-2 flex-wrap">
-                        <button type="button" class="btn btn-outline-primary" id="quickLinksSaveOrder" disabled>
+        <x-breadcrum title="Quick Links">
+            <div class="gap-2">
+                <button type="button" class="btn btn-outline-primary" id="quickLinksSaveOrder" disabled>
                             Save Order
                         </button>
                         <a href="{{ route('admin.setup.quick_links.create') }}" class="btn btn-primary" id="openCreateQuickLink">
                             <i class="material-icons material-symbols-rounded" style="font-size:20px;vertical-align:middle;">add</i>
                             Add Quick Link
                         </a>
-                    </div>
-                </div>
+            </div>
+        </x-breadcrum>
+        <div class="card">
+            <div class="card-body">
 
                 <div class="table-responsive">
                     <table class="table datatable" id="quickLinksTable" data-export="false">
@@ -55,6 +53,7 @@
                                                 <i class="material-icons material-symbols-rounded"
                                                     style="font-size:22px;">edit</i>
                                             </a>
+                                            
 
                                             <form action="{{ route('admin.setup.quick_links.delete', encrypt($link->id)) }}"
                                                 method="POST"
