@@ -13,6 +13,8 @@
         ? route('leave.update', $application->pk)
         : route('leave.store');
     $pageTitle = ($readOnly ?? false) ? 'View Leave Application' : (($application ?? null) ? 'Edit Leave Application' : 'Apply Leave');
+    $stationedReady = $stationedLeaveConfigured ?? false;
+    $upcomingStationed = $upcomingStationedLeave ?? null;
 @endphp
 
 <div class="container-fluid py-3 leave-module">
@@ -33,6 +35,22 @@
             @if($readOnly ?? false)
                 <div class="alert alert-info py-2 small mb-3">
                     Status: <strong>{{ $application->status_label }}</strong>
+                </div>
+            @endif
+
+            @if($errors->has('leave_type'))
+                <div class="alert alert-danger py-2 small mb-3">{{ $errors->first('leave_type') }}</div>
+            @endif
+
+            @if(! $isPt && ! $stationedReady && $upcomingStationed)
+                <div class="alert alert-warning py-2 small mb-3">
+                    Stationed leave for <strong>{{ $course->course_name }}</strong> will be available from
+                    <strong>{{ $upcomingStationed->effective_from->format('d-m-Y') }}</strong>.
+                    Please select a start date on or after that date.
+                </div>
+            @elseif(! $isPt && ! $stationedReady && ! $upcomingStationed)
+                <div class="alert alert-warning py-2 small mb-3">
+                    Stationed leave is not configured for your course: <strong>{{ $course->course_name }}</strong>.
                 </div>
             @endif
 
@@ -63,6 +81,14 @@
                         </div>
 
                         <div class="leave-form-row">
+                            <label class="leave-form-label">Course</label>
+                            <div class="leave-form-field">
+                                <input type="text" class="form-control" readonly
+                                    value="{{ $course->course_name ?? 'N/A' }}">
+                            </div>
+                        </div>
+
+                        <div class="leave-form-row">
                             <label class="leave-form-label">Nature of Leave <span class="text-danger">*</span></label>
                             <div class="leave-form-field">
                                 <select name="leave_nature_master_pk" class="form-select" required {{ ($readOnly ?? false) ? 'disabled' : '' }}>
@@ -83,6 +109,7 @@
                                 <div class="leave-date-wrap">
                                     <input type="date" name="from_date" id="from_date" class="form-control" required
                                         value="{{ old('from_date', isset($application) ? $application->from_date?->format('Y-m-d') : '') }}"
+                                        @if(! $isPt && $upcomingStationed) min="{{ $upcomingStationed->effective_from->format('Y-m-d') }}" @endif
                                         {{ ($readOnly ?? false) ? 'readonly' : '' }}>
                                     <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
                                 </div>

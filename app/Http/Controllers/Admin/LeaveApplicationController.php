@@ -43,6 +43,8 @@ class LeaveApplicationController extends Controller
             'ptBalance' => $ptBalance,
             'application' => null,
             'readOnly' => false,
+            'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
+            'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
         ]));
     }
 
@@ -95,6 +97,8 @@ class LeaveApplicationController extends Controller
             'ptBalance' => $ptBalance,
             'application' => $application->load('attachments'),
             'readOnly' => false,
+            'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
+            'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
         ]));
     }
 
@@ -128,6 +132,8 @@ class LeaveApplicationController extends Controller
             'ptBalance' => $ptBalance,
             'application' => $application,
             'readOnly' => true,
+            'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
+            'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
         ]));
     }
 
@@ -174,9 +180,16 @@ class LeaveApplicationController extends Controller
         ]);
 
         if ($validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE
-            && ! $this->leaveService->stationedLeaveConfigured($context['course_pk'])) {
+            && ! $this->leaveService->stationedLeaveConfigured($context['course_pk'], $validated['from_date'])) {
+            $courseName = $context['course']->course_name ?? 'your course';
+            $upcoming = $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']);
+            $message = $upcoming
+                ? 'Stationed leave for ' . $courseName . ' will be available from '
+                    . $upcoming->effective_from->format('d-m-Y') . '. Please choose a start date on or after that date.'
+                : 'Stationed leave is not configured for your course (' . $courseName . ').';
+
             return back()->withInput()->withErrors([
-                'leave_type' => 'Stationed leave is not configured for your course.',
+                'leave_type' => $message,
             ]);
         }
 

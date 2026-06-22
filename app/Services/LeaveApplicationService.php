@@ -98,13 +98,38 @@ class LeaveApplicationService
         ];
     }
 
-    public function stationedLeaveConfigured(int $coursePk): bool
+    /**
+     * Latest active stationed-leave config for a course as of a given date
+     * (defaults to today). Uses the leave start date when validating applications.
+     */
+    public function getActiveStationedLeaveConfig(int $coursePk, ?string $asOfDate = null): ?StationedLeaveMaster
+    {
+        $asOfDate = $asOfDate ?? now()->toDateString();
+
+        return StationedLeaveMaster::query()
+            ->where('course_master_pk', $coursePk)
+            ->where('active_inactive', 1)
+            ->whereDate('effective_from', '<=', $asOfDate)
+            ->orderByDesc('effective_from')
+            ->first();
+    }
+
+    public function stationedLeaveConfigured(int $coursePk, ?string $asOfDate = null): bool
+    {
+        return $this->getActiveStationedLeaveConfig($coursePk, $asOfDate) !== null;
+    }
+
+    /**
+     * Next stationed-leave config that is active but not yet effective (for UI hints).
+     */
+    public function getUpcomingStationedLeaveConfig(int $coursePk): ?StationedLeaveMaster
     {
         return StationedLeaveMaster::query()
             ->where('course_master_pk', $coursePk)
             ->where('active_inactive', 1)
-            ->whereDate('effective_from', '<=', now()->toDateString())
-            ->exists();
+            ->whereDate('effective_from', '>', now()->toDateString())
+            ->orderBy('effective_from')
+            ->first();
     }
 
     public function assertNoOverlap(
@@ -158,14 +183,14 @@ class LeaveApplicationService
                 $q->whereNull('course_master.end_date')
                     ->orWhereDate('course_master.end_date', '>=', $today);
             })
-            ->orderByDesc('course_master.end_date')
+            ->orderByDesc('smcm.pk')
             ->first();
 
         if ($runningCourse) {
             return $runningCourse;
         }
 
-        return $baseQuery->orderByDesc('course_master.end_date')->first();
+        return $baseQuery->orderByDesc('smcm.pk')->first();
     }
 
     protected function normalizeGender(?string $gender): ?string
