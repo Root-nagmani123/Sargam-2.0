@@ -41,6 +41,24 @@ class SidebarNavResolver
             }
         }
 
+        // Sub-pages whose URL ends with a non-numeric segment that is also an
+        // independent menu name (e.g. roles/1/dashboard ending with /dashboard)
+        // falsely match the shorter menu via the suffix check in entryMatches,
+        // opening under the wrong tab. For these routes, resolve nav as if visiting
+        // the parent list page so the correct sidebar item stays highlighted.
+        $parentRouteMap = [
+            'roles.dashboard'       => ['path' => 'roles',       'route' => 'roles.index'],
+            'assign.roles.dashboard'=> ['path' => 'roles',       'route' => 'roles.index'],
+        ];
+        if (isset($parentRouteMap[$routeName])) {
+            $p = $parentRouteMap[$routeName];
+            $menu = $this->findMenuForRequest($p['path'], $p['route'])
+                 ?? $this->findMenuForRouteName($p['route']);
+            if ($menu) return $this->resultFromMenu($menu);
+            $legacy = $this->legacyFallback($p['path'], $p['route']);
+            if ($legacy) return $legacy;
+        }
+
         $menu = $this->findMenuForRequest($path, $routeName);
         if ($menu) {
             return $this->resultFromMenu($menu);

@@ -116,6 +116,14 @@ class RoleController extends Controller
     {
     }
 
+    public function destroyDashboardCard($id)
+    {
+        $card = DashboardCard::findOrFail($id);
+        $card->roles()->detach();
+        $card->delete();
+        return response()->json(['success' => true, 'message' => 'Card deleted successfully.']);
+    }
+
     public function updateDashboardCard(Request $request, $id)
     {
         $card = DashboardCard::findOrFail($id);
@@ -170,7 +178,27 @@ class RoleController extends Controller
         $assignedCardIds = $role->belongsToMany(DashboardCard::class, 'role_dashboard_cards', 'role_id', 'dashboard_card_id')
             ->pluck('dashboard_cards.id')
             ->toArray();
-        return view('roles-permissions.assign-dashboard', compact('role', 'allCards', 'assignedCardIds'));
+        $materialIcons = $this->materialIconNames();
+        return view('roles-permissions.assign-dashboard', compact('role', 'allCards', 'assignedCardIds', 'materialIcons'));
+    }
+
+    private function materialIconNames(): array
+    {
+        $path = resource_path('data/material-symbols-rounded.codepoints');
+        if (!is_readable($path)) {
+            return [];
+        }
+        $lines = file($path, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES);
+        if (!$lines) return [];
+        $names = [];
+        foreach ($lines as $line) {
+            $line = trim($line);
+            if ($line === '' || str_starts_with($line, '#')) continue;
+            $parts = preg_split('/\s+/', $line, 2);
+            if (!empty($parts[0])) $names[] = $parts[0];
+        }
+        sort($names, SORT_NATURAL | SORT_FLAG_CASE);
+        return $names;
     }
 
     public function assignDashboardCard(Request $request, $id)

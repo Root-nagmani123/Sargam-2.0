@@ -118,6 +118,7 @@ Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->na
 Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
 Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
 Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
+Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
 Route::resource('roles', RoleController::class);
 
 // Protected Routes
