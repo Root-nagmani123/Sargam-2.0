@@ -388,6 +388,10 @@ class SidebarNavResolver
             return $this->resultForCategorySlug('home');
         }
 
+        if (request()->routeIs('leave.*') || str_starts_with($path, 'leave')) {
+            return $this->resultForCategorySlug('home');
+        }
+
         $slug = null;
 
         if (

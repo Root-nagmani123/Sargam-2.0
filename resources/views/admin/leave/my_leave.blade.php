@@ -1,21 +1,16 @@
-@extends(isOfficerTraineeUser() ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends('admin.layouts.master')
 
 @section('title', 'My Leave Applications')
 
-@section(isOfficerTraineeUser() ? 'content' : 'setup_content')
+@section('content')
 
 @include('admin.leave.partials.styles')
 
 <div class="container-fluid py-3 leave-module">
+    <x-breadcrum title="My Leave Applications" />
     <x-session_message />
 
-    <div class="row g-3">
-        <div class="col-lg-3">
-            @include('admin.leave.partials.sidebar')
-        </div>
-
-        <div class="col-lg-9">
-            <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
+    <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
                 <div class="card-body p-3 p-md-4">
                     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
                         <div>
@@ -65,8 +60,6 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 </div>
 @endsection
 

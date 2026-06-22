@@ -1,19 +1,14 @@
-@extends(isOfficerTraineeUser() ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends('admin.layouts.master')
 
 @section('title', 'Leave Balance')
 
-@section(isOfficerTraineeUser() ? 'content' : 'setup_content')
+@section('content')
 
 @include('admin.leave.partials.styles')
 
 <div class="container-fluid py-3 leave-module">
-    <div class="row g-3">
-        <div class="col-lg-3">
-            @include('admin.leave.partials.sidebar', ['ptBalance' => $ptBalance])
-        </div>
-
-        <div class="col-lg-9">
-            <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
+    <x-breadcrum title="Leave Balance" />
+    <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
                 <div class="card-body p-3 p-md-4">
                     <h2 class="h5 fw-semibold mb-3">Leave Balance</h2>
                     <p class="text-muted small mb-4">Course: {{ $course->course_name }}</p>
@@ -40,7 +35,5 @@
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 </div>
 @endsection
