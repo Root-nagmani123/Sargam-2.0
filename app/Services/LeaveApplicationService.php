@@ -25,25 +25,22 @@ class LeaveApplicationService
             abort(404, 'Student record not found.');
         }
 
-        $course = CourseMaster::query()
-            ->join('student_master_course__map as smcm', 'smcm.course_master_pk', '=', 'course_master.pk')
-            ->where('smcm.student_master_pk', $student->pk)
-            ->where('smcm.active_inactive', 1)
-            ->where('course_master.active_inactive', 1)
-            ->whereDate('course_master.end_date', '>=', now()->toDateString())
-            ->orderByDesc('course_master.end_date')
-            ->select('course_master.*')
-            ->first();
+        $course = $this->findStudentCourse((int) $student->pk);
 
         if (! $course) {
-            abort(403, 'No active course found for your account.');
+            abort(403, 'No course enrollment found for your account.');
         }
+
+        $today = now()->toDateString();
+        $courseIsRunning = $course->end_date === null
+            || $course->end_date >= $today;
 
         return [
             'student' => $student,
             'course' => $course,
             'student_pk' => (int) $student->pk,
             'course_pk' => (int) $course->pk,
+            'course_is_running' => $courseIsRunning,
         ];
     }
 
@@ -139,6 +136,36 @@ class LeaveApplicationService
         if ($query->exists()) {
             throw new \InvalidArgumentException('Leave dates overlap with an existing application.');
         }
+    }
+
+    /**
+     * Prefer a currently running course; otherwise use the latest active enrollment.
+     * Matches enrollment checks used elsewhere (e.g. EnrollementController::hasActiveCourse).
+     */
+    protected function findStudentCourse(int $studentPk): ?CourseMaster
+    {
+        $today = now()->toDateString();
+
+        $baseQuery = CourseMaster::query()
+            ->join('student_master_course__map as smcm', 'smcm.course_master_pk', '=', 'course_master.pk')
+            ->where('smcm.student_master_pk', $studentPk)
+            ->where('smcm.active_inactive', 1)
+            ->where('course_master.active_inactive', 1)
+            ->select('course_master.*');
+
+        $runningCourse = (clone $baseQuery)
+            ->where(function ($q) use ($today) {
+                $q->whereNull('course_master.end_date')
+                    ->orWhereDate('course_master.end_date', '>=', $today);
+            })
+            ->orderByDesc('course_master.end_date')
+            ->first();
+
+        if ($runningCourse) {
+            return $runningCourse;
+        }
+
+        return $baseQuery->orderByDesc('course_master.end_date')->first();
     }
 
     protected function normalizeGender(?string $gender): ?string

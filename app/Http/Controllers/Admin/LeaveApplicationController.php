@@ -18,7 +18,7 @@ class LeaveApplicationController extends Controller
     public function __construct(protected LeaveApplicationService $leaveService)
     {
         $this->middleware(function ($request, $next) {
-            if (! hasRole('Student-OT') && ! hasRole('Officer Trainee')) {
+            if (! isOfficerTraineeUser()) {
                 abort(403, 'Only officer trainees can access leave applications.');
             }
 

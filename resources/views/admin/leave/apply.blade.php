@@ -1,8 +1,8 @@
-@extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends(isOfficerTraineeUser() ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', ($readOnly ?? false) ? 'View Leave Application' : (($application ?? null) ? 'Edit Leave Application' : 'Apply Leave'))
 
-@section(hasRole('Officer Trainee') ? 'content' : 'setup_content')
+@section(isOfficerTraineeUser() ? 'content' : 'setup_content')
 
 @include('admin.leave.partials.styles')
 
@@ -16,6 +16,12 @@
 
 <div class="container-fluid py-3 leave-module">
     <x-session_message />
+
+    @if(empty($course_is_running))
+        <div class="alert alert-warning py-2 small mb-3">
+            Your enrolled course has ended. Leave applications use your latest course enrollment.
+        </div>
+    @endif
 
     <div class="row g-3">
         <div class="col-lg-3">

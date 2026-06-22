@@ -1,8 +1,8 @@
-@extends(hasRole('Officer Trainee') ? 'admin.layouts.timetable' : 'admin.layouts.master')
+@extends(isOfficerTraineeUser() ? 'admin.layouts.timetable' : 'admin.layouts.master')
 
 @section('title', 'Leave Balance')
 
-@section(hasRole('Officer Trainee') ? 'content' : 'setup_content')
+@section(isOfficerTraineeUser() ? 'content' : 'setup_content')
 
 @include('admin.leave.partials.styles')
 
