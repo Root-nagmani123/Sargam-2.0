@@ -193,7 +193,7 @@ class MemoDisciplineController extends Controller
             return response()->json('Discipline and Course are required.');
         }
 
-        $discipline = DisciplineMaster::find($discipline_master_pk)->where('course_master_pk', $course_id)->where('active_inactive', 1)->first();
+        $discipline = DisciplineMaster::where('pk', $discipline_master_pk)->where('course_master_pk', $course_id)->where('active_inactive', 1)->first();
 
         if (!$discipline) {
             return response()->json('Discipline not found.');

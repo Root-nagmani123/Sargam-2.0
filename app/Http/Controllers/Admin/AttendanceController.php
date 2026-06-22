@@ -302,6 +302,7 @@ class AttendanceController extends Controller
 
                     $isMarked = (bool) ($markedCache[$cacheKey] ?? false);
                     $markBtnClass = $isMarked ? 'btn btn-success btn-sm' : 'btn btn-primary btn-sm';
+                    $markBtnLabel = $isMarked ? 'Attendance Marked' : 'Mark Attendance';
 
         // if ($currentPath === 'user_attendance') {
              if (hasRole('Student-OT')) {
@@ -331,14 +332,14 @@ class AttendanceController extends Controller
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
+        ]) . '" class="' . $markBtnClass . '">' . $markBtnLabel . '</a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
+        ]) . '" class="' . $markBtnClass . '">' . $markBtnLabel . '</a>';
         }
 
         // Admin Page
