@@ -82,7 +82,17 @@
             height: 42px !important;
             font-size: 17px !important;
             flex-shrink: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 0.75rem;
         }
+        /* stat-icon colour classes (dashboard-stat-cards.css is not loaded on this page) */
+        .stat-icon-blue  { background: rgba(47, 128, 237, 0.12); color: #2f80ed; }
+        .stat-icon-green { background: rgba(39, 174, 96, 0.12);  color: #27ae60; }
+        .stat-icon-amber { background: rgba(232, 163, 23, 0.12); color: #c98a0e; }
+        .stat-icon-rose  { background: rgba(220, 53, 69, 0.10);  color: #dc3545; }
+        .stat-icon-navy  { background: rgba(30, 58, 95, 0.12);   color: #1e3a5f; }
         .dc-preview-body { display: flex; flex-direction: column; gap: 1px; }
         .dc-preview-label {
             font-size: 11px; color: #6c757d; margin: 0;
@@ -199,7 +209,7 @@
                                         title="Edit">
                                         <i class="material-symbols-rounded" style="font-size:18px;">edit</i>
                                     </button>
-                                    <button class="btn btn-sm border-0 bg-transparent text-danger delete-card-btn d-inline-flex align-items-center justify-content-center"
+                                    <button class="btn btn-sm border-0 bg-transparent text-danger delete-card-btn d-inline-flex align-items-center justify-content-center{{ in_array($card->id, $assignedCardIds) ? ' d-none' : '' }}"
                                         data-id="{{ $card->id }}"
                                         title="Delete">
                                         <i class="material-symbols-rounded" style="font-size:18px;">delete</i>
@@ -579,7 +589,12 @@ $(document).on('change', '.card-toggle', function() {
         type: "POST",
         data: { _token: "{{ csrf_token() }}", card_id: cardId, status: isChecked },
         success: function(response) {
-            if (response.success) { toastr.success(response.message); updateEnabledCount(); }
+            if (response.success) {
+                toastr.success(response.message);
+                updateEnabledCount();
+                // Enabled cards must not be deletable — only disabled ones show the delete option.
+                $toggle.closest('tr').find('.delete-card-btn').toggleClass('d-none', isChecked === 1);
+            }
             else { toastr.error(response.message); $toggle.prop('checked', !isChecked); }
         },
         error: function() { toastr.error('Something went wrong'); $toggle.prop('checked', !isChecked); }

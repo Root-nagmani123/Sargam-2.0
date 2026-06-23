@@ -191,7 +191,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
                             <div class="stat-icon-wrapper {{ $card['color_class'] }}">
-                                <i class="bi {{ $card['icon'] }}"></i>
+                                <i class="material-symbols-rounded">{{ $card['icon'] }}</i>
                             </div>
                             <div class="flex-grow-1 min-w-0">
                                 <p class="stat-title">{{ $card['label'] }}</p>
@@ -444,8 +444,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 </div>
                 @endif
 
-                @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super
-                Admin'))
+                @if(in_array('widget_todays_classes', $enabledWidgetKeys))
                 <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-todays-classes-panel">
                     <div class="card-header py-3 px-4">
                         <h5 class="dashboard-feed-panel__title mb-0">Today's Classes</h5>

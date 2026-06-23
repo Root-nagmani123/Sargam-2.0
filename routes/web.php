@@ -113,13 +113,15 @@ Route::post('/login', [LoginController::class, 'authenticate'])->name('post_logi
 
 
 
-Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
-Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
-Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
-Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
-Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
-Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
-Route::resource('roles', RoleController::class);
+Route::middleware(['auth'])->group(function () {
+    Route::post('roles/permissions/{id}', [RoleController::class, 'assignPermission'])->name('assign.roles.permissions');
+    Route::get('roles/{id}/dashboard', [RoleController::class, 'showDashboard'])->name('roles.dashboard');
+    Route::post('roles/{id}/dashboard', [RoleController::class, 'assignDashboardCard'])->name('assign.roles.dashboard');
+    Route::post('dashboard-cards', [RoleController::class, 'storeDashboardCard'])->name('dashboard.cards.store');
+    Route::put('dashboard-cards/{id}', [RoleController::class, 'updateDashboardCard'])->name('dashboard.cards.update');
+    Route::delete('dashboard-cards/{id}', [RoleController::class, 'destroyDashboardCard'])->name('dashboard.cards.destroy');
+    Route::resource('roles', RoleController::class);
+});
 
 // Protected Routes
 Route::middleware(['auth'])->group(function () {
