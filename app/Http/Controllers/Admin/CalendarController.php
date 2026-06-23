@@ -348,6 +348,7 @@ class CalendarController extends Controller
     }
     public function store(Request $request)
     {
+        abort_unless(hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'), 403);
         // print_r($request->all());die;
         $validated = $request->validate([
             'Course_name' => 'required|integer',
@@ -487,12 +488,10 @@ class CalendarController extends Controller
             return;
         }
 
-        // Teaching role + feedback != none → main faculty (gets rated)
+        // Teaching role → main faculty (gets rated by supporting faculty)
         // Sectional / Administration → supporting faculty (gives rating)
         $mainFaculty       = collect($facultyDetails)
             ->where('role', 'Teaching')
-            ->where('feedback', '!=', 'none')
-            ->filter(fn($d) => !empty($d['feedback']))
             ->pluck('faculty_pk')->all();
         $supportingFaculty = collect($facultyDetails)->whereIn('role', ['Sectional', 'Administration'])->pluck('faculty_pk')->all();
 
@@ -1604,7 +1603,7 @@ class CalendarController extends Controller
      */
     private function canEditWeeklyInfo(): bool
     {
-        return hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST');
+        return hasRole('Training') || hasRole('Admin') || hasRole('Training-MCTP') || hasRole('IST') || hasRole('Training-Induction');
     }
 
     /**
@@ -1787,6 +1786,7 @@ class CalendarController extends Controller
 
     public function update_event(Request $request, $hash)
     {
+        abort_unless(hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'), 403);
         $id = decrypt($hash);
         $validated = $request->validate([
             'Course_name'      => 'required|integer',
@@ -1891,6 +1891,7 @@ class CalendarController extends Controller
     }
     public function delete_event($id)
     {
+        abort_unless(hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'), 403);
         $event = CalendarEvent::findOrFail($id);
         $event->delete();
         return response()->json(['status' => 'success']);
@@ -2610,5 +2611,194 @@ class CalendarController extends Controller
         } catch (\Exception $e) {
             return null;
         }
+    }
+
+    // =========================================================
+    // FACULTY INTERNAL FEEDBACK
+    // =========================================================
+
+    public function facultyInternalFeedback(Request $request)
+    {
+        try {
+            // Admin can pass ?faculty_pk=X to view any faculty's feedback
+            if ($request->filled('faculty_pk') && hasRole('Super-Admin')) {
+                $supporting_faculty_pk = (int) $request->faculty_pk;
+            } else {
+                $supporting_faculty_pk = get_auth_faculty_master_pk();
+            }
+
+            // Super admin with no faculty record sees all data (view-only)
+            $isAdmin = !$supporting_faculty_pk;
+
+            // ================= PENDING FEEDBACK =================
+            $pendingQuery = DB::table('supporting_faculty_feedback as sff')
+                ->select([
+                    'sff.pk as feedback_pk',
+                    'sff.timetable_pk',
+                    'sff.main_faculty_master_pk',
+                    'sff.supporting_faculty_master_pk',
+                    'fm.full_name as main_faculty_name',
+                    'sf.full_name as supporting_faculty_name',
+                    'c.course_name',
+                    'v.venue_name',
+                    't.subject_topic',
+                    't.class_session',
+                    't.Ratting_checkbox',
+                    't.Remark_checkbox',
+                    DB::raw('t.START_DATE as from_date'),
+                ])
+                ->join('timetable as t', 'sff.timetable_pk', '=', 't.pk')
+                ->join('faculty_master as fm', 'sff.main_faculty_master_pk', '=', 'fm.pk')
+                ->join('faculty_master as sf', 'sff.supporting_faculty_master_pk', '=', 'sf.pk')
+                ->join('course_master as c', 'sff.course_master_pk', '=', 'c.pk')
+                ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->where('sff.is_submitted', 0)
+                ->where('sff.active_inactive', 1);
+
+            if (!$isAdmin) {
+                $pendingQuery->where('sff.supporting_faculty_master_pk', $supporting_faculty_pk)
+                    ->whereDate('t.END_DATE', '<=', now()->toDateString());
+            }
+
+            $pendingData = $pendingQuery->orderBy('t.START_DATE', 'asc')->get();
+
+            // ================= SUBMITTED FEEDBACK =================
+            $submittedData = DB::table('supporting_faculty_feedback as sff')
+                ->select([
+                    'sff.pk as feedback_pk',
+                    'sff.timetable_pk',
+                    'sff.content',
+                    'sff.presentation',
+                    'sff.remark',
+                    'sff.rating',
+                    'sff.modified_date as submitted_date',
+                    'sff.main_faculty_master_pk',
+                    'fm.full_name as main_faculty_name',
+                    'sf.full_name as supporting_faculty_name',
+                    'c.course_name',
+                    'v.venue_name',
+                    't.subject_topic',
+                    't.class_session',
+                    't.Ratting_checkbox',
+                    't.Remark_checkbox',
+                    DB::raw('t.START_DATE as from_date'),
+                ])
+                ->join('timetable as t', 'sff.timetable_pk', '=', 't.pk')
+                ->join('faculty_master as fm', 'sff.main_faculty_master_pk', '=', 'fm.pk')
+                ->join('faculty_master as sf', 'sff.supporting_faculty_master_pk', '=', 'sf.pk')
+                ->join('course_master as c', 'sff.course_master_pk', '=', 'c.pk')
+                ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->where('sff.is_submitted', 1)
+                ->when(!$isAdmin, fn($q) => $q->where('sff.supporting_faculty_master_pk', $supporting_faculty_pk))
+                ->orderByDesc('sff.modified_date')
+                ->get();
+
+            return view(
+                'admin.feedback.faculty_internal_feedback',
+                compact('pendingData', 'submittedData', 'isAdmin')
+            );
+        } catch (\Throwable $e) {
+            logger()->error('Error in facultyInternalFeedback: ' . $e->getMessage());
+            return back()->with('error', 'Something went wrong');
+        }
+    }
+
+    public function submitFacultyInternalFeedback(Request $request)
+    {
+        $request->validate([
+            'feedback_pk' => 'required|array|min:1',
+        ]);
+
+        $supporting_faculty_pk = get_auth_faculty_master_pk();
+
+        if (!$supporting_faculty_pk) {
+            return back()->withErrors(['error' => 'Faculty record not found. Please log in as a faculty member.']);
+        }
+        $now = now();
+
+        $indexes = $request->has('submit_index')
+            ? [$request->submit_index]
+            : array_keys($request->feedback_pk);
+
+        $inserted = 0;
+        $errors   = [];
+
+        foreach ($indexes as $i) {
+            $feedbackPk   = $request->feedback_pk[$i] ?? null;
+            $content      = $request->content[$i] ?? null;
+            $presentation = $request->presentation[$i] ?? null;
+            $remarks      = $request->remarks[$i] ?? null;
+            $ratingCb     = $request->Ratting_checkbox[$i] ?? 0;
+
+            if (!$feedbackPk) {
+                $errors[] = "Invalid feedback row at index $i";
+                continue;
+            }
+
+            // On bulk submit skip rows the faculty left untouched
+            $isBulk = !$request->has('submit_index');
+            if ($isBulk && !$content && !$presentation && empty(trim((string) $remarks))) {
+                continue;
+            }
+
+            if ($ratingCb == 1 && !$content && !$presentation) {
+                $errors[] = 'Please provide content or presentation rating';
+                continue;
+            }
+
+            // Verify the row belongs to this faculty and is still pending
+            $row = DB::table('supporting_faculty_feedback')
+                ->where('pk', $feedbackPk)
+                ->where('supporting_faculty_master_pk', $supporting_faculty_pk)
+                ->where('is_submitted', 0)
+                ->where('active_inactive', 1)
+                ->first();
+
+            if (!$row) {
+                $errors[] = 'Feedback already submitted or not found';
+                continue;
+            }
+
+            $overallRating = null;
+            if ($content && $presentation) {
+                $overallRating = ($content + $presentation) / 2;
+            } elseif ($content) {
+                $overallRating = $content;
+            } elseif ($presentation) {
+                $overallRating = $presentation;
+            }
+
+            DB::table('supporting_faculty_feedback')
+                ->where('pk', $feedbackPk)
+                ->update([
+                    'content'       => $content,
+                    'presentation'  => $presentation,
+                    'remark'        => $remarks,
+                    'rating'        => $overallRating,
+                    'is_submitted'  => 1,
+                    'modified_date' => $now,
+                ]);
+
+            $inserted++;
+        }
+
+        $errorSummary = '';
+        if (!empty($errors)) {
+            $errorSummary = collect($errors)
+                ->countBy()
+                ->map(fn($count, $reason) => $count > 1 ? "$reason ($count)" : $reason)
+                ->implode('; ');
+        }
+
+        if ($inserted === 0) {
+            $msg = $errorSummary !== '' ? $errorSummary : 'Please submit at least one feedback.';
+            return back()->withErrors(['error' => $msg]);
+        }
+
+        if (!empty($errors) && $inserted > 0) {
+            return back()->with('success', "Successfully submitted $inserted feedback(s). " . count($errors) . " item(s) failed: $errorSummary");
+        }
+
+        return back()->with('success', 'Feedback submitted successfully.');
     }
 }

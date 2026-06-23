@@ -781,6 +781,7 @@ function get_Role_by_course()
     if (empty($role_course)) {
         // Non-admin user with roles but no mapped courses should see no data.
         return [-1];
+        // return [-1];
     }
 
     return $role_course;

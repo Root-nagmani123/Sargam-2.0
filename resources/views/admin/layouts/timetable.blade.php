@@ -30,7 +30,6 @@
     <!-- Sargam Design System — must load LAST -->
     <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}" />
 </head>
-<x-session_message />
 
 <body class="admin-force-light bg-light" style="min-height: 100vh; display: flex; flex-direction: column; font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;">
     <!-- Top Blue Bar (Govt of India) -->
@@ -120,6 +119,7 @@
     <!-- Main Content (OT student pages use @section('content'); calendar uses @section('setup_content')) -->
     <main id="main-content" class="flex-grow-1">
                    <div class="container-fluid p-0 px-2">
+                     <x-session_message />
                      @yield('content')
                     @yield('setup_content')
                    </div>
@@ -289,7 +289,6 @@
                 // Tab switching handled by Bootstrap
             });
 
-            // Flash alerts are rendered once by <x-session_message />.
             // On feedback success, switch to the Submitted tab and refresh.
             @if (session('success'))
                 setTimeout(function() {

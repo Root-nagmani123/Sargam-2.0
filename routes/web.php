@@ -1232,6 +1232,8 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+Route::get('/faculty-internal-feedback', [CalendarController::class, 'facultyInternalFeedback'])->name('feedback.get.facultyInternalFeedback');
+Route::post('/faculty-internal-feedback/submit', [CalendarController::class, 'submitFacultyInternalFeedback'])->name('feedback.submit.facultyInternalFeedback');
 // Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
 // Route::get('admin/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])->name('admin.get.sessions.by.course');
 // // Change export routes to POST

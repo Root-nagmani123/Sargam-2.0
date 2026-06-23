@@ -1344,8 +1344,9 @@ class FeedbackController extends Controller
      */
     public function facultyPortalIndex(FacultyFeedbackReportService $reportService)
     {
-       
+    
         $reportService->assertFacultyRole();
+        
 
         $facultyPk = $reportService->resolveFacultyPk();
         if (! $facultyPk) {

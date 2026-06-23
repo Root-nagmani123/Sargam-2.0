@@ -25,7 +25,7 @@
         </div>
     @endif
     <x-breadcrum title="Calendar Creation">
-   @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST'))
+   @if(hasRole('Training') || hasRole('Super Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'))
         <a id="createEventButton"
                 href="{{ route('calendar.event.create') }}"
             class="btn btn-primary d-inline-flex align-items-center justify-content-center gap-1 rounded-1 shadow-sm px-3 fw-semibold text-nowrap">

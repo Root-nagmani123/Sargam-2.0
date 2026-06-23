@@ -232,6 +232,7 @@ class StudentMedicalExemptionController extends Controller
          | NORMAL PAGE LOAD
          ========================================================= */
         $courses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
             ->orderBy('course_name', 'asc')
             ->get();
 
@@ -249,9 +250,9 @@ class StudentMedicalExemptionController extends Controller
 
     $data_course_id = get_Role_by_course();
 
-    if (!empty($data_course_id)) {
-        $courses = $courses->whereIn('pk', $data_course_id);
-    }
+    // if (!empty($data_course_id)) {
+    //     $courses = $courses->whereIn('pk', $data_course_id);
+    // }
 
     $courses = $courses
         ->where('end_date', '>', now())
