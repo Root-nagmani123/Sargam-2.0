@@ -105,16 +105,13 @@ class FacultyLeaveApprovalController extends Controller
 
         $query = LeaveApplication::with(['student', 'nature'])
             ->whereIn('course_master_pk', $coursePks ?: [-1])
+            ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
             ->whereIn('status', [
                 LeaveApplication::STATUS_PENDING,
                 LeaveApplication::STATUS_APPROVED,
                 LeaveApplication::STATUS_REJECTED,
             ])
             ->orderByDesc('pk');
-
-        if ($request->filled('leave_type')) {
-            $query->where('leave_type', $request->leave_type);
-        }
 
         if ($request->has('status') && $request->status !== '') {
             $query->where('status', (int) $request->status);

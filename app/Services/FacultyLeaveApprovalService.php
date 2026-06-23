@@ -119,6 +119,10 @@ class FacultyLeaveApprovalService
 
     public function canFacultyAccessLeave(int $facultyPk, LeaveApplication $application): bool
     {
+        if ($application->leave_type !== LeaveApplication::TYPE_STATIONED_LEAVE) {
+            return false;
+        }
+
         return in_array(
             (int) $application->course_master_pk,
             $this->getApproverCourseIds($facultyPk),

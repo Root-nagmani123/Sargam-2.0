@@ -19,13 +19,6 @@
 
             <div class="row g-2 mb-3 align-items-center">
                 <div class="col-md-3">
-                    <select id="filter_leave_type" class="form-select form-select-sm">
-                        <option value="">All Leave Types</option>
-                        <option value="PT_EXEMPTION">PT Exemption</option>
-                        <option value="STATIONED_LEAVE">Stationed Leave</option>
-                    </select>
-                </div>
-                <div class="col-md-3">
                     <select id="filter_status" class="form-select form-select-sm">
                         <option value="1" selected>Pending</option>
                         <option value="2">Approved</option>
@@ -71,7 +64,6 @@ $(function () {
         ajax: {
             url: "{{ route('faculty.leave-approval.index') }}",
             data: function (d) {
-                d.leave_type = $('#filter_leave_type').val();
                 d.status = $('#filter_status').val();
             }
         },
@@ -87,7 +79,7 @@ $(function () {
         ],
     });
 
-    $('#filter_leave_type, #filter_status').on('change', function () {
+    $('#filter_status').on('change', function () {
         table.ajax.reload();
     });
 
