@@ -46,6 +46,7 @@ use App\Http\Controllers\Admin\{
     ExemptionMasterController,
     StationedLeaveMasterController,
     LeaveApplicationController,
+    FacultyLeaveApprovalController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -814,6 +815,14 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/faculties', 'faculties')->name('faculties');
         Route::post('/status/{id}', 'status')->name('status');
         Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    });
+
+    // Faculty — Leave Approval (menu route: faculty-leave-approval)
+    Route::controller(FacultyLeaveApprovalController::class)->group(function () {
+        Route::get('/faculty-leave-approval', 'index')->name('faculty.leave-approval.index');
+        Route::get('/faculty-leave-approval/{id}', 'show')->name('faculty.leave-approval.show');
+        Route::post('/faculty-leave-approval/{id}/approve', 'approve')->name('faculty.leave-approval.approve');
+        Route::post('/faculty-leave-approval/{id}/reject', 'reject')->name('faculty.leave-approval.reject');
     });
 
     // Officer Trainee — Leave Application (User Side)
