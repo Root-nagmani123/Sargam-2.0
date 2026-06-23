@@ -34,7 +34,7 @@ class GroupMappingController extends Controller
         $data_course_id = get_Role_by_course();
 
         $epoch = DataTableRedisCache::readListEpoch(GroupMappingDataTable::LISTING_CACHE_EPOCH_KEY);
-        $cacheKey = 'group_mapping_index_dropdowns:v2:' . md5(json_encode([
+        $cacheKey = 'group_mapping_index_dropdowns:v3:' . md5(json_encode([
             'epoch' => $epoch,
             'data_course_id' => $data_course_id,
             'date' => now()->toDateString(),
@@ -69,15 +69,80 @@ class GroupMappingController extends Controller
                     ->pluck('full_name', 'pk')
                     ->toArray();
 
-                return compact('courses', 'groupTypes', 'facilities');
+                $filterFaculties = $this->getFilterFacultiesForList('active', null, null);
+
+                return compact('courses', 'groupTypes', 'facilities', 'filterFaculties');
             }
         );
 
         $courses = $dropdowns['courses'];
         $groupTypes = $dropdowns['groupTypes'];
         $facilities = $dropdowns['facilities'] ?? [];
+        $filterFaculties = $dropdowns['filterFaculties'] ?? [];
 
-        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes', 'facilities'));
+        return $dataTable->render('admin.group_mapping.index', compact('courses', 'groupTypes', 'facilities', 'filterFaculties'));
+    }
+
+    public function filterFaculties(Request $request)
+    {
+        $statusFilter = $request->input('status_filter', 'active');
+        $courseFilter = $request->input('course_filter');
+        $groupTypeFilter = $request->input('group_type_filter');
+
+        return response()->json([
+            'faculties' => $this->getFilterFacultiesForList($statusFilter, $courseFilter, $groupTypeFilter),
+        ]);
+    }
+
+    private function getFilterFacultiesForList(?string $statusFilter, $courseFilter, $groupTypeFilter): array
+    {
+        if (empty($statusFilter)) {
+            $statusFilter = 'active';
+        }
+
+        $currentDate = Carbon::now()->format('Y-m-d');
+        $data_course_id = get_Role_by_course();
+
+        $facilityIds = GroupTypeMasterCourseMasterMap::query()
+            ->whereNotNull('facility_id')
+            ->when($statusFilter === 'active', function ($query) use ($currentDate) {
+                $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
+                    $courseQuery->where(function ($q) use ($currentDate) {
+                        $q->whereNull('end_date')
+                            ->orWhereDate('end_date', '>=', $currentDate);
+                    });
+                });
+            })
+            ->when($statusFilter === 'archive', function ($query) use ($currentDate) {
+                $query->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
+                    $courseQuery->whereNotNull('end_date')
+                        ->whereDate('end_date', '<', $currentDate);
+                });
+            })
+            ->when(! empty($data_course_id), function ($query) use ($data_course_id) {
+                $query->whereHas('courseGroup', function ($courseQuery) use ($data_course_id) {
+                    $courseQuery->whereIn('pk', $data_course_id);
+                });
+            })
+            ->when(! empty($courseFilter), function ($query) use ($courseFilter) {
+                $query->where('course_name', $courseFilter);
+            })
+            ->when(! empty($groupTypeFilter), function ($query) use ($groupTypeFilter) {
+                $query->where('type_name', $groupTypeFilter);
+            })
+            ->distinct()
+            ->pluck('facility_id')
+            ->filter()
+            ->values();
+
+        if ($facilityIds->isEmpty()) {
+            return [];
+        }
+
+        return FacultyMaster::whereIn('pk', $facilityIds)
+            ->orderBy('full_name')
+            ->pluck('full_name', 'pk')
+            ->toArray();
     }
 
 
@@ -655,6 +720,108 @@ class GroupMappingController extends Controller
     }
 
 
+    /**
+     * Download the group mapping listing as a PDF, respecting the same
+     * filters used by the DataTable (status, course, group type, search).
+     *
+     * @param \Illuminate\Http\Request $request
+     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
+     */
+    public function downloadPdf(Request $request)
+    {
+        try {
+            $statusFilter    = $request->input('status_filter');
+            $courseFilter    = $request->input('course_filter');
+            $groupTypeFilter = $request->input('group_type_filter');
+            $facultyFilter   = $request->input('faculty_filter');
+            $searchValue     = trim((string) $request->input('search', ''));
+            $currentDate     = Carbon::now()->format('Y-m-d');
+
+            // Mirror the DataTable: default to "active" when no status is chosen.
+            if (empty($statusFilter)) {
+                $statusFilter = 'active';
+            }
+
+            $data_course_id = get_Role_by_course();
+
+            $query = GroupTypeMasterCourseMasterMap::query()
+                ->withCount('studentCourseGroupMap')
+                ->with(['courseGroup', 'courseGroupType', 'Faculty'])
+                ->when($statusFilter === 'active', function ($q) use ($currentDate) {
+                    $q->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
+                        $courseQuery->where(function ($inner) use ($currentDate) {
+                            $inner->whereNull('end_date')
+                                ->orWhereDate('end_date', '>=', $currentDate);
+                        });
+                    });
+                })
+                ->when($statusFilter === 'archive', function ($q) use ($currentDate) {
+                    $q->whereHas('courseGroup', function ($courseQuery) use ($currentDate) {
+                        $courseQuery->whereNotNull('end_date')
+                            ->whereDate('end_date', '<', $currentDate);
+                    });
+                })
+                ->when(!empty($data_course_id), function ($q) use ($data_course_id) {
+                    $q->whereHas('courseGroup', function ($courseQuery) use ($data_course_id) {
+                        $courseQuery->whereIn('pk', $data_course_id);
+                    });
+                })
+                ->when(!empty($courseFilter), function ($q) use ($courseFilter) {
+                    $q->where('course_name', $courseFilter);
+                })
+                ->when(!empty($groupTypeFilter), function ($q) use ($groupTypeFilter) {
+                    $q->where('type_name', $groupTypeFilter);
+                })
+                ->when(!empty($facultyFilter), function ($q) use ($facultyFilter) {
+                    $q->where('facility_id', $facultyFilter);
+                })
+                ->when($searchValue !== '', function ($q) use ($searchValue) {
+                    $q->where(function ($subQuery) use ($searchValue) {
+                        $subQuery->where('group_name', 'like', "%{$searchValue}%")
+                            ->orWhereHas('courseGroup', function ($courseQuery) use ($searchValue) {
+                                $courseQuery->where('course_name', 'like', "%{$searchValue}%");
+                            })
+                            ->orWhereHas('courseGroupType', function ($typeQuery) use ($searchValue) {
+                                $typeQuery->where('type_name', 'like', "%{$searchValue}%");
+                            });
+                    });
+                })
+                ->orderBy('pk', 'desc');
+
+            $rows = $query->get();
+
+            $statusLabel = $statusFilter === 'archive' ? 'Archived' : 'Active';
+            $courseLabel = $courseFilter ? (optional(CourseMaster::find($courseFilter))->course_name ?? '') : '';
+            $groupTypeLabel = $groupTypeFilter ? (optional(CourseGroupTypeMaster::find($groupTypeFilter))->type_name ?? '') : '';
+            $facultyLabel = $facultyFilter ? (optional(FacultyMaster::find($facultyFilter))->full_name ?? '') : '';
+
+            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('admin.group_mapping.pdf', [
+                'rows'           => $rows,
+                'statusLabel'    => $statusLabel,
+                'courseLabel'    => $courseLabel,
+                'groupTypeLabel' => $groupTypeLabel,
+                'facultyLabel'   => $facultyLabel,
+                'searchValue'    => $searchValue,
+                'generatedAt'    => Carbon::now()->format('d M Y, h:i A'),
+                'emblemSrc'      => $this->indiaEmblemDataUri(),
+                'lbsnaaLogoSrc'  => $this->lbsnaaLogoDataUri(),
+            ])
+                ->setPaper('a4', 'landscape')
+                ->setOptions([
+                    'defaultFont'          => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled'      => true,
+                    'dpi'                  => 96,
+                ]);
+
+            $filename = 'course-group-mapping-' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', $e->getMessage());
+        }
+    }
+
     function delete(string $id)
     {
         try {
@@ -804,5 +971,57 @@ class GroupMappingController extends Controller
         }
         
         return (int) $faculty->employee_master_pk;
+    }
+
+    private function indiaEmblemDataUri(): string
+    {
+        foreach ([
+            public_path('admin_assets/images/logos/ashoka.png'),
+            public_path('images/ashoka.png'),
+        ] as $path) {
+            if (is_file($path) && is_readable($path)) {
+                $raw = @file_get_contents($path);
+                if ($raw !== false) {
+                    return 'data:image/png;base64,' . base64_encode($raw);
+                }
+            }
+        }
+
+        $url = 'https://upload.wikimedia.org/wikipedia/commons/thumb/5/55/Emblem_of_India.svg/120px-Emblem_of_India.svg.png';
+        try {
+            $response = \Illuminate\Support\Facades\Http::timeout(20)->connectTimeout(8)->get($url);
+            if ($response->successful() && strlen($response->body()) > 100) {
+                return 'data:image/png;base64,' . base64_encode($response->body());
+            }
+        } catch (\Throwable $e) {
+        }
+
+        return $url;
+    }
+
+    private function lbsnaaLogoDataUri(): string
+    {
+        foreach ([
+            public_path('images/lbsnaa_logo.jpg'),
+            public_path('images/lbsnaa_logo.png'),
+            public_path('admin_assets/images/logos/logo_new.png'),
+            public_path('admin_assets/images/logos/logo.png'),
+            public_path('admin_assets/images/logos/logo.svg'),
+        ] as $path) {
+            if (is_file($path) && is_readable($path)) {
+                $raw = @file_get_contents($path);
+                if ($raw !== false) {
+                    $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+                    $mime = match ($ext) {
+                        'svg' => 'image/svg+xml',
+                        'png' => 'image/png',
+                        default => 'image/jpeg',
+                    };
+                    return 'data:' . $mime . ';base64,' . base64_encode($raw);
+                }
+            }
+        }
+
+        return 'https://www.lbsnaa.gov.in/admin_assets/images/logo.png';
     }
 }

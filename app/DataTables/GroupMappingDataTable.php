@@ -40,6 +40,7 @@ class GroupMappingDataTable extends DataTable
                 'status_filter' => (string) $this->request()->input('status_filter', ''),
                 'course_filter' => (string) $this->request()->input('course_filter', ''),
                 'group_type_filter' => (string) $this->request()->input('group_type_filter', ''),
+                'faculty_filter' => (string) $this->request()->input('faculty_filter', ''),
                 'role_course_ids' => get_Role_by_course(),
             ]
         );
@@ -160,10 +161,11 @@ public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
 $statusFilter = request('status_filter');
 $courseFilter = request('course_filter');
 $groupTypeFilter = request('group_type_filter');
+$facultyFilter = request('faculty_filter');
 $currentDate = Carbon::now()->format('Y-m-d');
 
 // Check if any filter is explicitly set
-$hasAnyFilter = !empty($statusFilter) || !empty($courseFilter) || !empty($groupTypeFilter);
+$hasAnyFilter = !empty($statusFilter) || !empty($courseFilter) || !empty($groupTypeFilter) || !empty($facultyFilter);
 
 // If no filters are applied, show active courses by default
 if (!$hasAnyFilter) {
@@ -198,6 +200,9 @@ $courseQuery->whereNotNull('end_date')
     })
     ->when(!empty($groupTypeFilter), function ($query) use ($groupTypeFilter) {
     $query->where('type_name', $groupTypeFilter);
+    })
+    ->when(!empty($facultyFilter), function ($query) use ($facultyFilter) {
+    $query->where('facility_id', $facultyFilter);
     })
     ->orderBy('pk', 'desc');
 

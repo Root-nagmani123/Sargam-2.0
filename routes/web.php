@@ -530,6 +530,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('student-delete', 'deleteStudent')->name('student.delete');
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
+        Route::get('filter-faculties', 'filterFaculties')->name('filter.faculties');
+        Route::get('download-pdf', 'downloadPdf')->name('download.pdf');
         Route::delete('delete/{id}', 'delete')->name('delete');
     });
 

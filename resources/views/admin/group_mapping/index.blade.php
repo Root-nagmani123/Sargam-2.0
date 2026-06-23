@@ -76,10 +76,27 @@
             </li>
         </ul>
 
-        <button type="button" class="btn programme-dt-btn-columns gm-download-btn" id="gmDownloadBtn">
-            <i class="bi bi-download" aria-hidden="true"></i>
-            <span>Download</span>
-        </button>
+        <div class="dropdown">
+            <button type="button" class="btn programme-dt-btn-columns gm-download-btn dropdown-toggle"
+                id="gmDownloadBtn" data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-download" aria-hidden="true"></i>
+                <span>Download</span>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end shadow-sm border-0 rounded-1 py-2" aria-labelledby="gmDownloadBtn">
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="gmDownloadCsv">
+                        <i class="bi bi-filetype-csv text-success" aria-hidden="true"></i>
+                        <span>Download CSV</span>
+                    </button>
+                </li>
+                <li>
+                    <button type="button" class="dropdown-item d-flex align-items-center gap-2 mx-2 rounded-1 py-2" id="gmDownloadPdf">
+                        <i class="bi bi-filetype-pdf text-danger" aria-hidden="true"></i>
+                        <span>Download PDF</span>
+                    </button>
+                </li>
+            </ul>
+        </div>
     </div>
 
     <div class="card gm-dt-card border-0 shadow-sm rounded-1 overflow-hidden">
@@ -103,6 +120,14 @@
                             @endforeach
                         </select>
                     </div>
+                    <div class="programme-dt-filter-select">
+                        <select id="facultyFilter" class="form-select form-select-sm" aria-label="Filter by faculty">
+                            <option value="">Faculty</option>
+                            @foreach($filterFaculties ?? [] as $pk => $name)
+                            <option value="{{ $pk }}">{{ $name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
                     <button type="button" class="btn programme-dt-btn-reset" id="resetFilters">
                         Reset Filters
                     </button>
@@ -114,11 +139,7 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <button type="button" class="btn gm-search-toggle" id="gmSearchToggle"
-                        aria-label="Search" title="Search">
-                        <i class="bi bi-search" aria-hidden="true"></i>
-                    </button>
-                    <div id="gmDtSearch" class="programme-dt-search d-none">
+                    <div id="gmDtSearch" class="programme-dt-search">
                         <div class="dataTables_filter">
                             <label class="mb-0 w-100">
                                 <input type="search" id="gmCustomSearch" class="form-control shadow-none"
@@ -505,16 +526,43 @@ $(document).on('preXhr.dt', '#group-mapping-table', function(e, settings, data) 
     }
     var courseFilter = $('#courseFilter').val();
     var groupTypeFilter = $('#groupTypeFilter').val();
+    var facultyFilter = $('#facultyFilter').val();
     if (courseFilter) {
         data.course_filter = courseFilter;
     }
     if (groupTypeFilter) {
         data.group_type_filter = groupTypeFilter;
     }
+    if (facultyFilter) {
+        data.faculty_filter = facultyFilter;
+    }
 });
 
 $(document).ready(function() {
     window.groupMappingCurrentFilter = 'active';
+
+    function reloadFacultyFilterOptions(done) {
+        $.get('{{ route('group.mapping.filter.faculties') }}', {
+            status_filter: window.groupMappingCurrentFilter || 'active',
+            course_filter: $('#courseFilter').val() || '',
+            group_type_filter: $('#groupTypeFilter').val() || ''
+        }).done(function(res) {
+            var $sel = $('#facultyFilter');
+            var current = $sel.val();
+            $sel.find('option:not(:first)').remove();
+            $.each(res.faculties || {}, function(pk, name) {
+                $sel.append($('<option></option>').val(pk).text(name));
+            });
+            if (current && res.faculties && res.faculties[current]) {
+                $sel.val(current);
+            } else {
+                $sel.val('');
+            }
+            if (typeof done === 'function') {
+                done();
+            }
+        });
+    }
 
     function setActiveFilterButton(activeBtn) {
         $('#filterGroupActive, #filterGroupArchive')
@@ -690,45 +738,40 @@ $(document).ready(function() {
         $('#filterGroupActive').on('click', function() {
             setActiveFilterButton($(this));
             window.groupMappingCurrentFilter = 'active';
-            table.ajax.reload();
+            reloadFacultyFilterOptions(function() {
+                table.ajax.reload();
+            });
         });
 
         $('#filterGroupArchive').on('click', function() {
             setActiveFilterButton($(this));
             window.groupMappingCurrentFilter = 'archive';
-            table.ajax.reload();
+            reloadFacultyFilterOptions(function() {
+                table.ajax.reload();
+            });
         });
 
         $('#courseFilter, #groupTypeFilter').on('change', function() {
+            reloadFacultyFilterOptions(function() {
+                table.ajax.reload();
+            });
+        });
+
+        $('#facultyFilter').on('change', function() {
             table.ajax.reload();
         });
 
         $('#resetFilters').on('click', function() {
             $('#courseFilter').val('');
             $('#groupTypeFilter').val('');
+            $('#facultyFilter').val('');
             window.groupMappingCurrentFilter = 'active';
             setActiveFilterButton($('#filterGroupActive'));
-            table.ajax.reload();
+            reloadFacultyFilterOptions(function() {
+                table.ajax.reload();
+            });
         });
     }, 150);
-
-    /* ---------- Search collapse-to-icon ---------- */
-    var $gmSearchToggle = $('#gmSearchToggle');
-    var $gmSearchSlot = $('#gmDtSearch');
-
-    $gmSearchToggle.on('click', function() {
-        $gmSearchSlot.removeClass('d-none');
-        $gmSearchToggle.addClass('d-none');
-        $gmSearchSlot.find('input').trigger('focus');
-    });
-
-    // Collapse back to the icon when the field is left empty.
-    $(document).on('blur', '#gmDtSearch input', function() {
-        if (!$(this).val().trim()) {
-            $gmSearchSlot.addClass('d-none');
-            $gmSearchToggle.removeClass('d-none');
-        }
-    });
 
     // Drive the DataTable search from the custom input (debounced).
     var gmSearchTimer = null;
@@ -742,8 +785,35 @@ $(document).ready(function() {
         }, 300);
     });
 
+    /* ---------- Download PDF (respects applied filters) ---------- */
+    $('#gmDownloadPdf').on('click', function() {
+        var params = {
+            status_filter: window.groupMappingCurrentFilter || 'active'
+        };
+        var courseFilter = $('#courseFilter').val();
+        var groupTypeFilter = $('#groupTypeFilter').val();
+        var facultyFilter = $('#facultyFilter').val();
+        if (courseFilter) {
+            params.course_filter = courseFilter;
+        }
+        if (groupTypeFilter) {
+            params.group_type_filter = groupTypeFilter;
+        }
+        if (facultyFilter) {
+            params.faculty_filter = facultyFilter;
+        }
+        if ($.fn.DataTable.isDataTable('#group-mapping-table')) {
+            var searchValue = $('#group-mapping-table').DataTable().search();
+            if (searchValue) {
+                params.search = searchValue;
+            }
+        }
+        var url = '{{ route('group.mapping.download.pdf') }}?' + $.param(params);
+        window.open(url, '_blank');
+    });
+
     /* ---------- Download current table as CSV ---------- */
-    $('#gmDownloadBtn').on('click', function() {
+    $('#gmDownloadCsv').on('click', function() {
         var tableEl = document.getElementById('group-mapping-table');
         if (!tableEl) {
             return;
