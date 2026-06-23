@@ -199,29 +199,35 @@ class StudentMedicalExemptionController extends Controller
                     $editUrl = route('student.medical.exemption.edit', encrypt($row->pk));
                     $deleteUrl = route('student.medical.exemption.delete', encrypt($row->pk));
                     $disabled = $row->active_inactive == 1 ? 'disabled' : '';
+                    $checked  = $row->active_inactive == 1 ? 'checked' : '';
 
                     return '
-                        <a href="' . $editUrl . '">
-                            <i class="material-icons material-symbols-rounded">edit</i>
-                        </a>
+                        <div class="sme-row-actions">
+                            <a href="' . $editUrl . '" class="sme-act sme-act-edit sme-edit-btn" title="Edit" aria-label="Edit">
+                                <i class="material-icons material-symbols-rounded">edit</i>
+                            </a>
 
-                        <a href="javascript:void(0)"
-                           class="delete-btn ' . $disabled . '"
-                           data-url="' . $deleteUrl . '">
-                            <i class="material-icons material-symbols-rounded">delete</i>
-                        </a>';
+                            <div class="form-check form-switch sme-act-switch">
+                                <input class="form-check-input status-toggle"
+                                    type="checkbox"
+                                    role="switch"
+                                    data-table="student_medical_exemption"
+                                    data-column="active_inactive"
+                                    data-id="' . $row->pk . '" ' . $checked . '>
+                            </div>
+
+                            <a href="javascript:void(0)"
+                               class="delete-btn sme-act sme-act-delete ' . $disabled . '"
+                               data-url="' . $deleteUrl . '" title="Delete" aria-label="Delete">
+                                <i class="material-icons material-symbols-rounded">delete</i>
+                            </a>
+                        </div>';
                 })
 
                 ->addColumn('status', function ($row) {
-                    $checked = $row->active_inactive == 1 ? 'checked' : '';
-                    return '
-                        <div class="form-check form-switch">
-                            <input class="form-check-input status-toggle"
-                                type="checkbox"
-                                data-table="student_medical_exemption"
-                                data-column="active_inactive"
-                                data-id="' . $row->pk . '" ' . $checked . '>
-                        </div>';
+                    return $row->active_inactive == 1
+                        ? '<span class="sme-status sme-status-active">Active</span>'
+                        : '<span class="sme-status sme-status-inactive">Inactive</span>';
                 })
 
                 ->rawColumns(['document', 'action', 'status'])
@@ -351,6 +357,13 @@ class StudentMedicalExemptionController extends Controller
         );
 
         if ($overlapError) {
+            // Modal (AJAX) submits expect 422 JSON so the error surfaces inline.
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => $overlapError,
+                    'errors'  => ['from_date' => [$overlapError]],
+                ], 422);
+            }
             return redirect()
                 ->back()
                 ->withInput()
@@ -461,6 +474,13 @@ class StudentMedicalExemptionController extends Controller
         );
 
         if ($overlapError) {
+            // Modal (AJAX) submits expect 422 JSON so the error surfaces inline.
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => $overlapError,
+                    'errors'  => ['from_date' => [$overlapError]],
+                ], 422);
+            }
             return redirect()
                 ->back()
                 ->withInput()

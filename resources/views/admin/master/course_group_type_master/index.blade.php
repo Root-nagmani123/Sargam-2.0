@@ -8,12 +8,20 @@
         buttonText="Add Course Group Type"
         buttonId="showAlert"
         buttonIcon="add"
-        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-2 fw-semibold shadow-sm" />
+        buttonClass="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm" />
 
-    <div class="card cgt-dt-card border-0 shadow-sm rounded-3 overflow-hidden">
+    <div class="card cgt-dt-card border-0 shadow-sm rounded-1 overflow-hidden">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-column flex-lg-row align-items-stretch align-items-lg-center justify-content-end gap-3 mb-4">
-                <div id="cgtDtSearch" class="programme-dt-search ms-lg-auto" data-dt-search-for="coursegrouptype"></div>
+                <div class="d-flex flex-wrap align-items-center justify-content-end gap-2">
+                    <button type="button" class="btn programme-dt-btn-columns" id="cgtBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#cgtColumnVisibilityModal"
+                        title="Show / hide columns">
+                        <span>Columns</span>
+                        <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div id="cgtDtSearch" class="programme-dt-search"></div>
+                </div>
             </div>
 
             <div class="programme-dt-panel">
@@ -29,7 +37,7 @@
                         </thead>
                     </table>
                 </div>
-                <div id="cgtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="coursegrouptype"></div>
+                <div id="cgtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
             </div>
         </div>
     </div>
@@ -51,14 +59,13 @@
                 <h2 class="programme-confirm-title h4 fw-bold mb-3" id="cgtConfirmTitle">Confirm</h2>
                 <p class="programme-confirm-message mb-4 mb-md-5" id="cgtConfirmMessage"></p>
                 <div class="d-flex flex-column flex-sm-row gap-3 justify-content-center align-items-stretch programme-confirm-actions">
-                    <button type="button" class="btn btn-lg rounded-3 programme-confirm-btn" id="cgtConfirmCancel">
+                    <button type="button" class="btn btn-lg rounded-1 programme-confirm-btn" id="cgtConfirmCancel">
                         Cancel
                     </button>
-                    <button type="button" class="btn btn-lg rounded-3 programme-confirm-btn" id="cgtConfirmOk">
+                    <button type="button" class="btn btn-lg rounded-1 programme-confirm-btn" id="cgtConfirmOk">
                         Confirm
                     </button>
                 </div>
-                <div id="cgtDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="coursegrouptype"></div>
             </div>
         </div>
     </div>
@@ -91,8 +98,8 @@
                 </form>
             </div>
             <div class="modal-footer border-0 gap-2">
-                <button type="button" class="btn btn-outline-primary rounded-3" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-3" id="cgtAddSubmit">Create Course Group</button>
+                <button type="button" class="btn btn-outline-primary rounded-1" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-1" id="cgtAddSubmit">Create Course Group</button>
             </div>
         </div>
     </div>
@@ -126,8 +133,27 @@
                 </form>
             </div>
             <div class="modal-footer border-0 gap-2">
-                <button type="button" class="btn btn-outline-primary rounded-3" data-bs-dismiss="modal">Cancel</button>
-                <button type="button" class="btn btn-primary rounded-3" id="cgtEditSubmit">Update Course Group</button>
+                <button type="button" class="btn btn-outline-primary rounded-1" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary rounded-1" id="cgtEditSubmit">Update Course Group</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="cgtColumnVisibilityModal" tabindex="-1" aria-labelledby="cgtColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="cgtColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="cgtColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
             </div>
         </div>
     </div>
@@ -307,6 +333,80 @@ $(function() {
         }
     }
 
+    function enhanceCgtDtControls() {
+        const $wrapper = $('#coursegrouptype_wrapper');
+        if (!$wrapper.length) {
+            return;
+        }
+
+        const $searchSlot = $('#cgtDtSearch');
+        const $footer = $('#cgtDtFooter');
+
+        if (!$searchSlot.find('.dataTables_filter').length) {
+            const $filter = $wrapper.find('.dataTables_filter').first();
+            if ($filter.length) {
+                $filter.find('input')
+                    .addClass('form-control shadow-none')
+                    .attr('placeholder', 'Search')
+                    .attr('aria-label', 'Search course group types');
+                $filter.find('label').contents().filter(function() {
+                    return this.nodeType === 3;
+                }).remove();
+                $searchSlot.append($filter);
+            }
+        }
+
+        if ($footer.data('dtReady')) {
+            updateCgtDtCount();
+            return;
+        }
+
+        const $paginate = $wrapper.find('.dataTables_paginate').first();
+        const $length = $wrapper.find('.dataTables_length').first();
+        const $info = $wrapper.find('.dataTables_info').first();
+
+        if (!$footer.length) {
+            return;
+        }
+
+        const $pagCol = $('<div class="programme-dt-pagination"></div>');
+        const $countCol = $('<div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto"></div>');
+
+        if ($paginate.length) {
+            $paginate.find('.pagination').addClass('mb-0');
+            $pagCol.append($paginate);
+        }
+
+        if ($length.length) {
+            const $select = $length.find('select').addClass('form-select form-select-sm');
+            $length.find('label')
+                .empty()
+                .append(document.createTextNode('Showing '))
+                .append($select)
+                .append(document.createTextNode(' '));
+            $countCol.append($length);
+        }
+
+        if ($info.length) {
+            $info.addClass('mb-0');
+            $countCol.append($info);
+        }
+
+        $footer.append($pagCol).append($countCol);
+        $footer.data('dtReady', true);
+    }
+
+    function updateCgtDtCount() {
+        if (!table) {
+            return;
+        }
+        const info = table.page.info();
+        const $info = $('#cgtDtFooter .dataTables_info');
+        if ($info.length && info.recordsDisplay !== undefined) {
+            $info.text('of ' + info.recordsDisplay.toLocaleString() + ' items');
+        }
+    }
+
     function decorateCgtRows() {
         $(tableSelector + ' tbody tr').each(function() {
             const $row = $(this);
@@ -334,7 +434,7 @@ $(function() {
 
                 $statusCell.empty().append(
                     $('<span>', {
-                        class: 'badge rounded-pill programme-status-badge cgt-status-badge ' + badgeClass,
+                        class: 'badge rounded-1 programme-status-badge cgt-status-badge ' + badgeClass,
                         text: label
                     })
                 );
@@ -356,8 +456,83 @@ $(function() {
         });
     }
 
+    /* ---------- Column show / hide (DataTables API) ---------- */
+    const cgtColStorageKey = 'cgtGrid:hiddenColumns:v1';
+
+    function cgtGetHiddenCols() {
+        try {
+            const raw = localStorage.getItem(cgtColStorageKey);
+            const arr = raw ? JSON.parse(raw) : [];
+            return Array.isArray(arr) ? arr : [];
+        } catch (e) {
+            return [];
+        }
+    }
+
+    function cgtPersistHiddenCols(arr) {
+        try { localStorage.setItem(cgtColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    function setupCgtColumns(dt) {
+        if (!dt) {
+            return;
+        }
+        const hidden = cgtGetHiddenCols();
+
+        // Apply saved visibility — DataTables keeps this across redraws / ajax reloads.
+        dt.columns().every(function() {
+            const idx = this.index();
+            this.visible(hidden.indexOf(idx) === -1, false);
+        });
+        dt.columns.adjust();
+
+        // Build the modal checkboxes once from the live table headers.
+        const $grid = $('#cgtColumnToggleGrid');
+        if (!$grid.length) {
+            return;
+        }
+        $grid.empty();
+
+        dt.columns().every(function() {
+            const idx = this.index();
+            const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
+            if (!title) {
+                return;
+            }
+
+            const inputId = 'cgtcolvis_' + idx;
+            const $cell = $('<div class="col-12 col-sm-6"></div>');
+            const $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                .attr('for', inputId);
+            const $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                .attr('id', inputId)
+                .prop('checked', hidden.indexOf(idx) === -1);
+
+            $cb.on('change', function() {
+                const h = cgtGetHiddenCols();
+                const pos = h.indexOf(idx);
+                if (this.checked) {
+                    if (pos !== -1) h.splice(pos, 1);
+                } else {
+                    if (pos === -1) h.push(idx);
+                }
+                cgtPersistHiddenCols(h);
+                dt.column(idx).visible(this.checked, false);
+                dt.columns.adjust();
+            });
+
+            $label.append($cb).append($('<span></span>').text(title));
+            $cell.append($label);
+            $grid.append($cell);
+        });
+    }
+
     if ($.fn.DataTable.isDataTable(tableSelector)) {
         table = $(tableSelector).DataTable();
+        enhanceCgtDtControls();
+        decorateCgtRows();
+        updateCgtDtCount();
+        setupCgtColumns(table);
     } else {
         table = $(tableSelector).DataTable({
             processing: true,
@@ -410,15 +585,35 @@ $(function() {
                 }
             ],
             language: {
+                search: '',
+                searchPlaceholder: 'Search',
                 processing: '<span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>Loading…',
                 emptyTable: 'No course group types found.',
-                zeroRecords: 'No matching course group types found.'
+                zeroRecords: 'No matching course group types found.',
+                lengthMenu: 'Showing _MENU_',
+                info: 'of _TOTAL_ items',
+                infoEmpty: 'of 0 items',
+                infoFiltered: 'of _MAX_ items',
+                paginate: {
+                    previous: '‹',
+                    next: '›'
+                }
             },
+            dom: '<"row d-none"<"col-sm-12"f>>rt<"row d-none"<"col-sm-12"ilp>>',
             initComplete: function() {
+                enhanceCgtDtControls();
                 decorateCgtRows();
+                updateCgtDtCount();
+                setupCgtColumns(this.api());
             },
             drawCallback: function() {
+                const $wrapper = $('#coursegrouptype_wrapper');
+                if ($wrapper.find('.dataTables_paginate').length && !$('#cgtDtFooter .dataTables_paginate').length) {
+                    $('#cgtDtFooter').empty().data('dtReady', false);
+                }
+                enhanceCgtDtControls();
                 decorateCgtRows();
+                updateCgtDtCount();
             }
         });
     }

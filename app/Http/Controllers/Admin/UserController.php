@@ -1559,6 +1559,11 @@ class UserController extends Controller
             ['path' => $request->url(), 'query' => $request->query()]
         );
 
+        // Live search / pagination: return only the table partial (no full reload).
+        if ($request->ajax()) {
+            return view('admin.user_management.users._table', compact('users', 'perPage', 'search', 'user_type'));
+        }
+
         return view('admin.user_management.users.index', compact('users', 'perPage', 'search', 'user_type'));
     }
 

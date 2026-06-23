@@ -79,9 +79,7 @@ class CourseMasterDataTable extends DataTable
                 $checked = $isActive ? 'checked' : '';
                 $csrf = csrf_token();
 
-                $deleteHtml = $isActive
-                    ? '<button type="button" class="programme-action-btn programme-action-btn--danger d-none" disabled aria-disabled="true" title="Cannot delete active course"><i class="bi bi-trash3" aria-hidden="true"></i></button>'
-                    : '<form action="'.$deleteUrl.'" method="POST" class="d-inline-flex m-0 programme-delete-form">'
+                $deleteHtml = '<form action="'.$deleteUrl.'" method="POST" class="d-inline-flex m-0 programme-delete-form">'
                         .'<input type="hidden" name="_token" value="'.$csrf.'">'
                         .'<input type="hidden" name="_method" value="DELETE">'
                         .'<button type="submit" class="programme-action-btn programme-action-btn--danger programme-delete-btn" aria-label="Delete course">'
