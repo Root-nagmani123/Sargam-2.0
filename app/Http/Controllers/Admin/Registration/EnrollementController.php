@@ -14,6 +14,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StudentEnrollmentExport as StudentsExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Exports\StudentEnrollmentExport;
+use App\Exports\CourseParticipantExport;
 use Illuminate\Validation\Rule;
 use Mpdf\Mpdf;
 use Yajra\DataTables\Facades\DataTables;
@@ -460,6 +461,98 @@ class EnrollementController extends Controller
             'status',
             'courseStatus'
         ));
+    }
+
+    /**
+     * My Course Participant – replica of studentCourses().
+     * Self-contained so the original Course Wise OTs List page is unaffected.
+     */
+    public function myCourseParticipant(Request $request)
+    {
+        // Role-scoped courses: [] = all (Admin/Super Admin), [-1] = none, [pks] = restricted
+        $data_course_id = get_Role_by_course();
+
+        // For AJAX requests from DataTables - list participants of the user's courses
+        if ($request->ajax() && $request->has('draw')) {
+            $query = StudentMasterCourseMap::with([
+                'studentMaster.cadre',
+                'course'
+            ])
+                ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
+                ->orderByDesc('created_date');
+
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('user_name', function ($row) {
+                    return $row->studentMaster->user_id ?? 'N/A';
+                })
+                ->addColumn('name', function ($row) {
+                    return $row->studentMaster->display_name ?? 'N/A';
+                })
+                ->addColumn('ot_code', function ($row) {
+                    return $row->studentMaster->generated_OT_code ?? 'N/A';
+                })
+                ->addColumn('email_id', function ($row) {
+                    return $row->studentMaster->email ?? 'N/A';
+                })
+                ->addColumn('mobile_no', function ($row) {
+                    return $row->studentMaster->contact_no ?? 'N/A';
+                })
+                ->addColumn('cadre', function ($row) {
+                    return $row->studentMaster->cadre->cadre_name ?? 'N/A';
+                })
+                ->make(true);
+        }
+
+        // For initial page load - count only the user's scoped participants
+        $totalCount = StudentMasterCourseMap::query()
+            ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
+            ->count();
+        $filteredCount = $totalCount;
+
+        return view('admin.registration.my_course_participant', compact(
+            'totalCount',
+            'filteredCount'
+        ));
+    }
+
+    /**
+     * Dedicated export for My Course Participant (user_name, Name, ot code, email_id, mobile no, cadre).
+     * Lean output so large datasets don't exhaust memory on PDF.
+     */
+    public function myCourseParticipantExport(Request $request)
+    {
+        @ini_set('memory_limit', '1024M');
+        @set_time_limit(300);
+
+        $format = $request->input('format');
+
+        // Role-scoped courses (same scoping as the listing)
+        $data_course_id = get_Role_by_course();
+
+        $participants = StudentMasterCourseMap::with([
+            'studentMaster.cadre'
+        ])
+            ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
+            ->orderByDesc('created_date')
+            ->get();
+
+        $totalCount = $participants->count();
+
+        if ($format === 'xlsx') {
+            return Excel::download(new CourseParticipantExport($participants), 'course_participants.xlsx');
+        }
+
+        if ($format === 'csv') {
+            return Excel::download(new CourseParticipantExport($participants), 'course_participants.csv');
+        }
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.report.course_participant_pdf', compact('participants', 'totalCount'));
+            return $pdf->setPaper('a4', 'landscape')->download('course_participants.pdf');
+        }
+
+        return back()->with('error', 'Invalid export format selected.');
     }
 
     public function StudenEnroll_export(Request $request)

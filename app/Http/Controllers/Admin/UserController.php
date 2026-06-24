@@ -366,6 +366,9 @@ class UserController extends Controller
         $isStudentOT    = hasRole('Student-OT');
         $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
 
+        // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
+        $myCourseIds = get_Role_by_course();
+
         // Hardcoded card definitions: count, link, visibility
         $cardDefinitions = [
             'pending_permanent_id'    => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
@@ -385,6 +388,7 @@ class UserController extends Controller
             'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
+            'my_course_pariticant'    => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
         ];
 
         // Count map for custom cards added via UI.
