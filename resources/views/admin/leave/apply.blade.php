@@ -15,6 +15,11 @@
     $pageTitle = ($readOnly ?? false) ? 'View Leave Application' : (($application ?? null) ? 'Edit Leave Application' : 'Apply Leave');
     $stationedReady = $stationedLeaveConfigured ?? false;
     $upcomingStationed = $upcomingStationedLeave ?? null;
+    $ptReady = $ptExemptionConfigured ?? false;
+    $upcomingPt = $upcomingPtExemption ?? null;
+    $activePt = $activePtExemption ?? null;
+    $ptMinDate = $activePt?->effective_from?->format('Y-m-d')
+        ?? ($upcomingPt?->effective_from?->format('Y-m-d'));
 @endphp
 
 <div class="container-fluid py-3 leave-module">
@@ -40,6 +45,18 @@
 
             @if($errors->has('leave_type'))
                 <div class="alert alert-danger py-2 small mb-3">{{ $errors->first('leave_type') }}</div>
+            @endif
+
+            @if($isPt && ! $ptReady && $upcomingPt)
+                <div class="alert alert-warning py-2 small mb-3">
+                    PT exemption for <strong>{{ $course->course_name }}</strong> will be available from
+                    <strong>{{ $upcomingPt->effective_from->format('d-m-Y') }}</strong>.
+                    Please select a start date on or after that date.
+                </div>
+            @elseif($isPt && ! $ptReady && ! $upcomingPt)
+                <div class="alert alert-warning py-2 small mb-3">
+                    PT exemption is not configured for your course: <strong>{{ $course->course_name }}</strong>.
+                </div>
             @endif
 
             @if(! $isPt && ! $stationedReady && $upcomingStationed)
@@ -107,12 +124,15 @@
                             <label class="leave-form-label">Start Date <span class="text-danger">*</span></label>
                             <div class="leave-form-field">
                                 <div class="leave-date-wrap">
-                                    <input type="date" name="from_date" id="from_date" class="form-control" required
+                                    <input type="date" name="from_date" id="from_date" class="form-control @error('from_date') is-invalid @enderror" required
                                         value="{{ old('from_date', isset($application) ? $application->from_date?->format('Y-m-d') : '') }}"
-                                        @if(! $isPt && $upcomingStationed) min="{{ $upcomingStationed->effective_from->format('Y-m-d') }}" @endif
+                                        @if($isPt && $ptMinDate) min="{{ $ptMinDate }}" @elseif(! $isPt && $upcomingStationed) min="{{ $upcomingStationed->effective_from->format('Y-m-d') }}" @endif
                                         {{ ($readOnly ?? false) ? 'readonly' : '' }}>
                                     <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
                                 </div>
+                                @error('from_date')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
 
@@ -148,10 +168,14 @@
                         <div class="leave-form-row">
                             <label class="leave-form-label">Contact No. during Exemption <span class="text-danger">*</span></label>
                             <div class="leave-form-field">
-                                <input type="text" name="contact_number" class="form-control" maxlength="15"
-                                    placeholder="Enter Contact Number"
+                                <input type="text" name="contact_number" class="form-control @error('contact_number') is-invalid @enderror"
+                                    maxlength="10" inputmode="numeric" pattern="[6-9][0-9]{9}" required
+                                    placeholder="10-digit mobile number"
                                     value="{{ old('contact_number', $application->contact_number ?? '') }}"
                                     {{ ($readOnly ?? false) ? 'readonly' : '' }}>
+                                @error('contact_number')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
                     </div>
@@ -173,7 +197,7 @@
                                 <span>Note</span>
                             </div>
                             <p class="leave-note-text">
-                                You can edit or delete the leave application until it is approved by the authority.
+                                PT exemption is approved automatically on submit. Save as draft if you want to edit later.
                             </p>
                         </div>
                     </div>
@@ -185,7 +209,7 @@
                                 <span>Note</span>
                             </div>
                             <p class="leave-note-text">
-                                You can edit or delete the leave application until it is approved by the authority.
+                                Stationed leave stays pending until faculty approval. You can edit or delete it while pending or in draft.
                             </p>
                         </div>
                     </div>
@@ -194,6 +218,23 @@
 
                 <div class="mt-4 pt-2">
                     <h3 class="attachment-section-title">Attachment (Optional)</h3>
+                    <p class="text-muted small mb-2">
+                        Allowed file types: <strong>PDF</strong>, <strong>JPG</strong>, <strong>JPEG</strong>, <strong>PNG</strong>, <strong>DOC</strong>, <strong>DOCX</strong>.
+                        Max file size: <strong>5 MB</strong> per file.
+                    </p>
+                    @php
+                        $attachmentErrors = collect($errors->messages())->filter(
+                            fn ($_, $key) => str_starts_with($key, 'attachments.')
+                        )->flatten();
+                    @endphp
+                    @if($attachmentErrors->isNotEmpty())
+                        <div class="alert alert-danger py-2 small mb-2">
+                            @foreach($attachmentErrors as $error)
+                                <div>{{ $error }}</div>
+                            @endforeach
+                        </div>
+                    @endif
+                    <div id="attachment-validation-error" class="alert alert-danger py-2 small d-none mb-2"></div>
                     <div class="table-responsive">
                         <table class="table attachment-table mb-2">
                             <thead>
@@ -260,6 +301,57 @@
 <script>
 $(function () {
     let attachmentIndex = 0;
+    const allowedExtensions = ['pdf', 'jpg', 'jpeg', 'png', 'doc', 'docx'];
+    const maxSizeBytes = 5 * 1024 * 1024;
+    const acceptTypes = '.pdf,.jpg,.jpeg,.png,.doc,.docx';
+
+    function validateAttachmentFile(file) {
+        if (!file) {
+            return null;
+        }
+
+        const ext = (file.name.split('.').pop() || '').toLowerCase();
+        if (!allowedExtensions.includes(ext)) {
+            return 'File "' + file.name + '" is not allowed. Use PDF, JPG, JPEG, PNG, DOC, or DOCX.';
+        }
+
+        if (file.size > maxSizeBytes) {
+            return 'File "' + file.name + '" exceeds the 5 MB size limit.';
+        }
+
+        return null;
+    }
+
+    function showAttachmentError(message) {
+        $('#attachment-validation-error').text(message).removeClass('d-none');
+    }
+
+    function clearAttachmentError() {
+        $('#attachment-validation-error').addClass('d-none').text('');
+        $('.leave-attachment-file').removeClass('is-invalid');
+    }
+
+    function validateAllAttachments() {
+        clearAttachmentError();
+
+        let hasError = false;
+        $('.leave-attachment-file').each(function () {
+            const file = this.files && this.files[0];
+            if (!file) {
+                return;
+            }
+
+            const error = validateAttachmentFile(file);
+            if (error) {
+                hasError = true;
+                $(this).addClass('is-invalid');
+                showAttachmentError(error);
+                return false;
+            }
+        });
+
+        return !hasError;
+    }
 
     function updateTotalDays() {
         const from = $('#from_date').val();
@@ -287,13 +379,33 @@ $(function () {
             <tr>
                 <td class="attach-serial"></td>
                 <td><input type="text" name="attachments[${attachmentIndex}][title]" class="form-control form-control-sm" placeholder="Medical Certificate"></td>
-                <td><input type="file" name="attachments[${attachmentIndex}][file]" class="form-control form-control-sm"></td>
+                <td><input type="file" name="attachments[${attachmentIndex}][file]" class="form-control form-control-sm leave-attachment-file" accept="${acceptTypes}"></td>
                 <td><button type="button" class="btn btn-sm border-0 p-1 remove-attachment-row"><i class="material-icons material-symbols-rounded text-danger" style="font-size:20px;">delete</i></button></td>
             </tr>
         `;
         $('#attachment-rows').append(row);
         attachmentIndex++;
         refreshAttachmentSerial();
+    });
+
+    $(document).on('change', '.leave-attachment-file', function () {
+        clearAttachmentError();
+        const file = this.files && this.files[0];
+        if (!file) {
+            return;
+        }
+
+        const error = validateAttachmentFile(file);
+        if (error) {
+            $(this).addClass('is-invalid').val('');
+            showAttachmentError(error);
+        }
+    });
+
+    $('#leave-apply-form').on('submit', function (e) {
+        if (!validateAllAttachments()) {
+            e.preventDefault();
+        }
     });
 
     $(document).on('click', '.remove-attachment-row', function () {

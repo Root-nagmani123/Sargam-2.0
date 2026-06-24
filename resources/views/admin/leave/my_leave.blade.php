@@ -56,7 +56,9 @@
                     </div>
 
                     <div class="info-alert p-3 mt-3 small">
-                        You can edit or delete only those leave applications which are in <strong>Pending</strong> or <strong>Draft</strong> status.
+                        <strong>PT Exemption</strong> is approved automatically on submit.
+                        <strong>Stationed Leave</strong> stays pending until faculty approval.
+                        You can edit or delete only <strong>Draft</strong> or <strong>Pending</strong> applications.
                     </div>
                 </div>
             </div>

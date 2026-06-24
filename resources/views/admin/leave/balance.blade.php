@@ -31,7 +31,7 @@
                     </div>
 
                     <div class="info-alert p-3 mt-4 small">
-                        PT balance is updated once leave is approved by the authority.
+                        PT balance is updated when a PT exemption application is submitted (auto-approved).
                     </div>
                 </div>
             </div>

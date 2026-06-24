@@ -56,20 +56,59 @@ class LeaveApplicationService
         return (float) ($from->diffInDays($to) + 1);
     }
 
+    /**
+     * Latest active PT exemption config for a course and gender as of a given date
+     * (defaults to today). Uses the leave start date when validating applications.
+     */
+    public function getActivePtExemptionConfig(int $coursePk, ?string $gender, ?string $asOfDate = null): ?ExemptionMaster
+    {
+        $genderLabel = $this->normalizeGender($gender);
+        if (! $genderLabel) {
+            return null;
+        }
+
+        $asOfDate = $asOfDate ?? now()->toDateString();
+
+        return ExemptionMaster::query()
+            ->where('course_master_pk', $coursePk)
+            ->where('gender', $genderLabel)
+            ->where('active_inactive', 1)
+            ->whereDate('effective_from', '<=', $asOfDate)
+            ->orderByDesc('effective_from')
+            ->first();
+    }
+
+    public function ptExemptionConfigured(int $coursePk, ?string $gender, ?string $asOfDate = null): bool
+    {
+        return $this->getActivePtExemptionConfig($coursePk, $gender, $asOfDate) !== null;
+    }
+
+    /**
+     * Next PT exemption config that is active but not yet effective (for UI hints).
+     */
+    public function getUpcomingPtExemptionConfig(int $coursePk, ?string $gender): ?ExemptionMaster
+    {
+        $genderLabel = $this->normalizeGender($gender);
+        if (! $genderLabel) {
+            return null;
+        }
+
+        return ExemptionMaster::query()
+            ->where('course_master_pk', $coursePk)
+            ->where('gender', $genderLabel)
+            ->where('active_inactive', 1)
+            ->whereDate('effective_from', '>', now()->toDateString())
+            ->orderBy('effective_from')
+            ->first();
+    }
+
     public function getPtBalance(int $studentPk, int $coursePk, ?string $gender): array
     {
         $genderLabel = $this->normalizeGender($gender);
         $allocated = 0.0;
 
         if ($genderLabel) {
-            $config = ExemptionMaster::query()
-                ->where('course_master_pk', $coursePk)
-                ->where('gender', $genderLabel)
-                ->where('active_inactive', 1)
-                ->whereDate('effective_from', '<=', now()->toDateString())
-                ->orderByDesc('effective_from')
-                ->first();
-
+            $config = $this->getActivePtExemptionConfig($coursePk, $gender);
             $allocated = $config ? (float) $config->exemption_days : 0.0;
         }
 

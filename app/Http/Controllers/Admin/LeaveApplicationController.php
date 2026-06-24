@@ -37,15 +37,7 @@ class LeaveApplicationController extends Controller
             $context['student']->gender ?? null
         );
 
-        return view('admin.leave.apply', array_merge($context, [
-            'leaveType' => $leaveType,
-            'natures' => $natures,
-            'ptBalance' => $ptBalance,
-            'application' => null,
-            'readOnly' => false,
-            'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
-            'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
-        ]));
+        return view('admin.leave.apply', array_merge($context, $this->leaveFormViewData($context, $leaveType, $natures, $ptBalance, null, false)));
     }
 
     public function store(Request $request)
@@ -91,15 +83,7 @@ class LeaveApplicationController extends Controller
             $context['student']->gender ?? null
         );
 
-        return view('admin.leave.apply', array_merge($context, [
-            'leaveType' => $leaveType,
-            'natures' => $natures,
-            'ptBalance' => $ptBalance,
-            'application' => $application->load('attachments'),
-            'readOnly' => false,
-            'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
-            'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
-        ]));
+        return view('admin.leave.apply', array_merge($context, $this->leaveFormViewData($context, $leaveType, $natures, $ptBalance, $application->load('attachments'), false)));
     }
 
     public function update(Request $request, $id)
@@ -126,15 +110,7 @@ class LeaveApplicationController extends Controller
             $context['student']->gender ?? null
         );
 
-        return view('admin.leave.apply', array_merge($context, [
-            'leaveType' => $leaveType,
-            'natures' => $natures,
-            'ptBalance' => $ptBalance,
-            'application' => $application,
-            'readOnly' => true,
-            'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
-            'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
-        ]));
+        return view('admin.leave.apply', array_merge($context, $this->leaveFormViewData($context, $leaveType, $natures, $ptBalance, $application, true)));
     }
 
     public function destroy($id)
@@ -170,13 +146,17 @@ class LeaveApplicationController extends Controller
             'from_date' => 'required|date',
             'to_date' => 'required|date|after_or_equal:from_date',
             'reason' => 'required|string|max:2000',
-            'contact_number' => 'nullable|string|max:15',
+            'contact_number' => ['required', 'string', 'regex:/^[6-9][0-9]{9}$/'],
             'submit_action' => 'required|in:draft,submit',
             'attachments' => 'nullable|array',
             'attachments.*.title' => 'nullable|string|max:200',
             'attachments.*.file' => 'nullable|file|max:5120|mimes:pdf,jpg,jpeg,png,doc,docx',
             'existing_attachments' => 'nullable|array',
             'existing_attachments.*' => 'integer',
+        ], [
+            'contact_number.regex' => 'Contact number must be a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
+            'attachments.*.file.max' => 'Each attachment must not exceed 5 MB.',
+            'attachments.*.file.mimes' => 'Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX.',
         ]);
 
         if ($validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE
@@ -190,6 +170,27 @@ class LeaveApplicationController extends Controller
 
             return back()->withInput()->withErrors([
                 'leave_type' => $message,
+            ]);
+        }
+
+        if ($validated['leave_type'] === LeaveApplication::TYPE_PT_EXEMPTION
+            && ! $this->leaveService->ptExemptionConfigured(
+                $context['course_pk'],
+                $context['student']->gender ?? null,
+                $validated['from_date']
+            )) {
+            $courseName = $context['course']->course_name ?? 'your course';
+            $upcoming = $this->leaveService->getUpcomingPtExemptionConfig(
+                $context['course_pk'],
+                $context['student']->gender ?? null
+            );
+            $message = $upcoming
+                ? 'PT exemption for ' . $courseName . ' will be available from '
+                    . $upcoming->effective_from->format('d-m-Y') . '. Please choose a start date on or after that date.'
+                : 'PT exemption is not configured for your course (' . $courseName . ').';
+
+            return back()->withInput()->withErrors([
+                'from_date' => $message,
             ]);
         }
 
@@ -220,13 +221,20 @@ class LeaveApplicationController extends Controller
             }
         }
 
-        $status = $validated['submit_action'] === 'submit'
-            ? LeaveApplication::STATUS_PENDING
-            : LeaveApplication::STATUS_DRAFT;
+        $isSubmit = $validated['submit_action'] === 'submit';
+        $autoApprovePt = $isSubmit && $validated['leave_type'] === LeaveApplication::TYPE_PT_EXEMPTION;
+
+        if ($isSubmit) {
+            $status = $autoApprovePt
+                ? LeaveApplication::STATUS_APPROVED
+                : LeaveApplication::STATUS_PENDING;
+        } else {
+            $status = LeaveApplication::STATUS_DRAFT;
+        }
 
         $now = now();
 
-        DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request) {
+        DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprovePt) {
             $data = [
                 'course_master_pk' => $context['course_pk'],
                 'student_master_pk' => $context['student_pk'],
@@ -238,7 +246,10 @@ class LeaveApplicationController extends Controller
                 'reason' => $validated['reason'],
                 'contact_number' => $validated['contact_number'] ?? null,
                 'status' => $status,
-                'submitted_at' => $status === LeaveApplication::STATUS_PENDING ? $now : null,
+                'submitted_at' => $isSubmit ? $now : null,
+                'approved_at' => $autoApprovePt ? $now : ($isSubmit ? null : $application?->approved_at),
+                'approved_by_faculty_pk' => $autoApprovePt ? null : ($isSubmit ? null : $application?->approved_by_faculty_pk),
+                'rejection_remarks' => $autoApprovePt ? null : ($isSubmit ? null : $application?->rejection_remarks),
                 'modified_date' => $now,
             ];
 
@@ -275,9 +286,11 @@ class LeaveApplicationController extends Controller
             }
         });
 
-        $message = $status === LeaveApplication::STATUS_PENDING
-            ? 'Leave application submitted successfully.'
-            : 'Leave application saved as draft.';
+        $message = match (true) {
+            ! $isSubmit => 'Leave application saved as draft.',
+            $autoApprovePt => 'PT exemption application submitted and approved successfully.',
+            default => 'Leave application submitted successfully. Awaiting faculty approval.',
+        };
 
         return redirect()->route('leave.my-leave')->with('success', $message);
     }
@@ -337,5 +350,29 @@ class LeaveApplicationController extends Controller
             ->where('active_inactive', 1)
             ->orderBy('display_order')
             ->get();
+    }
+
+    protected function leaveFormViewData(
+        array $context,
+        string $leaveType,
+        $natures,
+        array $ptBalance,
+        ?LeaveApplication $application,
+        bool $readOnly
+    ): array {
+        $gender = $context['student']->gender ?? null;
+
+        return [
+            'leaveType' => $leaveType,
+            'natures' => $natures,
+            'ptBalance' => $ptBalance,
+            'application' => $application,
+            'readOnly' => $readOnly,
+            'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
+            'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
+            'ptExemptionConfigured' => $this->leaveService->ptExemptionConfigured($context['course_pk'], $gender),
+            'upcomingPtExemption' => $this->leaveService->getUpcomingPtExemptionConfig($context['course_pk'], $gender),
+            'activePtExemption' => $this->leaveService->getActivePtExemptionConfig($context['course_pk'], $gender),
+        ];
     }
 }
