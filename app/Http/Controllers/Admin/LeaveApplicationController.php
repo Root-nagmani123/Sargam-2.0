@@ -154,6 +154,7 @@ class LeaveApplicationController extends Controller
             'existing_attachments' => 'nullable|array',
             'existing_attachments.*' => 'integer',
         ], [
+            'to_date.after_or_equal' => 'End date cannot be before the start date. Please update the end date.',
             'contact_number.regex' => 'Contact number must be a valid 10-digit mobile number starting with 6, 7, 8, or 9.',
             'attachments.*.file.max' => 'Each attachment must not exceed 5 MB.',
             'attachments.*.file.mimes' => 'Allowed file types: PDF, JPG, JPEG, PNG, DOC, DOCX.',
@@ -162,14 +163,17 @@ class LeaveApplicationController extends Controller
         if ($validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE
             && ! $this->leaveService->stationedLeaveConfigured($context['course_pk'], $validated['from_date'])) {
             $courseName = $context['course']->course_name ?? 'your course';
-            $upcoming = $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']);
+            $upcoming = $this->leaveService->getUpcomingStationedLeaveConfig(
+                $context['course_pk'],
+                $validated['from_date']
+            );
             $message = $upcoming
-                ? 'Stationed leave for ' . $courseName . ' will be available from '
-                    . $upcoming->effective_from->format('d-m-Y') . '. Please choose a start date on or after that date.'
+                ? 'Stationed leave for ' . $courseName . ' is available from '
+                    . $upcoming->effective_from->format('d-m-Y') . ' onwards. Please choose a start date on or after that date.'
                 : 'Stationed leave is not configured for your course (' . $courseName . ').';
 
             return back()->withInput()->withErrors([
-                'leave_type' => $message,
+                'from_date' => $message,
             ]);
         }
 
@@ -182,11 +186,12 @@ class LeaveApplicationController extends Controller
             $courseName = $context['course']->course_name ?? 'your course';
             $upcoming = $this->leaveService->getUpcomingPtExemptionConfig(
                 $context['course_pk'],
-                $context['student']->gender ?? null
+                $context['student']->gender ?? null,
+                $validated['from_date']
             );
             $message = $upcoming
-                ? 'PT exemption for ' . $courseName . ' will be available from '
-                    . $upcoming->effective_from->format('d-m-Y') . '. Please choose a start date on or after that date.'
+                ? 'PT exemption for ' . $courseName . ' is available from '
+                    . $upcoming->effective_from->format('d-m-Y') . ' onwards. Please choose a start date on or after that date.'
                 : 'PT exemption is not configured for your course (' . $courseName . ').';
 
             return back()->withInput()->withErrors([
@@ -370,6 +375,7 @@ class LeaveApplicationController extends Controller
             'readOnly' => $readOnly,
             'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
             'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
+            'activeStationedLeave' => $this->leaveService->getActiveStationedLeaveConfig($context['course_pk']),
             'ptExemptionConfigured' => $this->leaveService->ptExemptionConfigured($context['course_pk'], $gender),
             'upcomingPtExemption' => $this->leaveService->getUpcomingPtExemptionConfig($context['course_pk'], $gender),
             'activePtExemption' => $this->leaveService->getActivePtExemptionConfig($context['course_pk'], $gender),

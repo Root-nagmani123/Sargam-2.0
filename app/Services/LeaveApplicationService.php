@@ -84,20 +84,23 @@ class LeaveApplicationService
     }
 
     /**
-     * Next PT exemption config that is active but not yet effective (for UI hints).
+     * Next PT exemption config that is active but not yet effective as of a given date
+     * (defaults to today). Pass the leave start date when validating applications.
      */
-    public function getUpcomingPtExemptionConfig(int $coursePk, ?string $gender): ?ExemptionMaster
+    public function getUpcomingPtExemptionConfig(int $coursePk, ?string $gender, ?string $asOfDate = null): ?ExemptionMaster
     {
         $genderLabel = $this->normalizeGender($gender);
         if (! $genderLabel) {
             return null;
         }
 
+        $asOfDate = $asOfDate ?? now()->toDateString();
+
         return ExemptionMaster::query()
             ->where('course_master_pk', $coursePk)
             ->where('gender', $genderLabel)
             ->where('active_inactive', 1)
-            ->whereDate('effective_from', '>', now()->toDateString())
+            ->whereDate('effective_from', '>', $asOfDate)
             ->orderBy('effective_from')
             ->first();
     }
@@ -159,24 +162,27 @@ class LeaveApplicationService
     }
 
     /**
-     * Next stationed-leave config that is active but not yet effective (for UI hints).
+     * Next stationed-leave config that is active but not yet effective as of a given date
+     * (defaults to today). Pass the leave start date when validating applications.
      */
-    public function getUpcomingStationedLeaveConfig(int $coursePk): ?StationedLeaveMaster
+    public function getUpcomingStationedLeaveConfig(int $coursePk, ?string $asOfDate = null): ?StationedLeaveMaster
     {
+        $asOfDate = $asOfDate ?? now()->toDateString();
+
         return StationedLeaveMaster::query()
             ->where('course_master_pk', $coursePk)
             ->where('active_inactive', 1)
-            ->whereDate('effective_from', '>', now()->toDateString())
+            ->whereDate('effective_from', '>', $asOfDate)
             ->orderBy('effective_from')
             ->first();
     }
 
-    public function assertNoOverlap(
+    public function findOverlappingApplication(
         int $studentPk,
         string $fromDate,
         string $toDate,
         ?int $ignoreApplicationPk = null
-    ): void {
+    ): ?LeaveApplication {
         $query = LeaveApplication::query()
             ->where('student_master_pk', $studentPk)
             ->whereIn('status', [
@@ -197,8 +203,31 @@ class LeaveApplicationService
             $query->where('pk', '!=', $ignoreApplicationPk);
         }
 
-        if ($query->exists()) {
-            throw new \InvalidArgumentException('Leave dates overlap with an existing application.');
+        return $query->orderByDesc('from_date')->first();
+    }
+
+    public function overlapErrorMessage(LeaveApplication $existing): string
+    {
+        $from = $existing->from_date?->format('d-m-Y') ?? '';
+        $to = $existing->to_date?->format('d-m-Y') ?? '';
+
+        return 'Leave dates overlap with an existing '
+            . $existing->leave_type_label
+            . ' application (' . $from . ' to ' . $to . ', '
+            . $existing->status_label
+            . '). Please choose dates that do not conflict.';
+    }
+
+    public function assertNoOverlap(
+        int $studentPk,
+        string $fromDate,
+        string $toDate,
+        ?int $ignoreApplicationPk = null
+    ): void {
+        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk);
+
+        if ($existing) {
+            throw new \InvalidArgumentException($this->overlapErrorMessage($existing));
         }
     }
 

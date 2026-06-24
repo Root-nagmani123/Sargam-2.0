@@ -15,11 +15,17 @@
     $pageTitle = ($readOnly ?? false) ? 'View Leave Application' : (($application ?? null) ? 'Edit Leave Application' : 'Apply Leave');
     $stationedReady = $stationedLeaveConfigured ?? false;
     $upcomingStationed = $upcomingStationedLeave ?? null;
+    $activeStationed = $activeStationedLeave ?? null;
+    $stationedMinDate = $activeStationed?->effective_from?->format('Y-m-d')
+        ?? ($upcomingStationed?->effective_from?->format('Y-m-d'));
     $ptReady = $ptExemptionConfigured ?? false;
     $upcomingPt = $upcomingPtExemption ?? null;
     $activePt = $activePtExemption ?? null;
     $ptMinDate = $activePt?->effective_from?->format('Y-m-d')
         ?? ($upcomingPt?->effective_from?->format('Y-m-d'));
+    $fromDateValue = old('from_date', isset($application) ? $application->from_date?->format('Y-m-d') : '');
+    $toDateValue = old('to_date', isset($application) ? $application->to_date?->format('Y-m-d') : '');
+    $toDateMin = $fromDateValue ?: ($isPt ? $ptMinDate : $stationedMinDate);
 @endphp
 
 <div class="container-fluid py-3 leave-module">
@@ -41,10 +47,6 @@
                 <div class="alert alert-info py-2 small mb-3">
                     Status: <strong>{{ $application->status_label }}</strong>
                 </div>
-            @endif
-
-            @if($errors->has('leave_type'))
-                <div class="alert alert-danger py-2 small mb-3">{{ $errors->first('leave_type') }}</div>
             @endif
 
             @if($isPt && ! $ptReady && $upcomingPt)
@@ -84,16 +86,24 @@
                         <div class="leave-form-row">
                             <label class="leave-form-label">Leave Type</label>
                             <div class="leave-form-field">
-                                <div class="leave-type-tabs" role="group" aria-label="Leave type">
-                                    <a href="{{ route('leave.apply', ['leave_type' => 'PT_EXEMPTION']) }}"
-                                        class="btn {{ $isPt ? 'active' : '' }} {{ ($readOnly ?? false) || ($application ?? null) ? 'disabled pe-none' : '' }}">
-                                        PT Exemption
-                                    </a>
-                                    <a href="{{ route('leave.apply', ['leave_type' => 'STATIONED_LEAVE']) }}"
-                                        class="btn {{ ! $isPt ? 'active' : '' }} {{ ($readOnly ?? false) || ($application ?? null) ? 'disabled pe-none' : '' }}">
-                                        Stationed Leave
-                                    </a>
-                                </div>
+                                @if($readOnly ?? false)
+                                    <div class="leave-type-tabs" role="group" aria-label="Leave type">
+                                        <span class="btn active disabled pe-none">
+                                            {{ $isPt ? 'PT Exemption' : 'Stationed Leave' }}
+                                        </span>
+                                    </div>
+                                @else
+                                    <div class="leave-type-tabs" role="group" aria-label="Leave type">
+                                        <a href="{{ route('leave.apply', ['leave_type' => 'PT_EXEMPTION']) }}"
+                                            class="btn {{ $isPt ? 'active' : '' }} {{ ($application ?? null) ? 'disabled pe-none' : '' }}">
+                                            PT Exemption
+                                        </a>
+                                        <a href="{{ route('leave.apply', ['leave_type' => 'STATIONED_LEAVE']) }}"
+                                            class="btn {{ ! $isPt ? 'active' : '' }} {{ ($application ?? null) ? 'disabled pe-none' : '' }}">
+                                            Stationed Leave
+                                        </a>
+                                    </div>
+                                @endif
                             </div>
                         </div>
 
@@ -125,8 +135,8 @@
                             <div class="leave-form-field">
                                 <div class="leave-date-wrap">
                                     <input type="date" name="from_date" id="from_date" class="form-control @error('from_date') is-invalid @enderror" required
-                                        value="{{ old('from_date', isset($application) ? $application->from_date?->format('Y-m-d') : '') }}"
-                                        @if($isPt && $ptMinDate) min="{{ $ptMinDate }}" @elseif(! $isPt && $upcomingStationed) min="{{ $upcomingStationed->effective_from->format('Y-m-d') }}" @endif
+                                        value="{{ $fromDateValue }}"
+                                        @if($isPt && $ptMinDate) min="{{ $ptMinDate }}" @elseif(! $isPt && $stationedMinDate) min="{{ $stationedMinDate }}" @endif
                                         {{ ($readOnly ?? false) ? 'readonly' : '' }}>
                                     <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
                                 </div>
@@ -140,11 +150,15 @@
                             <label class="leave-form-label">End Date <span class="text-danger">*</span></label>
                             <div class="leave-form-field">
                                 <div class="leave-date-wrap">
-                                    <input type="date" name="to_date" id="to_date" class="form-control" required
-                                        value="{{ old('to_date', isset($application) ? $application->to_date?->format('Y-m-d') : '') }}"
+                                    <input type="date" name="to_date" id="to_date" class="form-control @error('to_date') is-invalid @enderror" required
+                                        value="{{ $toDateValue }}"
+                                        @if($toDateMin) min="{{ $toDateMin }}" @endif
                                         {{ ($readOnly ?? false) ? 'readonly' : '' }}>
                                     <i class="material-icons material-symbols-rounded leave-date-icon">calendar_month</i>
                                 </div>
+                                @error('to_date')
+                                    <div class="text-danger small mt-1">{{ $message }}</div>
+                                @enderror
                             </div>
                         </div>
 
@@ -353,6 +367,22 @@ $(function () {
         return !hasError;
     }
 
+    function syncEndDateMin() {
+        const from = $('#from_date').val();
+        const $toDate = $('#to_date');
+
+        if (!from) {
+            return;
+        }
+
+        $toDate.attr('min', from);
+
+        const to = $toDate.val();
+        if (!to || to < from) {
+            $toDate.val(from);
+        }
+    }
+
     function updateTotalDays() {
         const from = $('#from_date').val();
         const to = $('#to_date').val();
@@ -360,8 +390,8 @@ $(function () {
             $('#total_days_display').val('0');
             return;
         }
-        const start = new Date(from);
-        const end = new Date(to);
+        const start = new Date(from + 'T00:00:00');
+        const end = new Date(to + 'T00:00:00');
         if (end < start) {
             $('#total_days_display').val('0');
             return;
@@ -370,7 +400,12 @@ $(function () {
         $('#total_days_display').val(diff);
     }
 
-    $('#from_date, #to_date').on('change', updateTotalDays);
+    $('#from_date').on('change', function () {
+        syncEndDateMin();
+        updateTotalDays();
+    });
+    $('#to_date').on('change', updateTotalDays);
+    syncEndDateMin();
     updateTotalDays();
 
     $('#add-attachment-row').on('click', function () {
