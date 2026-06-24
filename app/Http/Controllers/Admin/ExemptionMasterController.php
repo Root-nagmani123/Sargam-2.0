@@ -34,14 +34,31 @@ class ExemptionMasterController extends Controller
 
     public function create(Request $request)
     {
-        $courses = $this->getCourses();
         $courseMasterPk = $request->query('course_master_pk');
         $effectiveFrom = $request->query('effective_from');
+        $isEditing = $courseMasterPk && $effectiveFrom;
+
+        $configuredCourseIds = ExemptionMaster::query()
+            ->when($isEditing, fn ($q) => $q->where('course_master_pk', '!=', $courseMasterPk))
+            ->distinct()
+            ->pluck('course_master_pk')
+            ->all();
+
+        $courses = $this->getCourses()->reject(
+            fn ($course) => in_array($course->pk, $configuredCourseIds, true)
+        );
+
+        if ($isEditing && $courses->doesntContain('pk', (int) $courseMasterPk)) {
+            $editingCourse = CourseMaster::find($courseMasterPk);
+            if ($editingCourse) {
+                $courses->prepend($editingCourse);
+            }
+        }
 
         $maleRecord = null;
         $femaleRecord = null;
 
-        if ($courseMasterPk && $effectiveFrom) {
+        if ($isEditing) {
             $records = ExemptionMaster::where('course_master_pk', $courseMasterPk)
                 ->whereDate('effective_from', $effectiveFrom)
                 ->get()
@@ -56,7 +73,8 @@ class ExemptionMasterController extends Controller
             'courseMasterPk',
             'effectiveFrom',
             'maleRecord',
-            'femaleRecord'
+            'femaleRecord',
+            'isEditing'
         ));
     }
 
@@ -70,6 +88,15 @@ class ExemptionMasterController extends Controller
         ]);
 
         $this->assertCourseAllowed((int) $validated['course_master_pk']);
+
+        if ($this->courseHasConflictingExemption(
+            (int) $validated['course_master_pk'],
+            $validated['effective_from']
+        )) {
+            return back()->withInput()->withErrors([
+                'course_master_pk' => 'PT exemption is already configured for this course. Please edit the existing record.',
+            ]);
+        }
 
         $user = Auth::user();
         $now = now();
@@ -95,11 +122,21 @@ class ExemptionMasterController extends Controller
         });
 
         return redirect()
-            ->route('admin.pt-exemption-master.create', [
-                'course_master_pk' => $validated['course_master_pk'],
-                'effective_from' => $validated['effective_from'],
-            ])
+            ->route('admin.pt-exemption-master.index')
             ->with('success', 'PT exemption count saved successfully.');
+    }
+
+    protected function courseHasConflictingExemption(int $courseMasterPk, string $effectiveFrom): bool
+    {
+        $existingForCourse = ExemptionMaster::where('course_master_pk', $courseMasterPk)->exists();
+
+        if (! $existingForCourse) {
+            return false;
+        }
+
+        return ! ExemptionMaster::where('course_master_pk', $courseMasterPk)
+            ->whereDate('effective_from', $effectiveFrom)
+            ->exists();
     }
 
     protected function saveExemptionRow(

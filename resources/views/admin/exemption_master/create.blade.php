@@ -62,6 +62,16 @@
 
     <x-session_message />
 
+    @if ($errors->has('course_master_pk'))
+        <div class="alert alert-danger">{{ $errors->first('course_master_pk') }}</div>
+    @endif
+
+    @if (!($isEditing ?? false) && $courses->isEmpty())
+        <div class="alert alert-warning">
+            All eligible courses already have a PT exemption configuration. Use Edit on the list page to update an existing record.
+        </div>
+    @endif
+
     <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
@@ -78,20 +88,26 @@
                 <div class="row g-3 mb-4">
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="course_master_pk" class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
-                        <select id="course_master_pk" name="course_master_pk" class="form-select" required>
+                        <select id="course_master_pk" name="course_master_pk" class="form-select" required
+                            @if(($isEditing ?? false) || $courses->isEmpty()) disabled @endif>
                             <option value="">Select Course</option>
                             @foreach ($courses as $course)
                                 <option value="{{ $course->pk }}"
+                                    data-start-date="{{ filled($course->start_year) ? \Carbon\Carbon::parse($course->start_year)->format('Y-m-d') : '' }}"
                                     {{ (string) old('course_master_pk', $courseMasterPk) === (string) $course->pk ? 'selected' : '' }}>
                                     {{ $course->course_name }}
                                 </option>
                             @endforeach
                         </select>
+                        @if($isEditing ?? false)
+                            <input type="hidden" name="course_master_pk" value="{{ old('course_master_pk', $courseMasterPk) }}">
+                        @endif
                     </div>
                     <div class="col-12 col-md-6 col-lg-4">
                         <label for="effective_from" class="form-label fw-semibold">Effective From <span class="text-danger">*</span></label>
                         <input type="date" id="effective_from" name="effective_from" class="form-control" required
-                            value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}">
+                            value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}"
+                            @if($isEditing ?? false) readonly @endif>
                     </div>
                 </div>
 
@@ -138,7 +154,8 @@
                     <div class="info-note flex-grow-1 mb-0">
                         <strong>Note:</strong> This count will be applicable to participants of the selected course.
                     </div>
-                    <button type="submit" class="btn btn-save-config d-inline-flex align-items-center gap-1 px-4">
+                    <button type="submit" class="btn btn-save-config d-inline-flex align-items-center gap-1 px-4"
+                        @if(!($isEditing ?? false) && $courses->isEmpty()) disabled @endif>
                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">save</i>
                         Save
                     </button>
@@ -148,3 +165,22 @@
     </div>
 </div>
 @endsection
+
+@push('scripts')
+<script>
+$(function () {
+    function setEffectiveFromCourseStart() {
+        const startDate = $('#course_master_pk option:selected').data('startDate');
+        if (startDate) {
+            $('#effective_from').val(startDate);
+        }
+    }
+
+    $('#course_master_pk').on('change', setEffectiveFromCourseStart);
+
+    if ($('#course_master_pk').val() && !$('#effective_from').val()) {
+        setEffectiveFromCourseStart();
+    }
+});
+</script>
+@endpush

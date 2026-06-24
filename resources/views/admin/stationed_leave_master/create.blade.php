@@ -75,6 +75,10 @@
         <div class="alert alert-danger">{{ $errors->first('faculty_rows') }}</div>
     @endif
 
+    @if ($errors->has('is_faculty_approval_required'))
+        <div class="alert alert-danger">{{ $errors->first('is_faculty_approval_required') }}</div>
+    @endif
+
     <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
         <div class="card-body p-3 p-md-4">
             <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
@@ -95,6 +99,7 @@
                             <option value="">-- Select Course --</option>
                             @foreach ($courses as $course)
                                 <option value="{{ $course->pk }}"
+                                    data-start-date="{{ filled($course->start_year) ? \Carbon\Carbon::parse($course->start_year)->format('Y-m-d') : '' }}"
                                     {{ (string) old('course_master_pk', $courseMasterPk) === (string) $course->pk ? 'selected' : '' }}>
                                     {{ $course->course_name }}
                                 </option>
@@ -112,7 +117,7 @@
                     <label class="form-label fw-semibold d-block">Approval Required <span class="text-danger">*</span></label>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="is_faculty_approval_required"
-                            name="is_faculty_approval_required" value="1"
+                            name="is_faculty_approval_required" value="1" required
                             {{ (int) $approvalRequired === 1 ? 'checked' : '' }}>
                         <label class="form-check-label" for="is_faculty_approval_required">
                             Require approval from faculty
@@ -222,6 +227,19 @@
 $(function () {
     let rowIndex = {{ max($existingRows->count(), 0) }};
 
+    function setEffectiveFromCourseStart() {
+        const startDate = $('#course_master_pk option:selected').data('startDate');
+        if (startDate) {
+            $('#effective_from').val(startDate);
+        }
+    }
+
+    $('#course_master_pk').on('change', setEffectiveFromCourseStart);
+
+    if ($('#course_master_pk').val() && !$('#effective_from').val()) {
+        setEffectiveFromCourseStart();
+    }
+
     function refreshSerialNumbers() {
         $('#faculty-rows-body tr').not('#faculty-empty-row').each(function (idx) {
             $(this).find('.row-serial').text(idx + 1);
@@ -299,7 +317,8 @@ $(function () {
 
     $('#stationed-leave-form').on('submit', function () {
         if (!$('#is_faculty_approval_required').is(':checked')) {
-            return true;
+            toastr.error('Please check "Require approval from faculty" to continue.');
+            return false;
         }
 
         if ($('#faculty-rows-body tr[data-faculty-pk]').length === 0) {

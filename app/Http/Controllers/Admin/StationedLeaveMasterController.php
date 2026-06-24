@@ -71,35 +71,32 @@ class StationedLeaveMasterController extends Controller
         $validated = $request->validate([
             'course_master_pk' => 'required|exists:course_master,pk',
             'effective_from' => 'required|date',
-            'is_faculty_approval_required' => 'nullable|in:0,1',
-            'faculty_rows' => 'nullable|array',
+            'is_faculty_approval_required' => 'required|accepted',
+            'faculty_rows' => 'required|array|min:1',
             'faculty_rows.*.faculty_master_pk' => 'required|exists:faculty_master,pk',
             'faculty_rows.*.is_approval_authority' => 'nullable|in:0,1',
+        ], [
+            'is_faculty_approval_required.required' => 'Please check "Require approval from faculty" to continue.',
+            'is_faculty_approval_required.accepted' => 'Please check "Require approval from faculty" to continue.',
+            'faculty_rows.required' => 'Please add at least one faculty when approval is required.',
+            'faculty_rows.min' => 'Please add at least one faculty when approval is required.',
         ]);
 
         $this->assertCourseAllowed((int) $validated['course_master_pk']);
 
-        $approvalRequired = (int) ($validated['is_faculty_approval_required'] ?? 0);
-        $facultyRows = collect($validated['faculty_rows'] ?? [])
+        $approvalRequired = 1;
+        $facultyRows = collect($validated['faculty_rows'])
             ->unique('faculty_master_pk')
             ->values();
 
-        if ($approvalRequired === 1) {
-            if ($facultyRows->isEmpty()) {
-                return back()->withInput()->withErrors([
-                    'faculty_rows' => 'Please add at least one faculty when approval is required.',
-                ]);
-            }
+        $hasAuthority = $facultyRows->contains(function ($row) {
+            return (int) ($row['is_approval_authority'] ?? 0) === 1;
+        });
 
-            $hasAuthority = $facultyRows->contains(function ($row) {
-                return (int) ($row['is_approval_authority'] ?? 0) === 1;
-            });
-
-            if (! $hasAuthority) {
-                return back()->withInput()->withErrors([
-                    'faculty_rows' => 'Please mark at least one faculty as approval authority.',
-                ]);
-            }
+        if (! $hasAuthority) {
+            return back()->withInput()->withErrors([
+                'faculty_rows' => 'Please mark at least one faculty as approval authority.',
+            ]);
         }
 
         $user = Auth::user();
@@ -142,10 +139,7 @@ class StationedLeaveMasterController extends Controller
         });
 
         return redirect()
-            ->route('admin.stationed-leave-master.create', [
-                'course_master_pk' => $validated['course_master_pk'],
-                'effective_from' => $validated['effective_from'],
-            ])
+            ->route('admin.stationed-leave-master.index')
             ->with('success', 'Stationed leave configuration saved successfully.');
     }
 
