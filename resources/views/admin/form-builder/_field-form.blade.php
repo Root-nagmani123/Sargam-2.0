@@ -153,6 +153,15 @@
                     <input type="text" name="file_extensions" class="form-control form-control-sm" value="{{ $field->file_extensions ?? '' }}" placeholder="jpeg,jpg,png,pdf">
                     <small class="text-muted">Comma-separated, without dots (e.g. jpeg,png,pdf).</small>
                 </div>
+                <div class="col-12">
+                    <label class="form-label small fw-semibold">Fillable Form Template</label>
+                    <select name="form_template" class="form-select form-select-sm">
+                        @foreach(\App\Support\FC\DocumentFormTemplates::options() as $tplKey => $tplLabel)
+                            <option value="{{ $tplKey }}" {{ (($field->form_template ?? '') === $tplKey) ? 'selected' : '' }}>{{ $tplLabel }}</option>
+                        @endforeach
+                    </select>
+                    <small class="text-muted">Choose a template to let candidates <strong>fill this document online</strong> (a PDF is generated) instead of uploading a file.</small>
+                </div>
             </div>
         </div>
     </div>
