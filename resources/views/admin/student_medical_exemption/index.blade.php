@@ -1091,7 +1091,10 @@ $(document).ready(function() {
                 });
                 if (first && first.length) first[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
             } else if (typeof Swal !== 'undefined') {
-                Swal.fire('Error', 'Something went wrong. Please try again.', 'error');
+                var errMsg = (xhr.responseJSON && xhr.responseJSON.message)
+                    ? xhr.responseJSON.message
+                    : 'Something went wrong. Please try again.';
+                Swal.fire('Error', errMsg, 'error');
             }
         });
     }
