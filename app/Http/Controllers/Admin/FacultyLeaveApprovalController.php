@@ -113,11 +113,14 @@ class FacultyLeaveApprovalController extends Controller
             ])
             ->orderByDesc('pk');
 
-        if ($request->has('status') && $request->status !== '') {
-            $query->where('status', (int) $request->status);
-        } elseif (! $request->has('status')) {
+        if (! $request->has('status')) {
+            // Default landing (no status param sent at all) shows pending only.
             $query->where('status', LeaveApplication::STATUS_PENDING);
+        } elseif ($request->filled('status')) {
+            // A specific status was chosen.
+            $query->where('status', (int) $request->status);
         }
+        // Empty status ('' = "All Status") -> no extra filter, base whereIn applies.
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -131,11 +134,11 @@ class FacultyLeaveApprovalController extends Controller
                 $viewUrl = route('faculty.leave-approval.show', $row->pk);
                 $html = '<div class="d-inline-flex align-items-center gap-2 flex-wrap">';
 
+                $html .= '<a href="' . $viewUrl . '" class="btn btn-sm btn-outline-primary">View</a>';
+
                 if ($this->approvalService->canFacultyActOnLeave($facultyPk, $row)) {
                     $html .= '<button type="button" class="btn btn-sm btn-success faculty-leave-approve" data-id="' . $row->pk . '">Approve</button>';
                     $html .= '<button type="button" class="btn btn-sm btn-danger faculty-leave-reject" data-id="' . $row->pk . '">Reject</button>';
-                } else {
-                    $html .= '<a href="' . $viewUrl . '" class="btn btn-sm btn-outline-primary">View</a>';
                 }
 
                 $html .= '</div>';
