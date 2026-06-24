@@ -366,6 +366,8 @@
         'faculty_details'           => $event->faculty_details ?: $event->Faculty_feedback,
         'faculty_master'            => $event->faculty_master,
         'faculty_type'              => $event->faculty_type,
+        'class_session'             => $event->class_session,
+        'session_type'              => $event->session_type,
     ]) !!};
 
     const oldData = {!! \Illuminate\Support\Js::from([
@@ -632,6 +634,11 @@
     /* ---------------- Init Choices on static selects ---------------- */
     ['Course_name', 'group_type', 'subject_module', 'subject_name', 'sector', 'vanue', 'shift']
         .forEach(id => initChoices(document.getElementById(id)));
+
+    /* ---------------- Explicitly restore shift after Choices.js init ---------------- */
+    if (eventData.session_type == 1 && eventData.class_session) {
+        setSelectValue(document.getElementById('shift'), eventData.class_session);
+    }
 
     /* ---------------- Load dependent dropdowns with saved values ---------------- */
     const preselectGroup   = oldData.group_type   ?? eventData.course_group_type_master;

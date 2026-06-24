@@ -286,7 +286,9 @@ const CalendarConfig = {
         subjectNames: "{{ route('calendar.get.subject.name') }}",
         eventCard: "{{ route('calendar.event.card', ['id' => 'EVENT_ID']) }}",
         timetablePdf: "{{ route('calendar.timetable.pdf') }}",
+        timetablePreview: "{{ route('calendar.timetable.preview') }}",
         weeklyTimetablePdf: "{{ route('calendar.weekly-timetable.pdf') }}",
+        weeklyTimetablePreview: "{{ route('calendar.weekly-timetable.preview') }}",
         weeklyInfoPdf: "{{ route('calendar.weekly-info.pdf') }}",
         weeklyInfoMeta: "{{ route('calendar.weekly-info.meta') }}",
         weeklyInfoSave: "{{ route('calendar.weekly-info.save') }}"
@@ -1313,8 +1315,11 @@ class CalendarManager {
         });
 
         // Whole-week timetable PDF (download / print) — list-view panel + main toolbar
-        document.getElementById('btnWeekTimetablePdf')?.addEventListener('click', () => this.openWeeklyTimetablePdf(true));
-        document.getElementById('btnWeekTimetablePrint')?.addEventListener('click', () => this.openWeeklyTimetablePdf(false));
+        document.getElementById('btnWeekTimetablePdf')?.addEventListener('click', () => this.openWeeklyTimetablePdf(false));
+        document.getElementById('btnWeekTimetablePrint')?.addEventListener('click', () => {
+            const params = this.weeklyExportParams(false);
+            window.open(`${CalendarConfig.api.weeklyTimetablePdf}?${params.toString()}`, '_blank', 'noopener');
+        });
         document.getElementById('btnToolbarWeekPdf')?.addEventListener('click', () => this.openWeeklyTimetablePdf(true));
         document.getElementById('btnToolbarWeekPrint')?.addEventListener('click', () => this.openWeeklyTimetablePdf(false));
         document.getElementById('btnToolbarWeekInfo')?.addEventListener('click', () => this.openWeeklyInfoPdf(false));
@@ -1323,13 +1328,13 @@ class CalendarManager {
         document.getElementById('weeklyInfoForm')?.addEventListener('submit', (e) => this.saveWeeklyInfo(e));
 
         // Form submission
-        document.getElementById('eventForm').addEventListener('submit', (e) => this.handleFormSubmit(e));
+        document.getElementById('eventForm')?.addEventListener('submit', (e) => this.handleFormSubmit(e));
 
         // Dynamic field dependencies
-        document.getElementById('Course_name').addEventListener('change', () => this.loadGroupTypes());
-        document.getElementById('subject_module').addEventListener('change', () => this.loadSubjectNames());
-        document.getElementById('faculty').addEventListener('change', () => this.updateFacultyType());
-        document.getElementById('faculty_type').addEventListener('change', () => this.updateCheckboxState());
+        document.getElementById('Course_name')?.addEventListener('change', () => this.loadGroupTypes());
+        document.getElementById('subject_module')?.addEventListener('change', () => this.loadSubjectNames());
+        document.getElementById('faculty')?.addEventListener('change', () => this.updateFacultyType());
+        document.getElementById('faculty_type')?.addEventListener('change', () => this.updateCheckboxState());
 
         // Shift type toggles
         document.querySelectorAll('input[name="shift_type"]').forEach(radio => {
@@ -1337,12 +1342,12 @@ class CalendarManager {
         });
 
         // Full day checkbox
-        document.getElementById('fullDayCheckbox').addEventListener('change', (e) => {
+        document.getElementById('fullDayCheckbox')?.addEventListener('change', (e) => {
             this.toggleFullDayFields(e.target.checked);
         });
 
         // Feedback checkbox
-        document.getElementById('feedback_checkbox').addEventListener('change', () => {
+        document.getElementById('feedback_checkbox')?.addEventListener('change', () => {
             this.toggleFeedbackDependencies();
         });
 
@@ -2304,21 +2309,20 @@ async setInternalFaculty(internalFacultyIds) {
 
     /** Open the whole-week timetable PDF for the current week + course filter. */
     openWeeklyTimetablePdf(download) {
-        window.open(`${CalendarConfig.api.weeklyTimetablePdf}?${this.weeklyExportParams(download).toString()}`, '_blank', 'noopener');
+        const params = this.weeklyExportParams(false); // no download flag — preview handles it
+        window.open(`${CalendarConfig.api.weeklyTimetablePreview}?${params.toString()}`, '_blank', 'noopener');
     }
 
-    /** Open the academic time table PDF for the calendar's visible range + course filter. */
+    /** Open the academic time table preview page for the calendar's visible range + course filter. */
     openTimetablePdf(download) {
         const params = new URLSearchParams();
 
-        // Use the calendar's currently visible date range.
         if (this.calendar) {
             const view = this.calendar.view;
             if (view?.activeStart) {
                 params.append('start', view.activeStart.toISOString().split('T')[0]);
             }
             if (view?.activeEnd) {
-                // activeEnd is exclusive in FullCalendar — step back one day for an inclusive range.
                 const end = new Date(view.activeEnd);
                 end.setDate(end.getDate() - 1);
                 params.append('end', end.toISOString().split('T')[0]);
@@ -2328,11 +2332,9 @@ async setInternalFaculty(internalFacultyIds) {
         if (this.selectedCourseId) {
             params.append('course_id', this.selectedCourseId);
         }
-        if (download) {
-            params.append('download', '1');
-        }
 
-        window.open(`${CalendarConfig.api.timetablePdf}?${params.toString()}`, '_blank', 'noopener');
+        // Always open the preview page — download button is on the preview page itself.
+        window.open(`${CalendarConfig.api.timetablePreview}?${params.toString()}`, '_blank', 'noopener');
     }
 
     /** Open the Course Information / Faculty-for-the-week PDF for the current week + course filter. */

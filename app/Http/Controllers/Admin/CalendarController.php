@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
 use App\Models\User;
+use App\Services\FacultyFeedbackReportService;
 use Illuminate\Support\Facades\Session;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Str;
@@ -1375,40 +1376,53 @@ class CalendarController extends Controller
             ->orderBy('timetable.class_session')
             ->get();
 
-        $rows = $events->map(function ($e) {
-            $facultyIds = json_decode($e->faculty_master, true);
-            if (!is_array($facultyIds)) {
-                $facultyIds = !empty($e->faculty_master) ? [$e->faculty_master] : [];
-            }
-            $faculty = $facultyIds
-                ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
-                : '';
-
-            $date = Carbon::parse($e->START_DATE);
-
-            return (object) [
-                'date'         => $date->format('d M Y'),
-                'day'          => $date->format('D'),
-                'session'      => trim((string) $e->class_session),
-                'topic'        => trim((string) $e->subject_topic) ?: 'Session',
-                'faculty_name' => $faculty,
-                'venue_name'   => trim((string) ($e->venue_name ?? '')),
-            ];
-        });
-
         $course = $courseId
-            ? DB::table('course_master')
-                ->where('pk', $courseId)
-                ->select('course_name', 'couse_short_name', 'course_year')
-                ->first()
+            ? DB::table('course_master')->where('pk', $courseId)->first()
             : null;
 
+        $courseStartDate = ($course && !empty($course->start_year))
+            ? Carbon::parse($course->start_year)->format('j F Y') : '';
+        $courseEndDate = ($course && !empty($course->end_date))
+            ? Carbon::parse($course->end_date)->format('j F Y') : '';
+        $courseDuration = ($courseStartDate && $courseEndDate)
+            ? $courseStartDate . ' to ' . $courseEndDate : '';
+
+        $toDataUri = function (string $path): string {
+            if (!extension_loaded('gd') || !is_file($path)) return '';
+            $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = in_array($ext, ['jpg', 'jpeg']) ? 'image/jpeg' : 'image/png';
+            return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+        };
+
+        $weeks = $this->buildWeeksGrid($events, $rangeStartDate, $rangeEndDate, $course);
+
+        $primaryVenue = '';
+        $venueCounts  = [];
+        foreach ($events as $e) {
+            if (!empty($e->venue_name)) {
+                $venueCounts[$e->venue_name] = ($venueCounts[$e->venue_name] ?? 0) + 1;
+            }
+        }
+        if (!empty($venueCounts)) {
+            arsort($venueCounts);
+            $primaryVenue = array_key_first($venueCounts);
+        }
+
         $data = [
-            'rows'        => $rows,
-            'course'      => $course,
-            'rangeStart'  => $rangeStartDate->format('d M Y'),
-            'rangeEnd'    => $rangeEndDate->format('d M Y'),
-            'studentName' => hasRole('Student-OT') ? (auth()->user()->user_name ?? null) : null,
+            'weeks'          => $weeks,
+            'rangeStart'     => $rangeStartDate->format('d M Y'),
+            'rangeEnd'       => $rangeEndDate->format('d M Y'),
+            'course'         => $course,
+            'courseStartDate'=> $courseStartDate,
+            'courseEndDate'  => $courseEndDate,
+            'courseDuration' => $courseDuration,
+            'multiCourse'    => is_null($courseId),
+            'primaryVenue'   => $primaryVenue,
+            'footerNote'     => '',
+            'studentName'    => hasRole('Student-OT') ? (auth()->user()->user_name ?? null) : null,
+            'logoLeft'       => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi'     => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
 
         $pdf = Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
@@ -1417,7 +1431,8 @@ class CalendarController extends Controller
                 'defaultFont'          => 'DejaVu Sans',
                 'isHtml5ParserEnabled' => true,
                 'isRemoteEnabled'      => true,
-                'dpi'                  => 110,
+                'isPhpEnabled'         => true,
+                'dpi'                  => 96,
             ]);
 
         $fileName = 'time-table-' . $rangeStartDate->format('Y-m-d') . '.pdf';
@@ -1425,6 +1440,24 @@ class CalendarController extends Controller
         return $request->boolean('download')
             ? $pdf->download($fileName)
             : $pdf->stream($fileName);
+    }
+
+    /** Preview page: shows the timetable PDF in-browser with a Download button. */
+    public function previewTimetablePdf(Request $request)
+    {
+        $streamUrl   = route('calendar.timetable.pdf',   $request->only(['start', 'end', 'course_id']));
+        $downloadUrl = route('calendar.timetable.pdf',   array_merge($request->only(['start', 'end', 'course_id']), ['download' => 1]));
+        $title = 'Time Table';
+        return view('admin.calendar.pdf.preview', compact('streamUrl', 'downloadUrl', 'title'));
+    }
+
+    /** Preview page: shows the weekly timetable PDF in-browser with a Download button. */
+    public function previewWeeklyTimetablePdf(Request $request)
+    {
+        $streamUrl   = route('calendar.weekly-timetable.pdf',   $request->only(['week_start', 'course_id']));
+        $downloadUrl = route('calendar.weekly-timetable.pdf',   array_merge($request->only(['week_start', 'course_id']), ['download' => 1]));
+        $title = 'Weekly Time Table';
+        return view('admin.calendar.pdf.preview', compact('streamUrl', 'downloadUrl', 'title'));
     }
 
     /**
@@ -1445,7 +1478,7 @@ class CalendarController extends Controller
 
         $courseId = $request->query('course_id') ?: null;
 
-        $rows = DB::table('timetable')
+        $weekRows = DB::table('timetable')
             ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
             ->whereBetween('timetable.START_DATE', [$weekStart->toDateString(), $weekEnd->toDateString()])
             ->when($courseId, function ($q) use ($courseId) {
@@ -1462,113 +1495,28 @@ class CalendarController extends Controller
             ->orderBy('timetable.START_DATE')
             ->get();
 
-        // Build grid[timeSlot][isoWeekday 1..5] = list of session cells, ordered by start time.
-        $grid = [];
-        $slotOrder = [];
-        foreach ($rows as $r) {
-            $dow = (int) Carbon::parse($r->START_DATE)->dayOfWeekIso; // 1=Mon .. 7=Sun
-            if ($dow < 1 || $dow > 5) {
-                continue; // Mon–Fri grid (matches the on-screen weekly view)
-            }
+        // Programme details from the course.
+        $course = $courseId ? DB::table('course_master')->where('pk', $courseId)->first() : null;
+        $multiCourse = is_null($courseId);
 
-            $slot = trim((string) $r->class_session);
-            if ($slot === '') {
-                $slot = 'Unscheduled';
-            }
-            if (!isset($grid[$slot])) {
-                $grid[$slot] = [];
-                $slotOrder[$slot] = $this->timetableSlotSortKey($slot);
-            }
-
-            $facultyIds = json_decode($r->faculty_master, true);
-            if (!is_array($facultyIds)) {
-                $facultyIds = !empty($r->faculty_master) ? [$r->faculty_master] : [];
-            }
-            $faculty = $facultyIds
-                ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
-                : '';
-
-            $grid[$slot][$dow][] = [
-                'topic'   => trim((string) $r->subject_topic) ?: 'Session',
-                'faculty' => $faculty,
-                'venue'   => trim((string) ($r->venue_name ?? '')),
-            ];
-        }
-
-        uksort($grid, function ($a, $b) use ($slotOrder) {
-            return ($slotOrder[$a] ?? PHP_INT_MAX) <=> ($slotOrder[$b] ?? PHP_INT_MAX);
-        });
-
-        // Build ordered row descriptors: stacked time + full-width break/lunch detection.
-        $rows = [];
-        $venueCounts = [];
-        foreach ($grid as $slot => $byDay) {
-            $allCells = [];
-            foreach ($byDay as $cells) {
-                foreach ($cells as $c) {
-                    $allCells[] = $c;
-                    if ($c['venue'] !== '') {
-                        $venueCounts[$c['venue']] = ($venueCounts[$c['venue']] ?? 0) + 1;
-                    }
-                }
-            }
-
-            $isBreak = !empty($allCells);
-            foreach ($allCells as $c) {
-                if (!preg_match('/\b(tea\s*break|lunch|break|recess|hi[\s-]?tea)\b/i', $c['topic'])) {
-                    $isBreak = false;
-                    break;
-                }
-            }
-
-            [$startLbl, $endLbl] = $this->splitSessionTime($slot);
-
-            $rows[] = [
-                'slot'       => $slot,
-                'startLbl'   => $startLbl,
-                'endLbl'     => $endLbl,
-                'byDay'      => $byDay,
-                'isBreak'    => $isBreak,
-                'breakLabel' => $isBreak ? $allCells[0]['topic'] : null,
-            ];
-        }
-
-        // Programme details (subtitle, period, programme-relative week) from the course.
-        $programmeName = null;
-        $period = null;
-        $programmeWeek = $weekStart->isoWeek;
-        $course = null;
-        $multiCourse = false;
-        if ($courseId) {
-            $course = DB::table('course_master')->where('pk', $courseId)->first();
-            if ($course) {
-                $programmeName = $course->course_name ?? null;
-                $courseStart = !empty($course->start_year) ? Carbon::parse($course->start_year) : null;
-                if ($courseStart) {
-                    $courseMonday = $courseStart->copy()->startOfWeek(Carbon::MONDAY);
-                    $relWeek = intdiv((int) $courseMonday->diffInDays($weekStart, false), 7) + 1;
-                    if ($relWeek >= 1) {
-                        $programmeWeek = $relWeek;
-                    }
-                }
-            }
-        }
-
-        $primaryVenue = '';
-        if (!empty($venueCounts)) {
-            arsort($venueCounts);
-            $primaryVenue = array_key_first($venueCounts);
-        }
-
-        // Course duration line, e.g. "8 December 2025 to 17 April 2026".
         $courseStartDate = ($course && !empty($course->start_year))
             ? Carbon::parse($course->start_year)->format('j F Y') : '';
         $courseEndDate = ($course && !empty($course->end_date))
             ? Carbon::parse($course->end_date)->format('j F Y') : '';
+        $courseDuration = ($courseStartDate && $courseEndDate)
+            ? $courseStartDate . ' to ' . $courseEndDate : '';
 
-        $courseDuration = '';
-        if ($courseStartDate && $courseEndDate) {
-            $courseDuration = $courseStartDate . ' to ' . $courseEndDate;
+        // Most common venue across the week.
+        $primaryVenue = '';
+        $venueCounts  = [];
+        foreach ($weekRows as $r) {
+            if (!empty($r->venue_name)) {
+                $venueCounts[$r->venue_name] = ($venueCounts[$r->venue_name] ?? 0) + 1;
+            }
+        }
+        if (!empty($venueCounts)) {
+            arsort($venueCounts);
+            $primaryVenue = array_key_first($venueCounts);
         }
 
         // Embed logos as base64 data URIs — DomPDF can't reliably resolve
@@ -1583,7 +1531,7 @@ class CalendarController extends Controller
         };
 
         $data = [
-            'weeks'           => [],
+            'weeks'           => $this->buildWeeksGrid($weekRows, $weekStart, $weekEnd, $course),
             'rangeStart'      => $weekStart->format('d M Y'),
             'rangeEnd'        => $weekEnd->format('d M Y'),
             'course'          => $course,
@@ -1592,12 +1540,10 @@ class CalendarController extends Controller
             'courseDuration'  => $courseDuration,
             'multiCourse'     => $multiCourse,
             'primaryVenue'    => $primaryVenue,
-            // Optional footer note / announcement (no hardcoding — driven by request).
             'footerNote'      => trim((string) $request->input('note', '')),
             'studentName'     => auth()->user()->user_name ?? '',
             'logoLeft'        => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
             'logoRight'       => $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
-            // Pre-shaped Devanagari academy name (DomPDF can't shape Indic text).
             'titleHindi'      => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
 
@@ -1617,6 +1563,165 @@ class CalendarController extends Controller
         return $request->boolean('download')
             ? $pdf->download($fileName)
             : $pdf->stream($fileName);
+    }
+
+    /**
+     * Build the $weeks array expected by ot-timetable-pdf.blade.php.
+     * Each entry covers one Mon–Fri week within [$rangeStart, $rangeEnd].
+     */
+    private function buildWeeksGrid($events, Carbon $rangeStart, Carbon $rangeEnd, $course = null): array
+    {
+        $weeks = [];
+        $cursor = $rangeStart->copy()->startOfWeek(Carbon::MONDAY);
+
+        while ($cursor->lte($rangeEnd)) {
+            $weekEnd = $cursor->copy()->addDays(6);
+
+            // Filter events for this week (Mon–Fri only)
+            $weekEvents = collect($events)->filter(function ($e) use ($cursor, $weekEnd) {
+                $d = Carbon::parse($e->START_DATE);
+                return $d->between($cursor, $weekEnd) && $d->dayOfWeekIso >= 1 && $d->dayOfWeekIso <= 5;
+            });
+
+            // Build days descriptors Mon–Fri
+            $days = [];
+            for ($i = 0; $i < 5; $i++) {
+                $d = $cursor->copy()->addDays($i);
+                $days[] = [
+                    'key'     => $i + 1,
+                    'dayName' => $d->format('l'),
+                    'label'   => $d->format('M j'),
+                ];
+            }
+
+            // Build time-slot grid
+            $grid      = [];
+            $slotOrder = [];
+
+            foreach ($weekEvents as $r) {
+                $dow  = (int) Carbon::parse($r->START_DATE)->dayOfWeekIso;
+                $slot = trim((string) $r->class_session) ?: 'Unscheduled';
+
+                if (!isset($grid[$slot])) {
+                    $grid[$slot]      = [];
+                    $slotOrder[$slot] = $this->timetableSlotSortKey($slot);
+                }
+
+                $facultyIds = json_decode($r->faculty_master, true);
+                if (!is_array($facultyIds)) {
+                    $facultyIds = !empty($r->faculty_master) ? [$r->faculty_master] : [];
+                }
+                $faculty = $facultyIds
+                    ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
+                    : '';
+
+                $grid[$slot][$dow][] = [
+                    'topic'   => trim((string) $r->subject_topic) ?: 'Session',
+                    'faculty' => $faculty,
+                    'venue'   => trim((string) ($r->venue_name ?? '')),
+                    'isBreak' => false,
+                    'course'  => '',
+                    'time'    => '',
+                ];
+            }
+
+            uksort($grid, function ($a, $b) use ($slotOrder) {
+                return ($slotOrder[$a] ?? PHP_INT_MAX) <=> ($slotOrder[$b] ?? PHP_INT_MAX);
+            });
+
+            // Build row descriptors
+            $rows = [];
+            foreach ($grid as $slot => $byDay) {
+                $allCells = [];
+                foreach ($byDay as $cells) {
+                    foreach ($cells as $c) {
+                        $allCells[] = $c;
+                    }
+                }
+
+                $isBand = !empty($allCells);
+                foreach ($allCells as $c) {
+                    if (!preg_match('/\b(tea\s*break|lunch|break|recess|hi[\s-]?tea)\b/i', $c['topic'])) {
+                        $isBand = false;
+                        break;
+                    }
+                }
+
+                [$from, $to] = $this->splitSessionTime($slot);
+
+                $cells = [];
+                foreach ($days as $day) {
+                    $cells[$day['key']] = [
+                        'state'   => 'show',
+                        'rowspan' => 1,
+                        'isBreak' => false,
+                        'events'  => $byDay[$day['key']] ?? [],
+                    ];
+                }
+
+                $rows[] = [
+                    'from'      => $from,
+                    'to'        => $to,
+                    'isBand'    => $isBand,
+                    'bandTopic' => $isBand ? ($allCells[0]['topic'] ?? '') : null,
+                    'cells'     => $cells,
+                ];
+            }
+
+            // Determine programme-relative week number
+            $weekNumber = $cursor->isoWeek;
+            if ($course && !empty($course->start_year)) {
+                $courseMonday = Carbon::parse($course->start_year)->startOfWeek(Carbon::MONDAY);
+                $rel = intdiv((int) $courseMonday->diffInDays($cursor, false), 7) + 1;
+                if ($rel >= 1) {
+                    $weekNumber = $rel;
+                }
+            }
+
+            $rangeLabel = $cursor->format('j M') . ' – ' . min($weekEnd, $rangeEnd)->format('j M Y');
+
+            $weeks[] = [
+                'weekNumber' => $weekNumber,
+                'rangeLabel' => $rangeLabel,
+                'days'       => $days,
+                'rows'       => $rows,
+            ];
+
+            $cursor->addWeek();
+        }
+
+        return $weeks;
+    }
+
+    /** Convert a time-slot string to a sortable integer (minutes since midnight). */
+    private function timetableSlotSortKey(string $slot): int
+    {
+        [$start] = $this->splitSessionTime($slot);
+        if (!$start) {
+            return PHP_INT_MAX;
+        }
+        // Try 12-hour format first
+        if (preg_match('/(\d{1,2}):(\d{2})\s*(AM|PM)/i', $start, $m)) {
+            $h = (int) $m[1];
+            $min = (int) $m[2];
+            if (strtoupper($m[3]) === 'PM' && $h !== 12) $h += 12;
+            if (strtoupper($m[3]) === 'AM' && $h === 12) $h = 0;
+            return $h * 60 + $min;
+        }
+        // 24-hour format
+        if (preg_match('/(\d{1,2}):(\d{2})/', $start, $m)) {
+            return (int) $m[1] * 60 + (int) $m[2];
+        }
+        return PHP_INT_MAX;
+    }
+
+    /** Split "09:00 AM - 05:00 PM" into ["09:00 AM", "05:00 PM"]. */
+    private function splitSessionTime(string $slot): array
+    {
+        $parts = preg_split('/\s*[-–—]\s*/', trim($slot), 2);
+        $from  = trim($parts[0] ?? $slot);
+        $to    = trim($parts[1] ?? '');
+        return [$from, $to];
     }
 
     /**
@@ -1791,7 +1896,7 @@ class CalendarController extends Controller
             ->get();
 
         $sectors      = SectorMaster::query()->active()->get(['pk', 'sector_name']);
-        $facultyRoles = ['Teaching', 'Sectional', 'Administration'];
+        $facultyRoles = ['Teaching', 'Sectoral', 'Administration'];
 
         return view('admin.calendar.edit-event', compact(
             'event',
@@ -2643,14 +2748,17 @@ class CalendarController extends Controller
     {
         try {
             // Admin can pass ?faculty_pk=X to view any faculty's feedback
-            if ($request->filled('faculty_pk') && hasRole('Super-Admin')) {
+            $isAdminRole = hasRole('Super Admin') || hasRole('Admin') || hasRole('Training') || hasRole('Super-Admin');
+
+            if ($request->filled('faculty_pk') && $isAdminRole) {
                 $supporting_faculty_pk = (int) $request->faculty_pk;
             } else {
                 $supporting_faculty_pk = get_auth_faculty_master_pk();
             }
 
-            // Super admin with no faculty record sees all data (view-only)
-            $isAdmin = !$supporting_faculty_pk;
+            // Only true admins (with no faculty record) see all data; a faculty whose
+            // pk lookup fails gets an empty result set, not everyone else's data.
+            $isAdmin = $isAdminRole && !$supporting_faculty_pk;
 
             // ================= PENDING FEEDBACK =================
             $pendingQuery = DB::table('supporting_faculty_feedback as sff')

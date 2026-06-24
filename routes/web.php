@@ -490,8 +490,10 @@ Route::middleware(['auth'])->group(function () {
         });
         // Academic time table (flat session list) — printable / downloadable PDF
         Route::get('/timetable/pdf', [CalendarController::class, 'downloadTimetablePdf'])->name('timetable.pdf');
+        Route::get('/timetable/preview', [CalendarController::class, 'previewTimetablePdf'])->name('timetable.preview');
         // Whole-week timetable — printable / downloadable PDF
         Route::get('/weekly-timetable/pdf', [CalendarController::class, 'weeklyTimetablePdf'])->name('weekly-timetable.pdf');
+        Route::get('/weekly-timetable/preview', [CalendarController::class, 'previewWeeklyTimetablePdf'])->name('weekly-timetable.preview');
         // Course Information + Resource Persons (Faculty for the Week) — printable / downloadable PDF
         Route::get('/weekly-info/pdf', [CalendarController::class, 'weeklyInfoPdf'])->name('weekly-info.pdf');
         Route::get('/weekly-info/meta', [CalendarController::class, 'weeklyInfoMeta'])->name('weekly-info.meta');
