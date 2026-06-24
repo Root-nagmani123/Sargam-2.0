@@ -2384,10 +2384,10 @@ class CalendarController extends Controller
                 })
                 ->where('t.feedback_checkbox', 1)
                 ->where('t.active_inactive', 1)
-                // Only show Teaching-role faculty at the OT end
+                // Only show Teaching-role faculty at OT end — strict filter.
                 ->whereRaw("
-                    (t.faculty_details IS NULL OR t.faculty_details = '' OR t.faculty_details = '[]')
-                    OR JSON_CONTAINS(
+                    JSON_VALID(t.faculty_details) = 1
+                    AND JSON_CONTAINS(
                         t.faculty_details,
                         JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
                     ) = 1
@@ -2815,12 +2815,17 @@ class CalendarController extends Controller
                     ->where(function ($q) {
                         // Session must have fully ended: either END_DATE is before today,
                         // or END_DATE is today and the session end time has already passed.
+                        // Handles both "HH:MM to HH:MM" and "hh:MM AM/PM - hh:MM AM/PM" formats.
                         $q->whereDate('t.END_DATE', '<', now()->toDateString())
                           ->orWhere(function ($q2) {
                               $q2->whereDate('t.END_DATE', '=', now()->toDateString())
-                                 ->whereRaw(
-                                     "TIME(NOW()) > STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')"
-                                 );
+                                 ->whereRaw("
+                                     TIME(NOW()) > COALESCE(
+                                         STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i'),
+                                         STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p'),
+                                         '00:00:00'
+                                     )
+                                 ");
                           });
                     });
             }
