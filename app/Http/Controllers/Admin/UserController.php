@@ -237,13 +237,11 @@ class UserController extends Controller
             $todayTimetable = $this->getTodayTimetableForStudent($userId);
          }
 
-         // Calculate total sessions for Internal Faculty or Guest Faculty
-         if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
-             // Get faculty_master.pk from user_id
-             $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
+         // Calculate total sessions for faculty portal users (Faculty / Internal / Guest)
+         if (is_faculty_portal_user()) {
+             $facultyPk = get_auth_faculty_master_pk();
 
-             if ($faculty) {
-                 $facultyPk = $faculty->pk;
+             if ($facultyPk) {
                  $totalSessions = CalendarEvent::where('active_inactive', 1)
                      ->where(function ($query) use ($facultyPk) {
                          $query->whereRaw('JSON_CONTAINS(faculty_master, ?)', ['"'.$facultyPk.'"'])
@@ -252,10 +250,7 @@ class UserController extends Controller
                      ->count();
 
                  // Check if faculty is CC or ACC
-                 $coordinatorCourses = CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
-                     $query->where('Coordinator_name', $facultyPk)
-                           ->orWhere('Assistant_Coordinator_name', $facultyPk);
-                 })->pluck('courses_master_pk')->unique();
+                 $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
 
                  // ========== SOURCE 1: CC/ACC Courses Students ==========
                  $source1StudentPks = collect([]);
@@ -979,25 +974,18 @@ class UserController extends Controller
      */
     public function studentList()
     {
-        $userId = Auth::user()->user_id;
         $students = collect([]);
         $availableCourses = collect([]);
         $facultyPk = null;
 
-        // Check if user is Internal Faculty or Guest Faculty
-        if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
-            // Get faculty_master.pk from user_id
-            $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
+        // Faculty portal users (Faculty / Internal / Guest) — includes CC/ACC coordinators
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
 
-            if ($faculty) {
-                $facultyPk = $faculty->pk;
-
+            if ($facultyPk) {
                 // ========== SOURCE 1: CC/ACC Courses ==========
                 $source1Students = collect([]);
-                $coordinatorCourses = CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
-                    $query->where('Coordinator_name', $facultyPk)
-                          ->orWhere('Assistant_Coordinator_name', $facultyPk);
-                })->pluck('courses_master_pk')->unique();
+                $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
 
                 if ($coordinatorCourses->isNotEmpty()) {
                     // Filter for active courses only
@@ -1096,25 +1084,17 @@ class UserController extends Controller
                 }
 
                 // ========== MERGE BOTH SOURCES ==========
-                // Combine Source 1 and Source 2 students manually to avoid getKey() issues
-                // Priority: Source 2 students (they have groupMapping) over Source 1 students
-                $seenStudentPks = [];
+                // Keep one row per student+course so course filters stay accurate
+                $seenStudentCourseKeys = [];
                 $uniqueStudents = collect([]);
 
-                // Process Source 2 students FIRST (they have groupMapping, so prioritize them)
-                foreach ($source2Students as $studentMap) {
+                foreach ($source2Students->concat($source1Students) as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
-                    if (!in_array($studentPk, $seenStudentPks)) {
-                        $seenStudentPks[] = $studentPk;
-                        $uniqueStudents->push($studentMap);
-                    }
-                }
+                    $coursePk = $studentMap->course_master_pk ?? 0;
+                    $studentCourseKey = $studentPk . '_' . $coursePk;
 
-                // Process Source 1 students (only if not already added from Source 2)
-                foreach ($source1Students as $studentMap) {
-                    $studentPk = $studentMap->student_master_pk;
-                    if (!in_array($studentPk, $seenStudentPks)) {
-                        $seenStudentPks[] = $studentPk;
+                    if (!in_array($studentCourseKey, $seenStudentCourseKeys, true)) {
+                        $seenStudentCourseKeys[] = $studentCourseKey;
                         $uniqueStudents->push($studentMap);
                     }
                 }
@@ -1159,7 +1139,9 @@ class UserController extends Controller
                     $studentMap->total_memo_count = $memos->count();
                 }
 
-                $students = $uniqueStudents;
+                $students = $uniqueStudents->filter(function ($studentMap) {
+                    return !empty($studentMap->studentMaster);
+                })->values();
 
                 // Get unique courses from the student list - only active courses
                 $availableCourses = $students->pluck('course')
@@ -1444,6 +1426,18 @@ class UserController extends Controller
         if (!$student) {
             return redirect()->route('admin.dashboard.students')
                 ->with('error', 'Student not found.');
+        }
+
+        if (is_faculty_portal_user()
+            && !hasRole('Super Admin')
+            && !hasRole('Training Induction Admin')
+            && !hasRole('Training MCTP Admin')
+            && !hasRole('Training IST')) {
+            $facultyPk = get_auth_faculty_master_pk();
+            if (!$facultyPk || !$this->canFacultyViewStudent($facultyPk, (int) $studentPk)) {
+                return redirect()->route('admin.dashboard.students')
+                    ->with('error', 'You do not have access to view this student.');
+            }
         }
 
         // Get medical exceptions
@@ -2431,6 +2425,80 @@ public function uploadPdf(Request $request)
                 'session_venue' => $entry->venue ? $entry->venue->venue_name : 'N/A',
             ];
         });
+    }
+
+    /**
+     * Course IDs where the faculty is CC or ACC.
+     */
+    private function getCoordinatorCourseIds(int $facultyPk)
+    {
+        return CourseCordinatorMaster::where(function ($query) use ($facultyPk) {
+            $query->where('Coordinator_name', $facultyPk)
+                  ->orWhere('Assistant_Coordinator_name', $facultyPk)
+                  ->orWhereRaw('FIND_IN_SET(?, Assistant_Coordinator_name)', [$facultyPk]);
+        })->pluck('courses_master_pk')->unique();
+    }
+
+    /**
+     * Active course IDs where the faculty is CC or ACC.
+     */
+    private function getActiveCoordinatorCourseIds(int $facultyPk)
+    {
+        $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
+        if ($coordinatorCourses->isEmpty()) {
+            return collect([]);
+        }
+
+        return CourseMaster::whereIn('pk', $coordinatorCourses)
+            ->where('active_inactive', 1)
+            ->where('end_date', '>=', now())
+            ->pluck('pk');
+    }
+
+    /**
+     * Whether a faculty user may view a student's detail page.
+     */
+    private function canFacultyViewStudent(int $facultyPk, int $studentPk): bool
+    {
+        $activeCoordinatorCourses = $this->getActiveCoordinatorCourseIds($facultyPk);
+        if ($activeCoordinatorCourses->isNotEmpty()) {
+            $enrolled = StudentMasterCourseMap::where('student_master_pk', $studentPk)
+                ->whereIn('course_master_pk', $activeCoordinatorCourses)
+                ->where('active_inactive', 1)
+                ->exists();
+
+            if ($enrolled) {
+                return true;
+            }
+        }
+
+        $groupMappings = DB::table('group_type_master_course_master_map')
+            ->where('facility_id', $facultyPk)
+            ->where('active_inactive', 1)
+            ->get();
+
+        if ($groupMappings->isEmpty()) {
+            return false;
+        }
+
+        $activeCourseIds = CourseMaster::whereIn('pk', $groupMappings->pluck('course_name')->unique())
+            ->where('active_inactive', 1)
+            ->where('end_date', '>=', now())
+            ->pluck('pk');
+
+        if ($activeCourseIds->isEmpty()) {
+            return false;
+        }
+
+        $activeGroupMappingPks = $groupMappings
+            ->whereIn('course_name', $activeCourseIds)
+            ->pluck('pk')
+            ->unique();
+
+        return StudentCourseGroupMap::where('student_master_pk', $studentPk)
+            ->whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
+            ->where('active_inactive', 1)
+            ->exists();
     }
 
 
