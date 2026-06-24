@@ -1048,6 +1048,25 @@ $(document).ready(function() {
             }
         }
 
+        // Client-side file validation for Doc_upload
+        $form.on('change', '#Doc_upload', function(){
+            var $input = $(this);
+            $input.siblings('.sme-file-err').remove();
+            if (!this.files.length) return;
+            var file = this.files[0];
+            var ext  = file.name.split('.').pop().toLowerCase();
+            var allowed = ['pdf','jpg','jpeg','png','doc','docx'];
+            if (!allowed.includes(ext)) {
+                $input.after('<small class="text-danger sme-file-err d-block mt-1">Invalid file type. Allowed: PDF, JPG, JPEG, PNG, DOC, DOCX.</small>');
+                this.value = '';
+                return;
+            }
+            if (file.size > 5 * 1024 * 1024) {
+                $input.after('<small class="text-danger sme-file-err d-block mt-1">File size exceeds 5 MB limit. Please choose a smaller file.</small>');
+                this.value = '';
+            }
+        });
+
         // Course -> students (the Add form carries #courseDropdown)
         $form.on('change', '#courseDropdown', function(){
             var courseId = $(this).val();
@@ -1062,6 +1081,8 @@ $(document).ready(function() {
     function submitModalForm(){
         var form = document.getElementById('smeAjaxForm');
         if (!form) return;
+        // Block if client-side file error is still visible
+        if ($('#smeAjaxForm .sme-file-err').length) return;
         var $btn = $('#smeFormSubmit').prop('disabled', true);
         $('#smeAjaxForm .sme-err').remove();
         $('#smeAjaxForm .is-invalid').removeClass('is-invalid');

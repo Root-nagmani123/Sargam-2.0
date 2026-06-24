@@ -113,7 +113,7 @@ class CalendarController extends Controller
             ->get();
 
         $sectors = SectorMaster::query()->active()->get(['pk', 'sector_name']);
-        $facultyRoles = ['Teaching', 'Sectoral', 'Administration'];
+        $facultyRoles = ['Teaching', 'Sectional', 'Administration'];
 
         \Log::info('Calendar data loaded successfully', [
             'courses_count' => $courseMaster->count(),
@@ -184,7 +184,7 @@ class CalendarController extends Controller
         $sectors = SectorMaster::query()->active()->get(['pk', 'sector_name']);
 
         // No roles master exists yet — fixed list per product decision.
-        $facultyRoles = ['Teaching', 'Sectoral', 'Administration'];
+        $facultyRoles = ['Teaching', 'Sectional', 'Administration'];
 
         // Optional date prefill (e.g. arriving from a calendar day click).
         $prefillDate = $request->filled('date')
@@ -263,7 +263,7 @@ class CalendarController extends Controller
             ->get();
 
         $sectors = SectorMaster::query()->active()->get(['pk', 'sector_name']);
-        $facultyRoles = ['Teaching', 'Sectoral', 'Administration'];
+        $facultyRoles = ['Teaching', 'Sectional', 'Administration'];
 
         return view('admin.calendar.ot-index', compact(
             'courseMaster',
@@ -501,11 +501,13 @@ class CalendarController extends Controller
         }
 
         // Teaching role → main faculty (gets rated by supporting faculty)
-        // Sectional / Administration → supporting faculty (gives rating)
+        // Any other role (Sectional, Administration, etc.) → supporting faculty (gives rating)
         $mainFaculty       = collect($facultyDetails)
             ->where('role', 'Teaching')
             ->pluck('faculty_pk')->all();
-        $supportingFaculty = collect($facultyDetails)->whereIn('role', ['Sectional', 'Administration'])->pluck('faculty_pk')->all();
+        $supportingFaculty = collect($facultyDetails)
+            ->filter(fn($d) => !empty($d['role']) && $d['role'] !== 'Teaching')
+            ->pluck('faculty_pk')->all();
 
         $now = now();
 
@@ -675,8 +677,10 @@ class CalendarController extends Controller
             $facultyIds = json_decode($event->faculty_master, true);
             $facultyNames = '';
             if (is_array($facultyIds) && !empty($facultyIds)) {
+                $orderedIds = implode(',', array_map('intval', $facultyIds));
                 $facultyNames = DB::table('faculty_master')
                     ->whereIn('pk', $facultyIds)
+                    ->orderByRaw("FIELD(pk, {$orderedIds})")
                     ->pluck('full_name')
                     ->implode(', ');
             } elseif (!is_array($facultyIds) && !empty($event->faculty_master)) {
@@ -810,8 +814,13 @@ class CalendarController extends Controller
         $facultyDetails = json_decode($event->faculty_details, true) ?? [];
         $facultyDetailMap = collect($facultyDetails)->keyBy('faculty_pk'); // pk => detail row
 
+        $orderedFacultyIds = $facultyIds ?: [];
+        $facultyOrderSql   = !empty($orderedFacultyIds)
+            ? 'FIELD(pk, ' . implode(',', array_map('intval', $orderedFacultyIds)) . ')'
+            : 'pk';
         $facultyRows = DB::table('faculty_master')
-            ->whereIn('pk', $facultyIds ?: [])
+            ->whereIn('pk', $orderedFacultyIds)
+            ->orderByRaw($facultyOrderSql)
             ->get(['pk', 'full_name']);
 
         $facultyNames = $facultyRows->map(function ($f) use ($facultyDetailMap) {
@@ -881,8 +890,10 @@ class CalendarController extends Controller
             $facultyIds = json_decode($event->faculty_master, true);
             $facultyNames = '';
             if (is_array($facultyIds) && !empty($facultyIds)) {
+                $orderedIds = implode(',', array_map('intval', $facultyIds));
                 $facultyNames = DB::table('faculty_master')
                     ->whereIn('pk', $facultyIds)
+                    ->orderByRaw("FIELD(pk, {$orderedIds})")
                     ->pluck('full_name')
                     ->implode(', ');
             } elseif (!is_array($facultyIds) && !empty($event->faculty_master)) {
@@ -1611,9 +1622,15 @@ class CalendarController extends Controller
                 if (!is_array($facultyIds)) {
                     $facultyIds = !empty($r->faculty_master) ? [$r->faculty_master] : [];
                 }
-                $faculty = $facultyIds
-                    ? DB::table('faculty_master')->whereIn('pk', $facultyIds)->pluck('full_name')->implode(', ')
-                    : '';
+                if ($facultyIds) {
+                    $orderedFacIds = implode(',', array_map('intval', $facultyIds));
+                    $faculty = DB::table('faculty_master')
+                        ->whereIn('pk', $facultyIds)
+                        ->orderByRaw("FIELD(pk, {$orderedFacIds})")
+                        ->pluck('full_name')->implode(', ');
+                } else {
+                    $faculty = '';
+                }
 
                 $grid[$slot][$dow][] = [
                     'topic'   => trim((string) $r->subject_topic) ?: 'Session',
@@ -1896,7 +1913,7 @@ class CalendarController extends Controller
             ->get();
 
         $sectors      = SectorMaster::query()->active()->get(['pk', 'sector_name']);
-        $facultyRoles = ['Teaching', 'Sectoral', 'Administration'];
+        $facultyRoles = ['Teaching', 'Sectional', 'Administration'];
 
         return view('admin.calendar.edit-event', compact(
             'event',
@@ -2367,6 +2384,14 @@ class CalendarController extends Controller
                 })
                 ->where('t.feedback_checkbox', 1)
                 ->where('t.active_inactive', 1)
+                // Only show Teaching-role faculty at the OT end
+                ->whereRaw("
+                    (t.faculty_details IS NULL OR t.faculty_details = '' OR t.faculty_details = '[]')
+                    OR JSON_CONTAINS(
+                        t.faculty_details,
+                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
+                    ) = 1
+                ")
                 ->whereNotExists(function ($sub) use ($student_pk) {
                     $sub->select(DB::raw(1))
                         ->from('topic_feedback as tf')
@@ -2787,7 +2812,17 @@ class CalendarController extends Controller
 
             if (!$isAdmin) {
                 $pendingQuery->where('sff.supporting_faculty_master_pk', $supporting_faculty_pk)
-                    ->whereDate('t.END_DATE', '<=', now()->toDateString());
+                    ->where(function ($q) {
+                        // Session must have fully ended: either END_DATE is before today,
+                        // or END_DATE is today and the session end time has already passed.
+                        $q->whereDate('t.END_DATE', '<', now()->toDateString())
+                          ->orWhere(function ($q2) {
+                              $q2->whereDate('t.END_DATE', '=', now()->toDateString())
+                                 ->whereRaw(
+                                     "TIME(NOW()) > STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')"
+                                 );
+                          });
+                    });
             }
 
             $pendingData = $pendingQuery->orderBy('t.START_DATE', 'asc')->get();

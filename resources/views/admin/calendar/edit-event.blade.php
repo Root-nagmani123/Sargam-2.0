@@ -186,13 +186,22 @@
                         <div class="row g-3">
                             <div class="col-md-6">
                                 <label for="start_time" class="form-label required">Start Time</label>
+                                @php
+                                    $manualStart = '';
+                                    $manualEnd   = '';
+                                    if ($event->session_type == 2 && $event->class_session) {
+                                        $parts = explode(' - ', $event->class_session, 2);
+                                        try { $manualStart = \Carbon\Carbon::parse(trim($parts[0]))->format('H:i'); } catch (\Throwable $e) {}
+                                        try { $manualEnd   = \Carbon\Carbon::parse(trim($parts[1] ?? ''))->format('H:i'); } catch (\Throwable $e) {}
+                                    }
+                                @endphp
                                 <input type="time" name="start_time" id="start_time" class="form-control"
-                                    value="{{ old('start_time', $event->session_type == 2 ? \Illuminate\Support\Str::before($event->class_session, ' - ') : '') }}">
+                                    value="{{ old('start_time', $manualStart) }}">
                             </div>
                             <div class="col-md-6">
                                 <label for="end_time" class="form-label required">End Time</label>
                                 <input type="time" name="end_time" id="end_time" class="form-control"
-                                    value="{{ old('end_time', $event->session_type == 2 ? trim(\Illuminate\Support\Str::after($event->class_session, ' - ')) : '') }}">
+                                    value="{{ old('end_time', $manualEnd) }}">
                             </div>
                         </div>
                     </div>

@@ -12,11 +12,6 @@
         ['label' => 'Calendar Creation', 'url' => route('calendar.index')],
         ['label' => 'Add Event'],
     ]">
-        <button type="button" id="btnDownloadForm"
-            class="btn btn-outline-primary d-inline-flex align-items-center gap-1 rounded-2 px-3 fw-semibold">
-            <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">download</i>
-            <span>Download Form</span>
-        </button>
     </x-breadcrum>
 
     @if($errors->any())
