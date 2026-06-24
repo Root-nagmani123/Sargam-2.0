@@ -274,6 +274,7 @@ class FormBuilderController extends Controller
             'css_class'            => ['nullable', 'string', Rule::in(array_keys(FcFormField::columnLayoutOptions()))],
             'file_max_kb'          => 'nullable|integer',
             'file_extensions'      => 'nullable|string|max:200',
+            'form_template'        => 'nullable|string|max:100',
             'is_active'            => 'nullable|boolean',
         ]);
 
@@ -281,6 +282,11 @@ class FormBuilderController extends Controller
         if (! empty($data['options_json'])) {
             $comma = FcFormField::optionsJsonToCommaList($data['options_json']);
             $data['options_json'] = FcFormField::commaListToOptionsJson($comma);
+        }
+
+        // form_template only applies to file fields; clear it otherwise.
+        if (($data['field_type'] ?? null) !== 'file') {
+            $data['form_template'] = null;
         }
 
         $data['is_required'] = $request->boolean('is_required');
