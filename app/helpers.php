@@ -770,7 +770,8 @@ function get_Role_by_course()
         return [-1];
     }
 
-    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds));
+    $epoch = Cache::get('role_by_course_epoch', 1);
+    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds)) . '_e' . $epoch;
     $role_course = Cache::remember($cacheKey, 600, function () use ($userRoleIds) {
         return DB::table('course_master as cm')
             ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')

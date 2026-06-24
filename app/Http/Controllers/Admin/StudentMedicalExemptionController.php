@@ -347,6 +347,7 @@ class StudentMedicalExemptionController extends Controller
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'nullable|boolean',
+            'Doc_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
         ]);
 
         // Check for overlapping time ranges for the same student
@@ -461,6 +462,7 @@ class StudentMedicalExemptionController extends Controller
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'required|boolean',
+            'Doc_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
         ]);
 
         $record = StudentMedicalExemption::findOrFail(decrypt($id));

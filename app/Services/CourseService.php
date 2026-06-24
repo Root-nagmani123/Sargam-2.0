@@ -68,6 +68,7 @@ class CourseService
                 'course_year' => $validatedData['courseyear'],
                 'start_year' => $validatedData['startdate'],
                 'end_date' => $validatedData['enddate'],
+                'active_inactive' => 1,
                 'created_date' => now(),
                 'Modified_date' => now(),
             ];

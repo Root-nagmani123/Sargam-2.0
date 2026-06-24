@@ -101,7 +101,7 @@
                     <div class="col-12">
                         <label for="topic" class="form-label required">Topic</label>
                         <input type="text" name="topic" id="topic" class="form-control"
-                            placeholder="eg. Lorem ipsum dolor sit amet"
+                            placeholder=""
                             value="{{ old('topic', $event->subject_topic) }}">
                     </div>
                 </div>
@@ -300,16 +300,12 @@
                           title="Feedback is available for the Teaching role only">
                         <span class="text-muted small fw-medium"><b>Feedback:</b></span>
                         <div class="form-check mb-0">
-                            <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="fb_remark___IDX__" value="remark">
+                            <input class="form-check-input" type="checkbox" name="faculty_feedback_remark[__IDX__]" id="fb_remark___IDX__" value="remark">
                             <label class="form-check-label" for="fb_remark___IDX__">Remark</label>
                         </div>
                         <div class="form-check mb-0">
-                            <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="fb_rating___IDX__" value="rating">
+                            <input class="form-check-input" type="checkbox" name="faculty_feedback_rating[__IDX__]" id="fb_rating___IDX__" value="rating">
                             <label class="form-check-label" for="fb_rating___IDX__">Rating</label>
-                        </div>
-                        <div class="form-check mb-0">
-                            <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="fb_none___IDX__" value="none" checked>
-                            <label class="form-check-label" for="fb_none___IDX__">None</label>
                         </div>
                     </span>
                     <button type="button" class="btn btn-outline-danger btn-sm ms-auto cal-ce-remove-faculty d-inline-flex align-items-center justify-content-center" title="Remove faculty" aria-label="Remove faculty">
@@ -376,7 +372,8 @@
         'faculty'          => old('faculty'),
         'faculty_row_type' => old('faculty_row_type'),
         'faculty_role'     => old('faculty_role'),
-        'faculty_feedback' => old('faculty_feedback'),
+        'faculty_feedback_remark' => old('faculty_feedback_remark'),
+        'faculty_feedback_rating' => old('faculty_feedback_rating'),
         'type_names'       => old('type_names'),
         'group_type'       => old('group_type'),
         'subject_name'     => old('subject_name'),
@@ -450,8 +447,14 @@
             if (type && preset.type    != null) setSelectValue(type, preset.type);
             if (role && preset.role    != null) setSelectValue(role, preset.role);
             if (preset.feedback) {
-                const fb = row.querySelector(`input[name="faculty_feedback[${idx}]"][value="${preset.feedback}"]`);
-                if (fb) fb.checked = true;
+                if (preset.feedback === 'remark' || preset.feedback === 'both') {
+                    const fb = row.querySelector(`input[name="faculty_feedback_remark[${idx}]"]`);
+                    if (fb) fb.checked = true;
+                }
+                if (preset.feedback === 'rating' || preset.feedback === 'both') {
+                    const fb = row.querySelector(`input[name="faculty_feedback_rating[${idx}]"]`);
+                    if (fb) fb.checked = true;
+                }
             }
         }
         applyFeedbackState(row);
@@ -464,8 +467,7 @@
         const isTeaching = !!role && role.value === 'Teaching';
         row.querySelectorAll('input[name^="faculty_feedback"]').forEach(inp => { inp.disabled = !isTeaching; });
         if (!isTeaching) {
-            const none = row.querySelector('input[name^="faculty_feedback"][value="none"]');
-            if (none) none.checked = true;
+            row.querySelectorAll('input[name^="faculty_feedback"]').forEach(inp => { inp.checked = false; });
         }
         const wrap = row.querySelector('[data-feedback-wrap]');
         if (wrap) wrap.classList.toggle('d-none', !isTeaching);
@@ -489,6 +491,15 @@
         }
         if (e.target.matches('select[name^="faculty_role"]')) {
             const row = e.target.closest('[data-faculty-row]');
+            if (row && e.target.value === 'Teaching') {
+                const duplicate = Array.from(facultyRows.querySelectorAll('select[name^="faculty_role"]'))
+                    .find(s => s !== e.target && s.value === 'Teaching');
+                if (duplicate) {
+                    alert('Only one faculty can have the Teaching role.');
+                    e.target.value = '';
+                    if (e.target._choices) e.target._choices.setChoiceByValue('');
+                }
+            }
             if (row) applyFeedbackState(row);
         }
     });
@@ -514,7 +525,7 @@
                     faculty:  facs[k],
                     type:     oldData.faculty_row_type?.[k] ?? null,
                     role:     oldData.faculty_role?.[k]     ?? null,
-                    feedback: oldData.faculty_feedback?.[k] ?? null,
+                    feedback: (oldData.faculty_feedback_remark?.[k] ? (oldData.faculty_feedback_rating?.[k] ? 'both' : 'remark') : (oldData.faculty_feedback_rating?.[k] ? 'rating' : null)),
                 });
             });
             return;

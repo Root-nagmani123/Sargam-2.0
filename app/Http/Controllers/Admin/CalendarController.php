@@ -52,8 +52,11 @@ class CalendarController extends Controller
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->whereDate('end_date', '>=', today());
 
+        // Training-admin roles manage events and must see courses by role mapping, not timetable.
+        $isTrainingAdmin = hasRole('Training') || hasRole('Training-Induction') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+
         // Faculty see courses from their timetable / coordinator assignments, not role mapping.
-        if (is_faculty_portal_user()) {
+        if (is_faculty_portal_user() && !$isTrainingAdmin) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $facultyCourseIds = app(FacultyFeedbackReportService::class)->getAccessibleCourseIds($facultyPk);
@@ -140,7 +143,9 @@ class CalendarController extends Controller
         $courseMaster = CourseMaster::where('course_master.active_inactive', 1)
             ->whereDate('end_date', '>=', today());
 
-        if (is_faculty_portal_user()) {
+        $isTrainingAdmin = hasRole('Training') || hasRole('Training-Induction') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+
+        if (is_faculty_portal_user() && !$isTrainingAdmin) {
             $facultyPk = get_auth_faculty_master_pk();
             if ($facultyPk) {
                 $facultyCourseIds = app(FacultyFeedbackReportService::class)->getAccessibleCourseIds($facultyPk);
@@ -256,13 +261,18 @@ class CalendarController extends Controller
             ->select('pk', 'shift_name', 'shift_time', 'start_time', 'end_time')
             ->get();
 
+        $sectors = SectorMaster::query()->active()->get(['pk', 'sector_name']);
+        $facultyRoles = ['Teaching', 'Sectoral', 'Administration'];
+
         return view('admin.calendar.ot-index', compact(
             'courseMaster',
             'facultyMaster',
             'subjects',
             'venueMaster',
             'classSessionMaster',
-            'internal_faculty'
+            'internal_faculty',
+            'sectors',
+            'facultyRoles'
         ));
     }
     public function weeklyTimetable(Request $request)
@@ -363,7 +373,8 @@ class CalendarController extends Controller
             'faculty_type' => 'nullable|integer',
             'faculty_row_type' => 'nullable|array',
             'faculty_role' => 'nullable|array',
-            'faculty_feedback' => 'nullable|array',
+            'faculty_feedback_remark' => 'nullable|array',
+            'faculty_feedback_rating' => 'nullable|array',
             'sector' => 'nullable|integer',
             'vanue' => 'required|integer',
             'shift' => 'required_if:shift_type,1',
@@ -431,8 +442,8 @@ class CalendarController extends Controller
         if ($facultyDetails) {
             // Per-faculty feedback (new form) — keep event-level flags in sync.
             $feedbacks = collect($facultyDetails)->pluck('feedback');
-            $hasRemark = $feedbacks->contains('remark');
-            $hasRating = $feedbacks->contains('rating');
+            $hasRemark = $feedbacks->contains('remark') || $feedbacks->contains('both');
+            $hasRating = $feedbacks->contains('rating') || $feedbacks->contains('both');
             $event->feedback_checkbox = ($hasRemark || $hasRating) ? 1 : 0;
             $event->Ratting_checkbox = $hasRating ? 1 : 0;
             $event->Remark_checkbox = $hasRemark ? 1 : 0;
@@ -548,13 +559,14 @@ class CalendarController extends Controller
 
     private function buildFacultyDetails(Request $request): array
     {
-        $facultyIds = $request->input('faculty', []);
-        $rowTypes   = $request->input('faculty_row_type', []);
-        $roles      = $request->input('faculty_role', []);
-        $feedbacks  = $request->input('faculty_feedback', []);
+        $facultyIds      = $request->input('faculty', []);
+        $rowTypes        = $request->input('faculty_row_type', []);
+        $roles           = $request->input('faculty_role', []);
+        $feedbackRemarks = $request->input('faculty_feedback_remark', []);
+        $feedbackRatings = $request->input('faculty_feedback_rating', []);
 
         // Only treat as the new format when at least one per-row attribute is sent.
-        if (empty($rowTypes) && empty($roles) && empty($feedbacks)) {
+        if (empty($rowTypes) && empty($roles) && empty($feedbackRemarks) && empty($feedbackRatings)) {
             return [];
         }
 
@@ -563,9 +575,18 @@ class CalendarController extends Controller
             if ($facultyPk === null || $facultyPk === '') {
                 continue;
             }
-            $role = $roles[$i] ?? null;
-            // Feedback is only valid for the Teaching role; force 'none' otherwise.
-            $feedback = ($role === 'Teaching') ? ($feedbacks[$i] ?? 'none') : 'none';
+            $role      = $roles[$i] ?? null;
+            $hasRemark = ($role === 'Teaching') && !empty($feedbackRemarks[$i]);
+            $hasRating = ($role === 'Teaching') && !empty($feedbackRatings[$i]);
+            if ($hasRemark && $hasRating) {
+                $feedback = 'both';
+            } elseif ($hasRemark) {
+                $feedback = 'remark';
+            } elseif ($hasRating) {
+                $feedback = 'rating';
+            } else {
+                $feedback = 'none';
+            }
             $details[] = [
                 'faculty_pk'   => (int) $facultyPk,
                 'faculty_type' => isset($rowTypes[$i]) && $rowTypes[$i] !== '' ? (int) $rowTypes[$i] : null,
@@ -1797,12 +1818,13 @@ class CalendarController extends Controller
             'type_names'       => 'required|array|min:1',
             'type_names.*'     => 'required|integer',
             'faculty'          => 'required|array|min:1',
-            'faculty.*'        => 'required|integer',
-            'faculty_type'     => 'nullable|integer',
-            'faculty_row_type' => 'nullable|array',
-            'faculty_role'     => 'nullable|array',
-            'faculty_feedback' => 'nullable|array',
-            'sector'           => 'nullable|integer',
+            'faculty.*'              => 'required|integer',
+            'faculty_type'           => 'nullable|integer',
+            'faculty_row_type'       => 'nullable|array',
+            'faculty_role'           => 'nullable|array',
+            'faculty_feedback_remark' => 'nullable|array',
+            'faculty_feedback_rating' => 'nullable|array',
+            'sector'                 => 'nullable|integer',
             'vanue'            => 'required|integer',
             'shift'            => 'required_if:shift_type,1',
             'start_time'       => 'required_if:shift_type,2',
@@ -1856,8 +1878,8 @@ class CalendarController extends Controller
 
         if ($facultyDetails) {
             $feedbacks = collect($facultyDetails)->pluck('feedback');
-            $hasRemark = $feedbacks->contains('remark');
-            $hasRating = $feedbacks->contains('rating');
+            $hasRemark = $feedbacks->contains('remark') || $feedbacks->contains('both');
+            $hasRating = $feedbacks->contains('rating') || $feedbacks->contains('both');
             $event->feedback_checkbox = ($hasRemark || $hasRating) ? 1 : 0;
             $event->Ratting_checkbox  = $hasRating ? 1 : 0;
             $event->Remark_checkbox   = $hasRemark ? 1 : 0;
