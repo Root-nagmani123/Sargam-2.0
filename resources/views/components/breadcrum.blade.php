@@ -200,6 +200,12 @@
             ];
         })
         ->filter(fn ($item) => filled($item['label']))
+        ->map(function ($item) {
+            if (strtolower($item['label']) === 'home' && is_null($item['url'])) {
+                $item['url'] = route('admin.dashboard');
+            }
+            return $item;
+        })
         ->values()
         ->all();
 
