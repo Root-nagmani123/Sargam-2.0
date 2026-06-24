@@ -1384,7 +1384,7 @@ class ReportController extends Controller
             'overview' => fn() => $this->exportOverviewCsv(),
             'service'  => fn() => $this->exportServiceCsv(),
             'state'    => fn() => $this->exportStateCsv(),
-            'bank'     => fn() => $this->exportBankCsv(),
+            'bank'     => fn() => $this->exportBankCsv($request),
             default    => abort(404),
         };
 
@@ -1562,22 +1562,47 @@ class ReportController extends Controller
         return trim(preg_replace('/[^A-Za-z0-9_\-\.]+/', '_', $name), '_');
     }
 
-    private function exportBankCsv(): void
+    private function exportBankCsv(Request $request): void
     {
+        // Mirror the bank report query (bankDetails): these tables key on user_id,
+        // not "username", and the identifier column is resolved via fc_user_col().
+        $s1Col  = fc_user_col('student_master_firsts');
+        $smCol  = fc_user_col('student_masters');
+        $bCol   = fc_user_col('new_registration_bank_details_masters');
+        $hasFrm = Schema::hasTable('fc_registration_master');
+
         $out = fopen('php://output','w');
-        fputcsv($out, ['Username','Full Name','Service','Bank Name','Branch','IFSC','Account No','Holder Name','Type','Verified']);
-        DB::table('student_master_firsts as s1')
-          ->leftJoin('service_masters as svc','s1.service_id','=','svc.id')
-          ->leftJoin('new_registration_bank_details_masters as b','s1.username','=','b.username')
-          ->whereNotNull('b.account_no')
-          ->select('s1.username','s1.full_name','svc.service_code','b.*')
-          ->orderBy('s1.full_name')
-          ->each(fn($r) => fputcsv($out, [
-              $r->username,$r->full_name,$r->service_code ?? '',
-              $r->bank_name ?? '',$r->branch_name ?? '',$r->ifsc_code ?? '',
-              $r->account_no ?? '',$r->account_holder_name ?? '',
-              $r->account_type ?? '',$r->is_verified ? 'Yes':'No',
-          ]));
+        fputcsv($out, ['User ID','Full Name','Service','Bank Name','IFSC','Account No','Holder Name']);
+
+        $query = DB::table('student_master_firsts as s1')
+            ->leftJoin('student_masters as sm', "sm.{$smCol}", '=', "s1.{$s1Col}")
+            ->leftJoin('new_registration_bank_details_masters as b', "b.{$bCol}", '=', "s1.{$s1Col}")
+            ->leftJoin('service_masters as svc', 's1.service_id', '=', 'svc.id');
+
+        if ($hasFrm) {
+            $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "s1.{$s1Col}")
+                  ->leftJoin('service_master as svc_frm', DB::raw('CAST(frm.service_master_pk AS UNSIGNED)'), '=', 'svc_frm.pk');
+        }
+
+        $serviceExpr = $hasFrm
+            ? "COALESCE(NULLIF(TRIM(svc.service_code),''), NULLIF(TRIM(svc_frm.service_short_name),''), NULLIF(TRIM(svc_frm.service_name),''))"
+            : "NULLIF(TRIM(svc.service_code),'')";
+
+        $query->whereNotNull('b.account_no')
+            ->when($request->filled('form_id'), fn ($q) => $q->where('sm.form_id', (int) $request->form_id))
+            ->select([
+                DB::raw("s1.{$s1Col} as user_id"),
+                DB::raw("NULLIF(TRIM(COALESCE(NULLIF(TRIM(s1.full_name),''), CONCAT(COALESCE(s1.first_name,''),' ',COALESCE(s1.last_name,'')))), '') as full_name"),
+                DB::raw("{$serviceExpr} as service_code"),
+                'b.bank_name', 'b.ifsc_code',
+                'b.account_no', 'b.account_holder_name',
+            ])
+            ->orderBy('s1.full_name')
+            ->each(fn ($r) => fputcsv($out, [
+                $r->user_id, $r->full_name ?? '', $r->service_code ?? '',
+                $r->bank_name ?? '', $r->ifsc_code ?? '',
+                $r->account_no ?? '', $r->account_holder_name ?? '',
+            ]));
         fclose($out);
     }
 }

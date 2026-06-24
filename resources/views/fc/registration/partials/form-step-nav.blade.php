@@ -4,12 +4,6 @@
 @endphp
 @if($navForm && count($navItems) > 0)
 <div class="mb-3">
-    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2 mb-2">
-        <a href="{{ route('fc-reg.forms.dashboard', $navForm) }}" class="btn btn-sm btn-outline-secondary">
-            <i class="bi bi-grid me-1"></i>{{ $navForm->form_name }}
-        </a>
-        <span class="text-muted small">Travel Plan is part of your registration form</span>
-    </div>
     <div class="d-flex align-items-center gap-0 flex-nowrap overflow-auto pb-1">
         @foreach($navItems as $i => $item)
             @php

@@ -1,10 +1,11 @@
-@extends('admin.layouts.master')
+@extends('fc.layouts.master')
 @section('title', 'Travel Plan – FC Registration')
 @php
     $userId = auth()->id();
 @endphp
 
-@section('setup_content')
+@section('content')
+@include('fc.registration.partials.fc-form-theme')
 <style>
     .travel-form-enhanced {
         font-size: 1.02rem;
@@ -99,8 +100,29 @@
         padding: 1rem;
     }
 </style>
-<div class="row justify-content-center">
-<div class="col-12 col-xl-10">
+<div class="fc-form-page">
+<div class="fc-shell">
+    @php
+        $navForm = $formStepNav['form'] ?? null;
+        $navItems = $formStepNav['items'] ?? [];
+        $travelIdx = collect($navItems)->search(fn ($it) => ! empty($it['current']));
+        $travelStepNo = $travelIdx !== false ? $travelIdx + 1 : 5;
+        $travelStepTotal = count($navItems);
+    @endphp
+    <div class="fc-band">
+        <div class="fc-band__row">
+            <div class="fc-band__ico"><i class="bi bi-train-front"></i></div>
+            <div>
+                <h4>{{ $navForm->form_name ?? 'Foundation Course' }}</h4>
+                <p>@if($travelStepTotal > 0)Step {{ $travelStepNo }} of {{ $travelStepTotal }} — @endif Travel Plan</p>
+            </div>
+            @if($navForm)
+                <a href="{{ route('fc-reg.forms.dashboard', $navForm) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3">
+                    <i class="bi bi-grid me-1"></i>All Steps
+                </a>
+            @endif
+        </div>
+    </div>
 
     @if(!empty($formStepNav))
         @include('fc.registration.partials.form-step-nav', ['formStepNav' => $formStepNav])
@@ -108,7 +130,7 @@
         @include('partials.step-indicator', ['current' => 5])
     @endif
 
-    <div class="card border-0 shadow-sm" style="border-radius:10px;">
+    <div class="card fc-card border-0 shadow-sm">
         <div class="card-header bg-white border-bottom py-3 px-4">
             <h5 class="fw-bold mb-0" style="color:#1a3c6e;">
                 <i class="bi bi-train-front me-2"></i>Travel Plan — Joining (Joining Date report)

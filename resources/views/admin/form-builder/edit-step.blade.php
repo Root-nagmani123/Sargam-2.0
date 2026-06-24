@@ -232,7 +232,7 @@
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h6 class="mb-0 text-uppercase small fw-bold text-muted" id="fcGroupFieldsCountLabel">Fields ({{ $groupedFieldCount }})</h6>
             <div class="d-flex gap-2">
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" data-bs-target="#fcManageGroups" aria-expanded="false">
+                <button type="button" id="fcManageGroupsBtn" class="btn btn-sm btn-outline-secondary" onclick="toggleManageGroups()">
                     <i class="bi bi-collection me-1"></i>Manage Groups ({{ $step->fieldGroups->count() }})
                 </button>
                 <button type="button" class="btn btn-sm btn-primary" onclick="openAddGroupFieldModal()">
@@ -281,16 +281,18 @@
         </div>
     </div>
 
-    <div class="collapse mb-4" id="fcManageGroups">
-        <div class="card border-0 shadow-sm" style="border-radius:10px;">
-            <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
-                <h6 class="mb-0 text-uppercase small fw-bold text-muted">Field Groups ({{ $step->fieldGroups->count() }})</h6>
-                <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addGroupModal">
-                    <i class="bi bi-plus-circle me-1"></i>Add Group
-                </button>
-            </div>
-            <div class="card-body p-0">
-                <div class="table-responsive">
+    <div class="modal fade" id="fcManageGroups" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
+            <div class="modal-content" style="border-radius:10px;">
+                <div class="modal-header">
+                    <h5 class="modal-title mb-0">Field Groups ({{ $step->fieldGroups->count() }})</h5>
+                    <button type="button" class="btn btn-sm btn-primary ms-3 me-auto" onclick="fcShowModalFrom('fcManageGroups','addGroupModal')">
+                        <i class="bi bi-plus-circle me-1"></i>Add Group
+                    </button>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>
                             <tr class="small text-muted">
@@ -340,7 +342,8 @@
                                 </tr>
                             @endforelse
                         </tbody>
-                    </table>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -905,6 +908,31 @@ function moveField(fieldId, direction) {
     }).then(() => location.reload());
 }
 
+// Toggle the "Manage Groups" panel explicitly (the Bootstrap data-API is not
+// active in this admin theme, which is why modals here are opened via `new bootstrap.*`).
+// Open the "Manage Groups" panel as a modal popup.
+function toggleManageGroups() {
+    var el = document.getElementById('fcManageGroups');
+    if (el) new bootstrap.Modal(el).show();
+}
+
+// Smoothly switch from one open modal to another: hide the current one (if open),
+// then show the target once the hide animation has finished. Avoids stacked backdrops.
+function fcShowModalFrom(sourceId, targetId) {
+    var targetEl = document.getElementById(targetId);
+    if (!targetEl) return;
+    var sourceEl = document.getElementById(sourceId);
+    var sourceInst = sourceEl ? bootstrap.Modal.getInstance(sourceEl) : null;
+    if (sourceInst && sourceEl.classList.contains('show')) {
+        sourceEl.addEventListener('hidden.bs.modal', function () {
+            new bootstrap.Modal(targetEl).show();
+        }, { once: true });
+        sourceInst.hide();
+    } else {
+        new bootstrap.Modal(targetEl).show();
+    }
+}
+
 function openAddGroupFieldModal(groupId) {
     const form = document.getElementById('groupFieldForm');
     const groupSelect = document.getElementById('gfGroupSelect');
@@ -917,6 +945,7 @@ function openAddGroupFieldModal(groupId) {
         document.getElementById('groupFieldModalTitle').textContent = 'Add Field';
         document.getElementById('gfSubmitBtn').textContent = 'Add Field';
         if (groupSelectWrap) groupSelectWrap.classList.remove('d-none');
+        if (groupSelect) groupSelect.required = true;
         form.querySelectorAll('input[type=text], input[type=number], textarea').forEach(el => el.value = '');
         form.querySelectorAll('.fc-options-json-input').forEach(el => { el.value = ''; });
         form.querySelectorAll('.target-column-sync').forEach(el => { el.value = ''; });
@@ -937,6 +966,7 @@ function openAddGroupFieldModal(groupId) {
     document.getElementById('groupFieldModalTitle').textContent = 'Add Field';
     document.getElementById('gfSubmitBtn').textContent = 'Add Field';
     if (groupSelect) groupSelect.value = String(selectedGroupId);
+    if (groupSelect) groupSelect.required = true;
     if (groupSelectWrap) groupSelectWrap.classList.remove('d-none');
     form.querySelectorAll('input[type=text], input[type=number], textarea').forEach(el => el.value = '');
     form.querySelectorAll('.fc-options-json-input').forEach(el => { el.value = ''; });
@@ -977,7 +1007,7 @@ function editGroup(group) {
     document.getElementById('editGroupMinRows').value = group.min_rows ?? 0;
     document.getElementById('editGroupMaxRows').value = group.max_rows ?? 20;
     document.getElementById('editGroupActive').checked = group.is_active !== false && group.is_active !== 0;
-    new bootstrap.Modal(document.getElementById('editGroupModal')).show();
+    fcShowModalFrom('fcManageGroups', 'editGroupModal');
 }
 
 function editGroupField(field) {
@@ -988,6 +1018,10 @@ function editGroupField(field) {
     document.getElementById('gfSubmitBtn').textContent = 'Update Field';
     const groupSelectWrap = document.getElementById('gfGroupSelectWrap');
     if (groupSelectWrap) groupSelectWrap.classList.add('d-none');
+    // The group is fixed when editing; drop the required constraint so the hidden,
+    // unfocusable select can't silently block the form submit (HTML5 validation).
+    const gfGroupSelect = document.getElementById('gfGroupSelect');
+    if (gfGroupSelect) gfGroupSelect.required = false;
     const inputs = {
         field_name: field.field_name,
         label: field.label, field_type: field.field_type,

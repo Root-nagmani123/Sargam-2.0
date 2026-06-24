@@ -6,8 +6,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const form = cb.closest('form');
     if (!form) return;
 
-    const presFields = ['pres_address_line1', 'pres_address_line2', 'pres_city', 'pres_state_id', 'pres_pincode', 'pres_country_id'];
-    const permFields = ['perm_address_line1', 'perm_address_line2', 'perm_city', 'perm_state_id', 'perm_pincode', 'perm_country_id'];
+    // Ordered so dependent location selects copy in cascade order: country -> state -> district.
+    const presFields = ['pres_address_line1', 'pres_address_line2', 'pres_country_id', 'pres_state_id', 'pres_district', 'pres_city', 'pres_city_name', 'pres_pincode'];
+    const permFields = ['perm_address_line1', 'perm_address_line2', 'perm_country_id', 'perm_state_id', 'perm_district', 'perm_city', 'perm_city_name', 'perm_pincode'];
 
     function field(name) {
         return form.querySelector('[name="' + name + '"]');
