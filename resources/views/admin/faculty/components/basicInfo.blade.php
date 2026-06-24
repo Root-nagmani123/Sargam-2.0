@@ -347,8 +347,8 @@
             </div>
 
             @if(!empty($faculty->photo_uplode_path))
-            <div class="mt-2 d-flex align-items-center gap-2">
-                <span class="text-info text-bold">Previously Uploaded Photo</span>
+            <div id="previousPhotoWrapper" class="mt-2 d-flex align-items-center gap-2">
+                <!--<span class="text-info text-bold">Previously Uploaded Photo</span>-->
                 <a href="{{ asset('storage/'.$faculty->photo_uplode_path) }}" target="_blank" title="Click to view full photo">
                     <img src="{{ asset('storage/'.$faculty->photo_uplode_path) }}" alt="Uploaded Photo" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;">
                 </a>
