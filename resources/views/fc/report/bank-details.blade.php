@@ -42,7 +42,7 @@
         <div class="table-responsive">
             <table class="table table-hover table-sm mb-0" style="font-size:12px;">
                 <thead class="table-dark">
-                    <tr><th class="px-3">#</th><th>User ID</th><th>Full Name</th><th>Service</th><th>Bank Name</th><th>Branch</th><th>IFSC</th><th>Account No</th><th>Holder Name</th><th>Type</th><th class="text-center">Verified</th></tr>
+                    <tr><th class="px-3">#</th><th>User ID</th><th>Full Name</th><th>Service</th><th>Bank Name</th><th>IFSC</th><th>Account No</th><th>Holder Name</th></tr>
                 </thead>
                 <tbody>
                 @forelse($students as $idx => $s)
@@ -51,24 +51,13 @@
                         <td><code style="font-size:10px">{{ $s->user_id }}</code></td>
                         <td>{{ $s->full_name }}</td>
                         <td><span class="badge bg-primary-subtle text-primary" style="font-size:10px;">{{ $s->service_code ?? '—' }}</span></td>
-                        <td>{{ $s->bank_name ?? '<span class="text-muted">—</span>' }}</td>
-                        <td>{{ $s->branch_name ?? '—' }}</td>
+                        <td>{{ $s->bank_name ?? '—' }}</td>
                         <td><code style="font-size:10px">{{ $s->ifsc_code ?? '—' }}</code></td>
                         <td><code style="font-size:10px">{{ $s->account_no ?? '—' }}</code></td>
                         <td>{{ $s->account_holder_name ?? '—' }}</td>
-                        <td>{{ $s->account_type ?? '—' }}</td>
-                        <td class="text-center">
-                            @if($s->is_verified)
-                                <i class="bi bi-patch-check-fill text-success"></i>
-                            @elseif($s->account_no)
-                                <i class="bi bi-clock text-warning" title="Pending verification"></i>
-                            @else
-                                <i class="bi bi-dash text-secondary opacity-50"></i>
-                            @endif
-                        </td>
                     </tr>
                 @empty
-                    <tr><td colspan="11" class="text-center text-muted py-3">No records found.</td></tr>
+                    <tr><td colspan="8" class="text-center text-muted py-3">No records found.</td></tr>
                 @endforelse
                 </tbody>
             </table>
