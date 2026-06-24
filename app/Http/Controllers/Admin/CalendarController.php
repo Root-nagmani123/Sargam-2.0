@@ -2222,6 +2222,14 @@ class CalendarController extends Controller
                         ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
                         ->where('tf.is_submitted', 1);
                 })
+                // Only show Teaching-role faculty — strict filter.
+                ->whereRaw("
+                    JSON_VALID(t.faculty_details) = 1
+                    AND JSON_CONTAINS(
+                        t.faculty_details,
+                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
+                    ) = 1
+                ")
                 // Show only sessions whose end time has passed (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
                 ->whereRaw("
                 TIMESTAMP(
@@ -2812,22 +2820,18 @@ class CalendarController extends Controller
 
             if (!$isAdmin) {
                 $pendingQuery->where('sff.supporting_faculty_master_pk', $supporting_faculty_pk)
-                    ->where(function ($q) {
-                        // Session must have fully ended: either END_DATE is before today,
-                        // or END_DATE is today and the session end time has already passed.
-                        // Handles both "HH:MM to HH:MM" and "hh:MM AM/PM - hh:MM AM/PM" formats.
-                        $q->whereDate('t.END_DATE', '<', now()->toDateString())
-                          ->orWhere(function ($q2) {
-                              $q2->whereDate('t.END_DATE', '=', now()->toDateString())
-                                 ->whereRaw("
-                                     TIME(NOW()) > COALESCE(
-                                         STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i'),
-                                         STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p'),
-                                         '00:00:00'
-                                     )
-                                 ");
-                          });
-                    });
+                    ->whereRaw("
+                        TIMESTAMP(
+                            t.END_DATE,
+                            CASE
+                                WHEN t.class_session LIKE '% - %' THEN
+                                    STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                                WHEN t.class_session LIKE '% to %' THEN
+                                    STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                                ELSE NULL
+                            END
+                        ) <= NOW()
+                    ");
             }
 
             $pendingData = $pendingQuery->orderBy('t.START_DATE', 'asc')->get();
