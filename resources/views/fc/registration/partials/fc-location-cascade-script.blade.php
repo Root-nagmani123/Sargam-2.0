@@ -35,8 +35,20 @@
     function findDistrictForState(stateSelect) {
         var stateField = stateSelect.name;
         var scoped = stateSelect.closest('.repeatable-row') || stateSelect.closest('.row.g-3') || stateSelect.closest('.row.g-2') || document;
-        return scoped.querySelector('.fc-district-select[data-fc-state-field="' + stateField + '"]')
-            || scoped.querySelector('.fc-district-select');
+        // Prefer the district explicitly paired to this state field.
+        var exact = scoped.querySelector('.fc-district-select[data-fc-state-field="' + stateField + '"]');
+        if (exact) {
+            return exact;
+        }
+        // No explicit pairing: only fall back when the scope is unambiguous, i.e. a
+        // single district (or a single unpaired district). NEVER grab another pair's
+        // district — that would reset a field the user already filled.
+        var districts = Array.prototype.slice.call(scoped.querySelectorAll('.fc-district-select'));
+        if (districts.length === 1) {
+            return districts[0];
+        }
+        var unpaired = districts.filter(function (d) { return !d.getAttribute('data-fc-state-field'); });
+        return unpaired.length === 1 ? unpaired[0] : null;
     }
 
     function forceDomicileCascade(stateSelect) {

@@ -224,10 +224,12 @@ class GenericFormController extends Controller
         if ($request->boolean('same_as_permanent')) {
             $validated['pres_address_line1'] = $validated['perm_address_line1'] ?? null;
             $validated['pres_address_line2'] = $validated['perm_address_line2'] ?? null;
-            $validated['pres_city']          = $validated['perm_city'] ?? null;
-            $validated['pres_state_id']      = $validated['perm_state_id'] ?? null;
-            $validated['pres_pincode']       = $validated['perm_pincode'] ?? null;
             $validated['pres_country_id']    = $validated['perm_country_id'] ?? null;
+            $validated['pres_state_id']      = $validated['perm_state_id'] ?? null;
+            $validated['pres_district']      = $validated['perm_district'] ?? null;
+            $validated['pres_city']          = $validated['perm_city'] ?? null;
+            $validated['pres_city_name']     = $validated['perm_city_name'] ?? null;
+            $validated['pres_pincode']       = $validated['perm_pincode'] ?? null;
             $validated['same_as_permanent']  = 1;
         }
 

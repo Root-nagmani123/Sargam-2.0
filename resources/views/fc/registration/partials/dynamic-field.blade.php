@@ -19,7 +19,7 @@
         'pres_district' => 'pres_state_id',
         'birth_district' => 'birth_state_id',
         'matric_district' => 'matric_state_id',
-        'domicile_district' => 'domicile_state',
+        'domicile_district' => 'domicile_state_id',
     ];
     $pairedStateField = $districtStatePairs[$fieldName]
         ?? (str_ends_with($fieldName, '_district') ? str_replace('_district', '_state_id', $fieldName) : null);
@@ -179,11 +179,29 @@
                 @endforeach
             </div>
         @else
+            @php
+                $singleChecked = fc_checkbox_single_checked($value);
+                // "Same as above" is not persisted (target _skip). On a fresh load, restore its
+                // checked state by inferring it from saved data: all present fields equal permanent.
+                if ($fieldName === 'same_as_permanent' && ! $singleChecked
+                    && ! session()->hasOldInput() && ! empty($existingData)) {
+                    $eq = fn ($a, $b) => (string) ($a ?? '') === (string) ($b ?? '');
+                    $singleChecked = filled($existingData->perm_state_id ?? null)
+                        && $eq($existingData->pres_address_line1 ?? null, $existingData->perm_address_line1 ?? null)
+                        && $eq($existingData->pres_address_line2 ?? null, $existingData->perm_address_line2 ?? null)
+                        && $eq($existingData->pres_country_id ?? null, $existingData->perm_country_id ?? null)
+                        && $eq($existingData->pres_state_id ?? null, $existingData->perm_state_id ?? null)
+                        && $eq($existingData->pres_district ?? null, $existingData->perm_district ?? null)
+                        && $eq($existingData->pres_city ?? null, $existingData->perm_city ?? null)
+                        && $eq($existingData->pres_city_name ?? null, $existingData->perm_city_name ?? null)
+                        && $eq($existingData->pres_pincode ?? null, $existingData->perm_pincode ?? null);
+                }
+            @endphp
             <div class="form-check mt-1">
                 <input class="form-check-input @error($fieldName) is-invalid @enderror" type="checkbox"
                        name="{{ $fieldName }}" value="1"
                        id="{{ $fieldName === 'same_as_permanent' ? 'same_as_permanent' : 'fc_cb_single_'.$field->id }}"
-                       {{ fc_checkbox_single_checked($value) ? 'checked' : '' }}
+                       {{ $singleChecked ? 'checked' : '' }}
                        {{ $isReadonly ? 'disabled' : '' }}>
                 <label class="form-check-label small" for="{{ $fieldName === 'same_as_permanent' ? 'same_as_permanent' : 'fc_cb_single_'.$field->id }}">{{ $field->label }}</label>
             </div>
