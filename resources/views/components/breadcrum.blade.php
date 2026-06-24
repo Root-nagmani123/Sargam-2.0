@@ -7,6 +7,7 @@
     'showBack' => null,
     'buttonText' => null,
     'buttonUrl' => null,
+    'buttonId' => null,
     'buttonIcon' => 'add',
     'buttonClass' => 'btn btn-primary btn-sm d-inline-flex align-items-center gap-2',
 ])
@@ -243,7 +244,7 @@
                             @endforeach
                         </ol>
                     </nav>
-                    <h1 class="modern-breadcrumb-title mb-0 text-dark">{{ $title }}</h1>
+                    <h4 class="modern-breadcrumb-title mb-0 text-dark">{{ $title }}</h4>
                 </div>
             </div>
 
@@ -253,7 +254,9 @@
                         {{ $slot }}
                     @else
                         <a href="{{ $buttonUrl ?: 'javascript:void(0)' }}"
-                           class="{{ $buttonClass }}">
+                           @if(filled($buttonId)) id="{{ $buttonId }}" @endif
+                           class="{{ $buttonClass }}"
+                           @if(filled($buttonId) && !filled($buttonUrl)) role="button" @endif>
                             @if(filled($buttonIcon))
                                 <i class="material-icons material-symbols-rounded" style="font-size: 18px;" aria-hidden="true">{{ $buttonIcon }}</i>
                             @endif
@@ -292,7 +295,7 @@
     }
 
     .modern-breadcrumb-title {
-        font-size: clamp(1.35rem, 2vw, 2rem);
+        font-size: 1.25rem;
         font-weight: 700;
         line-height: 1.15;
         letter-spacing: -0.01em;

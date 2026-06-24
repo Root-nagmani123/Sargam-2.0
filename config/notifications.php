@@ -49,6 +49,10 @@ return [
             'route' => 'memo.notice.management.conversation_student',
             'params' => ['id' => 'reference_pk', 'type' => 'memo'],
         ],
+        'MemoDiscipline' => [
+            'route' => 'memo.discipline.memo.show',
+            'params' => ['id' => 'reference_pk'],
+        ],
     ],
 
     // Memo/Notice Notifications (used when type is 'memo_notice')

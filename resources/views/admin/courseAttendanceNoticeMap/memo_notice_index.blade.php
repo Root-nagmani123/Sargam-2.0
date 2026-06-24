@@ -109,7 +109,8 @@
                                             aria-hidden="true">edit</i>
                                     </a>
 
-                                    <!-- Delete -->
+                                    <!-- Delete (only for inactive templates) -->
+                                    @if($template->active_inactive == 0)
                                     <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
                                         method="POST"
                                         class="d-inline"
@@ -118,13 +119,18 @@
                                         @method('DELETE')
 
                                         <button type="submit"
-                                            class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
+                                            class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-danger"
                                             aria-label="Delete memo notice template">
                                             <i class="material-icons material-symbols-rounded"
                                                 style="font-size:18px;"
                                                 aria-hidden="true">delete</i>
                                         </button>
                                     </form>
+                                    @else
+                                    <span title="Deactivate first to delete" style="cursor:not-allowed; opacity:0.4;">
+                                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">delete</i>
+                                    </span>
+                                    @endif
 
                                 </div>
 

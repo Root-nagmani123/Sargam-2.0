@@ -61,91 +61,61 @@ class GroupMappingDataTable extends DataTable
             ->addColumn('Faculty', function ($row) {
                 return $row->Faculty->full_name ?? '-';
             })
-            ->addColumn('student_count', fn($row) => $row->student_course_group_map_count ?? '-')
-            ->addColumn('view_download', function ($row) {
-                $id = encrypt($row->pk);
-                    if (!empty($row->student_course_group_map_count) && $row->student_course_group_map_count > 0) {
-                        $exportUrl = route('group.mapping.export.student.list', $id);
-                        $html = <<<HTML
-    <a href="javascript:void(0)" class="view-student" data-id="{$id}" data-bs-toggle="tooltip" data-bs-placement="top" title="View Students">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">visibility</i>
-    </a>
-    <a href="{$exportUrl}" data-bs-toggle="tooltip" data-bs-placement="top" title="Download Student List">
-        <i class="material-icons menu-icon material-symbols-rounded" style="font-size: 30px;">download</i>
-    </a>
-    HTML;
-                    return $html;
+            ->addColumn('student_count', fn ($row) => $row->student_course_group_map_count ?? '0')
+            ->addColumn('status', function ($row) {
+                if ((int) $row->active_inactive === 1) {
+                    return '<span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>';
                 }
-                return "<span class='text-muted'>No Students</span>";
+
+                return '<span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>';
             })
             ->addColumn('action', function ($row) {
                 $id = encrypt($row->pk);
-                $editUrl = route('group.mapping.edit', ['id' => $id]);
                 $deleteUrl = route('group.mapping.delete', ['id' => $id]);
-                $isActive = $row->active_inactive == 1;
+                $courseLabel = $row->courseGroup->course_name ?? '';
+                $typeLabel = $row->courseGroupType->type_name ?? '';
+                $facultyLabel = $row->Faculty->full_name ?? '';
+                $isActive = (int) $row->active_inactive === 1;
+                $checked = $isActive ? 'checked' : '';
                 $csrf = csrf_token();
 
-                $html = <<<HTML
-<td class="text-center">
-    <div class="d-inline-flex align-items-center gap-2"
-         role="group"
-         aria-label="Row actions">
+                $viewHtml = '<a href="javascript:void(0)" class="programme-action-btn gm-action-btn view-student" data-id="' . e($id) . '" aria-label="View students"><i class="bi bi-eye" aria-hidden="true"></i></a>';
 
-        <!-- Edit -->
-        <a
-            href="{$editUrl}"
-            class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1"
-            aria-label="Edit group name mapping"
-        >
-            <span class="material-icons material-symbols-rounded"
-                  style="font-size:18px;"
-                  aria-hidden="true">
-                edit
-            </span>
-            <span class="d-none d-lg-inline">Edit</span>
-        </a>
+                $downloadHtml = '<a href="' . e(route('group.mapping.export.student.list', $id)) . '" class="programme-action-btn gm-action-btn" aria-label="Download student list"><i class="bi bi-download" aria-hidden="true"></i></a>';
 
-        <!-- Delete -->
-        <?php if ($isActive): ?>
-<button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1 d-none" disabled
-    aria-disabled="true" title="Cannot delete active group mapping">
-    <span class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;"
-        aria-hidden="true">
-        delete
-    </span>
-</button>
-<?php else: ?>
-<form action="{$deleteUrl}" method="POST" class="d-inline">
-    <input type="hidden" name="_token" value="{$csrf}">
-    <input type="hidden" name="_method" value="DELETE">
+                $deleteHtml = $isActive
+                    ? '<button type="button" class="programme-action-btn gm-action-btn programme-action-btn--danger" disabled aria-disabled="true" title="Cannot delete active group mapping"><i class="bi bi-trash" aria-hidden="true"></i></button>'
+                    : '<form action="' . e($deleteUrl) . '" method="POST" class="d-inline-flex m-0 gm-delete-form">'
+                        . '<input type="hidden" name="_token" value="' . e($csrf) . '">'
+                        . '<input type="hidden" name="_method" value="DELETE">'
+                        . '<button type="submit" class="programme-action-btn gm-action-btn programme-action-btn--danger delete-btn" aria-label="Delete group mapping" onclick="return confirm(\'Are you sure you want to delete this group name mapping?\');">'
+                        . '<i class="bi bi-trash" aria-hidden="true"></i>'
+                        . '</button></form>';
 
-    <button type="submit" class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1"
-        aria-label="Delete group name mapping"
-        onclick="return confirm('Are you sure you want to delete this group name mapping?');">
-        <span class="material-icons material-symbols-rounded bg-transparent border-0 p-0" style="font-size:18px;"
-            aria-hidden="true">
-            delete
-        </span>
-    </button>
-</form>
-<?php endif; ?>
+                $toggleHtml = '<label class="programme-action-toggle-icon mb-0" aria-label="Toggle group mapping status">'
+                    . '<input class="status-toggle plain-status-toggle gm-status-toggle-input" type="checkbox" role="switch"'
+                    . ' data-table="group_type_master_course_master_map" data-column="active_inactive" data-id="' . e($row->pk) . '" ' . $checked . '>'
+                    . '<i class="bi bi-toggle-off gm-toggle-icon gm-toggle-icon--off" aria-hidden="true"></i>'
+                    . '<i class="bi bi-toggle-on gm-toggle-icon gm-toggle-icon--on" aria-hidden="true"></i>'
+                    . '</label>';
 
-</div>
-</td>
-
-HTML;
-return $html;
-})
-
-->addColumn('status', function ($row) {
-$checked = $row->active_inactive == 1 ? 'checked' : '';
-return "
-<div class='form-check form-switch d-inline-block'>
-    <input class='form-check-input status-toggle' type='checkbox' role='switch'
-        data-table='group_type_master_course_master_map' data-column='active_inactive' data-id='{$row->pk}' {$checked}>
-</div>
-";
-})
+                return '<div class="d-inline-flex align-items-center justify-content-center programme-action-group gm-action-group" role="group" aria-label="Row actions">'
+                    . $viewHtml
+                    . '<button type="button" class="programme-action-btn gm-action-btn edit-btn gm-edit-btn" aria-label="Edit group mapping"'
+                    . ' data-id="' . e($id) . '"'
+                    . ' data-course-id="' . e($row->course_name) . '"'
+                    . ' data-course-name="' . e($courseLabel) . '"'
+                    . ' data-type-id="' . e($row->type_name) . '"'
+                    . ' data-type-name="' . e($typeLabel) . '"'
+                    . ' data-group-name="' . e($row->group_name ?? '') . '"'
+                    . ' data-facility-id="' . e($row->facility_id ?? '') . '"'
+                    . ' data-faculty-name="' . e($facultyLabel) . '">'
+                    . '<i class="bi bi-pencil" aria-hidden="true"></i></button>'
+                    . $toggleHtml
+                    . $downloadHtml
+                    . $deleteHtml
+                    . '</div>';
+            })
 ->filterColumn('course_name', function ($query, $keyword) {
 $query->whereHas('courseGroup', function ($q) use ($keyword) {
 $q->where('course_name', 'like', "%{$keyword}%");
@@ -182,7 +152,7 @@ $existsQuery->select(DB::raw(1))
 }
 })
 
-->rawColumns(['course_name', 'group_name', 'type_name', 'view_download', 'action', 'status']);
+->rawColumns(['course_name', 'group_name', 'type_name', 'student_count', 'status', 'action']);
 }
 
 public function query(GroupTypeMasterCourseMasterMap $model): QueryBuilder
@@ -244,7 +214,7 @@ $courseQuery->whereNotNull('end_date')
     ->orderBy(1)
     ->responsive(false)
     ->selectStyleSingle()
-    ->addTableClass('table table-bordered table-hover align-middle custom-mapping-table')
+    ->addTableClass('table table-hover align-middle mb-0 w-100 programme-dt-table')
     ->parameters([
     'responsive' => false,
     'scrollX' => false,
@@ -253,14 +223,25 @@ $courseQuery->whereNotNull('end_date')
     'searching' => true,
     'lengthChange' => true,
     'pageLength' => 10,
+    'lengthMenu' => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
     'order' => [],
-    'pagingType' => 'simple_numbers', // Bootstrap 5 pagination style
+    'dom' => 'rt<"row d-none"<"col-sm-12"ilp>>',
+    'pagingType' => 'full_numbers',
     'language' => [
+    'search' => '',
+    'searchPlaceholder' => 'Search',
+    'processing' => '<span class="spinner-border spinner-border-sm text-primary me-2" role="status" aria-hidden="true"></span>Loading…',
+    'emptyTable' => 'No group mappings found.',
+    'zeroRecords' => 'No matching group mappings found.',
+    'lengthMenu' => 'Showing _MENU_',
+    'info' => 'of _TOTAL_ items',
+    'infoEmpty' => 'of 0 items',
+    'infoFiltered' => 'of _MAX_ items',
     'paginate' => [
     'previous' => '&laquo;',
     'next' => '&raquo;',
-    ]
-    ]
+    ],
+    ],
     ]);
     }
 
@@ -269,44 +250,39 @@ $courseQuery->whereNotNull('end_date')
     public function getColumns(): array
     {
     return [
-    Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center'),
+    Column::computed('DT_RowIndex')->title('S.No.')->addClass('text-center text-nowrap gm-col-sno'),
     Column::make('course_name')
     ->title('Course Name')
-    ->addClass('text-center')
+    ->addClass('text-start gm-col-course')
     ->searchable(true)
     ->orderable(false),
     Column::make('type_name')
     ->title('Group Type')
-    ->addClass('text-center')
+    ->addClass('text-start gm-col-type')
     ->searchable(false)
     ->orderable(false),
     Column::make('group_name')
     ->title('Group Name')
-    ->addClass('text-center')
+    ->addClass('text-start gm-col-group')
     ->searchable(true),
     Column::make('Faculty')
     ->title('Faculty')
-    ->addClass('text-center')
+    ->addClass('text-start gm-col-faculty')
     ->searchable(false)
     ->orderable(false),
     Column::computed('student_count')
-    ->title('Student Count')
-    ->addClass('text-center')
+    ->title('Student Name')
+    ->addClass('text-center gm-col-student')
     ->searchable(false)
     ->orderable(false),
-    Column::computed('view_download')
-    ->title('View/Download')
-    ->addClass('text-center')
-    ->searchable(false)
-    ->orderable(false)
-    ->exportable(false)
-    ->printable(false),
     Column::computed('status')
-    ->addClass('text-center')
+    ->title('Status')
+    ->addClass('text-center gm-col-status')
     ->exportable(false)
     ->printable(false),
     Column::computed('action')
-    ->addClass('text-center')
+    ->title('Action')
+    ->addClass('text-center gm-col-action')
     ->exportable(false)
     ->printable(false)
     ];

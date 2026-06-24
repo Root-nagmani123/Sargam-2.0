@@ -7,7 +7,7 @@ use App\Models\CoursesMaster;
 use App\Models\CourseTeamMaster;
 use Illuminate\Http\Request;
 use App\Http\Requests\ProgrammeRequest;
-use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster};
+use App\Models\{EmployeeMaster, CourseMaster, FacultyMaster, User};
 use Spatie\Permission\Models\Role;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Crypt;
@@ -171,7 +171,7 @@ class CourseController extends Controller
             }
             $selectedSupportingSection = $courseMasterObj->user_role_master_pk ?? '';
             
-            return view('admin.programme.create', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
+            return view('admin.programme.edit', compact('courseMasterObj', 'facultyList', 'coordinator_name', 'assistant_coordinator_name', 'assistant_coordinator_roles', 'roleOptions', 'supportingSectionList', 'selectedSupportingSection'));
         } catch (\Exception $e) {
             return redirect()->back()->with('error', 'Invalid course ID');
         }
@@ -290,17 +290,17 @@ class CourseController extends Controller
             
             // Fetch assistant coordinator faculties using PKs
             $assistantCoordinatorFaculties = FacultyMaster::whereIn('pk', $assistantCoordinatorPks)->get();
-            
-          
-            
+
+
+
             // Map assistant coordinators with their names, photos and roles
             $assistantCoordinatorsData = [];
             foreach ($coordinators as $coordinator) {
                 if ($coordinator->Assistant_Coordinator_name) {
                     $assistantFaculty = $assistantCoordinatorFaculties->firstWhere('pk', $coordinator->Assistant_Coordinator_name);
-                    
-                 
-                    
+
+
+
                     $assistantCoordinatorsData[] = [
                         'name' => $assistantFaculty ? $assistantFaculty->full_name : 'Not Assigned',
                         'role' => $coordinator->assistant_coordinator_role ?? 'Not Specified',
@@ -309,11 +309,29 @@ class CourseController extends Controller
                 }
             }
 
+            // Resolve the name of the user who created the course
+            $createdByName = null;
+            if (!empty($course->created_by)) {
+                $creator = User::find($course->created_by);
+                if ($creator) {
+                    $createdByName = trim(($creator->first_name ?? '') . ' ' . ($creator->last_name ?? ''))
+                        ?: ($creator->user_name ?? $creator->name ?? null);
+                }
+            }
+
+            // Resolve the supporting section name from the linked role
+            $supportingSectionName = null;
+            if (!empty($course->user_role_master_pk)) {
+                $supportingSectionName = Role::where('id', $course->user_role_master_pk)->value('name');
+            }
+
             return view('admin.programme.show', compact(
                 'course',
                 'coordinatorName',
                 'coordinatorFaculty',
-                'assistantCoordinatorsData'
+                'assistantCoordinatorsData',
+                'createdByName',
+                'supportingSectionName'
             ));
         // } catch (\Illuminate\Contracts\Encryption\DecryptException $e) {
         //     \Log::error('Decryption error in course show: ' . $e->getMessage());

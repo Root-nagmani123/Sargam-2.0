@@ -38,7 +38,7 @@
     <div class="col-md-6">
         <div class="mb-3">
 
-            <x-input name="father_husband_name" label="Father's/Husband's Name :" type="text" value="{{ $member->father_name ?? old('father_husband_name') }}" formLabelClass="form-label" formInputClass="form-control only-letters" labelRequired="true" />
+            <x-input name="father_husband_name" label="Father's/Husband's Name :" type="text" value="{{ $member->father_name ?? old('father_husband_name') }}" formLabelClass="form-label" formInputClass="form-control letters-with-space" labelRequired="true" />
 
         </div>
     </div>

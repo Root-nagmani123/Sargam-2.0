@@ -587,6 +587,7 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/create', 'create')->name('create');
         Route::post('/store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
+        Route::get('/edit-data/{id}', 'editData')->name('editData');
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
         Route::post('/update', 'update')->name('update');
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
@@ -846,6 +847,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::get('/Subject-by-course', 'getSubjectByCourse')->name('getSubjectByCourse'); // <-- New AJAX route
             Route::get('/Topic-by-subject', 'getTopicBysubject')->name('getTopicBysubject'); // <-- New AJAX route
             Route::get('/get-timetable-Details-By-topic', 'gettimetableDetailsBytopic')->name('gettimetableDetailsBytopic'); // <-- New AJAX route
+            Route::get('/get-template-by-course', 'getTemplateByCourse')->name('getTemplateByCourse'); // <-- Template AJAX route
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
             Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
             Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
@@ -862,6 +864,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
             Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
+            Route::get('/messages/{id}/{type}', 'getNewMessages')->name('getNewMessages');
         });
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
@@ -903,6 +906,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
 
 
         Route::get('/memo-discipline-show/{id}', [MemoDisciplineController::class, 'memo_show'])->name('memo.show');
+        Route::get('/messages/{id}', [MemoDisciplineController::class, 'getNewMessages'])->name('getNewMessages');
     });
 
 

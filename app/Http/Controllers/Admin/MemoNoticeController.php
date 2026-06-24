@@ -58,7 +58,7 @@ class MemoNoticeController extends Controller
             if(!empty($data_course_id)){
                 $courses->whereIn('pk',$data_course_id);
             }
-            $courses->orderBy('course_name')
+            $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_index', compact('templates', 'courses'));
@@ -89,8 +89,8 @@ class MemoNoticeController extends Controller
                     ->orWhere(function ($upcoming) use ($currentDate) {
                         $upcoming->where('start_year', '>', $currentDate);
                     });
-            })
-            ->orderBy('course_name')
+            });
+        $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name', 'start_year', 'end_date']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_create', compact('courses'));
@@ -107,17 +107,23 @@ class MemoNoticeController extends Controller
             'designation' => 'required|string|max:255',
             'content' => 'required|string',
             'memo_notice_type' => 'required|string|in:Memo,Notice,Discipline Memo',
+            'signature_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
         // Prevent Duplicate Active Memo/Notice
         $alreadyExists = MemoNoticeTemplate::where('course_master_pk', $validated['course_master_pk'])
             ->where('memo_notice_type', $validated['memo_notice_type'])
-            ->where('active_inactive', 1)   // Only active templates count
+            ->where('active_inactive', 1)
             ->exists();
 
         if ($alreadyExists) {
             return back()->withInput()->with('error',
                 'An active ' . $validated['memo_notice_type'] . ' already exists for this course.');
+        }
+
+        $signaturePath = null;
+        if ($request->hasFile('signature_image')) {
+            $signaturePath = $request->file('signature_image')->store('memo-notice/signatures', 'public');
         }
 
         MemoNoticeTemplate::create([
@@ -127,6 +133,7 @@ class MemoNoticeController extends Controller
             'director_designation' => $validated['designation'],
             'content' => $validated['content'],
             'memo_notice_type' => $validated['memo_notice_type'],
+            'signature_image' => $signaturePath,
             'active_inactive' => 1,
             'created_by' => Auth::id(),
             'updated_by' => Auth::id(),
@@ -168,8 +175,8 @@ class MemoNoticeController extends Controller
 
                     // **OR upcoming courses**: start_year > today
                     ->orWhere('start_year', '>', $currentDate);
-            })
-            ->orderBy('course_name')
+            });
+        $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_edit', compact('template', 'courses'));
@@ -189,13 +196,13 @@ class MemoNoticeController extends Controller
             'designation' => 'required|string|max:255',
             'content' => 'required|string',
             'memo_notice_type' => 'required|string|in:Memo,Notice,Discipline Memo',
+            'signature_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
         ]);
 
-        // 🔴 Duplicate Active Memo/Notice check (excluding current record)
         $alreadyExists = MemoNoticeTemplate::where('course_master_pk', $validated['course_master_pk'])
             ->where('memo_notice_type', $validated['memo_notice_type'])
             ->where('active_inactive', 1)
-            ->where('pk', '!=', $template->pk) // 🔥 current record exclude
+            ->where('pk', '!=', $template->pk)
             ->exists();
 
         if ($alreadyExists) {
@@ -203,7 +210,7 @@ class MemoNoticeController extends Controller
                 'An active ' . $validated['memo_notice_type'] . ' already exists for this course.');
         }
 
-        $template->update([
+        $updateData = [
             'course_master_pk' => $validated['course_master_pk'] ?: null,
             'title' => $validated['title'],
             'director_name' => $validated['director'],
@@ -211,7 +218,21 @@ class MemoNoticeController extends Controller
             'content' => $validated['content'],
             'memo_notice_type' => $validated['memo_notice_type'],
             'updated_by' => Auth::id(),
-        ]);
+        ];
+
+        if ($request->hasFile('signature_image')) {
+            if ($template->signature_image) {
+                Storage::disk('public')->delete($template->signature_image);
+            }
+            $updateData['signature_image'] = $request->file('signature_image')->store('memo-notice/signatures', 'public');
+        }
+
+        if ($request->input('remove_signature') == '1' && $template->signature_image) {
+            Storage::disk('public')->delete($template->signature_image);
+            $updateData['signature_image'] = null;
+        }
+
+        $template->update($updateData);
 
         return redirect()->route('admin.memo-notice.index')
             ->with('success', 'Memo/Notice template updated successfully.');

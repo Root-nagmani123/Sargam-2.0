@@ -346,7 +346,7 @@
         <span class="stat-pill"><strong>{{ $feedbackData->count() }}</strong> Sessions</span>
         <span class="stat-pill">Avg Content: <strong>{{ number_format($feedbackData->avg('content_percentage'), 2) }}%</strong></span>
         <span class="stat-pill">Avg Presentation: <strong>{{ number_format($feedbackData->avg('presentation_percentage'), 2) }}%</strong></span>
-        <span class="stat-pill">Total Participants: <strong>{{ $feedbackData->sum('participants') }}</strong></span>
+        <span class="stat-pill">Total Participants: <strong>{{ $totalParticipants ?? $feedbackData->sum('participants') }}</strong></span>
     </div>
 @endif
 

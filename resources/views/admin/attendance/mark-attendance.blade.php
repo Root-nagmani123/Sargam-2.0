@@ -50,8 +50,7 @@ table.table-bordered.dataTable td:nth-child(4) {
 
                     <div class="col-md-3">
                         <strong>Faculty Name:</strong>
-                        <span
-                            class="text-primary">{{ optional($courseGroup->timetable)->faculty->full_name ?? '' }}</span>
+                            <span class="text-primary">{{ get_timetable_faculty_names(optional($courseGroup)->timetable) }}</span>
                     </div>
                     <div class="col-md-3">
                         <strong>Topic Date:</strong>

@@ -108,7 +108,7 @@
                         </li>
                         <li class="nav-item">
                             <a class="nav-link fw-semibold text-dark px-lg-3" href="https://www.lbsnaa.gov.in/footer_menu/contact-us"
-                                target="_blank">FAQs</a>
+                                target="_blank">Contact Us</a>
                         </li>
                     </ul>
                 </div>
