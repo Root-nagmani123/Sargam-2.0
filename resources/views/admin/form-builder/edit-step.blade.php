@@ -875,7 +875,8 @@ function editField(field) {
         lookup_table: field.lookup_table,
         lookup_value_column: field.lookup_value_column, lookup_label_column: field.lookup_label_column,
         lookup_order_column: field.lookup_order_column, section_heading: field.section_heading,
-        file_max_kb: field.file_max_kb, file_extensions: field.file_extensions
+        file_max_kb: field.file_max_kb, file_extensions: field.file_extensions,
+        form_template: field.form_template
     };
     for (const [k, v] of Object.entries(inputs)) {
         const el = form.querySelector(`[name="${k}"]`);

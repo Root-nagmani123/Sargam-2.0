@@ -102,7 +102,19 @@
                                     @enderror
                                 </td>
                                 <td>
-                                    @if($readonly)
+                                    @if($field->form_template)
+                                        {{-- Fillable form document: fill online instead of uploading --}}
+                                        @if($readonly || ! isset($form, $step))
+                                            <button type="button" class="btn btn-sm btn-outline-primary py-0 px-2" disabled>
+                                                <i class="bi bi-pencil-square me-1"></i>Fill Form
+                                            </button>
+                                        @else
+                                            <a href="{{ route('fc-reg.forms.doc-form', [$form, $step, $field->field_name]) }}"
+                                               class="btn btn-sm {{ $isDone ? 'btn-outline-primary' : 'btn-primary' }} py-0 px-2 text-nowrap">
+                                                <i class="bi bi-pencil-square me-1"></i>{{ $isDone ? 'Edit Form' : 'Fill Form' }}
+                                            </a>
+                                        @endif
+                                    @elseif($readonly)
                                         <div class="d-flex gap-1">
                                             <input type="file" class="form-control form-control-sm py-0" disabled>
                                             <button type="button" class="btn btn-sm btn-primary py-0 px-2" disabled>

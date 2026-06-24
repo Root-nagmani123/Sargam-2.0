@@ -41,7 +41,7 @@ class FcFormField extends Model
         'validation_rules', 'is_required', 'display_order', 'placeholder', 'help_text',
         'default_value', 'options_json', 'lookup_table', 'lookup_value_column',
         'lookup_label_column', 'lookup_order_column', 'section_heading', 'css_class',
-        'file_max_kb', 'file_extensions', 'is_active',
+        'file_max_kb', 'file_extensions', 'form_template', 'is_active',
     ];
 
     protected $casts = [

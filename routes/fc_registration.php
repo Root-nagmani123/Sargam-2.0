@@ -17,6 +17,7 @@ use App\Http\Controllers\FC\{
     RegistrationStatusController,
     FcJoiningAttendanceController,
     FcJoiningSampleDocumentController,
+    FcJoiningDocumentFormController,
     FormBuilderController,
     FormManagementController,
     GenericFormController,
@@ -206,6 +207,10 @@ Route::middleware(['auth'])->prefix('fc-reg/forms')->name('fc-reg.forms.')->grou
     Route::get('/{form}/step/{step}',        [GenericFormController::class, 'showStep'])->name('step');
     Route::post('/{form}/step/{step}',       [GenericFormController::class, 'saveStep'])->name('step.save');
     Route::post('/{form}/group/{group}',     [GenericFormController::class, 'saveGroup'])->name('group.save');
+
+    // Fillable joining-document forms (fill online → generates a PDF into the doc slot)
+    Route::get('/{form}/step/{step}/fill/{field}',  [FcJoiningDocumentFormController::class, 'show'])->name('doc-form');
+    Route::post('/{form}/step/{step}/fill/{field}', [FcJoiningDocumentFormController::class, 'save'])->name('doc-form.save');
 });
 
 // ── FC Travel plans (admin) ────────────────────────────────────
