@@ -101,7 +101,8 @@ class LeaveApplicationController extends Controller
     public function view($id)
     {
         $context = $this->leaveService->resolveStudentContext((int) Auth::user()->pk);
-        $application = $this->findOwnedApplication($context['student_pk'], $id)->load('attachments');
+        $application = $this->findOwnedApplication($context['student_pk'], $id)
+            ->load(['attachments', 'approvedByFaculty']);
         $leaveType = $application->leave_type;
         $natures = $this->getNatures($leaveType);
         $ptBalance = $this->leaveService->getPtBalance(

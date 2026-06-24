@@ -44,9 +44,24 @@
             <hr class="leave-apply-divider">
 
             @if($readOnly ?? false)
-                <div class="alert alert-info py-2 small mb-3">
+                @php
+                    $applicationStatus = (int) ($application->status ?? -1);
+                    $isRejectedApplication = $applicationStatus === \App\Models\LeaveApplication::STATUS_REJECTED;
+                    $isApprovedApplication = $applicationStatus === \App\Models\LeaveApplication::STATUS_APPROVED;
+                @endphp
+                <div class="alert alert-{{ $isRejectedApplication ? 'danger' : ($isApprovedApplication ? 'success' : 'info') }} py-2 small mb-3">
                     Status: <strong>{{ $application->status_label }}</strong>
                 </div>
+
+                @if($isRejectedApplication)
+                    <div class="border border-danger rounded p-3 mb-3 small bg-danger bg-opacity-10">
+                        <div class="mb-2"><strong>Rejected By:</strong> {{ $application->action_by_faculty_name }}</div>
+                        @if($application->approved_at)
+                            <div class="mb-2"><strong>Rejected On:</strong> {{ $application->approved_at->format('d-m-Y, h:i A') }}</div>
+                        @endif
+                        <div><strong>Rejection Reason:</strong> {{ $application->rejection_remarks ?: 'No reason provided.' }}</div>
+                    </div>
+                @endif
             @endif
 
             @if($isPt && ! $ptReady && $upcomingPt)

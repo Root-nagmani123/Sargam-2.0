@@ -72,6 +72,30 @@ class LeaveApplication extends Model
         return $this->hasMany(LeaveApplicationAttachment::class, 'leave_application_pk', 'pk');
     }
 
+    public function approvedByFaculty()
+    {
+        return $this->belongsTo(FacultyMaster::class, 'approved_by_faculty_pk', 'pk');
+    }
+
+    public function getActionByFacultyNameAttribute(): string
+    {
+        $faculty = $this->approvedByFaculty;
+
+        if (! $faculty) {
+            return '-';
+        }
+
+        $name = trim((string) ($faculty->full_name ?? ''));
+        if ($name !== '') {
+            return $name;
+        }
+
+        return trim(implode(' ', array_filter([
+            $faculty->first_name ?? '',
+            $faculty->last_name ?? '',
+        ]))) ?: '-';
+    }
+
     public function getLeaveTypeLabelAttribute(): string
     {
         return match ($this->leave_type) {
