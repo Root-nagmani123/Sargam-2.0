@@ -183,308 +183,33 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
         
         <div class="dashboard-stats-grid row row-cols-1 row-cols-sm-2 row-cols-md-3 row-cols-lg-5 g-3 mb-3 mt-3">
-            @if(hasRole('Security Card') || hasRole('Admin Security') || hasRole('Super Admin'))
+            @foreach($cardsToRender as $card)
             <div class="col">
-                <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
+                @if($card['link'])
+                <a href="{{ $card['link'] }}" class="text-decoration-none d-block h-100">
+                @endif
                     <div class="card stat-card h-100 p-3">
                         <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-blue">
-                                <i class="bi bi-person-vcard"></i>
+                            <div class="stat-icon-wrapper {{ $card['color_class'] }}">
+                                <i class="material-symbols-rounded">{{ $card['icon'] }}</i>
                             </div>
                             <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Pending Permanent ID Requests</p>
-                                @php $v = (int) ($todayPendingPermanentIdCardRequests ?? 0); @endphp
-                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col">
-                <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-blue">
-                                <i class="bi bi-person-vcard"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Pending Contractual ID Requests</p>
-                                @php $v = (int) ($todayPendingContractualIdCardRequests ?? 0); @endphp
-                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col">
-                <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-amber">
-                                <i class="bi bi-copy"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Duplicate Permanent ID Requests</p>
-                                @php $v = (int) ($todayDuplicatePermIdCardRequests ?? 0); @endphp
-                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col">
-                <a href="{{ $idCardApprovalRoute }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-amber">
-                                <i class="bi bi-files"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Duplicate Contractual ID Requests</p>
-                                @php $v = (int) ($todayDuplicateContractualIdCardRequests ?? 0); @endphp
-                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col">
-                <a href="{{ route('admin.security.family_idcard_approval.index') }}"
-                    class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-blue">
-                                <i class="bi bi-people"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Requested Family ID</p>
-                                @php $v = (int) ($todayFamilyApprovals ?? 0); @endphp
-                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            <div class="col">
-                <a href="{{ route('admin.security.vehicle_pass_approval.index') }}"
-                    class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-green">
-                                <i class="bi bi-car-front"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Requested Vehicle Pass</p>
-                                @php $v = (int) ($todayVehicleApprovals ?? 0); @endphp
-                                <p class="stat-value mb-1">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            @endif
-        @if(!hasRole('Security Card') && !hasRole('Admin Security'))
-        <div class="col">
-                <a href="{{ route('admin.dashboard.active_course') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-blue">
-                                <i class="bi bi-journal-text"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Total Active Courses</p>
-                                @php $v = (int) $totalActiveCourses; @endphp
+                                <p class="stat-title">{{ $card['label'] }}</p>
+                                @php $v = (int) $card['count']; @endphp
                                 <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
                             </div>
                         </div>
                     </div>
-                </a>
-            </div>
-
-            <div class="col">
-                <a href="{{ route('admin.dashboard.incoming_course') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-green">
-                                <i class="bi bi-calendar-event"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Upcoming Courses</p>
-                                @php $v = (int) $upcomingCourses; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-
-            <div class="col">
-                <a href="{{ route('admin.dashboard.upcoming_events') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-amber">
-                                <i class="bi bi-megaphone"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Upcoming Events</p>
-                                @php $v = 2; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-
-            <div class="col">
-                @if(hasRole('Student-OT'))
-                <a href="{{ route('medical.exception.ot.view') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-rose">
-                                <i class="bi bi-heart-pulse"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Medical Exception</p>
-                                @php $v = (int) $exemptionCount; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-                @else
-                <a href="{{ route('admin.dashboard.guest_faculty') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-rose">
-                                <i class="bi bi-person-vcard"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Total Guest Faculty</p>
-                                @php $v = (int) $total_guest_faculty; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
+                @if($card['link'])
                 </a>
                 @endif
             </div>
-
-            @if(($todayApproval1IdCardRequests ?? 0) > 0)
-            <div class="col">
-                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}"
-                    class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-blue">
-                                <i class="bi bi-person-badge"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Pending ID Card Requests (Approval I)</p>
-                                @php $v = (int) $todayApproval1IdCardRequests; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            @endif
-
-            @if(($todayApproval1DuplicateIdCardRequests ?? 0) > 0)
-            <div class="col">
-                <a href="{{ route('admin.security.employee_idcard_approval.approval1') }}"
-                    class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-amber">
-                                <i class="bi bi-copy"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Pending Duplicate ID (Approval I)</p>
-                                @php $v = (int) $todayApproval1DuplicateIdCardRequests; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            @endif
-
-            <div class="col">
-                @if(hasRole('Student-OT'))
-                <a href="{{ route('ot.mdo.escrot.exemption.view') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-navy">
-                                <i class="bi bi-person-gear"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">OT MDO/Escort</p>
-                                @php $v = (int) $MDO_count; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-                @else
-                <a href="{{ route('admin.dashboard.inhouse_faculty') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-navy">
-                                <i class="bi bi-people-fill"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Total Inhouse Faculty</p>
-                                @php $v = (int) $total_internal_faculty; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-                @endif
-            </div>
-
-            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin'))
-            <div class="col">
-                <a href="{{ route('admin.dashboard.sessions') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-green">
-                                <i class="bi bi-clock-history"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Session Details</p>
-                                @php $v = (int) $totalSessions; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            @endif
-
-            @if(isset($isCCorACC) && $isCCorACC)
-            <div class="col">
-                <a href="{{ route('admin.dashboard.students') }}" class="text-decoration-none d-block h-100">
-                    <div class="card stat-card h-100 p-3">
-                        <div class="d-flex align-items-center gap-3">
-                            <div class="stat-icon-wrapper stat-icon-amber">
-                                <i class="bi bi-person-lines-fill"></i>
-                            </div>
-                            <div class="flex-grow-1 min-w-0">
-                                <p class="stat-title">Total Students</p>
-                                @php $v = (int) $totalStudents; @endphp
-                                <p class="stat-value">{{ $v < 10 ? sprintf('%02d', $v) : $v }}</p>
-                            </div>
-                        </div>
-                    </div>
-                </a>
-            </div>
-            @endif
-            @endif
+            @endforeach
         </div>
 
         <div class="row g-3 g-lg-4">
             <div class="col">
+                @if(in_array('widget_notices', $enabledWidgetKeys))
                 @php
                 $noticeTabKeys = ['office-orders', 'work-allocation', 'notice-circular'];
                 $noticeTabLabels = [
@@ -616,7 +341,8 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         @endif
                     </div>
                 </div>
-                @if(hasRole('Admin') || hasRole('Training-Induction') || hasRole('Super Admin'))
+                @endif
+                @if(in_array('widget_admin_summary', $enabledWidgetKeys))
                 <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-notifications-panel">
                     <div class="card-header py-3 px-4">
                         <div class="d-flex justify-content-between align-items-center gap-3">
@@ -679,7 +405,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         @endif
                     </div>
                 </div>
+                @endif
 
+                @if(in_array('widget_campus_tweets', $enabledWidgetKeys))
                 @php
                 $campusTweetCount = 3;
                 @endphp
@@ -716,8 +444,7 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                 </div>
                 @endif
 
-                @if(hasRole('Student-OT') || hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super
-                Admin'))
+                @if(in_array('widget_todays_classes', $enabledWidgetKeys))
                 <div class="card dashboard-panel dashboard-feed-panel mb-4" id="dashboard-todays-classes-panel">
                     <div class="card-header py-3 px-4">
                         <h5 class="dashboard-feed-panel__title mb-0">Today's Classes</h5>
@@ -761,7 +488,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
 
             </div>
 
+            @if(in_array('widget_todays_birthdays', $enabledWidgetKeys) || in_array('widget_calendar', $enabledWidgetKeys))
             <div class="col-auto" style="width: 480px; min-width: 480px;">
+                @if(in_array('widget_todays_birthdays', $enabledWidgetKeys))
                 <div class="card dashboard-panel dashboard-birthdays-panel border-0 mb-4">
                     <div class="card-header bg-white border-0">
                         <div class="d-flex align-items-center justify-content-between w-100">
@@ -851,7 +580,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     </div>
                     @endif
                 </div>
+                @endif
 
+                @if(in_array('widget_calendar', $enabledWidgetKeys))
                 <div class="card dashboard-panel dashboard-birthdays-panel--calendar border-0">
                     <div class="card-header bg-white border-0">
                         <div class="d-flex align-items-center justify-content-between w-100">
@@ -869,7 +600,9 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                         </div>
                     </div>
                 </div>
+                @endif
             </div>
+            @endif
         </div>
     </div>
 

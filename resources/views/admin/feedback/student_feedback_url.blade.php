@@ -160,55 +160,6 @@
     }
     .sf-flatpickr .flatpickr-day.today { border-color: #004a93; }
     .sf-flatpickr .flatpickr-day:hover { background: #eef3f9; }
-
-    /* ===== Responsive: tablets & down ===== */
-    @media (max-width: 991.98px) {
-        /* Toolbar: tabs and the bulk submit button stack and fill width */
-        .sf-toolbar .feedback-nav-tabs { width: 100%; }
-        .sf-toolbar .btn-primary { width: 100%; }
-    }
-
-    @media (max-width: 767.98px) {
-        .session-feedback-main { padding-left: .25rem !important; padding-right: .25rem !important; }
-
-        /* Filter bar: every control becomes a full-width, comfortably-tappable block */
-        .sf-filterbar .sf-daterange-wrap,
-        .sf-filterbar .sf-daterange-input,
-        .sf-filterbar #sf-rating-filter,
-        .sf-filterbar #sf-reset-filters {
-            width: 100% !important;
-            min-width: 0 !important;
-        }
-        .sf-filterbar .sf-daterange-input { min-width: 0 !important; }
-
-        /* The Columns / Search cluster drops below and spreads out */
-        .sf-filterbar .ms-auto {
-            margin-left: 0 !important;
-            width: 100%;
-            justify-content: flex-start;
-        }
-        .sf-filterbar #sf-columns-btn { flex: 1 1 auto; justify-content: center; }
-        .sf-filterbar .sf-search-input { width: 100% !important; flex: 1 1 100%; }
-
-        /* Tighter table cells so more fits before horizontal scroll kicks in */
-        .sf-table thead th { padding: .65rem .6rem; font-size: .78rem; }
-        .sf-table tbody td { padding: .6rem .6rem; font-size: .85rem; }
-
-        /* Pagination footer rows breathe */
-        .session-feedback-card .card-footer .row > [class*="col-"] { text-align: center; }
-        .session-feedback-card .card-footer .d-flex { justify-content: center !important; }
-    }
-
-    @media (max-width: 575.98px) {
-        /* Status pills wrap evenly and stay tappable */
-        .sf-toolbar .nav-pills .nav-link {
-            flex: 1 1 auto;
-            justify-content: center;
-            padding: .45rem .75rem;
-        }
-        /* Smaller interactive stars so a full row of 5 never overflows its cell */
-        #pending-tab-pane .star-rating label { font-size: 1.15rem; }
-    }
 </style>
 
     <!-- Main Content -->
