@@ -235,39 +235,52 @@
         </tr>
     </table>
 
+    @php
+        // Fallback to a default column set if none was passed (keeps the view safe
+        // when rendered outside the controller's export flow).
+        $columns = $columns ?? [
+            ['title' => 'S.No.',        'align' => 'center', 'width' => 5],
+            ['title' => 'Course Name',  'align' => 'left',   'width' => 24],
+            ['title' => 'Group Type',   'align' => 'left',   'width' => 14],
+            ['title' => 'Group Name',   'align' => 'left',   'width' => 16],
+            ['title' => 'Faculty',      'align' => 'left',   'width' => 20],
+            ['title' => 'Student Name', 'align' => 'center', 'width' => 10],
+            ['title' => 'Status',       'align' => 'center', 'width' => 11],
+        ];
+        $columns = array_values($columns);
+        $colCount = count($columns);
+    @endphp
     <table class="data-table">
         <thead>
             <tr>
-                <th style="width: 5%;" class="text-center">S.No.</th>
-                <th style="width: 24%;">Course Name</th>
-                <th style="width: 14%;">Group Type</th>
-                <th style="width: 16%;">Group Name</th>
-                <th style="width: 20%;">Faculty</th>
-                <th style="width: 10%;" class="text-center">Students</th>
-                <th style="width: 11%;" class="text-center">Status</th>
+                @foreach($columns as $column)
+                    <th style="width: {{ $column['width'] ?? '' }}%;" class="{{ ($column['align'] ?? 'left') === 'center' ? 'text-center' : '' }}">
+                        {{ $column['title'] }}
+                    </th>
+                @endforeach
             </tr>
         </thead>
         <tbody>
-            @forelse($rows as $index => $row)
-                @php
-                    $isActive = (int) ($row->active_inactive ?? 0) === 1;
-                @endphp
+            @forelse($rows as $row)
                 <tr>
-                    <td class="text-center">{{ $index + 1 }}</td>
-                    <td>{{ optional($row->courseGroup)->course_name ?? '-' }}</td>
-                    <td>{{ optional($row->courseGroupType)->type_name ?? '-' }}</td>
-                    <td>{{ $row->group_name ?? '-' }}</td>
-                    <td>{{ optional($row->Faculty)->full_name ?? '-' }}</td>
-                    <td class="text-center">{{ $row->student_course_group_map_count ?? 0 }}</td>
-                    <td class="text-center">
-                        <span class="{{ $isActive ? 'status-active' : 'status-inactive' }}">
-                            {{ $isActive ? 'Active' : 'Inactive' }}
-                        </span>
-                    </td>
+                    @foreach($columns as $column)
+                        @php
+                            $value = isset($column['value']) ? ($column['value'])($row, $loop->parent->iteration) : '';
+                            $isStatus = ($column['title'] ?? '') === 'Status';
+                            $isActive = (int) ($row->active_inactive ?? 0) === 1;
+                        @endphp
+                        <td class="{{ ($column['align'] ?? 'left') === 'center' ? 'text-center' : '' }}">
+                            @if($isStatus)
+                                <span class="{{ $isActive ? 'status-active' : 'status-inactive' }}">{{ $value }}</span>
+                            @else
+                                {{ $value !== '' && $value !== null ? $value : '-' }}
+                            @endif
+                        </td>
+                    @endforeach
                 </tr>
             @empty
                 <tr class="empty-row">
-                    <td colspan="7">No group mappings found for the applied filters.</td>
+                    <td colspan="{{ $colCount }}">No group mappings found for the applied filters.</td>
                 </tr>
             @endforelse
         </tbody>

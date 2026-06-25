@@ -10,7 +10,6 @@ use Yajra\DataTables\EloquentDataTable;
 use Yajra\DataTables\Html\Builder as HtmlBuilder;
 use Yajra\DataTables\Html\Column;
 use Yajra\DataTables\Services\DataTable;
-use Illuminate\Support\Facades\DB;
 
 class GroupMappingDataTable extends DataTable
 {
@@ -144,10 +143,12 @@ $subQuery->where('group_name', 'like', "%{$searchValue}%")
 $courseQuery->where('course_name', 'like', "%{$searchValue}%");
 })
 
-->orWhereExists(function ($existsQuery) use ($searchValue) {
-$existsQuery->select(DB::raw(1))
-->from('course_group_type_master')
-->where('type_name', 'like', "%{$searchValue}%");
+->orWhereHas('courseGroupType', function ($typeQuery) use ($searchValue) {
+$typeQuery->where('type_name', 'like', "%{$searchValue}%");
+})
+
+->orWhereHas('Faculty', function ($facultyQuery) use ($searchValue) {
+$facultyQuery->where('full_name', 'like', "%{$searchValue}%");
 });
 });
 }

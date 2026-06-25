@@ -564,6 +564,27 @@ $(document).ready(function() {
         });
     }
 
+    function reloadCourseFilterOptions(done) {
+        $.get('{{ route('group.mapping.filter.courses') }}', {
+            status_filter: window.groupMappingCurrentFilter || 'active'
+        }).done(function(res) {
+            var $sel = $('#courseFilter');
+            var current = $sel.val();
+            $sel.find('option:not(:first)').remove();
+            $.each(res.courses || {}, function(pk, name) {
+                $sel.append($('<option></option>').val(pk).text(name));
+            });
+            if (current && res.courses && res.courses[current]) {
+                $sel.val(current);
+            } else {
+                $sel.val('');
+            }
+            if (typeof done === 'function') {
+                done();
+            }
+        });
+    }
+
     function setActiveFilterButton(activeBtn) {
         $('#filterGroupActive, #filterGroupArchive')
             .removeClass('active')
@@ -613,6 +634,18 @@ $(document).ready(function() {
                 .append($select)
                 .append(document.createTextNode(' '));
             $countCol.append($length);
+
+            // The length control is relocated out of the DataTables wrapper, which
+            // detaches DataTables' delegated change listener. Drive the page length
+            // explicitly via the API so changing "Showing N" actually re-pages.
+            $select.off('change.gmLen').on('change.gmLen', function() {
+                if ($.fn.DataTable.isDataTable('#group-mapping-table')) {
+                    var len = parseInt(this.value, 10);
+                    if (!isNaN(len)) {
+                        $('#group-mapping-table').DataTable().page.len(len).draw();
+                    }
+                }
+            });
         }
 
         // Self-managed count text — does NOT rely on relocating DataTables' own
@@ -650,6 +683,16 @@ $(document).ready(function() {
 
     function gmPersistHiddenCols(arr) {
         try { localStorage.setItem(gmColStorageKey, JSON.stringify(arr)); } catch (e) {}
+    }
+
+    // Exportable column indices (0..6); 7 = Action is never exported. Returns the
+    // visible ones so downloads honour the "Columns" show/hide selection.
+    function gmVisibleExportCols() {
+        var hidden = gmGetHiddenCols();
+        var exportable = [0, 1, 2, 3, 4, 5, 6];
+        return exportable.filter(function(idx) {
+            return hidden.indexOf(idx) === -1;
+        });
     }
 
     function setupGmColumns(dt) {
@@ -738,16 +781,20 @@ $(document).ready(function() {
         $('#filterGroupActive').on('click', function() {
             setActiveFilterButton($(this));
             window.groupMappingCurrentFilter = 'active';
-            reloadFacultyFilterOptions(function() {
-                table.ajax.reload();
+            reloadCourseFilterOptions(function() {
+                reloadFacultyFilterOptions(function() {
+                    table.ajax.reload();
+                });
             });
         });
 
         $('#filterGroupArchive').on('click', function() {
             setActiveFilterButton($(this));
             window.groupMappingCurrentFilter = 'archive';
-            reloadFacultyFilterOptions(function() {
-                table.ajax.reload();
+            reloadCourseFilterOptions(function() {
+                reloadFacultyFilterOptions(function() {
+                    table.ajax.reload();
+                });
             });
         });
 
@@ -762,13 +809,18 @@ $(document).ready(function() {
         });
 
         $('#resetFilters').on('click', function() {
+            // Clear only the filters/search — keep the current Active/Archived tab.
             $('#courseFilter').val('');
             $('#groupTypeFilter').val('');
             $('#facultyFilter').val('');
-            window.groupMappingCurrentFilter = 'active';
-            setActiveFilterButton($('#filterGroupActive'));
-            reloadFacultyFilterOptions(function() {
-                table.ajax.reload();
+            $('#gmCustomSearch').val('');
+            if ($.fn.DataTable.isDataTable('#group-mapping-table')) {
+                $('#group-mapping-table').DataTable().search('');
+            }
+            reloadCourseFilterOptions(function() {
+                reloadFacultyFilterOptions(function() {
+                    table.ajax.reload();
+                });
             });
         });
     }, 150);
@@ -808,57 +860,37 @@ $(document).ready(function() {
                 params.search = searchValue;
             }
         }
+        params.columns = gmVisibleExportCols().join(',');
         var url = '{{ route('group.mapping.download.pdf') }}?' + $.param(params);
         window.open(url, '_blank');
     });
 
-    /* ---------- Download current table as CSV ---------- */
+    /* ---------- Download CSV (server-side, respects applied filters) ---------- */
     $('#gmDownloadCsv').on('click', function() {
-        var tableEl = document.getElementById('group-mapping-table');
-        if (!tableEl) {
-            return;
+        var params = {
+            status_filter: window.groupMappingCurrentFilter || 'active'
+        };
+        var courseFilter = $('#courseFilter').val();
+        var groupTypeFilter = $('#groupTypeFilter').val();
+        var facultyFilter = $('#facultyFilter').val();
+        if (courseFilter) {
+            params.course_filter = courseFilter;
         }
-
-        var lines = [];
-
-        // Header row (exclude the trailing Action column).
-        var $headers = $(tableEl).find('thead th');
-        var headerCells = [];
-        $headers.each(function(i) {
-            if (i === $headers.length - 1) {
-                return; // skip Action
-            }
-            headerCells.push('"' + ($(this).text() || '').replace(/\s+/g, ' ').trim().replace(/"/g, '""') + '"');
-        });
-        lines.push(headerCells.join(','));
-
-        // Body rows currently rendered (current page).
-        $(tableEl).find('tbody tr').each(function() {
-            var tr = this;
-            if (tr.children.length <= 1) {
-                return; // empty-state row
-            }
-            var cells = [];
-            for (var i = 0; i < tr.children.length - 1; i++) { // exclude Action
-                var txt = (tr.children[i].innerText || '').replace(/\s+/g, ' ').trim().replace(/"/g, '""');
-                cells.push('"' + txt + '"');
-            }
-            lines.push(cells.join(','));
-        });
-
-        if (lines.length <= 1) {
-            return;
+        if (groupTypeFilter) {
+            params.group_type_filter = groupTypeFilter;
         }
-
-        var blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = 'course_group_mapping_' + new Date().toISOString().slice(0, 10) + '.csv';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        if (facultyFilter) {
+            params.faculty_filter = facultyFilter;
+        }
+        if ($.fn.DataTable.isDataTable('#group-mapping-table')) {
+            var searchValue = $('#group-mapping-table').DataTable().search();
+            if (searchValue) {
+                params.search = searchValue;
+            }
+        }
+        params.columns = gmVisibleExportCols().join(',');
+        var url = '{{ route('group.mapping.download.csv') }}?' + $.param(params);
+        window.open(url, '_blank');
     });
 
     $('#studentGroupType').on('change', function() {
