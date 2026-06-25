@@ -36,14 +36,30 @@ class CalendarEvent extends Model
         'remark_checkbox',
         'bio_attendance',
         'Faculty_feedback',
+        // Redesigned full-page Add Event form
+        'sector_pk',
+        'is_break',
+        'break_type',
+        'break_start_time',
+        'break_end_time',
+        'faculty_details',
         'active_inactive',
         'created_date',
         'modified_date',
+        // Optional presentation fields used by the printable Event Card
+        'event_banner',
+        'event_category',
+        'organizer',
+        'contact_info',
+        'qr_code_data',
+        'event_description',
+        'custom_fields',
     ];
 
       protected $casts = [
         'START_DATE' => 'date:Y-m-d',
         'END_DATE' => 'date:Y-m-d',
+        'custom_fields' => 'array',
     ];
 
     // ---------- RELATIONSHIPS ----------

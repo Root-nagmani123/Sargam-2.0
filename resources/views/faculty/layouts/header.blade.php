@@ -278,8 +278,34 @@
 
     <!-- Right Side Actions - Enhanced -->
     <div class="d-flex align-items-center ms-auto gap-4" style="margin-right: 56px;">
-          <i class="material-icons menu-icon material-symbols-rounded"
-                                                    style="font-size: 30px;">notifications</i>
+        <!-- Pending Feedback Notification Bell -->
+        <div class="position-relative d-none" id="facultyFeedbackBellWrap">
+            <button class="btn btn-link p-1 position-relative" id="facultyFeedbackBell"
+                    title="Pending Feedback" aria-label="Pending Feedback Notifications"
+                    data-bs-toggle="dropdown" aria-expanded="false" style="color:#475569">
+                <i class="material-icons material-symbols-rounded" style="font-size:28px">notifications</i>
+                <span id="facultyFeedbackBadge"
+                      class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                      style="font-size:10px;display:none"></span>
+            </button>
+            <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0"
+                 id="facultyFeedbackDropdown"
+                 style="min-width:300px;max-width:340px;border-radius:12px;overflow:hidden">
+                <div class="px-3 py-2 fw-semibold text-white d-flex align-items-center gap-2"
+                     style="background:#b30000;font-size:14px">
+                    <i class="material-icons material-symbols-rounded" style="font-size:18px">pending_actions</i>
+                    Pending Feedback
+                </div>
+                <ul id="facultyFeedbackList" class="list-unstyled mb-0"
+                    style="max-height:280px;overflow-y:auto"></ul>
+                <div class="p-2 border-top text-center">
+                    <a href="{{ route('feedback.get.facultyInternalFeedback') }}"
+                       class="btn btn-sm btn-outline-danger w-100" style="font-size:13px">
+                        View All Pending Feedback
+                    </a>
+                </div>
+            </div>
+        </div>
         <!-- Logout Button - Enhanced -->
         <form action="{{ route('logout') }}" method="POST" class="m-0 p-0 d-inline" role="form">
             @csrf

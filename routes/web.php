@@ -469,16 +469,22 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
+        Route::get('/event/create', [CalendarController::class, 'createEvent'])->name('event.create');
         Route::get('/get-subject-Name', [CalendarController::class, 'getSubjectName'])->name('get.subject.name');
         Route::post('/events', [CalendarController::class, 'store'])->name('event.store');
         Route::get('/full-calendar-details', [CalendarController::class, 'fullCalendarDetails'])->name('event.calendar-details');
         Route::get('/single-calendar-details', [CalendarController::class, 'SingleCalendarDetails'])->name('event.Singlecalendar-details');
 
-        Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
-        Route::post('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
+        // Event Card — printable / downloadable PDF representation
+        Route::get('/event-card/{id}', [CalendarController::class, 'eventCard'])->name('event.card');
+        Route::get('/event-card/{id}/pdf', [CalendarController::class, 'eventCardPdf'])->name('event.card.pdf');
+
+        Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('event.show');
+        Route::get('/event/{hash}/edit', [CalendarController::class, 'editEventPage'])->name('event.edit.page');
+        Route::post('/event-update/{hash}', [CalendarController::class, 'update_event'])->name('event.update');
         Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
 
-        Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
+        Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
 
@@ -489,6 +495,16 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/single-calendar-details', [CalendarController::class, 'otSingleCalendarDetails'])->name('event.Singlecalendar-details');
             Route::get('/download', [CalendarController::class, 'otDownloadPdf'])->name('download');
         });
+        // Academic time table (flat session list) — printable / downloadable PDF
+        Route::get('/timetable/pdf', [CalendarController::class, 'downloadTimetablePdf'])->name('timetable.pdf');
+        Route::get('/timetable/preview', [CalendarController::class, 'previewTimetablePdf'])->name('timetable.preview');
+        // Whole-week timetable — printable / downloadable PDF
+        Route::get('/weekly-timetable/pdf', [CalendarController::class, 'weeklyTimetablePdf'])->name('weekly-timetable.pdf');
+        Route::get('/weekly-timetable/preview', [CalendarController::class, 'previewWeeklyTimetablePdf'])->name('weekly-timetable.preview');
+        // Course Information + Resource Persons (Faculty for the Week) — printable / downloadable PDF
+        Route::get('/weekly-info/pdf', [CalendarController::class, 'weeklyInfoPdf'])->name('weekly-info.pdf');
+        Route::get('/weekly-info/meta', [CalendarController::class, 'weeklyInfoMeta'])->name('weekly-info.meta');
+        Route::post('/weekly-info/save', [CalendarController::class, 'saveWeeklyInfo'])->name('weekly-info.save');
     });
 
     // Timetable Report
@@ -1226,6 +1242,11 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/faculty-internal-feedback', [CalendarController::class, 'facultyInternalFeedback'])->name('feedback.get.facultyInternalFeedback');
+    Route::get('/faculty-internal-feedback/pending-count', [CalendarController::class, 'facultyPendingFeedbackCount'])->name('feedback.faculty.pendingCount');
+    Route::post('/faculty-internal-feedback/submit', [CalendarController::class, 'submitFacultyInternalFeedback'])->name('feedback.submit.facultyInternalFeedback');
+});
 Route::get('/feedback/student-feedback-url', [CalendarController::class, 'studentFeedback_url'])->name('feedback.get.studentFeedbackUrl');
 // Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
 // Route::get('admin/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])->name('admin.get.sessions.by.course');
