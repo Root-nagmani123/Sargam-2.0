@@ -59,11 +59,20 @@
                 </li>
             </ul>
 
-            <div class="header-brand d-flex align-items-center gap-2 py-2">
-                <img src="{{ asset('images/ashoka.webp') }}" alt="ashoka emblem" class="header-logo-emblem">
-                <span class="header-brand-divider" aria-hidden="true"></span>
-                <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="logo" class="header-logo">
-            </div>
+            <a href="{{ route('admin.dashboard') }}"
+               class="header-brand d-flex align-items-center gap-2 py-2 text-decoration-none"
+               aria-label="Go to Dashboard"
+               title="Go to Dashboard">
+    <img src="{{ asset('images/ashoka.webp') }}"
+         alt="ashoka emblem"
+         class="header-logo-emblem">
+
+    <span class="header-brand-divider" aria-hidden="true"></span>
+
+    <img src="{{ asset('admin_assets/images/logos/logo.svg') }}"
+         alt="Sargam 2.0"
+         class="header-logo">
+</a>
 
             <a class="navbar-toggler p-0 border-0 nav-icon-hover-bg rounded-circle" data-bs-toggle="collapse"
                 data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false"
@@ -75,7 +84,7 @@
                 <div class="collapse navbar-collapse justify-content-center" id="mainNavbar">
                     <!-- Enhanced Navigation Container (Desktop) -->
                     <div class="nav-container position-relative d-none d-lg-block">
-                       
+
                         <ul class="navbar-nav header-main-nav px-4 py-2 gap-1 align-items-center" role="menubar">
                             @foreach($sidebarMenus as $category)
                                 @php
@@ -588,6 +597,8 @@
     gap: 10px !important;
     padding-left: 0;
     flex-shrink: 0;
+    position: relative;
+    z-index: 100;
 }
 .header-logo-emblem {
     height: 42px;
@@ -1269,31 +1280,31 @@
                         }
                     });
                 }
-                
+
                 // Mobile collapse: document-level delegation (capture phase)
                 let collapseHandledAt = 0;
                 function handleMobileCollapse(e) {
                     if (window.innerWidth >= 992) return;
-                    
+
                     const trigger = e.target.closest('[data-bs-toggle="collapse"]');
                     if (!trigger) return;
-                    
+
                     const sidebarTabContent = document.getElementById('sidebarTabContent');
                     if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
-                    
+
                     if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
-                    
+
                     // Prevent double-fire from pointerup + click on touch devices
                     const now = Date.now();
                     if (now - collapseHandledAt < 400) return;
                     collapseHandledAt = now;
-                    
+
                     const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') || '').replace(/^#/, '');
                     if (!targetId) return;
-                    
+
                     const targetElement = document.getElementById(targetId);
                     if (!targetElement) return;
-                    
+
                     if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
                         let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
                         if (!bsCollapse) {
@@ -1321,10 +1332,10 @@
                         e.stopPropagation();
                     }
                 }
-                
+
                 document.addEventListener('pointerup', handleMobileCollapse, true);
                 document.addEventListener('click', handleMobileCollapse, true);
-             
+
 
                 // Time format is already set in PHP, no need to override
 

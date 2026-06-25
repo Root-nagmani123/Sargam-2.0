@@ -200,6 +200,7 @@ $(document).ready(function() {
                 errorText.text('');
             }
             photoPreview.addClass('d-none').attr('src', '#');
+            $('#previousPhotoWrapper').removeClass('d-none');
 
             // If no file selected, just return
             if (!file) {
@@ -224,10 +225,11 @@ $(document).ready(function() {
                 return;
             }
 
-            // Valid file — show preview
+            // Valid file — hide previous photo and show new preview
             const reader = new FileReader();
             reader.onload = function (event) {
                 try {
+                    $('#previousPhotoWrapper').addClass('d-none');
                     photoPreview
                         .attr('src', event.target.result)
                         .removeClass('d-none');
