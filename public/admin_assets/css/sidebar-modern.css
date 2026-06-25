@@ -131,7 +131,7 @@
     background: #fff !important;
     overflow: hidden !important;
     position: relative !important;
-    display: block !important;
+	display: block !important;
 }
 
 @media (min-width: 992px) {

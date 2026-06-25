@@ -121,11 +121,13 @@
                 'admin.faculty.whos-who',
                 'admin.roles.*',
                 'admin.users.*',
+                'roles.*',
+                'users.*',
                 'admin.setup.quick_links.*',
                 'admin.setup.useful_links.*',
                 'course-repository.*',
             ],
-            ['member*', 'faculty*', 'users*']
+            ['member*', 'faculty*', 'users*', 'roles*']
         )) {
             return 'Users';
         }
@@ -200,6 +202,12 @@
             ];
         })
         ->filter(fn ($item) => filled($item['label']))
+        ->map(function ($item) {
+            if (strtolower($item['label']) === 'home' && is_null($item['url'])) {
+                $item['url'] = route('admin.dashboard');
+            }
+            return $item;
+        })
         ->values()
         ->all();
 
