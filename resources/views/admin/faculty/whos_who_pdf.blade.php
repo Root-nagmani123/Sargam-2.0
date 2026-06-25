@@ -39,15 +39,8 @@
         }
     }
 
-    $filterParts = [
-        'Course: ' . ($courseLabel ?? 'All Courses'),
-        'Cadre: ' . ($cadreLabel ?? 'All Cadres'),
-        'Service: ' . ($serviceLabel ?? 'All Services'),
-    ];
-    if (!empty($searchLabel)) {
-        $filterParts[] = 'Search: "' . $searchLabel . '"';
-    }
-    $filterLine = implode('  |  ', $filterParts);
+    $courseLabel = $courseLabel ?? 'All Courses';
+    $searchMeta = !empty($searchLabel) ? 'Search: "' . $searchLabel . '"' : '';
 @endphp
 <!doctype html>
 <html lang="en">
@@ -117,6 +110,12 @@
             font-size: 8pt;
             color: #555;
             margin-bottom: 3px;
+        }
+        .report-course {
+            font-size: 12pt;
+            font-weight: 700;
+            color: #0b4a7e;
+            margin-bottom: 4px;
         }
 
         .card {
@@ -221,7 +220,10 @@
 
     <div class="report-title-block">
         <h1 class="report-title">Who's Who</h1>
-        <div class="report-meta">{{ $filterLine }}</div>
+        <div class="report-course">{{ $courseLabel }}</div>
+        @if($searchMeta)
+            <div class="report-meta">{{ $searchMeta }}</div>
+        @endif
         <div class="report-meta">Generated: {{ $printedOn }} &nbsp;|&nbsp; Total: {{ count($students) }}</div>
     </div>
 
