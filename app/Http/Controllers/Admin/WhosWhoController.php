@@ -5,7 +5,6 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\CadreMaster;
 use App\Models\CourseMaster;
-use App\Models\District;
 use App\Models\ServiceMaster;
 use App\Models\StudentMaster;
 use App\Models\StudentMasterCourseMap;
@@ -379,15 +378,6 @@ class WhosWhoController extends Controller
             ? $this->loadCounsellorAndHouseLookup($studentPks)
             : collect();
 
-        $districtPks = $studentMaps
-            ->map(fn ($map) => $map->studentMaster?->state_district_mapping_pk)
-            ->filter()
-            ->unique()
-            ->values();
-        $districtsByPk = $districtPks->isNotEmpty()
-            ? District::whereIn('pk', $districtPks)->pluck('district_name', 'pk')
-            : collect();
-
         $categoryPks = $studentMaps
             ->map(fn ($map) => $map->studentMaster?->admission_category_pk)
             ->filter()
@@ -398,16 +388,21 @@ class WhosWhoController extends Controller
             : collect();
 
         $statePks = $studentMaps
-            ->flatMap(fn ($map) => [
-                $map->studentMaster?->domicile_state_pk,
-                $map->studentMaster?->state_master_pk,
-                $map->studentMaster?->postal_state_pk,
-            ])
+            ->map(fn ($map) => $map->studentMaster?->state_master_pk)
             ->filter()
             ->unique()
             ->values();
         $statesByPk = $statePks->isNotEmpty()
             ? State::whereIn('pk', $statePks)->pluck('state_name', 'pk')
+            : collect();
+
+        $streamPks = $studentMaps
+            ->map(fn ($map) => $map->studentMaster?->highest_stream_pk)
+            ->filter()
+            ->unique()
+            ->values();
+        $streamsByPk = $streamPks->isNotEmpty()
+            ? DB::table('stream_master')->whereIn('pk', $streamPks)->pluck('stream_name', 'pk')
             : collect();
 
         // Log results
@@ -497,17 +492,14 @@ class WhosWhoController extends Controller
                     : 'N/A';
             }
 
-            // Get state name
+            // Domicile state: state_master.state_name via student_master.state_master_pk
             $stateName = 'N/A';
-            if ($student->domicile_state_pk) {
-                $stateName = $statesByPk[$student->domicile_state_pk]
-                    ?? ('State ID: ' . $student->domicile_state_pk);
+            if ($student->state_master_pk) {
+                $stateName = $statesByPk[$student->state_master_pk] ?? 'N/A';
             }
 
-            $districtName = 'N/A';
-            if ($student->state_district_mapping_pk) {
-                $districtName = $districtsByPk[$student->state_district_mapping_pk] ?? 'N/A';
-            }
+            // District column maps to student_master.city (per Who's Who SQL)
+            $cityName = filled($student->city) ? $student->city : 'N/A';
 
             $categoryName = 'N/A';
             if ($student->admission_category_pk && isset($categoriesByPk[$student->admission_category_pk])) {
@@ -515,23 +507,14 @@ class WhosWhoController extends Controller
                 $categoryName = $categoryRow->Seat_name ?? $categoryRow->seat_name ?? 'N/A';
             }
 
-            $addressStatePk = $student->postal_state_pk ?: $student->state_master_pk;
-            $addressState = $addressStatePk ? ($statesByPk[$addressStatePk] ?? '') : '';
-            $addressParts = array_filter([
-                $student->postal_address ?: $student->address,
-                $student->postal_city ?: $student->city ?: $student->town_village,
-                $addressState,
-                strtoupper((string) ($student->nationality ?? 'INDIA')),
-                $student->postal_pin_code ?: $student->pin_code,
-            ], fn ($part) => filled($part));
-            $fullAddress = !empty($addressParts) ? implode(' ', $addressParts) : 'N/A';
+            $fullAddress = filled($student->address) ? $student->address : 'N/A';
 
-            // Get stream name if available
             $streamName = 'N/A';
-            if ($student->highest_stream_pk) {
-                $stream = DB::table('stream_master')->where('pk', $student->highest_stream_pk)->first();
-                $streamName = $stream ? $stream->stream_name : 'Stream ID: ' . $student->highest_stream_pk;
+            if ($student->highest_stream_pk && isset($streamsByPk[$student->highest_stream_pk])) {
+                $streamName = $streamsByPk[$student->highest_stream_pk];
             }
+
+            $cadreName = $student->cadre->cadre_name ?? null;
 
             // Format batch
             $batch = 'N/A';
@@ -544,7 +527,7 @@ class WhosWhoController extends Controller
                 'id' => $student->generated_OT_code ?? ('STU-' . $student->pk),
                 'name' => $student->display_name ?? (trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))),
                 'rank' => $student->rank ?? 'N/A',
-                'cadre' => $student->cadre->cadre_name ?? 'N/A',
+                'cadre' => filled($cadreName) ? $cadreName : 'N/A',
                 'code' => $student->generated_OT_code ?? 'N/A',
                 'counsellor' => $counsellorName,
                 'house' => $houseName,
@@ -557,7 +540,7 @@ class WhosWhoController extends Controller
                 'image_src' => $forExport ? $this->resolveStudentPhotoDataUri($student->photo_path) : null,
                 'dob' => $student->dob ? Carbon::parse($student->dob)->format('d-M-y') : 'N/A',
                 'domicile' => strtoupper($stateName),
-                'district' => strtoupper($districtName),
+                'district' => strtoupper($cityName),
                 'category' => strtoupper($categoryName),
                 'address' => $fullAddress,
                 'attempts' => $student->rank ?? 'N/A',
