@@ -117,6 +117,40 @@ class FacultyLeaveApprovalService
             ->all();
     }
 
+    /**
+     * Resolve the user_ids of every faculty assigned to approve stationed leave
+     * for the given course. Used to notify approvers when a request is submitted.
+     *
+     * @return list<int>
+     */
+    public function getApproverUserIdsForCourse(int $coursePk): array
+    {
+        $facultyPks = DB::table('stationed_leave_faculty_approver as slfa')
+            ->join('stationed_leave_master as slm', 'slm.pk', '=', 'slfa.stationed_leave_master_pk')
+            ->where('slm.course_master_pk', $coursePk)
+            ->where('slm.active_inactive', 1)
+            ->pluck('slfa.faculty_master_pk')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+
+        if ($facultyPks === []) {
+            return [];
+        }
+
+        return FacultyMaster::query()
+            ->whereIn('pk', $facultyPks)
+            ->where('active_inactive', 1)
+            ->pluck('employee_master_pk')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
+
     public function canFacultyAccessLeave(int $facultyPk, LeaveApplication $application): bool
     {
         if ($application->leave_type !== LeaveApplication::TYPE_STATIONED_LEAVE) {

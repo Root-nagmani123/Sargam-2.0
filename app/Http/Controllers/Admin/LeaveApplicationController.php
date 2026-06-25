@@ -6,11 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use App\Models\LeaveApplicationAttachment;
 use App\Models\LeaveNatureMaster;
+use App\Services\FacultyLeaveApprovalService;
 use App\Services\LeaveApplicationService;
+use App\Services\NotificationService;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Yajra\DataTables\Facades\DataTables;
 
 class LeaveApplicationController extends Controller
@@ -239,8 +242,9 @@ class LeaveApplicationController extends Controller
         }
 
         $now = now();
+        $isNew = $application === null;
 
-        DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprovePt) {
+        $application = DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprovePt) {
             $data = [
                 'course_master_pk' => $context['course_pk'],
                 'student_master_pk' => $context['student_pk'],
@@ -290,7 +294,16 @@ class LeaveApplicationController extends Controller
                     'created_date' => $now,
                 ]);
             }
+
+            return $application;
         });
+
+        // Notify stationed-leave approvers when a request is submitted for their review.
+        // PT exemptions auto-approve and drafts are not actionable, so neither is notified.
+        if ($isSubmit && ! $autoApprovePt
+            && $validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE) {
+            $this->notifyApproversOfNewLeaveRequest($application, $context, $totalDays);
+        }
 
         $message = match (true) {
             ! $isSubmit => 'Leave application saved as draft.',
@@ -299,6 +312,49 @@ class LeaveApplicationController extends Controller
         };
 
         return redirect()->route('leave.my-leave')->with('success', $message);
+    }
+
+    /**
+     * Notify the faculty assigned as stationed-leave approvers for the student's
+     * course that a new leave request is awaiting their review.
+     */
+    protected function notifyApproversOfNewLeaveRequest(LeaveApplication $application, array $context, float $totalDays): void
+    {
+        try {
+            $approverUserIds = app(FacultyLeaveApprovalService::class)
+                ->getApproverUserIdsForCourse((int) $context['course_pk']);
+
+            if ($approverUserIds === []) {
+                return;
+            }
+
+            $studentName = app(FacultyLeaveApprovalService::class)
+                ->studentDisplayName($context['student'] ?? null);
+            $courseName = $context['course']->course_name ?? 'their course';
+            $fromDate = optional($application->from_date)->format('d-m-Y') ?? $application->from_date;
+            $toDate = optional($application->to_date)->format('d-m-Y') ?? $application->to_date;
+            $days = number_format($totalDays, 0);
+
+            $title = 'New Leave Request';
+            $message = "{$studentName} has submitted a Stationed Leave request for {$courseName} "
+                . "from {$fromDate} to {$toDate} ({$days} day" . ($days === '1' ? '' : 's') . "). "
+                . 'Awaiting your approval.';
+
+            app(NotificationService::class)->createMultiple(
+                $approverUserIds,
+                'leave',
+                'StationedLeave',
+                (int) $application->pk,
+                $title,
+                $message
+            );
+        } catch (\Throwable $e) {
+            // Notification failure must never block leave submission.
+            Log::error('Failed to notify approvers of new leave request', [
+                'leave_pk' => $application->pk ?? null,
+                'error' => $e->getMessage(),
+            ]);
+        }
     }
 
     protected function myLeaveDatatable(Request $request)
