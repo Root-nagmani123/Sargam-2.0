@@ -2506,7 +2506,192 @@ class CalendarController extends Controller
         }
     }
 
+ /**
+  * Student session-feedback listing, doubling as the SSO entry point.
+  *
+  * An external site (e.g. Moodle) redirects here with ?username=<user_name>.
+  * On that first hop we log the user in, stash the username in the session,
+  * then redirect back to this same route WITHOUT the query string so the
+  * username never lingers in the address bar. The clean follow-up request is
+  * authenticated (via the session) and renders the listing.
+  *
+  * SECURITY: the username arrives in plaintext, so anyone can impersonate any
+  * user simply by editing the query string. This is intentional for now per
+  * request. Before exposing this beyond a trusted/internal redirect, switch to
+  * an encrypted token like studentFacultyFeedback() does.
+  */
+ public function studentFeedback_url(Request $request)
+  {
+        // SSO hop: ?username=<user_name> present → log in, stash, strip the query.
+        if ($request->filled('username')) {
+            $username = trim((string) $request->query('username'));
 
+            $user = User::where('user_name', $username)->firstOrFail();
+            Auth::login($user);
+
+            // Keep the username available in the session for downstream use.
+            session(['feedback_username' => $username]);
+
+            // Redirect to the same route with no query string → clean URL.
+            return redirect()->route('feedback.get.studentFeedbackUrl');
+        }
+
+        // Clean request: ensure we have an authenticated user. Fall back to the
+        // username stashed on the SSO hop if the session somehow lost the login.
+        if (!auth()->check() && ($stashed = session('feedback_username'))) {
+            if ($user = User::where('user_name', trim($stashed))->first()) {
+                Auth::login($user);
+            }
+        }
+
+        if (!auth()->check()) {
+            return redirect()->route('login');
+        }
+
+        try {
+            $student_pk = auth()->user()->user_id;
+            $pendingQuery = DB::table('timetable as t')
+                ->select([
+                    't.pk as timetable_pk',
+                    't.subject_topic',
+                    't.Ratting_checkbox',
+                    't.feedback_checkbox',
+                    't.Remark_checkbox',
+                    't.faculty_master as faculty_json', // Keep original JSON
+                    'f.pk as faculty_pk', // Get individual faculty PK
+                    'f.full_name as faculty_name',
+                    'c.course_name',
+                    'v.venue_name',
+                    DB::raw('t.START_DATE as from_date'),
+                    't.class_session',
+                    // Add field to extract session end time for sorting (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
+                    DB::raw("
+                    CASE
+                        WHEN t.class_session LIKE '% - %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                        WHEN t.class_session LIKE '% to %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                        ELSE NULL
+                    END as session_end_time
+                ")
+                ])
+                ->leftJoin('faculty_master as f', function ($join) {
+                    $join->whereRaw("
+                    (
+                        JSON_VALID(t.faculty_master)
+                        AND JSON_CONTAINS(
+                            t.faculty_master,
+                            JSON_QUOTE(CAST(f.pk AS CHAR))
+                        )
+                    )
+                    OR
+                    (
+                        NOT JSON_VALID(t.faculty_master)
+                        AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
+                    )
+                ");
+                })
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
+                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                        ->where('smcm.student_master_pk', '=', $student_pk)
+                        ->where('smcm.active_inactive', '=', 1);
+                })
+                ->where('t.feedback_checkbox', 1)
+                ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->where('csa.Student_master_pk', '=', $student_pk)
+                        ->where('csa.status', '1');
+                })
+                ->whereNotExists(function ($sub) use ($student_pk) {
+                    $sub->select(DB::raw(1))
+                        ->from('topic_feedback as tf')
+                        ->whereColumn('tf.timetable_pk', 't.pk')
+                        ->where('tf.student_master_pk', $student_pk)
+                        ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
+                        ->where('tf.is_submitted', 1);
+                })
+                // Show only sessions whose end time has passed (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
+                ->whereRaw("
+                TIMESTAMP(
+                    t.END_DATE,
+                    CASE
+                        WHEN t.class_session LIKE '% - %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                        WHEN t.class_session LIKE '% to %' THEN
+                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                        ELSE NULL
+                    END
+                ) <= NOW()
+            ");
+
+            if (hasRole('Student-OT')) {
+                $pendingQuery
+                    ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
+                    ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+                    ->where('scgm.student_master_pk', $student_pk);
+            }
+
+            $pendingData = $pendingQuery
+                ->orderBy('t.START_DATE', 'asc')
+                ->orderBy('session_end_time', 'asc')
+                ->get()
+                ->unique(function ($item) {
+                    // Ensure each faculty-timetable combination is unique
+                    return $item->timetable_pk . '_' . $item->faculty_pk;
+                })
+                ->values(); // Reset array keys
+
+            $submittedData = DB::table('topic_feedback as tf')
+                ->select([
+                    'tf.pk as feedback_pk',
+                    'tf.timetable_pk',
+                    'tf.topic_name',
+                    'tf.presentation',
+                    'tf.content',
+                    'tf.remark',
+                    'tf.rating',
+                    'tf.is_submitted',
+                    'tf.created_date',
+                    'tf.faculty_pk',
+                    't.subject_topic',
+                    // Get faculty name from faculty_master using tf.faculty_pk
+                    'fm.full_name as faculty_name',
+                    'c.course_name',
+                    'v.venue_name',
+                    DB::raw('t.START_DATE as from_date'),
+                    't.class_session',
+                    't.Ratting_checkbox',
+                    't.Remark_checkbox',
+                ])
+                ->join('timetable as t', 'tf.timetable_pk', '=', 't.pk')
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('faculty_master as fm', 'tf.faculty_pk', '=', 'fm.pk') // JOIN ON tf.faculty_pk
+                ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->where('tf.student_master_pk', $student_pk)
+                ->where('tf.is_submitted', 1)
+                ->orderByDesc('tf.created_date')
+                ->get();
+
+            $payload = [
+                'username' => auth()->user()->user_name,
+            ];
+
+            $encrypted = Crypt::encryptString(json_encode($payload));
+
+            $otUrl = route('feedback.get.studentFacultyFeedback', ['data' => $encrypted]);
+
+            return view('admin.feedback.student_feedback_url', compact(
+                'pendingData',
+                'submittedData',
+                'otUrl'
+            ));
+        } catch (\Throwable $e) {
+            logger()->error('Error in studentFeedback: ' . $e->getMessage());
+            return back()->with('error', $e->getMessage());
+        }
+    }
 
 
 

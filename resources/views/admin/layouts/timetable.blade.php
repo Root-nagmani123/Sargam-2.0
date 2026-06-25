@@ -34,7 +34,7 @@
 <body class="admin-force-light bg-light" style="min-height: 100vh; display: flex; flex-direction: column; font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;">
     <!-- Top Blue Bar (Govt of India) -->
 <!-- Government Header Strips -->
-<div class="govt-header">
+<div class="govt-header d-none d-lg-block">
     <!-- Top Accessibility / Government of India Strip -->
     <div class="govt-header-top text-white py-2">
         <div class="container-fluid p-0 px-2">
@@ -91,7 +91,7 @@
             <nav class="navbar navbar-expand-lg navbar-light p-0">
                 <a class="navbar-brand d-flex align-items-center gap-2 gap-md-3 me-2 p-0" href="#">
                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg"
-                        alt="Emblem of India" height="56" class="d-inline-block">
+                        alt="Emblem of India" height="56" class="d-lg-block d-none ">
                     <span class="vr d-none d-sm-inline-block align-self-center"></span>
                     <img src="https://www.lbsnaa.gov.in/admin_assets/images/logo.png" alt="LBSNAA Logo" height="56" class="d-inline-block">
                 </a>

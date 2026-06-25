@@ -1155,6 +1155,26 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
+     * Item dropdown: allow Tab (in addition to Enter) to select the currently highlighted option.
+     * Reuses Choices' own Enter handler so selection behaviour is identical, then lets Tab move focus on.
+     */
+    function bindSvItemChoicesTabSelect(selectEl, choices, api) {
+        if (!api || !api.wrapper) return;
+        api.wrapper.addEventListener('keydown', function (e) {
+            if (e.key !== 'Tab' || e.shiftKey) return;
+            var dropdown = choices.dropdown ? choices.dropdown.element : null;
+            var isOpen = dropdown && dropdown.classList && dropdown.classList.contains('is-active');
+            if (!isOpen) return;
+            var highlighted = dropdown.querySelector('.choices__item--selectable.is-highlighted');
+            if (!highlighted) return;
+            // Trigger Choices' native selection of the highlighted option (same as pressing Enter).
+            var enter = new KeyboardEvent('keydown', { key: 'Enter', keyCode: 13, which: 13, bubbles: true, cancelable: true });
+            e.target.dispatchEvent(enter);
+            // Default Tab behaviour proceeds, moving focus to the next field.
+        });
+    }
+
+    /**
      * Selling voucher dropdowns: type-to-search using whole words only.
      * Each space-separated token must match a label word from the start (prefix while typing),
      * so e.g. "rice" matches "Basmati Rice" but not "price".
@@ -1313,6 +1333,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         if (selectEl.classList.contains('sv-item-select')) {
             bindSvItemChoicesFixedDropdown(selectEl, choices, api);
+            bindSvItemChoicesTabSelect(selectEl, choices, api);
         }
 
         selectEl.choicesInstance = api;

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CourseMaster;
 use App\Models\CourseCordinatorMaster;
 use App\Models\FacultyMaster;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
@@ -68,7 +69,7 @@ class CourseService
                 'course_year' => $validatedData['courseyear'],
                 'start_year' => $validatedData['startdate'],
                 'end_date' => $validatedData['enddate'],
-                'active_inactive' => 1,
+                'created_by' => Auth::id(),
                 'created_date' => now(),
                 'Modified_date' => now(),
             ];

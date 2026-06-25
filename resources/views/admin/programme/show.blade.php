@@ -12,6 +12,16 @@
         $coordinatorDisplay = $coordinatorName ?: 'NA';
         $startDate = filled($course->start_year) ? \Carbon\Carbon::parse($course->start_year)->format('d M Y') : null;
         $endDate = filled($course->end_date) ? \Carbon\Carbon::parse($course->end_date)->format('d M Y') : null;
+        $durationLabel = null;
+        if (filled($course->start_year) && filled($course->end_date)) {
+            $start = \Carbon\Carbon::parse($course->start_year)->startOfDay();
+            $end = \Carbon\Carbon::parse($course->end_date)->startOfDay();
+            if ($end->gte($start)) {
+                $totalDays = $start->diffInDays($end) + 1;
+                $weeks = (int) ceil($totalDays / 7);
+                $durationLabel = $weeks . ' ' . \Illuminate\Support\Str::plural('Week', $weeks);
+            }
+        }
         $updatedAt = \Carbon\Carbon::parse($course->Modified_date ?? $course->updated_at ?? now())->format('d M Y, h:i A');
         $isActive = filled($course->end_date) && \Carbon\Carbon::parse($course->end_date)->startOfDay()->gte(now()->startOfDay());
         $statusLabel = $isActive ? 'Active' : 'Archived';
@@ -74,19 +84,6 @@
             <div class="col-6 col-md-4 col-xl">
                 <div class="card border-0 shadow-sm rounded-3 h-100 programme-show-stat-card hover-lift">
                     <div class="card-body d-flex align-items-center gap-3 py-3">
-                        <span class="programme-show-stat-icon bg-warning-subtle text-warning">
-                            <i class="material-icons material-symbols-rounded" aria-hidden="true">calendar_month</i>
-                        </span>
-                        <div class="min-w-0">
-                            <div class="small text-body-secondary">Availability</div>
-                            <div class="fw-bold text-dark">{{ $display($course->duration) }}</div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="col-6 col-md-4 col-xl">
-                <div class="card border-0 shadow-sm rounded-3 h-100 programme-show-stat-card hover-lift">
-                    <div class="card-body d-flex align-items-center gap-3 py-3">
                         <span class="programme-show-stat-icon programme-show-stat-icon--purple">
                             <i class="material-icons material-symbols-rounded" aria-hidden="true">person</i>
                         </span>
@@ -122,32 +119,26 @@
                         <div class="row g-4">
                             <div class="col-md-6">
                                 <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Course Code</div>
-                                    <div class="programme-show-field__value">{{ $display($course->course_code) }}</div>
-                                </div>
-                            </div>
-                            <div class="col-md-6">
-                                <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Course Name</div>
+                                    <div class="programme-show-field__label">Course Full Name</div>
                                     <div class="programme-show-field__value">{{ $display($course->course_name) }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Course Category</div>
-                                    <div class="programme-show-field__value">{{ $display($course->course_category ?? null) }}</div>
+                                    <div class="programme-show-field__label">Course Short Name</div>
+                                    <div class="programme-show-field__value">{{ $display($course->couse_short_name) }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="programme-show-field">
-                                    <div class="programme-show-field__label">Course Type</div>
-                                    <div class="programme-show-field__value">{{ $display($course->course_type) }}</div>
+                                    <div class="programme-show-field__label">Supporting Section</div>
+                                    <div class="programme-show-field__value">{{ $display($supportingSectionName ?? null) }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="programme-show-field">
                                     <div class="programme-show-field__label">Duration</div>
-                                    <div class="programme-show-field__value">{{ $display($course->duration) }}</div>
+                                    <div class="programme-show-field__value">{{ $durationLabel ?? 'NA' }}</div>
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -265,12 +256,12 @@
                         <hr class="programme-show-divider mb-4">
 
                         <div class="programme-show-field mb-3">
-                            <div class="programme-show-field__label">Course Code</div>
-                            <div class="programme-show-field__value">{{ $display($course->course_code) }}</div>
+                            <div class="programme-show-field__label">Course Short Name</div>
+                            <div class="programme-show-field__value">{{ $display($course->couse_short_name) }}</div>
                         </div>
                         <div class="programme-show-field mb-3">
                             <div class="programme-show-field__label">Created By</div>
-                            <div class="programme-show-field__value">{{ $display($course->created_by ?? null) }}</div>
+                            <div class="programme-show-field__value">{{ $display($createdByName ?? null) }}</div>
                         </div>
                         <div class="programme-show-field mb-3">
                             <div class="programme-show-field__label">Start Date</div>

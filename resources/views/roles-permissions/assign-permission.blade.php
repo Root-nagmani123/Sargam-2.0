@@ -2,7 +2,14 @@
 @section('title', 'Assign Permission')
 @section('setup_content')
 <div class="container-fluid">
-    <x-breadcrum title="Assign Permission" />
+    <x-breadcrum
+        title="Assign Permission"
+        :items="[
+            'Setup',
+            'Hr Management',
+            'Assign Permission',
+        ]"
+    />
     <x-session_message />
     <div class="datatables">
         <div class="card" >
