@@ -201,7 +201,11 @@ class StudentAttendanceListDataTable extends DataTable
                     $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
                     
                     match ($value) {
-                        4 => $dutyType = $mdoDutyTypes['mdo'] ?? null,
+                        // MDO (4) is intentionally NOT auto-checked: an MDO-duty OT is
+                        // defaulted to "Present" in the Attendance column instead. Since all
+                        // radios for a student share the same name, auto-checking MDO here
+                        // would override that Present default in the browser.
+                        4 => $dutyType = null,
                         5 => $dutyType = $mdoDutyTypes['escort'] ?? null,
                         7 => $dutyType = $mdoDutyTypes['other'] ?? null,
                         default => $dutyType = null,
@@ -256,9 +260,11 @@ class StudentAttendanceListDataTable extends DataTable
         } else {
             // Check if student has any exemptions or duties
             $hasExemptionOrDuty = $this->hasExemptionOrDuty($studentId);
-            
+
             // If no exemptions or duties, default to Present (1)
-            if (!$hasExemptionOrDuty) {
+            // MDO duty is not an exemption — the OT is still attending, so it should
+            // also default to Present in the Attendance column (Medical/Other/Escort do not).
+            if (!$hasExemptionOrDuty || $this->hasMdoDuty($studentId)) {
                 $defaultCheckedValue = 1; // Present
             }
         }
@@ -282,6 +288,34 @@ class StudentAttendanceListDataTable extends DataTable
         }
 
         return $html;
+    }
+
+    /**
+     * Check if student has an MDO duty overlapping the current class session.
+     * Used to default the Attendance column to "Present" for MDO-duty OTs
+     * (MDO duty means the OT is still attending, unlike Medical/Other exemptions).
+     */
+    protected function hasMdoDuty(int $studentId): bool
+    {
+        $timetable = Timetable::select('START_DATE', 'class_session')->where('pk', $this->timetable_pk)->first();
+
+        if (empty($timetable)) {
+            return false;
+        }
+
+        $mdoDutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+
+        if (empty($mdoDutyTypes['mdo'])) {
+            return false;
+        }
+
+        $mdoDuty = MDOEscotDutyMap::where([
+            ['course_master_pk', '=', $this->course_pk],
+            ['mdo_duty_type_master_pk', '=', $mdoDutyTypes['mdo']],
+            ['selected_student_list', '=', $studentId]
+        ])->whereDate('mdo_date', '=', $timetable->START_DATE)->first();
+
+        return $mdoDuty && $this->checkTimeOverlap($timetable->class_session, $mdoDuty->Time_from, $mdoDuty->Time_to);
     }
 
     /**

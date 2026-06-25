@@ -99,12 +99,20 @@ select.mee-filter-control {
 </style>
 <div class="container-fluid mee-master-page">
     <x-breadcrum title="Escort/ Moderator Duty">
-        <button type="button"
-            id="meeAddExemptionBtn"
-            class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm text-nowrap">
-            <i class="bi bi-plus-lg" aria-hidden="true"></i>
-            <span>Add New MDO/ Escort Exemption</span>
-        </button>
+        <div class="d-inline-flex flex-wrap align-items-center gap-2">
+            <button type="button"
+                id="meeBulkUploadBtn"
+                class="btn btn-outline-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm text-nowrap">
+                <i class="bi bi-upload" aria-hidden="true"></i>
+                <span>Bulk Upload</span>
+            </button>
+            <button type="button"
+                id="meeAddExemptionBtn"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 py-2 rounded-1 fw-semibold shadow-sm text-nowrap">
+                <i class="bi bi-plus-lg" aria-hidden="true"></i>
+                <span>Add New MDO/ Escort Exemption</span>
+            </button>
+        </div>
     </x-breadcrum>
 
     <x-session_message />
@@ -275,6 +283,7 @@ select.mee-filter-control {
 @include('admin.mdo_escrot_exemption.partials.add_modal')
 @include('admin.mdo_escrot_exemption.partials.edit_modal')
 @include('admin.mdo_escrot_exemption.partials.student_list_modal')
+@include('admin.mdo_escrot_exemption.partials.bulk_upload_modal')
 
 <!-- Column Visibility modal -->
 <div class="modal fade" id="meeColumnsModal" tabindex="-1" aria-labelledby="meeColumnsModalLabel" aria-hidden="true">
@@ -339,6 +348,7 @@ $(document).ready(function() {
 
     initMeeAddModal(table);
     initMeeEditModal(table);
+    initMeeBulkUploadModal(table);
 
     function meeBindDeleteActions() {
         $('#mdoescot-table form[id^="delete-form-"] button[type="submit"]').removeAttr('onclick');
@@ -1111,6 +1121,183 @@ $(document).ready(function() {
                         message = Object.values(errors).flat().join('<br>');
                     }
                     $('#meeEditFormAlert').removeClass('d-none alert-success').addClass('alert-danger').html(message);
+                },
+                complete: function() {
+                    $submit.prop('disabled', false).text(defaultText);
+                }
+            });
+        });
+    }
+
+    // ===== Bulk Upload modal =====
+    function initMeeBulkUploadModal(table) {
+        var bulkModalEl = document.getElementById('meeBulkUploadModal');
+        if (!bulkModalEl) {
+            return;
+        }
+
+        var meeBulkModal = bootstrap.Modal.getOrCreateInstance(bulkModalEl);
+        var bulkStoreUrl = @json(route('mdo-escrot-exemption.bulk.store'));
+        var bulkTemplateUrl = @json(route('mdo-escrot-exemption.bulk.template'));
+
+        // Resolve the "Escort" duty-type id from the bulk modal's own select
+        var bulkEscortDutyTypeId = null;
+        $('#meeBulkDutyType option').each(function() {
+            if ($(this).text().trim().toLowerCase() === 'escort') {
+                bulkEscortDutyTypeId = $(this).val();
+            }
+        });
+
+        function toggleBulkFaculty() {
+            var dutyType = $('#meeBulkDutyType').val();
+            if (bulkEscortDutyTypeId && dutyType === bulkEscortDutyTypeId) {
+                $('#meeBulkFacultyContainer').removeClass('d-none');
+                $('#meeBulkFaculty').prop('required', true);
+            } else {
+                $('#meeBulkFacultyContainer').addClass('d-none');
+                $('#meeBulkFaculty').val('').prop('required', false);
+            }
+        }
+
+        function clearBulkErrors() {
+            $('#meeBulkFormAlert').addClass('d-none').removeClass('alert-success alert-danger').empty();
+            $('#meeBulkUploadForm .text-danger[id^="meeBulkError"]').addClass('d-none');
+            $('#meeBulkUploadForm .form-select, #meeBulkUploadForm .form-control').removeClass('is-invalid');
+            $('#meeBulkResultBox').addClass('d-none');
+            $('#meeBulkResultErrors').addClass('d-none');
+            $('#meeBulkResultErrorList').empty();
+        }
+
+        function resetBulkForm() {
+            var form = document.getElementById('meeBulkUploadForm');
+            if (form) {
+                form.reset();
+            }
+            clearBulkErrors();
+            toggleBulkFaculty();
+        }
+
+        function validateBulkForm() {
+            clearBulkErrors();
+            var valid = true;
+            if (!$('#meeBulkCourse').val()) {
+                $('#meeBulkErrorCourse').removeClass('d-none');
+                $('#meeBulkCourse').addClass('is-invalid');
+                valid = false;
+            }
+            if (!$('#meeBulkDutyType').val()) {
+                $('#meeBulkErrorDutyType').removeClass('d-none');
+                $('#meeBulkDutyType').addClass('is-invalid');
+                valid = false;
+            }
+            if (bulkEscortDutyTypeId && $('#meeBulkDutyType').val() === bulkEscortDutyTypeId && !$('#meeBulkFaculty').val()) {
+                $('#meeBulkErrorFaculty').removeClass('d-none');
+                $('#meeBulkFaculty').addClass('is-invalid');
+                valid = false;
+            }
+            if (!$('#meeBulkFile').val()) {
+                $('#meeBulkErrorFile').removeClass('d-none');
+                $('#meeBulkFile').addClass('is-invalid');
+                valid = false;
+            }
+            return valid;
+        }
+
+        function renderBulkResult(response) {
+            var $box = $('#meeBulkResultBox').removeClass('d-none');
+            var imported = response.imported || 0;
+            var skipped = response.skipped || 0;
+            $('#meeBulkResultSummary').text(imported + ' imported, ' + skipped + ' skipped.');
+
+            var errors = response.errors || [];
+            if (errors.length) {
+                var $list = $('#meeBulkResultErrorList').empty();
+                errors.forEach(function(err) {
+                    $list.append($('<li>').text(err));
+                });
+                $('#meeBulkResultErrors').removeClass('d-none');
+            } else {
+                $('#meeBulkResultErrors').addClass('d-none');
+            }
+        }
+
+        $('#meeBulkUploadBtn').on('click', function() {
+            resetBulkForm();
+            meeBulkModal.show();
+        });
+
+        bulkModalEl.addEventListener('hidden.bs.modal', resetBulkForm);
+
+        $('#meeBulkDutyType').on('change', toggleBulkFaculty);
+
+        $('#meeBulkDownloadTemplate').on('click', function(e) {
+            e.preventDefault();
+            var courseId = $('#meeBulkCourse').val();
+            var url = bulkTemplateUrl + (courseId ? ('?course_master_pk=' + encodeURIComponent(courseId)) : '');
+            window.location.href = url;
+        });
+
+        $('#meeBulkUploadForm').on('submit', function(e) {
+            e.preventDefault();
+            if (!validateBulkForm()) {
+                return;
+            }
+
+            var $submit = $('#meeBulkSubmitBtn');
+            var defaultText = $submit.text();
+            var formData = new FormData(this);
+
+            $submit.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Uploading...');
+
+            $.ajax({
+                url: bulkStoreUrl,
+                type: 'POST',
+                data: formData,
+                processData: false,
+                contentType: false,
+                headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                success: function(response) {
+                    table.ajax.reload(null, false);
+                    renderBulkResult(response);
+                    $('#meeBulkFormAlert').removeClass('d-none alert-danger').addClass('alert-success')
+                        .text(response.message || 'Upload completed.');
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Success',
+                        text: response.message || 'Bulk upload completed.',
+                        timer: 2400,
+                        showConfirmButton: false
+                    });
+                },
+                error: function(xhr) {
+                    var response = xhr.responseJSON || {};
+                    var message = response.message || 'Something went wrong. Please try again.';
+                    var errors = response.errors || null;
+
+                    if (errors && !response.imported) {
+                        // Laravel validation errors (object of field => messages)
+                        if (!Array.isArray(errors)) {
+                            var map = {
+                                course_master_pk: '#meeBulkCourse',
+                                mdo_duty_type_master_pk: '#meeBulkDutyType',
+                                faculty_master_pk: '#meeBulkFaculty',
+                                bulk_file: '#meeBulkFile'
+                            };
+                            Object.keys(errors).forEach(function(key) {
+                                if (map[key]) {
+                                    $(map[key]).addClass('is-invalid');
+                                }
+                            });
+                            message = Object.values(errors).flat().join('<br>');
+                        }
+                    }
+
+                    $('#meeBulkFormAlert').removeClass('d-none alert-success').addClass('alert-danger').html(message);
+
+                    // Row-level errors from the importer (file processed but nothing imported)
+                    if (response.errors && Array.isArray(response.errors)) {
+                        renderBulkResult(response);
+                    }
                 },
                 complete: function() {
                     $submit.prop('disabled', false).text(defaultText);

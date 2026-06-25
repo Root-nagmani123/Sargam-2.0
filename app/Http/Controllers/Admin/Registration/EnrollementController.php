@@ -476,6 +476,7 @@ class EnrollementController extends Controller
         if ($request->ajax() && $request->has('draw')) {
             $query = StudentMasterCourseMap::with([
                 'studentMaster.cadre',
+                'studentMaster.courseGroupMaps.groupTypeMasterCourseMasterMap',
                 'course'
             ])
                 ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
@@ -500,6 +501,22 @@ class EnrollementController extends Controller
                 })
                 ->addColumn('cadre', function ($row) {
                     return $row->studentMaster->cadre->cadre_name ?? 'N/A';
+                })
+                ->addColumn('participant_group', function ($row) {
+                    $groups = optional($row->studentMaster)->courseGroupMaps;
+                    if (!$groups) {
+                        return 'N/A';
+                    }
+
+                    // Only the group(s) belonging to this row's course
+                    $names = $groups
+                        ->filter(fn($g) => optional($g->groupTypeMasterCourseMasterMap)->course_name == $row->course_master_pk)
+                        ->map(fn($g) => $g->groupTypeMasterCourseMasterMap->group_name ?? null)
+                        ->filter()
+                        ->unique()
+                        ->implode(', ');
+
+                    return $names !== '' ? $names : 'N/A';
                 })
                 ->make(true);
         }

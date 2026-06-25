@@ -591,6 +591,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
         Route::post('/update', 'update')->name('update');
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
+        Route::get('/bulk-template', 'bulkTemplate')->name('bulk.template');
+        Route::post('/bulk-store', 'bulkStore')->name('bulk.store');
     });
 
     // ============================================

@@ -224,6 +224,7 @@
                                 <th class="fw-bold" style="padding: 1rem;">email_id</th>
                                 <th class="fw-bold" style="padding: 1rem;">mobile no</th>
                                 <th class="fw-bold" style="padding: 1rem;">cadre</th>
+                                <th class="fw-bold" style="padding: 1rem;">Participant group</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -276,7 +277,8 @@
                 { data: 'ot_code', name: 'ot_code' },
                 { data: 'email_id', name: 'email_id' },
                 { data: 'mobile_no', name: 'mobile_no' },
-                { data: 'cadre', name: 'cadre' }
+                { data: 'cadre', name: 'cadre' },
+                { data: 'participant_group', name: 'participant_group' }
             ],
             columnDefs: [
                 { targets: [0], className: 'text-center' }
