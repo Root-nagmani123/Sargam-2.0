@@ -553,6 +553,10 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('student-delete', 'deleteStudent')->name('student.delete');
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
+        Route::get('filter-faculties', 'filterFaculties')->name('filter.faculties');
+        Route::get('filter-courses', 'filterCourses')->name('filter.courses');
+        Route::get('download-pdf', 'downloadPdf')->name('download.pdf');
+        Route::get('download-csv', 'downloadCsv')->name('download.csv');
         Route::delete('delete/{id}', 'delete')->name('delete');
     });
 
@@ -1158,6 +1162,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
     Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
     Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
+    Route::get('/faculty/whos-who/download-pdf', [WhosWhoController::class, 'downloadPdf'])->name('admin.faculty.whos-who.download-pdf');
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
