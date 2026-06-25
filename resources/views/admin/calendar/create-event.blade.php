@@ -465,15 +465,6 @@
         }
         if (e.target.matches('select[name^="faculty_role"]')) {
             const row = e.target.closest('[data-faculty-row]');
-            if (row && e.target.value === 'Teaching') {
-                const duplicate = Array.from(facultyRows.querySelectorAll('select[name^="faculty_role"]'))
-                    .find(s => s !== e.target && s.value === 'Teaching');
-                if (duplicate) {
-                    alert('Only one faculty can have the Teaching role.');
-                    e.target.value = '';
-                    if (e.target._choices) e.target._choices.setChoiceByValue('');
-                }
-            }
             if (row) applyFeedbackState(row);
         }
     });
