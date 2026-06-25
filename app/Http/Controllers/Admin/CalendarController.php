@@ -2836,6 +2836,7 @@ class CalendarController extends Controller
                     't.class_session',
                     't.Ratting_checkbox',
                     't.Remark_checkbox',
+                    't.faculty_details',
                     DB::raw('t.START_DATE as from_date'),
                 ])
                 ->join('timetable as t', 'sff.timetable_pk', '=', 't.pk')
@@ -2862,7 +2863,14 @@ class CalendarController extends Controller
                     ");
             }
 
-            $pendingData = $pendingQuery->orderBy('t.START_DATE', 'asc')->get();
+            $pendingData = $pendingQuery->orderBy('t.START_DATE', 'asc')->get()
+                ->map(function ($item) {
+                    $item->faculty_feedback_type = $this->resolveFacultyFeedbackType(
+                        $item->faculty_details,
+                        (int) $item->main_faculty_master_pk
+                    );
+                    return $item;
+                });
 
             // ================= SUBMITTED FEEDBACK =================
             $submittedData = DB::table('supporting_faculty_feedback as sff')

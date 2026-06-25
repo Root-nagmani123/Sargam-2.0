@@ -440,6 +440,15 @@
     const rowTemplate  = document.getElementById('facultyRowTemplate').innerHTML;
     let rowSeq = 0;
 
+    // Capture master faculty list from template ONCE.
+    const ALL_FACULTY_OPTS = (function () {
+        const tmp = document.createElement('div');
+        tmp.innerHTML = rowTemplate;
+        return Array.from(tmp.querySelectorAll('.cal-ce-faculty-select option')).map(function (o) {
+            return { value: o.value, label: o.textContent.trim(), faculty_type: o.dataset.faculty_type || '' };
+        });
+    })();
+
     function addFacultyRow(preset) {
         const idx     = rowSeq++;
         const wrapper = document.createElement('div');
@@ -493,44 +502,44 @@
         });
     }
 
-    function getSelectedFacultyIds(exceptRow) {
-        const ids = new Set();
-        facultyRows.querySelectorAll('[data-faculty-row]').forEach(function (row) {
-            if (row === exceptRow) return;
-            const sel = row.querySelector('.cal-ce-faculty-select');
-            if (sel && sel.value) ids.add(String(sel.value));
-        });
-        return ids;
-    }
-
     function syncFacultyOptions() {
+        const takenMap = new Map();
         facultyRows.querySelectorAll('[data-faculty-row]').forEach(function (row) {
             const sel = row.querySelector('.cal-ce-faculty-select');
-            if (!sel) return;
-            const taken = getSelectedFacultyIds(row);
+            if (sel && sel.value) takenMap.set(String(sel.value), row);
+        });
+
+        facultyRows.querySelectorAll('[data-faculty-row]').forEach(function (row) {
+            const sel = row.querySelector('.cal-ce-faculty-select');
+            if (!sel || !sel._choices) return;
             const ownVal = String(sel.value);
-            if (sel._choices) {
-                const choices = sel._choices._currentState?.choices ?? [];
-                choices.forEach(function (c) {
-                    if (!c.value) return;
-                    c.disabled = taken.has(String(c.value)) && String(c.value) !== ownVal;
-                });
-                sel._choices._renderChoices();
-            } else {
-                Array.from(sel.options).forEach(function (opt) {
-                    if (!opt.value) return;
-                    opt.disabled = taken.has(String(opt.value)) && String(opt.value) !== ownVal;
-                });
-            }
+
+            const newChoices = ALL_FACULTY_OPTS.filter(function (o) {
+                if (!o.value) return true;
+                if (o.value === ownVal) return true;
+                return !takenMap.has(o.value);
+            }).map(function (o) {
+                return {
+                    value: o.value,
+                    label: o.label,
+                    selected: o.value === ownVal,
+                    placeholder: !o.value,
+                    customProperties: { faculty_type: o.faculty_type },
+                };
+            });
+
+            sel._choices.setChoices(newChoices, 'value', 'label', true);
+            if (ownVal) sel._choices.setChoiceByValue(ownVal);
         });
     }
 
     facultyRows.addEventListener('change', function (e) {
         if (e.target.classList.contains('cal-ce-faculty-select')) {
-            const opt  = e.target.options[e.target.selectedIndex];
-            const t    = opt?.dataset?.faculty_type;
-            const row  = e.target.closest('[data-faculty-row]');
-            const typeSel = row?.querySelector('.cal-ce-faculty-type');
+            const selectedVal = e.target.value;
+            const masterOpt   = ALL_FACULTY_OPTS.find(function (o) { return o.value === selectedVal; });
+            const t           = masterOpt ? masterOpt.faculty_type : '';
+            const row         = e.target.closest('[data-faculty-row]');
+            const typeSel     = row?.querySelector('.cal-ce-faculty-type');
             if (typeSel) setSelectValue(typeSel, t || '');
             syncFacultyOptions();
         }

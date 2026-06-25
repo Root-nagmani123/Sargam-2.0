@@ -109,6 +109,36 @@
                             <a class="nav-link fw-semibold text-dark px-lg-3" href="https://www.lbsnaa.gov.in/footer_menu/contact-us"
                                 target="_blank">Contact Us</a>
                         </li>
+                        @auth
+                        <li class="nav-item">
+                            <div class="position-relative d-none" id="facultyFeedbackBellWrap">
+                                <button class="btn btn-link p-1 position-relative" id="facultyFeedbackBell"
+                                        title="Pending Feedback" data-bs-toggle="dropdown" aria-expanded="false"
+                                        style="color:#333">
+                                    <i class="bi bi-bell-fill" style="font-size:20px"></i>
+                                    <span id="facultyFeedbackBadge"
+                                          class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger"
+                                          style="font-size:10px;display:none"></span>
+                                </button>
+                                <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0"
+                                     id="facultyFeedbackDropdown"
+                                     style="min-width:300px;max-width:340px;border-radius:12px;overflow:hidden">
+                                    <div class="px-3 py-2 fw-semibold text-white d-flex align-items-center gap-2"
+                                         style="background:#b30000;font-size:14px">
+                                        Pending Feedback
+                                    </div>
+                                    <ul id="facultyFeedbackList" class="list-unstyled mb-0"
+                                        style="max-height:280px;overflow-y:auto"></ul>
+                                    <div class="p-2 border-top text-center">
+                                        <a href="{{ route('feedback.get.facultyInternalFeedback') }}"
+                                           class="btn btn-sm btn-outline-danger w-100" style="font-size:13px">
+                                            View All Pending Feedback
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </li>
+                        @endauth
                     </ul>
                 </div>
             </nav>
@@ -273,6 +303,7 @@
 
     <!-- Bootstrap JS (local) -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.6/dist/js/bootstrap.bundle.min.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- JavaScript for Tab Functionality -->
     <script>
@@ -391,6 +422,73 @@
 
     @stack('scripts')
     @yield('scripts')
+
+    @auth
+    <script>
+    (function () {
+        var POPUP_KEY = 'fac_feedback_popup_' + (new Date().toDateString());
+        var feedbackUrl = '{{ route('feedback.get.facultyInternalFeedback') }}';
+        var countUrl    = '{{ route('feedback.faculty.pendingCount') }}';
+
+        function loadFeedbackBell() {
+            fetch(countUrl, {
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+                }
+            })
+            .then(function (r) { if (!r.ok) return null; return r.json(); })
+            .then(function (data) {
+                if (!data) return;
+                var count = data.count || 0;
+                var wrap  = document.getElementById('facultyFeedbackBellWrap');
+                var badge = document.getElementById('facultyFeedbackBadge');
+                var list  = document.getElementById('facultyFeedbackList');
+                if (!wrap) return;
+                if (count > 0) {
+                    wrap.classList.remove('d-none');
+                    badge.textContent = count > 9 ? '9+' : count;
+                    badge.style.display = '';
+                    list.innerHTML = '';
+                    (data.items || []).slice(0, 5).forEach(function (item) {
+                        var li = document.createElement('li');
+                        li.className = 'border-bottom';
+                        li.innerHTML = '<a href="' + feedbackUrl + '" class="d-block px-3 py-2 text-decoration-none text-dark">' +
+                            '<div class="fw-semibold text-truncate" style="font-size:13px;max-width:260px">' + (item.main_faculty_name || '') + '</div>' +
+                            '<div class="text-muted text-truncate" style="font-size:12px;max-width:260px">' + (item.subject_topic || item.course_name || '') + '</div>' +
+                            '<div class="text-muted" style="font-size:11px">' + (item.from_date || '') + ' &bull; ' + (item.class_session || '') + '</div>' +
+                            '</a>';
+                        list.appendChild(li);
+                    });
+                    if (!sessionStorage.getItem(POPUP_KEY) && typeof Swal !== 'undefined') {
+                        sessionStorage.setItem(POPUP_KEY, '1');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Pending Feedback',
+                            html: 'You have <strong>' + count + '</strong> pending feedback session' + (count > 1 ? 's' : '') + ' awaiting your response.',
+                            confirmButtonText: 'Give Feedback Now',
+                            confirmButtonColor: '#b30000',
+                            showCancelButton: true,
+                            cancelButtonText: 'Later',
+                        }).then(function (result) {
+                            if (result.isConfirmed) window.location.href = feedbackUrl;
+                        });
+                    }
+                }
+            })
+            .catch(function (err) { console.warn('Faculty feedback bell error:', err); });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadFeedbackBell);
+        } else {
+            loadFeedbackBell();
+        }
+    })();
+    </script>
+    @endauth
 
 </body>
 

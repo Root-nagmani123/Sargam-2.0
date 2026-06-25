@@ -191,6 +191,33 @@
         </ul>
     </div>
 
+    <!-- Pending Feedback Bell (shows only when faculty has pending feedback) -->
+    <div class="position-relative d-none" id="facultyFeedbackBellWrap">
+        <button class="btn notification-btn position-relative" id="facultyFeedbackBell"
+                title="Pending Feedback" data-bs-toggle="dropdown" aria-expanded="false">
+            <i class="material-icons material-symbols-rounded" style="font-size:20px">pending_actions</i>
+            <span id="facultyFeedbackBadge"
+                  class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger notification-badge"
+                  style="display:none"></span>
+        </button>
+        <div class="dropdown-menu dropdown-menu-end shadow border-0 p-0"
+             id="facultyFeedbackDropdown"
+             style="min-width:300px;max-width:340px;border-radius:12px;overflow:hidden">
+            <div class="px-3 py-2 fw-semibold text-white d-flex align-items-center gap-2"
+                 style="background:#b30000;font-size:14px">
+                <i class="material-icons material-symbols-rounded" style="font-size:18px">pending_actions</i>
+                Pending Feedback
+            </div>
+            <ul id="facultyFeedbackList" class="list-unstyled mb-0" style="max-height:280px;overflow-y:auto"></ul>
+            <div class="p-2 border-top text-center">
+                <a href="{{ route('feedback.get.facultyInternalFeedback') }}"
+                   class="btn btn-sm btn-outline-danger w-100" style="font-size:13px">
+                    View All Pending Feedback
+                </a>
+            </div>
+        </div>
+    </div>
+
     <!-- User Profile Dropdown -->
     <style>
         .profile-dd .profile-dd-item {

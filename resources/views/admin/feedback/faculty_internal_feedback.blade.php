@@ -264,9 +264,15 @@
                                                     <td class="text-nowrap">{{ $feedback->supporting_faculty_name }}</td>
                                                 @endif
 
+                                                @php
+                                                    $fbType    = $feedback->faculty_feedback_type ?? 'both';
+                                                    $showRating = in_array($fbType, ['rating', 'both']);
+                                                    $showRemark = in_array($fbType, ['remark', 'both']);
+                                                @endphp
+
                                                 {{-- Content Rating --}}
                                                 <td class="text-center">
-                                                    @if(!$isAdmin)
+                                                    @if(!$isAdmin && $showRating)
                                                         <div class="star-rating">
                                                             @for ($i = 5; $i >= 1; $i--)
                                                                 <input type="radio"
@@ -276,14 +282,16 @@
                                                                 <label for="content-{{ $i }}-{{ $loop->index }}">&#9733;</label>
                                                             @endfor
                                                         </div>
-                                                    @else
+                                                    @elseif($isAdmin)
                                                         <span class="text-muted small">Pending</span>
+                                                    @else
+                                                        <span class="text-muted small">—</span>
                                                     @endif
                                                 </td>
 
                                                 {{-- Presentation Rating --}}
                                                 <td class="text-center">
-                                                    @if(!$isAdmin)
+                                                    @if(!$isAdmin && $showRating)
                                                         <div class="star-rating">
                                                             @for ($i = 5; $i >= 1; $i--)
                                                                 <input type="radio"
@@ -293,17 +301,21 @@
                                                                 <label for="presentation-{{ $i }}-{{ $loop->index }}">&#9733;</label>
                                                             @endfor
                                                         </div>
-                                                    @else
+                                                    @elseif($isAdmin)
                                                         <span class="text-muted small">Pending</span>
+                                                    @else
+                                                        <span class="text-muted small">—</span>
                                                     @endif
                                                 </td>
 
                                                 {{-- Remarks --}}
                                                 <td style="min-width: 220px;">
-                                                    @if(!$isAdmin)
+                                                    @if(!$isAdmin && $showRemark)
                                                         <textarea class="form-control form-control-sm rounded-1 sf-remark"
                                                             name="remarks[{{ $loop->index }}]" rows="1"
                                                             placeholder="Enter remark"></textarea>
+                                                    @elseif($isAdmin)
+                                                        <span class="text-muted small">—</span>
                                                     @else
                                                         <span class="text-muted small">—</span>
                                                     @endif
@@ -321,9 +333,9 @@
                                                     <input type="hidden" name="feedback_pk[{{ $loop->index }}]"
                                                         value="{{ $feedback->feedback_pk }}">
                                                     <input type="hidden" name="Ratting_checkbox[{{ $loop->index }}]"
-                                                        value="1">
+                                                        value="{{ $showRating ? 1 : 0 }}">
                                                     <input type="hidden" name="Remark_checkbox[{{ $loop->index }}]"
-                                                        value="1">
+                                                        value="{{ $showRemark ? 1 : 0 }}">
                                                 </td>
                                                 @endif
                                             </tr>
