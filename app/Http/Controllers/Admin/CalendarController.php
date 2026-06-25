@@ -2877,6 +2877,50 @@ class CalendarController extends Controller
         }
     }
 
+    public function facultyPendingFeedbackCount()
+    {
+        try {
+            $supporting_faculty_pk = get_auth_faculty_master_pk();
+            if (!$supporting_faculty_pk) {
+                return response()->json(['count' => 0, 'items' => []]);
+            }
+
+            $items = DB::table('supporting_faculty_feedback as sff')
+                ->select([
+                    'sff.pk as feedback_pk',
+                    'fm.full_name as main_faculty_name',
+                    't.subject_topic',
+                    'c.course_name',
+                    DB::raw('t.START_DATE as from_date'),
+                    't.class_session',
+                ])
+                ->join('timetable as t', 'sff.timetable_pk', '=', 't.pk')
+                ->join('faculty_master as fm', 'sff.main_faculty_master_pk', '=', 'fm.pk')
+                ->join('course_master as c', 'sff.course_master_pk', '=', 'c.pk')
+                ->where('sff.supporting_faculty_master_pk', $supporting_faculty_pk)
+                ->where('sff.is_submitted', 0)
+                ->where('sff.active_inactive', 1)
+                ->whereRaw("
+                    TIMESTAMP(
+                        t.END_DATE,
+                        CASE
+                            WHEN t.class_session LIKE '% - %' THEN
+                                STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                            WHEN t.class_session LIKE '% to %' THEN
+                                STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                            ELSE NULL
+                        END
+                    ) <= NOW()
+                ")
+                ->orderBy('t.START_DATE', 'asc')
+                ->get();
+
+            return response()->json(['count' => $items->count(), 'items' => $items]);
+        } catch (\Throwable $e) {
+            return response()->json(['count' => 0, 'items' => []]);
+        }
+    }
+
     public function submitFacultyInternalFeedback(Request $request)
     {
         $request->validate([
