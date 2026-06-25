@@ -472,6 +472,30 @@ class EnrollementController extends Controller
         // Role-scoped courses: [] = all (Admin/Super Admin), [-1] = none, [pks] = restricted
         $data_course_id = get_Role_by_course();
 
+        // Filters are available only to these roles
+        $showFilters = hasRole('Super Admin') || hasRole('Training MCTP Admin');
+
+        // Filter inputs
+        $courseId = $request->input('course_id');
+        $status = $request->input('status');
+        $courseStatus = $request->input('course_status', 'active');
+
+        // Course dropdown (scoped to the user's courses + active/archived toggle)
+        $courses = CourseMaster::query()
+            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
+            ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
+            ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
+
+        // AJAX: refresh course dropdown when the active/archived toggle changes
+        if ($request->ajax() && $request->has('ajax_courses')) {
+            return response()->json([
+                'success' => true,
+                'courses' => $courses,
+            ]);
+        }
+
         // For AJAX requests from DataTables - list participants of the user's courses
         if ($request->ajax() && $request->has('draw')) {
             $query = StudentMasterCourseMap::with([
@@ -480,6 +504,8 @@ class EnrollementController extends Controller
                 'course'
             ])
                 ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
+                ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+                ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
                 ->orderByDesc('created_date');
 
             return DataTables::of($query)
@@ -529,7 +555,12 @@ class EnrollementController extends Controller
 
         return view('admin.registration.my_course_participant', compact(
             'totalCount',
-            'filteredCount'
+            'filteredCount',
+            'showFilters',
+            'courses',
+            'courseId',
+            'status',
+            'courseStatus'
         ));
     }
 

@@ -9,6 +9,82 @@
         </div>
         <x-session_message />
 
+        @if (!empty($showFilters) && $showFilters)
+        {{-- Filters (visible only to Super Admin & Training MCTP Admin) --}}
+        <div class="card shadow-lg mb-4 border-0 animate-fade-in" style="border-left: 5px solid #11998e; border-radius: 15px;">
+            <div class="card-header py-4" style="background: linear-gradient(135deg, #11998e 0%, #0066cc 100%); border-radius: 15px 15px 0 0;">
+                <div class="d-flex align-items-center">
+                    <div class="icon-box me-3">
+                        <i class="fas fa-filter fa-lg text-white"></i>
+                    </div>
+                    <h5 class="mb-0 text-white fw-bold">Filters</h5>
+                </div>
+            </div>
+            <div class="card-body p-4" style="background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);">
+                <form id="filterForm" method="GET">
+                    <div class="row g-3">
+                        <!-- Course Type -->
+                        <div class="col-12">
+                            <label class="form-label fw-bold text-dark mb-3" style="font-size: 0.95rem; letter-spacing: 0.5px;">
+                                <i class="fas fa-list-check me-2 text-primary"></i>COURSE TYPE
+                            </label>
+                            <div class="btn-group w-100 shadow" role="group" aria-label="Course type filter" style="border-radius: 10px; overflow: hidden;">
+                                <input type="radio" class="btn-check" name="course_status" id="course_status_active"
+                                    value="active" {{ $courseStatus === 'active' ? 'checked' : '' }} autocomplete="off">
+                                <label class="btn btn-outline-success btn-lg custom-toggle-btn" for="course_status_active">
+                                    <i class="fas fa-check-circle me-2"></i>Active Courses
+                                </label>
+
+                                <input type="radio" class="btn-check" name="course_status" id="course_status_inactive"
+                                    value="inactive" {{ $courseStatus === 'inactive' ? 'checked' : '' }} autocomplete="off">
+                                <label class="btn btn-outline-danger btn-lg custom-toggle-btn" for="course_status_inactive">
+                                    <i class="fas fa-archive me-2"></i>Archived Courses
+                                </label>
+                            </div>
+                        </div>
+
+                        <!-- Filter by Course -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark" style="font-size: 0.9rem;">
+                                <i class="fas fa-graduation-cap me-2 text-primary"></i>Filter by Course
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-white border-end-0" style="border: 2px solid #e0e0e0; border-right: none;">
+                                    <i class="fas fa-search text-muted"></i>
+                                </span>
+                                <select name="course_id" id="course_id" class="form-select form-select-lg shadow-sm custom-select" style="border-left: none;">
+                                    <option value="">-- All Courses --</option>
+                                    @foreach ($courses as $id => $name)
+                                        <option value="{{ $id }}" {{ (string) $courseId === (string) $id ? 'selected' : '' }}>
+                                            {{ $name }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                            </div>
+                        </div>
+
+                        <!-- Enrollment Status -->
+                        <div class="col-md-6">
+                            <label class="form-label fw-bold text-dark" style="font-size: 0.9rem;">
+                                <i class="fas fa-toggle-on me-2 text-primary"></i>Enrollment Status
+                            </label>
+                            <div class="input-group input-group-lg">
+                                <span class="input-group-text bg-white border-end-0" style="border: 2px solid #e0e0e0; border-right: none;">
+                                    <i class="fas fa-filter text-muted"></i>
+                                </span>
+                                <select name="status" id="status" class="form-select form-select-lg shadow-sm custom-select" style="border-left: none;">
+                                    <option value="">-- All Status --</option>
+                                    <option value="1" {{ (string) $status === '1' ? 'selected' : '' }}>Active</option>
+                                    <option value="0" {{ (string) $status === '0' ? 'selected' : '' }}>Inactive</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+        @endif
+
         {{-- Counts + Import + Export --}}
         <div class="card shadow-lg mb-4 border-0 animate-fade-in" style="border-left: 5px solid #004a93; border-radius: 15px;">
             <div class="card-header bg-gradient-primary py-4" style="background: linear-gradient(135deg, #004a93 0%, #0066cc 100%); border-radius: 15px 15px 0 0;">
@@ -20,9 +96,9 @@
                 </div>
             </div>
             <div class="card-body p-4" style="background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);">
-                <div class="row g-4">
+                <div class="row g-4 align-items-stretch">
                     <!-- Total Count -->
-                    <div class="col-lg-4 col-md-12">
+                    <div class="col-lg-4 col-md-4">
                         <div class="stats-card h-100">
                             <div class="stats-icon">
                                 <i class="fas fa-users"></i>
@@ -37,7 +113,7 @@
                     </div>
 
                     <!-- Import Button -->
-                    <div class="col-lg-4 col-md-6">
+                    <div class="col-lg-4 col-md-4">
                         <div class="action-card h-100 d-flex flex-column">
                             <label class="form-label fw-bold text-dark mb-3" style="font-size: 0.85rem;">
                                 <i class="fas fa-file-import me-2 text-primary"></i>IMPORT
@@ -56,7 +132,7 @@
                     </div>
 
                     <!-- Export Section -->
-                    <div class="col-lg-4 col-md-6">
+                    <div class="col-lg-4 col-md-4">
                         <form method="GET" action="{{ route('my.course.participant.export') }}" id="exportForm" class="h-100">
                             <div class="action-card h-100 d-flex flex-column">
                                 <label class="form-label fw-bold text-dark mb-2" style="font-size: 0.85rem;">
@@ -260,6 +336,11 @@
             ajax: {
                 url: "{{ route('my.course.participant') }}",
                 type: "GET",
+                data: function(d) {
+                    d.course_id = $('#course_id').val() || '';
+                    d.status = $('#status').val() || '';
+                    d.course_status = $('input[name="course_status"]:checked').val() || '';
+                },
                 dataSrc: function(json) {
                     $('#filteredCount').text(json.recordsTotal || 0);
                     return json.data || [];
@@ -287,6 +368,35 @@
                 let api = this.api();
                 $('#filteredCount').text(api.page.info().recordsTotal);
             }
+        });
+
+        // ----- Filters (Super Admin & Training MCTP Admin only) -----
+        // Reload table when course / status changes
+        $('#course_id, #status').on('change', function() {
+            dataTable.ajax.reload();
+        });
+
+        // When Active/Archived toggle changes, refresh the course dropdown then reload
+        $('input[name="course_status"]').on('change', function() {
+            const courseStatus = $(this).val();
+            $.ajax({
+                url: "{{ route('my.course.participant') }}",
+                type: "GET",
+                data: { course_status: courseStatus, ajax_courses: true },
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    const courseSelect = $('#course_id');
+                    courseSelect.empty().append('<option value="">-- All Courses --</option>');
+                    $.each(response.courses, function(id, name) {
+                        courseSelect.append(new Option(name, id));
+                    });
+                    courseSelect.val('');
+                    dataTable.ajax.reload();
+                },
+                error: function(xhr) {
+                    console.error('Course dropdown AJAX error:', xhr.responseText);
+                }
+            });
         });
 
         // Export form submission
@@ -377,6 +487,36 @@
         box-shadow: 0 0 0 0.25rem rgba(102, 126, 234, 0.15);
     }
 
+    .custom-toggle-btn {
+        position: relative;
+        font-weight: 600;
+        letter-spacing: 0.5px;
+        text-transform: uppercase;
+        font-size: 0.9rem;
+        padding: 1rem 2rem;
+        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+        border: 2px solid currentColor;
+    }
+
+    .btn-check:checked + .btn-outline-success.custom-toggle-btn {
+        background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 8px 25px rgba(17, 153, 142, 0.4);
+    }
+
+    .btn-check:checked + .btn-outline-danger.custom-toggle-btn {
+        background: linear-gradient(135deg, #eb3349 0%, #f45c43 100%);
+        border-color: transparent;
+        color: white;
+        box-shadow: 0 8px 25px rgba(235, 51, 73, 0.4);
+    }
+
+    .input-group:focus-within .input-group-text {
+        border-color: #667eea;
+        background-color: #f0f4ff;
+    }
+
     .stats-card {
         background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
         border-radius: 15px;
@@ -390,6 +530,7 @@
         flex-direction: column;
         justify-content: center;
         text-align: center;
+        min-height: 210px;
     }
 
     .stats-card::before {
@@ -416,9 +557,10 @@
     .action-card {
         background: #fff;
         border-radius: 12px;
-        padding: 1rem;
+        padding: 1.25rem;
         box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
         transition: all 0.3s ease;
+        min-height: 210px;
     }
 
     .action-card:hover {
