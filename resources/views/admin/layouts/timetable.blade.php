@@ -30,9 +30,9 @@
     <!-- Sargam Design System — must load LAST -->
     <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}" />
 </head>
-<x-session_message />
 
 <body class="admin-force-light bg-light" style="min-height: 100vh; display: flex; flex-direction: column; font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;">
+    <x-session_message />
     <!-- Top Blue Bar (Govt of India) -->
 <!-- Government Header Strips -->
 <div class="govt-header">
@@ -289,7 +289,7 @@
                 // Tab switching handled by Bootstrap
             });
 
-            // Flash alerts are rendered once by <x-session_message />.
+            // Flash alerts are rendered once by the session message component.
             // On feedback success, switch to the Submitted tab and refresh.
             @if (session('success'))
                 setTimeout(function() {
