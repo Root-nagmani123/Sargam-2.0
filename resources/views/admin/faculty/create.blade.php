@@ -60,10 +60,7 @@ input.is-invalid {
     <x-breadcrum title="Faculty" />
     <x-session_message />
     <!-- start Vertical Steps Example -->
-    {{-- <div class="card" id="facultyForm" data-store-url="{{ route('faculty.store') }}" data-index-url="{{ route('faculty.index') }}">
-        <div class="card-body"> --}}
-
-            <form class="facultyForm">
+        <form class="facultyForm">
 			  @csrf
 			  <input type="hidden" name="faculty_id" id="faculty_id" value="">
                 <div class="card">
@@ -90,8 +87,8 @@ input.is-invalid {
                             <div class="mb-3">
                             <x-select
                             name="appellation"
-                            label="Appellation :"
-                            placeholder="Select Appellation"
+                            label="Salutation (Title) :"
+                            placeholder="Select Salutation"
                             formLabelClass="form-label"
                             :options="$appellationMasterList"
                              labelRequired="true"
@@ -110,22 +107,7 @@ input.is-invalid {
                                         />
                                 </div>
                             </div>
-                            <!--<div class="col-md-6">
-                                <div class="mb-3">
-                                    <x-input
-                                        name="firstName"
-                                        label="First Name :"
-                                        placeholder="First Name"
-                                        formLabelClass="form-label"
-                                        required="true"
-                                        value="{{ $hostelFloorMapping->hostel_floor_master_pk ?? '' }}"
-                                        labelRequired="true"
-                                        formInputClass="only-letters"
-                                        />
-                                </div>
-                            </div>-->
-
-							<div class="col-md-6">
+                            <div class="col-md-6">
 							<div class="mb-3">
 								<x-input
 									name="firstName"
@@ -143,8 +125,6 @@ input.is-invalid {
 							</div>
 						</div>
 
-
-
                             <div class="col-md-6">
                                 <div class="mb-3">
 
@@ -155,13 +135,10 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         formInputClass="only-letters"
                                         />
-
-
                                 </div>
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-
                                     <x-input
                                         name="lastname"
                                         label="Last Name :"
@@ -171,12 +148,11 @@ input.is-invalid {
                                         labelRequired="true"
                                         formInputClass="only-letters"
                                         />
-
                                 </div>
                             </div>
+
                             <div class="col-md-3">
                                 <div class="mb-3">
-
                                     <x-input
                                         name="fullname"
                                         label="Full Name :"
@@ -273,8 +249,8 @@ input.is-invalid {
                                 <div class="mb-3">
                                     <x-input
                                         name="current_department"
-                                        label="Current Department :"
-                                        placeholder="Current Department"
+                                        label="Organisation :"
+                                        placeholder="Select Organisation"
                                         formLabelClass="form-label"
 
                                     />
@@ -298,16 +274,7 @@ input.is-invalid {
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <!--<x-select
-                                        name="state"
-                                        label="State :"
-                                        placeholder="State"
-                                        formLabelClass="form-label"
-                                        {{-- :options="$state" --}}
-                                        required="true"
-                                        labelRequired="true"
-                                        />-->
-						    <x-select
+            			    <x-select
 							name="state"
 							label="State :"
 							placeholder="State"
@@ -321,16 +288,7 @@ input.is-invalid {
                             <div class="col-md-6">
                                 <div class="mb-3">
 
-                                    <!--<x-select
-                                        name="district"
-                                        label="District :"
-                                        placeholder="District"
-                                        formLabelClass="form-label"
-                                        {{-- :options="$district" --}}
-                                        required="true"
-                                        />-->
-
-                                        <x-select
+                                       <x-select
                                         name="district"
                                         label="District :"
                                         placeholder="District"
@@ -344,18 +302,7 @@ input.is-invalid {
                             </div>
                             <div class="col-md-6">
                                 <div class="mb-3">
-
-                                    <!--<x-select
-                                        name="city"
-                                        label="City :"
-                                        placeholder="City"
-                                        formLabelClass="form-label"
-                                        {{-- :options="$city" --}}
-                                        required="true"
-                                        labelRequired="true"
-                                        />-->
-
-                                        <x-select
+                                      <x-select
                                         name="city"
                                         label="City :"
                                         placeholder="City"
@@ -506,19 +453,7 @@ input.is-invalid {
                                         />
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
-                                    {{-- <x-input
-                                        type="number"
-                                        name="year_of_passing[]"
-                                        label="Year of Passing :"
-                                        placeholder="Year of Passing"
-                                        formLabelClass="form-label"
-                                        min="1900"
-                                        max="{{ date('Y') }}"
-                                        step="1"
-                                        required="true"
-                                        /> --}}
-
-                                    <x-select
+                                       <x-select
                                         name="year_of_passing[]"
                                         label="Year of Passing :"
                                         placeholder="Year of Passing"

@@ -34,7 +34,7 @@
         <div class="mb-3">
             <x-select
                 name="appellation"
-                label="Appellation :"
+                label="Salutation (Title) :"
                 formLabelClass="form-label"
                 :options="$appellationMasterList"
                  labelRequired="true"
@@ -202,8 +202,8 @@
 	<div class="mb-3">
 		<x-input
 			name="current_department"
-			label="Current Department :"
-			placeholder="Current Department"
+			label="Organisation :"
+			placeholder="Select Organisation"
 			formLabelClass="form-label"
 			 value="{{ $faculty->current_department}}"
 		/>
