@@ -1733,6 +1733,28 @@ class CalendarController extends Controller
     }
 
     /** Split "09:00 AM - 05:00 PM" into ["09:00 AM", "05:00 PM"]. */
+    /**
+     * Extract the per-faculty feedback type (remark/rating/both/none) from
+     * the faculty_details JSON for a specific faculty PK.
+     * Falls back to 'both' for legacy events that have no faculty_details.
+     */
+    private function resolveFacultyFeedbackType(?string $facultyDetailsJson, int $facultyPk): string
+    {
+        if (empty($facultyDetailsJson)) {
+            return 'both';
+        }
+        $details = json_decode($facultyDetailsJson, true);
+        if (!is_array($details)) {
+            return 'both';
+        }
+        foreach ($details as $d) {
+            if (isset($d['faculty_pk']) && (int) $d['faculty_pk'] === $facultyPk) {
+                return $d['feedback'] ?? 'both';
+            }
+        }
+        return 'both';
+    }
+
     private function splitSessionTime(string $slot): array
     {
         $parts = preg_split('/\s*[-–—]\s*/', trim($slot), 2);
@@ -2167,6 +2189,7 @@ class CalendarController extends Controller
                     't.Ratting_checkbox',
                     't.feedback_checkbox',
                     't.Remark_checkbox',
+                    't.faculty_details',
                     't.faculty_master as faculty_json', // Keep original JSON
                     'f.pk as faculty_pk', // Get individual faculty PK
                     'f.full_name as faculty_name',
@@ -2256,10 +2279,13 @@ class CalendarController extends Controller
                 ->orderBy('session_end_time', 'asc')
                 ->get()
                 ->unique(function ($item) {
-                    // Ensure each faculty-timetable combination is unique
                     return $item->timetable_pk . '_' . $item->faculty_pk;
                 })
-                ->values(); // Reset array keys
+                ->map(function ($item) {
+                    $item->faculty_feedback_type = $this->resolveFacultyFeedbackType($item->faculty_details, $item->faculty_pk);
+                    return $item;
+                })
+                ->values();
 
             $submittedData = DB::table('topic_feedback as tf')
                 ->select([
@@ -2347,6 +2373,7 @@ class CalendarController extends Controller
                     't.Ratting_checkbox',
                     't.feedback_checkbox',
                     't.Remark_checkbox',
+                    't.faculty_details',
                     't.faculty_master as faculty_json', // Keep original JSON
                     'f.pk as faculty_pk', // Get individual faculty PK
                     'f.full_name as faculty_name',
@@ -2430,9 +2457,10 @@ class CalendarController extends Controller
                 ->orderBy('t.START_DATE', 'asc')
                 ->orderBy('session_end_time', 'asc')
                 ->get()
-                ->unique(function ($item) {
-                    // Ensure each faculty-timetable combination is unique
-                    return $item->timetable_pk . '_' . $item->faculty_pk;
+                ->unique(fn($item) => $item->timetable_pk . '_' . $item->faculty_pk)
+                ->map(function ($item) {
+                    $item->faculty_feedback_type = $this->resolveFacultyFeedbackType($item->faculty_details, $item->faculty_pk);
+                    return $item;
                 })
                 ->values();
 

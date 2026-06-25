@@ -274,9 +274,15 @@
                                                         <td class="fw-medium text-wrap" style="min-width: 180px;">{{ $feedback->subject_topic }}</td>
                                                         <td class="text-nowrap">{{ $feedback->faculty_name }}</td>
 
+                                                        @php
+                                                            $fbType = $feedback->faculty_feedback_type ?? 'both';
+                                                            $showRating = in_array($fbType, ['rating', 'both']);
+                                                            $showRemark = in_array($fbType, ['remark', 'both']);
+                                                        @endphp
+
                                                         {{-- Content Rating (inline) --}}
                                                         <td class="text-center">
-                                                            @if ($feedback->Ratting_checkbox == 1)
+                                                            @if ($showRating)
                                                                 <div class="star-rating">
                                                                     @for ($i = 5; $i >= 1; $i--)
                                                                         <input type="radio"
@@ -294,7 +300,7 @@
 
                                                         {{-- Presentation Rating (inline) --}}
                                                         <td class="text-center">
-                                                            @if ($feedback->Ratting_checkbox == 1)
+                                                            @if ($showRating)
                                                                 <div class="star-rating">
                                                                     @for ($i = 5; $i >= 1; $i--)
                                                                         <input type="radio"
@@ -312,7 +318,7 @@
 
                                                         {{-- Remarks (inline) --}}
                                                         <td style="min-width: 220px;">
-                                                            @if ($feedback->Remark_checkbox == 1)
+                                                            @if ($showRemark)
                                                                 <textarea class="form-control form-control-sm rounded-1 sf-remark" name="remarks[{{ $loop->index }}]" rows="1"
                                                                     placeholder="Enter remark">{{ old('remarks.' . $loop->index) }}</textarea>
                                                             @else
@@ -341,10 +347,10 @@
                                                                 value="{{ $feedback->subject_topic }}">
                                                             <input type="hidden"
                                                                 name="Ratting_checkbox[{{ $loop->index }}]"
-                                                                value="{{ $feedback->Ratting_checkbox }}">
+                                                                value="{{ $showRating ? 1 : 0 }}">
                                                             <input type="hidden"
                                                                 name="Remark_checkbox[{{ $loop->index }}]"
-                                                                value="{{ $feedback->Remark_checkbox }}">
+                                                                value="{{ $showRemark ? 1 : 0 }}">
                                                         </td>
                                                     </tr>
                                                 @endif

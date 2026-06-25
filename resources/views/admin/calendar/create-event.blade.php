@@ -428,6 +428,7 @@
         }
         applyFeedbackState(row);
         updateRemoveButtons();
+        syncFacultyOptions();
         return row;
     }
 
@@ -452,6 +453,42 @@
         });
     }
 
+    // Collect all currently selected faculty PKs (excluding the row being changed).
+    function getSelectedFacultyIds(exceptRow) {
+        const ids = new Set();
+        facultyRows.querySelectorAll('[data-faculty-row]').forEach(function (row) {
+            if (row === exceptRow) return;
+            const sel = row.querySelector('.cal-ce-faculty-select');
+            if (sel && sel.value) ids.add(String(sel.value));
+        });
+        return ids;
+    }
+
+    // Disable already-selected faculty in every row's dropdown except the row's own selection.
+    function syncFacultyOptions() {
+        facultyRows.querySelectorAll('[data-faculty-row]').forEach(function (row) {
+            const sel = row.querySelector('.cal-ce-faculty-select');
+            if (!sel) return;
+            const taken = getSelectedFacultyIds(row);
+            const ownVal = String(sel.value);
+
+            if (sel._choices) {
+                // Rebuild choice list: disable taken options (keep own selection enabled).
+                const choices = sel._choices._currentState?.choices ?? [];
+                choices.forEach(function (c) {
+                    if (!c.value) return; // placeholder
+                    c.disabled = taken.has(String(c.value)) && String(c.value) !== ownVal;
+                });
+                sel._choices._renderChoices();
+            } else {
+                Array.from(sel.options).forEach(function (opt) {
+                    if (!opt.value) return;
+                    opt.disabled = taken.has(String(opt.value)) && String(opt.value) !== ownVal;
+                });
+            }
+        });
+    }
+
     // Auto-fill faculty type from the selected faculty's data attribute,
     // and toggle the feedback controls when the Role changes.
     facultyRows.addEventListener('change', function (e) {
@@ -462,6 +499,7 @@
             const typeSel = row?.querySelector('.cal-ce-faculty-type');
             // Faculty Type is determined by the chosen Faculty — always sync it.
             if (typeSel) setSelectValue(typeSel, t || '');
+            syncFacultyOptions();
         }
         if (e.target.matches('select[name^="faculty_role"]')) {
             const row = e.target.closest('[data-faculty-row]');
@@ -476,6 +514,7 @@
         if (rows.length > 1) {
             btn.closest('[data-faculty-row]').remove();
             updateRemoveButtons();
+            syncFacultyOptions();
         }
     });
 

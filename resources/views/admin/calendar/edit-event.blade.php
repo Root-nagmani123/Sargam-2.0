@@ -470,6 +470,7 @@
         }
         applyFeedbackState(row);
         updateRemoveButtons();
+        syncFacultyOptions();
         return row;
     }
 
@@ -492,6 +493,38 @@
         });
     }
 
+    function getSelectedFacultyIds(exceptRow) {
+        const ids = new Set();
+        facultyRows.querySelectorAll('[data-faculty-row]').forEach(function (row) {
+            if (row === exceptRow) return;
+            const sel = row.querySelector('.cal-ce-faculty-select');
+            if (sel && sel.value) ids.add(String(sel.value));
+        });
+        return ids;
+    }
+
+    function syncFacultyOptions() {
+        facultyRows.querySelectorAll('[data-faculty-row]').forEach(function (row) {
+            const sel = row.querySelector('.cal-ce-faculty-select');
+            if (!sel) return;
+            const taken = getSelectedFacultyIds(row);
+            const ownVal = String(sel.value);
+            if (sel._choices) {
+                const choices = sel._choices._currentState?.choices ?? [];
+                choices.forEach(function (c) {
+                    if (!c.value) return;
+                    c.disabled = taken.has(String(c.value)) && String(c.value) !== ownVal;
+                });
+                sel._choices._renderChoices();
+            } else {
+                Array.from(sel.options).forEach(function (opt) {
+                    if (!opt.value) return;
+                    opt.disabled = taken.has(String(opt.value)) && String(opt.value) !== ownVal;
+                });
+            }
+        });
+    }
+
     facultyRows.addEventListener('change', function (e) {
         if (e.target.classList.contains('cal-ce-faculty-select')) {
             const opt  = e.target.options[e.target.selectedIndex];
@@ -499,6 +532,7 @@
             const row  = e.target.closest('[data-faculty-row]');
             const typeSel = row?.querySelector('.cal-ce-faculty-type');
             if (typeSel) setSelectValue(typeSel, t || '');
+            syncFacultyOptions();
         }
         if (e.target.matches('select[name^="faculty_role"]')) {
             const row = e.target.closest('[data-faculty-row]');
@@ -513,6 +547,7 @@
         if (rows.length > 1) {
             btn.closest('[data-faculty-row]').remove();
             updateRemoveButtons();
+            syncFacultyOptions();
         }
     });
 
