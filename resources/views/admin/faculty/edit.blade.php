@@ -52,19 +52,18 @@
             <div class="card">
                 <div class="card-body">
                     <div class="row">
-                            <div class="col-12">
-                                <label for="sector" class="form-label">Current Sector :<span class="text-danger">*</span></label>
+                            <div class="col-12 col-md-6">
                                 <div class="mb-3">
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input success" type="radio" name="current_sector"
-                                            id="success-radio" value="1" {{ $faculty->faculty_sector == 1 ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="success-radio">Government Sector</label>
-                                    </div>
-                                    <div class="form-check form-check-inline">
-                                        <input class="form-check-input success" type="radio" name="current_sector"
-                                            id="success2-radio" value="2" {{ $faculty->faculty_sector == 2 ? 'checked' : '' }}>
-                                        <label class="form-check-label" for="success2-radio">Private Sector</label>
-                                    </div>
+                                    <x-select
+                                        name="current_sector"
+                                        label="Current Sector :"
+                                        placeholder="Select Sector"
+                                        formLabelClass="form-label"
+                                        :options="$facultySectorList"
+                                        required="true"
+                                        labelRequired="true"
+                                        value="{{ $faculty->faculty_sector }}"
+                                    />
                                     <div id="current-sector-error-placeholder"></div>
                                 </div>
                             </div>

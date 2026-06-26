@@ -1,4 +1,4 @@
-@extends('admin.layouts.master')
+﻿@extends('admin.layouts.master')
 
 @section('title', 'Faculty')
 
@@ -704,25 +704,19 @@ input.is-invalid {
 <div class="card">
      <div class="card-body">
           <div class="row">
-               <div class="col-12">
-                    <label for="sector" class="form-label">Current Sector : <span class="text-danger">*</span></label>
+               <div class="col-12 col-md-6">
                     <div class="mb-3">
-                         <div class="form-check form-check-inline">
-						 <input class="form-check-input success"
-						 type="radio" name="current_sector"
-                         id="success-radio" value="1">
-
-                     <label class="form-check-label"
-					 for="success-radio">Government Sector</label>
-                      </div>
-                    <div class="form-check form-check-inline">
-                      <input class="form-check-input success"
-					  type="radio" name="current_sector"
-                       id="success2-radio" value="2" >
-                     <label class="form-check-label" for="success2-radio">Private Sector</label>
-                     </div>
-                     <div id="current-sector-error-placeholder"></div>
-                       </div>
+                        <x-select
+                            name="current_sector"
+                            label="Current Sector :"
+                            placeholder="Select Sector"
+                            formLabelClass="form-label"
+                            :options="$facultySectorList"
+                            required="true"
+                            labelRequired="true"
+                        />
+                        <div id="current-sector-error-placeholder"></div>
+                    </div>
                 </div>
 
                  <div class="col-12">
@@ -741,25 +735,10 @@ input.is-invalid {
                         </div>
                         <hr>
 		<div class="d-flex justify-content-end align-items-center gap-2 mb-3">
-
-			<!--<button onclick="printFacultyForm()" class="btn btn-success d-flex align-items-center gap-2" type="button">
-				<i class="material-icons menu-icon">print</i>
-				Print
-			</button>-->
-
-			<!--<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
-				<i class="material-icons menu-icon">save</i>
-				Save
-			</button>-->
-
-			<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
+		<button class="btn btn-primary d-flex align-items-center gap-2" type="button" id="saveFacultyForm">
 			<i class="material-icons menu-icon">save</i>
 			Save
 		</button>
-
-
-
-
 			<a href="{{ route('faculty.index') }}" class="btn btn-secondary d-flex align-items-center gap-2">
 				<i class="material-icons menu-icon">arrow_back</i>
 				Back
@@ -1231,10 +1210,7 @@ if (faculty.Reference_Recommendation) {
 });
 
 
- $('input[name="current_sector"][value="' + faculty.faculty_sector + '"]').prop("checked", true);
-
- //document.querySelector('input[name="current_sector"]:checked').value;
- //document.querySelectorAll('input[name="faculties[]"]:checked');
+ $("select[name='current_sector']").val(faculty.faculty_sector).trigger('change');
 
 
 	$("#faculty_id").val(faculty.pk);

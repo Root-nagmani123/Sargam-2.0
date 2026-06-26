@@ -600,7 +600,8 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // current_sector
-        let currentSector = $('input[name="current_sector"]:checked').val();
+        let currentSector = $('select[name="current_sector"]').val();
+        console.log('current_sector value being sent:', currentSector);
         formData.append('current_sector', currentSector);
 
         // append csrf token

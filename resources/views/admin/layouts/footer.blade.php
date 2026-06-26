@@ -215,7 +215,7 @@
   <script src="{{asset('admin_assets/js/routes.js')}}"></script>
   <!-- SweetAlert2 must be loaded before custom.js (status-toggle confirmation uses Swal.fire) -->
   <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-  <script src="{{asset('admin_assets/js/custom.js')}}"></script>
+  <script src="{{asset('admin_assets/js/custom.js')}}?v={{ filemtime(public_path('admin_assets/js/custom.js')) }}"></script>
   <script src="{{asset('admin_assets/js/status-toggle-delete.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
   <script src="{{asset('admin_assets/libs/jquery-steps/build/jquery.steps.min.js')}}"></script>

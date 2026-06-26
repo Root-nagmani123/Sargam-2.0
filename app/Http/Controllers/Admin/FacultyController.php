@@ -41,7 +41,12 @@ class FacultyController extends Controller
             $years[$i] = $i;
         }
 
-        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years', 'appellationMasterList'));
+        $facultySectorList = DB::table('faculty_sector_master')
+            ->where('active_inactive', 1)
+            ->pluck('name', 'pk')
+            ->toArray();
+
+        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years', 'appellationMasterList', 'facultySectorList'));
     }
 
     /**
@@ -67,10 +72,11 @@ class FacultyController extends Controller
 
             // Step 1: Prepare Faculty Details
             $faculty_sector = is_numeric($request->current_sector) ? (int)$request->current_sector : null;
-            if (!in_array($faculty_sector, [1, 2])) {
+            $validSectors = DB::table('faculty_sector_master')->where('active_inactive', 1)->pluck('pk')->toArray();
+            if (!in_array($faculty_sector, $validSectors)) {
                 return response()->json([
                     'status' => false,
-                    'message' => 'Faculty sector is required and must be 1 or 2.'
+                    'message' => 'Please select a valid sector.'
                 ], 422);
             }
 
@@ -572,7 +578,13 @@ class FacultyController extends Controller
         }
 
         $facultExpertise = $faculty->facultyExpertiseMap->isNotEmpty() ? $faculty->facultyExpertiseMap->pluck('faculty_expertise_pk')->toArray() : [];
-        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years','appellationMasterList'));
+
+        $facultySectorList = DB::table('faculty_sector_master')
+            ->where('active_inactive', 1)
+            ->pluck('name', 'pk')
+            ->toArray();
+
+        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years', 'appellationMasterList', 'facultySectorList'));
     }
 
     public function update(Request $request)
