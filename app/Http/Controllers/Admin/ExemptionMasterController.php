@@ -83,6 +83,7 @@ class ExemptionMasterController extends Controller
         $validated = $request->validate([
             'course_master_pk' => 'required|exists:course_master,pk',
             'effective_from' => 'required|date',
+            'apply_cutoff_time' => 'required|date_format:H:i',
             'male_exemption_days' => 'required|numeric|min:0|max:999.9',
             'female_exemption_days' => 'required|numeric|min:0|max:999.9',
         ]);
@@ -107,6 +108,7 @@ class ExemptionMasterController extends Controller
                 $validated['effective_from'],
                 'Male',
                 (float) $validated['male_exemption_days'],
+                $validated['apply_cutoff_time'],
                 $user->pk ?? null,
                 $now
             );
@@ -116,6 +118,7 @@ class ExemptionMasterController extends Controller
                 $validated['effective_from'],
                 'Female',
                 (float) $validated['female_exemption_days'],
+                $validated['apply_cutoff_time'],
                 $user->pk ?? null,
                 $now
             );
@@ -144,6 +147,7 @@ class ExemptionMasterController extends Controller
         string $effectiveFrom,
         string $gender,
         float $exemptionDays,
+        string $applyCutoffTime,
         ?int $createdBy,
         $now
     ): void {
@@ -155,6 +159,7 @@ class ExemptionMasterController extends Controller
         if ($record) {
             $record->update([
                 'exemption_days' => $exemptionDays,
+                'apply_cutoff_time' => $applyCutoffTime,
                 'active_inactive' => 1,
                 'modified_date' => $now,
             ]);
@@ -167,6 +172,7 @@ class ExemptionMasterController extends Controller
             'effective_from' => $effectiveFrom,
             'gender' => $gender,
             'exemption_days' => $exemptionDays,
+            'apply_cutoff_time' => $applyCutoffTime,
             'active_inactive' => 1,
             'created_by' => $createdBy,
             'created_date' => $now,
@@ -254,6 +260,13 @@ class ExemptionMasterController extends Controller
             })
             ->addColumn('effective_from_display', function ($row) {
                 return $row->effective_from ? $row->effective_from->format('d-m-Y') : 'N/A';
+            })
+            ->addColumn('apply_cutoff_time_display', function ($row) {
+                if (blank($row->apply_cutoff_time)) {
+                    return 'N/A';
+                }
+
+                return \Carbon\Carbon::parse($row->apply_cutoff_time)->format('h:i A');
             })
             ->addColumn('exemption_days_display', function ($row) {
                 return number_format((float) $row->exemption_days, 1) . ' Days';

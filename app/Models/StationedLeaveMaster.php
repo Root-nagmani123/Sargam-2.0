@@ -15,6 +15,7 @@ class StationedLeaveMaster extends Model
     protected $fillable = [
         'course_master_pk',
         'effective_from',
+        'apply_cutoff_time',
         'is_faculty_approval_required',
         'active_inactive',
         'created_by',

@@ -232,6 +232,70 @@ class LeaveApplicationService
     }
 
     /**
+     * Officer trainees may apply for leave starting today only before the configured PT/cutoff time.
+     */
+    public function isLeaveStartDateAllowedForApply(?string $cutoffTime, string $fromDate, ?Carbon $now = null): bool
+    {
+        if (blank($cutoffTime)) {
+            return true;
+        }
+
+        $now = $now ?? now();
+        $from = Carbon::parse($fromDate)->startOfDay();
+        $today = $now->copy()->startOfDay();
+
+        if (! $from->equalTo($today)) {
+            return true;
+        }
+
+        $cutoff = Carbon::parse($today->toDateString() . ' ' . $cutoffTime);
+
+        return $now->lt($cutoff);
+    }
+
+    public function applyCutoffErrorMessage(string $leaveTypeLabel, ?string $cutoffTime): string
+    {
+        $timeDisplay = $cutoffTime
+            ? Carbon::parse($cutoffTime)->format('h:i A')
+            : '';
+
+        return 'You cannot apply for ' . $leaveTypeLabel . ' starting today after PT timing ('
+            . $timeDisplay . '). Please select a future start date.';
+    }
+
+    /**
+     * Earliest selectable start date considering effective-from and same-day apply cutoff.
+     */
+    public function resolveEarliestFromDate(?string $configMinDate, ?string $cutoffTime): ?string
+    {
+        $candidates = array_filter([
+            $configMinDate,
+            now()->toDateString(),
+        ]);
+
+        if ($candidates === []) {
+            return null;
+        }
+
+        $min = max($candidates);
+
+        if (! $this->isLeaveStartDateAllowedForApply($cutoffTime, now()->toDateString())) {
+            $min = max($min, now()->addDay()->toDateString());
+        }
+
+        return $min;
+    }
+
+    public function formatCutoffTimeDisplay(?string $cutoffTime): ?string
+    {
+        if (blank($cutoffTime)) {
+            return null;
+        }
+
+        return Carbon::parse($cutoffTime)->format('h:i A');
+    }
+
+    /**
      * Prefer a currently running course; otherwise use the latest active enrollment.
      * Matches enrollment checks used elsewhere (e.g. EnrollementController::hasActiveCourse).
      */

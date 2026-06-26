@@ -111,6 +111,23 @@
                         <input type="date" id="effective_from" name="effective_from" class="form-control" required
                             value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}">
                     </div>
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <label for="apply_cutoff_time" class="form-label fw-semibold">PT Timing <span class="text-danger">*</span></label>
+                        @php
+                            $cutoffValue = old(
+                                'apply_cutoff_time',
+                                $config?->apply_cutoff_time
+                                    ? \Carbon\Carbon::parse($config->apply_cutoff_time)->format('H:i')
+                                    : '06:00'
+                            );
+                        @endphp
+                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control @error('apply_cutoff_time') is-invalid @enderror" required
+                            value="{{ $cutoffValue }}">
+                        @error('apply_cutoff_time')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Officer trainees cannot apply for the same day's leave after this time.</div>
+                    </div>
                 </div>
 
                 <div class="mb-4">

@@ -43,6 +43,7 @@
                                 <th>SR NO.</th>
                                 <th>COURSE</th>
                                 <th>EFFECTIVE FROM</th>
+                                <th>PT TIMING</th>
                                 <th>APPROVAL REQUIRED</th>
                                 <th>FACULTY COUNT</th>
                                 <th>STATUS</th>
@@ -70,6 +71,7 @@ $(function () {
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
             { data: 'course_name', name: 'course.course_name' },
             { data: 'effective_from_display', name: 'effective_from' },
+            { data: 'apply_cutoff_time_display', name: 'apply_cutoff_time', orderable: false, searchable: false },
             { data: 'approval_required_display', name: 'is_faculty_approval_required' },
             { data: 'faculty_count_display', name: 'approvers_count' },
             { data: 'status', name: 'status', orderable: false, searchable: false },

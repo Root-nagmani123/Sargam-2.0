@@ -17,6 +17,7 @@ class ExemptionMaster extends Model
         'effective_from',
         'gender',
         'exemption_days',
+        'apply_cutoff_time',
         'active_inactive',
         'created_by',
         'created_date',

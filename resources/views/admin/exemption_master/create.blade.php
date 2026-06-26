@@ -109,6 +109,23 @@
                             value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}"
                             @if($isEditing ?? false) readonly @endif>
                     </div>
+                    <div class="col-12 col-md-6 col-lg-4">
+                        <label for="apply_cutoff_time" class="form-label fw-semibold">PT Timing <span class="text-danger">*</span></label>
+                        @php
+                            $cutoffValue = old(
+                                'apply_cutoff_time',
+                                $maleRecord?->apply_cutoff_time
+                                    ? \Carbon\Carbon::parse($maleRecord->apply_cutoff_time)->format('H:i')
+                                    : '06:00'
+                            );
+                        @endphp
+                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control @error('apply_cutoff_time') is-invalid @enderror" required
+                            value="{{ $cutoffValue }}">
+                        @error('apply_cutoff_time')
+                            <div class="invalid-feedback">{{ $message }}</div>
+                        @enderror
+                        <div class="form-text">Officer trainees cannot apply for the same day's exemption after this time.</div>
+                    </div>
                 </div>
 
                 <h3 class="h6 fw-semibold mb-3">PT Exemption Count (Per Academic Year)</h3>
@@ -153,6 +170,7 @@
                 <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
                     <div class="info-note flex-grow-1 mb-0">
                         <strong>Note:</strong> This count will be applicable to participants of the selected course.
+                        PT timing controls when officer trainees can apply for the same day's exemption (e.g. 06:00 AM).
                     </div>
                     <button type="submit" class="btn btn-save-config d-inline-flex align-items-center gap-1 px-4"
                         @if(!($isEditing ?? false) && $courses->isEmpty()) disabled @endif>

@@ -16,13 +16,13 @@
     $stationedReady = $stationedLeaveConfigured ?? false;
     $upcomingStationed = $upcomingStationedLeave ?? null;
     $activeStationed = $activeStationedLeave ?? null;
-    $stationedMinDate = $activeStationed?->effective_from?->format('Y-m-d')
-        ?? ($upcomingStationed?->effective_from?->format('Y-m-d'));
+    $stationedMinDate = $stationedEarliestFromDate ?? ($activeStationed?->effective_from?->format('Y-m-d')
+        ?? ($upcomingStationed?->effective_from?->format('Y-m-d')));
     $ptReady = $ptExemptionConfigured ?? false;
     $upcomingPt = $upcomingPtExemption ?? null;
     $activePt = $activePtExemption ?? null;
-    $ptMinDate = $activePt?->effective_from?->format('Y-m-d')
-        ?? ($upcomingPt?->effective_from?->format('Y-m-d'));
+    $ptMinDate = $ptEarliestFromDate ?? ($activePt?->effective_from?->format('Y-m-d')
+        ?? ($upcomingPt?->effective_from?->format('Y-m-d')));
     $fromDateValue = old('from_date', isset($application) ? $application->from_date?->format('Y-m-d') : '');
     $toDateValue = old('to_date', isset($application) ? $application->to_date?->format('Y-m-d') : '');
     $toDateMin = $fromDateValue ?: ($isPt ? $ptMinDate : $stationedMinDate);
@@ -74,6 +74,11 @@
                 <div class="alert alert-warning py-2 small mb-3">
                     PT exemption is not configured for your course: <strong>{{ $course->course_name }}</strong>.
                 </div>
+            @elseif($isPt && ($ptCutoffPassedToday ?? false) && $ptCutoffTimeDisplay)
+                <div class="alert alert-warning py-2 small mb-3">
+                    Today's PT timing (<strong>{{ $ptCutoffTimeDisplay }}</strong>) has passed.
+                    You cannot apply for PT exemption starting today. Please select a future start date.
+                </div>
             @endif
 
             @if(! $isPt && ! $stationedReady && $upcomingStationed)
@@ -85,6 +90,11 @@
             @elseif(! $isPt && ! $stationedReady && ! $upcomingStationed)
                 <div class="alert alert-warning py-2 small mb-3">
                     Stationed leave is not configured for your course: <strong>{{ $course->course_name }}</strong>.
+                </div>
+            @elseif(! $isPt && ($stationedCutoffPassedToday ?? false) && $stationedCutoffTimeDisplay)
+                <div class="alert alert-warning py-2 small mb-3">
+                    Today's PT timing (<strong>{{ $stationedCutoffTimeDisplay }}</strong>) has passed.
+                    You cannot apply for stationed leave starting today. Please select a future start date.
                 </div>
             @endif
 
@@ -227,6 +237,9 @@
                             </div>
                             <p class="leave-note-text">
                                 PT exemption is approved automatically on submit. Save as draft if you want to edit later.
+                                @if($ptCutoffTimeDisplay)
+                                    Same-day applications are allowed only before <strong>{{ $ptCutoffTimeDisplay }}</strong>.
+                                @endif
                             </p>
                         </div>
                     </div>
@@ -239,6 +252,9 @@
                             </div>
                             <p class="leave-note-text">
                                 Stationed leave stays pending until faculty approval. You can edit or delete it while pending or in draft.
+                                @if($stationedCutoffTimeDisplay)
+                                    Same-day applications are allowed only before <strong>{{ $stationedCutoffTimeDisplay }}</strong>.
+                                @endif
                             </p>
                         </div>
                     </div>

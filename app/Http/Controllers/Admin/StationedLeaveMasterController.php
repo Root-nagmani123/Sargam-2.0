@@ -71,6 +71,7 @@ class StationedLeaveMasterController extends Controller
         $validated = $request->validate([
             'course_master_pk' => 'required|exists:course_master,pk',
             'effective_from' => 'required|date',
+            'apply_cutoff_time' => 'required|date_format:H:i',
             'is_faculty_approval_required' => 'required|accepted',
             'faculty_rows' => 'required|array|min:1',
             'faculty_rows.*.faculty_master_pk' => 'required|exists:faculty_master,pk',
@@ -110,6 +111,7 @@ class StationedLeaveMasterController extends Controller
             if ($config) {
                 $config->update([
                     'is_faculty_approval_required' => $approvalRequired,
+                    'apply_cutoff_time' => $validated['apply_cutoff_time'],
                     'active_inactive' => 1,
                     'modified_date' => $now,
                 ]);
@@ -117,6 +119,7 @@ class StationedLeaveMasterController extends Controller
                 $config = StationedLeaveMaster::create([
                     'course_master_pk' => $validated['course_master_pk'],
                     'effective_from' => $validated['effective_from'],
+                    'apply_cutoff_time' => $validated['apply_cutoff_time'],
                     'is_faculty_approval_required' => $approvalRequired,
                     'active_inactive' => 1,
                     'created_by' => $user->pk ?? null,
@@ -245,6 +248,13 @@ class StationedLeaveMasterController extends Controller
             })
             ->addColumn('course_name', fn ($row) => $row->course->course_name ?? 'N/A')
             ->addColumn('effective_from_display', fn ($row) => $row->effective_from?->format('d-m-Y') ?? 'N/A')
+            ->addColumn('apply_cutoff_time_display', function ($row) {
+                if (blank($row->apply_cutoff_time)) {
+                    return 'N/A';
+                }
+
+                return \Carbon\Carbon::parse($row->apply_cutoff_time)->format('h:i A');
+            })
             ->addColumn('approval_required_display', fn ($row) => (int) $row->is_faculty_approval_required === 1 ? 'Yes' : 'No')
             ->addColumn('faculty_count_display', fn ($row) => (int) ($row->approvers_count ?? 0))
             ->addColumn('status', function ($row) {
