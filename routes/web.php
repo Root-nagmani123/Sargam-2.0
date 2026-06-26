@@ -74,27 +74,31 @@ use App\Http\Controllers\SidebarMenu\{
     SidebarCategoryController,MenuGroupController,MenuController
 };
 
-Route::get('assign-role', function () {
-    $user = User::find(2);
-    $permissions = $user->getAllPermissions();
-    foreach ($permissions as $permission) {
-        echo $permission->name . "<br>";
-    }
-})->name('admin.assign-role');
+Route::middleware(['auth'])->group(function () {
+    Route::get('assign-role', function () {
+        abort_unless(hasRole('Super Admin'), 403, 'Super Admin access required.');
+        $user = User::find(2);
+        $permissions = $user->getAllPermissions();
+        foreach ($permissions as $permission) {
+            echo $permission->name . "<br>";
+        }
+    })->name('admin.assign-role');
 
-Route::get('test-menus', function () {
-    
-    $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
-    dd($menus);
-});
+    Route::get('test-menus', function () {
+        abort_unless(hasRole('Super Admin'), 403, 'Super Admin access required.');
+        $menus = app()->make(\App\Services\SidebarMenu\MenuService::class)->getMenus();
+        dd($menus);
+    });
 
-Route::get('clear-cache', function () {
-    Artisan::call('cache:clear');
-    Artisan::call('config:clear');
-    Artisan::call('view:clear');
-    Artisan::call('route:clear');
-    Artisan::call('optimize:clear');
-    return redirect()->back()->with('success', 'Cache cleared successfully');
+    Route::get('clear-cache', function () {
+        abort_unless(hasRole('Super Admin'), 403, 'Super Admin access required.');
+        Artisan::call('cache:clear');
+        Artisan::call('config:clear');
+        Artisan::call('view:clear');
+        Artisan::call('route:clear');
+        Artisan::call('optimize:clear');
+        return redirect()->back()->with('success', 'Cache cleared successfully');
+    });
 });
 // Authentication Routes
 Auth::routes(['verify' => true, 'register' => false]);
@@ -976,7 +980,7 @@ Route::get('/admin/memo-conversation', function () {
 
 // routes/web.php (admin section)
 
-Route::prefix('admin')->group(function () {
+Route::middleware(['auth'])->prefix('admin')->group(function () {
     Route::get('/memo-notice', [MemoNoticeController::class, 'index'])->name('admin.memo-notice.index');
     Route::get('/memo-notice/create', [MemoNoticeController::class, 'create'])->name('admin.memo-notice.create');
     Route::post('/memo-notice', [MemoNoticeController::class, 'store'])->name('admin.memo-notice.store');
@@ -1715,7 +1719,12 @@ Route::middleware(['auth'])->prefix('admin/estate')->name('admin.estate.')->grou
         Route::get('migration-report/filter-options', [EstateController::class, 'getEstateMigrationReportFilterOptions'])->name('migration-report.filter-options');
     });
 });
-Route::get('/view-logs', [App\Http\Controllers\LogController::class, 'index']);
+Route::middleware(['auth'])->group(function () {
+    Route::get('/view-logs', function () {
+        abort_unless(hasRole('Super Admin'), 403, 'Super Admin access required.');
+        return app()->make(App\Http\Controllers\LogController::class)->index(request());
+    });
+});
 
 Route::middleware(['auth'])->prefix('sidebar')->name('sidebar.')->group(function () {
     Route::get('categories/status/{id}', [SidebarCategoryController::class, 'status'])->name('categories.status');

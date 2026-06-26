@@ -37,6 +37,9 @@ class Kernel extends HttpKernel
             \Illuminate\View\Middleware\ShareErrorsFromSession::class,
             \App\Http\Middleware\VerifyCsrfToken::class,
             \Illuminate\Routing\Middleware\SubstituteBindings::class,
+            // Role-Based URL Access Control — runs last so session/auth are ready.
+            // Unauthenticated requests pass through; only authenticated users are checked.
+            \App\Http\Middleware\CheckMenuPermission::class,
         ],
 
         'api' => [
