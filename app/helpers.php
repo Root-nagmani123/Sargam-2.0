@@ -326,6 +326,14 @@ function hasRole($role)
 }
 
 /**
+ * Officer Trainee portal user (session Student-OT pseudo-role or Spatie Officer Trainee).
+ */
+function isOfficerTraineeUser(): bool
+{
+    return hasRole('Student-OT') || hasRole('Officer Trainee');
+}
+
+/**
  * Whether the user has at least one Spatie role (user management → assign role).
  */
 function userHasAssignedRoles(): bool

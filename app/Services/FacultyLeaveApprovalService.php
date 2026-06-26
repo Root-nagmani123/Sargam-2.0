@@ -140,91 +140,15 @@ class FacultyLeaveApprovalService
             return [];
         }
 
-        $faculties = FacultyMaster::query()
+        return FacultyMaster::query()
             ->whereIn('pk', $facultyPks)
             ->where('active_inactive', 1)
-            ->get(['pk', 'first_name', 'last_name', 'full_name', 'email_id', 'alternate_email_id', 'mobile_no', 'employee_master_pk']);
-
-        $userIds = [];
-        foreach ($faculties as $faculty) {
-            $userId = $this->resolveFacultyLoginUserId($faculty);
-            if ($userId) {
-                $userIds[] = $userId;
-            }
-        }
-
-        return array_values(array_unique($userIds));
-    }
-
-    /**
-     * Resolve the login user_credentials.user_id for a faculty record.
-     *
-     * The login is NOT faculty_master.employee_master_pk — faculty often sign in
-     * through a credential that links only by mobile, email, or name (mirroring the
-     * reverse matching in resolveFacultyPk()). We try those in the same order.
-     */
-    protected function resolveFacultyLoginUserId(object $faculty): ?int
-    {
-        // 1) Mobile match.
-        if (! empty($faculty->mobile_no)) {
-            $userId = DB::table('user_credentials')
-                ->where('mobile_no', (string) $faculty->mobile_no)
-                ->value('user_id');
-            if ($userId) {
-                return (int) $userId;
-            }
-        }
-
-        // 2) Email match (primary or alternate) against the login user_name or email.
-        foreach (array_filter([$faculty->email_id, $faculty->alternate_email_id]) as $email) {
-            $email = strtolower(trim((string) $email));
-            if ($email === '') {
-                continue;
-            }
-            $userId = DB::table('user_credentials')
-                ->whereRaw('LOWER(user_name) = ?', [$email])
-                ->orWhereRaw('LOWER(email_id) = ?', [$email])
-                ->value('user_id');
-            if ($userId) {
-                return (int) $userId;
-            }
-        }
-
-        // 3) Normalized-name match (e.g. login "ankita.dhanda" == faculty "Ankita Dhanda").
-        $nameKeys = array_filter([
-            $this->normalizeIdentityKey($faculty->full_name ?? ''),
-            $this->normalizeIdentityKey(trim(($faculty->first_name ?? '') . ' ' . ($faculty->last_name ?? ''))),
-        ]);
-
-        $firstNameToken = $this->normalizeIdentityKey((string) ($faculty->first_name ?? ''));
-        foreach (array_unique($nameKeys) as $nameKey) {
-            if ($nameKey === '') {
-                continue;
-            }
-            // Narrow the scan with a LIKE on the first-name token, then compare on the
-            // fully-normalized key (which ignores dots/spaces) in PHP.
-            $candidates = DB::table('user_credentials')
-                ->select('user_id', 'user_name')
-                ->when($firstNameToken !== '', fn ($q) => $q->whereRaw('LOWER(user_name) LIKE ?', [$firstNameToken . '%']))
-                ->get()
-                ->filter(fn ($cred) => $this->normalizeIdentityKey((string) $cred->user_name) === $nameKey);
-
-            if ($candidates->count() === 1) {
-                return (int) $candidates->first()->user_id;
-            }
-        }
-
-        // 4) Last resort: a credential whose user_id equals employee_master_pk.
-        if (! empty($faculty->employee_master_pk)) {
-            $userId = DB::table('user_credentials')
-                ->where('user_id', (int) $faculty->employee_master_pk)
-                ->value('user_id');
-            if ($userId) {
-                return (int) $userId;
-            }
-        }
-
-        return null;
+            ->pluck('employee_master_pk')
+            ->map(fn ($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     public function canFacultyAccessLeave(int $facultyPk, LeaveApplication $application): bool

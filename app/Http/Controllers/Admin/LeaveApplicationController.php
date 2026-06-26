@@ -203,6 +203,45 @@ class LeaveApplicationController extends Controller
             ]);
         }
 
+        if ($validated['leave_type'] === LeaveApplication::TYPE_PT_EXEMPTION) {
+            $ptConfig = $this->leaveService->getActivePtExemptionConfig(
+                $context['course_pk'],
+                $context['student']->gender ?? null,
+                $validated['from_date']
+            );
+
+            if ($ptConfig && ! $this->leaveService->isLeaveStartDateAllowedForApply(
+                $ptConfig->apply_cutoff_time,
+                $validated['from_date']
+            )) {
+                return back()->withInput()->withErrors([
+                    'from_date' => $this->leaveService->applyCutoffErrorMessage(
+                        'PT exemption',
+                        $ptConfig->apply_cutoff_time
+                    ),
+                ]);
+            }
+        }
+
+        if ($validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE) {
+            $stationedConfig = $this->leaveService->getActiveStationedLeaveConfig(
+                $context['course_pk'],
+                $validated['from_date']
+            );
+
+            if ($stationedConfig && ! $this->leaveService->isLeaveStartDateAllowedForApply(
+                $stationedConfig->apply_cutoff_time,
+                $validated['from_date']
+            )) {
+                return back()->withInput()->withErrors([
+                    'from_date' => $this->leaveService->applyCutoffErrorMessage(
+                        'stationed leave',
+                        $stationedConfig->apply_cutoff_time
+                    ),
+                ]);
+            }
+        }
+
         $totalDays = $this->leaveService->calculateTotalDays($validated['from_date'], $validated['to_date']);
 
         try {
@@ -423,6 +462,15 @@ class LeaveApplicationController extends Controller
         bool $readOnly
     ): array {
         $gender = $context['student']->gender ?? null;
+        $activePt = $this->leaveService->getActivePtExemptionConfig($context['course_pk'], $gender);
+        $upcomingPt = $this->leaveService->getUpcomingPtExemptionConfig($context['course_pk'], $gender);
+        $activeStationed = $this->leaveService->getActiveStationedLeaveConfig($context['course_pk']);
+        $upcomingStationed = $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']);
+
+        $ptConfigMinDate = $activePt?->effective_from?->format('Y-m-d')
+            ?? $upcomingPt?->effective_from?->format('Y-m-d');
+        $stationedConfigMinDate = $activeStationed?->effective_from?->format('Y-m-d')
+            ?? $upcomingStationed?->effective_from?->format('Y-m-d');
 
         return [
             'leaveType' => $leaveType,
@@ -431,11 +479,33 @@ class LeaveApplicationController extends Controller
             'application' => $application,
             'readOnly' => $readOnly,
             'stationedLeaveConfigured' => $this->leaveService->stationedLeaveConfigured($context['course_pk']),
-            'upcomingStationedLeave' => $this->leaveService->getUpcomingStationedLeaveConfig($context['course_pk']),
-            'activeStationedLeave' => $this->leaveService->getActiveStationedLeaveConfig($context['course_pk']),
+            'upcomingStationedLeave' => $upcomingStationed,
+            'activeStationedLeave' => $activeStationed,
             'ptExemptionConfigured' => $this->leaveService->ptExemptionConfigured($context['course_pk'], $gender),
-            'upcomingPtExemption' => $this->leaveService->getUpcomingPtExemptionConfig($context['course_pk'], $gender),
-            'activePtExemption' => $this->leaveService->getActivePtExemptionConfig($context['course_pk'], $gender),
+            'upcomingPtExemption' => $upcomingPt,
+            'activePtExemption' => $activePt,
+            'ptEarliestFromDate' => $this->leaveService->resolveEarliestFromDate(
+                $ptConfigMinDate,
+                $activePt?->apply_cutoff_time
+            ),
+            'stationedEarliestFromDate' => $this->leaveService->resolveEarliestFromDate(
+                $stationedConfigMinDate,
+                $activeStationed?->apply_cutoff_time
+            ),
+            'ptCutoffTimeDisplay' => $this->leaveService->formatCutoffTimeDisplay($activePt?->apply_cutoff_time),
+            'stationedCutoffTimeDisplay' => $this->leaveService->formatCutoffTimeDisplay($activeStationed?->apply_cutoff_time),
+            'ptCutoffPassedToday' => $activePt
+                && $activePt->apply_cutoff_time
+                && ! $this->leaveService->isLeaveStartDateAllowedForApply(
+                    $activePt->apply_cutoff_time,
+                    now()->toDateString()
+                ),
+            'stationedCutoffPassedToday' => $activeStationed
+                && $activeStationed->apply_cutoff_time
+                && ! $this->leaveService->isLeaveStartDateAllowedForApply(
+                    $activeStationed->apply_cutoff_time,
+                    now()->toDateString()
+                ),
         ];
     }
 }

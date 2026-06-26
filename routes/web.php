@@ -43,6 +43,10 @@ use App\Http\Controllers\Admin\{
     EstateController,
     QuickLinkController,
     TimetableReportController,
+    ExemptionMasterController,
+    StationedLeaveMasterController,
+    LeaveApplicationController,
+    FacultyLeaveApprovalController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -155,6 +159,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.navigation.error');
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
+    Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
@@ -819,6 +824,45 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::get('/export', 'export')->name('export');
 
         Route::delete('/delete/{id}', 'delete')->name('delete');
+    });
+
+    // PT Exemption Master (Leave Management)
+    Route::prefix('admin/pt-exemption-master')->name('admin.pt-exemption-master.')->controller(ExemptionMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::post('/status/{id}', 'status')->name('status');
+        Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    });
+
+    // Stationed Leave Master (Leave Management)
+    Route::prefix('admin/stationed-leave-master')->name('admin.stationed-leave-master.')->controller(StationedLeaveMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/faculties', 'faculties')->name('faculties');
+        Route::post('/status/{id}', 'status')->name('status');
+        Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    });
+
+    // Faculty — Leave Approval (menu route: faculty-leave-approval)
+    Route::controller(FacultyLeaveApprovalController::class)->group(function () {
+        Route::get('/faculty-leave-approval', 'index')->name('faculty.leave-approval.index');
+        Route::get('/faculty-leave-approval/{id}', 'show')->name('faculty.leave-approval.show');
+        Route::post('/faculty-leave-approval/{id}/approve', 'approve')->name('faculty.leave-approval.approve');
+        Route::post('/faculty-leave-approval/{id}/reject', 'reject')->name('faculty.leave-approval.reject');
+    });
+
+    // Officer Trainee — Leave Application (User Side)
+    Route::prefix('leave')->name('leave.')->controller(LeaveApplicationController::class)->group(function () {
+        Route::get('/apply', 'apply')->name('apply');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/my-leave', 'myLeave')->name('my-leave');
+        Route::get('/balance', 'balance')->name('balance');
+        Route::get('/{id}/edit', 'edit')->name('edit');
+        Route::put('/{id}', 'update')->name('update');
+        Route::get('/{id}/view', 'view')->name('view');
+        Route::delete('/{id}', 'destroy')->name('destroy');
     });
 
     // Medical Exception Views

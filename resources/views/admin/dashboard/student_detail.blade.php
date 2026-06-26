@@ -46,35 +46,51 @@
 
     <!-- Summary Cards -->
     <div class="row mb-4">
-        <div class="col-md-3">
-            <div class="card text-center" style="border-left: 4px solid #dc3545; cursor: pointer;" onclick="scrollToSection('medicalExceptionsSection')">
+        <div class="col-lg-2 col-md-4 col-6 mb-3">
+            <div class="card text-center h-100" style="border-left: 4px solid #dc3545; cursor: pointer;" onclick="scrollToSection('medicalExceptionsSection')">
                 <div class="card-body">
                     <h3 class="text-danger">{{ $medicalExemptions->count() }}</h3>
-                    <p class="mb-0">Medical Exceptions</p>
+                    <p class="mb-0 small">Medical Exceptions</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="border-left: 4px solid #ffc107; cursor: pointer;" onclick="scrollToSection('dutiesSection')">
+        <div class="col-lg-2 col-md-4 col-6 mb-3">
+            <div class="card text-center h-100" style="border-left: 4px solid #28a745; cursor: pointer;" onclick="scrollToSection('ptExemptionsSection')">
+                <div class="card-body">
+                    <h3 class="text-success">{{ $ptExemptions->count() }}</h3>
+                    <p class="mb-0 small">PT Exemptions</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6 mb-3">
+            <div class="card text-center h-100" style="border-left: 4px solid #6610f2; cursor: pointer;" onclick="scrollToSection('stationedLeavesSection')">
+                <div class="card-body">
+                    <h3 style="color: #6610f2;">{{ $stationedLeaves->count() }}</h3>
+                    <p class="mb-0 small">Station Leave</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-4 col-6 mb-3">
+            <div class="card text-center h-100" style="border-left: 4px solid #ffc107; cursor: pointer;" onclick="scrollToSection('dutiesSection')">
                 <div class="card-body">
                     <h3 class="text-warning">{{ $duties->count() }}</h3>
-                    <p class="mb-0">Duties Assigned</p>
+                    <p class="mb-0 small">Duties Assigned</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="border-left: 4px solid #17a2b8; cursor: pointer;" onclick="scrollToSection('noticesSection')">
+        <div class="col-lg-2 col-md-4 col-6 mb-3">
+            <div class="card text-center h-100" style="border-left: 4px solid #17a2b8; cursor: pointer;" onclick="scrollToSection('noticesSection')">
                 <div class="card-body">
                     <h3 class="text-info">{{ $notices->count() }}</h3>
-                    <p class="mb-0">Notices Received</p>
+                    <p class="mb-0 small">Notices Received</p>
                 </div>
             </div>
         </div>
-        <div class="col-md-3">
-            <div class="card text-center" style="border-left: 4px solid #6c757d; cursor: pointer;" onclick="scrollToSection('memosSection')">
+        <div class="col-lg-2 col-md-4 col-6 mb-3">
+            <div class="card text-center h-100" style="border-left: 4px solid #6c757d; cursor: pointer;" onclick="scrollToSection('memosSection')">
                 <div class="card-body">
                     <h3 class="text-secondary">{{ $memos->count() }}</h3>
-                    <p class="mb-0">Memos Issued</p>
+                    <p class="mb-0 small">Memos Issued</p>
                 </div>
             </div>
         </div>
@@ -135,6 +151,136 @@
                 </div>
             @else
                 <p class="text-muted">No medical exceptions found.</p>
+            @endif
+        </div>
+    </div>
+
+    <!-- PT Exemptions -->
+    <div class="card mb-4" id="ptExemptionsSection">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-running me-2"></i>PT Exemptions ({{ $ptExemptions->count() }})</h5>
+            <div>
+                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('ptExemptionsTable', 'PT_Exemptions')">
+                    <i class="fas fa-file-excel me-1"></i>Export Excel
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('ptExemptionsTable')">
+                    <i class="fas fa-print me-1"></i>Print
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if($ptExemptions->isNotEmpty())
+                <div class="table-responsive">
+                    <table class="table table-hover" id="ptExemptionsTable">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Nature</th>
+                                <th>From Date</th>
+                                <th>To Date</th>
+                                <th>Total Days</th>
+                                <th>Status</th>
+                                <th>Reason</th>
+                                <th>Document</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($ptExemptions as $leave)
+                                <tr>
+                                    <td>{{ $leave->course->course_name ?? 'N/A' }}</td>
+                                    <td>{{ $leave->nature->nature_name ?? 'N/A' }}</td>
+                                    <td>{{ $leave->from_date ? $leave->from_date->format('d M Y') : 'N/A' }}</td>
+                                    <td>{{ $leave->to_date ? $leave->to_date->format('d M Y') : 'N/A' }}</td>
+                                    <td>{{ number_format((float) $leave->total_days, 0) }}</td>
+                                    <td>
+                                        <span class="badge {{ $leave->status_badge_class }}">{{ $leave->status_label }}</span>
+                                    </td>
+                                    <td>{{ $leave->reason ?? 'N/A' }}</td>
+                                    <td class="text-center">
+                                        @if($leave->attachments->isNotEmpty())
+                                            @foreach($leave->attachments as $attachment)
+                                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank"
+                                                    class="btn btn-sm btn-info mb-1" title="View Document">
+                                                    <i class="fas fa-file-pdf"></i> View
+                                                </a>
+                                            @endforeach
+                                        @else
+                                            <span class="text-muted">N/A</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <p class="text-muted">No PT exemptions found.</p>
+            @endif
+        </div>
+    </div>
+
+    <!-- Station Leave -->
+    <div class="card mb-4" id="stationedLeavesSection">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Station Leave ({{ $stationedLeaves->count() }})</h5>
+            <div>
+                <button type="button" class="btn btn-sm btn-success" onclick="exportTableToExcel('stationedLeavesTable', 'Station_Leave')">
+                    <i class="fas fa-file-excel me-1"></i>Export Excel
+                </button>
+                <button type="button" class="btn btn-sm btn-primary" onclick="printTable('stationedLeavesTable')">
+                    <i class="fas fa-print me-1"></i>Print
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            @if($stationedLeaves->isNotEmpty())
+                <div class="table-responsive">
+                    <table class="table table-hover" id="stationedLeavesTable">
+                        <thead>
+                            <tr>
+                                <th>Course</th>
+                                <th>Nature</th>
+                                <th>From Date</th>
+                                <th>To Date</th>
+                                <th>Total Days</th>
+                                <th>Status</th>
+                                <th>Approved By</th>
+                                <th>Reason</th>
+                                <th>Document</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach($stationedLeaves as $leave)
+                                <tr>
+                                    <td>{{ $leave->course->course_name ?? 'N/A' }}</td>
+                                    <td>{{ $leave->nature->nature_name ?? 'N/A' }}</td>
+                                    <td>{{ $leave->from_date ? $leave->from_date->format('d M Y') : 'N/A' }}</td>
+                                    <td>{{ $leave->to_date ? $leave->to_date->format('d M Y') : 'N/A' }}</td>
+                                    <td>{{ number_format((float) $leave->total_days, 0) }}</td>
+                                    <td>
+                                        <span class="badge {{ $leave->status_badge_class }}">{{ $leave->status_label }}</span>
+                                    </td>
+                                    <td>{{ $leave->action_by_faculty_name }}</td>
+                                    <td>{{ $leave->reason ?? 'N/A' }}</td>
+                                    <td class="text-center">
+                                        @if($leave->attachments->isNotEmpty())
+                                            @foreach($leave->attachments as $attachment)
+                                                <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank"
+                                                    class="btn btn-sm btn-info mb-1" title="View Document">
+                                                    <i class="fas fa-file-pdf"></i> View
+                                                </a>
+                                            @endforeach
+                                        @else
+                                            <span class="text-muted">N/A</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @else
+                <p class="text-muted">No station leave applications found.</p>
             @endif
         </div>
     </div>
