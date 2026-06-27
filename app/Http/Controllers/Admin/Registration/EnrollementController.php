@@ -467,10 +467,49 @@ class EnrollementController extends Controller
      * My Course Participant – replica of studentCourses().
      * Self-contained so the original Course Wise OTs List page is unaffected.
      */
+    /**
+     * Course scoping for the My Course Participant page.
+     * Super Admin and Faculty see all courses; every other role (Admin, PA,
+     * IST, Induction, etc.) is restricted to the courses mapped to their role(s).
+     *
+     * @return array [] = all, [-1] = none, [pks...] = restricted
+     */
+    private function participantCourseScope(): array
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return [-1];
+        }
+
+        // Super Admin and Faculty are unrestricted on this page
+        if (hasRole('Super Admin') || hasRole('Faculty')) {
+            return [];
+        }
+
+        $userRoleIds = DB::table('model_has_roles')
+            ->where('model_id', $user->pk)
+            ->where('model_type', \App\Models\User::class)
+            ->pluck('role_id')
+            ->toArray();
+
+        if (empty($userRoleIds)) {
+            return [-1];
+        }
+
+        $courses = DB::table('course_master as cm')
+            ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
+            ->whereIn('r.id', $userRoleIds)
+            ->pluck('cm.pk')
+            ->toArray();
+
+        return empty($courses) ? [-1] : $courses;
+    }
+
     public function myCourseParticipant(Request $request)
     {
-        // Role-scoped courses: [] = all (Admin/Super Admin), [-1] = none, [pks] = restricted
-        $data_course_id = get_Role_by_course();
+        // Course scoping: only Super Admin sees all; others see assigned courses only
+        $data_course_id = $this->participantCourseScope();
 
         // Filters are available only to these roles
         $showFilters = hasRole('Super Admin') || hasRole('Training MCTP Admin');
@@ -498,6 +537,9 @@ class EnrollementController extends Controller
 
         // For AJAX requests from DataTables - list participants of the user's courses
         if ($request->ajax() && $request->has('draw')) {
+            // Universal search term from the table header search box
+            $searchTerm = trim((string) $request->input('search_term', ''));
+
             $query = StudentMasterCourseMap::with([
                 'studentMaster.cadre',
                 'studentMaster.courseGroupMaps.groupTypeMasterCourseMasterMap',
@@ -506,6 +548,18 @@ class EnrollementController extends Controller
                 ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
                 ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
                 ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+                ->when($searchTerm !== '', function ($q) use ($searchTerm) {
+                    $q->whereHas('studentMaster', function ($sq) use ($searchTerm) {
+                        $sq->where('user_id', 'like', "%{$searchTerm}%")
+                            ->orWhere('display_name', 'like', "%{$searchTerm}%")
+                            ->orWhere('generated_OT_code', 'like', "%{$searchTerm}%")
+                            ->orWhere('email', 'like', "%{$searchTerm}%")
+                            ->orWhere('contact_no', 'like', "%{$searchTerm}%")
+                            ->orWhereHas('cadre', function ($cq) use ($searchTerm) {
+                                $cq->where('cadre_name', 'like', "%{$searchTerm}%");
+                            });
+                    });
+                })
                 ->orderByDesc('created_date');
 
             return DataTables::of($query)
@@ -575,13 +629,32 @@ class EnrollementController extends Controller
 
         $format = $request->input('format');
 
-        // Role-scoped courses (same scoping as the listing)
-        $data_course_id = get_Role_by_course();
+        // Course scoping (same as the listing): only Super Admin sees all
+        $data_course_id = $this->participantCourseScope();
+
+        // Same filters as the listing so the export matches what is on screen
+        $courseId = $request->input('course_id');
+        $status = $request->input('status');
+        $searchTerm = trim((string) $request->input('search_term', ''));
 
         $participants = StudentMasterCourseMap::with([
             'studentMaster.cadre'
         ])
             ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
+            ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+            ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+            ->when($searchTerm !== '', function ($q) use ($searchTerm) {
+                $q->whereHas('studentMaster', function ($sq) use ($searchTerm) {
+                    $sq->where('user_id', 'like', "%{$searchTerm}%")
+                        ->orWhere('display_name', 'like', "%{$searchTerm}%")
+                        ->orWhere('generated_OT_code', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('contact_no', 'like', "%{$searchTerm}%")
+                        ->orWhereHas('cadre', function ($cq) use ($searchTerm) {
+                            $cq->where('cadre_name', 'like', "%{$searchTerm}%");
+                        });
+                });
+            })
             ->orderByDesc('created_date')
             ->get();
 

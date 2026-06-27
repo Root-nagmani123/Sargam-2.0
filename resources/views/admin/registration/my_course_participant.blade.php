@@ -86,79 +86,53 @@
         @endif
 
         {{-- Counts + Import + Export --}}
-        <div class="card shadow-lg mb-4 border-0 animate-fade-in" style="border-left: 5px solid #004a93; border-radius: 15px;">
-            <div class="card-header bg-gradient-primary py-4" style="background: linear-gradient(135deg, #004a93 0%, #0066cc 100%); border-radius: 15px 15px 0 0;">
-                <div class="d-flex align-items-center">
-                    <div class="icon-box me-3">
-                        <i class="fas fa-users fa-lg text-white"></i>
-                    </div>
-                    <h5 class="mb-0 text-white fw-bold">Course Participants</h5>
+        <div class="cp-panel mb-4 animate-fade-in">
+            <div class="cp-panel-head">
+                <div class="cp-panel-head-icon">
+                    <i class="fas fa-users"></i>
                 </div>
+                <h5 class="cp-panel-title mb-0">Course Participants</h5>
             </div>
-            <div class="card-body p-4" style="background: linear-gradient(to bottom, #ffffff 0%, #f8f9fa 100%);">
-                <div class="row g-4 align-items-stretch">
-                    <!-- Total Count -->
-                    <div class="col-lg-4 col-md-4">
-                        <div class="stats-card h-100">
-                            <div class="stats-icon">
-                                <i class="fas fa-users"></i>
-                            </div>
-                            <div class="stats-content">
-                                <div class="stats-label">Total Records</div>
-                                <div class="stats-value">
-                                    <span id="filteredCount" class="counter">{{ $filteredCount }}</span>
-                                </div>
-                            </div>
+
+            <div class="cp-toolbar">
+                <!-- Total Records stat -->
+                <div class="cp-stat">
+                    <div class="cp-tile-icon cp-icon-blue">
+                        <i class="fas fa-users"></i>
+                    </div>
+                    <div class="cp-tile-body">
+                        <div class="cp-tile-label">Total Records</div>
+                        <div class="cp-tile-value">
+                            <span id="filteredCount" class="counter">{{ $filteredCount }}</span>
                         </div>
                     </div>
+                </div>
 
-                    <!-- Import Button -->
-                    <div class="col-lg-4 col-md-4">
-                        <div class="action-card h-100 d-flex flex-column">
-                            <label class="form-label fw-bold text-dark mb-3" style="font-size: 0.85rem;">
-                                <i class="fas fa-file-import me-2 text-primary"></i>IMPORT
-                            </label>
-                            <button type="button" class="btn btn-import w-100 flex-grow-1" data-bs-toggle="modal"
-                                data-bs-target="#importModal">
-                                <div class="btn-icon">
-                                    <i class="fas fa-file-import"></i>
-                                </div>
-                                <div class="btn-text">
-                                    <div class="btn-title">Import Data</div>
-                                    <small class="btn-subtitle">Upload OT List</small>
-                                </div>
-                            </button>
-                        </div>
-                    </div>
+                <!-- Actions -->
+                <div class="cp-actions">
+                    <button type="button" class="btn cp-import-btn" data-bs-toggle="modal"
+                        data-bs-target="#importModal">
+                        <i class="fas fa-file-import me-2"></i>Import Data
+                    </button>
 
-                    <!-- Export Section -->
-                    <div class="col-lg-4 col-md-4">
-                        <form method="GET" action="{{ route('my.course.participant.export') }}" id="exportForm" class="h-100">
-                            <div class="action-card h-100 d-flex flex-column">
-                                <label class="form-label fw-bold text-dark mb-2" style="font-size: 0.85rem;">
-                                    <i class="fas fa-file-export me-2 text-success"></i>EXPORT (SELECT FORMAT)
-                                </label>
-                                <select name="format" class="form-select shadow-sm custom-select mb-3" required id="exportFormat">
-                                    <option value="">Choose export type...</option>
-                                    <option value="pdf">📄 PDF Document</option>
-                                    <option value="xlsx">📊 Excel Spreadsheet</option>
-                                    <option value="csv">📝 CSV File</option>
-                                </select>
-                                <button type="submit" class="btn btn-export w-100 flex-grow-1" id="exportBtn">
-                                    <div class="btn-icon">
-                                        <i class="fas fa-download"></i>
-                                    </div>
-                                    <div class="btn-text">
-                                        <div class="btn-title">Export Data</div>
-                                        <small class="btn-subtitle">Download Records</small>
-                                    </div>
-                                </button>
-                            </div>
-                        </form>
-                    </div>
+                    <form method="GET" action="{{ route('my.course.participant.export') }}" id="exportForm" class="cp-export-group">
+                        {{-- Mirror the active list filters so the export matches the table --}}
+                        <input type="hidden" name="course_id" id="exportCourseId">
+                        <input type="hidden" name="status" id="exportStatus">
+                        <input type="hidden" name="search_term" id="exportSearchTerm">
+                        <select name="format" class="form-select cp-select" required id="exportFormat">
+                            <option value="">Choose export type…</option>
+                            <option value="pdf">📄 PDF Document</option>
+                            <option value="xlsx">📊 Excel Spreadsheet</option>
+                            <option value="csv">📝 CSV File</option>
+                        </select>
+                        <button type="submit" class="btn cp-export-btn" id="exportBtn">
+                            <i class="fas fa-download me-2"></i>Export
+                        </button>
+                    </form>
                 </div>
             </div>
-        </div> <!-- End of top card -->
+        </div> <!-- End of top panel -->
 
         <!-- Import Modal -->
         <div class="modal fade" id="importModal" tabindex="-1" aria-labelledby="importModalLabel" aria-hidden="true">
@@ -283,8 +257,10 @@
                             <small class="text-muted-50">View course participants</small>
                         </div>
                     </div>
-                    <div>
-                        <i class="fas fa-database fa-2x opacity-50"></i>
+                    <div class="cp-table-search">
+                        <i class="fas fa-search cp-table-search-icon"></i>
+                        <input type="text" id="participantSearch" class="form-control cp-search-input"
+                            placeholder="Search name, OT code, email, mobile…" autocomplete="off">
                     </div>
                 </div>
             </div>
@@ -340,6 +316,7 @@
                     d.course_id = $('#course_id').val() || '';
                     d.status = $('#status').val() || '';
                     d.course_status = $('input[name="course_status"]:checked').val() || '';
+                    d.search_term = $('#participantSearch').val() || '';
                 },
                 dataSrc: function(json) {
                     $('#filteredCount').text(json.recordsTotal || 0);
@@ -368,6 +345,15 @@
                 let api = this.api();
                 $('#filteredCount').text(api.page.info().recordsTotal);
             }
+        });
+
+        // ----- Universal search (debounced) -----
+        let searchTimer = null;
+        $('#participantSearch').on('keyup', function() {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(function() {
+                dataTable.ajax.reload();
+            }, 400);
         });
 
         // ----- Filters (Super Admin & Training MCTP Admin only) -----
@@ -407,6 +393,10 @@
                 alert('Please select an export format');
                 return false;
             }
+            // Carry the active list filters into the export so counts match
+            $('#exportCourseId').val($('#course_id').val() || '');
+            $('#exportStatus').val($('#status').val() || '');
+            $('#exportSearchTerm').val($('#participantSearch').val() || '');
         });
 
         // Import Form Validation
@@ -517,83 +507,168 @@
         background-color: #f0f4ff;
     }
 
-    .stats-card {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        border-radius: 15px;
-        padding: 1.5rem;
-        color: white;
-        box-shadow: 0 10px 30px rgba(102, 126, 234, 0.3);
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        text-align: center;
-        min-height: 210px;
-    }
-
-    .stats-card::before {
-        content: '';
-        position: absolute;
-        top: -50%;
-        right: -50%;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-        animation: pulse 3s ease-in-out infinite;
-    }
-
-    .stats-card:hover {
-        transform: translateY(-5px) scale(1.02);
-        box-shadow: 0 15px 40px rgba(102, 126, 234, 0.4);
-    }
-
-    .stats-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.9; }
-    .stats-label { font-size: 0.85rem; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; opacity: 0.9; margin-bottom: 0.5rem; }
-    .stats-value { font-size: 2.5rem; font-weight: 700; line-height: 1; }
-    .counter { display: inline-block; transition: all 0.3s ease; }
-
-    .action-card {
+    /* ===== Course Participants panel ===== */
+    .cp-panel {
         background: #fff;
-        border-radius: 12px;
-        padding: 1.25rem;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
-        transition: all 0.3s ease;
-        min-height: 210px;
+        border: 1px solid #eef0f4;
+        border-radius: 16px;
+        padding: 1.5rem;
+        box-shadow: 0 6px 24px rgba(17, 38, 78, 0.06);
     }
 
-    .action-card:hover {
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
-        transform: translateY(-5px);
+    .cp-panel-head {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin-bottom: 1.25rem;
     }
 
-    .btn-import, .btn-export {
-        border: none;
-        border-radius: 12px;
-        padding: 1.2rem 1.5rem;
-        font-weight: 600;
+    .cp-panel-head-icon {
+        width: 40px;
+        height: 40px;
+        flex: 0 0 40px;
         display: flex;
         align-items: center;
         justify-content: center;
+        border-radius: 10px;
+        background: #eef2ff;
+        color: #4f46e5;
+        font-size: 1.05rem;
+    }
+
+    .cp-panel-title { font-size: 1.15rem; font-weight: 700; color: #1f2a44; }
+
+    /* Toolbar: stat on left, actions on right */
+    .cp-toolbar {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1.25rem;
+    }
+
+    .cp-stat {
+        display: flex;
+        align-items: center;
         gap: 1rem;
-        transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
-        position: relative;
-        overflow: hidden;
+        padding: 0.85rem 1.5rem 0.85rem 0.85rem;
+        background: #f7f9fc;
+        border: 1px solid #eef0f4;
+        border-radius: 14px;
+        flex: 0 0 auto;
     }
 
-    .btn-import { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
-    .btn-export { background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); color: white; }
-
-    .btn-import:hover, .btn-export:hover {
-        transform: translateY(-3px);
-        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+    .cp-actions {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 0.75rem;
     }
 
-    .btn-icon { font-size: 1.5rem; display: flex; align-items: center; justify-content: center; }
-    .btn-text { text-align: left; flex: 1; }
-    .btn-title { font-size: 1rem; font-weight: 700; display: block; margin-bottom: 0.25rem; }
-    .btn-subtitle { font-size: 0.75rem; opacity: 0.9; font-weight: 400; }
+    .cp-export-group {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        margin: 0;
+    }
+
+    .cp-import-btn {
+        border: 1.5px solid #e2e6f0;
+        border-radius: 10px;
+        padding: 0.65rem 1.25rem;
+        font-weight: 700;
+        color: #4f46e5;
+        background: #eef2ff;
+        white-space: nowrap;
+        transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .cp-import-btn:hover {
+        color: #fff;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border-color: transparent;
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+    }
+
+    .cp-tile-icon {
+        width: 52px;
+        height: 52px;
+        flex: 0 0 52px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 13px;
+        font-size: 1.35rem;
+        color: #fff;
+    }
+
+    .cp-icon-blue   { background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); }
+    .cp-icon-indigo { background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%); }
+    .cp-icon-green  { background: linear-gradient(135deg, #10b981 0%, #059669 100%); }
+
+    .cp-tile-body { min-width: 0; }
+    .cp-tile-label { font-size: 0.75rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: #8a93a6; margin-bottom: 0.1rem; }
+    .cp-tile-value { font-size: 1.9rem; font-weight: 800; line-height: 1; color: #1f2a44; }
+    .counter { display: inline-block; transition: all 0.3s ease; }
+
+    .cp-select {
+        width: 210px;
+        border: 1.5px solid #e2e6f0;
+        border-radius: 10px;
+        padding: 0.65rem 0.85rem;
+        font-weight: 500;
+        color: #1f2a44;
+        transition: border-color .25s ease, box-shadow .25s ease;
+    }
+    .cp-select:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.15);
+    }
+
+    .cp-export-btn {
+        border: none;
+        border-radius: 10px;
+        padding: 0.65rem 1.25rem;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+        transition: transform .2s ease, box-shadow .2s ease;
+    }
+    .cp-export-btn:hover { color: #fff; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16, 185, 129, 0.35); }
+
+    /* Table header universal search */
+    .cp-table-search { position: relative; width: 300px; max-width: 100%; }
+    .cp-table-search-icon {
+        position: absolute;
+        top: 50%;
+        left: 0.9rem;
+        transform: translateY(-50%);
+        color: #9aa3b5;
+        font-size: 0.9rem;
+        pointer-events: none;
+    }
+    .cp-search-input {
+        border: 1.5px solid #e2e6f0;
+        border-radius: 10px;
+        padding: 0.6rem 0.9rem 0.6rem 2.4rem;
+        font-size: 0.9rem;
+        transition: border-color .25s ease, box-shadow .25s ease;
+    }
+    .cp-search-input:focus {
+        border-color: #6366f1;
+        box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.15);
+    }
+
+    @media (max-width: 767.98px) {
+        .cp-table-search { width: 100%; margin-top: 0.75rem; }
+        .cp-toolbar { flex-direction: column; align-items: stretch; }
+        .cp-stat { justify-content: flex-start; }
+        .cp-actions { flex-direction: column; align-items: stretch; }
+        .cp-export-group { flex-direction: column; align-items: stretch; }
+        .cp-select { width: 100%; }
+        .cp-import-btn, .cp-export-btn { width: 100%; }
+    }
 
     .modern-table { width: 100% !important; table-layout: auto; margin: 0; }
     .modern-table thead th { white-space: nowrap; vertical-align: middle; position: relative; }

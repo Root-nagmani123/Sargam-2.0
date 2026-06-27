@@ -140,13 +140,22 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
         ClassSessionMaster::where('active_inactive', 1)
             ->get(['shift_name', 'shift_time', 'start_time', 'end_time'])
             ->each(function ($session) {
-                if (!$session->start_time || !$session->end_time) {
+                // Prefer the human-facing shift_time label (e.g. "09:00 to 10:25") so the
+                // imported times match what the user sees when picking a session. The
+                // start_time/end_time columns can drift out of sync with that label.
+                $times = $this->parseRange($session->shift_time);
+
+                if (!$times && $session->start_time && $session->end_time) {
+                    $times = [
+                        'from' => date('H:i:s', strtotime($session->start_time)),
+                        'to'   => date('H:i:s', strtotime($session->end_time)),
+                    ];
+                }
+
+                if (!$times) {
                     return;
                 }
-                $times = [
-                    'from' => date('H:i:s', strtotime($session->start_time)),
-                    'to'   => date('H:i:s', strtotime($session->end_time)),
-                ];
+
                 foreach ([$session->shift_name, $session->shift_time] as $key) {
                     $key = strtolower(trim((string) $key));
                     if ($key !== '') {
@@ -154,6 +163,32 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                     }
                 }
             });
+    }
+
+    /**
+     * Parse a "HH:MM to HH:MM" / "HH:MM - HH:MM" style range into Time_from/Time_to.
+     */
+    private function parseRange(?string $value): ?array
+    {
+        $value = trim((string) $value);
+        if ($value === '') {
+            return null;
+        }
+
+        foreach ([' to ', ' - ', '-', ' to', 'to '] as $sep) {
+            if (strpos($value, $sep) !== false) {
+                $parts = array_map('trim', explode($sep, $value, 2));
+                if (count($parts) === 2 && $parts[0] !== '' && $parts[1] !== '') {
+                    $from = strtotime($parts[0]);
+                    $to   = strtotime($parts[1]);
+                    if ($from !== false && $to !== false && $to > $from) {
+                        return ['from' => date('H:i:s', $from), 'to' => date('H:i:s', $to)];
+                    }
+                }
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -172,20 +207,7 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
         }
 
         // Fallback: explicit time range like "10:00 to 11:00", "10:00-11:00", "10:00 AM - 11:00 AM".
-        foreach ([' to ', ' - ', '-', ' to', 'to '] as $sep) {
-            if (strpos($session, $sep) !== false) {
-                $parts = array_map('trim', explode($sep, $session, 2));
-                if (count($parts) === 2 && $parts[0] !== '' && $parts[1] !== '') {
-                    $from = strtotime($parts[0]);
-                    $to   = strtotime($parts[1]);
-                    if ($from !== false && $to !== false && $to > $from) {
-                        return ['from' => date('H:i:s', $from), 'to' => date('H:i:s', $to)];
-                    }
-                }
-            }
-        }
-
-        return null;
+        return $this->parseRange($session);
     }
 
     private function parseDate($value): ?string
