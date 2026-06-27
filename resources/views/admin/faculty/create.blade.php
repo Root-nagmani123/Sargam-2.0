@@ -369,7 +369,17 @@ input.is-invalid {
                                     placeholder="Alternate Email :"
                                     formLabelClass="form-label"
                                     />
-
+                            </div>
+                            <div class="col-md-6">
+                                <div class="mb-3">
+                                    <x-select
+                                        name="service_master_pk"
+                                        label="Service :"
+                                        placeholder="Select Service"
+                                        formLabelClass="form-label"
+                                        :options="$serviceMasterList"
+                                    />
+                                </div>
                             </div>
                             <div class="col-md-6 mt-3">
                                 <x-input
@@ -381,7 +391,6 @@ input.is-invalid {
                                     formLabelClass="form-label"
                                     accept="image/jpeg,image/png"
                                     helperSmallText="Please upload a recent passport-sized photo (Max 2 MB, JPG or PNG only)"
-
                                 />
 
                                 <!-- File Validation Message -->
@@ -395,11 +404,10 @@ input.is-invalid {
                                 <div class="mt-2">
                                     <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
                                 </div>
-								 <div class="existing-photo"></div>
+                                <div class="existing-photo"></div>
                             </div>
 
                             <div class="col-md-6 mt-3">
-
                                 <x-input
                                     type="file"
                                     name="document"
@@ -409,15 +417,15 @@ input.is-invalid {
                                     helperSmallText="CV or any other supporting document"
                                     />
 
-                                       <!-- PDF Preview -->
-                           <div class="d-flex align-items-start mt-2">
-                            <iframe id="documentPreviewPDF" class="d-none border"
-                                    style="width: 100%; max-width: 200px; height: 200px; border-radius: 6px;"></iframe>
-                        </div>
+                                <!-- PDF Preview -->
+                                <div class="d-flex align-items-start mt-2">
+                                    <iframe id="documentPreviewPDF" class="d-none border"
+                                            style="width: 100%; max-width: 200px; height: 200px; border-radius: 6px;"></iframe>
+                                </div>
 
-                    <!-- Existing Document Link -->
-                            <div class="existing-document mt-2"></div>
-                        </div>
+                                <!-- Existing Document Link -->
+                                <div class="existing-document mt-2"></div>
+                            </div>
 
 
                             </div>
@@ -1211,6 +1219,7 @@ if (faculty.Reference_Recommendation) {
 
 
  $("select[name='current_sector']").val(faculty.faculty_sector).trigger('change');
+ $("select[name='service_master_pk']").val(faculty.service_master_pk ?? '').trigger('change');
 
 
 	$("#faculty_id").val(faculty.pk);

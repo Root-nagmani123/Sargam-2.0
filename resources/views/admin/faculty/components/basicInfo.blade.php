@@ -325,11 +325,21 @@
             formLabelClass="form-label"
             value="{{ $faculty->alternate_email_id }}"
             />
-
+    </div>
+    <div class="col-md-6">
+        <div class="mb-3">
+            <x-select
+                name="service_master_pk"
+                label="Service :"
+                placeholder="Select Service"
+                formLabelClass="form-label"
+                :options="$serviceMasterList"
+                value="{{ $faculty->service_master_pk }}"
+            />
+        </div>
     </div>
     <div class="col-md-6 mt-3">
-
-       <x-input
+        <x-input
             type="file"
             name="photo"
             label="Photo Upload:"
@@ -352,15 +362,12 @@
             <a href="{{ asset('storage/'.$faculty->photo_uplode_path) }}" target="_blank" class="rounded-circle" title="View Photo">
                 <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
             </a>
-        @endif
-        <div class="mt-2">
-            <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
-        </div>
+            @endif
+            <div class="mt-2">
+                <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
+            </div>
     </div>
     <div class="col-md-6 mt-3">
-
-
-
         <x-input
             type="file"
             name="document"
@@ -376,7 +383,6 @@
             <a href="{{ asset('storage/'.$faculty->Doc_uplode_path) }}" target="_blank" class="rounded-circle" title="View Document">
                 <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
             </a>
-        @endif
-
+            @endif
     </div>
 </div>

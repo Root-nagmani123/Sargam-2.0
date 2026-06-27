@@ -601,8 +601,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // current_sector
         let currentSector = $('select[name="current_sector"]').val();
-        console.log('current_sector value being sent:', currentSector);
         formData.append('current_sector', currentSector);
+
+        // service_master_pk
+        let serviceMasterPk = $('select[name="service_master_pk"]').val();
+        formData.append('service_master_pk', serviceMasterPk ?? '');
 
         // append csrf token
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));

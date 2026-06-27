@@ -46,7 +46,11 @@ class FacultyController extends Controller
             ->pluck('name', 'pk')
             ->toArray();
 
-        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years', 'appellationMasterList', 'facultySectorList'));
+        $serviceMasterList = \App\Models\ServiceMaster::where('active_inactive', 1)
+            ->pluck('service_name', 'pk')
+            ->toArray();
+
+        return view("admin.faculty.create", compact('faculties', 'country', 'state', 'city', 'district', 'facultyTypeList', 'years', 'appellationMasterList', 'facultySectorList', 'serviceMasterList'));
     }
 
     /**
@@ -114,6 +118,7 @@ class FacultyController extends Controller
                 'IFSC_Code' => $request->ifsccode,
                 'PAN_No' => $request->pannumber,
                 'faculty_sector' => $faculty_sector,
+                'service_master_pk' => $request->service_master_pk ?: null,
                 'faculty_pa' => $request->facultyType == '1' ? $request->faculty_pa : null, // Only save for Internal faculty type
                 //'created_by' => Auth::id(),
                 'created_by' => Auth::user()->user_id,  // Employee Master PK,
@@ -584,7 +589,11 @@ class FacultyController extends Controller
             ->pluck('name', 'pk')
             ->toArray();
 
-        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years', 'appellationMasterList', 'facultySectorList'));
+        $serviceMasterList = \App\Models\ServiceMaster::where('active_inactive', 1)
+            ->pluck('service_name', 'pk')
+            ->toArray();
+
+        return view('admin.faculty.edit', compact('faculties', 'faculty', 'country', 'state', 'district', 'city', 'facultExpertise', 'years', 'appellationMasterList', 'facultySectorList', 'serviceMasterList'));
     }
 
     public function update(Request $request)
@@ -687,6 +696,7 @@ class FacultyController extends Controller
             //$facultyDetails['created_by']   = Auth::id();
             $facultyDetails['created_by']   = Auth::user()->user_id; // Employee Master PK
             $facultyDetails['faculty_sector'] = $request->current_sector;
+            $facultyDetails['service_master_pk'] = $request->service_master_pk ?: null;
             //$facultyDetails['last_update']   = now();
             $facultyDetails['active_inactive'] = 1;
 
