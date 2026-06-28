@@ -51,14 +51,8 @@
                     <div class="form-text text-muted">Use lowercase only — capital letters are converted automatically.</div>
                 </div>
 
-                <!-- Mobile Number -->
-                <div class="col-md-12">
-                    <label class="form-label">Mobile Number</label>
-                    <input type="text" class="form-control" placeholder="Enter your Mobile Number" name="reg_mobile"
-                        value="{{ old('reg_mobile', session('fc_user_mobile')) }}" required pattern="\d{10,15}"
-                        title="Enter a valid mobile number (10-15 digits)"
-                        {{ session('fc_user_mobile') ? 'readonly' : '' }}>
-                </div>
+                <!-- Mobile Number (hidden — taken from the registration link; required by the backend lookup) -->
+                <input type="hidden" name="reg_mobile" value="{{ old('reg_mobile', session('fc_user_mobile')) }}">
 
 
                 <!-- Password -->

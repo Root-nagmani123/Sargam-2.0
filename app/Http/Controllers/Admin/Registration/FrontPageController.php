@@ -12,9 +12,13 @@ use App\Support\FcEncryptedFormId;
 use Illuminate\Http\Request;
 use App\Models\FC\FcForm;
 use App\Models\FrontPage;
+use App\Models\FacultyMaster;
+use App\Models\DesignationMaster;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Log;
 use App\Models\PathPage;
 use App\Models\PathPageFaq;
 use App\Models\ExemptionCategory;
@@ -48,7 +52,48 @@ class FrontPageController extends Controller
     public function index()
     {
         $data = FrontPage::first(); // fetch latest/only record
-        return view('admin.forms.home_page', compact('data'));
+
+        // Faculty list for the Coordinator Name dropdown (same source as Create Course).
+        // Keyed by full_name so the saved value remains a name string and the public
+        // front page (which prints coordinator_name directly) keeps working unchanged.
+        $facultyList = FacultyMaster::orderBy('full_name')->pluck('full_name', 'full_name')->toArray();
+
+        // Preserve a previously saved coordinator name even if it is no longer in the faculty list.
+        if ($data && !empty($data->coordinator_name) && !isset($facultyList[$data->coordinator_name])) {
+            $facultyList = [$data->coordinator_name => $data->coordinator_name] + $facultyList;
+        }
+
+        // Map of coordinator (faculty) name => their designation name, so the
+        // Coordinator Designation field can auto-fill when a coordinator is picked.
+        // Chain: faculty_master.employee_master_pk -> employee_master.designation_master_pk -> designation_master.
+        $coordinatorDesignations = FacultyMaster::query()
+            ->join('employee_master', 'faculty_master.employee_master_pk', '=', 'employee_master.pk')
+            ->join('designation_master', 'employee_master.designation_master_pk', '=', 'designation_master.pk')
+            ->whereNotNull('faculty_master.full_name')
+            ->pluck('designation_master.designation_name', 'faculty_master.full_name')
+            ->toArray();
+
+        // Options for the Coordinator Designation searchable dropdown. Keyed by name so the
+        // saved value stays a string (the public front page prints coordinator_designation directly).
+        $designationList = DesignationMaster::where('active_inactive', 1)
+            ->orderBy('designation_name')
+            ->pluck('designation_name', 'designation_name')
+            ->toArray();
+
+        // Ensure every designation that a coordinator can auto-fill is selectable (even if inactive).
+        foreach ($coordinatorDesignations as $desigName) {
+            if (!empty($desigName) && !isset($designationList[$desigName])) {
+                $designationList[$desigName] = $desigName;
+            }
+        }
+
+        // Preserve the currently saved designation even if it is inactive or no longer in the master.
+        if ($data && !empty($data->coordinator_designation) && !isset($designationList[$data->coordinator_designation])) {
+            $designationList[$data->coordinator_designation] = $data->coordinator_designation;
+        }
+        asort($designationList);
+
+        return view('admin.forms.home_page', compact('data', 'facultyList', 'coordinatorDesignations', 'designationList'));
     }
 
     public function storeOrUpdate(Request $request)
@@ -279,6 +324,9 @@ class FrontPageController extends Controller
                 'password' => Hash::make($request->reg_password),
             ]);
 
+        // Email the username and password to the trainee (best-effort: never block account creation).
+        $this->sendCredentialsEmail($registration->email ?? null, $request->reg_name, $request->reg_password, $registration->pk ?? null);
+
         return redirect()->route('fc.login', $this->intentQueryForFcFormLinks())->with(
             'sweet_success',
             'Credentials saved successfully. Please log in to complete your registration form.'
@@ -291,6 +339,52 @@ class FrontPageController extends Controller
         $this->fcRegistrationIntent->ingestFormQuery($request);
 
         return view('fc.fc_login'); // Adjust to your login blade path
+    }
+
+    // Log the foundation-course (staged) user out and return to the FC login page.
+    // session()->invalidate() flushes the staged roster pk, so the user is fully signed out.
+    public function logout(Request $request)
+    {
+        Auth::logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
+
+        return redirect()->route('fc.login');
+    }
+
+    /**
+     * Email the FC login credentials (username + password) to the trainee.
+     * Best-effort: any mail failure is logged but never blocks account creation.
+     */
+    protected function sendCredentialsEmail(?string $email, string $username, string $password, ?int $registrationPk = null): void
+    {
+        $email = trim((string) $email);
+        if ($email === '') {
+            return;
+        }
+
+        try {
+            $fromAddress = config('mail.from.address') ?: 'no-reply@lbsnaa.gov.in';
+            $fromName = config('mail.from.name') ?: 'LBSNAA Foundation Course';
+
+            $body = "Dear Candidate,\n\n"
+                . "Your login credentials for the LBSNAA Foundation Course registration portal have been created successfully.\n\n"
+                . "Username: {$username}\n"
+                . "Password: {$password}\n\n"
+                . "Please keep these credentials confidential and do not share them with anyone.\n\n"
+                . "Regards,\n"
+                . "Lal Bahadur Shastri National Academy of Administration, Mussoorie";
+
+            Mail::raw($body, function ($mail) use ($email, $fromAddress, $fromName) {
+                $mail->from($fromAddress, $fromName)
+                    ->to($email)
+                    ->subject('Your Foundation Course Login Credentials');
+            });
+        } catch (\Throwable $e) {
+            Log::error('Failed to send FC credentials email: ' . $e->getMessage(), [
+                'registration_pk' => $registrationPk,
+            ]);
+        }
     }
 
     //user login verification
