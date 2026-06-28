@@ -230,7 +230,15 @@
                {{ $isReadonly ? 'disabled' : '' }}>
         <div class="form-text text-muted">{{ $fileHint }}</div>
         @if($value && !$isReadonly)
-            <small class="text-success d-block mt-1"><i class="bi bi-check-circle"></i> File uploaded: {{ basename($value) }}</small>
+            @php $uploadedFileUrl = view_file_link($value); @endphp
+            <small class="text-success d-block mt-1">
+                <i class="bi bi-check-circle"></i> File uploaded: {{ basename($value) }}
+                @if($uploadedFileUrl)
+                    <a href="{{ $uploadedFileUrl }}" target="_blank" rel="noopener" class="ms-2 text-decoration-none">
+                        <i class="bi bi-eye"></i> Preview
+                    </a>
+                @endif
+            </small>
             <input type="hidden" name="{{ $fieldName }}_existing" value="1">
         @endif
         @break
