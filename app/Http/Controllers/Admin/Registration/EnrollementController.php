@@ -520,9 +520,13 @@ class EnrollementController extends Controller
         $courseStatus = $request->input('course_status', 'active');
 
         // Course dropdown (scoped to the user's courses + active/archived toggle)
+        // Active  = flagged active AND not yet ended (end_date today or later)
+        // Archived = flagged inactive OR already ended
         $courses = CourseMaster::query()
-            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
-            ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
+            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1)
+                ->whereDate('end_date', '>=', now()))
+            ->when($courseStatus === 'inactive', fn($q) => $q->where(fn($w) => $w->where('active_inactive', 0)
+                ->orWhereDate('end_date', '<', now())))
             ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
@@ -558,6 +562,9 @@ class EnrollementController extends Controller
                             ->orWhereHas('cadre', function ($cq) use ($searchTerm) {
                                 $cq->where('cadre_name', 'like', "%{$searchTerm}%");
                             });
+                    })
+                    ->orWhereHas('course', function ($cq) use ($searchTerm) {
+                        $cq->where('couse_short_name', 'like', "%{$searchTerm}%");
                     });
                 })
                 ->orderByDesc('created_date');
@@ -569,6 +576,9 @@ class EnrollementController extends Controller
                 })
                 ->addColumn('name', function ($row) {
                     return $row->studentMaster->display_name ?? 'N/A';
+                })
+                ->addColumn('course_code', function ($row) {
+                    return $row->course->couse_short_name ?? 'N/A';
                 })
                 ->addColumn('ot_code', function ($row) {
                     return $row->studentMaster->generated_OT_code ?? 'N/A';
@@ -653,6 +663,9 @@ class EnrollementController extends Controller
                         ->orWhereHas('cadre', function ($cq) use ($searchTerm) {
                             $cq->where('cadre_name', 'like', "%{$searchTerm}%");
                         });
+                })
+                ->orWhereHas('course', function ($cq) use ($searchTerm) {
+                    $cq->where('couse_short_name', 'like', "%{$searchTerm}%");
                 });
             })
             ->orderByDesc('created_date')

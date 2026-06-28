@@ -142,9 +142,21 @@ class StudentAttendanceListDataTable extends DataTable
         }
     }
 
-    // Escort nahi hai → N/A
+    // Escort nahi hai → agar OT ki MDO duty hai to "MDO Duty" text dikhao
+    if ($this->hasMdoDuty($studentId)) {
+        return "<span class='text-primary fw-bold'>MDO Duty</span>";
+    }
+
+    // Na escort, na MDO → N/A
     return "<span class='text-muted'>N/A</span>";
 }
+
+        // MDO Duty column: agar OT ki MDO duty pehle se hai to yahan radio button
+        // mat dikhao — OT ko Attendance column me "Present" default kiya gaya hai aur
+        // duty status "Escort/Moderator Duty" column me text ke roop me dikh rahi hai.
+        if ($value === 4 && $this->hasMdoDuty($row->studentsMaster->pk)) {
+            return "<span class='text-muted'>N/A</span>";
+        }
 
         $studentId = $row->studentsMaster->pk;
         $courseStudent = CourseStudentAttendance::where([

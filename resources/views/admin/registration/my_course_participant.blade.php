@@ -257,10 +257,13 @@
                             <small class="text-muted-50">View course participants</small>
                         </div>
                     </div>
-                    <div class="cp-table-search">
-                        <i class="fas fa-search cp-table-search-icon"></i>
-                        <input type="text" id="participantSearch" class="form-control cp-search-input"
-                            placeholder="Search name, OT code, email, mobile…" autocomplete="off">
+                    <div class="cp-header-tools">
+                        <div id="colvisContainer" class="cp-colvis"></div>
+                        <div class="cp-table-search">
+                            <i class="fas fa-search cp-table-search-icon"></i>
+                            <input type="text" id="participantSearch" class="form-control cp-search-input"
+                                placeholder="Search name, course code, OT code, email, mobile…" autocomplete="off">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -272,6 +275,7 @@
                                 <th class="fw-bold" style="padding: 1rem;">S.No</th>
                                 <th class="fw-bold" style="padding: 1rem;">user_name</th>
                                 <th class="fw-bold" style="padding: 1rem;">Name</th>
+                                <th class="fw-bold" style="padding: 1rem;">Course Code</th>
                                 <th class="fw-bold" style="padding: 1rem;">ot code</th>
                                 <th class="fw-bold" style="padding: 1rem;">email_id</th>
                                 <th class="fw-bold" style="padding: 1rem;">mobile no</th>
@@ -292,10 +296,14 @@
 @push('scripts')
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
 <link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/responsive/2.5.0/css/responsive.bootstrap5.min.css">
+<link rel="stylesheet" type="text/css" href="https://cdn.datatables.net/buttons/2.4.2/css/buttons.bootstrap5.min.css">
 <script type="text/javascript" src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
 <script type="text/javascript" src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.4.2/js/dataTables.buttons.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.bootstrap5.min.js"></script>
+<script type="text/javascript" src="https://cdn.datatables.net/buttons/2.4.2/js/buttons.colVis.min.js"></script>
 
 <script>
     $(document).ready(function() {
@@ -332,6 +340,7 @@
                 { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false, width: '60px' },
                 { data: 'user_name', name: 'user_name' },
                 { data: 'name', name: 'name' },
+                { data: 'course_code', name: 'course_code' },
                 { data: 'ot_code', name: 'ot_code' },
                 { data: 'email_id', name: 'email_id' },
                 { data: 'mobile_no', name: 'mobile_no' },
@@ -346,6 +355,17 @@
                 $('#filteredCount').text(api.page.info().recordsTotal);
             }
         });
+
+        // ----- Column show / hide (ColVis) — available to every user -----
+        new $.fn.dataTable.Buttons(dataTable, {
+            buttons: [{
+                extend: 'colvis',
+                text: '<i class="fas fa-table-columns me-1"></i> Columns',
+                className: 'cp-colvis-btn',
+                columns: ':gt(0)' // keep S.No always visible; toggle the rest
+            }]
+        });
+        dataTable.buttons().container().appendTo('#colvisContainer');
 
         // ----- Universal search (debounced) -----
         let searchTimer = null;
@@ -660,7 +680,52 @@
         box-shadow: 0 0 0 0.2rem rgba(99, 102, 241, 0.15);
     }
 
+    /* Column show/hide (ColVis) */
+    .cp-header-tools {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+    }
+    .cp-colvis .dt-buttons { margin: 0; }
+    .cp-colvis .cp-colvis-btn {
+        border: 1.5px solid #e2e6f0;
+        border-radius: 10px;
+        padding: 0.6rem 1.1rem;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: #4f46e5;
+        background: #eef2ff;
+        white-space: nowrap;
+        transition: transform .2s ease, box-shadow .2s ease, background .2s ease;
+    }
+    .cp-colvis .cp-colvis-btn:hover,
+    .cp-colvis .cp-colvis-btn:focus {
+        color: #fff;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        border-color: transparent;
+        box-shadow: 0 8px 20px rgba(79, 70, 229, 0.3);
+    }
+    .dt-button-collection.dropdown-menu {
+        padding: 0.4rem;
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(17, 38, 78, 0.15);
+        border: 1px solid #eef0f4;
+    }
+    .dt-button-collection .dt-button.dropdown-item {
+        border-radius: 8px;
+        font-weight: 500;
+        padding: 0.5rem 0.85rem;
+    }
+    .dt-button-collection .dt-button.dropdown-item.active,
+    .dt-button-collection .dt-button.dropdown-item:hover {
+        background: #eef2ff;
+        color: #4f46e5;
+    }
+
     @media (max-width: 767.98px) {
+        .cp-header-tools { width: 100%; flex-direction: column; align-items: stretch; margin-top: 0.75rem; }
+        .cp-colvis .cp-colvis-btn { width: 100%; }
         .cp-table-search { width: 100%; margin-top: 0.75rem; }
         .cp-toolbar { flex-direction: column; align-items: stretch; }
         .cp-stat { justify-content: flex-start; }

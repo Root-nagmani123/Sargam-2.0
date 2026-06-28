@@ -27,7 +27,7 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
     /** @var array<int, array{record: \App\Models\MDOEscotDutyMap, student_id: int}> */
     private array $insertedRecords = [];
 
-    /** OT code (upper-cased) => student_master_pk, for the selected course. */
+    /** OT code (upper-cased) => ['pk' => student_master_pk, 'name' => display_name], for the selected course. */
     private array $courseOtMap = [];
 
     /** shift_name (lower-cased) => ['from' => H:i:s, 'to' => H:i:s]. */
@@ -50,12 +50,13 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
             $rowNumber = $index + 2;
 
             try {
+                $name    = $this->cleanString($row['name'] ?? null);
                 $otCode  = $this->cleanString($row['ot_code'] ?? $row['otcode'] ?? null);
                 $dateRaw = $row['date'] ?? null;
                 $session = $this->cleanString($row['session'] ?? null);
 
                 // Skip fully empty rows silently (trailing blanks in spreadsheets).
-                if (empty($otCode) && empty($dateRaw) && empty($session)) {
+                if (empty($name) && empty($otCode) && empty($dateRaw) && empty($session)) {
                     continue;
                 }
 
@@ -64,9 +65,20 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                $studentId = $this->courseOtMap[strtoupper($otCode)] ?? null;
-                if (!$studentId) {
+                $entry = $this->courseOtMap[strtoupper($otCode)] ?? null;
+                if (!$entry) {
                     $this->fail($rowNumber, "OT Code '{$otCode}' is not enrolled in the selected course.");
+                    continue;
+                }
+                $studentId = $entry['pk'];
+
+                // Name must be present and match the OT Code's enrolled student.
+                if (empty($name)) {
+                    $this->fail($rowNumber, "Name is required for OT Code '{$otCode}'.");
+                    continue;
+                }
+                if (!$this->namesMatch($name, $entry['name'])) {
+                    $this->fail($rowNumber, "Name '{$name}' does not match OT Code '{$otCode}' (expected '{$entry['name']}').");
                     continue;
                 }
 
@@ -126,11 +138,14 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
 
         StudentMaster::whereIn('pk', $studentIds)
             ->whereNotNull('generated_OT_code')
-            ->get(['pk', 'generated_OT_code'])
+            ->get(['pk', 'display_name', 'generated_OT_code'])
             ->each(function ($student) {
                 $code = strtoupper(trim((string) $student->generated_OT_code));
                 if ($code !== '') {
-                    $this->courseOtMap[$code] = $student->pk;
+                    $this->courseOtMap[$code] = [
+                        'pk'   => $student->pk,
+                        'name' => (string) $student->display_name,
+                    ];
                 }
             });
     }
@@ -227,6 +242,23 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
 
         $ts = strtotime(trim((string) $value));
         return $ts !== false ? date('Y-m-d', $ts) : null;
+    }
+
+    /**
+     * Compare the sheet's Name against the OT code's student name.
+     * Case-insensitive and whitespace-tolerant; both must be non-empty.
+     */
+    private function namesMatch(string $provided, string $expected): bool
+    {
+        $a = $this->normalizeName($provided);
+        $b = $this->normalizeName($expected);
+
+        return $a !== '' && $a === $b;
+    }
+
+    private function normalizeName(string $value): string
+    {
+        return preg_replace('/\s+/', ' ', strtolower(trim($value)));
     }
 
     private function cleanString($value): ?string

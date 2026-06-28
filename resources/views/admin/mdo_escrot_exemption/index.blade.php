@@ -1249,6 +1249,11 @@ $(document).ready(function() {
 
             $submit.prop('disabled', true).html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Uploading...');
 
+            // Show the file upload progress loader
+            var $uploadProgress = $('#meeBulkUploadProgress').removeClass('d-none');
+            var $uploadBar = $('#meeBulkUploadBar').css('width', '0%').attr('aria-valuenow', 0);
+            $('#meeBulkUploadPercent').text('0%');
+
             $.ajax({
                 url: bulkStoreUrl,
                 type: 'POST',
@@ -1256,6 +1261,19 @@ $(document).ready(function() {
                 processData: false,
                 contentType: false,
                 headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' },
+                xhr: function() {
+                    var xhr = $.ajaxSettings.xhr();
+                    if (xhr.upload) {
+                        xhr.upload.addEventListener('progress', function(e) {
+                            if (e.lengthComputable) {
+                                var pct = Math.round((e.loaded / e.total) * 100);
+                                $uploadBar.css('width', pct + '%').attr('aria-valuenow', pct);
+                                $('#meeBulkUploadPercent').text(pct + '%');
+                            }
+                        }, false);
+                    }
+                    return xhr;
+                },
                 success: function(response) {
                     table.ajax.reload(null, false);
                     renderBulkResult(response);
@@ -1300,6 +1318,7 @@ $(document).ready(function() {
                     }
                 },
                 complete: function() {
+                    $('#meeBulkUploadProgress').addClass('d-none');
                     $submit.prop('disabled', false).text(defaultText);
                 }
             });

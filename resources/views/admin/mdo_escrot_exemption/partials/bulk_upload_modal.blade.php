@@ -90,6 +90,18 @@
                                 class="form-control rounded-3" accept=".xlsx,.xls,.csv" required>
                             <small class="text-muted d-block mt-1">Accepted formats: .xlsx, .xls, .csv (max 5 MB).</small>
                             <small class="text-danger d-none mt-1" id="meeBulkErrorFile">Please select a file to upload.</small>
+
+                            {{-- Upload progress loader for the file --}}
+                            <div id="meeBulkUploadProgress" class="d-none mt-2">
+                                <div class="d-flex align-items-center gap-2 mb-1">
+                                    <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                                    <small class="text-primary fw-semibold">Uploading file… <span id="meeBulkUploadPercent">0%</span></small>
+                                </div>
+                                <div class="progress rounded-pill" style="height: 6px;">
+                                    <div id="meeBulkUploadBar" class="progress-bar progress-bar-striped progress-bar-animated"
+                                        role="progressbar" style="width: 0%;" aria-valuemin="0" aria-valuemax="100"></div>
+                                </div>
+                            </div>
                         </div>
 
                         <div class="col-12">
