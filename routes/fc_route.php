@@ -159,6 +159,9 @@ Route::post('/fc/store-credentials', [FrontPageController::class, 'credential_st
 Route::get('/fc/login', [FrontPageController::class, 'showLoginForm'])->name('fc.login');
 Route::post('/fc/login-verify', [FrontPageController::class, 'verifyLogin'])->name('fc.login.verify');
 
+//logout (foundation-course staged user)
+Route::get('/fc/logout', [FrontPageController::class, 'logout'])->name('fc.logout');
+
 //path choose route
 Route::get('/fc/choose-path', [FrontPageController::class, 'choosePath'])->name('fc.choose.path');
 

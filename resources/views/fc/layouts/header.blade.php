@@ -97,7 +97,11 @@
                                <a class="nav-link fw-medium" href="https://www.lbsnaa.gov.in/footer_menu/contact-us" target="_blank">Contact</a>
                            </li>
                            <li class="nav-item mt-2 mt-lg-0">
-                               <a class="btn btn-outline-primary" href="{{ route('fc.login') }}">Login</a>
+                               @if (auth()->check())
+                                   <a class="btn btn-outline-primary" href="{{ route('fc.logout') }}">Logout</a>
+                               @else
+                                   <a class="btn btn-outline-primary" href="{{ route('fc.login') }}">Login</a>
+                               @endif
                            </li>
                        </ul>
                    </div>

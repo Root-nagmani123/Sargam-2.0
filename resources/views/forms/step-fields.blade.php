@@ -196,7 +196,30 @@ document.querySelectorAll('.fc-file-upload[data-max-kb]').forEach(function (inpu
         return true;
     }
 
-    input.addEventListener('change', function () { validateFile(this.files[0]); });
+    // Show a "Preview selected file" link that opens the just-chosen file in a new tab.
+    function updatePreviewLink(file) {
+        var linkEl = input.parentNode.querySelector('.js-file-preview-selected');
+        if (!file) {
+            if (linkEl) { URL.revokeObjectURL(linkEl.href); linkEl.remove(); }
+            return;
+        }
+        if (!linkEl) {
+            linkEl = document.createElement('a');
+            linkEl.className = 'js-file-preview-selected d-inline-block small mt-1 text-decoration-none';
+            linkEl.target = '_blank';
+            linkEl.rel = 'noopener';
+            linkEl.innerHTML = '<i class="bi bi-eye"></i> Preview selected file';
+            input.parentNode.appendChild(linkEl);
+        } else {
+            URL.revokeObjectURL(linkEl.href);
+        }
+        linkEl.href = URL.createObjectURL(file);
+    }
+
+    input.addEventListener('change', function () {
+        var ok = validateFile(this.files[0]);
+        updatePreviewLink(ok && this.files[0] ? this.files[0] : null);
+    });
 
     var form = input.closest('form');
     if (form) {

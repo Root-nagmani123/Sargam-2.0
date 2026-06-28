@@ -17,8 +17,20 @@
 
     <main id="content" class="flex-grow-1 py-4 py-md-5">
         <div class="container">
+            <!-- Guidelines -->
+            <section class="mb-5" aria-labelledby="path-guidelines-heading">
+                <h2 id="path-guidelines-heading" class="h4 fw-bold text-primary mb-3">
+                    Guidelines for Registration &amp; Exemption
+                </h2>
+                <div class="card border border-primary border-opacity-25 bg-primary-subtle bg-opacity-10 rounded-4 shadow-sm">
+                    <div class="card-body p-4 path-card-content">
+                        {!! $pathPage->guidelines ?? '' !!}
+                    </div>
+                </div>
+            </section>
+
             <header class="text-center mb-4 mb-lg-5">
-                <h1 class="h2 fw-bold text-primary mb-3">Choose Your Path</h1>
+                <h1 class="h2 fw-bold text-primary mb-3">How Would You Like to Proceed?</h1>
                 <p class="fs-6 mb-0 col-lg-8 mx-auto">
                     Please select the appropriate option based on your current status.
                 </p>
@@ -93,7 +105,7 @@
                                 style="width: 3.5rem; height: 3.5rem;" aria-hidden="true">
                                 <i class="bi bi-box-arrow-in-right fs-3 text-primary"></i>
                             </div>
-                            <h2 class="h5 fw-bold text-primary mb-3">Already Registered?</h2>
+                            <h2 class="h5 fw-bold text-primary mb-3">Login</h2>
                             <div class="path-card-content small flex-grow-1">
                                 {!! $pathPage->already_registered ?? '' !!}
                             </div>
@@ -107,18 +119,6 @@
                     </div>
                 </div>
             </div>
-
-            <!-- Guidelines -->
-            <section class="mb-5" aria-labelledby="path-guidelines-heading">
-                <h2 id="path-guidelines-heading" class="h4 fw-bold text-primary mb-3">
-                    Guidelines for Registration &amp; Exemption
-                </h2>
-                <div class="card border border-primary border-opacity-25 bg-primary-subtle bg-opacity-10 rounded-4 shadow-sm">
-                    <div class="card-body p-4 path-card-content">
-                        {!! $pathPage->guidelines ?? '' !!}
-                    </div>
-                </div>
-            </section>
 
             <!-- FAQ Section -->
             <section class="pt-2" aria-labelledby="path-faq-heading">
