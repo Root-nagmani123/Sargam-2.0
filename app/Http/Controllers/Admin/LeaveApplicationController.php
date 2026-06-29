@@ -271,9 +271,16 @@ class LeaveApplicationController extends Controller
 
         $isSubmit = $validated['submit_action'] === 'submit';
         $autoApprovePt = $isSubmit && $validated['leave_type'] === LeaveApplication::TYPE_PT_EXEMPTION;
+        $autoApproveStationed = $isSubmit
+            && $validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE
+            && ! $this->leaveService->stationedLeaveRequiresFacultyApproval(
+                $context['course_pk'],
+                $validated['from_date']
+            );
+        $autoApprove = $autoApprovePt || $autoApproveStationed;
 
         if ($isSubmit) {
-            $status = $autoApprovePt
+            $status = $autoApprove
                 ? LeaveApplication::STATUS_APPROVED
                 : LeaveApplication::STATUS_PENDING;
         } else {
@@ -283,7 +290,7 @@ class LeaveApplicationController extends Controller
         $now = now();
         $isNew = $application === null;
 
-        $application = DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprovePt) {
+        $application = DB::transaction(function () use ($validated, $context, $application, $totalDays, $status, $now, $request, $isSubmit, $autoApprove) {
             $data = [
                 'course_master_pk' => $context['course_pk'],
                 'student_master_pk' => $context['student_pk'],
@@ -296,9 +303,9 @@ class LeaveApplicationController extends Controller
                 'contact_number' => $validated['contact_number'] ?? null,
                 'status' => $status,
                 'submitted_at' => $isSubmit ? $now : null,
-                'approved_at' => $autoApprovePt ? $now : ($isSubmit ? null : $application?->approved_at),
-                'approved_by_faculty_pk' => $autoApprovePt ? null : ($isSubmit ? null : $application?->approved_by_faculty_pk),
-                'rejection_remarks' => $autoApprovePt ? null : ($isSubmit ? null : $application?->rejection_remarks),
+                'approved_at' => $autoApprove ? $now : ($isSubmit ? null : $application?->approved_at),
+                'approved_by_faculty_pk' => $autoApprove ? null : ($isSubmit ? null : $application?->approved_by_faculty_pk),
+                'rejection_remarks' => $autoApprove ? null : ($isSubmit ? null : $application?->rejection_remarks),
                 'modified_date' => $now,
             ];
 
@@ -338,8 +345,8 @@ class LeaveApplicationController extends Controller
         });
 
         // Notify stationed-leave approvers when a request is submitted for their review.
-        // PT exemptions auto-approve and drafts are not actionable, so neither is notified.
-        if ($isSubmit && ! $autoApprovePt
+        // PT exemptions and auto-approved stationed leave are not notified.
+        if ($isSubmit && ! $autoApprove
             && $validated['leave_type'] === LeaveApplication::TYPE_STATIONED_LEAVE) {
             $this->notifyApproversOfNewLeaveRequest($application, $context, $totalDays);
         }
@@ -347,6 +354,7 @@ class LeaveApplicationController extends Controller
         $message = match (true) {
             ! $isSubmit => 'Leave application saved as draft.',
             $autoApprovePt => 'PT exemption application submitted and approved successfully.',
+            $autoApproveStationed => 'Stationed leave application submitted and approved successfully.',
             default => 'Leave application submitted successfully. Awaiting faculty approval.',
         };
 
@@ -506,6 +514,7 @@ class LeaveApplicationController extends Controller
                     $activeStationed->apply_cutoff_time,
                     now()->toDateString()
                 ),
+            'stationedLeaveRequiresFacultyApproval' => $this->leaveService->stationedLeaveRequiresFacultyApproval($context['course_pk']),
         ];
     }
 }

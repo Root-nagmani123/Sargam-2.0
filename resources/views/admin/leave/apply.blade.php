@@ -253,7 +253,11 @@
                                 <span>Note</span>
                             </div>
                             <p class="leave-note-text">
-                                Stationed leave stays pending until faculty approval. You can edit or delete it while pending or in draft.
+                                @if($stationedLeaveRequiresFacultyApproval ?? false)
+                                    Stationed leave stays pending until faculty approval. You can edit or delete it while pending or in draft.
+                                @else
+                                    Stationed leave is approved automatically on submit when faculty approval is not required. Save as draft if you want to edit later.
+                                @endif
                                 @if($stationedCutoffTimeDisplay)
                                     Same-day applications are allowed only before <strong>{{ $stationedCutoffTimeDisplay }}</strong>.
                                 @endif

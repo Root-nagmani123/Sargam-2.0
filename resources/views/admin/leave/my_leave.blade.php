@@ -57,7 +57,7 @@
 
                     <div class="info-alert p-3 mt-3 small">
                         <strong>PT Exemption</strong> is approved automatically on submit.
-                        <strong>Stationed Leave</strong> stays pending until faculty approval.
+                        <strong>Stationed Leave</strong> is approved automatically when faculty approval is not configured; otherwise it stays pending until faculty approval.
                         You can edit or delete only <strong>Draft</strong> or <strong>Pending</strong> applications.
                     </div>
                 </div>

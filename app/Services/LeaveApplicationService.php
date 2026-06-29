@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\CourseMaster;
 use App\Models\ExemptionMaster;
 use App\Models\LeaveApplication;
+use App\Models\StationedLeaveFacultyApprover;
 use App\Models\StationedLeaveMaster;
 use App\Models\StudentMaster;
 use Carbon\Carbon;
@@ -159,6 +160,23 @@ class LeaveApplicationService
     public function stationedLeaveConfigured(int $coursePk, ?string $asOfDate = null): bool
     {
         return $this->getActiveStationedLeaveConfig($coursePk, $asOfDate) !== null;
+    }
+
+    /**
+     * Whether a submitted stationed-leave application must wait for faculty approval.
+     */
+    public function stationedLeaveRequiresFacultyApproval(int $coursePk, ?string $asOfDate = null): bool
+    {
+        $config = $this->getActiveStationedLeaveConfig($coursePk, $asOfDate);
+
+        if (! $config || ! (int) $config->is_faculty_approval_required) {
+            return false;
+        }
+
+        return StationedLeaveFacultyApprover::query()
+            ->where('stationed_leave_master_pk', $config->pk)
+            ->where('is_approval_authority', 1)
+            ->exists();
     }
 
     /**
