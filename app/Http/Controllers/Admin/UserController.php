@@ -1594,7 +1594,7 @@ class UserController extends Controller
         $user_type = trim((string) $request->input('User_type', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'admin_users_index:v4:' . md5(json_encode([
+        $cacheKey = 'admin_users_index:v5:' . md5(json_encode([
             'epoch' => $epoch,
             'search' => $search,
             'user_type' => $user_type,
@@ -1652,9 +1652,15 @@ class UserController extends Controller
      */
     private function adminUsersBaseQuery($search, string $user_type)
     {
+        // Roles are managed through Spatie (model_has_roles / roles), which is
+        // what the assign-role flow writes to — read from there so assigned
+        // roles actually surface in the listing.
         $usersQuery = DB::table('user_credentials as uc')
-            ->leftJoin('employee_role_mapping as erm', 'erm.user_credentials_pk', '=', 'uc.pk')
-            ->leftJoin('user_role_master as urm', 'urm.pk', '=', 'erm.user_role_master_pk')
+            ->leftJoin('model_has_roles as mhr', function ($join) {
+                $join->on('mhr.model_id', '=', 'uc.pk')
+                    ->where('mhr.model_type', '=', User::class);
+            })
+            ->leftJoin('roles as r', 'r.id', '=', 'mhr.role_id')
             ->select(
                 'uc.pk',
                 'uc.user_name',
@@ -1663,7 +1669,7 @@ class UserController extends Controller
                 'uc.email_id',
                 'uc.mobile_no',
                 'uc.user_category as User_type',
-                DB::raw("GROUP_CONCAT(urm.user_role_display_name SEPARATOR ', ') as roles")
+                DB::raw("GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') as roles")
             )
             ->groupBy(
                 'uc.pk',
