@@ -118,26 +118,15 @@
             'Setup',
             'Hr Management',
             'Assign Dashboard',
-        ]"
-    />
-    <x-session_message />
-    <div class="datatables">
-        <div class="card">
-            <div class="card-header border-bottom d-flex justify-content-between align-items-center">
-                <h4 class="mb-0">Assign Dashboard Cards ({{ ucfirst($role->name) }})</h4>
-                <div class="d-flex align-items-center gap-2">
-                    <span class="badge bg-success-subtle text-success border border-success-subtle" id="enabledCount">
-                        {{ count($assignedCardIds) }} Enabled
-                    </span>
-                    <button class="btn btn-sm btn-primary d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addCardModal">
+        ]">
+    <button class="btn btn-sm btn-primary d-flex align-items-center gap-1" data-bs-toggle="modal" data-bs-target="#addCardModal">
                         <i class="material-symbols-rounded" style="font-size:18px;">add</i>
                         <span class="d-none d-md-inline">Add New Card</span>
                     </button>
-                    <a href="{{ route('roles.index') }}" class="btn btn-sm btn-outline-secondary">
-                        <i class="material-symbols-rounded" style="font-size:16px;">arrow_back</i> Back to Roles
-                    </a>
-                </div>
-            </div>
+    </x-breadcrum>
+    <x-session_message />
+    <div class="datatables">
+        <div class="card">
             <div class="card-body">
 
                 <!-- Search & Filter Bar -->
