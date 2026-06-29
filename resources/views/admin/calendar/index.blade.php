@@ -2648,17 +2648,21 @@ async setInternalFaculty(internalFacultyIds) {
     renderListEvent(events) {
         const arr = Array.isArray(events) ? events : [events];
         return arr.map(event => {
-            const groupName = event.extendedProps.group_name || event.extendedProps.group || '';
-            const title = event.title || event.extendedProps.topic || '';
-            const faculty = event.extendedProps.faculty_name || '';
-            const venue = event.extendedProps.vanue || event.extendedProps.venue_name || '';
-            const classSession = event.extendedProps.class_session || '';
+            // List view fetches the raw JSON feed (flat objects), while
+            // FullCalendar nests custom fields under extendedProps — support both.
+            const ep = event.extendedProps || event;
+            const isBreak = ep.is_break === true || ep.type === 'break';
+            const groupName = ep.group_name || ep.group || '';
+            const title = event.title || ep.topic || '';
+            const faculty = ep.faculty_name || '';
+            const venue = ep.vanue || ep.venue_name || '';
+            const classSession = ep.class_session || '';
             const startTime = event.start ? new Date(event.start).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
             const endTime = event.end ? new Date(event.end).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true }) : '';
             const timeRange = startTime && endTime ? `${startTime} - ${endTime}` : '';
             
             return `
-                <div class="list-event-card p-2 mb-2" data-group="${groupName}">
+                <div class="list-event-card p-2 mb-2 ${isBreak ? 'list-event-break' : ''}" data-group="${groupName}">
                     ${groupName ? `<div class="group-badge">${groupName}</div>` : ''}
                     <div class="title">${title}</div>
                     <div class="meta d-flex align-items-center"><i class="material-icons me-1">class</i>${classSession}</div> <div class="meta d-flex align-items-center"><i class="material-icons me-1">place</i>${venue}</div>
@@ -2738,7 +2742,7 @@ async setInternalFaculty(internalFacultyIds) {
         const rows = document.querySelectorAll('#timetableBody tr');
         rows.forEach(row => {
             const text = row.textContent.toLowerCase();
-            if (text.includes('break time')) row.classList.add('break-row');
+            if (text.includes('break')) row.classList.add('break-row');
             if (text.includes('lunch')) row.classList.add('lunch-row');
         });
     }

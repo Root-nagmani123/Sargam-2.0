@@ -661,6 +661,9 @@ class CalendarController extends Controller
             )
             ->get();
 
+        // Keep the raw rows so breaks can be emitted as their own calendar entries.
+        $timetableRows = $events;
+
         // Array of some sample colors
         $colors = ['#ffffff'];
 
@@ -747,10 +750,65 @@ class CalendarController extends Controller
                 ];
             });
 
-        // Merge events and holidays
-        $allEvents = $events->merge($holidays);
+        // Emit breaks (tea / lunch / snacks) as their own entries so they
+        // appear in both the calendar and the Weekly Timetable table.
+        $breaks = $this->buildBreakEvents($timetableRows);
+
+        // Merge events, breaks and holidays
+        $allEvents = $events->merge($breaks)->merge($holidays);
 
         return response()->json($allEvents);
+    }
+
+    /**
+     * Build synthetic calendar entries for any timetable row that carries a
+     * break (tea / lunch / snacks). A break is stored on the event row itself
+     * (break_type / break_start_time / break_end_time) rather than as its own
+     * timetable record, so we surface it here as a separate timed event.
+     */
+    private function buildBreakEvents($rows)
+    {
+        $breaks = collect();
+
+        foreach ($rows as $row) {
+            $hasBreak = !empty($row->is_break) || !empty($row->break_type);
+            if (!$hasBreak || empty($row->break_start_time) || empty($row->break_end_time)) {
+                continue;
+            }
+
+            try {
+                $date    = Carbon::parse($row->START_DATE)->format('Y-m-d');
+                $startCarbon = Carbon::parse($row->break_start_time);
+                $endCarbon   = Carbon::parse($row->break_end_time);
+            } catch (\Exception $e) {
+                continue;
+            }
+
+            $sessionLabel = $startCarbon->format('h:i A') . ' - ' . $endCarbon->format('h:i A');
+            $title        = ucfirst($row->break_type ?: 'break') . ' Break';
+
+            $breaks->push([
+                'id'                  => 'break_' . $row->pk,
+                'title'               => $title,
+                'start'               => $date . 'T' . $startCarbon->format('H:i:s'),
+                'end'                 => $date . 'T' . $endCarbon->format('H:i:s'),
+                'vanue'               => '',
+                'faculty_name'        => '',
+                'group_name'          => '',
+                'class_session'       => $sessionLabel,
+                'class_session_debug' => $sessionLabel,
+                'backgroundColor'     => '#fff7ed',
+                'borderColor'         => '#fed7aa',
+                'textColor'           => '#9a3412',
+                'allDay'              => false,
+                'display'             => 'block',
+                'is_break'            => true,
+                'break_type'          => $row->break_type,
+                'type'                => 'break',
+            ]);
+        }
+
+        return $breaks;
     }
     function SingleCalendarDetails(Request $request)
     {
@@ -877,6 +935,9 @@ class CalendarController extends Controller
             )
             ->get();
 
+        // Keep the raw rows so breaks can be emitted as their own calendar entries.
+        $timetableRows = $events;
+
         // Array of some sample colors
         $colors = ['#ffffff'];
 
@@ -996,7 +1057,9 @@ class CalendarController extends Controller
                 ];
             });
 
-        $allEvents = $events->merge($holidays);
+        $breaks = $this->buildBreakEvents($timetableRows);
+
+        $allEvents = $events->merge($breaks)->merge($holidays);
 
         return response()->json($allEvents);
     }
@@ -1381,6 +1444,10 @@ class CalendarController extends Controller
                 'timetable.class_session',
                 'timetable.START_DATE',
                 'timetable.faculty_master',
+                'timetable.is_break',
+                'timetable.break_type',
+                'timetable.break_start_time',
+                'timetable.break_end_time',
                 'venue_master.venue_name as venue_name'
             )
             ->orderBy('timetable.START_DATE')
@@ -1432,7 +1499,126 @@ class CalendarController extends Controller
             'footerNote'     => '',
             'studentName'    => hasRole('Student-OT') ? (auth()->user()->user_name ?? null) : null,
             'logoLeft'       => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
-            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'titleHindi'     => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
+        ];
+
+        $pdf = Pdf::loadView('admin.calendar.pdf.ot-timetable-pdf', $data)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'defaultFont'          => 'DejaVu Sans',
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled'      => true,
+                'isPhpEnabled'         => true,
+                'dpi'                  => 96,
+            ]);
+
+        $fileName = 'time-table-' . $rangeStartDate->format('Y-m-d') . '.pdf';
+
+        return $request->boolean('download')
+            ? $pdf->download($fileName)
+            : $pdf->stream($fileName);
+    }
+
+    /**
+     * OT (Student-OT) timetable PDF for the dedicated OT calendar's Download
+     * button. Always scoped to the logged-in student's groups (mirrors
+     * otFullCalendarDetails) and renders the same ot-timetable-pdf template
+     * via buildWeeksGrid(). Accepts ?start, ?end (YYYY-MM-DD) and ?course_id.
+     */
+    public function otDownloadPdf(Request $request)
+    {
+        @ini_set('memory_limit', '512M');
+        @set_time_limit(120);
+
+        $rangeStartDate = $request->filled('start')
+            ? Carbon::parse($request->start)
+            : Carbon::now()->startOfMonth();
+        $rangeEndDate = $request->filled('end')
+            ? Carbon::parse($request->end)
+            : Carbon::now()->endOfMonth();
+
+        $courseId  = $request->query('course_id') ?: null;
+        $studentPk = auth()->user()->user_id;
+
+        $events = DB::table('timetable')
+            ->leftJoin('venue_master', 'timetable.venue_id', '=', 'venue_master.venue_id')
+            ->join('course_group_timetable_mapping', 'course_group_timetable_mapping.timetable_pk', '=', 'timetable.pk')
+            ->join('student_course_group_map', 'student_course_group_map.group_type_master_course_master_map_pk', '=', 'course_group_timetable_mapping.group_pk')
+            ->where('student_course_group_map.student_master_pk', $studentPk);
+
+        if ($courseId) {
+            $events = $events->where('timetable.course_master_pk', $courseId);
+        }
+
+        $events = $events
+            ->whereDate('timetable.START_DATE', '>=', $rangeStartDate->toDateString())
+            ->whereDate('timetable.START_DATE', '<=', $rangeEndDate->toDateString())
+            ->select(
+                'timetable.pk',
+                'timetable.subject_topic',
+                'timetable.class_session',
+                'timetable.START_DATE',
+                'timetable.faculty_master',
+                'timetable.is_break',
+                'timetable.break_type',
+                'timetable.break_start_time',
+                'timetable.break_end_time',
+                'venue_master.venue_name as venue_name'
+            )
+            ->distinct()
+            ->orderBy('timetable.START_DATE')
+            ->orderBy('timetable.class_session')
+            ->get();
+
+        $course = $courseId
+            ? DB::table('course_master')->where('pk', $courseId)->first()
+            : null;
+
+        $courseStartDate = ($course && !empty($course->start_year))
+            ? Carbon::parse($course->start_year)->format('j F Y') : '';
+        $courseEndDate = ($course && !empty($course->end_date))
+            ? Carbon::parse($course->end_date)->format('j F Y') : '';
+        $courseDuration = ($courseStartDate && $courseEndDate)
+            ? $courseStartDate . ' to ' . $courseEndDate : '';
+
+        $toDataUri = function (string $path): string {
+            if (!extension_loaded('gd') || !is_file($path)) return '';
+            $ext  = strtolower(pathinfo($path, PATHINFO_EXTENSION));
+            $mime = in_array($ext, ['jpg', 'jpeg']) ? 'image/jpeg' : 'image/png';
+            return 'data:' . $mime . ';base64,' . base64_encode(file_get_contents($path));
+        };
+
+        $weeks = $this->buildWeeksGrid($events, $rangeStartDate, $rangeEndDate, $course);
+
+        $primaryVenue = '';
+        $venueCounts  = [];
+        foreach ($events as $e) {
+            if (!empty($e->venue_name)) {
+                $venueCounts[$e->venue_name] = ($venueCounts[$e->venue_name] ?? 0) + 1;
+            }
+        }
+        if (!empty($venueCounts)) {
+            arsort($venueCounts);
+            $primaryVenue = array_key_first($venueCounts);
+        }
+
+        $data = [
+            'weeks'          => $weeks,
+            'rangeStart'     => $rangeStartDate->format('d M Y'),
+            'rangeEnd'       => $rangeEndDate->format('d M Y'),
+            'course'         => $course,
+            'courseStartDate'=> $courseStartDate,
+            'courseEndDate'  => $courseEndDate,
+            'courseDuration' => $courseDuration,
+            'multiCourse'    => is_null($courseId),
+            'primaryVenue'   => $primaryVenue,
+            'footerNote'     => '',
+            'studentName'    => auth()->user()->user_name ?? null,
+            'logoLeft'       => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
+            'logoRight'      => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
             'titleHindi'     => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
 
@@ -1501,6 +1687,10 @@ class CalendarController extends Controller
                 'timetable.class_session',
                 'timetable.START_DATE',
                 'timetable.faculty_master',
+                'timetable.is_break',
+                'timetable.break_type',
+                'timetable.break_start_time',
+                'timetable.break_end_time',
                 'venue_master.venue_name as venue_name'
             )
             ->orderBy('timetable.START_DATE')
@@ -1554,7 +1744,8 @@ class CalendarController extends Controller
             'footerNote'      => trim((string) $request->input('note', '')),
             'studentName'     => auth()->user()->user_name ?? '',
             'logoLeft'        => $toDataUri(public_path('admin_assets/images/logos/logo_new.png')),
-            'logoRight'       => $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
+            'logoRight'       => $toDataUri(public_path('admin_assets/images/logos/constitution-75.png'))
+                ?: $toDataUri(public_path('admin_assets/images/logos/Azadi-Ka-Amrit-Mahotsav-Logo.png')),
             'titleHindi'      => $toDataUri(public_path('admin_assets/images/logos/lbsnaa-title-hi.png')),
         ];
 
@@ -1578,7 +1769,9 @@ class CalendarController extends Controller
 
     /**
      * Build the $weeks array expected by ot-timetable-pdf.blade.php.
-     * Each entry covers one Mon–Fri week within [$rangeStart, $rangeEnd].
+     * Each entry covers one Mon–Sun week within [$rangeStart, $rangeEnd], with
+     * sessions/breaks laid onto shared time boundaries so longer sessions span
+     * multiple rows (rowspan) and breaks shared by all days become full bands.
      */
     private function buildWeeksGrid($events, Carbon $rangeStart, Carbon $rangeEnd, $course = null): array
     {
@@ -1588,99 +1781,190 @@ class CalendarController extends Controller
         while ($cursor->lte($rangeEnd)) {
             $weekEnd = $cursor->copy()->addDays(6);
 
-            // Filter events for this week (Mon–Fri only)
+            // Filter events for this week (Mon–Sun)
             $weekEvents = collect($events)->filter(function ($e) use ($cursor, $weekEnd) {
                 $d = Carbon::parse($e->START_DATE);
-                return $d->between($cursor, $weekEnd) && $d->dayOfWeekIso >= 1 && $d->dayOfWeekIso <= 5;
+                return $d->between($cursor, $weekEnd) && $d->dayOfWeekIso >= 1 && $d->dayOfWeekIso <= 7;
             });
 
-            // Build days descriptors Mon–Fri
+            // Build days descriptors Mon–Sun
             $days = [];
-            for ($i = 0; $i < 5; $i++) {
+            for ($i = 0; $i < 7; $i++) {
                 $d = $cursor->copy()->addDays($i);
                 $days[] = [
                     'key'     => $i + 1,
                     'dayName' => $d->format('l'),
-                    'label'   => $d->format('M j'),
+                    'label'   => $d->format('d.m.Y'),
                 ];
             }
 
-            // Build time-slot grid
-            $grid      = [];
-            $slotOrder = [];
+            // Collect timed items (sessions + breaks) per day and the time
+            // boundaries they imply. Each distinct start/end becomes a grid line;
+            // an item then spans (rowspan) every row that falls inside it, giving
+            // the nested look where a long session covers several time rows.
+            $itemsByDay   = [];
+            $untimedByDay = [];
+            foreach ($days as $day) {
+                $itemsByDay[$day['key']]   = [];
+                $untimedByDay[$day['key']] = [];
+            }
+            $boundaries = [];
 
             foreach ($weekEvents as $r) {
-                $dow  = (int) Carbon::parse($r->START_DATE)->dayOfWeekIso;
-                $slot = trim((string) $r->class_session) ?: 'Unscheduled';
-
-                if (!isset($grid[$slot])) {
-                    $grid[$slot]      = [];
-                    $slotOrder[$slot] = $this->timetableSlotSortKey($slot);
+                $dow = (int) Carbon::parse($r->START_DATE)->dayOfWeekIso;
+                if (!isset($itemsByDay[$dow])) {
+                    continue;
                 }
 
-                $facultyIds = json_decode($r->faculty_master, true);
-                if (!is_array($facultyIds)) {
-                    $facultyIds = !empty($r->faculty_master) ? [$r->faculty_master] : [];
-                }
-                if ($facultyIds) {
-                    $orderedFacIds = implode(',', array_map('intval', $facultyIds));
-                    $faculty = DB::table('faculty_master')
-                        ->whereIn('pk', $facultyIds)
-                        ->orderByRaw("FIELD(pk, {$orderedFacIds})")
-                        ->pluck('full_name')->implode(', ');
-                } else {
-                    $faculty = '';
-                }
+                $faculty = $this->resolveEventFaculty($r->faculty_master);
+                $slot    = trim((string) $r->class_session);
+                [$sFrom, $sTo] = $this->splitSessionTime($slot);
+                $sStart = $this->parseToMinutes($sFrom);
+                $sEnd   = $this->parseToMinutes($sTo);
 
-                $grid[$slot][$dow][] = [
+                $session = [
                     'topic'   => trim((string) $r->subject_topic) ?: 'Session',
                     'faculty' => $faculty,
                     'venue'   => trim((string) ($r->venue_name ?? '')),
                     'isBreak' => false,
                     'course'  => '',
-                    'time'    => '',
                 ];
-            }
 
-            uksort($grid, function ($a, $b) use ($slotOrder) {
-                return ($slotOrder[$a] ?? PHP_INT_MAX) <=> ($slotOrder[$b] ?? PHP_INT_MAX);
-            });
-
-            // Build row descriptors
-            $rows = [];
-            foreach ($grid as $slot => $byDay) {
-                $allCells = [];
-                foreach ($byDay as $cells) {
-                    foreach ($cells as $c) {
-                        $allCells[] = $c;
-                    }
+                if ($sStart !== null && $sEnd !== null && $sEnd > $sStart) {
+                    $session['start'] = $sStart;
+                    $session['end']   = $sEnd;
+                    $session['time']  = $this->fmtMinutes($sStart) . '-' . $this->fmtMinutes($sEnd);
+                    $itemsByDay[$dow][] = $session;
+                    $boundaries[$sStart] = true;
+                    $boundaries[$sEnd]   = true;
+                } else {
+                    // Shift-based / unparsable time — render in a trailing plain row.
+                    $session['time'] = $slot;
+                    $untimedByDay[$dow][] = $session;
                 }
 
-                $isBand = !empty($allCells);
-                foreach ($allCells as $c) {
-                    if (!preg_match('/\b(tea\s*break|lunch|break|recess|hi[\s-]?tea)\b/i', $c['topic'])) {
+                // Break (tea / lunch / snacks) stored on the event row itself.
+                $bk = $this->buildBreakInterval($r);
+                if ($bk) {
+                    $itemsByDay[$dow][] = [
+                        'topic'   => $bk['topic'],
+                        'faculty' => '',
+                        'venue'   => '',
+                        'isBreak' => true,
+                        'course'  => '',
+                        'time'    => $bk['time'],
+                        'start'   => $bk['start'],
+                        'end'     => $bk['end'],
+                    ];
+                    $boundaries[$bk['start']] = true;
+                    $boundaries[$bk['end']]   = true;
+                }
+            }
+
+            $bs = array_keys($boundaries);
+            sort($bs, SORT_NUMERIC);
+            $rowCount = max(0, count($bs) - 1);
+
+            // Lay each day's items onto the boundary rows with rowspans; rows
+            // below an item's first row (still inside it) become 'skip'.
+            $cellGrid = [];
+            foreach ($days as $day) {
+                $cellGrid[$day['key']] = [];
+                for ($i = 0; $i < $rowCount; $i++) {
+                    $cellGrid[$day['key']][$i] = [
+                        'state'   => 'show',
+                        'rowspan' => 1,
+                        'isBreak' => false,
+                        'events'  => [],
+                    ];
+                }
+                foreach ($itemsByDay[$day['key']] as $it) {
+                    $si = array_search($it['start'], $bs, true);
+                    $ei = array_search($it['end'], $bs, true);
+                    if ($si === false || $ei === false || $ei <= $si) {
+                        continue;
+                    }
+                    $span = $ei - $si;
+                    $cellGrid[$day['key']][$si]['events'][] = [
+                        'topic'   => $it['topic'],
+                        'faculty' => $it['faculty'],
+                        'venue'   => $it['venue'],
+                        'isBreak' => $it['isBreak'],
+                        'course'  => $it['course'],
+                        'time'    => $it['time'],
+                    ];
+                    if ($span > $cellGrid[$day['key']][$si]['rowspan']) {
+                        $cellGrid[$day['key']][$si]['rowspan'] = $span;
+                    }
+                    if ($it['isBreak']) {
+                        $cellGrid[$day['key']][$si]['isBreak'] = true;
+                    }
+                    for ($k = $si + 1; $k < $ei; $k++) {
+                        $cellGrid[$day['key']][$k]['state'] = 'skip';
+                    }
+                }
+            }
+
+            // Build row descriptors from boundaries.
+            $rows = [];
+            for ($i = 0; $i < $rowCount; $i++) {
+                // Full-width band when every day shows a break-only cell here.
+                $isBand = true;
+                foreach ($days as $day) {
+                    $cell = $cellGrid[$day['key']][$i];
+                    if ($cell['state'] === 'skip' || empty($cell['events'])) {
                         $isBand = false;
                         break;
                     }
+                    foreach ($cell['events'] as $ev) {
+                        if (empty($ev['isBreak'])) {
+                            $isBand = false;
+                            break 2;
+                        }
+                    }
                 }
 
-                [$from, $to] = $this->splitSessionTime($slot);
+                $cells     = [];
+                $bandTopic = null;
+                foreach ($days as $day) {
+                    $cells[$day['key']] = $cellGrid[$day['key']][$i];
+                    if ($isBand && $bandTopic === null && !empty($cells[$day['key']]['events'])) {
+                        $bandTopic = $cells[$day['key']]['events'][0]['topic'];
+                    }
+                }
 
+                $rows[] = [
+                    'from'      => $this->fmtMinutes($bs[$i]),
+                    'to'        => $this->fmtMinutes($bs[$i + 1]),
+                    'isBand'    => $isBand,
+                    'bandTopic' => $bandTopic,
+                    'cells'     => $cells,
+                ];
+            }
+
+            // Append untimed (shift-based) sessions as a plain trailing row.
+            $hasUntimed = false;
+            foreach ($days as $day) {
+                if (!empty($untimedByDay[$day['key']])) {
+                    $hasUntimed = true;
+                    break;
+                }
+            }
+            if ($hasUntimed) {
                 $cells = [];
                 foreach ($days as $day) {
                     $cells[$day['key']] = [
                         'state'   => 'show',
                         'rowspan' => 1,
                         'isBreak' => false,
-                        'events'  => $byDay[$day['key']] ?? [],
+                        'events'  => $untimedByDay[$day['key']],
                     ];
                 }
-
                 $rows[] = [
-                    'from'      => $from,
-                    'to'        => $to,
-                    'isBand'    => $isBand,
-                    'bandTopic' => $isBand ? ($allCells[0]['topic'] ?? '') : null,
+                    'from'      => '',
+                    'to'        => '',
+                    'isBand'    => false,
+                    'bandTopic' => null,
                     'cells'     => $cells,
                 ];
             }
@@ -1711,6 +1995,84 @@ class CalendarController extends Controller
     }
 
     /** Convert a time-slot string to a sortable integer (minutes since midnight). */
+    /** Parse a time part ("09:30 AM", "9:30", "01:00 PM") into minutes-of-day. */
+    private function parseToMinutes(?string $time): ?int
+    {
+        $time = trim((string) $time);
+        if ($time === '') {
+            return null;
+        }
+        try {
+            $c = Carbon::parse($time);
+            return $c->hour * 60 + $c->minute;
+        } catch (\Exception $e) {
+            return null;
+        }
+    }
+
+    /** Format minutes-of-day as "0930" (image style). */
+    private function fmtMinutes(int $minutes): string
+    {
+        return sprintf('%02d%02d', intdiv($minutes, 60), $minutes % 60);
+    }
+
+    /** Break-band / cell label matching the printed timetable wording. */
+    private function breakTopicLabel(?string $type): string
+    {
+        switch (strtolower((string) $type)) {
+            case 'lunch':
+                return 'Lunch';
+            case 'snacks':
+                return 'Snacks';
+            case 'tea':
+            default:
+                return 'Tea Break';
+        }
+    }
+
+    /** Resolve a timetable row's faculty_master JSON into a "Name, Name" string. */
+    private function resolveEventFaculty($facultyMaster): string
+    {
+        $facultyIds = json_decode((string) $facultyMaster, true);
+        if (!is_array($facultyIds)) {
+            $facultyIds = !empty($facultyMaster) ? [$facultyMaster] : [];
+        }
+        if (!$facultyIds) {
+            return '';
+        }
+        $ordered = implode(',', array_map('intval', $facultyIds));
+        return DB::table('faculty_master')
+            ->whereIn('pk', $facultyIds)
+            ->orderByRaw("FIELD(pk, {$ordered})")
+            ->pluck('full_name')
+            ->implode(', ');
+    }
+
+    /**
+     * Turn a timetable row's break fields into an interval (minutes) + label.
+     * Returns null when the row has no usable break.
+     */
+    private function buildBreakInterval($row): ?array
+    {
+        $hasBreak = !empty($row->is_break ?? null) || !empty($row->break_type ?? null);
+        if (!$hasBreak || empty($row->break_start_time) || empty($row->break_end_time)) {
+            return null;
+        }
+
+        $start = $this->parseToMinutes($row->break_start_time);
+        $end   = $this->parseToMinutes($row->break_end_time);
+        if ($start === null || $end === null || $end <= $start) {
+            return null;
+        }
+
+        return [
+            'start' => $start,
+            'end'   => $end,
+            'topic' => $this->breakTopicLabel($row->break_type),
+            'time'  => $this->fmtMinutes($start) . '-' . $this->fmtMinutes($end),
+        ];
+    }
+
     private function timetableSlotSortKey(string $slot): int
     {
         [$start] = $this->splitSessionTime($slot);
