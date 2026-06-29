@@ -150,7 +150,7 @@ class LoginController extends Controller
 
         $roles = ($user->user_category === 'S')
             ? ['Student-OT']
-            : $user->roles()->pluck('user_role_name')->toArray();
+            : $user->roles()->pluck('name')->toArray();
 
         Session::put('user_roles', $roles);
 

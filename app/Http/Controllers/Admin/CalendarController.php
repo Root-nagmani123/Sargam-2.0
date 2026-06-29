@@ -2544,79 +2544,16 @@ class CalendarController extends Controller
     {
         try {
             $student_pk = auth()->user()->user_id;
-            $pendingQuery = DB::table('timetable as t')
-                ->select([
-                    't.pk as timetable_pk',
-                    't.subject_topic',
-                    't.Ratting_checkbox',
-                    't.feedback_checkbox',
-                    't.Remark_checkbox',
-                    't.faculty_details',
-                    't.faculty_master as faculty_json', // Keep original JSON
-                    'f.pk as faculty_pk', // Get individual faculty PK
-                    'f.full_name as faculty_name',
-                    'c.course_name',
-                    'v.venue_name',
-                    DB::raw('t.START_DATE as from_date'),
-                    't.class_session',
-                    // Add field to extract session end time for sorting (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
-                    DB::raw("
-                    CASE
-                        WHEN t.class_session LIKE '% - %' THEN
-                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
-                        WHEN t.class_session LIKE '% to %' THEN
-                            STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
-                        ELSE NULL
-                    END as session_end_time
-                ")
-                ])
-                ->leftJoin('faculty_master as f', function ($join) {
-                    $join->whereRaw("
-                    (
-                        JSON_VALID(t.faculty_master)
-                        AND JSON_CONTAINS(
-                            t.faculty_master,
-                            JSON_QUOTE(CAST(f.pk AS CHAR))
-                        )
-                    )
-                    OR
-                    (
-                        NOT JSON_VALID(t.faculty_master)
-                        AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR)
-                    )
-                ");
-                })
-                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
-                ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
-                ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
-                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
-                        ->where('smcm.student_master_pk', '=', $student_pk)
-                        ->where('smcm.active_inactive', '=', 1);
-                })
-                ->where('t.feedback_checkbox', 1)
-                ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
-                    $join->on('csa.timetable_pk', '=', 't.pk')
-                        ->where('csa.Student_master_pk', '=', $student_pk)
-                        ->where('csa.status', '1');
-                })
-                ->whereNotExists(function ($sub) use ($student_pk) {
-                    $sub->select(DB::raw(1))
-                        ->from('topic_feedback as tf')
-                        ->whereColumn('tf.timetable_pk', 't.pk')
-                        ->where('tf.student_master_pk', $student_pk)
-                        ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
-                        ->where('tf.is_submitted', 1);
-                })
-                // Only show Teaching-role faculty — strict filter.
-                ->whereRaw("
-                    JSON_VALID(t.faculty_details) = 1
-                    AND JSON_CONTAINS(
-                        t.faculty_details,
-                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
-                    ) = 1
-                ")
-                // Show only sessions whose end time has passed (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
-                ->whereRaw("
+            $sessionEndRaw = "
+                CASE
+                    WHEN t.class_session LIKE '% - %' THEN
+                        STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' - ', -1)), '%h:%i %p')
+                    WHEN t.class_session LIKE '% to %' THEN
+                        STR_TO_DATE(TRIM(SUBSTRING_INDEX(t.class_session, ' to ', -1)), '%H:%i')
+                    ELSE NULL
+                END as session_end_time
+            ";
+            $sessionEndTimeoutRaw = "
                 TIMESTAMP(
                     t.END_DATE,
                     CASE
@@ -2627,27 +2564,108 @@ class CalendarController extends Controller
                         ELSE NULL
                     END
                 ) <= NOW()
-            ");
+            ";
+            $commonSelect = [
+                't.pk as timetable_pk',
+                't.subject_topic',
+                't.Ratting_checkbox',
+                't.feedback_checkbox',
+                't.Remark_checkbox',
+                't.faculty_details',
+                't.faculty_master as faculty_json',
+                'f.pk as faculty_pk',
+                'f.full_name as faculty_name',
+                'c.course_name',
+                DB::raw('t.START_DATE as from_date'),
+                't.class_session',
+                DB::raw($sessionEndRaw),
+            ];
+
+            // OLD LOGIC: timetables from old backend — faculty in faculty_master field, no faculty_details
+            $oldPendingQuery = DB::table('timetable as t')
+                ->select(array_merge($commonSelect, [DB::raw("IFNULL(v.venue_name, '') as venue_name")]))
+                ->join('faculty_master as f', function ($join) {
+                    $join->whereRaw("
+                        (JSON_VALID(t.faculty_master) AND JSON_CONTAINS(t.faculty_master, JSON_QUOTE(CAST(f.pk AS CHAR))))
+                        OR (NOT JSON_VALID(t.faculty_master) AND CAST(t.faculty_master AS CHAR) = CAST(f.pk AS CHAR))
+                    ");
+                })
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->leftJoin('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
+                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                        ->where('smcm.student_master_pk', '=', $student_pk)
+                        ->where('smcm.active_inactive', '=', 1);
+                })
+                ->where('t.feedback_checkbox', 1)
+                ->where(function ($q) {
+                    $q->whereNull('t.faculty_details')
+                      ->orWhere('t.faculty_details', '')
+                      ->orWhereRaw('NOT JSON_VALID(t.faculty_details)');
+                })
+                ->whereNotExists(function ($sub) use ($student_pk) {
+                    $sub->select(DB::raw(1))
+                        ->from('topic_feedback as tf')
+                        ->whereColumn('tf.timetable_pk', 't.pk')
+                        ->where('tf.student_master_pk', $student_pk)
+                        ->whereColumn('tf.faculty_pk', 'f.pk')
+                        ->where('tf.is_submitted', 1);
+                })
+                ->whereRaw($sessionEndTimeoutRaw);
+
+            // NEW LOGIC: timetables from new backend — faculty in faculty_details JSON with role=Teaching
+            $newPendingQuery = DB::table('timetable as t')
+                ->select(array_merge($commonSelect, ['v.venue_name']))
+                ->join('faculty_master as f', function ($join) {
+                    $join->whereRaw("
+                        JSON_VALID(t.faculty_details) = 1
+                        AND JSON_CONTAINS(t.faculty_details, JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')) = 1
+                    ");
+                })
+                ->join('course_master as c', 't.course_master_pk', '=', 'c.pk')
+                ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+                ->join('student_master_course__map as smcm', function ($join) use ($student_pk) {
+                    $join->on('smcm.course_master_pk', '=', 't.course_master_pk')
+                        ->where('smcm.student_master_pk', '=', $student_pk)
+                        ->where('smcm.active_inactive', '=', 1);
+                })
+                ->where('t.feedback_checkbox', 1)
+                ->whereRaw('JSON_VALID(t.faculty_details) = 1')
+                ->join('course_student_attendance as csa', function ($join) use ($student_pk) {
+                    $join->on('csa.timetable_pk', '=', 't.pk')
+                        ->where('csa.Student_master_pk', '=', $student_pk)
+                        ->where('csa.status', '1');
+                })
+                ->whereNotExists(function ($sub) use ($student_pk) {
+                    $sub->select(DB::raw(1))
+                        ->from('topic_feedback as tf')
+                        ->whereColumn('tf.timetable_pk', 't.pk')
+                        ->where('tf.student_master_pk', $student_pk)
+                        ->whereColumn('tf.faculty_pk', 'f.pk')
+                        ->where('tf.is_submitted', 1);
+                })
+                ->whereRaw($sessionEndTimeoutRaw);
 
             if (hasRole('Student-OT')) {
-                $pendingQuery
+                $newPendingQuery
                     ->join('course_group_timetable_mapping as cgtm', 'cgtm.timetable_pk', '=', 't.pk')
-                    ->join('student_course_group_map as scgm', 'scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
-                    ->where('scgm.student_master_pk', $student_pk);
+                    ->join('student_course_group_map as scgm', function ($join) use ($student_pk) {
+                        $join->on('scgm.group_type_master_course_master_map_pk', '=', 'cgtm.group_pk')
+                             ->where('scgm.student_master_pk', $student_pk);
+                    });
             }
 
-            $pendingData = $pendingQuery
-                ->orderBy('t.START_DATE', 'asc')
-                ->orderBy('session_end_time', 'asc')
-                ->get()
+            $pendingData = $oldPendingQuery->get()
+                ->merge($newPendingQuery->get())
                 ->unique(function ($item) {
                     return $item->timetable_pk . '_' . $item->faculty_pk;
                 })
+                ->sortBy('from_date')
+                ->values()
                 ->map(function ($item) {
                     $item->faculty_feedback_type = $this->resolveFacultyFeedbackType($item->faculty_details, $item->faculty_pk);
                     return $item;
-                })
-                ->values();
+                });
 
             $submittedData = DB::table('topic_feedback as tf')
                 ->select([
