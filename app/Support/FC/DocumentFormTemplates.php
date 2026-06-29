@@ -20,7 +20,13 @@ namespace App\Support\FC;
  * Field shape:  ['name'=>'officer_name','label'=>'Name / नाम','type'=>'text',
  *                'required'=>true,'width'=>'col-md-6','options'=>[...]]
  *   type: text | textarea | date | number | email | select
- * Table shape:  ['key'=>'nominees','heading'=>'...','columns'=>[ <field>, ... ]]
+ * Table shape:  ['key'=>'nominees','heading'=>'...','intro'=>'...','columns'=>[ <field>, ... ]]
+ *
+ * Optional presentational keys (rendered by both blades, no data impact):
+ *   template['intro']   — preamble paragraph under the title
+ *   template['notes']   — array of footnote strings rendered at the bottom
+ *   section['intro']    — text under a section heading
+ *   table['intro']      — text under a table heading
  */
 class DocumentFormTemplates
 {
@@ -198,6 +204,17 @@ class DocumentFormTemplates
         ];
     }
 
+    /** Date-only footer (several official forms have a "Dated" line but no "Place"). */
+    private static function dateOnlySection(): array
+    {
+        return [
+            'heading' => 'Date / दिनांक',
+            'fields'  => [
+                ['name' => 'declaration_date', 'label' => 'Date / दिनांक', 'type' => 'date', 'width' => 'col-md-4'],
+            ],
+        ];
+    }
+
     private static function officerSection(): array
     {
         return [
@@ -252,34 +269,41 @@ class DocumentFormTemplates
     {
         return [
             'key'      => 'group_insurance',
-            'title'    => 'Nomination – Central Govt. Employees Group Insurance Scheme (Form 7 / Form 8)',
-            'subtitle' => 'CGEGIS, 1980',
+            'title'    => 'Nomination — Central Government Employees Group Insurance Scheme, 1980',
+            'subtitle' => 'Form 7 (member without family) / Form 8 (member with family) — See Para 19.7',
+            'intro'    => 'Use <strong>Form 7</strong> if you have <strong>no family</strong> (nomination may be in favour of any person). Use <strong>Form 8</strong> if you <strong>have a family</strong> (nomination must be in favour of one or more members of the family). Indicate which applies below.',
             'sections' => [
                 [
-                    'heading' => 'Employee Details / कर्मचारी विवरण',
+                    'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
                     'fields'  => [
                         ['name' => 'officer_name', 'label' => 'Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
                         ['name' => 'designation', 'label' => 'Designation / पद नाम', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'date_of_appointment', 'label' => 'Date of Appointment / नियुक्ति तिथि', 'type' => 'date', 'width' => 'col-md-6'],
+                        ['name' => 'form_variant', 'label' => 'Applicable Form', 'type' => 'select', 'options' => ['Form 7 — Member without family', 'Form 8 — Member with family'], 'required' => true, 'width' => 'col-md-6'],
                     ],
                 ],
             ],
             'tables' => [
                 [
                     'key'     => 'nominees',
-                    'heading' => 'Nominees / नामिती',
+                    'heading' => 'Nomination / नामांकन',
                     'columns' => [
-                        ['name' => 'name', 'label' => 'Name & Address of Nominee', 'type' => 'text'],
-                        ['name' => 'relationship', 'label' => 'Relationship', 'type' => 'text'],
-                        ['name' => 'dob', 'label' => 'Date of Birth (if minor)', 'type' => 'date'],
-                        ['name' => 'share', 'label' => 'Share %', 'type' => 'text'],
-                        ['name' => 'contingency', 'label' => 'Contingency on which share lapses', 'type' => 'text'],
+                        ['name' => 'name', 'label' => 'Name(s) and address(es) of nominee / nominees', 'type' => 'text'],
+                        ['name' => 'relationship', 'label' => 'Relationship with Government servant', 'type' => 'text'],
+                        ['name' => 'age', 'label' => 'Age', 'type' => 'text'],
+                        ['name' => 'share', 'label' => 'Share of amount to be paid to each', 'type' => 'text'],
+                        ['name' => 'contingency', 'label' => 'Contingencies on the happening of which the nomination shall become invalid', 'type' => 'text'],
+                        ['name' => 'successor', 'label' => 'Name, address &amp; relationship of the person to whom the right shall pass if the nominee predeceases the Government servant', 'type' => 'text'],
                     ],
                 ],
             ],
-            'declaration' => 'I hereby nominate the person(s) mentioned above to receive the amount payable under the Central Government Employees Group Insurance Scheme in the event of my death.',
+            'declaration' => 'I hereby nominate the person(s) mentioned above to receive the amount of the Savings Fund / Insurance under the Central Government Employees Group Insurance Scheme, 1980 in the event of my death, and confer on him/her the right to receive the said amount.',
+            'notes' => [
+                'Draw a line across the blank space below the last entry to prevent the insertion of any name after it.',
+                'Where the amount of share payable to each nominee is not specified, the amount shall be distributed among the nominees in equal shares.',
+                'A member without a family shall make nomination in Form 7; a member with a family shall make nomination in Form 8 in favour of one or more members of the family only.',
+            ],
             'sections_footer' => [self::placeDateSection()],
-            'signatures' => ['Signature of the Employee', 'Signature of Two Witnesses'],
+            'signatures' => ['Signature of the Government Servant', 'Signature of Witness 1', 'Signature of Witness 2'],
         ];
     }
 
@@ -287,17 +311,34 @@ class DocumentFormTemplates
     {
         return [
             'key'      => 'nps_subscription',
-            'title'    => 'NPS Subscriber Registration Form',
+            'title'    => 'NPS Subscriber Registration Form (CSRF-1)',
             'subtitle' => 'National Pension System',
             'sections' => [
                 [
+                    'heading' => 'Subscriber Category / अंशदाता श्रेणी',
+                    'fields'  => [
+                        ['name' => 'category', 'label' => 'Subscriber Category', 'type' => 'select', 'options' => ['Central Government', 'State Government', 'All Citizen Model', 'Corporate'], 'width' => 'col-md-6'],
+                    ],
+                ],
+                [
                     'heading' => 'Personal Details / व्यक्तिगत विवरण',
                     'fields'  => [
-                        ['name' => 'officer_name', 'label' => 'Full Name / पूरा नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
-                        ['name' => 'father_spouse_name', 'label' => "Father's / Spouse's Name", 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'first_name', 'label' => 'First Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-4'],
+                        ['name' => 'middle_name', 'label' => 'Middle Name', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'last_name', 'label' => 'Last Name / उपनाम', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'father_name', 'label' => "Father's Name", 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'mother_name', 'label' => "Mother's Name", 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'date_of_birth', 'label' => 'Date of Birth / जन्म तिथि', 'type' => 'date', 'width' => 'col-md-4'],
-                        ['name' => 'gender', 'label' => 'Gender / लिंग', 'type' => 'select', 'options' => ['Male', 'Female', 'Other'], 'width' => 'col-md-4'],
+                        ['name' => 'place_of_birth', 'label' => 'Place of Birth (City &amp; Country)', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'gender', 'label' => 'Gender / लिंग', 'type' => 'select', 'options' => ['Male', 'Female', 'Transgender'], 'width' => 'col-md-4'],
+                        ['name' => 'nationality', 'label' => 'Nationality', 'type' => 'text', 'width' => 'col-md-4'],
                         ['name' => 'marital_status', 'label' => 'Marital Status', 'type' => 'select', 'options' => ['Single', 'Married'], 'width' => 'col-md-4'],
+                        ['name' => 'spouse_name', 'label' => "Spouse's Name (if married)", 'type' => 'text', 'width' => 'col-md-4'],
+                    ],
+                ],
+                [
+                    'heading' => 'Identity &amp; Contact / पहचान एवं संपर्क',
+                    'fields'  => [
                         ['name' => 'pan', 'label' => 'PAN', 'type' => 'text', 'width' => 'col-md-4'],
                         ['name' => 'aadhaar', 'label' => 'Aadhaar No.', 'type' => 'text', 'width' => 'col-md-4'],
                         ['name' => 'mobile', 'label' => 'Mobile No.', 'type' => 'text', 'width' => 'col-md-4'],
@@ -305,39 +346,65 @@ class DocumentFormTemplates
                     ],
                 ],
                 [
-                    'heading' => 'Address / पता',
+                    'heading' => 'Correspondence Address / पत्राचार का पता',
                     'fields'  => [
-                        ['name' => 'address', 'label' => 'Address', 'type' => 'textarea', 'width' => 'col-md-12'],
-                        ['name' => 'city', 'label' => 'City', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'state', 'label' => 'State', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'pincode', 'label' => 'Pincode', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'corr_address', 'label' => 'Address', 'type' => 'textarea', 'width' => 'col-md-12'],
+                        ['name' => 'corr_city', 'label' => 'City', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'corr_state', 'label' => 'State', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'corr_pincode', 'label' => 'Pincode', 'type' => 'text', 'width' => 'col-md-4'],
+                    ],
+                ],
+                [
+                    'heading' => 'Permanent Address / स्थायी पता',
+                    'fields'  => [
+                        ['name' => 'perm_address', 'label' => 'Address', 'type' => 'textarea', 'width' => 'col-md-12'],
+                        ['name' => 'perm_city', 'label' => 'City', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'perm_state', 'label' => 'State', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'perm_pincode', 'label' => 'Pincode', 'type' => 'text', 'width' => 'col-md-4'],
                     ],
                 ],
                 [
                     'heading' => 'Bank Details / बैंक विवरण',
                     'fields'  => [
-                        ['name' => 'bank_name', 'label' => 'Bank Name', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'account_number', 'label' => 'Account Number', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'ifsc', 'label' => 'IFSC Code', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'account_type', 'label' => 'Account Type', 'type' => 'select', 'options' => ['Savings', 'Current'], 'width' => 'col-md-3'],
+                        ['name' => 'account_number', 'label' => 'Account Number', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'bank_name', 'label' => 'Bank Name', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'branch_name', 'label' => 'Branch', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'branch_address', 'label' => 'Branch Address', 'type' => 'textarea', 'width' => 'col-md-6'],
+                        ['name' => 'micr', 'label' => 'MICR Code', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'ifsc', 'label' => 'IFSC Code', 'type' => 'text', 'width' => 'col-md-3'],
+                    ],
+                ],
+                [
+                    'heading' => 'Scheme Preference / योजना वरीयता',
+                    'fields'  => [
+                        ['name' => 'pension_fund', 'label' => 'Pension Fund Manager (PFM)', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'investment_option', 'label' => 'Investment Option', 'type' => 'select', 'options' => ['Active Choice', 'Auto Choice'], 'width' => 'col-md-3'],
+                        ['name' => 'tier_ii', 'label' => 'Tier II Account?', 'type' => 'select', 'options' => ['No', 'Yes'], 'width' => 'col-md-3'],
+                        ['name' => 'tax_resident_outside', 'label' => 'Tax resident of any country other than India? (FATCA)', 'type' => 'select', 'options' => ['No', 'Yes'], 'width' => 'col-md-6'],
                     ],
                 ],
             ],
             'tables' => [
                 [
                     'key'     => 'nominees',
-                    'heading' => 'Nominee Details / नामिती विवरण',
+                    'heading' => 'Nomination Details / नामांकन विवरण',
                     'columns' => [
                         ['name' => 'name', 'label' => 'Nominee Name', 'type' => 'text'],
                         ['name' => 'relationship', 'label' => 'Relationship', 'type' => 'text'],
-                        ['name' => 'dob', 'label' => 'Date of Birth', 'type' => 'date'],
+                        ['name' => 'age', 'label' => 'Age', 'type' => 'text'],
                         ['name' => 'percentage', 'label' => 'Share %', 'type' => 'text'],
-                        ['name' => 'guardian', 'label' => 'Guardian (if minor)', 'type' => 'text'],
+                        ['name' => 'guardian', 'label' => 'Guardian (if nominee is a minor)', 'type' => 'text'],
                     ],
                 ],
             ],
-            'declaration' => 'I declare that the information furnished above is true to the best of my knowledge and belief.',
+            'declaration' => 'I hereby declare that the information furnished above is true and correct to the best of my knowledge and belief. I undertake to intimate any change in the above information to the CRA / Nodal Office. I have read and understood the terms and conditions of the NPS and agree to be bound by them.',
+            'notes' => [
+                'Up to three nominees may be registered here; for more, use the prescribed annexure.',
+                'If the total share does not add up to 100%, it will be treated as invalid.',
+            ],
             'sections_footer' => [self::placeDateSection()],
-            'signatures' => ['Signature of the Subscriber'],
+            'signatures' => ['Signature / Thumb Impression of the Subscriber'],
         ];
     }
 
@@ -345,41 +412,78 @@ class DocumentFormTemplates
     {
         return [
             'key'      => 'employee_info_sheet',
-            'title'    => 'Employee Information Sheet',
+            'title'    => 'Employee Information Sheet (EIS)',
+            'subtitle' => 'PFMS — Form EIS/B/1',
             'sections' => [
                 [
                     'heading' => 'Personal Details / व्यक्तिगत विवरण',
                     'fields'  => [
-                        ['name' => 'officer_name', 'label' => 'Full Name / पूरा नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
-                        ['name' => 'designation', 'label' => 'Designation / पद', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'date_of_birth', 'label' => 'Date of Birth', 'type' => 'date', 'width' => 'col-md-4'],
-                        ['name' => 'date_of_joining', 'label' => 'Date of Joining', 'type' => 'date', 'width' => 'col-md-4'],
-                        ['name' => 'blood_group', 'label' => 'Blood Group', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'pan', 'label' => 'PAN', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'aadhaar', 'label' => 'Aadhaar No.', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'marital_status', 'label' => 'Marital Status', 'type' => 'select', 'options' => ['Single', 'Married'], 'width' => 'col-md-4'],
+                        ['name' => 'officer_name', 'label' => 'Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'gender', 'label' => 'Gender', 'type' => 'select', 'options' => ['Male', 'Female', 'Transgender'], 'width' => 'col-md-3'],
+                        ['name' => 'date_of_birth', 'label' => 'Date of Birth', 'type' => 'date', 'width' => 'col-md-3'],
+                        ['name' => 'employee_type', 'label' => 'Type', 'type' => 'select', 'options' => ['Pensionable', 'NPS'], 'width' => 'col-md-3'],
+                        ['name' => 'pan', 'label' => 'PAN', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'aadhaar', 'label' => 'Aadhaar No.', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'employee_code', 'label' => 'Employee Code', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'date_of_entry_govt', 'label' => 'Date of Entry in Govt. Service', 'type' => 'date', 'width' => 'col-md-4'],
+                        ['name' => 'date_of_superannuation', 'label' => 'Date of Superannuation', 'type' => 'date', 'width' => 'col-md-4'],
+                        ['name' => 'physically_disabled', 'label' => 'Physically Disabled?', 'type' => 'select', 'options' => ['No', 'Yes'], 'width' => 'col-md-4'],
+                    ],
+                ],
+                [
+                    'heading' => 'Posting Details / तैनाती विवरण',
+                    'fields'  => [
+                        ['name' => 'current_office', 'label' => 'Current Office', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'designation', 'label' => 'Designation', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'group', 'label' => 'Group', 'type' => 'select', 'options' => ['A', 'B', 'C'], 'width' => 'col-md-3'],
+                        ['name' => 'date_of_joining_office', 'label' => 'Date of Joining Office', 'type' => 'date', 'width' => 'col-md-4'],
+                        ['name' => 'date_in_current_post', 'label' => 'Date in Current Post', 'type' => 'date', 'width' => 'col-md-4'],
+                        ['name' => 'city_class', 'label' => 'City Class (X/Y/Z)', 'type' => 'select', 'options' => ['X', 'Y', 'Z'], 'width' => 'col-md-4'],
+                    ],
+                ],
+                [
+                    'heading' => 'Pay Details / वेतन विवरण',
+                    'fields'  => [
+                        ['name' => 'pay_commission', 'label' => 'Pay Commission', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'pay_level', 'label' => 'Pay Level', 'type' => 'text', 'width' => 'col-md-2'],
+                        ['name' => 'basic_pay', 'label' => 'Basic Pay (₹)', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'pay_wef', 'label' => 'Pay w.e.f. Date', 'type' => 'date', 'width' => 'col-md-2'],
+                        ['name' => 'next_increment_date', 'label' => 'Next Increment Date', 'type' => 'date', 'width' => 'col-md-2'],
+                    ],
+                ],
+                [
+                    'heading' => 'PF / NPS Details / पीएफ-एनपीएस विवरण',
+                    'fields'  => [
+                        ['name' => 'pf_type', 'label' => 'PF Type', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'pf_agency', 'label' => 'PF Agency', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'pf_series', 'label' => 'PF Series', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'pran_no', 'label' => 'PF / PRAN No.', 'type' => 'text', 'width' => 'col-md-3'],
+                    ],
+                ],
+                [
+                    'heading' => 'CGEGIS / CGHS / Category',
+                    'fields'  => [
+                        ['name' => 'cgegis', 'label' => 'CGEGIS Applicable?', 'type' => 'select', 'options' => ['Yes', 'No'], 'width' => 'col-md-2'],
+                        ['name' => 'cghs', 'label' => 'CGHS Applicable?', 'type' => 'select', 'options' => ['Yes', 'No'], 'width' => 'col-md-2'],
+                        ['name' => 'cghs_card_no', 'label' => 'CGHS Card No.', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'category', 'label' => 'Category', 'type' => 'select', 'options' => ['General', 'OBC', 'SC', 'ST'], 'width' => 'col-md-2'],
+                        ['name' => 'ex_serviceman', 'label' => 'Ex-Serviceman?', 'type' => 'select', 'options' => ['No', 'Yes'], 'width' => 'col-md-3'],
+                    ],
+                ],
+                [
+                    'heading' => 'Bank &amp; Contact / बैंक एवं संपर्क',
+                    'fields'  => [
+                        ['name' => 'ifsc', 'label' => 'IFSC Code', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'bank_name', 'label' => 'Bank Name', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'branch', 'label' => 'Branch', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'account_number', 'label' => 'Savings A/c No.', 'type' => 'text', 'width' => 'col-md-3'],
                         ['name' => 'mobile', 'label' => 'Mobile No.', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'email', 'label' => 'Email', 'type' => 'email', 'width' => 'col-md-6'],
                     ],
                 ],
-                [
-                    'heading' => 'Address / पता',
-                    'fields'  => [
-                        ['name' => 'present_address', 'label' => 'Present Address', 'type' => 'textarea', 'width' => 'col-md-6'],
-                        ['name' => 'permanent_address', 'label' => 'Permanent Address', 'type' => 'textarea', 'width' => 'col-md-6'],
-                    ],
-                ],
-                [
-                    'heading' => 'Emergency Contact / आपातकालीन संपर्क',
-                    'fields'  => [
-                        ['name' => 'emergency_name', 'label' => 'Contact Name', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'emergency_relation', 'label' => 'Relationship', 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'emergency_phone', 'label' => 'Contact Phone', 'type' => 'text', 'width' => 'col-md-4'],
-                    ],
-                ],
             ],
             'sections_footer' => [self::placeDateSection()],
-            'signatures' => ['Signature of the Employee'],
+            'signatures' => ['Signature of the Officer / Official'],
         ];
     }
 
@@ -387,22 +491,37 @@ class DocumentFormTemplates
     {
         return [
             'key'      => 'debts_liabilities',
-            'title'    => 'Form No. 6-C: Statement of Debts and Other Liabilities',
-            'sections' => [self::officerSection()],
-            'tables'   => [
+            'title'    => 'Statement of Debts and Other Liabilities on First Appointment',
+            'subtitle' => 'Form No. 6-C',
+            'sections' => [
                 [
-                    'key'     => 'liabilities',
-                    'heading' => 'Debts & Liabilities / ऋण एवं देयताएँ',
-                    'columns' => [
-                        ['name' => 'creditor', 'label' => 'Name & Address of Creditor', 'type' => 'text'],
-                        ['name' => 'amount', 'label' => 'Amount (₹)', 'type' => 'text'],
-                        ['name' => 'date_incurred', 'label' => 'Date Incurred', 'type' => 'date'],
-                        ['name' => 'details', 'label' => 'Details / Reasons', 'type' => 'text'],
+                    'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
+                    'fields'  => [
+                        ['name' => 'officer_name', 'label' => 'Name of the Officer (in full) and Service to which he/she belongs', 'type' => 'text', 'required' => true, 'width' => 'col-md-8'],
+                        ['name' => 'present_post', 'label' => 'Present Post held', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'as_on_date', 'label' => 'Statement as on Date', 'type' => 'date', 'width' => 'col-md-4'],
                     ],
                 ],
             ],
+            'tables' => [
+                [
+                    'key'     => 'liabilities',
+                    'heading' => 'Debts &amp; Other Liabilities / ऋण एवं अन्य देयताएँ',
+                    'columns' => [
+                        ['name' => 'amount', 'label' => 'Amount', 'type' => 'text'],
+                        ['name' => 'creditor', 'label' => 'Name and address of Creditor', 'type' => 'text'],
+                        ['name' => 'date_incurred', 'label' => 'Date of incurring Liability', 'type' => 'date'],
+                        ['name' => 'details', 'label' => 'Details of Transaction', 'type' => 'text'],
+                        ['name' => 'remarks', 'label' => 'Remarks', 'type' => 'text'],
+                    ],
+                ],
+            ],
+            'notes' => [
+                'Indicate the source from which the loan was raised and the purpose for which it was utilised.',
+                'In the Remarks column, indicate the sanction/permission obtained from, or the report made to, the competent authority, if any.',
+            ],
             'declaration' => 'I hereby declare that the above statement of my debts and other liabilities is true and complete to the best of my knowledge and belief.',
-            'sections_footer' => [self::placeDateSection()],
+            'sections_footer' => [self::dateOnlySection()],
             'signatures' => ['Signature of the Government Servant'],
         ];
     }
@@ -411,26 +530,35 @@ class DocumentFormTemplates
     {
         return [
             'key'      => 'immovable_property',
-            'title'    => 'Form No. 6-A: Statement of Immovable Property',
-            'sections' => [self::officerSection()],
-            'tables'   => [
+            'title'    => 'Statement of Immovable Property on First Appointment',
+            'subtitle' => 'Form No. 6-A (Form 1 — see Rule 16 AIS (Conduct) Rules / Rule 18 CCS (Conduct) Rules)',
+            'sections' => [
+                [
+                    'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
+                    'fields'  => [
+                        ['name' => 'officer_name', 'label' => 'Name of the Officer (in full) and Service to which he/she belongs', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'present_post', 'label' => 'Present Post held', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'cadre', 'label' => 'Cadre of the State on which borne', 'type' => 'text', 'width' => 'col-md-3'],
+                    ],
+                ],
+            ],
+            'tables' => [
                 [
                     'key'     => 'properties',
                     'heading' => 'Immovable Property / अचल संपत्ति',
                     'columns' => [
-                        ['name' => 'description', 'label' => 'Description & Location', 'type' => 'text'],
-                        ['name' => 'area', 'label' => 'Area / Extent', 'type' => 'text'],
-                        ['name' => 'how_acquired', 'label' => 'How Acquired', 'type' => 'select', 'options' => ['Purchase', 'Lease', 'Mortgage', 'Inheritance', 'Gift', 'Other']],
-                        ['name' => 'date_acquired', 'label' => 'Date of Acquisition', 'type' => 'date'],
-                        ['name' => 'value', 'label' => 'Value (₹)', 'type' => 'text'],
-                        ['name' => 'in_whose_name', 'label' => 'In Whose Name', 'type' => 'text'],
-                        ['name' => 'annual_income', 'label' => 'Annual Income (₹)', 'type' => 'text'],
+                        ['name' => 'location', 'label' => 'Name of District, Sub-Division, Taluk and Village in which property is situated', 'type' => 'text'],
+                        ['name' => 'property_details', 'label' => 'Name and details of Property (Housing/other building and Land)', 'type' => 'text'],
+                        ['name' => 'present_value', 'label' => 'Present Value', 'type' => 'text'],
+                        ['name' => 'in_whose_name', 'label' => 'If not in own name, in whose name held and his/her relationship to the officer', 'type' => 'text'],
+                        ['name' => 'how_acquired', 'label' => 'How acquired (purchase/lease/mortgage/inheritance/gift, etc.) with date of acquisition and name &amp; details of persons from whom acquired', 'type' => 'text'],
+                        ['name' => 'annual_income', 'label' => 'Annual Income from the Property', 'type' => 'text'],
                         ['name' => 'remarks', 'label' => 'Remarks', 'type' => 'text'],
                     ],
                 ],
             ],
             'declaration' => 'I hereby declare that the above statement of immovable property is true and complete to the best of my knowledge and belief.',
-            'sections_footer' => [self::placeDateSection()],
+            'sections_footer' => [self::dateOnlySection()],
             'signatures' => ['Signature of the Government Servant'],
         ];
     }
@@ -439,56 +567,81 @@ class DocumentFormTemplates
     {
         return [
             'key'      => 'movable_property',
-            'title'    => 'Form No. 6-B: Statement of Movable Property',
-            'sections' => [self::officerSection()],
-            'tables'   => [
+            'title'    => 'Statement of Movable Property on First Appointment',
+            'subtitle' => 'Form No. 6-B',
+            'sections' => [
+                [
+                    'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
+                    'fields'  => [
+                        ['name' => 'officer_name', 'label' => 'Name of the Officer (in full) and Service to which he/she belongs', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'present_post', 'label' => 'Present Post held', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'present_pay', 'label' => 'Present Pay (₹)', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'year', 'label' => 'Year', 'type' => 'text', 'width' => 'col-md-3'],
+                    ],
+                ],
+            ],
+            'tables' => [
                 [
                     'key'     => 'movables',
                     'heading' => 'Movable Property / चल संपत्ति',
                     'columns' => [
-                        ['name' => 'description', 'label' => 'Description of Item', 'type' => 'text'],
-                        ['name' => 'how_acquired', 'label' => 'How Acquired', 'type' => 'select', 'options' => ['Purchase', 'Gift', 'Inheritance', 'Other']],
-                        ['name' => 'date_acquired', 'label' => 'Date of Acquisition', 'type' => 'date'],
-                        ['name' => 'value', 'label' => 'Value (₹)', 'type' => 'text'],
+                        ['name' => 'description', 'label' => 'Name and details of Movable Property', 'type' => 'text'],
+                        ['name' => 'present_value', 'label' => 'Present Value', 'type' => 'text'],
+                        ['name' => 'in_whose_name', 'label' => 'If not in own name, in whose name held and his/her relationship to the Government Servant', 'type' => 'text'],
+                        ['name' => 'how_acquired', 'label' => 'How acquired (purchase/inheritance/gift, etc.) with date of acquisition and name &amp; details of persons from whom acquired', 'type' => 'text'],
                         ['name' => 'remarks', 'label' => 'Remarks', 'type' => 'text'],
                     ],
                 ],
             ],
             'declaration' => 'I hereby declare that the above statement of movable property is true and complete to the best of my knowledge and belief.',
-            'sections_footer' => [self::placeDateSection()],
+            'sections_footer' => [self::dateOnlySection()],
             'signatures' => ['Signature of the Government Servant'],
         ];
     }
 
     private static function closeRelation(): array
     {
+        $columns = [
+            ['name' => 'relation', 'label' => 'Relation', 'type' => 'text'],
+            ['name' => 'name', 'label' => 'Name', 'type' => 'text'],
+            ['name' => 'nationality', 'label' => 'Nationality', 'type' => 'text'],
+            ['name' => 'present_address', 'label' => 'Present Address', 'type' => 'text'],
+            ['name' => 'place_of_birth', 'label' => 'Place of Birth', 'type' => 'text'],
+            ['name' => 'occupation', 'label' => 'Occupation', 'type' => 'text'],
+        ];
+
         return [
             'key'      => 'close_relation',
-            'title'    => 'Declaration of Close Relation in Government Service',
+            'title'    => 'Declaration of Close Relations who are Foreign Nationals / Domiciled Abroad',
+            'subtitle' => 'Form to be filled by Government employees on first appointment (MHA O.M. No. F.3/12(S)/64-Ests.(B), dated 12-10-1965)',
+            'intro'    => 'Give particulars of close relations (father, mother, wife/husband, sons, daughters, brothers, sisters) who are (A) nationals of, or domiciled in, other countries, or (B) of non-Indian origin residing in India. If there are no such relations, write &ldquo;NIL&rdquo;.',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
                     'fields'  => [
                         ['name' => 'officer_name', 'label' => 'Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
                         ['name' => 'designation', 'label' => 'Designation / पद नाम', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'has_relative', 'label' => 'Any close relative in Government service?', 'type' => 'select', 'options' => ['No', 'Yes'], 'width' => 'col-md-6'],
                     ],
                 ],
             ],
             'tables' => [
                 [
-                    'key'     => 'relatives',
-                    'heading' => 'Relatives in Government Service / सरकारी सेवा में संबंधी',
-                    'columns' => [
-                        ['name' => 'name', 'label' => 'Name', 'type' => 'text'],
-                        ['name' => 'relationship', 'label' => 'Relationship', 'type' => 'text'],
-                        ['name' => 'designation', 'label' => 'Designation', 'type' => 'text'],
-                        ['name' => 'department', 'label' => 'Department / Office', 'type' => 'text'],
-                    ],
+                    'key'     => 'foreign_nationals',
+                    'heading' => 'A. Close relations who are nationals of, or are domiciled in, other countries',
+                    'columns' => $columns,
+                ],
+                [
+                    'key'     => 'non_indian_origin',
+                    'heading' => 'B. Close relations residing in India who are of non-Indian origin',
+                    'columns' => $columns,
                 ],
             ],
-            'declaration' => 'I hereby declare that the particulars given above regarding my close relations in Government service are true and complete to the best of my knowledge.',
-            'sections_footer' => [self::placeDateSection()],
+            'declaration' => 'I certify that the foregoing information is correct and complete to the best of my knowledge and belief.',
+            'notes' => [
+                'Suppression of any factual information which the Government servant is required to convey would be regarded as a serious matter and would expose the official concerned to serious consequences.',
+                'Any subsequent change in the above particulars should be reported to the Head of Office.',
+            ],
+            'sections_footer' => [self::dateOnlySection()],
             'signatures' => ['Signature of the Government Servant'],
         ];
     }
@@ -498,21 +651,22 @@ class DocumentFormTemplates
         return [
             'key'      => 'dowry_declaration',
             'title'    => 'Dowry Declaration',
-            'subtitle' => 'Under the Dowry Prohibition Act, 1961',
+            'subtitle' => 'Under the Dowry Prohibition Act, 1961 (Rule 13-A, CCS (Conduct) Rules, 1964)',
             'sections' => [
                 [
                     'heading' => 'Declarant Details / घोषणाकर्ता विवरण',
                     'fields'  => [
-                        ['name' => 'officer_name', 'label' => 'Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
-                        ['name' => 'designation', 'label' => 'Designation / पद नाम', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'spouse_name', 'label' => "Spouse's Name (if married)", 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'date_of_marriage', 'label' => 'Date of Marriage (if applicable)', 'type' => 'date', 'width' => 'col-md-6'],
+                        ['name' => 'officer_name', 'label' => 'Name of Officer (in Block Letters) / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'service', 'label' => 'Name of Service / सेवा का नाम', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'marital_choice', 'label' => 'Marital Status', 'type' => 'select', 'options' => ['Unmarried', 'Married'], 'width' => 'col-md-4'],
+                        ['name' => 'parent_guardian_name', 'label' => 'Name of Parent / Guardian', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'parent_guardian_address', 'label' => 'Address of Parent / Guardian', 'type' => 'textarea', 'width' => 'col-md-4'],
                     ],
                 ],
             ],
-            'declaration' => 'I hereby solemnly declare that I have neither demanded nor taken/given any dowry, directly or indirectly, in connection with my marriage, in accordance with the provisions of the Dowry Prohibition Act, 1961.',
+            'declaration' => 'I hereby solemnly declare that I have neither demanded nor taken/given, nor shall I demand or take/give, any dowry, directly or indirectly, in connection with my marriage, in accordance with the provisions of the Dowry Prohibition Act, 1961.',
             'sections_footer' => [self::placeDateSection()],
-            'signatures' => ['Signature of the Declarant'],
+            'signatures' => ['Signature (Name of Officer in Block Letters)'],
         ];
     }
 
@@ -521,20 +675,27 @@ class DocumentFormTemplates
         return [
             'key'      => 'home_town',
             'title'    => 'Home Town Declaration',
+            'subtitle' => 'For the purpose of Leave Travel Concession (MHA Memo No. 43/715/57-Ests.(A), dated 24-06-1958)',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
                     'fields'  => [
                         ['name' => 'officer_name', 'label' => 'Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
-                        ['name' => 'designation', 'label' => 'Designation / पद नाम', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'home_town', 'label' => 'Declared Home Town', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'designation', 'label' => 'Designation (name of service followed by "Probationer")', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'town_village', 'label' => 'Name of Town / Village', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
                         ['name' => 'district', 'label' => 'District', 'type' => 'text', 'width' => 'col-md-3'],
                         ['name' => 'state', 'label' => 'State', 'type' => 'text', 'width' => 'col-md-3'],
-                        ['name' => 'basis', 'label' => 'Basis of Declaration / Criteria', 'type' => 'textarea', 'width' => 'col-md-12'],
+                        ['name' => 'reason', 'label' => 'Reason (mention a, b, c or d whichever is applicable)', 'type' => 'text', 'width' => 'col-md-12'],
                     ],
                 ],
             ],
-            'declaration' => 'I hereby declare that the home town indicated above is correct and is the place which requires my physical presence at intervals for discharging various domestic and social obligations.',
+            'notes' => [
+                '(a) The place is the one which requires your physical presence at intervals for discharging various domestic and social obligations, and you visit it frequently.',
+                '(b) You own residential property in that place, or you are a member of a joint family having such property there.',
+                '(c) Your near relations are permanently residing in that place.',
+                '(d) Prior to your entry into Government service, you had been living there for some years.',
+            ],
+            'declaration' => "I declare that my 'Home Town' for the purpose of Leave Travel Concession is as indicated above and the particulars given are correct.",
             'sections_footer' => [self::placeDateSection()],
             'signatures' => ['Signature of the Government Servant'],
         ];
@@ -544,22 +705,27 @@ class DocumentFormTemplates
     {
         return [
             'key'      => 'marital_status',
-            'title'    => 'Marital Status Declaration',
+            'title'    => 'Declaration Regarding Marital Status',
+            'subtitle' => 'Under Rule 21, CCS (Conduct) Rules, 1964',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
                     'fields'  => [
                         ['name' => 'officer_name', 'label' => 'Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
                         ['name' => 'designation', 'label' => 'Designation / पद नाम', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'marital_status', 'label' => 'Marital Status', 'type' => 'select', 'options' => ['Single', 'Married', 'Divorced', 'Widowed'], 'required' => true, 'width' => 'col-md-4'],
-                        ['name' => 'spouse_name', 'label' => "Spouse's Name (if married)", 'type' => 'text', 'width' => 'col-md-4'],
-                        ['name' => 'date_of_marriage', 'label' => 'Date of Marriage (if applicable)', 'type' => 'date', 'width' => 'col-md-4'],
+                        ['name' => 'status_clause', 'label' => 'Applicable Declaration (select the clause that applies)', 'type' => 'select', 'required' => true, 'width' => 'col-md-12', 'options' => [
+                            'I am unmarried / a widower / a widow',
+                            'I am married and have only one spouse living',
+                            'I am married and have more than one spouse living (exemption applied for)',
+                            'I am about to marry a person who has a spouse living (exemption applied for)',
+                        ]],
+                        ['name' => 'exemption_reasons', 'label' => 'Reasons for seeking exemption (if applicable)', 'type' => 'textarea', 'width' => 'col-md-12'],
                     ],
                 ],
             ],
-            'declaration' => 'I hereby declare that I do not have more than one spouse living and the marital status stated above is true and correct.',
+            'declaration' => 'I solemnly affirm that the above declaration is true, and I understand that if the declaration is found to be false, I shall be liable to be dismissed from service.',
             'sections_footer' => [self::placeDateSection()],
-            'signatures' => ['Signature of the Government Servant'],
+            'signatures' => ['Full Signature of the Government Servant'],
         ];
     }
 
@@ -568,19 +734,23 @@ class DocumentFormTemplates
         return [
             'key'      => 'oath_affirmation',
             'title'    => 'Form of Oath / Affirmation of Allegiance',
+            'intro'    => 'To be made at the Lal Bahadur Shastri National Academy of Administration, Mussoorie.',
             'sections' => [
                 [
                     'heading' => 'Details / विवरण',
                     'fields'  => [
-                        ['name' => 'officer_name', 'label' => 'Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
-                        ['name' => 'designation', 'label' => 'Designation / पद नाम', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'mode', 'label' => 'Mode', 'type' => 'select', 'options' => ['Solemnly affirm', 'Swear'], 'width' => 'col-md-6'],
+                        ['name' => 'officer_name', 'label' => 'Name (in capital letters) / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'service', 'label' => 'Service / सेवा', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'mode', 'label' => 'Mode', 'type' => 'select', 'options' => ['Solemnly affirm', 'Swear'], 'width' => 'col-md-3'],
                     ],
                 ],
             ],
-            'declaration' => 'I do solemnly affirm/swear that I will bear true faith and allegiance to the Constitution of India as by law established, that I will uphold the sovereignty and integrity of India, and that I will faithfully discharge the duties of my office.',
-            'sections_footer' => [self::placeDateSection()],
-            'signatures' => ['Signature of the Officer', 'Signature of Witness'],
+            'declaration' => 'I do solemnly affirm / swear that I will bear true faith and allegiance to the Constitution of India as by law established, that I will uphold the sovereignty and integrity of India, and that I will faithfully discharge the duties of my office. (SO HELP ME GOD)',
+            'notes' => [
+                'A person who, by reason of conscientious objection, declines to swear may instead make a solemn affirmation.',
+            ],
+            'sections_footer' => [self::dateOnlySection()],
+            'signatures' => ['Signature of the Officer'],
         ];
     }
 
@@ -589,41 +759,57 @@ class DocumentFormTemplates
         return [
             'key'      => 'surety_bond_ias',
             'title'    => 'Surety Bond (IAS / IPS / IFoS)',
+            'subtitle' => 'To be executed on Non-Judicial Stamp Paper of ₹100',
+            'intro'    => 'Bond executed by the Probationer together with one Surety, binding the Probationer to serve the Government for the prescribed period and to refund the cost of training / pay and allowances in the event of default, in accordance with the applicable Service Rules.',
             'sections' => [
                 [
-                    'heading' => 'Officer Details / अधिकारी विवरण',
+                    'heading' => 'Probationer / परिवीक्षाधीन अधिकारी',
                     'fields'  => [
-                        ['name' => 'officer_name', 'label' => 'Name of Officer / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'officer_name', 'label' => 'Full Name and Address of the Probationer', 'type' => 'textarea', 'required' => true, 'width' => 'col-md-6'],
                         ['name' => 'service', 'label' => 'Service', 'type' => 'select', 'options' => ['IAS', 'IPS', 'IFoS'], 'width' => 'col-md-3'],
-                        ['name' => 'bond_amount', 'label' => 'Bond Amount (₹)', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'exam_year', 'label' => 'Year of Examination', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'service_rule', 'label' => 'Applicable Service Rule', 'type' => 'text', 'width' => 'col-md-6'],
                     ],
                 ],
-            ],
-            'tables' => [
                 [
-                    'key'     => 'sureties',
-                    'heading' => 'Sureties / प्रतिभू',
-                    'columns' => [
-                        ['name' => 'name', 'label' => 'Name of Surety', 'type' => 'text'],
-                        ['name' => 'address', 'label' => 'Address', 'type' => 'text'],
-                        ['name' => 'occupation', 'label' => 'Occupation', 'type' => 'text'],
-                        ['name' => 'amount', 'label' => 'Amount (₹)', 'type' => 'text'],
+                    'heading' => 'Surety / प्रतिभू',
+                    'fields'  => [
+                        ['name' => 'surety_name', 'label' => 'Full Name of Surety', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'surety_address', 'label' => 'Address of Surety', 'type' => 'textarea', 'width' => 'col-md-6'],
+                        ['name' => 'surety_occupation', 'label' => 'Occupation of Surety', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'surety_eligibility', 'label' => 'Surety is', 'type' => 'select', 'options' => ['In the permanent service of Government', 'Ordinarily resident in India'], 'width' => 'col-md-6'],
+                    ],
+                ],
+                [
+                    'heading' => 'Witness to Probationer / परिवीक्षाधीन के साक्षी',
+                    'fields'  => [
+                        ['name' => 'prob_witness_name', 'label' => 'Name of Witness', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'prob_witness_address', 'label' => 'Address', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'prob_witness_occupation', 'label' => 'Occupation', 'type' => 'text', 'width' => 'col-md-4'],
+                    ],
+                ],
+                [
+                    'heading' => 'Witness to Surety / प्रतिभू के साक्षी',
+                    'fields'  => [
+                        ['name' => 'surety_witness_name', 'label' => 'Name of Witness', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'surety_witness_address', 'label' => 'Address', 'type' => 'text', 'width' => 'col-md-4'],
+                        ['name' => 'surety_witness_occupation', 'label' => 'Occupation', 'type' => 'text', 'width' => 'col-md-4'],
                     ],
                 ],
             ],
-            'declaration' => 'I bind myself and my heirs, executors and administrators to pay the Government the sum stated above in accordance with the terms of this surety bond.',
-            'sections_footer' => [self::placeDateSection()],
-            'signatures' => ['Signature of the Officer', 'Signature of Sureties'],
+            'declaration' => 'NOW THE CONDITION of the above-written bond is that if the Probationer shall faithfully serve the Government for the prescribed period and shall duly fulfil the terms of his/her appointment, then this bond shall be void; otherwise the Probationer and the Surety bind themselves, their heirs, executors and administrators, jointly and severally, to pay to the Government the amounts due under the bond.',
+            'sections_footer' => [self::dateOnlySection()],
+            'signatures' => ['Signature of the Probationer', 'Signature of the Surety'],
         ];
     }
 
     private static function suretyBondOthers(): array
     {
         $tpl = self::suretyBondIas();
-        $tpl['key']   = 'surety_bond_others';
-        $tpl['title'] = 'Surety Bond (Other Services)';
+        $tpl['key']      = 'surety_bond_others';
+        $tpl['title']    = 'Surety Bond (Central Civil Services, Group-A — Other than All India Services)';
         // Service becomes a free-text field for other services.
-        $tpl['sections'][0]['fields'][1] = ['name' => 'service', 'label' => 'Service', 'type' => 'text', 'width' => 'col-md-3'];
+        $tpl['sections'][0]['fields'][1] = ['name' => 'service', 'label' => 'Name of Service', 'type' => 'text', 'width' => 'col-md-3'];
 
         return $tpl;
     }
