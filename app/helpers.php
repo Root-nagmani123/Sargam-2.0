@@ -374,13 +374,15 @@ function isEstateHacAuthority(): bool
 }
 
 /**
- * Training authority: Training Induction Admin, Training MCTP Admin, Training IST, or Estate Admin / Super Admin.
- * DB role names match exactly.
+ * Training authority: Spatie training admin roles plus legacy session role names
+ * (Training-Induction, Training-MCTP, IST) used across sidebar and calendar modules.
  */
 function isTrainingOrEstateAuthority(): bool
 {
     return hasRole('Estate Admin') || hasRole('Super Admin')
-        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST')
+        || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST')
+        || hasRole('Training');
 }
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
