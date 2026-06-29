@@ -6,7 +6,6 @@ use App\Http\Controllers\Controller;
 use App\Models\LeaveApplication;
 use App\Services\FacultyLeaveApprovalService;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 use Yajra\DataTables\Facades\DataTables;
 
 class FacultyLeaveApprovalController extends Controller
@@ -14,13 +13,8 @@ class FacultyLeaveApprovalController extends Controller
     public function __construct(protected FacultyLeaveApprovalService $approvalService)
     {
         $this->middleware(function ($request, $next) {
-            if (! is_faculty_portal_user()) {
-                abort(403, 'Only faculty can access leave approvals.');
-            }
-
-            $facultyPk = $this->approvalService->resolveFacultyPk();
-            if (! $facultyPk || $this->approvalService->getApproverCourseIds($facultyPk) === []) {
-                abort(403, 'You are not assigned as a stationed leave approval authority.');
+            if (! $this->approvalService->canUserAccessLeaveApprovals()) {
+                abort(403, 'You are not authorized to access leave approvals.');
             }
 
             return $next($request);
@@ -46,9 +40,8 @@ class FacultyLeaveApprovalController extends Controller
     public function approve(Request $request, $id)
     {
         $application = $this->findAccessibleLeave((int) $id);
-        $facultyPk = (int) $this->approvalService->resolveFacultyPk();
 
-        if (! $this->approvalService->canFacultyActOnLeave($facultyPk, $application)) {
+        if (! $this->approvalService->canUserActOnLeave($application)) {
             return response()->json([
                 'success' => false,
                 'message' => 'This leave application cannot be approved.',
@@ -57,7 +50,7 @@ class FacultyLeaveApprovalController extends Controller
 
         $application->update([
             'status' => LeaveApplication::STATUS_APPROVED,
-            'approved_by_faculty_pk' => $facultyPk,
+            'approved_by_faculty_pk' => $this->approvalService->resolveFacultyPk(),
             'approved_at' => now(),
             'rejection_remarks' => null,
             'modified_date' => now(),
@@ -76,9 +69,8 @@ class FacultyLeaveApprovalController extends Controller
         ]);
 
         $application = $this->findAccessibleLeave((int) $id);
-        $facultyPk = (int) $this->approvalService->resolveFacultyPk();
 
-        if (! $this->approvalService->canFacultyActOnLeave($facultyPk, $application)) {
+        if (! $this->approvalService->canUserActOnLeave($application)) {
             return response()->json([
                 'success' => false,
                 'message' => 'This leave application cannot be rejected.',
@@ -87,7 +79,7 @@ class FacultyLeaveApprovalController extends Controller
 
         $application->update([
             'status' => LeaveApplication::STATUS_REJECTED,
-            'approved_by_faculty_pk' => $facultyPk,
+            'approved_by_faculty_pk' => $this->approvalService->resolveFacultyPk(),
             'approved_at' => now(),
             'rejection_remarks' => $validated['rejection_remarks'] ?? null,
             'modified_date' => now(),
@@ -101,11 +93,9 @@ class FacultyLeaveApprovalController extends Controller
 
     protected function datatable(Request $request)
     {
-        $facultyPk = (int) $this->approvalService->resolveFacultyPk();
-        $coursePks = $this->approvalService->getApproverCourseIds($facultyPk);
+        $coursePks = $this->approvalService->getAccessibleCourseIds();
 
         $query = LeaveApplication::with(['student', 'nature'])
-            ->whereIn('course_master_pk', $coursePks ?: [-1])
             ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
             ->whereIn('status', [
                 LeaveApplication::STATUS_PENDING,
@@ -113,6 +103,10 @@ class FacultyLeaveApprovalController extends Controller
                 LeaveApplication::STATUS_REJECTED,
             ])
             ->orderByDesc('pk');
+
+        if ($coursePks !== null) {
+            $query->whereIn('course_master_pk', $coursePks ?: [-1]);
+        }
 
         if (! $request->has('status')) {
             // Default landing (no status param sent at all) shows pending only.
@@ -131,13 +125,13 @@ class FacultyLeaveApprovalController extends Controller
             ->addColumn('to_date_display', fn ($row) => $row->to_date?->format('d/m/Y') ?? '-')
             ->addColumn('total_days_display', fn ($row) => number_format((float) $row->total_days, 0))
             ->addColumn('reason_text', fn ($row) => e(\Illuminate\Support\Str::limit($row->reason ?? '-', 80)))
-            ->addColumn('action', function ($row) use ($facultyPk) {
+            ->addColumn('action', function ($row) {
                 $viewUrl = route('faculty.leave-approval.show', $row->pk);
                 $html = '<div class="d-inline-flex align-items-center gap-2 flex-wrap">';
 
                 $html .= '<a href="' . $viewUrl . '" class="btn btn-sm btn-outline-primary">View</a>';
 
-                if ($this->approvalService->canFacultyActOnLeave($facultyPk, $row)) {
+                if ($this->approvalService->canUserActOnLeave($row)) {
                     $html .= '<button type="button" class="btn btn-sm btn-success faculty-leave-approve" data-id="' . $row->pk . '">Approve</button>';
                     $html .= '<button type="button" class="btn btn-sm btn-danger faculty-leave-reject" data-id="' . $row->pk . '">Reject</button>';
                 }
@@ -152,10 +146,9 @@ class FacultyLeaveApprovalController extends Controller
 
     protected function findAccessibleLeave(int $id): LeaveApplication
     {
-        $facultyPk = (int) $this->approvalService->resolveFacultyPk();
         $application = LeaveApplication::with(['student', 'nature', 'attachments', 'course'])->findOrFail($id);
 
-        if (! $this->approvalService->canFacultyAccessLeave($facultyPk, $application)) {
+        if (! $this->approvalService->canUserAccessLeave($application)) {
             abort(403, 'You are not authorized to view this leave application.');
         }
 

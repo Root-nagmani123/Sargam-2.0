@@ -99,6 +99,73 @@ class FacultyLeaveApprovalService
         return preg_replace('/[^a-z0-9]/', '', strtolower($value)) ?? '';
     }
 
+    public function canUserAccessLeaveApprovals(): bool
+    {
+        if (isTrainingOrEstateAuthority()) {
+            return true;
+        }
+
+        if (! is_faculty_portal_user()) {
+            return false;
+        }
+
+        $facultyPk = $this->resolveFacultyPk();
+
+        return $facultyPk && $this->getApproverCourseIds($facultyPk) !== [];
+    }
+
+    /**
+     * @return list<int>|null null = all courses (training authority)
+     */
+    public function getAccessibleCourseIds(): ?array
+    {
+        if (isTrainingOrEstateAuthority()) {
+            return null;
+        }
+
+        $facultyPk = $this->resolveFacultyPk();
+
+        if (! $facultyPk) {
+            return [];
+        }
+
+        return $this->getApproverCourseIds($facultyPk);
+    }
+
+    public function canUserAccessLeave(LeaveApplication $application): bool
+    {
+        if ($application->leave_type !== LeaveApplication::TYPE_STATIONED_LEAVE) {
+            return false;
+        }
+
+        if (isTrainingOrEstateAuthority()) {
+            return true;
+        }
+
+        $facultyPk = $this->resolveFacultyPk();
+
+        return $facultyPk && $this->canFacultyAccessLeave($facultyPk, $application);
+    }
+
+    public function canUserActOnLeave(LeaveApplication $application): bool
+    {
+        if ((int) $application->status !== LeaveApplication::STATUS_PENDING) {
+            return false;
+        }
+
+        if ($application->leave_type !== LeaveApplication::TYPE_STATIONED_LEAVE) {
+            return false;
+        }
+
+        if (isTrainingOrEstateAuthority()) {
+            return true;
+        }
+
+        $facultyPk = $this->resolveFacultyPk();
+
+        return $facultyPk && $this->canFacultyActOnLeave($facultyPk, $application);
+    }
+
     /**
      * Course IDs where the faculty is assigned as a stationed-leave approval authority.
      *
