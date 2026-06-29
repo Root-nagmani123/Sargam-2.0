@@ -74,7 +74,7 @@
                                 @endif
                             </td>
                             <td class="date">{{ $memo->date_ }}</td>
-                            <td>{{ $memo->topic_name }}</td>
+                            <td>{{ $memo->topic_name ?? 'N/A' }}</td>
                             <td>
                                 <div class="d-flex gap-2 flex-nowrap">
                                     <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->notice_id, 'type' => 'notice']) }}"

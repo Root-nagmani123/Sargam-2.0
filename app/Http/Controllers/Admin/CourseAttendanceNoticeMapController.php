@@ -1554,9 +1554,12 @@ public function noticedeleteMessage($id,$type)
       if(hasRole('Student-OT')){
         $notices->where('student_notice_status.student_pk', auth()->user()->user_id);
     }
-    $notices->leftJoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', 'csa.pk');
-    $notices->leftJoin('student_master as sm', 'csa.Student_master_pk', 'sm.pk');
-    $notices->leftJoin('timetable as t', 'student_notice_status.subject_topic', 't.pk');
+    $notices->leftJoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk');
+    // For direct notices course_student_attendance_pk=0, so csa is NULL; fall back to student_notice_status.student_pk
+    $notices->leftJoin('student_master as sm', function ($join) {
+        $join->whereRaw('sm.pk = COALESCE(csa.Student_master_pk, student_notice_status.student_pk)');
+    });
+    $notices->leftJoin('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk');
     $notices->select(
         'student_notice_status.pk as notice_id',
         'student_notice_status.student_pk',
@@ -1836,8 +1839,21 @@ if (!$id || !is_numeric($id)) {
 
     $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
 
-    
-   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details', 'memo_conclusion_master', 'memo_conclusion_master'));
+    // Resolve the student PK reliably for both attendance-based and direct notices.
+    // For direct notices course_student_attendance_pk = 0, so csa join yields NULL.
+    // student_notice_status.student_pk is always set for direct notices.
+    if ($type === 'notice') {
+        $snsRow = DB::table('student_notice_status as sns')
+            ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+            ->where('sns.pk', $id)
+            ->select(DB::raw('COALESCE(csa.Student_master_pk, sns.student_pk) as student_pk'))
+            ->first();
+        $noticeStudentPk = (int) ($snsRow->student_pk ?? 0);
+    } else {
+        $noticeStudentPk = (int) DB::table('student_memo_status')->where('pk', $id)->value('student_pk');
+    }
+
+   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details', 'memo_conclusion_master', 'noticeStudentPk'));
 }
 public function memo_notice_conversation_student(Request $request)
 {
@@ -2040,10 +2056,13 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
             // print_r($conversations);die;
 
     } else {
+        // Use LEFT JOINs so direct notices (course_student_attendance_pk=0) are not excluded
         $conversations = DB::table('notice_message_student_decip_incharge as nmsdi')
-            ->join('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
-            ->join('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
-            ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+            ->leftJoin('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
+            ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+            ->leftJoin('student_master as sm', function ($join) {
+                $join->whereRaw('sm.pk = COALESCE(csa.Student_master_pk, sns.student_pk)');
+            })
             ->where('nmsdi.student_notice_status_pk', $id)
             ->orderBy('nmsdi.created_date', 'asc')
             ->select(
@@ -2054,6 +2073,22 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
                 'sm.display_name as student_name'
             )
             ->get();
+    }
+
+    // Resolve notice status + student PK directly from the source record,
+    // so the reply form works even when conversations collection is empty.
+    if ($type === 'notice') {
+        $snsRow = DB::table('student_notice_status as sns')
+            ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+            ->where('sns.pk', $id)
+            ->select('sns.status as notice_status', DB::raw('COALESCE(csa.Student_master_pk, sns.student_pk) as student_pk'))
+            ->first();
+        $noticeStatus = (int) ($snsRow->notice_status ?? 0);
+        $studentPk    = (int) ($snsRow->student_pk ?? 0);
+    } else {
+        $smsRow = DB::table('student_memo_status')->where('pk', $id)->first();
+        $noticeStatus = (int) ($smsRow->communication_status ?? 0);
+        $studentPk    = (int) ($smsRow->student_pk ?? 0);
     }
 
     // Common mapper - fix N+1 by pre-fetching all users/students in bulk
@@ -2077,8 +2112,7 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
         return $item;
     });
 
-    // print_r($conversations);die;
-    return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id','user_type'));
+    return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations', 'type', 'id', 'user_type', 'noticeStatus', 'studentPk'));
 }
 
 public function get_conversation_model_bkp($id,$type, Request $request)

@@ -143,68 +143,70 @@
 {{-- Reply / Status Section --}}
 {{-- ===================== --}}
 
-@if($conversations->isNotEmpty())
+@php
+    // Use the conversation's last status when available; fall back to the direct $noticeStatus
+    // from the source record (passed by controller) — handles empty conversation correctly.
+    $currentStatus    = $conversations->isNotEmpty()
+        ? (int) ($conversations->last()->notice_status ?? 0)
+        : (int) ($noticeStatus ?? 0);
+    $currentStudentId = $conversations->isNotEmpty()
+        ? ($conversations->first()->student_id ?? $studentPk ?? 0)
+        : ($studentPk ?? 0);
+@endphp
 
-    @if($conversations->last()->notice_status == 1)
+@if($currentStatus == 1)
 
-        <form id="memo_notice_conversation"
-              method="POST"
-              enctype="multipart/form-data"
-              action="{{ route('memo.notice.management.memo_notice_conversation_model') }}"
-              class="chat-composer"
-              novalidate
-              onsubmit="return false;">
+    <form id="memo_notice_conversation"
+          method="POST"
+          enctype="multipart/form-data"
+          action="{{ route('memo.notice.management.memo_notice_conversation_model') }}"
+          class="chat-composer"
+          novalidate
+          onsubmit="return false;">
 
-            @csrf
+        @csrf
 
-            <input type="hidden" name="memo_notice_id" value="{{ $id }}">
-            <input type="hidden" name="type" value="{{ $type }}">
-            <input type="hidden" name="user_type" value="{{ $user_type }}">
+        <input type="hidden" name="memo_notice_id" value="{{ $id }}">
+        <input type="hidden" name="type" value="{{ $type }}">
+        <input type="hidden" name="user_type" value="{{ $user_type }}">
 
-            @if ($user_type == 'student')
-                <input type="hidden" name="created_by" value="{{ $conversations->first()->student_id }}">
-                <input type="hidden" name="role_type" value="s">
-            @else
-                <input type="hidden" name="created_by" value="{{ auth()->user()->pk }}">
-                <input type="hidden" name="role_type" value="f">
-            @endif
+        @if ($user_type == 'student')
+            <input type="hidden" name="created_by" value="{{ $currentStudentId }}">
+            <input type="hidden" name="role_type" value="s">
+        @else
+            <input type="hidden" name="created_by" value="{{ auth()->user()->pk }}">
+            <input type="hidden" name="role_type" value="f">
+        @endif
 
-            <label class="chat-attach-btn" for="memo_notice_attachment" title="Attach file" aria-label="Attach file">📎</label>
-            <input id="memo_notice_attachment" type="file" name="document" hidden>
+        <label class="chat-attach-btn" for="memo_notice_attachment" title="Attach file" aria-label="Attach file">📎</label>
+        <input id="memo_notice_attachment" type="file" name="document" hidden>
 
-            <textarea name="student_decip_incharge_msg"
-                      class="chat-input"
-                      rows="1"
-                      placeholder="Type your message..."
-                      required></textarea>
+        <textarea name="student_decip_incharge_msg"
+                  class="chat-input"
+                  rows="1"
+                  placeholder="Type your message..."
+                  required></textarea>
 
-            <button type="button" class="chat-send-btn" aria-label="Send">
-                <span class="visually-hidden">Send</span>➤
-            </button>
-        </form>
-        <div id="file-preview-area" style="padding:.15rem .75rem;background:#fff;"></div>
+        <button type="button" class="chat-send-btn" aria-label="Send">
+            <span class="visually-hidden">Send</span>➤
+        </button>
+    </form>
+    <div id="file-preview-area" style="padding:.15rem .75rem;background:#fff;"></div>
 
-    @elseif($conversations->last()->notice_status == 2)
+@elseif($currentStatus == 2)
 
-        <div class="alert alert-warning mt-3 text-center">
-            <strong>Notice Closed:</strong>
-            This notice has been closed. You cannot reply.
-        </div>
-
-    @else
-
-        <div class="alert alert-info mt-3 text-center">
-            <strong>Notice Not Started:</strong>
-            This notice has not started yet.
-        </div>
-
-    @endif
+    <div class="alert alert-warning mt-3 text-center">
+        <strong>{{ $type == 'memo' ? 'Memo' : 'Notice' }} Closed:</strong>
+        This {{ $type == 'memo' ? 'memo' : 'notice' }} has been closed. You cannot reply.
+    </div>
 
 @else
+
     <div class="alert alert-info mt-3 text-center">
-        <strong>Notice Not Started:</strong>
+        <strong>{{ $type == 'memo' ? 'Memo' : 'Notice' }} Not Started:</strong>
         Conversation is not yet started.
     </div>
+
 @endif
 
 </div>
