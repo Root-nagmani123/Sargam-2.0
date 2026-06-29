@@ -37,11 +37,12 @@ class CourseAttendanceNoticeMapController extends Controller
     }
 
     // Get initial notice records with course name
-    $noticesQuery = DB::table('course_student_attendance as csa')
-        ->join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
-        ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
-        ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-        ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
+    // Start from student_notice_status so direct notices (course_student_attendance_pk=0) are included
+    $noticesQuery = DB::table('student_notice_status as sns')
+        ->leftJoin('course_student_attendance as csa', 'csa.pk', '=', 'sns.course_student_attendance_pk')
+        ->leftJoin('student_master as sm', 'sm.pk', '=', 'sns.student_pk')
+        ->leftJoin('timetable as t', 't.pk', '=', 'sns.subject_topic')
+        ->leftJoin('course_master as cm', 'cm.pk', '=', 'sns.course_master_pk')
         ->select(
             'sns.pk as notice_id',
             'sns.pk as memo_notice_id',
@@ -59,7 +60,7 @@ class CourseAttendanceNoticeMapController extends Controller
             'sm.display_name as student_name',
             'sm.pk as student_id',
             't.subject_topic as topic_name',
-            't.START_DATE as session_date',
+            DB::raw('COALESCE(t.START_DATE, sns.date_) as session_date'),
             'cm.course_name',
             DB::raw('"Notice" as type_notice_memo')
         );
@@ -85,12 +86,24 @@ class CourseAttendanceNoticeMapController extends Controller
         }
     }
 
-    // Apply date range filter by session date
+    // Apply date range filter — use session date for attendance-based, notice date for direct
     if ($fromDateFilter) {
-        $noticesQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
+        $noticesQuery->where(function ($q) use ($fromDateFilter) {
+            $q->whereDate('t.START_DATE', '>=', $fromDateFilter)
+              ->orWhere(function ($q2) use ($fromDateFilter) {
+                  $q2->whereNull('t.START_DATE')
+                     ->whereDate('sns.date_', '>=', $fromDateFilter);
+              });
+        });
     }
     if ($toDateFilter) {
-        $noticesQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
+        $noticesQuery->where(function ($q) use ($toDateFilter) {
+            $q->whereDate('t.START_DATE', '<=', $toDateFilter)
+              ->orWhere(function ($q2) use ($toDateFilter) {
+                  $q2->whereNull('t.START_DATE')
+                     ->whereDate('sns.date_', '<=', $toDateFilter);
+              });
+        });
     }
 
     $notices = $noticesQuery->get();
@@ -2386,24 +2399,73 @@ public function store_memo_status(Request $request)
     return redirect()->back()->with('success', 'Memo saved successfully.');
   
 }
-function send_only_notice(Request $request){
-    $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
-     $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
-                        ->select('course_master.course_name', 'course_master.pk');
-                    $courseMasters->where('course_master.active_inactive', 1);
-                    $courseMasters = $courseMasters->get()->toArray();
-            $sessions = ClassSessionMaster::get();
-             $maunalSessions = Timetable::select('class_session')
-                ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
-                ->groupBy('class_session')
-                ->select('class_session')
-                ->get();
+public function send_direct_notice_save(Request $request)
+    {
+        $request->validate([
+            'course_master_pk'     => 'required|exists:course_master,pk',
+            'date_of_notice'       => 'required|date',
+            'selected_student_list'=> 'required|array|min:1',
+            'remark'               => 'nullable|string',
+        ]);
 
-$courseMasters_data = [];
-    return view('admin.courseAttendanceNoticeMap.send_only_notice', compact('courseMasters', 'sessions', 'maunalSessions','courseMasters_data'));
+        $rows = [];
+        foreach ($request->selected_student_list as $studentPk) {
+            $rows[] = [
+                'course_master_pk'            => $request->course_master_pk,
+                'date_'                       => $request->date_of_notice,
+                'student_pk'                  => $studentPk,
+                'message'                     => $request->remark,
+                'notice_memo'                 => 1,
+                'venue_id'                    => 0,
+                'faculty_master_pk'           => '',
+                'course_student_attendance_pk'=> 0,
+                'status'                      => 1,
+            ];
+        }
 
-    
-}
+        DB::table('student_notice_status')->insert($rows);
+
+        return redirect()->route('memo.notice.management.index')
+            ->with('success', 'Notices sent successfully.');
+    }
+
+    public function getStudentsForNotice(Request $request)
+    {
+        $courseId = (int) $request->course_id;
+
+        if (!$courseId) {
+            return response()->json(['status' => false, 'message' => 'Course is required.']);
+        }
+
+        $students = DB::table('student_master_course__map as a')
+            ->join('student_master as s', 'a.student_master_pk', '=', 's.pk')
+            ->where('a.course_master_pk', $courseId)
+            ->where('a.active_inactive', 1)
+            ->whereNotNull('s.display_name')
+            ->where('s.display_name', '!=', '')
+            ->orderBy('s.display_name')
+            ->select('s.pk', 's.display_name', 's.generated_OT_code')
+            ->get()
+            ->map(fn($s) => [
+                'pk'                => (int) $s->pk,
+                'display_name'      => $s->display_name,
+                'generated_OT_code' => $s->generated_OT_code,
+            ])
+            ->values();
+
+        return response()->json(['status' => true, 'students' => $students]);
+    }
+
+    function send_only_notice(Request $request){
+        $courseMasters = CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '>', now())
+            ->orderBy('course_name')
+            ->select('course_name', 'pk')
+            ->get()
+            ->toArray();
+
+        return view('admin.courseAttendanceNoticeMap.send_only_notice', compact('courseMasters'));
+    }
 function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
     {
         try {
