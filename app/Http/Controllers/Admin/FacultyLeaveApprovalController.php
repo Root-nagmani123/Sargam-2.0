@@ -18,8 +18,9 @@ class FacultyLeaveApprovalController extends Controller
                 abort(403, 'Only faculty can access leave approvals.');
             }
 
-            if (! $this->approvalService->resolveFacultyPk()) {
-                abort(403, 'Faculty profile not found for your account.');
+            $facultyPk = $this->approvalService->resolveFacultyPk();
+            if (! $facultyPk || $this->approvalService->getApproverCourseIds($facultyPk) === []) {
+                abort(403, 'You are not assigned as a stationed leave approval authority.');
             }
 
             return $next($request);

@@ -100,7 +100,7 @@ class FacultyLeaveApprovalService
     }
 
     /**
-     * Course IDs where the faculty is assigned as a stationed-leave approver.
+     * Course IDs where the faculty is assigned as a stationed-leave approval authority.
      *
      * @return list<int>
      */
@@ -109,6 +109,7 @@ class FacultyLeaveApprovalService
         return DB::table('stationed_leave_faculty_approver as slfa')
             ->join('stationed_leave_master as slm', 'slm.pk', '=', 'slfa.stationed_leave_master_pk')
             ->where('slfa.faculty_master_pk', $facultyPk)
+            ->where('slfa.is_approval_authority', 1)
             ->where('slm.active_inactive', 1)
             ->pluck('slm.course_master_pk')
             ->map(fn ($id) => (int) $id)
@@ -118,8 +119,8 @@ class FacultyLeaveApprovalService
     }
 
     /**
-     * Resolve the user_ids of every faculty assigned to approve stationed leave
-     * for the given course. Used to notify approvers when a request is submitted.
+     * Resolve the user_ids of every faculty marked as approval authority for stationed
+     * leave on the given course. Used to notify approvers when a request is submitted.
      *
      * @return list<int>
      */
@@ -129,6 +130,7 @@ class FacultyLeaveApprovalService
             ->join('stationed_leave_master as slm', 'slm.pk', '=', 'slfa.stationed_leave_master_pk')
             ->where('slm.course_master_pk', $coursePk)
             ->where('slm.active_inactive', 1)
+            ->where('slfa.is_approval_authority', 1)
             ->pluck('slfa.faculty_master_pk')
             ->map(fn ($id) => (int) $id)
             ->filter()
