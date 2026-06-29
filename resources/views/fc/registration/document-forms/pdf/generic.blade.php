@@ -38,9 +38,14 @@
         @if(! empty($template['title_hi']))<div class="hindi-title">{{ $template['title_hi'] }}</div>@endif
     </div>
 
+    @if(! empty($template['intro']))
+        <div style="font-size:10px; margin-bottom:10px; line-height:1.5;">{!! $template['intro'] !!}</div>
+    @endif
+
     {{-- Header sections as label/value rows --}}
     @foreach($template['sections'] ?? [] as $section)
         <div class="section-header">{!! $section['heading'] !!}</div>
+        @if(! empty($section['intro']))<div style="font-size:9px; color:#444; margin:4px 0; line-height:1.5;">{!! $section['intro'] !!}</div>@endif
         <table class="kv">
             @foreach($section['fields'] as $f)
                 <tr>
@@ -54,6 +59,7 @@
     {{-- Repeatable tables --}}
     @foreach($template['tables'] ?? [] as $tbl)
         <div class="section-header">{!! $tbl['heading'] !!}</div>
+        @if(! empty($tbl['intro']))<div style="font-size:9px; color:#444; margin:4px 0; line-height:1.5;">{!! $tbl['intro'] !!}</div>@endif
         @php $rows = $data['_tables'][$tbl['key']] ?? []; @endphp
         <table class="grid">
             <thead>
@@ -110,6 +116,14 @@
                 @endforeach
             </tr>
         </table>
+    @endif
+
+    {{-- Footnotes / instructions --}}
+    @if(! empty($template['notes']))
+        <div style="font-size:9px; color:#333; margin-top:16px; line-height:1.5;">
+            <strong>Notes:</strong>
+            <ol style="margin:4px 0 0; padding-left:16px;">@foreach($template['notes'] as $n)<li>{!! $n !!}</li>@endforeach</ol>
+        </div>
     @endif
 </body>
 </html>

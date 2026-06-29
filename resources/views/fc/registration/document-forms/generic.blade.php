@@ -53,6 +53,11 @@
     <form method="POST" action="{{ route('fc-reg.forms.doc-form.save', [$form, $step, $field->field_name]) }}" enctype="multipart/form-data">
         @csrf
 
+        {{-- Optional intro / preamble text --}}
+        @if(! empty($template['intro']))
+            <div class="alert alert-light border small mb-3">{!! $template['intro'] !!}</div>
+        @endif
+
         {{-- Header sections --}}
         @foreach($template['sections'] ?? [] as $section)
             <div class="card fc-card border-0 shadow-sm mb-3">
@@ -60,6 +65,7 @@
                     <h6 class="mb-0 text-uppercase small fw-bold text-muted">{!! $section['heading'] !!}</h6>
                 </div>
                 <div class="card-body">
+                    @if(! empty($section['intro']))<p class="small text-muted mb-3">{!! $section['intro'] !!}</p>@endif
                     <div class="row g-3">
                         @foreach($section['fields'] as $f)
                             @include('fc.registration.document-forms._field', ['f' => $f, 'value' => $val($f['name'])])
@@ -80,6 +86,7 @@
                     </button>
                 </div>
                 <div class="card-body p-0">
+                    @if(! empty($tbl['intro']))<div class="px-3 py-2 small text-muted border-bottom">{!! $tbl['intro'] !!}</div>@endif
                     <div class="table-responsive">
                         <table class="table table-bordered align-middle mb-0">
                             <thead class="table-light text-center">
@@ -171,6 +178,16 @@
                     <small class="text-muted d-block mt-2">
                         <i class="bi bi-info-circle me-1"></i>Upload a scanned/photographed signature image (PNG/JPG, max 2&nbsp;MB). Optional — you may also print the generated PDF and sign it physically.
                     </small>
+                </div>
+            </div>
+        @endif
+
+        {{-- Optional footnotes / instructions --}}
+        @if(! empty($template['notes']))
+            <div class="card fc-card border-0 shadow-sm mb-3">
+                <div class="card-body small text-muted">
+                    <strong>Notes / नोट:</strong>
+                    <ol class="mb-0 ps-3 mt-1">@foreach($template['notes'] as $n)<li>{!! $n !!}</li>@endforeach</ol>
                 </div>
             </div>
         @endif
