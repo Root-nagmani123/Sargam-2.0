@@ -36,7 +36,23 @@
         background-color: #004a93;
         color: #fff;
     }
+
+    #addFacultyModal .choices {
+        width: 100%;
+        margin-bottom: 0;
+    }
+    #addFacultyModal .choices[data-type*="select-one"]::after {
+        display: none;
+    }
+    #addFacultyModal .choices__list--dropdown,
+    #addFacultyModal .choices__list[aria-expanded] {
+        z-index: 1060;
+    }
 </style>
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+@endpush
 
 @php
     $approvalRequired = old('is_faculty_approval_required', $config ? (int) $config->is_faculty_approval_required : 1);
@@ -240,9 +256,44 @@
 @endsection
 
 @push('scripts')
+<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 $(function () {
     let rowIndex = {{ max($existingRows->count(), 0) }};
+    let facultyChoices = null;
+
+    function initFacultyPicker() {
+        const el = document.getElementById('faculty_picker');
+        if (!el || facultyChoices || typeof Choices === 'undefined') {
+            return;
+        }
+
+        facultyChoices = new Choices(el, {
+            searchEnabled: true,
+            searchPlaceholderValue: 'Search faculty...',
+            shouldSort: false,
+            itemSelectText: '',
+            allowHTML: false,
+            placeholder: true,
+            placeholderValue: '-- Select Faculty --',
+            position: 'bottom',
+            classNames: {
+                containerOuter: ['choices', 'w-100'],
+                containerInner: ['choices__inner', 'form-select'],
+            },
+        });
+        el._choicesInstance = facultyChoices;
+    }
+
+    $('#addFacultyModal').on('shown.bs.modal', initFacultyPicker);
+
+    function resetFacultyPicker() {
+        if (facultyChoices) {
+            facultyChoices.setChoiceByValue('');
+        } else {
+            $('#faculty_picker').val('');
+        }
+    }
 
     function setEffectiveFromCourseStart() {
         const startDate = $('#course_master_pk option:selected').data('startDate');
@@ -315,7 +366,7 @@ $(function () {
         $('#faculty-rows-body').append(rowHtml);
         rowIndex++;
         refreshSerialNumbers();
-        $('#faculty_picker').val('');
+        resetFacultyPicker();
         bootstrap.Modal.getInstance(document.getElementById('addFacultyModal')).hide();
     });
 
