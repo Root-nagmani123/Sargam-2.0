@@ -61,7 +61,7 @@
                             <label for="faculty_master_pk" class="form-label cgt-field-label mb-2">
                                 Faculty <span class="text-danger">*</span>
                             </label>
-                            <select name="faculty_master_pk" id="faculty_master_pk" class="form-select rounded-3">
+                            <select name="faculty_master_pk" id="faculty_master_pk" class="form-select rounded-3 mee-faculty-select2">
                                 <option value="">Select Faculty</option>
                                 @foreach($facultyMaster ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>

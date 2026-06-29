@@ -83,13 +83,12 @@ class MDOEscrotExemptionDataTable extends DataTable
 
     <!-- Edit -->
     <a href="javascript:void(0)"
-       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 mee-edit-btn"
+       class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 px-2 mee-edit-btn border-0 bg-transparent p-0"
        data-edit-id="{$row->pk}"
        aria-label="Edit record">
         <span class="material-icons material-symbols-rounded"
               style="font-size:20px;"
               aria-hidden="true">edit</span>
-        <span class="d-none d-md-inline">Edit</span>
     </a>
 
     <!-- Delete -->
@@ -98,13 +97,12 @@ class MDOEscrotExemptionDataTable extends DataTable
         <input type="hidden" name="_method" value="DELETE">
 
         <button type="submit"
-                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2"
+                class="btn btn-sm btn-outline-danger d-inline-flex align-items-center gap-1 px-2 border-0 bg-transparent p-0"
                 aria-label="Delete record"
                 onclick="return confirm('Are you sure you want to delete this record?');">
             <span class="material-icons material-symbols-rounded"
                   style="font-size:20px;"
                   aria-hidden="true">delete</span>
-            <span class="d-none d-md-inline">Delete</span>
         </button>
     </form>
 
@@ -232,8 +230,8 @@ public function html(): HtmlBuilder
             Column::make('mdo_date')->title('Date')->orderable(false)->searchable(false),
             Column::make('ot_code')->title('OT Code')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('student_name')->title('Student Name')->addClass('text-center')->orderable(false)->searchable(true),
-            Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('Time_from')->title('Time From')->orderable(false)->searchable(false)->addClass('text-center'),
+            Column::make('Time_to')->title('Time To')->orderable(false)->searchable(false)->addClass('text-center'),
             Column::make('course_name')->title('Programme Name')->addClass('text-center')->searchable(true)->orderable(false),
             Column::make('mdo_name')->title('Duty Type')->addClass('text-center')->searchable(true)->orderable(false),
             Column::make('faculty_name')->title('Faculty Name')->addClass('text-center')->searchable(true)->orderable(false),

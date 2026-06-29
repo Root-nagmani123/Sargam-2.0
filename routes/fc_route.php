@@ -242,6 +242,10 @@ Route::post('/enrollment/filter-students', [EnrollementController::class, 'filte
 // student master course map route
 Route::get('/student-courses', [EnrollementController::class, 'studentCourses'])->name('student.courses');
 
+// my course participant (replica of student-courses, used by dashboard card)
+Route::get('/my-course-participant', [EnrollementController::class, 'myCourseParticipant'])->name('my.course.participant');
+Route::get('/my-course-participant/export', [EnrollementController::class, 'myCourseParticipantExport'])->name('my.course.participant.export');
+
 // export student enrollment
 Route::get('admin/student-report', [EnrollementController::class, 'StudenEnroll_index'])->name('studentEnroll.report');
 Route::get('admin/student-report/export', [EnrollementController::class, 'StudenEnroll_export'])->name('studentEnroll.report.export');
