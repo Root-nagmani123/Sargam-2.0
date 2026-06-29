@@ -211,13 +211,13 @@
                 <div class="col-md-3 col-lg-2 sidebar">
                     <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist" aria-orientation="vertical">
                         @if ($childForms->isEmpty())
-                            <a class="nav-link active mb-4" href="{{ route('forms.show', $form->id) }}">
+                            <a class="nav-link active mb-4" href="{{ route('forms.show', encrypt($form->id)) }}">
                                 {{ $form->name }}
                             </a>
                         @else
                             @foreach ($childForms as $child)
                                 <a class="nav-link mb-4 {{ $child->id == $form->id ? 'active' : '' }}"
-                                    href="{{ route('forms.show', $child->id) }}">
+                                    href="{{ route('forms.show', encrypt($child->id)) }}">
                                     {{ $child->name }}
                                 </a>
                             @endforeach

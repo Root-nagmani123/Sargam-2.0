@@ -406,7 +406,6 @@
     function scrollToSection(sectionId) {
         const element = document.getElementById(sectionId);
         if (!element) {
-            console.error('Element not found:', sectionId);
             return;
         }
 
@@ -451,7 +450,6 @@
                 }
             }, 100);
         } catch (e) {
-            console.error('Scroll error:', e);
             // Fallback: simple scroll
             element.scrollIntoView({ behavior: 'smooth' });
         }

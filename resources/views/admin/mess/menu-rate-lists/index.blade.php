@@ -43,7 +43,7 @@
                             <td>{{ $menu->effective_to ? \Carbon\Carbon::parse($menu->effective_to)->format('d M Y') : 'Ongoing' }}</td>
                             <td><span class="badge {{ $menu->is_active ? 'bg-success' : 'bg-danger' }}">{{ $menu->is_active ? 'Active' : 'Inactive' }}</span></td>
                             <td>
-                                <a href="{{ route('admin.mess.menu-rate-lists.edit', $menu->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <a href="{{ route('admin.mess.menu-rate-lists.edit', encrypt($menu->id)) }}" class="btn btn-sm btn-warning">Edit</a>
                             </td>
                         </tr>
                         @empty

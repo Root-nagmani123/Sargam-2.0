@@ -83,7 +83,7 @@ class IssueCategoryController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $category = IssueCategoryMaster::findOrFail($id);
+        $category = IssueCategoryMaster::findOrFail(decrypt($id));
 
         $request->validate([
             'issue_category' => 'required|string|max:255',
@@ -108,7 +108,7 @@ class IssueCategoryController extends Controller
      */
     public function destroy($id)
     {
-        $category = IssueCategoryMaster::findOrFail($id);
+        $category = IssueCategoryMaster::findOrFail(decrypt($id));
 
         if ($category->status == 1) {
             return back()->with('error', 'Cannot delete an active category. Please set it to Inactive first.');

@@ -98,7 +98,7 @@ class InboundTransactionController extends Controller
 
     public function show($id)
     {
-        $transaction = InboundTransaction::with(['purchaseOrder', 'vendor', 'store', 'receiver', 'items.inventory'])->findOrFail($id);
+        $transaction = InboundTransaction::with(['purchaseOrder', 'vendor', 'store', 'receiver', 'items.inventory'])->findOrFail(decrypt($id));
         return view('mess.inboundtransactions.show', compact('transaction'));
     }
 }

@@ -4,7 +4,7 @@
 <div class="container-fluid">
     <x-breadcrum title="{{ isset($edit_id) ? 'Edit Duplicate ID Card Request' : 'Request For Duplicate ID Card' }}"></x-breadcrum>
 
-    <form action="{{ isset($edit_id) ? route('admin.duplicate_idcard.update', $edit_id) : route('admin.duplicate_idcard.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+    <form action="{{ isset($edit_id) ? route('admin.duplicate_idcard.update', encrypt($edit_id)) : route('admin.duplicate_idcard.store') }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         @csrf
         @if(isset($edit_id))
             @method('POST')
@@ -318,8 +318,6 @@
 </div>
 
 <script>
-    console.log('📝 Duplicate ID Card Script Loading...');
-    console.log('📝 Document Ready State:', document.readyState);
 
     function initDuplicatePrefetch() {
         const btnFetch = document.getElementById('btnFetchByCard');
@@ -337,7 +335,6 @@
         let isFetching = false;
 
         function showToast(message, isError) {
-            alert(message);
         }
 
         function fetchByCardNumber(options) {
@@ -445,20 +442,16 @@
     }
 
     function initCardReasonToggle() {
-        console.log('🔧 initCardReasonToggle() called');
         
         const reasonSelect = document.getElementById('card_reason_select');
-        console.log('🔍 reasonSelect element found:', reasonSelect ? 'YES ✅' : 'NO ❌');
         
         if (!reasonSelect) {
-            console.error('❌ card_reason_select element not found!');
             return;
         }
 
         let lastValue = '';
 
         function toggleDocumentSections() {
-            console.log('🔄 toggleDocumentSections() called');
             
             // Hide all conditional sections first
             const sections = {
@@ -496,22 +489,18 @@
 
             // Get current value
             const reason = reasonSelect.value;
-            console.log('✅ Selected reason:', reason);
             
             // Show appropriate section based on reason
             if (reason === 'Damage Card') {
-                console.log('🔴 Showing Damage Card section');
                 const el = document.getElementById('damage_doc_section');
                 if (el) {
                     el.style.display = 'block';
-                    console.log('✅ damage_doc_section display set to block');
                 }
                 if (damageDoc) {
                     damageDoc.setAttribute('required', 'required');
                     damageDoc.focus();
                 }
             } else if (reason === 'Card Lost') {
-                console.log('🟠 Showing Card Lost section');
                 const el = document.getElementById('fir_doc_section');
                 const payEl = document.getElementById('payment_receipt_section');
                 const payStoredFlag = document.getElementById('dup_stored_payment_receipt');
@@ -523,12 +512,10 @@
                     paymentReceipt.setAttribute('required', 'required');
                 }
             } else if (reason === 'Service Extended') {
-                console.log('🟡 Showing Service Extended section');
                 const el = document.getElementById('service_ext_section');
                 if (el) el.style.display = 'block';
                 if (serviceExt) serviceExt.setAttribute('required', 'required');
             } else if (reason === 'Change in Name') {
-                console.log('🟢 Showing Change in Name section');
                 const el1 = document.getElementById('new_name_section');
                 const el2 = document.getElementById('name_proof_section');
                 if (el1) el1.style.display = 'block';
@@ -536,44 +523,36 @@
                 if (newEmpName) newEmpName.setAttribute('required', 'required');
                 if (nameProof) nameProof.setAttribute('required', 'required');
             } else if (reason === 'Designation Change') {
-                console.log('🔵 Showing Designation Change section');
                 const el = document.getElementById('designation_order_section');
                 if (el) el.style.display = 'block';
                 if (designOrder) designOrder.setAttribute('required', 'required');
             } else {
-                console.log('⚪ No matching reason condition');
             }
         }
 
         // Attach normal event listeners
         reasonSelect.addEventListener('change', function(e) {
-            console.log('🎯 CHANGE EVENT FIRED!');
             toggleDocumentSections();
         });
 
         reasonSelect.addEventListener('input', function(e) {
-            console.log('🎯 INPUT EVENT FIRED!');
             toggleDocumentSections();
         });
 
         // POLLING APPROACH: Check for value changes every 100ms
         // This works even if events are blocked by other libraries
-        console.log('📌 Starting polling to detect dropdown changes...');
         setInterval(function() {
             const currentValue = reasonSelect.value;
             if (currentValue !== lastValue) {
-                console.log('🔄 POLLING DETECTED VALUE CHANGE:', lastValue, '→', currentValue);
                 lastValue = currentValue;
                 toggleDocumentSections();
             }
         }, 100);
 
         // Also check via MutationObserver for attribute changes
-        console.log('📌 Setting up MutationObserver...');
         const observer = new MutationObserver(function(mutations) {
             mutations.forEach(function(mutation) {
                 if (mutation.type === 'attributes' && mutation.attributeName === 'value') {
-                    console.log('👁️ MutationObserver detected value attribute change');
                     toggleDocumentSections();
                 }
             });
@@ -585,38 +564,29 @@
         });
 
         // Trigger on page load if there's a selected value
-        console.log('🔍 Checking if reason already selected on page load...');
         if (reasonSelect.value) {
-            console.log('✅ Initial value found:', reasonSelect.value);
             lastValue = reasonSelect.value;
             toggleDocumentSections();
         } else {
-            console.log('⚪ No initial value selected');
         }
     }
 
-    console.log('📍 Script execution point 1: registering DOMContentLoaded listener');
     
     // Initialize when DOM is ready
     document.addEventListener('DOMContentLoaded', function() {
-        console.log('📍 DOMContentLoaded fired');
         initCardReasonToggle();
         initDuplicatePrefetch();
         initContractualFieldsToggle();
     });
     
     // Also try immediately in case DOM is already ready
-    console.log('📍 Script execution point 2: checking readyState');
     if (document.readyState === 'loading') {
-        console.log('📍 Document still loading, waiting for DOMContentLoaded');
     } else {
-        console.log('📍 Document already loaded, calling initCardReasonToggle / initDuplicatePrefetch / initContractualFieldsToggle immediately');
         initCardReasonToggle();
         initDuplicatePrefetch();
         initContractualFieldsToggle();
     }
     
-    console.log('📝 Script initialization complete!');
 </script>
 @endsection
 

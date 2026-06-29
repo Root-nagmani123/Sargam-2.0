@@ -152,7 +152,7 @@ class MemoNoticeController extends Controller
     // Show edit form
     public function edit($id)
     {
-        $template = MemoNoticeTemplate::findOrFail($id);
+        $template = MemoNoticeTemplate::findOrFail(decrypt($id));
 
         $currentDate = now()->format('Y-m-d');
 
@@ -187,7 +187,7 @@ class MemoNoticeController extends Controller
     public function update(Request $request, $id)
 {
     try {
-        $template = MemoNoticeTemplate::findOrFail($id);
+        $template = MemoNoticeTemplate::findOrFail(decrypt($id));
 
         $validated = $request->validate([
             'course_master_pk' => 'nullable|integer',
@@ -247,7 +247,7 @@ class MemoNoticeController extends Controller
     // Delete template
     public function destroy($id)
     {
-        $template = MemoNoticeTemplate::findOrFail($id);
+        $template = MemoNoticeTemplate::findOrFail(decrypt($id));
         if ($template->active_inactive == 1) {
             return back()->with('error', 'Active templates cannot be deleted. Please deactivate first.');
         }
@@ -276,7 +276,7 @@ class MemoNoticeController extends Controller
     // Preview template
     public function preview($id)
     {
-        $template = MemoNoticeTemplate::with('course')->findOrFail($id);
+        $template = MemoNoticeTemplate::with('course')->findOrFail(decrypt($id));
 
         return view('admin.courseAttendanceNoticeMap.memo_notice_preview', compact('template'));
     }
@@ -285,7 +285,7 @@ class MemoNoticeController extends Controller
    public function changeStatus($id, $status)
 {
     try {
-        $template = MemoNoticeTemplate::findOrFail($id);
+        $template = MemoNoticeTemplate::findOrFail(decrypt($id));
 
         $courseId = $template->course_master_pk;
         $type = $template->memo_notice_type; // Memo or Notice
@@ -294,7 +294,7 @@ class MemoNoticeController extends Controller
         if ($status == 1) {
             MemoNoticeTemplate::where('course_master_pk', $courseId)
                 ->where('memo_notice_type', $type) // 🔥 Only same type deactivate
-                ->where('pk', '!=', $id)
+                ->where('pk', '!=', decrypt($id))
                 ->update([
                     'active_inactive' => 0,
                     'updated_by' => Auth::id()

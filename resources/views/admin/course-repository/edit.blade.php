@@ -10,7 +10,7 @@
             <div class="card-body">
                 <div class="row justify-content-center">
                     <div class="col-md-8"> 
-                        <form action="{{ route('course-repository.update', $repository->pk) }}" method="POST" enctype="multipart/form-data">
+                        <form action="{{ route('course-repository.update', encrypt($repository->pk)) }}" method="POST" enctype="multipart/form-data">
                             @csrf
                             @method('PUT')
 
@@ -59,7 +59,7 @@
                                 <button type="submit" class="btn btn-success">
                                     <i class="fas fa-save"></i> Save
                                 </button>
-                                <a href="{{ route('course-repository.show', $repository->pk) }}" class="btn btn-secondary">
+                                <a href="{{ route('course-repository.show', encrypt($repository->pk)) }}" class="btn btn-secondary">
                                     <i class="fas fa-arrow-left"></i> Back
                                 </a>
                             </div>

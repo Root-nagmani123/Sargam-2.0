@@ -30,7 +30,7 @@
 {{-- Filter toolbar with inline column show/hide — only rendered when a table exists --}}
 @if($cruShowFilterToolbar)
     @include('admin.course-repository.user.partials.filter-card', [
-        'route' => route('admin.course-repository.user.show', $repository->pk),
+        'route' => route('admin.course-repository.user.show', encrypt($repository->pk)),
         'courses' => $courses,
         'subjects' => $subjects,
         'faculties' => $faculties,

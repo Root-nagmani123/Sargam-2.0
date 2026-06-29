@@ -131,12 +131,12 @@ class RoleService
         return '
         <div class="d-inline-flex align-items-center gap-2" role="group" aria-label="Menu actions">
             <!-- Assign Permission -->
-            <a href="'.route('roles.show', $data->id).'" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" aria-label="Assign permission">
+            <a href="'.route('roles.show', encrypt($data->id)).'" class="btn btn-sm btn-outline-success d-flex align-items-center gap-1" aria-label="Assign permission">
                 <span class="material-symbols-rounded fs-6" aria-hidden="true">lock</span>
                 <span class="d-none d-md-inline">Assign Permission</span>
             </a>
             <!-- Assign Dashboard -->
-            <a href="'.route('roles.dashboard', $data->id).'" class="btn btn-sm btn-outline-info d-flex align-items-center gap-1" aria-label="Assign dashboard">
+            <a href="'.route('roles.dashboard', encrypt($data->id)).'" class="btn btn-sm btn-outline-info d-flex align-items-center gap-1" aria-label="Assign dashboard">
                 <span class="material-symbols-rounded fs-6" aria-hidden="true">dashboard</span>
                 <span class="d-none d-md-inline">Assign Dashboard</span>
             </a>

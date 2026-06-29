@@ -79,7 +79,7 @@ table.table-bordered.dataTable td:nth-child(4) {
                     <h4 class="card-title">Attendance</h4>
                     <div class="">
                         <a href="{{ route('attendance.index') }}" class="btn btn-secondary">Back</a>
-                        <a href="{{ route('attendance.export', ['group_pk' => $group_pk, 'course_pk' => $course_pk, 'timetable_pk' => $courseGroup->timetable_pk]) }}"
+                        <a href="{{ route('attendance.export', ['group_pk' => encrypt($group_pk), 'course_pk' => encrypt($course_pk), 'timetable_pk' => encrypt($courseGroup->timetable_pk)]) }}"
                             class="btn btn-success">
                             <i class="bi bi-file-earmark-excel"></i> Export to Excel
                         </a>

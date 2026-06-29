@@ -50,7 +50,7 @@ class LocationController extends Controller
 
     public function countryEdit($id)
     {
-        $country = Country::findOrFail($id);
+        $country = Country::findOrFail(decrypt($id));
         return view('admin.country.edit', compact('country'));
     }
 
@@ -61,7 +61,7 @@ class LocationController extends Controller
               'active_inactive' => 'required',
         ]);
 
-        $country = Country::findOrFail($id);
+        $country = Country::findOrFail(decrypt($id));
         $country->country_name = $request->country_name;
         $country->active_inactive = $request->active_inactive;
         $country->save();
@@ -109,7 +109,7 @@ class LocationController extends Controller
 
     public function stateEdit($id)
     {
-        $state = State::findOrFail($id);
+        $state = State::findOrFail(decrypt($id));
         $countries = Country::all();
         return view('admin.state.edit', compact('state', 'countries'));
     }
@@ -124,7 +124,7 @@ class LocationController extends Controller
         ]);
 
 
-        $state = State::findOrFail($pk);
+        $state = State::findOrFail(decrypt($pk));
 
         // Update the state data
         $state->state_name = $request->state_name;
@@ -183,7 +183,7 @@ class LocationController extends Controller
     {
          $countries = Country::all();
 
-        $district = District::findOrFail($id);
+        $district = District::findOrFail(decrypt($id));
         $states = State::all();
         return view('admin.district.edit', compact('district', 'states', 'countries'));
     }
@@ -196,7 +196,7 @@ class LocationController extends Controller
              'active_inactive' => 'required',
         ]);
 
-        $district = District::findOrFail($id);
+        $district = District::findOrFail(decrypt($id));
         $district->update([
             'country_master_pk' => $request->country_master_pk, // Assuming you have a country_master_pk in the request
 
@@ -253,7 +253,7 @@ class LocationController extends Controller
 
     public function cityEdit($id)
     {
-        $city = City::findOrFail($id);  // This will automatically handle finding by primary key 'pk'
+        $city = City::findOrFail(decrypt($id));  // This will automatically handle finding by primary key 'pk'
 
          $countries = Country::all();
 
@@ -271,7 +271,7 @@ class LocationController extends Controller
             'active_inactive' => 'required',
         ]);
 
-        $city = City::findOrFail($id);
+        $city = City::findOrFail(decrypt($id));
 
         // Update the city details using the model
         $city->update([

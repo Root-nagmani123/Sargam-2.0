@@ -98,7 +98,7 @@
                                                 <i class="bi bi-trash" aria-hidden="true"></i>
                                             </button>
                                             @else
-                                            <form action="{{ route('subject-module.destroy', $module->pk) }}" method="POST"
+                                            <form action="{{ route('subject-module.destroy', encrypt($module->pk)) }}" method="POST"
                                                 class="d-inline m-0 sm-delete-form"
                                                 onsubmit="return confirm('Are you sure you want to delete this Subject Module?');">
                                                 @csrf

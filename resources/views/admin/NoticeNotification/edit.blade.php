@@ -123,7 +123,7 @@
                 <h4 class="card-title mb-0 fw-semibold text-dark">Edit Notice notification</h4>
             </div>
 
-            <form method="POST" action="{{ route('admin.notice.update', $encId) }}" enctype="multipart/form-data" class="notice-form">
+            <form method="POST" action="{{ route('admin.notice.update', encrypt($encId)) }}" enctype="multipart/form-data" class="notice-form">
                 @csrf
                 @method('PUT')
 

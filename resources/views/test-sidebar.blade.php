@@ -130,17 +130,13 @@
 
         // Sidebar toggle
         document.addEventListener('DOMContentLoaded', function() {
-            console.log('=== Sidebar Toggle Test ===');
             
             const sidebarToggler = document.getElementById('headerCollapse');
             const sidebar = document.querySelector('.left-sidebar');
             const body = document.body;
             
-            console.log('Sidebar element found:', !!sidebar);
-            console.log('Toggler button found:', !!sidebarToggler);
             
             if (!sidebar || !sidebarToggler) {
-                console.error('Required elements not found!');
                 return;
             }
             
@@ -150,20 +146,16 @@
                 overlay = document.createElement('div');
                 overlay.className = 'sidebar-overlay';
                 body.appendChild(overlay);
-                console.log('Overlay created');
             }
             
             // Toggle function
             function toggleSidebar() {
-                console.log('Toggle called');
                 sidebar.classList.toggle('show-sidebar');
                 overlay.classList.toggle('show');
-                console.log('show-sidebar active:', sidebar.classList.contains('show-sidebar'));
             }
             
             // Click handler
             sidebarToggler.addEventListener('click', function(e) {
-                console.log('Button clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 toggleSidebar();
@@ -171,13 +163,11 @@
             
             // Overlay click
             overlay.addEventListener('click', function(e) {
-                console.log('Overlay clicked');
                 e.preventDefault();
                 e.stopPropagation();
                 toggleSidebar();
             });
             
-            console.log('Sidebar toggle initialized successfully');
         });
     </script>
 </body>

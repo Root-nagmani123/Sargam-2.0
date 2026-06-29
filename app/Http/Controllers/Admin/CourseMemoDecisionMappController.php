@@ -213,7 +213,7 @@ class CourseMemoDecisionMappController extends Controller
             'active_inactive'           => 'required|in:1,2',
         ]);
 
-        $mapping = CourseMemoDecisionMapp::find($request->id);
+        $mapping = CourseMemoDecisionMapp::find(decrypt($request->id));
 
         if (!$mapping) {
             return response()->json([

@@ -39,7 +39,7 @@ class MemoConclusionMasterDataTable extends DataTable
 
         ->addColumn('actions', function ($row) {
 
-            $deleteUrl = route('master.memo.conclusion.master.delete', $row->pk);
+            $deleteUrl = route('master.memo.conclusion.master.delete', encrypt($row->pk));
             $isActive  = ($row->active_inactive == 1);
 
             /* 🔹 DELETE BUTTON LOGIC */

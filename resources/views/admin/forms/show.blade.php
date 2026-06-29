@@ -388,25 +388,25 @@
                         aria-orientation="vertical">
                         @if ($childForms->isEmpty())
                             {{-- No children: show parent as active --}}
-                            <a class="nav-link active mb-4" href="{{ route('forms.show', $form->id) }}">
+                            <a class="nav-link active mb-4" href="{{ route('forms.show', encrypt($form->id)) }}">
                                 {{ $form->name }}
                             </a>
                         @else
                             {{-- Has children: show all child forms (siblings) --}}
                             @foreach ($childForms as $child)
                                 <a class="nav-link mb-4 {{ $child->id == $form->id ? 'active' : '' }}"
-                                    href="{{ route('forms.show', $child->id) }}">
+                                    href="{{ route('forms.show', encrypt($child->id)) }}">
                                     {{ $child->name }}
                                 </a>
                             @endforeach
                             <a class="nav-link mb-4 {{ request()->routeIs('fc.joining.index') ? 'active' : '' }}"
-                                href="{{ route('fc.joining.index', $form->id) }}">
+                                href="{{ route('fc.joining.index', encrypt($form->id)) }}">
                                 Joining Documents
                             </a>
 
                             <!-- Static Form: Admin Report -->
                             <a class="nav-link mb-4 {{ request()->routeIs('admin.joining-documents.index') ? 'active' : '' }}"
-                                href="{{ route('admin.joining-documents.index', $form->id) }}">
+                                href="{{ route('admin.joining-documents.index', encrypt($form->id)) }}">
                                 Report (Admin Only)
                             </a>
                         @endif
@@ -438,15 +438,15 @@
 
 
                             <div class="tab-content" id="v-pills-tabContent">
-                                <div class="tab-pane fade show active" id="{{ route('forms.show', $form->id) }}"
-                                    role="tabpanel" aria-labelledby="{{ route('forms.show', $form->id) }}-tab">
+                                <div class="tab-pane fade show active" id="{{ route('forms.show', encrypt($form->id)) }}"
+                                    role="tabpanel" aria-labelledby="{{ route('forms.show', encrypt($form->id)) }}-tab">
                                     @if ($form->description)
                                         <div class="description mb-3">
                                             {{-- {{ $form->description }} --}}
                                         </div>
                                     @endif
 
-                                    <form method="POST" action="{{ route('forms.submit', $form->id) }}"
+                                    <form method="POST" action="{{ route('forms.submit', encrypt($form->id)) }}"
                                         enctype="multipart/form-data">
                                         @csrf
 
@@ -593,7 +593,6 @@
             const previewContainer = document.getElementById(`file-preview-${input.id || input.name}`);
 
             if (!previewContainer) {
-                console.error(`Preview container not found for ID: file-preview-${input.id || input.name}`);
                 return;
             }
 

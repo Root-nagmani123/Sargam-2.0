@@ -43,7 +43,7 @@
                             <td>₹{{ number_format($limit->current_balance, 2) }}</td>
                             <td>₹{{ number_format($limit->credit_limit - $limit->current_balance, 2) }}</td>
                             <td>
-                                <a href="{{ route('admin.mess.credit-limits.edit', $limit->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <a href="{{ route('admin.mess.credit-limits.edit', encrypt($limit->id)) }}" class="btn btn-sm btn-warning">Edit</a>
                             </td>
                         </tr>
                         @empty

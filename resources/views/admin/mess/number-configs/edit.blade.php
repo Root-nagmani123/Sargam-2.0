@@ -9,7 +9,7 @@
         </h5>
     </div>
     <div class="card-body">
-        <form action="{{ route('admin.mess.number-configs.update', $config->id) }}" method="POST">
+        <form action="{{ route('admin.mess.number-configs.update', encrypt($config->id)) }}" method="POST">
             @csrf
             @method('PUT')
             

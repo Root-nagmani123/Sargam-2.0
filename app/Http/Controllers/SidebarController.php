@@ -290,6 +290,7 @@ class SidebarController extends Controller
 
     public function getCategoryGroups(Request $request, $category_id)
     {
+        $category_id = decrypt($category_id);
         $groups = MenuGroup::where('category_id', $category_id)->where('is_active', 1)->orderBy('order', 'ASC')->get();
         if ($groups->count() > 0) {
             return response()->json([

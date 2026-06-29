@@ -775,14 +775,14 @@
                                     </a>
 
                                     <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
+                                        data-bs-target="#chatOffcanvas" data-id="{{ encrypt($memo->pk) }}"
                                         data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
                                         <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                     </a>
                                 </div>
                                 @else
                                 <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                    data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
+                                    data-bs-target="#chatOffcanvas" data-id="{{ encrypt($memo->pk) }}"
                                     data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
                                     <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                 </a>

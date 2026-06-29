@@ -115,7 +115,7 @@ class FcRegistrationMasterListDaTable extends DataTable
                 // $query->whereRaw("exam_year", '=', $keyword);
                 $query->whereRaw("BINARY `exam_year` = ?", [$keyword]);
             })->addColumn('action', function ($row) {
-                return '<a href="' . route('admin.registration.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>';
+                return '<a href="' . route('admin.registration.edit', encrypt($row->pk)) . '" class="btn btn-sm btn-primary">Edit</a>';
             })
             ->addColumn('email_count', function ($row) {
                 return (int) $row->email_count; // make sure JS can read it as number

@@ -40,13 +40,13 @@ class MenuGroupController extends Controller
 
     public function show($id)
     {
-        $group = $this->service->find($id);
+        $group = $this->service->find(decrypt($id));
         return view('menu_groups.show', compact('group'));
     }
 
     public function edit($id)
     {
-        $group = $this->service->find($id);
+        $group = $this->service->find(decrypt($id));
         return view('menu_groups.edit', compact('group'));
     }
 

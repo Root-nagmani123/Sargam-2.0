@@ -294,7 +294,6 @@ document.addEventListener('DOMContentLoaded', function() {
             chart.render();
             chartInstances.push(chart);
         } catch (e) {
-            console.error(label + ' render failed:', e);
         }
     }
 

@@ -57,13 +57,13 @@ class VendorController extends Controller
 
     public function edit($id)
     {
-        $vendor = Vendor::findOrFail($id);
+        $vendor = Vendor::findOrFail(decrypt($id));
         return view('mess.vendors.edit', compact('vendor'));
     }
 
     public function update(Request $request, $id)
     {
-        $vendor = Vendor::findOrFail($id);
+        $vendor = Vendor::findOrFail(decrypt($id));
         $data = $this->validatedData($request, $vendor);
 
         if ($request->hasFile('licence_document')) {
@@ -84,7 +84,7 @@ class VendorController extends Controller
 
     public function destroy($id)
     {
-        $vendor = Vendor::findOrFail($id);
+        $vendor = Vendor::findOrFail(decrypt($id));
         $vendor->delete();
 
         self::bumpListCacheEpoch();

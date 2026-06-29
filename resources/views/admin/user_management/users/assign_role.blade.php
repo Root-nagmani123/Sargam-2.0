@@ -142,7 +142,6 @@ function loadRoles() {
             bindRoleCardStates();
         })
         .catch(error => {
-            console.error('Error loading roles:', error);
             document.getElementById("roleContainer").innerHTML = '<div class="alert alert-danger mb-0 rounded-3 w-100">Error loading roles. Please refresh the page.</div>';
             updateRoleCounters();
         });

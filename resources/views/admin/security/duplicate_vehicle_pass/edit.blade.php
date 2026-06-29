@@ -181,7 +181,6 @@
                     }
                 })
                 .catch(error => {
-                    console.error('Error fetching vehicle details:', error);
                     showNotification('Error loading vehicle details.', 'danger');
                 });
         });

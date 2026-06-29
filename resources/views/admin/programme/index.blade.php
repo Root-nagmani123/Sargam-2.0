@@ -552,7 +552,6 @@
                         }
                     },
                     error: function(xhr) {
-                        console.error('Error loading courses:', xhr);
                     }
                 });
             }
@@ -588,7 +587,6 @@
                     try {
                         new bootstrap.Dropdown(dropdownToggleEl);
                     } catch (e) {
-                        console.error('Error initializing dropdown:', e);
                     }
                 });
             }
@@ -659,7 +657,6 @@
             // Handle view course button click
             $(document).on('click', '.view-course-btn', function() {
                 var courseId = $(this).data('id');
-                console.log('Course ID:', courseId); // Debug log
                 loadCourseDetails(courseId);
             });
         }, 100);
@@ -738,7 +735,6 @@
         // Function to load course details
         function loadCourseDetails(courseId) {
             var url = '{{ route("programme.view", ":id") }}'.replace(':id', courseId);
-            console.log('Request URL:', url); // Debug log
 
             $.ajax({
                 url: url,
@@ -844,12 +840,6 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('AJAX Error:', {
-                        status: xhr.status,
-                        statusText: xhr.statusText,
-                        responseText: xhr.responseText,
-                        error: error
-                    });
 
                     var errorMessage = 'Error loading course details. Please try again.';
                     if (xhr.status === 404) {

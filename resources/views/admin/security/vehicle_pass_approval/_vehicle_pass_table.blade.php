@@ -31,7 +31,7 @@
                         <td>
                             <div class="d-flex gap-2 flex-wrap">
                                 @php $encryptId = encrypt($app->id); @endphp
-                                <a href="{{ route('admin.security.vehicle_pass_approval.show', $encryptId) }}"
+                                <a href="{{ route('admin.security.vehicle_pass_approval.show', encrypt($encryptId)) }}"
                                    class="btn  btn-info bg-transparent border-0 text-primary p-0" title="View Details">
                                     <i class="material-icons material-symbols-rounded">visibility</i>
                                 </a>

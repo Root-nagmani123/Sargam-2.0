@@ -113,14 +113,14 @@ class MDOEscrotExemptionController extends Controller
             ->pluck('full_name', 'pk')
             ->toArray();
 
-        $mdoDutyType = MDOEscotDutyMap::with(['studentMaster'])->findOrFail($id);
+        $mdoDutyType = MDOEscotDutyMap::with(['studentMaster'])->findOrFail(decrypt($id));
 
         return view('admin.mdo_escrot_exemption.edit', compact('id', 'MDODutyTypeMaster', 'mdoDutyType', 'facultyMaster'));
     }
 
     public function editData($id)
     {
-        $mdoDutyType = MDOEscotDutyMap::with(['studentMaster', 'courseMaster'])->findOrFail($id);
+        $mdoDutyType = MDOEscotDutyMap::with(['studentMaster', 'courseMaster'])->findOrFail(decrypt($id));
 
         $mdoDate = $mdoDutyType->mdo_date;
         if ($mdoDate) {
@@ -310,7 +310,7 @@ class MDOEscrotExemptionController extends Controller
     public function destroy($id)
     {
         try {
-            $mdoDutyType = MDOEscotDutyMap::findOrFail($id);
+            $mdoDutyType = MDOEscotDutyMap::findOrFail(decrypt($id));
             $mdoDutyType->delete();
 
             return redirect()->route('mdo-escrot-exemption.index')->with('success', 'MDO/Escort Exemption deleted successfully.');

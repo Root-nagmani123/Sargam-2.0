@@ -180,15 +180,6 @@
     <script>
         document.addEventListener('DOMContentLoaded', function () {
             @if(isset($reportTimingMs))
-            console.info(
-                '[Stock Purchase Details] server {{ $reportTimingMs }} ms'
-                @if(isset($reportCacheStatus))
-                + ', cache {{ $reportCacheStatus }}'
-                @endif
-                @if(isset($reportLineCount))
-                + ', {{ $reportLineCount }} lines total'
-                @endif
-            );
             @endif
 
             var tableWrap = document.getElementById('stock-purchase-table-wrap');
@@ -206,7 +197,6 @@
                             var ms = r.headers.get('X-Stock-Purchase-Details-Ms');
                             var cache = r.headers.get('X-Stock-Purchase-Details-Cache');
                             if (ms) {
-                                console.info('[Stock Purchase Details] page ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
                             }
                             return r.text();
                         })
@@ -217,7 +207,6 @@
                         })
                         .catch(function (e) {
                             tableWrap.style.opacity = '';
-                            console.error('Stock purchase pagination failed', e);
                         });
                 }
 

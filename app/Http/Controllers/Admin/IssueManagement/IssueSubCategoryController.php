@@ -154,7 +154,7 @@ class IssueSubCategoryController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $subCategory = IssueSubCategoryMaster::findOrFail($id);
+        $subCategory = IssueSubCategoryMaster::findOrFail(decrypt($id));
 
         $request->validate([
             'issue_category_master_pk' => 'required|exists:issue_category_master,pk',
@@ -182,7 +182,7 @@ class IssueSubCategoryController extends Controller
      */
     public function destroy($id)
     {
-        $subCategory = IssueSubCategoryMaster::findOrFail($id);
+        $subCategory = IssueSubCategoryMaster::findOrFail(decrypt($id));
 
         if ($subCategory->status == 1) {
             return back()->with('error', 'Cannot delete an active sub-category. Please set it to Inactive first.');

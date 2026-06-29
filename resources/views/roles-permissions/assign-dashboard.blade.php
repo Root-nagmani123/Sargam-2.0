@@ -585,7 +585,7 @@ $(document).on('change', '.card-toggle', function() {
     var $toggle   = $(this);
 
     $.ajax({
-        url: "{{ route('assign.roles.dashboard', $role->id) }}",
+        url: "{{ route('assign.roles.dashboard', encrypt($role->id)) }}",
         type: "POST",
         data: { _token: "{{ csrf_token() }}", card_id: cardId, status: isChecked },
         success: function(response) {

@@ -3,7 +3,7 @@
     <div class="card p-3">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4>Group Members: {{ $group->group_name }}</h4>
-            <a href="{{ route('admin.peer.group.import', $group->id) }}" class="btn btn-primary">
+            <a href="{{ route('admin.peer.group.import', encrypt($group->id)) }}" class="btn btn-primary">
                 Import More Users
             </a>
         </div>
@@ -69,7 +69,7 @@
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h4>Group Members: {{ $group->group_name }}</h4>
             <div>
-                <a href="{{ route('admin.peer.group.import', $group->id) }}" class="btn btn-primary">
+                <a href="{{ route('admin.peer.group.import', encrypt($group->id)) }}" class="btn btn-primary">
                     <i class="fas fa-upload"></i> Import More Users
                 </a>
                 <a href="{{ route('admin.peer.index') }}" class="btn btn-secondary">
@@ -166,7 +166,7 @@
                                 <br>
                                 No members found in this group.
                                 {{-- <br>
-                                <a href="{{ route('admin.peer.group.import', $group->id) }}" class="btn btn-primary mt-2">
+                                <a href="{{ route('admin.peer.group.import', encrypt($group->id)) }}" class="btn btn-primary mt-2">
                                     <i class="fas fa-upload"></i> Import Users
                                 </a> --}}
                             </td>

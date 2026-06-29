@@ -74,7 +74,7 @@ class FinanceBookingController extends Controller
      */
     public function show($id)
     {
-        $booking = FinanceBooking::with(['invoice', 'user', 'approver'])->findOrFail($id);
+        $booking = FinanceBooking::with(['invoice', 'user', 'approver'])->findOrFail(decrypt($id));
         return view('admin.mess.finance-bookings.show', compact('booking'));
     }
 
@@ -86,7 +86,7 @@ class FinanceBookingController extends Controller
      */
     public function edit($id)
     {
-        $booking = FinanceBooking::findOrFail($id);
+        $booking = FinanceBooking::findOrFail(decrypt($id));
         $invoices = Invoice::all();
         $users = User::select('pk', 'name', 'email')->get();
         
@@ -102,7 +102,7 @@ class FinanceBookingController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $booking = FinanceBooking::findOrFail($id);
+        $booking = FinanceBooking::findOrFail(decrypt($id));
         
         $validated = $request->validate([
             'booking_amount' => 'required|numeric|min:0',
@@ -124,7 +124,7 @@ class FinanceBookingController extends Controller
      */
     public function destroy($id)
     {
-        $booking = FinanceBooking::findOrFail($id);
+        $booking = FinanceBooking::findOrFail(decrypt($id));
         $booking->delete();
         
         return redirect()->route('admin.mess.finance-bookings.index')
@@ -136,7 +136,7 @@ class FinanceBookingController extends Controller
      */
     public function approve($id)
     {
-        $booking = FinanceBooking::findOrFail($id);
+        $booking = FinanceBooking::findOrFail(decrypt($id));
         $booking->update([
             'status' => 'approved',
             'approved_by' => auth()->user()->pk,
@@ -152,7 +152,7 @@ class FinanceBookingController extends Controller
      */
     public function reject($id)
     {
-        $booking = FinanceBooking::findOrFail($id);
+        $booking = FinanceBooking::findOrFail(decrypt($id));
         $booking->update([
             'status' => 'rejected',
             'approved_by' => auth()->user()->pk,

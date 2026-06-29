@@ -115,10 +115,10 @@
                                 <td>
                                     @if(!empty($r->user_may_edit))
                                         <div class="d-flex align-items-center gap-2">
-                                            <a href="{{ route('admin.duplicate_idcard.edit', $r->id) }}" class="btn btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit">
+                                            <a href="{{ route('admin.duplicate_idcard.edit', encrypt($r->id)) }}" class="btn btn-outline-primary bg-transparent border-0 text-primary p-0" title="Edit">
                                                 <i class="material-icons material-symbols-rounded" style="font-size:16px;">edit</i>
                                             </a>
-                                            <form action="{{ route('admin.duplicate_idcard.destroy', $r->id) }}" method="POST" class="d-inline"
+                                            <form action="{{ route('admin.duplicate_idcard.destroy', encrypt($r->id)) }}" method="POST" class="d-inline"
                                                   onsubmit="return confirm('Delete this duplicate ID card request? This cannot be undone.');">
                                                 @csrf
                                                 @method('DELETE')

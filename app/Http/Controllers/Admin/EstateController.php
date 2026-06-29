@@ -692,7 +692,7 @@ class EstateController extends Controller
                     ->all();
             }
             if ($isEdit) {
-                $existingReq = EstateHomeRequestDetails::findOrFail($request->id);
+                $existingReq = EstateHomeRequestDetails::findOrFail(decrypt($request->id));
                 // Existing rows may store employee_pk as pk_old; normalize before compare
                 $existingEmpPkRaw = (int) ($existingReq->employee_pk ?? 0);
                 $existingEmpPk = $existingEmpPkRaw;
@@ -717,7 +717,7 @@ class EstateController extends Controller
             // Editing: keep existing ID if none provided, otherwise use given one
             $reqId = $validated['req_id'] ?? null;
             if ($reqId === null || $reqId === '') {
-                $existing = EstateHomeRequestDetails::findOrFail($request->id);
+                $existing = EstateHomeRequestDetails::findOrFail(decrypt($request->id));
                 $reqId = $existing->req_id;
             }
         } else {
@@ -761,7 +761,7 @@ class EstateController extends Controller
             $data['change_status'] = 0;
         } else {
             // Edit modal does not post workflow fields; preserve existing HAC / change flags.
-            $workflow = EstateHomeRequestDetails::findOrFail($request->id);
+            $workflow = EstateHomeRequestDetails::findOrFail(decrypt($request->id));
             $data['app_status'] = (int) ($workflow->app_status ?? 0);
             $data['hac_status'] = (int) ($workflow->hac_status ?? 0);
             $data['f_status'] = (int) ($workflow->f_status ?? 0);
@@ -851,7 +851,7 @@ class EstateController extends Controller
         }
 
         if ($request->filled('id')) {
-            $record = EstateHomeRequestDetails::findOrFail($request->id);
+            $record = EstateHomeRequestDetails::findOrFail(decrypt($request->id));
             $record->update($data);
             $message = 'Estate request updated successfully.';
             EstateRequestForEstateDataTable::bumpListingCacheEpoch();
@@ -1710,7 +1710,7 @@ class EstateController extends Controller
     public function raiseChangeRequest($id)
     {
         $id = (int) $id;
-        $homeReq = DB::table('estate_home_request_details')->where('pk', $id)->first();
+        $homeReq = DB::table('estate_home_request_details')->where('pk', decrypt($id))->first();
         if (! $homeReq) {
             return redirect()->route('admin.estate.request-for-estate')->with('error', 'Request not found.');
         }
@@ -1953,7 +1953,7 @@ class EstateController extends Controller
         $id = (int) $id;
         $this->ensureChangeRequestOwnership($id);
 
-        $record = DB::table('estate_change_home_req_details')->where('pk', $id)->first();
+        $record = DB::table('estate_change_home_req_details')->where('pk', decrypt($id))->first();
         if (! $record) {
             return redirect()->back()->with('error', 'Change request record not found.');
         }
@@ -2256,7 +2256,7 @@ class EstateController extends Controller
     {
         $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails')
             ->where('estate_change_hac_status', 1)
-            ->findOrFail($id);
+            ->findOrFail(decrypt($id));
 
         $homeReq = $record->estateHomeRequestDetails;
         if (! $homeReq) {
@@ -2465,7 +2465,7 @@ class EstateController extends Controller
     {
         $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
             ->where('change_status', 0)
-            ->findOrFail($id);
+            ->findOrFail(decrypt($id));
 
         $existingPossession = DB::table('estate_possession_details')
             ->where('estate_home_request_details', $homeReq->pk)
@@ -2719,7 +2719,7 @@ class EstateController extends Controller
 
         $homeReq = EstateHomeRequestDetails::where('hac_status', 1)
             ->where('change_status', 0)
-            ->findOrFail($id);
+            ->findOrFail(decrypt($id));
 
         $request->validate([
             'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
@@ -2879,7 +2879,7 @@ class EstateController extends Controller
 
         $record = EstateChangeHomeReqDetails::with('estateHomeRequestDetails')
             ->where('estate_change_hac_status', 1)
-            ->findOrFail($id);
+            ->findOrFail(decrypt($id));
 
         $request->validate([
             'estate_house_master_pk' => 'required|integer|exists:estate_house_master,pk',
@@ -3025,7 +3025,7 @@ class EstateController extends Controller
             'disapprove_reason' => 'required|string|max:500',
         ]);
 
-        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->findOrFail($id);
+        $record = EstateChangeHomeReqDetails::where('estate_change_hac_status', 1)->findOrFail(decrypt($id));
         $record->change_ap_dis_status = 2;
         $record->f_status = 0; // Decision made — no longer "pending approval"
         $record->remarks = $request->disapprove_reason;
@@ -3095,7 +3095,7 @@ class EstateController extends Controller
         ];
 
         if ($request->filled('id')) {
-            $record = EstateOtherRequest::findOrFail($request->id);
+            $record = EstateOtherRequest::findOrFail(decrypt($request->id));
             $record->update($data);
             $message = 'Estate request successfully updated.';
         } else {
@@ -3142,7 +3142,7 @@ class EstateController extends Controller
     {
         $record = null;
         if ($request->filled('id')) {
-            $record = EstatePossessionOther::find($request->id);
+            $record = EstatePossessionOther::find(decrypt($request->id));
 
             // When editing, normalise location + house fields from estate_house_master
             // so that the dependent dropdowns and meter display can be correctly
@@ -3428,7 +3428,7 @@ class EstateController extends Controller
 
         // When allotting (not return-house): align with Define House - only Vacant and not already used
         if ($request->get('redirect_to') !== 'return-house') {
-            $isSameAsExisting = $request->filled('id') && (int) (EstatePossessionOther::find($request->id)?->estate_house_master_pk ?? 0) === (int) $house->pk;
+            $isSameAsExisting = $request->filled('id') && (int) (EstatePossessionOther::find(decrypt($request->id))?->estate_house_master_pk ?? 0) === (int) $house->pk;
             if (! $isSameAsExisting) {
                 if ((int) ($house->vacant_renovation_status ?? 1) !== 1) {
                     return redirect()
@@ -3541,7 +3541,7 @@ class EstateController extends Controller
                 $this->refreshHouseUsedStatusFromPossession((int) $housePk);
             }
         } elseif ($request->filled('id')) {
-            $existingRecord = EstatePossessionOther::find($request->id);
+            $existingRecord = EstatePossessionOther::find(decrypt($request->id));
             $previousHousePk = (int) ($existingRecord?->estate_house_master_pk ?? 0);
             unset($data['create_date'], $data['created_by']);
             EstatePossessionOther::where('pk', $request->id)->update($data);

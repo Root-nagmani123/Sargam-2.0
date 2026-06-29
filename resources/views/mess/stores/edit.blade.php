@@ -11,7 +11,7 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('admin.mess.stores.update', $store->id) }}">
+            <form method="POST" action="{{ route('admin.mess.stores.update', encrypt($store->id)) }}">
                 @csrf
                 @method('PUT')
 

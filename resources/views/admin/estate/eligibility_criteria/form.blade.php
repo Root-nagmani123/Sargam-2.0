@@ -21,7 +21,7 @@
             <p class="text-muted small mb-4">{{ $item ? 'Update mapping.' : 'Please Add Eligibility Unit Mapping.' }}</p>
             <hr class="my-4">
 
-            <form action="{{ $item ? route('admin.estate.eligibility-criteria.update', $item->pk) : route('admin.estate.eligibility-criteria.store') }}" method="POST">
+            <form action="{{ $item ? route('admin.estate.eligibility-criteria.update', encrypt($item->pk)) : route('admin.estate.eligibility-criteria.store') }}" method="POST">
                 @csrf
                 @if($item) @method('PUT') @endif
 

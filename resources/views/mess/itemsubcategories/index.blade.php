@@ -301,7 +301,6 @@ function initItemSubcategoryScripts() {
                     ts.clear(true);
                 }
             } catch (e) {
-                console.error('Tom Select init failed for', cfg.id, e);
             }
         });
     }

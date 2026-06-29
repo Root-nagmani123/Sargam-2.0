@@ -2648,7 +2648,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                 if (callback) callback();
             })
             .catch(function(err) {
-                console.error('Store items fetch failed:', err);
                 filteredItems = itemSubcategories || [];
                 if (callback) callback();
                 alert(
@@ -2858,7 +2857,6 @@ $selectedClientType = (string) request()->input('client_type', '');
             const storeId = getSelectValue(this);
             currentStoreId = storeId;
 
-            console.log('Store changed:', storeId); // Debug log
 
             if (!storeId) {
                 filteredItems = itemSubcategories;
@@ -2867,7 +2865,6 @@ $selectedClientType = (string) request()->input('client_type', '');
             }
 
             fetchStoreItems(storeId, function() {
-                console.log('Filtered items count:', filteredItems.length); // Debug log
                 updateAddItemDropdowns();
             });
         });
@@ -4229,7 +4226,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                 new bootstrap.Modal(document.getElementById('viewReportModal')).show();
             })
             .catch(err => {
-                console.error(err);
                 alert('Failed to load report.');
             });
     }, true);
@@ -4295,7 +4291,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                 new bootstrap.Modal(document.getElementById('returnItemModal')).show();
             })
             .catch(err => {
-                console.error(err);
                 alert('Failed to load return data.');
             });
     }, true);
@@ -4694,7 +4689,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                 }
             })
             .catch(err => {
-                console.error(err);
                 alert('Failed to load report for edit.');
             });
     }, true);
@@ -4818,14 +4812,11 @@ $selectedClientType = (string) request()->input('client_type', '');
             const storeSelect = addReportModal.querySelector('select[name="inve_store_master_pk"]');
             const preSelectedStore = storeSelect ? getSelectValue(storeSelect) : null;
 
-            console.log('Modal opening, pre-selected store:', preSelectedStore); // Debug log
 
             // If there's a pre-selected store, fetch its items
             if (preSelectedStore) {
                 currentStoreId = preSelectedStore;
                 fetchStoreItems(preSelectedStore, function() {
-                    console.log('Pre-fetched items for store:', preSelectedStore, 'Count:',
-                        filteredItems.length);
                     updateAddItemDropdowns();
                     refreshAllAvailable();
                     document.querySelectorAll('#addModalItemsBody .dr-item-row').forEach(function(
@@ -4902,7 +4893,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                 dt.draw(false);
             })
             .catch(function(err) {
-                console.error('Failed to refresh selling voucher date-range table', err);
             })
             .finally(function() {
                 isRefreshingSellingVoucherDateRangeTable = false;
@@ -5016,7 +5006,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                         if (window.toastr && data.message) {
                             toastr.success(data.message);
                         } else if (data.message) {
-                            alert(data.message);
                         }
                     } else {
                         var msg = (data && data.message) ? data.message :
@@ -5029,7 +5018,6 @@ $selectedClientType = (string) request()->input('client_type', '');
                                 }
                             } catch (e) {}
                         }
-                        alert(msg);
                     }
                 })
                 .catch(function() {

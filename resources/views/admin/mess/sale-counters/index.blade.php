@@ -43,8 +43,8 @@
                             <td>{{ $counter->location ?? 'N/A' }}</td>
                             <td><span class="badge {{ $counter->is_active ? 'bg-success' : 'bg-danger' }}">{{ $counter->is_active ? 'Active' : 'Inactive' }}</span></td>
                             <td>
-                                <a href="{{ route('admin.mess.sale-counters.show', $counter->id) }}" class="btn btn-sm btn-info">View</a>
-                                <a href="{{ route('admin.mess.sale-counters.edit', $counter->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <a href="{{ route('admin.mess.sale-counters.show', encrypt($counter->id)) }}" class="btn btn-sm btn-info">View</a>
+                                <a href="{{ route('admin.mess.sale-counters.edit', encrypt($counter->id)) }}" class="btn btn-sm btn-warning">Edit</a>
                             </td>
                         </tr>
                         @empty

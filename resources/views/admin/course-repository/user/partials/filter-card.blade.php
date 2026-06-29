@@ -444,7 +444,6 @@
         try {
             el._choicesBs = new Choices(el, cruFilterChoiceOptions(el));
         } catch (e) {
-            console.warn('Course repository filter Choices init failed', e);
         }
     }
 

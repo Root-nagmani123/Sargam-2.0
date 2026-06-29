@@ -68,7 +68,7 @@
                             <td>{{ $item->updater->name ?? 'N/A' }}</td>
 
                             <td>
-                                <a href="{{ route('exemptionEdit', $item->pk) }}" class="btn btn-sm btn-info">Edit</a>
+                                <a href="{{ route('exemptionEdit', encrypt($item->pk)) }}" class="btn btn-sm btn-info">Edit</a>
                             </td>
                             <td>
                                 <div class='form-check form-switch d-inline-block'>

@@ -12,7 +12,7 @@
                 <h4 class="card-title mb-3">Edit Memo / Notice</h4>
                 <hr>
 
-                <form action="{{ route('admin.memo-notice.update', $template->pk) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.memo-notice.update', encrypt($template->pk)) }}" method="POST" enctype="multipart/form-data">
                     @csrf
 
                     <div class="row">

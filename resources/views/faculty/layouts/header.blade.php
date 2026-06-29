@@ -400,7 +400,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Open search modal or expand search bar
             this.setAttribute('aria-expanded', 'true');
             // Add your search functionality here
-            console.log('Search triggered');
         });
     }
     

@@ -167,7 +167,6 @@ $('#courseSelectTogetStudent').on('change', function() {
                         });
                     } else {
                         // Show message if no defaulters found, but don't prevent UI update
-                        console.log('No defaulter students found for this topic.');
                     }
                      if (response.discipline_master_data && response.discipline_master_data.length > 0) {
                         response.discipline_master_data.forEach(discipline => {
@@ -183,7 +182,6 @@ $('#courseSelectTogetStudent').on('change', function() {
                         });
                     } else {
                         // Show message if no defaulters found, but don't prevent UI update
-                        console.log('No defaulter students found for this topic.');
                     }
 
                     // Destroy the old dual listbox wrapper
@@ -191,7 +189,6 @@ $('#courseSelectTogetStudent').on('change', function() {
                         try {
                             dualListbox.destroy();
                         } catch (e) {
-                            console.log('Error destroying dual listbox:', e);
                         }
                     }
                     $('.dual-listbox').remove();
@@ -214,8 +211,6 @@ $('#courseSelectTogetStudent').on('change', function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('AJAX Error:', error);
-                console.error('Response:', xhr.responseText);
                 alert('Error fetching defaulter students. Please check the console for details.');
             }
         });

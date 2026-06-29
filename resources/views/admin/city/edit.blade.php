@@ -14,7 +14,7 @@
         <div class="card-body">
             <h4 class="card-title mb-3">Edit City</h4>
             <hr>
-            <form action="{{ route('master.city.update', $city->pk) }}" method="POST">
+            <form action="{{ route('master.city.update', encrypt($city->pk)) }}" method="POST">
                 @csrf
 
                 <div class="row">

@@ -388,7 +388,7 @@ class FormController extends Controller
 
     public function edit($id)
     {
-        $form = DB::table('local_form')->where('id', $id)->first();
+        $form = DB::table('local_form')->where('id', decrypt($id))->first();
         $forms = DB::table('local_form')
             ->where('id', '!=', $id) // don't allow setting itself as parent
             ->orderBy('name')->get();
@@ -411,7 +411,7 @@ class FormController extends Controller
             'parent_id' => 'nullable|exists:local_form,id',
         ]);
 
-        DB::table('local_form')->where('id', $id)->update([
+        DB::table('local_form')->where('id', decrypt($id))->update([
             'parent_id' => $request->parent_id,
             'name' => $request->name,
             'shortname' => $request->shortname,
@@ -427,14 +427,14 @@ class FormController extends Controller
 
     public function toggleVisible($id)
     {
-        $form = DB::table('local_form')->where('id', $id)->first();
+        $form = DB::table('local_form')->where('id', decrypt($id))->first();
         if (!$form) {
             return response()->json(['error' => 'Form not found'], 404);
         }
 
         $newStatus = !$form->visible;
 
-        DB::table('local_form')->where('id', $id)->update(['visible' => $newStatus]);
+        DB::table('local_form')->where('id', decrypt($id))->update(['visible' => $newStatus]);
 
         return response()->json([
             'success' => true,
@@ -839,7 +839,7 @@ class FormController extends Controller
 
     public function moveUp($id)
     {
-        $form = DB::table('local_form')->where('id', $id)->first();
+        $form = DB::table('local_form')->where('id', decrypt($id))->first();
 
         if (!$form) {
             return response()->json(['success' => false, 'message' => 'Form not found.'], 404);
@@ -863,7 +863,7 @@ class FormController extends Controller
 
     public function moveDown($id)
     {
-        $form = DB::table('local_form')->where('id', $id)->first();
+        $form = DB::table('local_form')->where('id', decrypt($id))->first();
 
         if (!$form) {
             return response()->json(['success' => false, 'message' => 'Form not found.'], 404);
@@ -1095,7 +1095,7 @@ class FormController extends Controller
         }
 
         if ($table) {
-            // $record = DB::table($table)->where('id', $id)->first();
+            // $record = DB::table($table)->where('id', decrypt($id))->first();
             // return $record ? $record->$nameField : '';
         }
 

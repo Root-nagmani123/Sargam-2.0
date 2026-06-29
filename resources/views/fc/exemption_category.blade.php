@@ -71,7 +71,7 @@
                                 </div>
                             </div>
                             <div class="card-footer bg-transparent border-0 pt-0 px-4 pb-4">
-                                <a href="{{ route('fc.exemption_application', $item->pk) }}"
+                                <a href="{{ route('fc.exemption_application', encrypt($item->pk)) }}"
                                     class="btn {{ $theme['btn'] }} w-100 rounded-3">
                                     Apply for Exemption
                                 </a>

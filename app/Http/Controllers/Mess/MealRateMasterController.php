@@ -29,13 +29,13 @@ class MealRateMasterController extends Controller
 
     public function edit($id)
     {
-        $rate = MealRateMaster::findOrFail($id);
+        $rate = MealRateMaster::findOrFail(decrypt($id));
         return view('admin.mess.meal-rate-master.edit', compact('rate'));
     }
 
     public function update(Request $request, $id)
     {
-        $rate = MealRateMaster::findOrFail($id);
+        $rate = MealRateMaster::findOrFail(decrypt($id));
         $data = $this->validatedData($request, $rate);
         $rate->update($data);
         return redirect()->route('admin.mess.meal-rate-master.index')->with('success', 'Meal rate updated successfully.');
@@ -43,7 +43,7 @@ class MealRateMasterController extends Controller
 
     public function destroy($id)
     {
-        $rate = MealRateMaster::findOrFail($id);
+        $rate = MealRateMaster::findOrFail(decrypt($id));
         $rate->delete();
         return redirect()->route('admin.mess.meal-rate-master.index')->with('success', 'Meal rate deleted successfully.');
     }
@@ -53,7 +53,7 @@ class MealRateMasterController extends Controller
      */
     public function toggleStatus($id)
     {
-        $rate = MealRateMaster::findOrFail($id);
+        $rate = MealRateMaster::findOrFail(decrypt($id));
         $rate->update(['is_active' => !$rate->is_active]);
         $status = $rate->is_active ? 'Active' : 'Inactive';
         return redirect()->route('admin.mess.meal-rate-master.index')->with('success', "Meal rate set to {$status}.");

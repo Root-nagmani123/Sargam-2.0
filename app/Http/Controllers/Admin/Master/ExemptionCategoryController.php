@@ -363,7 +363,7 @@ public function medicalSpecialityStore(Request $request)
 
         if ($request->filled('id')) {
 
-            $speciality = ExemptionMedicalSpecialityMaster::findOrFail($request->id);
+            $speciality = ExemptionMedicalSpecialityMaster::findOrFail(decrypt($request->id));
 
             $speciality->update([
                 'speciality_name' => $validated['speciality_name'],

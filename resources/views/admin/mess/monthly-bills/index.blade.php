@@ -106,15 +106,15 @@
                             </td>
                             <td>{{ $bill->due_date ? date('d-M-Y', strtotime($bill->due_date)) : '-' }}</td>
                             <td>
-                                <a href="{{ route('admin.mess.monthly-bills.show', $bill->id) }}" 
+                                <a href="{{ route('admin.mess.monthly-bills.show', encrypt($bill->id)) }}" 
                                    class="btn btn-sm btn-info" title="View">
                                     <iconify-icon icon="solar:eye-bold"></iconify-icon>
                                 </a>
-                                <a href="{{ route('admin.mess.monthly-bills.edit', $bill->id) }}" 
+                                <a href="{{ route('admin.mess.monthly-bills.edit', encrypt($bill->id)) }}" 
                                    class="btn btn-sm btn-warning" title="Edit">
                                     <iconify-icon icon="solar:pen-bold"></iconify-icon>
                                 </a>
-                                <form action="{{ route('admin.mess.monthly-bills.destroy', $bill->id) }}" 
+                                <form action="{{ route('admin.mess.monthly-bills.destroy', encrypt($bill->id)) }}" 
                                       method="POST" class="d-inline" 
                                       onsubmit="return confirm('Are you sure you want to delete this bill?');">
                                     @csrf

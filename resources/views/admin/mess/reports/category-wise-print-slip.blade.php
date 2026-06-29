@@ -482,11 +482,6 @@ function printCategoryWiseSlip() {
 
 document.addEventListener('DOMContentLoaded', function() {
     @if(isset($reportTimingMs))
-    console.info(
-        '[Sale Voucher Report] server {{ $reportTimingMs }} ms'
-        @if(isset($reportCacheStatus)) + ', cache {{ $reportCacheStatus }}' @endif
-        @if(isset($reportLineCount)) + ', {{ $reportLineCount }} buyers total' @endif
-    );
     @endif
 
     var reportWrap = document.getElementById('cw-sale-voucher-report-wrap');
@@ -513,7 +508,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 })
                 .catch(function (e) {
                     reportWrap.style.opacity = '';
-                    console.error('Sale voucher report pagination failed', e);
                 });
         }
 

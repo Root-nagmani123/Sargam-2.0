@@ -35,9 +35,9 @@
                 </td>
                 <td>{{ $request->items->count() }} items</td>
                 <td>
-                    <a href="{{ route('admin.mess.materialrequests.show', $request->id) }}" class="btn btn-sm btn-info">View</a>
+                    <a href="{{ route('admin.mess.materialrequests.show', encrypt($request->id)) }}" class="btn btn-sm btn-info">View</a>
                     @if($request->status == 'pending')
-                        <a href="{{ route('admin.mess.materialrequests.approve', $request->id) }}" class="btn btn-sm btn-success">Approve</a>
+                        <a href="{{ route('admin.mess.materialrequests.approve', encrypt($request->id)) }}" class="btn btn-sm btn-success">Approve</a>
                     @endif
                 </td>
             </tr>

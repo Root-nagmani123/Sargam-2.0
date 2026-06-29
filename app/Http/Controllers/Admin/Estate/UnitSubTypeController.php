@@ -42,13 +42,13 @@ class UnitSubTypeController extends Controller
 
     public function edit(string $id)
     {
-        $item = UnitSubType::findOrFail($id);
+        $item = UnitSubType::findOrFail(decrypt($id));
         return view('admin.estate.define_unit_sub_type.form', compact('item'));
     }
 
     public function update(Request $request, string $id)
     {
-        $item = UnitSubType::findOrFail($id);
+        $item = UnitSubType::findOrFail(decrypt($id));
         $validated = $request->validate([
             'unit_sub_type' => 'required|string|max:255',
         ]);
@@ -58,7 +58,7 @@ class UnitSubTypeController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        UnitSubType::findOrFail($id)->delete();
+        UnitSubType::findOrFail(decrypt($id))->delete();
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Unit sub type deleted successfully.']);
         }

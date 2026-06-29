@@ -212,7 +212,6 @@ $(document).ready(function() {
                 errorText.text('Unsupported format. Only JPG and PNG files are allowed.');
                 errorMessageDiv.removeClass('d-none').addClass('show');
                 this.value = '';
-                console.warn('Photo validation failed: unsupported format', file.type);
                 return;
             }
 
@@ -221,7 +220,6 @@ $(document).ready(function() {
                 errorText.text('File size exceeds limit. Maximum file size allowed is 2 MB.');
                 errorMessageDiv.removeClass('d-none').addClass('show');
                 this.value = '';
-                console.warn('Photo validation failed: file size exceeded', file.size);
                 return;
             }
 
@@ -234,12 +232,10 @@ $(document).ready(function() {
                         .attr('src', event.target.result)
                         .removeClass('d-none');
                 } catch (err) {
-                    console.warn('Photo preview error:', err);
                 }
             };
             reader.readAsDataURL(file);
         } catch (err) {
-            console.error('Photo validation error:', err);
         }
     });
     // ======= END PHOTO VALIDATION =======

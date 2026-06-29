@@ -113,19 +113,19 @@
                                     </td>
                                     <td>{{ $parent->description }}</td>
                                     <td>
-                                        <a href="{{ route('forms.courseList', $parent->id) }}"
+                                        <a href="{{ route('forms.courseList', encrypt($parent->id)) }}"
                                             class="btn btn-sm btn-success">View</a>
                                     </td>
                                     <td>
-                                        <a href="{{ route('forms.show', $parent->id) }}"
+                                        <a href="{{ route('forms.show', encrypt($parent->id)) }}"
                                             class="btn btn-sm btn-info">Preview</a>
                                     </td>
                                     <td>
-                                        <a href="{{ route('forms.fc_edit', $parent->id) }}"
+                                        <a href="{{ route('forms.fc_edit', encrypt($parent->id)) }}"
                                             class="btn btn-sm btn-warning">Edit Fields</a>
                                     </td>
                                     <td>
-                                        <a href="{{ route('forms.edit', $parent->id) }}"
+                                        <a href="{{ route('forms.edit', encrypt($parent->id)) }}"
                                             class="btn btn-sm btn-danger">Edit</a>
                                     </td>
                                     <td>
@@ -152,19 +152,19 @@
                                             </td>
                                             <td>{{ $child->description }}</td>
                                             <td>
-                                                <a href="{{ route('forms.courseList', $child->id) }}"
+                                                <a href="{{ route('forms.courseList', encrypt($child->id)) }}"
                                                     class="btn btn-sm btn-success">View</a>
                                             </td>
                                             <td>
-                                                <a href="{{ route('forms.show', $child->id) }}"
+                                                <a href="{{ route('forms.show', encrypt($child->id)) }}"
                                                     class="btn btn-sm btn-info">Preview</a>
                                             </td>
                                             <td>
-                                                <a href="{{ route('forms.fc_edit', $child->id) }}"
+                                                <a href="{{ route('forms.fc_edit', encrypt($child->id)) }}"
                                                     class="btn btn-sm btn-warning">Edit Fields</a>
                                             </td>
                                             <td>
-                                                <a href="{{ route('forms.edit', $child->id) }}"
+                                                <a href="{{ route('forms.edit', encrypt($child->id)) }}"
                                                     class="btn btn-sm btn-danger">Edit</a>
                                             </td>
                                             <td>

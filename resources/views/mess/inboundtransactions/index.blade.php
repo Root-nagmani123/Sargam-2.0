@@ -33,7 +33,7 @@
                 <td>{{ $txn->invoice_number ?? 'N/A' }}</td>
                 <td>₹{{ number_format($txn->invoice_amount ?? 0, 2) }}</td>
                 <td>
-                    <a href="{{ route('admin.mess.inboundtransactions.show', $txn->id) }}" class="btn btn-sm btn-info">View</a>
+                    <a href="{{ route('admin.mess.inboundtransactions.show', encrypt($txn->id)) }}" class="btn btn-sm btn-info">View</a>
                 </td>
             </tr>
         @endforeach

@@ -27,7 +27,7 @@
                     </ul>
                 </div>
             @endif
-            <form method="POST" action="{{ route('exemptionUpdate', $item->pk) }}">
+            <form method="POST" action="{{ route('exemptionUpdate', encrypt($item->pk)) }}">
                 @csrf
 
                 <div class="mb-3">

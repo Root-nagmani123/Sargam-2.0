@@ -75,13 +75,13 @@ class ItemCategoryController extends Controller
 
     public function edit($id)
     {
-        $itemcategory = ItemCategory::findOrFail($id);
+        $itemcategory = ItemCategory::findOrFail(decrypt($id));
         return view('mess.itemcategories.edit', compact('itemcategory'));
     }
 
     public function update(Request $request, $id)
     {
-        $itemcategory = ItemCategory::findOrFail($id);
+        $itemcategory = ItemCategory::findOrFail(decrypt($id));
         $data = $this->validatedData($request, $itemcategory);
 
         $itemcategory->update($data);
@@ -95,7 +95,7 @@ class ItemCategoryController extends Controller
     {
         abort_if(! $this->canDeleteItemCategory(), 403, 'You are not authorized to delete item categories.');
 
-        $itemcategory = ItemCategory::findOrFail($id);
+        $itemcategory = ItemCategory::findOrFail(decrypt($id));
         $itemcategory->delete();
 
         self::bumpListCacheEpoch();

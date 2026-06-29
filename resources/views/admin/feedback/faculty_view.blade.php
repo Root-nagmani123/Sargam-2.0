@@ -591,7 +591,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error fetching suggestions:', error);
                 suggestionsList.innerHTML =
                     '<div class="suggestion-item text-muted">Error loading suggestions</div>';
                 suggestionsList.style.display = 'block';
@@ -776,7 +775,6 @@ function loadFeedbackData(page = 1) {
             contentContainer.style.display = 'block';
         })
         .catch(error => {
-            console.error('Error loading feedback data:', error);
             loadingSpinner.style.display = 'none';
             contentContainer.style.display = 'block';
             contentContainer.innerHTML =
@@ -846,7 +844,6 @@ function exportToExcel() {
             loadingSpinner.querySelector('p').textContent = 'Loading feedback data...';
         })
         .catch(error => {
-            console.error('Error exporting to Excel:', error);
             loadingSpinner.style.display = 'none';
             loadingSpinner.querySelector('p').textContent = 'Loading feedback data...';
             alert('Error exporting to Excel. Please try again.');
@@ -900,7 +897,6 @@ function exportToPDF() {
             loadingSpinner.style.display = 'none';
         })
         .catch(error => {
-            console.error('Error exporting to PDF:', error);
             loadingSpinner.style.display = 'none';
             alert('Error exporting to PDF. Please try again.');
         });

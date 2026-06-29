@@ -26,7 +26,7 @@
             </dd>
         </dl>
         <hr>
-        <a href="{{ route('admin.mess.vendor-item-mappings.edit', $mapping->id) }}" class="btn btn-primary btn-sm">Edit</a>
+        <a href="{{ route('admin.mess.vendor-item-mappings.edit', encrypt($mapping->id)) }}" class="btn btn-primary btn-sm">Edit</a>
     </div>
 </div>
 @endsection

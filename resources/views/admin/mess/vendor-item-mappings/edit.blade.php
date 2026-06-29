@@ -11,7 +11,7 @@
         </h5>
     </div>
     <div class="card-body">
-        <form action="{{ route('admin.mess.vendor-item-mappings.update', $mapping->id) }}" method="POST" id="editVendorMappingForm">
+        <form action="{{ route('admin.mess.vendor-item-mappings.update', encrypt($mapping->id)) }}" method="POST" id="editVendorMappingForm">
             @csrf
             @method('PUT')
 

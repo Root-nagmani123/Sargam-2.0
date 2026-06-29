@@ -45,7 +45,7 @@ class KitchenIssueApprovalController extends Controller
             'employee',
             'student',
             'approvals.approver'
-        ])->findOrFail($id);
+        ])->findOrFail(decrypt($id));
 
         if ($kitchenIssue->approve_status != KitchenIssueMaster::APPROVE_PENDING) {
             return redirect()->route('admin.mess.material-management-approvals.index')
@@ -64,7 +64,7 @@ class KitchenIssueApprovalController extends Controller
             'remarks' => 'nullable|string|max:500',
         ]);
 
-        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::findOrFail(decrypt($id));
 
         if ($kitchenIssue->approve_status != KitchenIssueMaster::APPROVE_PENDING) {
             return back()->with('error', 'This material management has already been processed');
@@ -110,7 +110,7 @@ class KitchenIssueApprovalController extends Controller
             'remarks' => 'required|string|max:500',
         ]);
 
-        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::findOrFail(decrypt($id));
 
         if ($kitchenIssue->approve_status != KitchenIssueMaster::APPROVE_PENDING) {
             return back()->with('error', 'This material management has already been processed');

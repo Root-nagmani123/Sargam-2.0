@@ -87,7 +87,7 @@ class VenueMasterController extends Controller
     }
 
     public function edit($id) {
-        $venue = VenueMaster::findOrFail($id);
+        $venue = VenueMaster::findOrFail(decrypt($id));
         return view('admin.venueMaster.edit', compact('venue'));
     }
 

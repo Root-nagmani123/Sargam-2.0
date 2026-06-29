@@ -46,8 +46,8 @@ class EligibilityCriteriaDataTable extends DataTable
                 });
             })
             ->addColumn('actions', function ($row) {
-                $editUrl = route('admin.estate.eligibility-criteria.edit', $row->pk);
-                $deleteUrl = route('admin.estate.eligibility-criteria.destroy', $row->pk);
+                $editUrl = route('admin.estate.eligibility-criteria.edit', encrypt($row->pk));
+                $deleteUrl = route('admin.estate.eligibility-criteria.destroy', encrypt($row->pk));
                 $token = csrf_token();
 
                 return '<div class="d-flex gap-1 flex-wrap">

@@ -1289,23 +1289,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function refreshChoicesFromSelect(el, selectedValue) {
-        console.log('refreshChoicesFromSelect called - el:', el, 'selectedValue:', selectedValue);
-        console.log('choicesInstance exists?', !!el.choicesInstance);
         if (!el || !el.choicesInstance) {
-            console.warn('No choicesInstance found for element:', el);
             return;
         }
         var instance = el.choicesInstance;
         var values = Array.from(el.options).map(function (o) {
             return { value: o.value, label: o.text, selected: selectedValue != null ? String(o.value) === String(selectedValue) : o.selected };
         });
-        console.log('Refreshing choices with', values.length, 'options');
         instance.clearStore();
         instance.setChoices(values, 'value', 'label', true);
         try {
             instance.setChoiceByValue(selectedValue != null ? String(selectedValue) : (el.value || ''));
         } catch (e) {
-            console.error('Error setting choice value:', e);
         }
     }
 
@@ -1611,7 +1606,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     }
                 } catch (e) {
-                    console.error('Failed to refresh modal_buyer_name options:', e);
                 }
             })
             .catch(function() {
@@ -2370,29 +2364,18 @@ document.addEventListener('DOMContentLoaded', function() {
         var sectionBuyerNames = {!! json_encode(($sectionBuyerNames ?? collect())->values()->all(), JSON_UNESCAPED_UNICODE) !!};
 
         // Debug: Log initial data
-        console.log('=== Main Filter Initialization ===');
-        console.log('clientTypeOptions:', clientTypeOptions);
-        console.log('employeeNames:', employeeNames);
-        console.log('Academy Staff count:', employeeNames['academy staff'] ? employeeNames['academy staff'].length : 0);
-        console.log('Faculty count:', employeeNames['faculty'] ? employeeNames['faculty'].length : 0);
-        console.log('Mess Staff count:', employeeNames['mess staff'] ? employeeNames['mess staff'].length : 0);
-        console.log('otCourses count:', otCourseOptions.length);
 
         function fillClientTypePk(preserve) {
             var slug = clientTypeSlug.value;
             var currentClientPk = preserve ? preservedClientTypePk : '';
-            console.log('=== fillClientTypePk START ===');
-            console.log('slug:', slug, 'preserve:', preserve, 'currentClientPk:', currentClientPk);
             
             // If Choices.js exists, destroy it first to rebuild clean
             if (clientTypePk.choicesInstance) {
-                console.log('Destroying existing Choices.js instance for clientTypePk...');
                 try {
                     clientTypePk.choicesInstance.destroy();
                     clientTypePk.choicesInstance = null;
                     clientTypePk.dataset.choicesInitialized = 'false';
                 } catch (e) {
-                    console.error('Error destroying Choices instance:', e);
                 }
             }
             
@@ -2422,23 +2405,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 clientTypePk.value = currentClientPk;
             }
 
-            console.log('fillClientTypePk - Re-initializing Choices.js for clientTypePk...');
-            console.log('fillClientTypePk - Total options:', clientTypePk.options.length);
             
             // Re-initialize Choices.js after options are added
             if (typeof window.Choices !== 'undefined') {
                 initChoicesElement(clientTypePk);
                 if (currentClientPk && clientTypePk.choicesInstance) {
-                    console.log('fillClientTypePk - Setting choice to:', currentClientPk);
                     try {
                         clientTypePk.choicesInstance.setChoiceByValue(currentClientPk);
                     } catch (e) {
-                        console.error('Error setting choice value:', e);
                     }
                 }
             }
             
-            console.log('fillClientTypePk - Calling fillBuyerSelect(true)...');
             fillBuyerSelect(true);
         }
 
@@ -2460,19 +2438,14 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             var currentBuyer = preserve ? preservedBuyerName : [];
-            console.log('=== fillBuyerSelect START ===');
-            console.log('selectedSlugs:', selectedSlugs, 'selectedPks:', selectedPks, 'preserve:', preserve);
-            console.log('buyerSelect.choicesInstance exists?', !!buyerSelect.choicesInstance);
             
             // If Choices.js exists, destroy it first to rebuild clean
             if (buyerSelect.choicesInstance) {
-                console.log('Destroying existing Choices.js instance...');
                 try {
                     buyerSelect.choicesInstance.destroy();
                     buyerSelect.choicesInstance = null;
                     buyerSelect.dataset.choicesInitialized = 'false';
                 } catch (e) {
-                    console.error('Error destroying Choices instance:', e);
                 }
             }
             
@@ -2480,19 +2453,16 @@ document.addEventListener('DOMContentLoaded', function() {
             buyerSelect.innerHTML = '';
 
             function addOptions(list) {
-                console.log('addOptions called with', list ? list.length : 0, 'items');
                 (list || []).forEach(function (o) {
                     var opt = document.createElement('option');
                     opt.value = o.value;
                     opt.textContent = o.text;
                     buyerSelect.appendChild(opt);
-                    console.log('Added option:', o.text);
                 });
                 if (Array.isArray(currentBuyer) && currentBuyer.length) {
                     Array.from(buyerSelect.options).forEach(function (option) {
                         option.selected = currentBuyer.indexOf(option.value) !== -1;
                     });
-                    console.log('Set current buyers to:', currentBuyer);
                 }
             }
 
@@ -2603,7 +2573,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         try {
                             buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
                         } catch (e) {
-                            console.error('Error setting buyer values:', e);
                         }
                     }
                 }
@@ -2617,18 +2586,10 @@ document.addEventListener('DOMContentLoaded', function() {
             if (slug === 'employee' && selectedPk) {
                 var selectedOpt = clientTypePk.options[clientTypePk.selectedIndex];
                 var dataClientName = selectedOpt && selectedOpt.dataset ? (selectedOpt.dataset.clientName || '') : '';
-                console.log('Employee Debug - selectedPk:', selectedPk);
-                console.log('Employee Debug - selectedOpt:', selectedOpt);
-                console.log('Employee Debug - dataClientName:', dataClientName);
-                console.log('Employee Debug - employeeNames keys:', Object.keys(employeeNames));
-                console.log('Employee Debug - employeeNames[dataClientName]:', employeeNames[dataClientName]);
                 
                 if (dataClientName && employeeNames[dataClientName] && employeeNames[dataClientName].length > 0) {
-                    console.log('Employee Debug - Adding', employeeNames[dataClientName].length, 'employees');
                     addOptions(employeeNames[dataClientName]);
                 } else {
-                    console.warn('Employee: No employees found for dataClientName:', dataClientName);
-                    console.warn('Available keys:', Object.keys(employeeNames));
                 }
             } else if (slug === 'employee' && !selectedPk) {
                 // Employee selected but Client Type = All => show all employee groups
@@ -2829,18 +2790,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 addOptions(list3);
             }
             
-            console.log('fillBuyerSelect - Total options in buyerSelect:', buyerSelect.options.length);
-            console.log('fillBuyerSelect - Re-initializing Choices.js...');
             
             // Re-initialize Choices.js after options are added
             if (typeof window.Choices !== 'undefined') {
                 initChoicesElement(buyerSelect);
                 if (currentBuyer && buyerSelect.choicesInstance) {
-                    console.log('fillBuyerSelect - Setting choice to:', currentBuyer);
                     try {
                         buyerSelect.choicesInstance.setChoiceByValue(currentBuyer);
                     } catch (e) {
-                        console.error('Error setting choice value:', e);
                     }
                 }
             }

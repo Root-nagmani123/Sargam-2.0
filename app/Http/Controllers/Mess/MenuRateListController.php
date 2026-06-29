@@ -36,7 +36,7 @@ class MenuRateListController extends Controller
 
     public function show($id)
     {
-        $menu = MenuRateList::with('inventory')->findOrFail($id);
+        $menu = MenuRateList::with('inventory')->findOrFail(decrypt($id));
         return view('admin.mess.menu-rate-lists.show', compact('menu'));
     }
 
@@ -48,7 +48,7 @@ class MenuRateListController extends Controller
      */
     public function edit($id)
     {
-        $menu = MenuRateList::findOrFail($id);
+        $menu = MenuRateList::findOrFail(decrypt($id));
         $items = Inventory::where('is_active', true)->get();
         return view('admin.mess.menu-rate-lists.edit', compact('menu', 'items'));
     }
@@ -62,7 +62,7 @@ class MenuRateListController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $menu = MenuRateList::findOrFail($id);
+        $menu = MenuRateList::findOrFail(decrypt($id));
         
         $request->validate([
             'menu_item_name' => 'required|string|max:255',
@@ -83,7 +83,7 @@ class MenuRateListController extends Controller
      */
     public function destroy($id)
     {
-        $menu = MenuRateList::findOrFail($id);
+        $menu = MenuRateList::findOrFail(decrypt($id));
         $menu->delete();
         return redirect()->route('admin.mess.menu-rate-lists.index')->with('success', 'Menu rate deleted successfully.');
     }

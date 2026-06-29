@@ -11,7 +11,7 @@
         <!-- Start Edit Form Card -->
       <div class="card">
     <div class="card-body">
-        <form action="{{ route('forms.update', $form->id) }}" method="POST" id="editForm">
+        <form action="{{ route('forms.update', encrypt($form->id)) }}" method="POST" id="editForm">
             @csrf
             @method('PUT')
 

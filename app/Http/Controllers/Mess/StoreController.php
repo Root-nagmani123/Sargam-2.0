@@ -53,13 +53,13 @@ class StoreController extends Controller
 
     public function edit($id)
     {
-        $store = Store::findOrFail($id);
+        $store = Store::findOrFail(decrypt($id));
         return view('mess.stores.edit', compact('store'));
     }
 
     public function update(Request $request, $id)
     {
-        $store = Store::findOrFail($id);
+        $store = Store::findOrFail(decrypt($id));
         $data  = $this->validatedData($request, $store);
 
         $store->update($data);
@@ -71,7 +71,7 @@ class StoreController extends Controller
 
     public function destroy($id)
     {
-        $store = Store::findOrFail($id);
+        $store = Store::findOrFail(decrypt($id));
         $store->delete();
 
         self::bumpListCacheEpoch();

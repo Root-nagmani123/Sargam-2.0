@@ -1675,6 +1675,7 @@ class ReportController extends Controller
      */
     public function getCourseBuyerNamesByCourse(Request $request, $course_pk)
     {
+        $course_pk = decrypt($course_pk);
         $coursePk = (int) $course_pk;
         if ($coursePk <= 0) {
             return response()->json(['buyers' => []]);
@@ -2988,7 +2989,7 @@ class ReportController extends Controller
                 'sale_qty' => $saleQty,
                 'avg_purchase_price' => $avgPurchasePrice,
                 'avg_sale_price' => $avgSalePrice,
-                'category_id' => $item->category_id,
+                'category_id' => encrypt($item->category_id),
                 'category_name' => $item->category ? $item->category->category_name : null,
             ];
         }

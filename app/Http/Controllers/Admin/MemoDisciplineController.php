@@ -276,6 +276,7 @@ class MemoDisciplineController extends Controller
         }
     }
     function getConversationModel(Request $request, $memoId,$type){
+        $memoId = decrypt($memoId);
         // $memo = MemoDiscipline::with([
         //     'course:pk,course_name',
         //     'discipline:pk,discipline_name',

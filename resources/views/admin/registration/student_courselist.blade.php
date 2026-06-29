@@ -336,14 +336,10 @@
 <script>
     $(document).ready(function() {
         let dataTable = null;
-        console.log('Document ready - Initializing...');
 
         // Debug function to check DataTable state
         function debugDataTable() {
-            console.log('DataTable status:', dataTable ? 'Initialized' : 'Not initialized');
             if (dataTable) {
-                console.log('DataTable settings:', dataTable.settings()[0]);
-                console.log('Current filters - Course ID:', $('#course_id').val(), 'Status:', $('#status').val());
             }
         }
 
@@ -354,7 +350,6 @@
 
         // Function to update course dropdown
         function updateCourseDropdown(courseStatus) {
-            console.log('Updating course dropdown for status:', courseStatus);
             $.ajax({
                 url: "{{ route('student.courses') }}",
                 type: "GET",
@@ -366,7 +361,6 @@
                     'X-Requested-With': 'XMLHttpRequest'
                 },
                 success: function(response) {
-                    console.log('Course dropdown update success:', response);
                     const courseSelect = $('#course_id');
                     courseSelect.empty().append('<option value="">-- Select Course --</option>');
 
@@ -379,13 +373,10 @@
                     
                     // Auto-initialize DataTable if a course is selected
                     if ($('#course_id').val() !== '') {
-                        console.log('Course already selected, initializing DataTable...');
                         initializeDataTable();
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Course dropdown AJAX error:', error);
-                    console.log('Response:', xhr.responseText);
                 }
             });
         }
@@ -410,24 +401,20 @@
         // Initialize DataTable
         //--------------------------
         function initializeDataTable() {
-            console.log('initializeDataTable called');
             
             // If DataTable is already initialized, just reload the data
             if (dataTable !== null && $.fn.DataTable.isDataTable('#studentsTable')) {
-                console.log('DataTable already exists, reloading...');
                 dataTable.ajax.reload();
                 return;
             }
 
             // Destroy existing DataTable if it exists
             if ($.fn.DataTable.isDataTable('#studentsTable')) {
-                console.log('Destroying existing DataTable...');
                 $('#studentsTable').DataTable().destroy();
                 // Clear the table body to reset layout
                 $('#studentsTable tbody').empty();
             }
 
-            console.log('Initializing new DataTable...');
             // Initialize DataTable
             dataTable = $('#studentsTable').DataTable({
                 processing: true,
@@ -445,17 +432,12 @@
                         d.course_id = $('#course_id').val();
                         d.status = $('#status').val();
                         d.course_status = $('input[name="course_status"]:checked').val();
-                        console.log('AJAX request data:', d);
                     },
                     dataSrc: function(json) {
-                        console.log('AJAX response received:', json);
                         $('#filteredCount').text(json.recordsTotal || 0);
                         return json.data || [];
                     },
                     error: function(xhr, error, thrown) {
-                        console.error('DataTable AJAX error:', error);
-                        console.error('Error details:', thrown);
-                        console.log('Response:', xhr.responseText);
                         alert('Error loading data. Please check console for details.');
                     }
                 },
@@ -474,14 +456,11 @@
                     { targets: [1, 2, 3, 4, 5], className: 'text-truncate' }
                 ],
                 drawCallback: function(settings) {
-                    console.log('DataTable draw complete');
                     let api = this.api();
                     $('#filteredCount').text(api.page.info().recordsTotal);
                     debugDataTable();
                 },
                 initComplete: function(settings, json) {
-                    console.log('DataTable init complete');
-                    console.log('Initial data:', json);
                 }
             });
             
@@ -490,10 +469,8 @@
 
         // Load table when course or status changes
         $('#course_id, #status').change(function() {
-            console.log('Filter changed:', $(this).attr('id'), $(this).val());
             
             if ($('#course_id').val() === '') {
-                console.log('No course selected, clearing table');
                 if (dataTable !== null) {
                     dataTable.clear().draw();
                     $('#filteredCount').text(0);
@@ -503,10 +480,8 @@
 
             // Initialize or reload DataTable
             if (dataTable === null) {
-                console.log('DataTable not initialized, initializing...');
                 initializeDataTable();
             } else {
-                console.log('Reloading DataTable with new filters...');
                 dataTable.ajax.reload();
             }
         });
@@ -514,7 +489,6 @@
         // When course status (Active / Archive) changes
         $('input[name="course_status"]').change(function() {
             const courseStatus = $(this).val();
-            console.log('Course status changed to:', courseStatus);
             updateCourseDropdown(courseStatus);
 
             // Reset filters
@@ -531,9 +505,7 @@
 
         // Initialize DataTable on page load if a course is selected
         $(window).on('load', function() {
-            console.log('Window loaded, checking for pre-selected course...');
             if ($('#course_id').val() !== '') {
-                console.log('Course pre-selected, initializing DataTable...');
                 setTimeout(() => {
                     initializeDataTable();
                 }, 1000);

@@ -72,7 +72,7 @@ class MDOEscrotExemptionDataTable extends DataTable
                 }
             }, true)
             ->addColumn('actions', function ($row) {
-                $deleteUrl = route('mdo-escrot-exemption.destroy', $row->pk);
+                $deleteUrl = route('mdo-escrot-exemption.destroy', encrypt($row->pk));
                 $csrf = csrf_token();
                 $formId = 'delete-form-' . $row->pk;
 

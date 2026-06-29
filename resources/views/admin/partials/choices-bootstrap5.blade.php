@@ -88,7 +88,6 @@
             try {
                 el._choicesBs = new Choices(el, choicesBsOptions(el));
             } catch (e) {
-                console.warn('Choices init failed', e);
             }
         });
     }

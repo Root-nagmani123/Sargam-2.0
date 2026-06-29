@@ -38,7 +38,7 @@ class StreamController extends Controller
 
     public function edit($id)
     {
-        $stream = Stream::findOrFail($id);
+        $stream = Stream::findOrFail(decrypt($id));
         return view('admin.stream.edit', compact('stream'));
     }
 
@@ -48,7 +48,7 @@ class StreamController extends Controller
         'stream_name' => 'required|string|max:100',
     ]);
 
-    $stream = Stream::findOrFail($id);
+    $stream = Stream::findOrFail(decrypt($id));
     $stream->stream_name = $request->stream_name;
     $stream->save();
 

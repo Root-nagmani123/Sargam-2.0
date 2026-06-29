@@ -10,7 +10,7 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('admin.mess.itemcategories.update', $itemcategory->id) }}">
+            <form method="POST" action="{{ route('admin.mess.itemcategories.update', encrypt($itemcategory->id)) }}">
                 @csrf
                 @method('PUT')
 

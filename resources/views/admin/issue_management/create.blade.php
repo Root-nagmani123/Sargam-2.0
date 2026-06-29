@@ -368,7 +368,6 @@ $(document).ready(function() {
                     }
                 },
                 error: function() {
-                    console.log('Error loading nodal employees');
                     destroyIssueChoices($('#nodal_employee'));
                     $('#nodal_employee').html('<option value="">Error loading employees</option>');
                     initIssueChoices($('#nodal_employee'), '— Select —');
@@ -449,7 +448,6 @@ $(document).ready(function() {
                     }
                 },
                 error: function() {
-                    console.log('Error loading buildings');
                 }
             });
         }
@@ -479,7 +477,6 @@ $(document).ready(function() {
                     }
                 },
                 error: function() {
-                    console.log('Error loading floors');
                 }
             });
         } else {
@@ -517,7 +514,6 @@ $(document).ready(function() {
                     }
                 },
                 error: function() {
-                    console.log('Error loading rooms');
                 }
             });
         } else {

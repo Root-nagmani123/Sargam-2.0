@@ -266,7 +266,6 @@
                 active_inactive: status
             };
 
-            console.log('Submitting:', data);
 
             fetch("{{ route('course.memo.decision.store') }}", {
                     method: 'POST',
@@ -303,7 +302,6 @@
                     }
                 })
                 .catch(error => {
-                    console.error(error);
                     Swal.fire({
                         icon: 'error',
                         title: 'Server Error',
@@ -328,7 +326,6 @@
             let conclusion = $(this).data('conclusion');
             let status = $(this).data('status');
 
-            console.log(id, course, memo, conclusion, status); // 🔍 debug
             $('#edit_id').val(id);
             $('#edit_course_master_pk').val(course).trigger('change');
             $('#edit_memo_type_master_pk').val(memo).trigger('change');
@@ -350,7 +347,6 @@
         memo_conclusion_master_pk: $('#edit_memo_conclusion_master_pk').val(),
         active_inactive: $('#edit_active_inactive').val()
     };
-    alert(data.course_master_pk);
 
 
     fetch("{{ route('course.memo.decision.update') }}", {

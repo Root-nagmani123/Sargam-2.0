@@ -249,7 +249,7 @@ class StoreAllocationController extends Controller
 
     public function edit($id)
     {
-        $allocation = StoreAllocation::with(['subStore', 'items.itemSubcategory'])->whereNotNull('sub_store_id')->findOrFail($id);
+        $allocation = StoreAllocation::with(['subStore', 'items.itemSubcategory'])->whereNotNull('sub_store_id')->findOrFail(decrypt($id));
         $data = [
             'id' => $allocation->id,
             'sub_store_id' => $allocation->sub_store_id,
@@ -272,7 +272,7 @@ class StoreAllocationController extends Controller
 
     public function update(Request $request, $id)
     {
-        $allocation = StoreAllocation::whereNotNull('sub_store_id')->findOrFail($id);
+        $allocation = StoreAllocation::whereNotNull('sub_store_id')->findOrFail(decrypt($id));
         $request->validate([
             'sub_store_id' => 'required|exists:mess_sub_stores,id',
             'allocation_date' => 'required|date',
@@ -310,7 +310,7 @@ class StoreAllocationController extends Controller
 
     public function destroy($id)
     {
-        $allocation = StoreAllocation::whereNotNull('sub_store_id')->findOrFail($id);
+        $allocation = StoreAllocation::whereNotNull('sub_store_id')->findOrFail(decrypt($id));
         $allocation->items()->delete();
         $allocation->delete();
 

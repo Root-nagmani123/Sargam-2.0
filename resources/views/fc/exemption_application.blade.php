@@ -20,7 +20,7 @@
                         <p class="text-muted small mb-0">Please fill in all required information for your exemption application.</p>
                     </header>
 
-                    <form method="POST" action="{{ route('fc.exemption.apply', $exemption->pk) }}" enctype="multipart/form-data">
+                    <form method="POST" action="{{ route('fc.exemption.apply', encrypt($exemption->pk)) }}" enctype="multipart/form-data">
                         @csrf
                         <input type="hidden" name="exemption_category" value="{{ $exemption->pk }}">
 

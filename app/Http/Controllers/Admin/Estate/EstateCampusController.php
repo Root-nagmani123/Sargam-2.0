@@ -32,13 +32,13 @@ class EstateCampusController extends Controller
 
     public function edit(string $id)
     {
-        $item = EstateCampus::findOrFail($id);
+        $item = EstateCampus::findOrFail(decrypt($id));
         return view('admin.estate.define_campus.form', compact('item'));
     }
 
     public function update(Request $request, string $id)
     {
-        $item = EstateCampus::findOrFail($id);
+        $item = EstateCampus::findOrFail(decrypt($id));
         $validated = $request->validate([
             'campus_name' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -49,7 +49,7 @@ class EstateCampusController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        EstateCampus::findOrFail($id)->delete();
+        EstateCampus::findOrFail(decrypt($id))->delete();
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Campus deleted successfully.']);
         }

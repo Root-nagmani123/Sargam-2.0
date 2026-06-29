@@ -78,7 +78,7 @@
                                                 data-status="{{ e($itemcategory->status ?? 'active') }}"
                                                 title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         @if($canDeleteItemCategory)
-                                            <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', $itemcategory->id) }}" class="d-inline"
+                                            <form method="POST" action="{{ route('admin.mess.itemcategories.destroy', encrypt($itemcategory->id)) }}" class="d-inline"
                                                   onsubmit="return confirm('Are you sure you want to delete this category item?');">
                                                 @csrf
                                                 @method('DELETE')

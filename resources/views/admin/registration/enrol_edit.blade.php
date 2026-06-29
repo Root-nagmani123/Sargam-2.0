@@ -37,7 +37,7 @@
                     </div>
                 @endif
 
-                <form method="POST" action="{{ route('enrollment.update', $student->pk) }}" id="editStudentForm"
+                <form method="POST" action="{{ route('enrollment.update', encrypt($student->pk)) }}" id="editStudentForm"
                     class="protected-form" data-ignore-global-validation="true">
                     @csrf
                     <!-- Add this hidden field -->
@@ -275,9 +275,8 @@
             form.parentNode.replaceChild(newForm, form);
 
             // Fix the action if it was changed
-            newForm.action = '{{ route('enrollment.update', $student->pk) }}';
+            newForm.action = '{{ route('enrollment.update', encrypt($student->pk)) }}';
 
-            console.log('Form protected. Action:', newForm.action);
         })();
 
         // Custom submit handler
@@ -288,9 +287,8 @@
             var form = document.getElementById('editStudentForm');
 
             // Force correct URL
-            form.action = '{{ route('enrollment.update', $student->pk) }}';
+            form.action = '{{ route('enrollment.update', encrypt($student->pk)) }}';
 
-            console.log('Submitting to:', form.action);
 
             // Submit the form
             form.submit();

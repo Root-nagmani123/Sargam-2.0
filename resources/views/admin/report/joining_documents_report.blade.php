@@ -217,13 +217,13 @@
                     <div class="nav flex-column nav-pills" id="v-pills-tab" role="tablist"
                         aria-orientation="vertical">
                         @if ($childForms->isEmpty())
-                            <a class="nav-link active mb-3" href="{{ route('forms.show', $form->id) }}">
+                            <a class="nav-link active mb-3" href="{{ route('forms.show', encrypt($form->id)) }}">
                                 {{ $form->name }}
                             </a>
                         @else
                             @foreach ($childForms as $child)
                                 <a class="nav-link mb-3 {{ $child->id == $form->id ? 'active' : '' }}"
-                                    href="{{ route('forms.show', $child->id) }}">
+                                    href="{{ route('forms.show', encrypt($child->id)) }}">
                                     {{ $child->name }}
                                 </a>
                             @endforeach
@@ -333,14 +333,14 @@
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <a href="{{ route('admin.joining-documents.download-all', $student->pk) }}"
+                                                    <a href="{{ route('admin.joining-documents.download-all', encrypt($student->pk)) }}"
                                                         class="btn btn-sm btn-outline-primary">
                                                         <i class="fa fa-download"></i> Download All
                                                     </a>
                                                 </td>
                                                 <td style="min-width: 250px;">
                                                     <form method="POST"
-                                                        action="{{ route('admin.joining-documents.save-remark', $student->pk) }}">
+                                                        action="{{ route('admin.joining-documents.save-remark', encrypt($student->pk)) }}">
                                                         @csrf
                                                         <textarea name="remark" class="form-control  text-center" rows="1"
                                                             style="width: 100%; min-height: 60px; resize: vertical;" onchange="this.form.submit()"

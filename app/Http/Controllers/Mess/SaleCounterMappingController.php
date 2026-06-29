@@ -70,7 +70,7 @@ class SaleCounterMappingController extends Controller
      */
     public function show($id)
     {
-        $mapping = SaleCounterMapping::with(['saleCounter', 'inventory'])->findOrFail($id);
+        $mapping = SaleCounterMapping::with(['saleCounter', 'inventory'])->findOrFail(decrypt($id));
         return view('admin.mess.sale-counter-mappings.show', compact('mapping'));
     }
 
@@ -82,7 +82,7 @@ class SaleCounterMappingController extends Controller
      */
     public function edit($id)
     {
-        $mapping = SaleCounterMapping::findOrFail($id);
+        $mapping = SaleCounterMapping::findOrFail(decrypt($id));
         $counters = SaleCounter::where('is_active', true)->get();
         $items = Inventory::where('is_active', true)->get();
         
@@ -98,7 +98,7 @@ class SaleCounterMappingController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $mapping = SaleCounterMapping::findOrFail($id);
+        $mapping = SaleCounterMapping::findOrFail(decrypt($id));
 
         $request->validate([
             'sale_counter_id' => 'required|exists:mess_sale_counters,id',
@@ -125,7 +125,7 @@ class SaleCounterMappingController extends Controller
      */
     public function destroy($id)
     {
-        $mapping = SaleCounterMapping::findOrFail($id);
+        $mapping = SaleCounterMapping::findOrFail(decrypt($id));
         $mapping->delete();
 
         return redirect()->route('admin.mess.sale-counter-mappings.index')

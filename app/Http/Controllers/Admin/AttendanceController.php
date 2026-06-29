@@ -53,10 +53,10 @@ class AttendanceController extends Controller
                     $timetablePk = $courseGroupTimetable ? $courseGroupTimetable->timetable_pk : 0;
                     
                     return redirect()->route('attendance.OT.student_mark.student', [
-                        'group_pk' => $groupPk,
-                        'course_pk' => $coursePk,
-                        'timetable_pk' => $timetablePk,
-                        'student_pk' => $studentPk
+                        'group_pk' => encrypt($groupPk),
+                        'course_pk' => encrypt($coursePk),
+                        'timetable_pk' => encrypt($timetablePk),
+                        'student_pk' => encrypt($studentPk)
                     ]);
                 }
                 
@@ -291,7 +291,7 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
                         $markedCount = CourseStudentAttendance::where([
                             'course_master_pk' => $row->Programme_pk,
                             'group_type_master_course_master_map_pk' => $row->group_pk,
-                            'timetable_pk' => $row->timetable_pk,
+                            'timetable_pk' => encrypt($row->timetable_pk),
                         ])->where('status', '!=', 0)->count();
 
                         $markedCache[$cacheKey] = $expectedCount > 0 && $markedCount === $expectedCount;
@@ -305,36 +305,36 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
             // Student-OT User Page - Show only their own attendance
             $studentPk = auth()->user()->user_id;
             return '<a href="' . route('attendance.OT.student_mark.student', [
-                'group_pk' => $row->group_pk,
-                'course_pk' => $row->Programme_pk,
-                'timetable_pk' => $row->timetable_pk,
-                'student_pk' => $studentPk
+                'group_pk' => encrypt($row->group_pk),
+                'course_pk' => encrypt($row->Programme_pk),
+                'timetable_pk' => encrypt($row->timetable_pk),
+                'student_pk' => encrypt($studentPk)
             ]) . '" class="btn btn-primary btn-sm 1">Show My Attendance</a>';
         } elseif (hasRole('Guest Faculty') || hasRole('Internal Faculty')) {
             // Faculty User Page
             return '<a href="' . route('attendance.student_mark', [
-                'group_pk' => $row->group_pk,
-                'course_pk' => $row->Programme_pk,
-                'timetable_pk' => $row->timetable_pk
+                'group_pk' => encrypt($row->group_pk),
+                'course_pk' => encrypt($row->Programme_pk),
+                'timetable_pk' => encrypt($row->timetable_pk)
             ]) . '" class="' . $markBtnClass . '">Show Attendance</a>';
         }else if($currentPath === 'send_notice'){
             return '<a href="' . route('attendance.send_notice', [
-            'group_pk' => $row->group_pk,
-            'course_pk' => $row->Programme_pk,
-            'timetable_pk' => $row->timetable_pk
+            'group_pk' => encrypt($row->group_pk),
+            'course_pk' => encrypt($row->Programme_pk),
+            'timetable_pk' => encrypt($row->timetable_pk)
         ]) . '" class="btn btn-primary btn-sm">Send Notice</a>';
         }else if(hasRole('Training-Induction') || hasRole('Staff') || hasRole('Admin')){
              return '<a href="' . route('attendance.mark', [
-            'group_pk' => $row->group_pk,
-            'course_pk' => $row->Programme_pk,
-            'timetable_pk' => $row->timetable_pk
+            'group_pk' => encrypt($row->group_pk),
+            'course_pk' => encrypt($row->Programme_pk),
+            'timetable_pk' => encrypt($row->timetable_pk)
         ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
-            'group_pk' => $row->group_pk,
-            'course_pk' => $row->Programme_pk,
-            'timetable_pk' => $row->timetable_pk
+            'group_pk' => encrypt($row->group_pk),
+            'course_pk' => encrypt($row->Programme_pk),
+            'timetable_pk' => encrypt($row->timetable_pk)
         ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
         }
 
@@ -359,6 +359,9 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
 
     function markAttendanceView($group_pk, $course_pk, $timetable_pk)
     {
+        $group_pk = decrypt($group_pk);
+        $course_pk = decrypt($course_pk);
+        $timetable_pk = decrypt($timetable_pk);
         try {
 
 $backUrl = url()->current();                 // Full previous URL
@@ -383,14 +386,14 @@ $currentPath = $segments[1] ?? null;
             $markedCount = CourseStudentAttendance::where([
                 'course_master_pk' => $course_pk,
                 'group_type_master_course_master_map_pk' => $group_pk,
-                'timetable_pk' => $timetable_pk,
+                'timetable_pk' => encrypt($timetable_pk),
             ])->where('status', '!=', 0)->count();
 
             $allMarked = $expectedCount > 0 && $markedCount === $expectedCount;
 
             return $dataTable->render('admin.attendance.mark-attendance', [
-                'group_pk' => $group_pk,
-                'course_pk' => $course_pk,
+                'group_pk' => encrypt($group_pk),
+                'course_pk' => encrypt($course_pk),
                 'courseGroup' => $courseGroup,
                 'currentPath' => $currentPath,
                 'allMarked' => $allMarked,
@@ -403,6 +406,9 @@ $currentPath = $segments[1] ?? null;
 
     public function export($group_pk, $course_pk, $timetable_pk)
     {
+        $group_pk = decrypt($group_pk);
+        $course_pk = decrypt($course_pk);
+        $timetable_pk = decrypt($timetable_pk);
         try {
             $courseGroup = CourseGroupTimetableMapping::with([
                 'course:pk,course_name',
@@ -489,7 +495,7 @@ $currentPath = $segments[1] ?? null;
                             'Student_master_pk' => $studentPk,
                             'course_master_pk' => $course_pk,
                             'group_type_master_course_master_map_pk' => $group_pk,
-                            'timetable_pk' => $request->timetable_pk,
+                            'timetable_pk' => encrypt($request->timetable_pk),
                         ],
                         [
                             'status' => $attendanceStatus,
@@ -565,6 +571,10 @@ $currentPath = $segments[1] ?? null;
 
 
     public function OTmarkAttendanceView(Request $request, $group_pk, $course_pk, $timetable_pk, $student_pk){
+        $group_pk = decrypt($group_pk);
+        $course_pk = decrypt($course_pk);
+        $timetable_pk = decrypt($timetable_pk);
+        $student_pk = decrypt($student_pk);
         try {
         // Verify user has Student-OT role
             if (!hasRole('Student-OT')) {

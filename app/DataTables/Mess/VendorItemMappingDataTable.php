@@ -43,8 +43,8 @@ class VendorItemMappingDataTable extends DataTable
                     : '—';
             })
             ->addColumn('action', function ($row) {
-                $editUrl = route('admin.mess.vendor-item-mappings.edit', $row->id);
-                $deleteUrl = route('admin.mess.vendor-item-mappings.destroy', $row->id);
+                $editUrl = route('admin.mess.vendor-item-mappings.edit', encrypt($row->id));
+                $deleteUrl = route('admin.mess.vendor-item-mappings.destroy', encrypt($row->id));
                 $csrf = csrf_token();
 
                 return '<a href="' . $editUrl . '" class="btn btn-sm btn-warning openEditVendorMapping">Edit</a>

@@ -53,16 +53,16 @@
                             </td>
                             <td>{{ $booking->approver->name ?? '-' }}</td>
                             <td>
-                                <a href="{{ route('admin.mess.finance-bookings.show', $booking->id) }}" 
+                                <a href="{{ route('admin.mess.finance-bookings.show', encrypt($booking->id)) }}" 
                                    class="btn btn-sm btn-info" title="View">
                                     <iconify-icon icon="solar:eye-bold"></iconify-icon>
                                 </a>
                                 @if($booking->status == 'pending')
-                                    <a href="{{ route('admin.mess.finance-bookings.edit', $booking->id) }}" 
+                                    <a href="{{ route('admin.mess.finance-bookings.edit', encrypt($booking->id)) }}" 
                                        class="btn btn-sm btn-warning" title="Edit">
                                         <iconify-icon icon="solar:pen-bold"></iconify-icon>
                                     </a>
-                                    <form action="{{ route('admin.mess.finance-bookings.approve', $booking->id) }}" 
+                                    <form action="{{ route('admin.mess.finance-bookings.approve', encrypt($booking->id)) }}" 
                                           method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-success" title="Approve"
@@ -70,7 +70,7 @@
                                             <iconify-icon icon="solar:check-circle-bold"></iconify-icon>
                                         </button>
                                     </form>
-                                    <form action="{{ route('admin.mess.finance-bookings.reject', $booking->id) }}" 
+                                    <form action="{{ route('admin.mess.finance-bookings.reject', encrypt($booking->id)) }}" 
                                           method="POST" class="d-inline">
                                         @csrf
                                         <button type="submit" class="btn btn-sm btn-danger" title="Reject"

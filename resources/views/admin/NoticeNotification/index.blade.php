@@ -218,7 +218,7 @@
                             </td>
                             <td class="text-center d-flex justify-content-center">
                                 <div class="d-inline-flex align-items-center gap-1">
-                                    <a href="{{ route('admin.notice.edit', $encId) }}"
+                                    <a href="{{ route('admin.notice.edit', encrypt($encId)) }}"
                                         class="btn btn-sm btn-outline-primary btn-transparent border-0 p-0" title="Edit"
                                         aria-label="Edit Notice">
                                         <span class="material-symbols-rounded fs-5">edit</span>
@@ -231,7 +231,7 @@
                                     </div>
                                     <div class="js-notice-delete-actions" data-id="{{ $n->pk }}">
                                         <form id="deleteForm{{ $encId }}"
-                                            action="{{ route('admin.notice.destroy', $encId) }}" method="POST"
+                                            action="{{ route('admin.notice.destroy', encrypt($encId)) }}" method="POST"
                                             class="d-inline js-notice-delete-enabled {{ $n->active_inactive == 0 ? '' : 'd-none' }}">
                                             @csrf
                                             @method('DELETE')

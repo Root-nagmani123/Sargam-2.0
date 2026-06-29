@@ -1458,7 +1458,6 @@
                     })
                     .then(response => response.json())
                     .then(data => {
-                        console.log('Controller Response:', data)
                         if (data.success && data.redirect_url) {
                             // Redirect to the appropriate module view
                             window.location.href = data.redirect_url;
@@ -1466,11 +1465,9 @@
                             // Fallback: reload if no redirect URL
                             location.reload();
                         } else {
-                            console.error('Failed to mark notification as read');
                         }
                     })
                     .catch(error => {
-                        console.error('Error:', error);
                         // Fallback to dashboard on error
                         window.location.href = '{{ route("admin.dashboard") }}';
                     });
@@ -1686,7 +1683,6 @@ document.addEventListener('DOMContentLoaded', function() {
     let initial;
 
     if (isFromLogin) {
-        console.log('Fresh login detected - forcing home tab');
         initial = '#home';
         deleteCookie('fresh_login');
         localStorage.removeItem('activeMainTab');
@@ -1695,7 +1691,6 @@ document.addEventListener('DOMContentLoaded', function() {
         const savedTab = localStorage.getItem('activeMainTab');
         // Menu placement / current route wins over last clicked tab
         initial = routeTab || savedTab || '#home';
-        console.log('Initial tab:', initial, '(route:', routeTab, ')');
     }
 
     showPane(initial, { skipBodyKeep: false });

@@ -122,7 +122,7 @@ class PeerEvaluationController extends Controller
 		 */
 		public function deleteCourse($id)
 		{
-			$course = PeerCourse::withCount(['events', 'groups'])->findOrFail($id);
+			$course = PeerCourse::withCount(['events', 'groups'])->findOrFail(decrypt($id));
 
 			if ($course->events_count > 0 || $course->groups_count > 0) {
 				return response()->json([
@@ -262,7 +262,7 @@ class PeerEvaluationController extends Controller
     public function toggleFormStatus($id)
     {
         try {
-            $group = PeerGroup::findOrFail($id);
+            $group = PeerGroup::findOrFail(decrypt($id));
             $group->is_form_active = !$group->is_form_active;
             $group->save();
 
@@ -284,7 +284,7 @@ class PeerEvaluationController extends Controller
     public function deleteGroup($id)
     {
         try {
-            $group = PeerGroup::findOrFail($id);
+            $group = PeerGroup::findOrFail(decrypt($id));
             $group->delete();
 
             return response()->json([
@@ -338,7 +338,7 @@ class PeerEvaluationController extends Controller
     public function toggleColumnVisibility($id)
     {
         try {
-            $column = PeerColumn::findOrFail($id);
+            $column = PeerColumn::findOrFail(decrypt($id));
             $column->is_visible = !$column->is_visible;
             $column->save();
 
@@ -360,7 +360,7 @@ class PeerEvaluationController extends Controller
     public function deleteColumn($id)
     {
         try {
-            $column = PeerColumn::findOrFail($id);
+            $column = PeerColumn::findOrFail(decrypt($id));
             $column->delete();
 
             return response()->json([
@@ -416,12 +416,12 @@ class PeerEvaluationController extends Controller
     public function toggleReflectionField($id)
     {
         try {
-            $field = DB::table('peer_reflection_fields')->where('id', $id)->first();
+            $field = DB::table('peer_reflection_fields')->where('id', decrypt($id))->first();
 
             if ($field) {
                 $newState = !$field->is_active;
                 DB::table('peer_reflection_fields')
-                    ->where('id', $id)
+                    ->where('id', decrypt($id))
                     ->update(['is_active' => $newState]);
 
                 return response()->json([
@@ -448,7 +448,7 @@ class PeerEvaluationController extends Controller
     public function deleteReflectionField($id)
     {
         try {
-            DB::table('peer_reflection_fields')->where('id', $id)->delete();
+            DB::table('peer_reflection_fields')->where('id', decrypt($id))->delete();
 
             return response()->json([
                 'success' => true,
@@ -649,8 +649,8 @@ if ($groupId && hasRole('Student-OT')) {
      */
     public function toggleGroup($id)
     {
-        $group = DB::table('peer_groups')->where('id', $id)->first();
-        DB::table('peer_groups')->where('id', $id)->update(['is_active' => !$group->is_active]);
+        $group = DB::table('peer_groups')->where('id', decrypt($id))->first();
+        DB::table('peer_groups')->where('id', decrypt($id))->update(['is_active' => !$group->is_active]);
         return response()->json(['new_state' => !$group->is_active]);
     }
 

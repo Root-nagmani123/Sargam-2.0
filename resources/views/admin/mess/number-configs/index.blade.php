@@ -43,7 +43,7 @@
                             <td>{{ $config->padding }} digits</td>
                             <td><code>{{ $config->prefix }}{{ str_pad($config->current_number + 1, $config->padding, '0', STR_PAD_LEFT) }}</code></td>
                             <td>
-                                <a href="{{ route('admin.mess.number-configs.edit', $config->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <a href="{{ route('admin.mess.number-configs.edit', encrypt($config->id)) }}" class="btn btn-sm btn-warning">Edit</a>
                             </td>
                         </tr>
                         @empty

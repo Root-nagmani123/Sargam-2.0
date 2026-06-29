@@ -15,7 +15,7 @@
             <hr>
             
                 
-                <form action="{{ route('admin.permissions.update', $permission->id) }}" method="POST">
+                <form action="{{ route('admin.permissions.update', encrypt($permission->id)) }}" method="POST">
                     @csrf
                     @method('PUT')
                     <div class="row">

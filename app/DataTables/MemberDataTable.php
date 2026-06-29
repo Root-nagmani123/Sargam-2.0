@@ -76,7 +76,7 @@ class MemberDataTable extends DataTable
                 $deleteButtonTitle = $isActive ? 'Cannot delete active records. Set to inactive first.' : 'Delete Member';
 
                 return '<div class="d-flex justify-content-center gap-2">
-                    <a href="' . route('member.edit', $row->pk) . '" class="btn btn-sm btn-primary">Edit</a>
+                    <a href="' . route('member.edit', encrypt($row->pk)) . '" class="btn btn-sm btn-primary">Edit</a>
                     <a href="' . route('member.show', encrypt($row->pk)) . '" class="btn btn-sm btn-success">View</a>
                     <button type="button" class="btn btn-sm btn-danger member-delete-btn" ' . $deleteButtonDisabled . ' title="' . $deleteButtonTitle . '"
                         data-delete-url="' . $deleteUrl . '" ' . ($isActive ? 'onclick="return false;"' : '') . '>Delete</button>

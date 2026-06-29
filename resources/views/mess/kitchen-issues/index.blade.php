@@ -1004,8 +1004,6 @@
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('Selling Voucher script loaded');
-    console.log('Bootstrap available:', typeof bootstrap !== 'undefined');
 
     function safeFocus(el) {
         if (!el || typeof el.focus !== 'function') return;
@@ -1226,7 +1224,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 return out;
             };
         } catch (e) {
-            console.warn('patchChoicesSearcherExactWordTokens', e);
         }
     }
 
@@ -1292,7 +1289,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     if (this._choices) this._choices.destroy();
                 } catch (e) {
-                    console.warn('Choices destroy failed', e);
                 } finally {
                     if (this.selectEl) {
                         this.selectEl.choicesInstance = null;
@@ -1684,7 +1680,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 syncFilterChoicesMultiFromNative(filterStatus);
             } catch (e) {
-                console.error('Choices initialization failed for status filter:', e);
             }
         }
 
@@ -1747,11 +1742,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
                 syncFilterChoicesMultiFromNative(filterStore);
             } catch (e) {
-                console.error('Choices initialization failed for store filter:', e);
             }
         }
     } else {
-        console.warn('Choices.js library not loaded on Selling Voucher page');
     }
 
     (function initSellingVoucherFilterCascade() {
@@ -2210,7 +2203,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 try {
                     reinitAddSellingVoucherModalItemGrid();
                 } catch (err) {
-                    console.error('resetSellingVoucherModalForm re-init failed', err);
                 }
             }, 10);
         });
@@ -2255,7 +2247,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     isRefreshingSellingVouchersTable = false;
                 }, false);
             } catch (err) {
-                console.error('Failed to refresh selling vouchers table', err);
                 isRefreshingSellingVouchersTable = false;
             }
             return;
@@ -2283,7 +2274,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 dt.draw(false);
             })
             .catch(function(err) {
-                console.error('Failed to refresh selling vouchers table', err);
             })
             .finally(function() {
                 isRefreshingSellingVouchersTable = false;
@@ -2365,7 +2355,6 @@ document.addEventListener('DOMContentLoaded', function() {
                             try {
                                 reinitAddSellingVoucherModalItemGrid();
                             } catch (err) {
-                                console.error('reinit after save failed', err);
                             }
                             var body = modalRoot && modalRoot.querySelector('.modal-body');
                             if (body) body.scrollTop = 0;
@@ -2391,7 +2380,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (window.toastr && data.message) {
                             toastr.success(data.message);
                         } else if (data.message) {
-                            alert(data.message);
                         }
                     } else {
                         var msg = (data && data.message) ? data.message : 'Failed to save voucher. Please try again.';
@@ -2406,7 +2394,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         if (!data && res.raw && res.raw.indexOf('<!DOCTYPE') !== -1) {
                             msg = 'Server returned a page instead of JSON. Try refreshing the page or check your session.';
                         }
-                        alert(msg);
                     }
                 })
                 .catch(function() {
@@ -2527,7 +2514,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (callback) callback();
         })
         .catch(err => {
-            console.error(err);
             alert('Failed to load store items.');
             filteredItems = itemSubcategories || [];
             if (callback) callback();
@@ -2536,7 +2522,6 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateAddItemDropdowns() {
         const rows = document.querySelectorAll('#modalItemsBody .sv-item-row');
-        console.log('Updating dropdowns, found rows:', rows.length); // Debug log
         rows.forEach(row => {
             const select = row.querySelector('.sv-item-select');
             if (!select) return;
@@ -2674,7 +2659,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const storeId = this.value;
             currentStoreId = storeId;
             
-            console.log('Store changed:', storeId); // Debug log
             
             if (!storeId) {
                 filteredItems = itemSubcategories;
@@ -2683,7 +2667,6 @@ document.addEventListener('DOMContentLoaded', function() {
             }
             
             fetchStoreItems(storeId, function() {
-                console.log('Filtered items count:', filteredItems.length); // Debug log
                 updateAddItemDropdowns();
             });
         });
@@ -3497,17 +3480,14 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
-                console.error('No voucher ID found');
                 return;
             }
-            console.log('Fetching voucher:', voucherId);
             fetch(viewSvBaseUrl + '/' + voucherId, { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => {
                     if (!r.ok) throw new Error('HTTP error ' + r.status);
                     return r.json();
                 })
                 .then(data => {
-                    console.log('Voucher data:', data);
                     const v = data.voucher;
                     const items = data.items || [];
                     document.getElementById('viewSellingVoucherModalLabel').textContent = 'View Selling Voucher #' + (v.pk || voucherId);
@@ -3550,7 +3530,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     modal.show();
                 })
                 .catch(err => { 
-                    console.error('Error loading voucher:', err); 
                     alert('Failed to load selling voucher: ' + err.message); 
                 });
         }
@@ -3564,17 +3543,14 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
-                console.error('No voucher ID found for return');
                 return;
             }
-            console.log('Loading return data for voucher:', voucherId);
             fetch(returnSvBaseUrl + '/' + voucherId + '/return', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => {
                     if (!r.ok) throw new Error('HTTP error ' + r.status);
                     return r.json();
                 })
                 .then(data => {
-                    console.log('Return data:', data);
                     document.getElementById('returnTransferFromStore').textContent = data.store_name || '—';
                     const issueDate = data.issue_date || '';
                     const todayYmd = new Date().toISOString().slice(0, 10);
@@ -3606,7 +3582,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     modal.show();
                 })
                 .catch(err => { 
-                    console.error('Error loading return data:', err); 
                     alert('Failed to load return data: ' + err.message); 
                 });
         }
@@ -3692,10 +3667,8 @@ document.addEventListener('DOMContentLoaded', function() {
             e.stopPropagation();
             const voucherId = btn.getAttribute('data-voucher-id');
             if (!voucherId) {
-                console.error('No voucher ID found for edit');
                 return;
             }
-            console.log('Loading edit data for voucher:', voucherId);
             fetch(editSvBaseUrl + '/' + voucherId + '/edit', { headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } })
                 .then(r => r.json().then(data => ({ ok: r.ok, status: r.status, data })))
                 .then(({ ok, status, data }) => {
@@ -3703,7 +3676,6 @@ document.addEventListener('DOMContentLoaded', function() {
                         alert(data && data.error ? data.error : 'Failed to load voucher (HTTP ' + status + ').');
                         return;
                     }
-                    console.log('Edit data:', data);
                     if (data.error) { alert(data.error); return; }
                     destroyEditModalTomSelects();
                     const v = data.voucher;
@@ -3845,7 +3817,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(err => { 
-                    console.error('Error loading voucher for edit:', err); 
                     alert('Failed to load selling voucher: ' + err.message); 
                 });
         }
@@ -4027,13 +3998,11 @@ document.addEventListener('DOMContentLoaded', function() {
             const storeSelect = addSellingVoucherModal.querySelector('select[name="store_id"]');
             const preSelectedStore = storeSelect ? storeSelect.value : null;
             
-            console.log('Modal opening, pre-selected store:', preSelectedStore); // Debug log
             
             // If there's a pre-selected store, fetch its items
             if (preSelectedStore) {
                 currentStoreId = preSelectedStore;
                 fetchStoreItems(preSelectedStore, function() {
-                    console.log('Pre-fetched items for store:', preSelectedStore, 'Count:', filteredItems.length);
                     updateAddItemDropdowns();
                     refreshAllAvailable();
                     document.querySelectorAll('#modalItemsBody .sv-item-row').forEach(function(row) { calcRow(row); });

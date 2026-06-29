@@ -129,7 +129,7 @@ public function store(Request $request)
     public function edit($encId)
     {
         $id = Crypt::decrypt($encId);
-        $notice = Notice::findOrFail($id);
+        $notice = Notice::findOrFail(decrypt($id));
 // print_r($notice); exit;
         $types = ['Course notice','Office order','Personal','Office notice','Service related'];
         $target = ['Office trainee','Staff/Faculty','All'];
@@ -160,7 +160,7 @@ public function store(Request $request)
 }
 
     $id = Crypt::decrypt($encId);
-    $notice = Notice::findOrFail($id);
+    $notice = Notice::findOrFail(decrypt($id));
 
     $data = $request->all();
 
@@ -181,9 +181,9 @@ public function store(Request $request)
     public function destroy($encId)
     {
         $id = Crypt::decrypt($encId);
-        $data = Notice::findOrFail($id);
+        $data = Notice::findOrFail(decrypt($id));
         if($data->active_inactive ==0){
-        Notice::findOrFail($id)->delete();
+        Notice::findOrFail(decrypt($id))->delete();
         return back()->with('success','Notice deleted!');
         }else{
         return back()->with('error','Active Notice cannot be deleted!');

@@ -34,7 +34,7 @@ class NumberConfigController extends Controller
 
     public function show($id)
     {
-        $config = NumberConfig::findOrFail($id);
+        $config = NumberConfig::findOrFail(decrypt($id));
         return view('admin.mess.number-configs.show', compact('config'));
     }
 
@@ -46,7 +46,7 @@ class NumberConfigController extends Controller
      */
     public function edit($id)
     {
-        $config = NumberConfig::findOrFail($id);
+        $config = NumberConfig::findOrFail(decrypt($id));
         return view('admin.mess.number-configs.edit', compact('config'));
     }
 
@@ -59,7 +59,7 @@ class NumberConfigController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $config = NumberConfig::findOrFail($id);
+        $config = NumberConfig::findOrFail(decrypt($id));
         
         $request->validate([
             'prefix' => 'required|string|max:10',
@@ -79,7 +79,7 @@ class NumberConfigController extends Controller
      */
     public function destroy($id)
     {
-        $config = NumberConfig::findOrFail($id);
+        $config = NumberConfig::findOrFail(decrypt($id));
         $config->delete();
         return redirect()->route('admin.mess.number-configs.index')->with('success', 'Number configuration deleted successfully.');
     }

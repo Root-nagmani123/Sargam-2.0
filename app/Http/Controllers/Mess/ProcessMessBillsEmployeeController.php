@@ -3219,13 +3219,13 @@ class ProcessMessBillsEmployeeController extends Controller
             // Legacy: numeric id – try date range first, then kitchen
             $bill = SellingVoucherDateRangeReport::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
                 ->whereIn('client_type_slug', self::ALLOWED_CLIENT_SLUGS)
-                ->find($id);
+                ->find(decrypt($id));
             $isDateRange = (bool) $bill;
             if (!$bill) {
                 $bill = KitchenIssueMaster::with(['store', 'subStore', 'clientTypeCategory', 'course', 'items.itemSubcategory'])
                     ->whereIn('client_type', self::ALLOWED_KITCHEN_CLIENT_TYPES)
                     ->whereIn('kitchen_issue_type', self::KITCHEN_MESS_SELLING_ISSUE_TYPES)
-                    ->where('pk', $id)
+                    ->where('pk', decrypt($id))
                     ->firstOrFail();
             }
         }
@@ -4735,7 +4735,7 @@ class ProcessMessBillsEmployeeController extends Controller
     private function kitchenIssueMasterPkForPayment(KitchenIssueMaster $bill): ?int
     {
         $pk = (int) ($bill->getAttribute('pk') ?? 0);
-        if ($pk > 0 && KitchenIssueMaster::query()->where('pk', $pk)->exists()) {
+        if ($pk > 0 && KitchenIssueMaster::query()->where('pk', decrypt($pk))->exists()) {
             return $pk;
         }
         if (Schema::hasColumn('kitchen_issue_master', 'id')) {

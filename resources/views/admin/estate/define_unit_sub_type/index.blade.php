@@ -35,7 +35,7 @@
                             <td class="ps-3">{{ $index + 1 }}</td>
                             <td class="fw-medium">{{ $row->unit_sub_type }}</td>
                             <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-unit-sub-type.edit', $row->pk) }}" class="text-primary" title="Edit">
+                                <a href="{{ route('admin.estate.define-unit-sub-type.edit', encrypt($row->pk)) }}" class="text-primary" title="Edit">
                                     <i class="material-icons material-symbols-rounded">edit</i>
                                 </a>
                             </td>

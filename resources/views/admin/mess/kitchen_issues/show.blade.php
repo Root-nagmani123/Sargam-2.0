@@ -132,7 +132,7 @@
             <hr>
             <div class="text-end">
                 @if($kitchenIssue->approve_status == 0)
-                <a href="{{ route('admin.mess.material-management.edit', $kitchenIssue->pk) }}" class="btn btn-primary">
+                <a href="{{ route('admin.mess.material-management.edit', encrypt($kitchenIssue->pk)) }}" class="btn btn-primary">
                     <iconify-icon icon="solar:pen-bold" width="18"></iconify-icon> Edit
                 </a>
                 @endif

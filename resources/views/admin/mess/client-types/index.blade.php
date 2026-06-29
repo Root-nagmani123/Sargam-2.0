@@ -39,7 +39,7 @@
                             <td>{{ $type->type_code }}</td>
                             <td>₹{{ number_format($type->default_credit_limit, 2) }}</td>
                             <td>
-                                <a href="{{ route('admin.mess.client-types.edit', $type->id) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <a href="{{ route('admin.mess.client-types.edit', encrypt($type->id)) }}" class="btn btn-sm btn-warning">Edit</a>
                             </td>
                         </tr>
                         @empty

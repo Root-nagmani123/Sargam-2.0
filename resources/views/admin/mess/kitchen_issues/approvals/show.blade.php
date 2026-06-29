@@ -74,7 +74,7 @@
             <!-- Approval Actions -->
             <div class="row">
                 <div class="col-md-6">
-                    <form action="{{ route('admin.mess.material-management-approvals.approve', $kitchenIssue->pk) }}" method="POST">
+                    <form action="{{ route('admin.mess.material-management-approvals.approve', encrypt($kitchenIssue->pk)) }}" method="POST">
                         @csrf
                         <div class="mb-3">
                             <label for="approve_remarks" class="form-label">Approval Remarks (Optional)</label>
@@ -87,7 +87,7 @@
                 </div>
 
                 <div class="col-md-6">
-                    <form action="{{ route('admin.mess.material-management-approvals.reject', $kitchenIssue->pk) }}" method="POST">
+                    <form action="{{ route('admin.mess.material-management-approvals.reject', encrypt($kitchenIssue->pk)) }}" method="POST">
                         @csrf
                         <div class="mb-3">
                             <label for="reject_remarks" class="form-label">Rejection Remarks <span class="text-danger">*</span></label>

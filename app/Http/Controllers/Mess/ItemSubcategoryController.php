@@ -245,7 +245,7 @@ class ItemSubcategoryController extends Controller
 
     public function edit($id)
     {
-        $itemsubcategory = ItemSubcategory::findOrFail($id);
+        $itemsubcategory = ItemSubcategory::findOrFail(decrypt($id));
         $categories = ItemCategory::active()->orderBy('category_name')->get();
 
         return view('mess.itemsubcategories.edit', compact('itemsubcategory', 'categories'));
@@ -253,7 +253,7 @@ class ItemSubcategoryController extends Controller
 
     public function update(Request $request, $id)
     {
-        $itemsubcategory = ItemSubcategory::findOrFail($id);
+        $itemsubcategory = ItemSubcategory::findOrFail(decrypt($id));
         $data = $this->validatedData($request, $itemsubcategory);
         unset($data['item_code']);
         if (Schema::hasColumn('mess_item_subcategories', 'subcategory_code')) {
@@ -269,7 +269,7 @@ class ItemSubcategoryController extends Controller
 
     public function destroy($id)
     {
-        $itemsubcategory = ItemSubcategory::findOrFail($id);
+        $itemsubcategory = ItemSubcategory::findOrFail(decrypt($id));
         $itemsubcategory->delete();
 
         self::bumpListCacheEpoch();

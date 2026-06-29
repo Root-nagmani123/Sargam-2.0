@@ -5,7 +5,7 @@
     <x-breadcrum title="Edit ID Card Request"></x-breadcrum>
     <x-session_message />
 
-    <form action="{{ route('admin.employee_idcard.update', $request->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+    <form action="{{ route('admin.employee_idcard.update', encrypt($request->id)) }}" method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
         @csrf
         @method('PUT')
 
@@ -352,7 +352,7 @@
 
                 <!-- Action Buttons - Bootstrap 5.3 -->
                 <div class="d-flex gap-2 justify-content-end mt-4 pt-4 border-top">
-                    <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-secondary px-4 rounded-2">
+                    <a href="{{ route('admin.employee_idcard.show', encrypt($request->id)) }}" class="btn btn-outline-secondary px-4 rounded-2">
                         Cancel
                     </a>
                     <button type="submit" class="btn btn-primary px-4 rounded-2">

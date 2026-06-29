@@ -21,7 +21,7 @@
             <p class="text-muted small mb-4">{{ $item ? 'Update unit type.' : 'Please add the unit type.' }}</p>
             <hr class="my-4">
 
-            <form action="{{ $item ? route('admin.estate.define-unit-type.update', $item->pk) : route('admin.estate.define-unit-type.store') }}" method="POST">
+            <form action="{{ $item ? route('admin.estate.define-unit-type.update', encrypt($item->pk)) : route('admin.estate.define-unit-type.store') }}" method="POST">
                 @csrf
                 @if($item) @method('PUT') @endif
 

@@ -1027,6 +1027,7 @@ class FamilyIDCardRequestController extends Controller
      */
     public function updateMember(Request $request, $id, $memberId)
     {
+        $memberId = decrypt($memberId);
         $mainRow = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
         if ((int) $mainRow->created_by !== (int) (Auth::user()->user_id ?? Auth::id())) {
             abort(403, 'You can only edit members of your own family ID card request.');
@@ -1075,6 +1076,7 @@ class FamilyIDCardRequestController extends Controller
      */
     public function destroyMember($id, $memberId)
     {
+        $memberId = decrypt($memberId);
         $mainRow = SecurityFamilyIdApply::where('fml_id_apply', $id)->firstOrFail();
         if ((int) $mainRow->created_by !== (int) (Auth::user()->user_id ?? Auth::id())) {
             abort(403, 'You can only remove members from your own family ID card request.');

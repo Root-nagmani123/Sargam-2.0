@@ -18,7 +18,7 @@
         </div>
     @endif
 
-    <form action="{{ route('admin.family_idcard.update', $request->id) }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
+    <form action="{{ route('admin.family_idcard.update', encrypt($request->id)) }}" method="POST" enctype="multipart/form-data" class="needs-validation" id="familyIdcardForm" novalidate>
         @csrf
         @method('PUT')
 

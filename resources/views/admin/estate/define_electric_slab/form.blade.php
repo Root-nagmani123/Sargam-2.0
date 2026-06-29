@@ -13,7 +13,7 @@
             <h1 class="h4 fw-bold text-dark mb-1">{{ $item ? 'Edit' : 'Add' }} Estate Electric Slab</h1>
             <p class="text-muted small mb-4">Please {{ $item ? 'update' : 'add' }} the Estate Electric Slab.</p>
 
-            <form action="{{ $item ? route('admin.estate.define-electric-slab.update', $item->pk) : route('admin.estate.define-electric-slab.store') }}" method="POST" id="formElectricSlab">
+            <form action="{{ $item ? route('admin.estate.define-electric-slab.update', encrypt($item->pk)) : route('admin.estate.define-electric-slab.store') }}" method="POST" id="formElectricSlab">
                 @csrf
                 @if($item) @method('PUT') @endif
 

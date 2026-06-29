@@ -63,7 +63,7 @@ document.addEventListener('DOMContentLoaded', function() {
     foreach ($ancestors as $ancestor) {
     $crumbItems[] = [
     'label' => $ancestor->course_repository_name,
-    'url' => route('course-repository.show', $ancestor->pk),
+    'url' => route('course-repository.show', encrypt($ancestor->pk)),
     ];
     }
     }
@@ -192,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                             @endif
 
                                             <div>
-                                                <a href="{{ route('course-repository.show', $child->pk) }}"
+                                                <a href="{{ route('course-repository.show', encrypt($child->pk)) }}"
                                                     class="text-decoration-none text-dark fw-medium">
                                                     {{ $child->course_repository_name }}
                                                 </a>
@@ -208,14 +208,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                     </td>
 
                                     <td>
-                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                        <a href="{{ route('course-repository.show', encrypt($child->pk)) }}"
                                             class="text-decoration-none fw-medium small">
                                             {{ $child->children->count() }} Sub-Categories
                                         </a>
                                     </td>
 
                                     <td>
-                                        <a href="{{ route('course-repository.show', $child->pk) }}"
+                                        <a href="{{ route('course-repository.show', encrypt($child->pk)) }}"
                                             class="text-decoration-none fw-medium small">
                                             View {{ str_pad($child->getDocumentCount(), 2, '0', STR_PAD_LEFT) }}
                                             Attachments
@@ -393,7 +393,7 @@ document.addEventListener('DOMContentLoaded', function() {
                                         <a href="javascript:void(0)" class="cr-admin-icon-btn edit-doc"
                                             data-pk="{{ $doc->pk }}" data-bs-toggle="tooltip" title="Edit"
                                             aria-label="Edit"><i class="bi bi-pencil" aria-hidden="true"></i></a>
-                                        <a href="{{ route('course-repository.document.download', $doc->pk) }}?file={{ urlencode($doc->upload_document) }}"
+                                        <a href="{{ route('course-repository.document.download', encrypt($doc->pk)) }}?file={{ urlencode($doc->upload_document) }}"
                                             class="cr-admin-icon-btn" data-bs-toggle="tooltip" title="Download"
                                             aria-label="Download">
                                             <i class="bi bi-download" aria-hidden="true"></i>
@@ -1497,7 +1497,6 @@ document.addEventListener('submit', function uploadFormSubmitHandler(e) {
             });
         }
         try {
-            alert(text);
         } catch (a) {}
     };
     var hideUploadError = function() {
@@ -2051,7 +2050,6 @@ window.crDocEdit = (function() {
 
         helpers = helpers || {};
         var showError = helpers.showError || function(m) {
-            alert(m);
         };
         var category = (document.querySelector('input[name="category"]:checked') || {}).value || 'Course';
 
@@ -2235,7 +2233,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     (new bootstrap.Modal(editModalEl)).show();
                 }
             } catch (err) {
-                console.warn('Edit error:', err);
             }
             return;
         }
@@ -2416,7 +2413,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 }
             } catch (err) {
-                console.warn('Delete document error:', err);
             }
         }
     });
@@ -2445,15 +2441,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const ministryValue = $('#ministry_master').val()?.trim() || '';
             const ministryName = ministryValue ? $('#ministry_master option:selected').text().trim() : '';
 
-            console.log('updateKeywords called:', {
-                courseName,
-                subjectName,
-                topicName,
-                sessionDate,
-                facultyName,
-                sectorName,
-                ministryName
-            });
 
             // Build keywords string (comma-separated)
             const keywordsParts = [];
@@ -2474,10 +2461,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 keywordsParts.push(ministryName);
 
             const keywords = keywordsParts.join(', '); // Comma-separated
-            console.log('Setting keywords:', keywords);
             $('#keywords_course').val(keywords);
         } catch (error) {
-            console.error('Error in updateKeywords:', error);
         }
     }
 
@@ -2500,15 +2485,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const sessionDate = $('#session_date_other').val()?.trim() || '';
             const facultyName = $('#author_name_other').val()?.trim() || '';
 
-            console.log('updateKeywordsOther called:', {
-                courseName,
-                subjectName,
-                topicName,
-                sessionDate,
-                facultyName,
-                sectorName,
-                ministryName
-            });
 
             // Build keywords string (comma-separated)
             const keywordsParts = [];
@@ -2526,23 +2502,19 @@ document.addEventListener('DOMContentLoaded', function() {
                 keywordsParts.push(ministryName);
 
             const keywords = keywordsParts.join(', '); // Comma-separated
-            console.log('Setting keywords (Other):', keywords);
             $('#keywords_other').val(keywords);
         } catch (error) {
-            console.error('Error in updateKeywordsOther:', error);
         }
     }
 
     // Global error handler for unhandled promise rejections
     window.addEventListener('unhandledrejection', function(event) {
-        console.warn('Unhandled promise rejection:', event.reason);
         // Prevent the default browser error handling
         event.preventDefault();
     });
 
     // Global error handler for uncaught errors
     window.addEventListener('error', function(event) {
-        console.warn('Global error caught:', event.error);
         // Don't prevent default handling for critical errors
     });
 
@@ -2578,7 +2550,6 @@ document.addEventListener('DOMContentLoaded', function() {
             // Start filtered to the currently selected status (Active by default).
             applyCourseStatusChoices(getCheckedCourseStatus());
         } catch (e) {
-            console.warn('Course Name Choices init failed', e);
             courseChoices = null;
         }
     }
@@ -2676,7 +2647,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(error => {
-                    console.error('Error fetching subjects:', error);
                     resetSubjectDropdown();
                 });
         });
@@ -2717,7 +2687,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 })
                 .catch(error => {
-                    console.error('Error fetching topics:', error);
                     resetTopicDropdown();
                 });
         });
@@ -2952,7 +2921,6 @@ document.addEventListener('DOMContentLoaded', function() {
             return new bootstrap.Tooltip(tooltipTriggerEl);
         });
     } catch (error) {
-        console.warn('Tooltip initialization failed:', error);
     }
 
     // Modern Toast Helper Functions
@@ -2962,7 +2930,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const messageElement = document.getElementById(type + 'Message');
 
             if (!toastElement) {
-                console.warn('Toast element not found:', type + 'Toast');
                 return;
             }
 
@@ -2978,7 +2945,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 toast.show();
             }
         } catch (error) {
-            console.warn('Toast display failed:', error);
         }
     }
 
@@ -3027,7 +2993,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }, 1000);
                 }
             } catch (error) {
-                console.warn('Search functionality error:', error);
             }
         });
     }
@@ -3054,7 +3019,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         // Update search results info
-        console.log(`Found ${visibleCount} results`);
     }
 
     // Clear Filters
@@ -3069,7 +3033,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 performTableSearch('');
                 showToast('success', 'Filters cleared successfully');
             } catch (error) {
-                console.warn('Clear filters error:', error);
             }
         });
     }
@@ -3082,7 +3045,6 @@ document.addEventListener('DOMContentLoaded', function() {
             const statusText = document.getElementById('uploadStatus');
 
             if (!uploadProgressModalEl || typeof bootstrap === 'undefined' || !bootstrap.Modal) {
-                console.warn('Upload progress modal not available');
                 return;
             }
 
@@ -3118,7 +3080,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }, 200);
         } catch (error) {
-            console.warn('Upload progress error:', error);
         }
     }
 
@@ -3180,11 +3141,9 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     });
                 } catch (toastError) {
-                    console.warn('Toast cleanup error:', toastError);
                 }
             }
         } catch (error) {
-            console.warn('Keyboard shortcut error:', error);
         }
     });
 
@@ -3260,7 +3219,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     row.style.transform = 'translateY(0)';
                 }, index * 50);
             } catch (rowError) {
-                console.warn('Row animation error:', rowError);
             }
         });
 
@@ -3273,10 +3231,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }, 2000);
             }
         } catch (storageError) {
-            console.warn('LocalStorage error:', storageError);
         }
     } catch (error) {
-        console.warn('Page load effects error:', error);
     }
 
     // Image preview for create modal
@@ -3298,7 +3254,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     preview.style.display = 'none';
                 }
             } catch (error) {
-                console.warn('Image preview error (create):', error);
             }
         });
     }
@@ -3322,7 +3277,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     preview.style.display = 'none';
                 }
             } catch (error) {
-                console.warn('Image preview error (edit):', error);
             }
         });
     }
@@ -3332,7 +3286,6 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const selectElement = document.getElementById(selectId);
             if (!selectElement) {
-                console.warn('Select element not found:', selectId);
                 return;
             }
 
@@ -3349,7 +3302,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
             }
         } catch (error) {
-            console.warn('Populate dropdown error:', error);
         }
     }
     // Step 1: Course changes -> Load Groups
@@ -3391,7 +3343,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (xhr.status === 401) {
                     Swal.fire('Session Expired', 'Please login again', 'warning');
                 } else {
-                    console.error(xhr.responseText);
                 }
             }
         });
@@ -3409,7 +3360,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
 
         if (!groupPk) return;
-        console.log('Selected Group PK:', groupPk);
 
         // AJAX call to get timetables
         $.ajax({
@@ -3431,7 +3381,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.log('Error loading timetables:', error);
             }
         });
     }
@@ -3498,7 +3447,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     filterCourses('active', 'course_name');
                 }
             } catch (error) {
-                console.warn('Course toggle error (active):', error);
             }
         });
     }
@@ -3511,7 +3459,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     filterCourses('archived', 'course_name');
                 }
             } catch (error) {
-                console.warn('Course toggle error (archived):', error);
             }
         });
     }
@@ -3525,7 +3472,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     filterCourses('active', 'course_name_other');
                 }
             } catch (error) {
-                console.warn('Course toggle error (other active):', error);
             }
         });
     }
@@ -3538,7 +3484,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     filterCourses('archived', 'course_name_other');
                 }
             } catch (error) {
-                console.warn('Course toggle error (other archived):', error);
             }
         });
     }
@@ -3547,7 +3492,6 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             const courseSelect = document.getElementById(selectId);
             if (!courseSelect) {
-                console.warn('Course select element not found:', selectId);
                 return;
             }
 
@@ -3585,7 +3529,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 updateKeywordsOther();
             }
         } catch (error) {
-            console.warn('Filter courses error:', error);
         }
     }
 
@@ -3669,7 +3612,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.log('Error loading timetable details:', error);
             }
         });
     });
@@ -3717,11 +3659,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     $ministrySelect.val('');
                     updateKeywords();
                 } else {
-                    console.log('Error:', response.message);
                 }
             },
             error: function(xhr, status, error) {
-                console.log('Error loading ministries:', error);
             }
         });
     });
@@ -3799,11 +3739,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     $ministrySelect.val('');
                     updateKeywordsOther();
                 } else {
-                    console.log('Error:', response.message);
                 }
             },
             error: function(xhr, status, error) {
-                console.log('Error loading ministries:', error);
             }
         });
     });
@@ -3819,7 +3757,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 const submitBtn = this.querySelector('button[type="submit"]');
 
                 if (!submitBtn) {
-                    console.warn('Submit button not found in create form');
                     return;
                 }
 
@@ -3863,13 +3800,11 @@ document.addEventListener('DOMContentLoaded', function() {
                         }
                     })
                     .catch(error => {
-                        console.error('Create form error:', error);
                         showToast('error', 'Network error occurred. Please try again.');
                         submitBtn.disabled = false;
                         submitBtn.innerHTML = originalText;
                     });
             } catch (error) {
-                console.warn('Create form submit error:', error);
             }
         });
     }
@@ -3914,7 +3849,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
@@ -4011,7 +3945,6 @@ document.addEventListener('DOMContentLoaded', function() {
     try {
         // Check if essential Bootstrap components are available
         if (typeof bootstrap === 'undefined') {
-            console.warn('Bootstrap JavaScript not loaded properly');
         }
 
         // Check for missing DOM elements that might cause errors
@@ -4022,7 +3955,6 @@ document.addEventListener('DOMContentLoaded', function() {
         criticalElements.forEach(id => {
             const element = document.getElementById(id);
             if (!element) {
-                console.warn(`Critical element missing: ${id}`);
             }
         });
 
@@ -4037,7 +3969,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     }
                 });
             } catch (tooltipError) {
-                console.warn('Additional tooltip initialization failed:', tooltipError);
             }
         }, 1000);
 
@@ -4078,7 +4009,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
 
     } catch (finalError) {
-        console.warn('Final initialization error:', finalError);
     }
 
     // Upload form submit is handled by document-level listener (see top of script)
@@ -4109,11 +4039,9 @@ document.addEventListener('click', function(e) {
     const btn = e.target.closest('.add-attachment-course');
     if (btn) {
         e.preventDefault();
-        console.log('Course Add More clicked');
 
         const tbody = document.getElementById('course_attachments_tbody');
         if (!tbody) {
-            console.error('course_attachments_tbody not found');
             return;
         }
 
@@ -4140,7 +4068,6 @@ document.addEventListener('click', function(e) {
 
         tbody.appendChild(newRow);
         updateDeleteButtons('course_attachments_tbody');
-        console.log('Added row to Course attachments. Total rows:', rowCount);
     }
 });
 
@@ -4149,11 +4076,9 @@ document.addEventListener('click', function(e) {
     const btn = e.target.closest('.add-attachment-other');
     if (btn) {
         e.preventDefault();
-        console.log('Other Add More clicked');
 
         const tbody = document.getElementById('other_attachments_tbody');
         if (!tbody) {
-            console.error('other_attachments_tbody not found');
             return;
         }
 
@@ -4180,7 +4105,6 @@ document.addEventListener('click', function(e) {
 
         tbody.appendChild(newRow);
         updateDeleteButtons('other_attachments_tbody');
-        console.log('Added row to Other attachments. Total rows:', rowCount);
     }
 });
 
@@ -4189,7 +4113,6 @@ document.addEventListener('click', function(e) {
     const btn = e.target.closest('.delete-attachment');
     if (btn) {
         e.preventDefault();
-        console.log('Delete clicked');
 
         const row = btn.closest('.attachment-row');
         const tbody = row.closest('tbody');
@@ -4216,7 +4139,6 @@ document.addEventListener('click', function(e) {
 
             // Update delete button visibility
             updateDeleteButtons(tbodyId);
-            console.log('Row deleted');
         }, 300);
     }
 });

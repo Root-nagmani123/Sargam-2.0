@@ -51,7 +51,7 @@ class MenuController extends Controller
 
     public function edit($id)
     {
-        $menu = $this->menuService->find($id);
+        $menu = $this->menuService->find(decrypt($id));
         $groups = $this->groupService->getAll();
         $menus = $this->menuService->getForDropdown();
 

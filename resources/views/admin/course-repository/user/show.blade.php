@@ -13,7 +13,7 @@ if (!empty($ancestors)) {
 foreach ($ancestors as $ancestor) {
 $crumbItems[] = [
 'label' => $ancestor->course_repository_name,
-'url' => route('admin.course-repository.user.show', $ancestor->pk),
+'url' => route('admin.course-repository.user.show', encrypt($ancestor->pk)),
 ];
 }
 }
@@ -59,7 +59,7 @@ $documentCount = $documents->count();
             {{-- Shared filter toolbar (with inline column show/hide) — stays visible across both card and grid views --}}
             @if(isset($courses) && isset($subjects) && isset($faculties))
             @include('admin.course-repository.user.partials.filter-card', [
-            'route' => route('admin.course-repository.user.show', $repository->pk),
+            'route' => route('admin.course-repository.user.show', encrypt($repository->pk)),
             'courses' => $courses,
             'subjects' => $subjects,
             'faculties' => $faculties,
@@ -80,7 +80,7 @@ $documentCount = $documents->count();
                         @foreach ($repository->children as $child)
                         @include('admin.course-repository.user.partials.repository-card', [
                         'repository' => $child,
-                        'cardRoute' => route('admin.course-repository.user.show', $child->pk),
+                        'cardRoute' => route('admin.course-repository.user.show', encrypt($child->pk)),
                         ])
                         @endforeach
                     </div>

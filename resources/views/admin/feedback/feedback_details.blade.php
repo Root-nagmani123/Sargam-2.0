@@ -649,7 +649,6 @@
                             }
                         })
                         .catch(error => {
-                            console.error('Error loading feedback data:', error);
                             showError('Error loading data. Please try again.');
                         })
                         .finally(() => {
@@ -933,7 +932,6 @@
                                 }
                             })
                             .catch(error => {
-                                console.error('Error fetching suggestions:', error);
                             });
                     }, 300);
                 }

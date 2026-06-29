@@ -594,8 +594,6 @@ $(document).ready(function() {
         const courses = $('.course-selected').val();
         const selectedDate = $('#mdo_date').val();
 
-        console.log('Course selected:', courses);
-        console.log('Date selected:', selectedDate);
 
         if (!courses || courses.length === 0) {
             alert('Please select a course first.');
@@ -619,7 +617,6 @@ $(document).ready(function() {
                 selectedDate: selectedDate
             },
             success: function(response) {
-                console.log('AJAX Response:', response);
 
                 if (!response.status) {
                     availableList.innerHTML = '<div class="no-students">Error: ' + response
@@ -641,10 +638,8 @@ $(document).ready(function() {
                     }
                 });
                 updateNoStudentsMessage();
-                console.log('Students loaded:', response.students.length);
             },
             error: function(xhr, status, error) {
-                console.error('AJAX Error:', xhr.responseText);
                 availableList.innerHTML =
                     '<div class="no-students">Error loading students. Please try again.</div>';
             }

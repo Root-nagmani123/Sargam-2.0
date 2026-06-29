@@ -47,14 +47,14 @@
                             <td>₹{{ number_format($rate->rate, 2) }}</td>
                             <td><span class="badge {{ $rate->is_active ? 'bg-success' : 'bg-danger' }}">{{ $rate->is_active ? 'Active' : 'Inactive' }}</span></td>
                             <td>
-                                <a href="{{ route('admin.mess.meal-rate-master.edit', $rate->id) }}" class="btn btn-sm btn-warning">Edit</a>
-                                <form method="POST" action="{{ route('admin.mess.meal-rate-master.toggle-status', $rate->id) }}" class="d-inline">
+                                <a href="{{ route('admin.mess.meal-rate-master.edit', encrypt($rate->id)) }}" class="btn btn-sm btn-warning">Edit</a>
+                                <form method="POST" action="{{ route('admin.mess.meal-rate-master.toggle-status', encrypt($rate->id)) }}" class="d-inline">
                                     @csrf
                                     <button type="submit" class="btn btn-sm {{ $rate->is_active ? 'btn-secondary' : 'btn-success' }}" title="{{ $rate->is_active ? 'Set Inactive' : 'Set Active' }}">
                                         {{ $rate->is_active ? 'Inactive' : 'Active' }}
                                     </button>
                                 </form>
-                                <form method="POST" action="{{ route('admin.mess.meal-rate-master.destroy', $rate->id) }}" class="d-inline" onsubmit="return confirm('Delete this meal rate?');">
+                                <form method="POST" action="{{ route('admin.mess.meal-rate-master.destroy', encrypt($rate->id)) }}" class="d-inline" onsubmit="return confirm('Delete this meal rate?');">
                                     @csrf
                                     @method('DELETE')
                                     <button type="submit" class="btn btn-sm btn-danger">Delete</button>

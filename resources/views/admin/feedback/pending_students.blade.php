@@ -615,7 +615,6 @@
                         renderPagination(response);
                     },
                     error: function(xhr, status, error) {
-                        console.error('Grouped data error:', error);
                         $('#studentAccordionContainer').html(
                             '<div class="state-empty rounded-4 border border-danger border-opacity-25 bg-danger bg-opacity-10 p-4 p-md-5">' +
                             '<i class="material-symbols-rounded d-block mb-3 text-danger" style="font-size:2.75rem">error_outline</i>' +
@@ -929,7 +928,6 @@
                         loadGroupedData();
                     },
                     error: function(xhr, status, error) {
-                        console.error('AJAX Error:', error);
                         destroySelect2IfAny($sessionSelect);
                         $sessionSelect.html('<option value="">Error loading sessions</option>');
                         initSessionSelect2();
@@ -1026,7 +1024,6 @@
                 loadGroupedData();
             }
 
-            console.log('Ready - Pending Feedback with Accordion View');
         });
     </script>
 @endpush

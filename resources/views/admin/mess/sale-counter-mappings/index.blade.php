@@ -58,11 +58,11 @@
                             </td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group">
-                                    <a href="{{ route('admin.mess.sale-counter-mappings.edit', $mapping->id) }}" 
+                                    <a href="{{ route('admin.mess.sale-counter-mappings.edit', encrypt($mapping->id)) }}" 
                                        class="btn btn-outline-primary" title="Edit">
                                         <iconify-icon icon="solar:pen-bold"></iconify-icon>
                                     </a>
-                                    <form action="{{ route('admin.mess.sale-counter-mappings.destroy', $mapping->id) }}" 
+                                    <form action="{{ route('admin.mess.sale-counter-mappings.destroy', encrypt($mapping->id)) }}" 
                                           method="POST" class="d-inline"
                                           onsubmit="return confirm('Are you sure you want to delete this mapping?');">
                                         @csrf

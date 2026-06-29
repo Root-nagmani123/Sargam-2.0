@@ -54,7 +54,7 @@
                                                        type="checkbox" 
                                                        role="switch"
                                                        data-id="{{ $subCategory->pk }}"
-                                                       data-url="{{ route('admin.issue-sub-categories.update', $subCategory->pk) }}"
+                                                       data-url="{{ route('admin.issue-sub-categories.update', encrypt($subCategory->pk)) }}"
                                                        {{ $subCategory->status == 1 ? 'checked' : '' }}>
                                             </div>
                                         </div>
@@ -66,7 +66,7 @@
                                                     title="Edit Sub-Category">
                                                 <i class="material-icons material-symbols-rounded" style="font-size: 18px;">edit</i>
                                             </a>
-                                            <form action="{{ route('admin.issue-sub-categories.destroy', $subCategory->pk) }}" 
+                                            <form action="{{ route('admin.issue-sub-categories.destroy', encrypt($subCategory->pk)) }}" 
                                                   method="POST" 
                                                   class="d-inline" 
                                                   onsubmit="return confirm('Are you sure you want to delete this sub-category?');">

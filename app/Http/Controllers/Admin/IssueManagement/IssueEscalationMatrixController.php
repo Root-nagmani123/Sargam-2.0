@@ -253,6 +253,7 @@ class IssueEscalationMatrixController extends Controller
      */
     public function update(Request $request, $categoryId)
     {
+        $categoryId = decrypt($categoryId);
         $request->merge(['issue_category_master_pk' => $categoryId]);
 
         return $this->store($request);

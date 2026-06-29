@@ -191,7 +191,7 @@ class SellingVoucherDateRangeController extends Controller
         if (in_array($selectedClientType, ['ot', 'course'], true)) {
             $filterClientTypePkOptions = $otCourses->map(function ($course) {
                 return [
-                    'value' => (string) $course->pk,
+                    'value' => encrypt((int) $course->pk),
                     'text' => (string) $course->course_name,
                 ];
             })->values();
@@ -415,6 +415,7 @@ class SellingVoucherDateRangeController extends Controller
      */
     public function getStudentsByCourse(Request $request, $course_pk)
     {
+        $course_pk = decrypt($course_pk);
         $students = StudentMaster::join('student_master_course__map', 'student_master.pk', '=', 'student_master_course__map.student_master_pk')
             ->where('student_master_course__map.course_master_pk', $course_pk)
             ->select('student_master.pk', 'student_master.display_name', 'student_master.generated_OT_code')
@@ -743,7 +744,7 @@ class SellingVoucherDateRangeController extends Controller
 
     public function show(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory'])->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with(['store', 'clientTypeCategory', 'course', 'items.itemSubcategory'])->findOrFail(decrypt($id));
 
         if ($request->wantsJson()) {
             $issueDateFormatted = $report->issue_date ? $report->issue_date->format('d/m/Y') : '—';
@@ -806,7 +807,7 @@ class SellingVoucherDateRangeController extends Controller
 
     public function edit(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with(['items.itemSubcategory', 'course', 'clientTypeCategory'])->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with(['items.itemSubcategory', 'course', 'clientTypeCategory'])->findOrFail(decrypt($id));
 
         if ($report->status == SellingVoucherDateRangeReport::STATUS_APPROVED) {
             if ($request->wantsJson()) {
@@ -872,7 +873,7 @@ class SellingVoucherDateRangeController extends Controller
 
     public function update(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::findOrFail($id);
+        $report = SellingVoucherDateRangeReport::findOrFail(decrypt($id));
 
         if ($report->status == SellingVoucherDateRangeReport::STATUS_APPROVED) {
             return redirect()->route('admin.mess.selling-voucher-date-range.index')->with('error', 'Edit is disabled for approved voucher.');
@@ -1047,7 +1048,7 @@ class SellingVoucherDateRangeController extends Controller
 
     public function destroy($id)
     {
-        $report = SellingVoucherDateRangeReport::findOrFail($id);
+        $report = SellingVoucherDateRangeReport::findOrFail(decrypt($id));
         $report->items()->delete();
         $report->delete();
         self::bumpSellingVoucherDateRangeListingCacheEpoch();
@@ -1061,7 +1062,7 @@ class SellingVoucherDateRangeController extends Controller
      */
     public function returnData(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with(['store', 'items.itemSubcategory'])->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with(['store', 'items.itemSubcategory'])->findOrFail(decrypt($id));
 
         if (!$request->wantsJson()) {
             return redirect()->route('admin.mess.selling-voucher-date-range.index');
@@ -1093,7 +1094,7 @@ class SellingVoucherDateRangeController extends Controller
      */
     public function updateReturn(Request $request, $id)
     {
-        $report = SellingVoucherDateRangeReport::with('items')->findOrFail($id);
+        $report = SellingVoucherDateRangeReport::with('items')->findOrFail(decrypt($id));
 
         $request->validate([
             'items' => 'required|array|min:1',

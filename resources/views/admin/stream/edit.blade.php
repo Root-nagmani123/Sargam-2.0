@@ -33,7 +33,7 @@
     <div class="card-body">
         <h4 class="card-title mb-3">Edit Stream</h4>
         <hr>
-        <form action="{{ route('stream.update', $stream->pk) }}" method="POST">
+        <form action="{{ route('stream.update', encrypt($stream->pk)) }}" method="POST">
             @csrf
             @method('PUT')
             

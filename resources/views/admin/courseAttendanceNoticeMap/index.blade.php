@@ -554,14 +554,14 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                     <a
                                         class="text-primary d-inline-flex align-items-center gap-1 text-decoration-none view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="notice" 
-                                        data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
+                                        data-id="{{ encrypt($memo->notice_id) }}" data-topic="{{ $memo->topic_name }}">
                                         <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
                                     </a>
                                     @elseif($memo->type_notice_memo == 'Memo')
                                     <a
                                         class="text-primary d-inline-flex align-items-center gap-1 text-decoration-none view-conversation"
                                         data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="memo"
-                                        data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}">
+                                        data-id="{{ encrypt($memo->memo_id) }}" data-topic="{{ $memo->topic_name }}">
                                         <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
                                     </a>
                                     @else
@@ -595,7 +595,7 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 </button>
                                 @elseif($memo->status == 2)
                                 <a href="javascript:void(0)" class="btn btn-sm btn-success generate-memo-btn"
-                                    data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal"
+                                    data-id="{{ encrypt($memo->memo_notice_id) }}" data-bs-toggle="modal"
                                     data-bs-target="#memo_generate">
                                     <i class="bi bi-file-earmark-plus me-1"></i> Generate Memo
                                 </a>
@@ -1066,8 +1066,6 @@ $(document).ready(function() {
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error fetching memo data:', error);
-                console.error('Response:', xhr.responseText);
                 alert('Failed to load memo data. Please try again.');
             }
         });

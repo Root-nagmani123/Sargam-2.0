@@ -844,7 +844,6 @@
                                     const tabElement = new bootstrap.Tab(this);
                                     tabElement.show();
                                 } catch(err) {
-                                    console.log('Bootstrap tab error:', err);
                                 }
                             }
                         }
@@ -857,9 +856,7 @@
             const notificationMarkAllReadUrl = '{{ route("admin.notifications.mark-all-read") }}';
             const notificationPanelsUrl = '{{ route("admin.notifications.panels") }}';
             function markAsRead(notificationId) {
-                console.log('[Notification][Step 1] markAsRead called', { notificationId, currentUrl: window.location.href });
                 const endpoint = '/admin/notifications/mark-read-redirect/' + notificationId;
-                console.log('[Notification][Step 2] Calling endpoint', { endpoint });
                 fetch(endpoint, {
                         method: 'POST',
                         headers: {
@@ -868,32 +865,20 @@
                         }
                     })
                     .then(response => {
-                        console.log('[Notification][Step 3] HTTP response', {
-                            status: response.status,
-                            ok: response.ok,
-                            redirected: response.redirected,
-                            responseUrl: response.url
-                        });
                         return response.json().then(data => ({ ok: response.ok, status: response.status, data }));
                     })
                     .then(({ ok, status, data }) => {
-                        console.log('[Notification][Step 4] Controller JSON payload', { ok, status, data });
                         if (data.success && data.redirect_url) {
                             // Redirect to the appropriate module view
-                            console.log('[Notification][Step 5] Redirecting to redirect_url', { redirectUrl: data.redirect_url });
                             window.location.href = data.redirect_url;
                         } else if (data.success) {
                             // Fallback: reload if no redirect URL
-                            console.log('[Notification][Step 5] success=true but redirect_url missing, triggering reload');
                             // location.reload(); //ye redirect ho rha h
                         } else {
-                            console.log('[Notification][Step 5] Failed to mark notification as read', data);
                         }
                     })
                     .catch(error => {
-                        console.log('[Notification][Step X] Exception in markAsRead', error);
                         // Fallback to dashboard on error
-                        console.log('[Notification][Fallback] Redirecting to dashboard due to error');
                         // window.location.href = '{{ route("admin.dashboard") }}';
                     });
             }
@@ -910,10 +895,6 @@
                 const id = target.getAttribute('data-notification-id');
                 if (!id) return;
 
-                console.log('[Notification][Step 0] Notification clicked', {
-                    id,
-                    elementClass: target.className
-                });
                 markAsRead(id);
             });
 
@@ -979,7 +960,6 @@
                         toggleMarkAllButtons(data.unread_count || 0);
                     })
                     .catch(function (error) {
-                        console.error('[Notification] Failed to refresh panels', error);
                     });
             }
 
@@ -1000,7 +980,6 @@
                         }
                     })
                     .catch(function (error) {
-                        console.error('[Notification][AllRead] Exception', error);
                     });
             }
             </script>
@@ -1420,15 +1399,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
     if (hasRouteTab) {
         initial = routeTab;
-        console.log('Initial tab from route:', initial);
     } else if (hasInferredTab) {
         initial = inferredTab;
-        console.log('Initial tab from sidebar URL match:', initial);
     } else if (hasSavedTab) {
         initial = savedTab;
-        console.log('Initial tab from storage fallback:', initial);
     } else {
-        console.log('Initial tab fallback to home');
     }
 
     showPane(initial);

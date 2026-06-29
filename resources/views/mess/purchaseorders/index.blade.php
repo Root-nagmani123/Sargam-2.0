@@ -2272,7 +2272,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 if (callback) callback();
             })
             .catch(err => {
-                console.error(err);
                 filteredItems = itemSubcategories || [];
                 if (callback) callback();
             });
@@ -2546,7 +2545,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 new bootstrap.Modal(document.getElementById('viewPurchaseOrderModal')).show();
             })
             .catch(err => {
-                console.error(err);
                 alert('Failed to load purchase order.');
             });
     }, true);
@@ -2714,7 +2712,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                 }
             })
             .catch(err => {
-                console.error(err);
                 alert('Failed to load purchase order.');
             });
     }, true);
@@ -3096,7 +3093,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                         if (window.toastr && data.message) {
                             toastr.success(data.message);
                         } else if (data.message) {
-                            alert(data.message);
                         }
                     } else {
                         var msg = (data && data.message) ? data.message :
@@ -3109,7 +3105,6 @@ $canDeletePurchaseOrder = hasRole('Super Admin') || hasRole('Mess-Admin');
                                 }
                             } catch (e) {}
                         }
-                        alert(msg);
                     }
                 })
                 .catch(function() {

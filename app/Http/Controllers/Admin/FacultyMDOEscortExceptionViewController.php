@@ -121,7 +121,7 @@ class FacultyMDOEscortExceptionViewController extends Controller
             })->toArray();
 
             return [
-                'student_pk' => $student->pk,
+                'student_pk' => encrypt($student->pk),
                 'student_name' => $this->getStudentName($student),
                 'ot_code' => $student->generated_OT_code,
                 'email' => $student->email,
@@ -276,7 +276,7 @@ class FacultyMDOEscortExceptionViewController extends Controller
                         }
                         
                         return [
-                            'student_pk' => $student->pk,
+                            'student_pk' => encrypt($student->pk),
                             'student_name' => $student->display_name ?? 'N/A',
                             'ot_code' => $student->generated_OT_code,
                             'date' => $dutyMap->mdo_date,

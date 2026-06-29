@@ -68,7 +68,7 @@
                                             onclick="editPriority({{ $priority->pk }}, {{ json_encode($priority->priority) }}, {{ json_encode($priority->description ?? '') }}, {{ $priority->status }})">
                                         <iconify-icon icon="solar:pen-bold"></iconify-icon> Edit
                                     </button>
-                                    <form action="{{ route('admin.issue-priorities.destroy', $priority->pk) }}"
+                                    <form action="{{ route('admin.issue-priorities.destroy', encrypt($priority->pk)) }}"
                                           method="POST" class="d-inline"
                                           onsubmit="return confirm('Are you sure you want to delete this priority?');">
                                         @csrf

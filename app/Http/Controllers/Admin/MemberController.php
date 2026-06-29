@@ -408,7 +408,7 @@ class MemberController extends Controller
     }
 
     public function edit($id) {
-        $member = EmployeeMaster::findOrFail($id);
+        $member = EmployeeMaster::findOrFail(decrypt($id));
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
@@ -416,7 +416,7 @@ class MemberController extends Controller
     }
 
     public function editProfile($id) {
-        $member = EmployeeMaster::findOrFail($id);
+        $member = EmployeeMaster::findOrFail(decrypt($id));
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
@@ -425,7 +425,7 @@ class MemberController extends Controller
 
     function editStep($step, $id)
     {
-        $member = EmployeeMaster::findOrFail($id);
+        $member = EmployeeMaster::findOrFail(decrypt($id));
         $appellationMasterList = AppellationMaster::where('active_inactive', 1)
             ->pluck('appettation_name', 'pk')
             ->toArray();
@@ -501,7 +501,7 @@ class MemberController extends Controller
     {
         try {
             // Find the member
-            $member = EmployeeMaster::findOrFail($id);
+            $member = EmployeeMaster::findOrFail(decrypt($id));
 
             // Toggle status: 1 (active) ↔ 2 (inactive)
             $newStatus = $member->status == 1 ? 2 : 1;

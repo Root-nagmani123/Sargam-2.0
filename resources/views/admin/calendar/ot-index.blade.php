@@ -2564,14 +2564,11 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
                     <script>
                         // IMMEDIATE fallback - hide loader after 3 seconds
                         (function() {
-                            console.log('Inline script: Setting up emergency timeout');
                             setTimeout(function() {
                                 var overlay = document.getElementById('calendarLoadingOverlay');
                                 if (overlay) {
-                                    console.log('EMERGENCY TIMEOUT: Hiding loader');
                                     overlay.style.display = 'none';
                                 } else {
-                                    console.error('Overlay element not found in timeout');
                                 }
                             }, 3000);
                         })();
@@ -2677,7 +2674,6 @@ body.compact-mode .timetable-grid td.has-scroll:not(.scrolled-bottom)::before {
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <!-- Modern JavaScript with improved accessibility -->
 <script>
-console.log('FullCalendar loaded:', typeof FullCalendar !== 'undefined');
 
 // Configuration object
 const CalendarConfig = {
@@ -2808,7 +2804,6 @@ class CalendarManager {
 
     init() {
         try {
-            console.log('Initializing calendar manager...');
             this.initFullCalendar();
             
             try { this.bindEvents(); } catch (e) { console.error('bindEvents error:', e); }
@@ -2818,9 +2813,7 @@ class CalendarManager {
             try { this.observeMoreLinksChanges(); } catch (e) { console.error('observeMoreLinksChanges error:', e); }
             try { this.initDensity(); } catch (e) { console.error('initDensity error:', e); }
             
-            console.log('Calendar manager initialized successfully');
         } catch (error) {
-            console.error('Error in init():', error);
             // Hide loader on error
             const loadingOverlay = document.getElementById('calendarLoadingOverlay');
             if (loadingOverlay) {
@@ -2841,7 +2834,6 @@ class CalendarManager {
     }
 
     initFullCalendar() {
-        console.log('Starting initFullCalendar...');
         const calendarEl = document.getElementById('calendar');
         const loadingOverlay = document.getElementById('calendarLoadingOverlay');
         
@@ -2849,13 +2841,11 @@ class CalendarManager {
             throw new Error('Calendar element not found');
         }
         
-        console.log('Calendar element found:', calendarEl);
         
         // Get initial course ID from filter dropdown
         const courseFilter = document.getElementById('courseFilter');
         this.selectedCourseId = courseFilter && courseFilter.value ? courseFilter.value : null;
         
-        console.log('Selected course ID:', this.selectedCourseId);
         
         // Update course header with initial selection
         // this.updateCourseHeader();
@@ -2911,17 +2901,14 @@ class CalendarManager {
                 this.fetchEvents(info, successCallback, failureCallback);
             },
             loading: (isLoading) => {
-                console.log('Calendar loading state:', isLoading);
                 const loadingOverlay = document.getElementById('calendarLoadingOverlay');
                 
                 if (!isLoading) {
                     // Events have finished loading
-                    console.log('Events loaded, hiding overlay');
                     
                     try {
                         this.updateWeekendVisibility();
                     } catch (error) {
-                        console.error('Error updating weekend visibility:', error);
                     }
                     
                     // Hide loading overlay
@@ -2929,7 +2916,6 @@ class CalendarManager {
                         loadingOverlay.style.display = 'none';
                     }
                 } else {
-                    console.log('Loading events...');
                 }
             },
             eventContent: this.renderEventContent.bind(this),
@@ -2945,7 +2931,6 @@ class CalendarManager {
         });
 
         this.calendar.render();
-        console.log('Calendar rendered');
 
         this.styleMoreLinks();
         this.applyDenseMode();
@@ -2955,7 +2940,6 @@ class CalendarManager {
         setTimeout(() => {
             const loadingOverlay = document.getElementById('calendarLoadingOverlay');
             if (loadingOverlay) {
-                console.log('Timeout fallback: hiding loading overlay');
                 loadingOverlay.style.display = 'none';
             }
         }, 2000); // Give calendar 2 seconds to load
@@ -2980,7 +2964,6 @@ class CalendarManager {
             url += '?' + params.toString();
         }
 
-        console.log('Fetching events from:', url);
 
         fetch(url, {
             headers: {
@@ -2995,20 +2978,17 @@ class CalendarManager {
             return response.json();
         })
         .then(data => {
-            console.log('Events loaded:', data.length);
             // Filter out holidays and restricted holidays
             const filteredData = data.filter(event => {
                 const type = (event.type || event.event_type || event.session_type || '').toString().toLowerCase();
                 return type !== 'holiday' && type !== 'restricted holiday' && type !== 'restricted' && !type.includes('holiday');
             });
-            console.log('Events after filtering:', filteredData.length);
             successCallback(filteredData);
             // Reveal Saturday/Sunday columns deterministically from the fetched
             // data (more reliable than reading getEvents() on the loading event).
             this.revealWeekendsForData(filteredData);
         })
         .catch(error => {
-            console.error('Error fetching events:', error);
             this.showNotification('Failed to load calendar events. Please refresh the page.', 'danger');
             failureCallback(error);
         });
@@ -3546,7 +3526,6 @@ class CalendarManager {
 
     setFormDate(date) {
         const formattedDate = date.toLocaleDateString('en-CA');
-        console.log('Selected date for form:', formattedDate);
         document.getElementById('start_datetime').value = formattedDate;
         document.getElementById('start_datetime').setAttribute('readonly', 'true');
     }
@@ -3701,7 +3680,6 @@ class CalendarManager {
 
             this.populateGroupTypes(data);
         } catch (error) {
-            console.error('Error loading group types:', error);
         }
     }
 
@@ -3825,7 +3803,6 @@ class CalendarManager {
 
             this.populateSubjectNames(data);
         } catch (error) {
-            console.error('Error loading subject names:', error);
         }
     }
 
@@ -3997,7 +3974,6 @@ class CalendarManager {
 
         } catch (error) {
             this.showNotification(error.message, 'danger');
-            console.error('Form submission error:', error);
         }
     }
 
@@ -4101,7 +4077,6 @@ class CalendarManager {
 
         } catch (error) {
             this.showNotification('Error loading event for editing', 'danger');
-            console.error('Edit load error:', error);
         }
     }
 
@@ -4204,15 +4179,12 @@ async updateinternal_faculty(facultyType) {
 // console.log(facultyType + 'kkkkk');
         switch (facultyType) {
             case '1': // Internal
-                console.log('internal');
               internalFacultyDiv.style.display = 'none';
                 break;
             case '2': // Guest
-                  console.log('guest');
                internalFacultyDiv.style.display = 'block';
                 break;
             default: // Research/Other
-            console.log('rtyuio');
                 internalFacultyDiv.style.display = 'block';
 
         }
@@ -4320,11 +4292,9 @@ async setInternalFaculty(internalFacultyIds) {
                     const groups = groupedData[matchingValue] || [];
                     this.populateGroupCheckboxes(groups);
                 } else {
-                    console.warn('Group type value not found in dropdown:', groupTypeValue);
                 }
             }
         } catch (error) {
-            console.error('Error loading group types for edit:', error);
         }
     }
 
@@ -4367,7 +4337,6 @@ async setInternalFaculty(internalFacultyIds) {
 
         } catch (error) {
             this.showNotification('Delete failed', 'danger');
-            console.error('Delete error:', error);
         }
     }
 
@@ -4476,16 +4445,11 @@ async setInternalFaculty(internalFacultyIds) {
             this.updateTableHeader(weekStart, activeDays);
 
             // Debug: Log the week being displayed
-            console.log('List view - Week offset:', this.listViewWeekOffset);
-            console.log('Week start:', weekStart);
-            console.log('Total events:', events.length);
-            console.log('Filtered events for this week:', filteredEvents.length);
 
             this.renderListView(filteredEvents, activeDays);
             this.renderWeekCards(events, weekStart);
             this.updateWeekRangeText(weekStart);
         } catch (error) {
-            console.error('Error loading list view:', error);
         }
     }
 
@@ -4530,13 +4494,11 @@ async setInternalFaculty(internalFacultyIds) {
         // Get the table and its header
         const table = document.getElementById('timetableTable');
         if (!table) {
-            console.warn('Table #timetableTable not found');
             return;
         }
 
         const thead = table.querySelector('thead tr');
         if (!thead) {
-            console.warn('Table header not found');
             return;
         }
 
@@ -4914,9 +4876,6 @@ async setInternalFaculty(internalFacultyIds) {
 
 // Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
-    console.log('DOM Content Loaded - Initializing calendar...');
-    console.log('Calendar element exists:', !!document.getElementById('calendar'));
-    console.log('Loading overlay exists:', !!document.getElementById('calendarLoadingOverlay'));
     initCourseFilterChoices();
 
     const eventModalEl = document.getElementById('eventModal');
@@ -4944,17 +4903,13 @@ document.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => {
         const overlay = document.getElementById('calendarLoadingOverlay');
         if (overlay) {
-            console.log('ABSOLUTE FALLBACK: Hiding loader after 3 seconds');
             overlay.style.display = 'none';
         }
     }, 3000);
     
     try {
         window.calendarManager = new CalendarManager();
-        console.log('Calendar manager initialized successfully');
     } catch (error) {
-        console.error('Error initializing calendar:', error);
-        console.error('Error stack:', error.stack);
         
         // Hide loading overlay and show error message
         const loadingOverlay = document.getElementById('calendarLoadingOverlay');

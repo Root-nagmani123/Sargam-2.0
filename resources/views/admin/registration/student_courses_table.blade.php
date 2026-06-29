@@ -41,7 +41,7 @@
             <td>{{ $enrollment->modified_date ? date('d-m-Y', strtotime($enrollment->modified_date)) : 'N/A' }}</td>
             <td>
                 @if($canEdit)
-                    <a href="{{ route('enrollment.edit', $student->pk) }}" 
+                    <a href="{{ route('enrollment.edit', encrypt($student->pk)) }}" 
                        class="btn btn-sm btn-warning edit-btn" 
                        title="Edit Enrollment">
                         <i class="fas fa-edit me-1"></i> Edit

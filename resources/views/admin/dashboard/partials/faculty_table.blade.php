@@ -514,7 +514,6 @@ $(document).ready(function() {
                     };
                 };
             } catch (e) {
-                console.warn('PDF customize failed:', e);
             }
         }
 
@@ -544,7 +543,6 @@ $(document).ready(function() {
             });
             api.buttons().container().appendTo($toolbar.find('.dt-toolbar-right'));
         } catch (e) {
-            console.warn('DataTables export/print buttons unavailable:', e);
         }
     }
 });

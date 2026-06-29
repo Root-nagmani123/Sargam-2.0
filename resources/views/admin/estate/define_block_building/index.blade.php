@@ -35,7 +35,7 @@
                             <td class="ps-3">{{ $index + 1 }}</td>
                             <td class="fw-medium">{{ $row->block_name }}</td>
                             <td class="pe-3 text-end">
-                                <a href="{{ route('admin.estate.define-block-building.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                <a href="{{ route('admin.estate.define-block-building.edit', encrypt($row->pk)) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
                             </td>
                         </tr>
                         @empty

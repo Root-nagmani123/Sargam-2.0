@@ -80,7 +80,6 @@
           $.extend(true, $.fn.dataTable.defaults, { autoWidth: false, responsive: true });
         }
       } catch (e) {
-        console.warn('Failed to set DataTables defaults:', e);
       }
     })();
   </script>
@@ -192,7 +191,6 @@
             $table.DataTable(tableOptions);
           });
         } catch (e) {
-          console.warn('Auto DataTable initialization failed:', e);
         }
       }
 

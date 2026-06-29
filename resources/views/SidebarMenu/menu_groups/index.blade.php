@@ -231,7 +231,6 @@
                 try {
                     el._mgChoices.destroy();
                 } catch (e) {
-                    console.warn('Choices destroy', e);
                 }
                 el._mgChoices = null;
             }
@@ -337,7 +336,6 @@
                 try {
                     el._mgChoices.setChoiceByValue(String(v));
                 } catch (err2) {
-                    console.warn('Choices setChoiceByValue', err2);
                 }
             }
         }

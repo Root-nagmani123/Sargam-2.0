@@ -227,15 +227,15 @@
 
                     <td class="text-center">
                         <div class="btn-group btn-group-sm" role="group" aria-label="Group Actions">
-                            <a href="{{ route('admin.peer.group.members', $group->id) }}"
+                            <a href="{{ route('admin.peer.group.members', encrypt($group->id)) }}"
                                 class="btn btn-outline-info" title="View Members" aria-label="View Members">
                                 <i class="fas fa-users"></i>
                             </a>
-                            <a href="{{ route('admin.peer.group.import', $group->id) }}"
+                            <a href="{{ route('admin.peer.group.import', encrypt($group->id)) }}"
                                 class="btn btn-outline-warning" title="Import Users" aria-label="Import Users">
                                 <i class="fas fa-upload"></i>
                             </a>
-                            <a href="{{ route('admin.peer.group.submissions', $group->id) }}"
+                            <a href="{{ route('admin.peer.group.submissions', encrypt($group->id)) }}"
                                 class="btn btn-outline-primary" title="View Submissions" aria-label="View Submissions">
                                 <i class="fas fa-eye"></i>
                             </a>
@@ -847,7 +847,6 @@ $('#coursesAccordion').prepend(html);
                                 }
                             } else {
                                 const errorMessage = response.message || 'Error updating form status';
-                                alert(errorMessage);
                                 checkbox.prop('checked', originalState);
                             }
                         })
@@ -857,7 +856,6 @@ $('#coursesAccordion').prepend(html);
                                 const response = JSON.parse(xhr.responseText);
                                 errorMessage = response.message || errorMessage;
                             } catch (e) {}
-                            alert(errorMessage);
                             checkbox.prop('checked', originalState);
                         })
                         .always(function() {

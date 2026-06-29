@@ -125,7 +125,7 @@ class CourseRepositoryController extends Controller
                     }]);
                 },
                 'documents'
-            ])->findOrFail($pk);
+            ])->findOrFail(decrypt($pk));
             $documents_count_array = [];
             
             foreach ($repository->children as $child) {
@@ -286,7 +286,7 @@ class CourseRepositoryController extends Controller
     public function edit($pk)
     {
         try {
-            $repository = CourseRepositoryMaster::findOrFail($pk);
+            $repository = CourseRepositoryMaster::findOrFail(decrypt($pk));
             $subtopics = CourseRepositorySubtopic::all();
             
             return view('admin.course-repository.edit', [
@@ -306,7 +306,7 @@ class CourseRepositoryController extends Controller
     public function update($pk, Request $request)
     {
         try {
-            $repository = CourseRepositoryMaster::findOrFail($pk);
+            $repository = CourseRepositoryMaster::findOrFail(decrypt($pk));
             
             $validated = $request->validate([
                 'course_repository_name' => 'required|string|max:500',
@@ -387,7 +387,7 @@ class CourseRepositoryController extends Controller
     public function destroy($pk)
     {
         try {
-            $repository = CourseRepositoryMaster::findOrFail($pk);
+            $repository = CourseRepositoryMaster::findOrFail(decrypt($pk));
             
             $repository->update([
                 'del_folder_status' => 0,
@@ -435,7 +435,7 @@ class CourseRepositoryController extends Controller
             $category = $validated['category'];
             
             // Get parent course_repository_master to fetch its type
-            $parent = CourseRepositoryMaster::findOrFail($pk);
+            $parent = CourseRepositoryMaster::findOrFail(decrypt($pk));
             
             // Build folder hierarchy path from ancestors
             $folderPath = $this->buildFolderPath($parent);
@@ -517,7 +517,7 @@ class CourseRepositoryController extends Controller
     public function deleteDocument($pk)
     {
         try {
-            $document = CourseRepositoryDocument::findOrFail($pk);
+            $document = CourseRepositoryDocument::findOrFail(decrypt($pk));
             
             $document->update([
                 'del_type' => 0,
@@ -554,7 +554,7 @@ class CourseRepositoryController extends Controller
                 'detail.author',
                 'detail.sector',
                 'detail.ministry',
-            ])->findOrFail($pk);
+            ])->findOrFail(decrypt($pk));
             $detail = $document->detail;
 
             // Map stored detail type back to the upload form's category labels
@@ -621,7 +621,7 @@ class CourseRepositoryController extends Controller
                 'video_link' => 'nullable|string|max:2000',
             ]);
 
-            $document = CourseRepositoryDocument::findOrFail($pk);
+            $document = CourseRepositoryDocument::findOrFail(decrypt($pk));
 
             // ---- Document-level fields (title + optional file replacement) ----
             $document->file_title = $validated['file_title'] ?? $document->file_title;
@@ -701,7 +701,7 @@ class CourseRepositoryController extends Controller
     public function downloadDocument($pk)
     {
         try {
-            $document = CourseRepositoryDocument::findOrFail($pk);
+            $document = CourseRepositoryDocument::findOrFail(decrypt($pk));
             
             if (!$document->full_path && !$document->normalized_full_path) {
                 return redirect()->back()->with('error', 'File not found');
@@ -848,6 +848,7 @@ class CourseRepositoryController extends Controller
      */
     public function getSubjectsByCourse($coursePk = null, Request $request = null)
     {
+        $coursePk = decrypt($coursePk);
         try {
             // Support both route parameter and query parameter for flexibility
             if (!$coursePk && $request) {
@@ -879,6 +880,7 @@ class CourseRepositoryController extends Controller
      */
     public function getTopicsBySubject($subjectPk = null, Request $request = null)
     {
+        $subjectPk = decrypt($subjectPk);
         try {
             // Support both route parameter and query parameter for flexibility
             if (!$subjectPk && $request) {
@@ -1334,6 +1336,7 @@ class CourseRepositoryController extends Controller
      */
     public function documentDetails($documentId)
     {
+        $documentId = decrypt($documentId);
         try {
             $document = CourseRepositoryDetail::with(['author', 'subject', 'course', 'topic'])
                 ->findOrFail($documentId);
@@ -1358,6 +1361,7 @@ class CourseRepositoryController extends Controller
      */
     public function documentView($documentId)
     {
+        $documentId = decrypt($documentId);
         try {
             $document = CourseRepositoryDetail::with(['documents', 'author', 'subject'])
                 ->findOrFail($documentId);
@@ -1388,6 +1392,7 @@ class CourseRepositoryController extends Controller
      */
     public function documentVideo($documentId)
     {
+        $documentId = decrypt($documentId);
         try {
             $document = CourseRepositoryDetail::with(['documents', 'author'])
                 ->findOrFail($documentId);
@@ -1421,7 +1426,7 @@ class CourseRepositoryController extends Controller
                     }]);
                 },
                 'documents'
-            ])->findOrFail($pk);
+            ])->findOrFail(decrypt($pk));
             
             $documents_count_array = [];
             

@@ -96,7 +96,7 @@
                                     <a href="{{ route('admin.security.employee_idcard_approval.show', encrypt($req->id)) }}" class="btn btn-sm btn-info" title="View">
                                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                     </a>
-                                    <a href="{{ route('admin.employee_idcard.show', $req->id) }}" class="btn btn-sm btn-outline-secondary" title="Full Details">
+                                    <a href="{{ route('admin.employee_idcard.show', encrypt($req->id)) }}" class="btn btn-sm btn-outline-secondary" title="Full Details">
                                         <i class="material-icons material-symbols-rounded" style="font-size:18px;">open_in_new</i>
                                     </a>
                                 </td>

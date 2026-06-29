@@ -53,7 +53,7 @@
                                                 data-status="{{ e($subStore->status ?? 'active') }}"
                                                 title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         @if($canDeleteSubStore)
-                                            <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', $subStore->id) }}" class="d-inline"
+                                            <form method="POST" action="{{ route('admin.mess.sub-stores.destroy', encrypt($subStore->id)) }}" class="d-inline"
                                                   onsubmit="return confirm('Are you sure you want to delete this sub store?');">
                                                 @csrf
                                                 @method('DELETE')

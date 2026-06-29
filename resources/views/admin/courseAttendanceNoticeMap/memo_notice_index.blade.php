@@ -101,7 +101,7 @@
                                     aria-label="Memo notice template actions">
 
                                     <!-- Edit -->
-                                    <a href="{{ route('admin.memo-notice.edit', $template->pk) }}"
+                                    <a href="{{ route('admin.memo-notice.edit', encrypt($template->pk)) }}"
                                         class="btn btn-sm btn-outline-primary d-inline-flex align-items-center gap-1 bg-transparent border-0 p-0 text-primary"
                                         aria-label="Edit memo notice template">
                                         <i class="material-icons material-symbols-rounded"
@@ -111,7 +111,7 @@
 
                                     <!-- Delete (only for inactive templates) -->
                                     @if($template->active_inactive == 0)
-                                    <form action="{{ route('admin.memo-notice.destroy', $template->pk) }}"
+                                    <form action="{{ route('admin.memo-notice.destroy', encrypt($template->pk)) }}"
                                         method="POST"
                                         class="d-inline"
                                         onsubmit="return confirm('Are you sure you want to delete this template?')">

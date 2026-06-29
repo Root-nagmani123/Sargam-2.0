@@ -491,7 +491,6 @@
                     per_page: perPage
                 },
                 success: function(response) {
-                    console.log('Enrolled Students Response:', response); // Debug
                     if (response.success) {
                         populateEnrolledTable(response.data || []);
                         setupEnrolledPagination(response.total || 0, response.current_page || 1,
@@ -503,7 +502,6 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('Enrolled Students AJAX Error:', error, xhr.responseText); // Debug
                     destroyEnrolledDataTableIfAny();
                     $('#enrolledTableBody').html('<tr><td colspan="7" class="text-center text-danger">Error loading students data. Please try again.</td></tr>');
                 }
@@ -672,7 +670,6 @@
 
         // Filter button loads students via ajax - FIXED VERSION
         $('#filterBtn').on('click', function() {
-            console.log('Filter button clicked'); // Debug
             loadStudents();
         });
 
@@ -680,8 +677,6 @@
             var previousCourses = $('#previous_courses').val() || [];
             var services = $('#services').val() || [];
 
-            console.log('Previous Courses:', previousCourses); // Debug
-            console.log('Services:', services); // Debug
 
             if (!previousCourses.length) {
                 alert('Please select at least one previous course');
@@ -700,11 +695,8 @@
                     services: services
                 },
                 success: function(response) {
-                    console.log('AJAX Response:', response); // Debug
                     
                     if (response.success) {
-                        console.log('Students data:', response.students); // Debug
-                        console.log('Total students:', response.total_count); // Debug
                         populateStudentTable(response.students || []);
                     } else {
                         destroyStudentDataTableIfAny();
@@ -716,9 +708,6 @@
                     }
                 },
                 error: function(xhr, status, error) {
-                    console.error('AJAX Error Status:', status); // Debug
-                    console.error('AJAX Error:', error); // Debug
-                    console.error('XHR Response:', xhr.responseText); // Debug
 
                     destroyStudentDataTableIfAny();
                     $('#studentTable tbody').html(
@@ -735,8 +724,6 @@
             destroyStudentDataTableIfAny();
             tableBody.empty();
 
-            console.log('Students data received for table:', students); // Debug
-            console.log('Number of students:', students ? students.length : 0); // Debug
 
             if (!students || students.length === 0) {
                 tableBody.html(
@@ -750,11 +737,9 @@
             }
 
             students.forEach(function(student, index) {
-                console.log('Student ' + index + ':', student); // Debug
                 
                 // Check if student_pk exists
                 if (!student.student_pk) {
-                    console.warn('Student missing student_pk:', student);
                     return;
                 }
                 
@@ -775,7 +760,6 @@
 
             initStudentDataTable();
 
-            console.log('Table populated with ' + students.length + ' students'); // Debug
         }
 
         // Optional: Auto-load students when both previous courses and services are selected
@@ -785,7 +769,6 @@
             
             // Only auto-load if at least one previous course is selected
             if (previousCourses.length > 0) {
-                console.log('Auto-loading students...');
                 loadStudents();
             }
         });

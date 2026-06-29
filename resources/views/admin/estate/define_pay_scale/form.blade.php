@@ -21,7 +21,7 @@
             <p class="text-muted small mb-4">Eligibility mapping from estate_eligibility_mapping (Salary Grade, Unit Type, Unit Sub Type).</p>
             <hr class="my-4">
 
-            <form action="{{ $item ? route('admin.estate.define-pay-scale.update', $item->pk) : route('admin.estate.define-pay-scale.store') }}" method="POST">
+            <form action="{{ $item ? route('admin.estate.define-pay-scale.update', encrypt($item->pk)) : route('admin.estate.define-pay-scale.store') }}" method="POST">
                 @csrf
                 @if($item) @method('PUT') @endif
 

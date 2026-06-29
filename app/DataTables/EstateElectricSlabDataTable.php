@@ -32,8 +32,8 @@ class EstateElectricSlabDataTable extends DataTable
                 return $row->unitType ? e($row->unitType->unit_type) : '-';
             })
             ->addColumn('action', function ($row) {
-                $editUrl = route('admin.estate.define-electric-slab.edit', $row->pk);
-                $deleteUrl = route('admin.estate.define-electric-slab.destroy', $row->pk);
+                $editUrl = route('admin.estate.define-electric-slab.edit', encrypt($row->pk));
+                $deleteUrl = route('admin.estate.define-electric-slab.destroy', encrypt($row->pk));
                 $token = csrf_token();
 
                 return '<div class="d-inline-flex align-items-center gap-1" role="group">

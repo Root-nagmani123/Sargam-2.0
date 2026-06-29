@@ -67,7 +67,7 @@ class RoleController extends Controller
      */
     public function show(Request $request, $id)
     {
-        $role = Role::findOrFail($id);
+        $role = Role::findOrFail(decrypt($id));
         $rolePermissions = $role->permissions->pluck('name')->toArray();
         $categories = SidebarCategory::with([
             'groups.menus'
@@ -118,7 +118,7 @@ class RoleController extends Controller
 
     public function destroyDashboardCard($id)
     {
-        $card = DashboardCard::findOrFail($id);
+        $card = DashboardCard::findOrFail(decrypt($id));
         $card->roles()->detach();
         $card->delete();
         return response()->json(['success' => true, 'message' => 'Card deleted successfully.']);
@@ -126,7 +126,7 @@ class RoleController extends Controller
 
     public function updateDashboardCard(Request $request, $id)
     {
-        $card = DashboardCard::findOrFail($id);
+        $card = DashboardCard::findOrFail(decrypt($id));
         $request->validate([
             'label'      => 'required|string|max:200',
             'icon'       => 'required|string|max:100',
@@ -173,7 +173,7 @@ class RoleController extends Controller
 
     public function showDashboard($id)
     {
-        $role = Role::findOrFail($id);
+        $role = Role::findOrFail(decrypt($id));
         $allCards = DashboardCard::orderBy('id', 'desc')->get();
         $assignedCardIds = $role->belongsToMany(DashboardCard::class, 'role_dashboard_cards', 'role_id', 'dashboard_card_id')
             ->pluck('dashboard_cards.id')
@@ -203,7 +203,7 @@ class RoleController extends Controller
 
     public function assignDashboardCard(Request $request, $id)
     {
-        $role = Role::findOrFail($id);
+        $role = Role::findOrFail(decrypt($id));
         $cardId = $request->card_id;
         $status = $request->status;
 
@@ -226,7 +226,7 @@ class RoleController extends Controller
 
     public function assignPermission(Request $request, $id)
     {
-        $role = Role::findOrFail($id);
+        $role = Role::findOrFail(decrypt($id));
         $permission = $request->permission;
         $status = $request->status;
         if (!$permission) {

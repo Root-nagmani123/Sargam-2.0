@@ -328,7 +328,7 @@ class VehiclePassApprovalController extends Controller
                 },
                 'createdBy',
                 'approvals'
-            ])->find($pk);
+            ])->find(decrypt($pk));
 
             if (! $application) {
                 return redirect()->route('admin.security.vehicle_pass_approval.index')
@@ -354,7 +354,7 @@ class VehiclePassApprovalController extends Controller
                 },
                 'createdBy',
                 'approvals'
-            ])->find($pk);
+            ])->find(decrypt($pk));
 
             if (! $application) {
                 return redirect()->route('admin.security.vehicle_pass_approval.index')
@@ -440,8 +440,8 @@ class VehiclePassApprovalController extends Controller
         }
 
         $application = $kind === 'fw'
-            ? VehiclePassFWApply::findOrFail($pk)
-            : VehiclePassTWApply::findOrFail($pk);
+            ? VehiclePassFWApply::findOrFail(decrypt($pk))
+            : VehiclePassTWApply::findOrFail(decrypt($pk));
 
         if ((int) $application->vech_card_status !== 1) {
             return redirect()->back()->with('error', 'Application already processed');
@@ -544,8 +544,8 @@ class VehiclePassApprovalController extends Controller
         }
 
         $application = $kind === 'fw'
-            ? VehiclePassFWApply::findOrFail($pk)
-            : VehiclePassTWApply::findOrFail($pk);
+            ? VehiclePassFWApply::findOrFail(decrypt($pk))
+            : VehiclePassTWApply::findOrFail(decrypt($pk));
 
         if ((int) $application->vech_card_status !== 1) {
             return redirect()->back()->with('error', 'Application already processed');

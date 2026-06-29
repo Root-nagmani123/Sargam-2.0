@@ -373,7 +373,6 @@
                 },
                 success: function(resp) {
                     if (resp && resp.message) {
-                        alert(resp.message);
                     } else {
                         alert('Deleted successfully.');
                     }
@@ -382,7 +381,6 @@
                 },
                 error: function(xhr) {
                     var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Delete failed.';
-                    alert(msg);
                 }
             });
         });

@@ -10,7 +10,7 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('admin.mess.client-types.update', $clientType->id) }}">
+            <form method="POST" action="{{ route('admin.mess.client-types.update', encrypt($clientType->id)) }}">
                 @csrf
                 @method('PUT')
 

@@ -139,7 +139,7 @@ class CourseGroupTypeController extends Controller
             // UPDATE
             if ($request->filled('id')) {
 
-                $course = CourseGroupTypeMaster::find($request->id);
+                $course = CourseGroupTypeMaster::find(decrypt($request->id));
 
                 if (!$course) {
                     return response()->json([

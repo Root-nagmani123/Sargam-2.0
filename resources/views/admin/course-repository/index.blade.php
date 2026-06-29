@@ -71,7 +71,7 @@
                                     @endif
 
                                     <div>
-                                        <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                        <a href="{{ route('course-repository.show', encrypt($repo->pk)) }}"
                                             class="text-decoration-none text-dark fw-medium">
                                             {{ $repo->course_repository_name }}
                                         </a>
@@ -81,14 +81,14 @@
                             </td>
 
                             <td>
-                                <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                <a href="{{ route('course-repository.show', encrypt($repo->pk)) }}"
                                     class="text-decoration-none small fw-medium {{ $subCount == 0 ? 'text-secondary' : '' }}">
                                     {{ $subCount }} Sub-Category
                                 </a>
                             </td>
 
                             <td>
-                                <a href="{{ route('course-repository.show', $repo->pk) }}"
+                                <a href="{{ route('course-repository.show', encrypt($repo->pk)) }}"
                                     class="text-decoration-none small fw-medium {{ $docCount == 0 ? 'text-secondary' : '' }}">
                                     See {{ str_pad($docCount, 2, '0', STR_PAD_LEFT) }} Attachment
                                 </a>
@@ -733,7 +733,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
@@ -822,7 +821,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     '<span class="material-icons material-symbols-rounded me-1">check_circle</span> Save';
             })
             .catch(function(error) {
-                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',
@@ -942,7 +940,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             })
             .catch(error => {
-                console.error('Error:', error);
                 Swal.fire({
                     icon: 'error',
                     title: 'Error!',

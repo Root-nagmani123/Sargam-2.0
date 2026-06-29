@@ -83,13 +83,13 @@ class VendorItemMappingController extends Controller
 
     public function show($id)
     {
-        $mapping = VendorItemMapping::with(['vendor', 'itemCategory', 'itemSubcategory'])->findOrFail($id);
+        $mapping = VendorItemMapping::with(['vendor', 'itemCategory', 'itemSubcategory'])->findOrFail(decrypt($id));
         return view('admin.mess.vendor-item-mappings.show', compact('mapping'));
     }
 
     public function edit(Request $request, $id)
     {
-        $mapping = VendorItemMapping::with(['vendor', 'itemCategory', 'itemSubcategory'])->findOrFail($id);
+        $mapping = VendorItemMapping::with(['vendor', 'itemCategory', 'itemSubcategory'])->findOrFail(decrypt($id));
         $vendors = Vendor::when(
             \Illuminate\Support\Facades\Schema::hasColumn('mess_vendors', 'is_active'),
             fn ($q) => $q->where('is_active', true)
@@ -109,7 +109,7 @@ class VendorItemMappingController extends Controller
 
     public function update(Request $request, $id)
     {
-        $mapping = VendorItemMapping::findOrFail($id);
+        $mapping = VendorItemMapping::findOrFail(decrypt($id));
 
         try {
             $request->validate([
@@ -158,7 +158,7 @@ class VendorItemMappingController extends Controller
 
     public function destroy($id)
     {
-        $mapping = VendorItemMapping::findOrFail($id);
+        $mapping = VendorItemMapping::findOrFail(decrypt($id));
         $mapping->delete();
 
         return redirect()->route('admin.mess.vendor-item-mappings.index')

@@ -106,7 +106,6 @@
 document.addEventListener('DOMContentLoaded', function() {
     const sidebarComm = document.getElementById('sidebar-communication');
     if (!sidebarComm) {
-        console.error('Communication sidebar not found');
         return;
     }
 

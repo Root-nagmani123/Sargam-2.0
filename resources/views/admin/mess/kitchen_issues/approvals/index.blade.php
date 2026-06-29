@@ -42,7 +42,7 @@
                                     <td>{{ $issue->request_date->format('d-m-Y') }}</td>
                                     <td class="text-center">
                                         <div class="d-inline-flex align-items-center gap-2" role="group">
-                                            <a href="{{ route('admin.mess.material-management-approvals.show', $issue->pk) }}"
+                                            <a href="{{ route('admin.mess.material-management-approvals.show', encrypt($issue->pk)) }}"
                                                 class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                                 <iconify-icon icon="solar:eye-bold" width="18"></iconify-icon>
                                                 <span class="d-none d-md-inline">Review</span>

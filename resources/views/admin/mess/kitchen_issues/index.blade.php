@@ -122,21 +122,21 @@
                                     <td>{{ $issue->request_date->format('d-m-Y') }}</td>
                                     <td class="text-center">
                                         <div class="d-inline-flex align-items-center gap-2" role="group">
-                                            <a href="{{ route('admin.mess.material-management.show', $issue->pk) }}"
+                                            <a href="{{ route('admin.mess.material-management.show', encrypt($issue->pk)) }}"
                                                 class="btn btn-sm btn-outline-info d-flex align-items-center gap-1">
                                                 <iconify-icon icon="solar:eye-bold" width="18"></iconify-icon>
                                                 <span class="d-none d-md-inline">View</span>
                                             </a>
 
                                             @if($issue->approve_status == 0)
-                                            <a href="{{ route('admin.mess.material-management.edit', $issue->pk) }}"
+                                            <a href="{{ route('admin.mess.material-management.edit', encrypt($issue->pk)) }}"
                                                 class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1">
                                                 <iconify-icon icon="solar:pen-bold" width="18"></iconify-icon>
                                                 <span class="d-none d-md-inline">Edit</span>
                                             </a>
 
                                             @if($issue->send_for_approval == 0)
-                                            <form action="{{ route('admin.mess.material-management.send-for-approval', $issue->pk) }}"
+                                            <form action="{{ route('admin.mess.material-management.send-for-approval', encrypt($issue->pk)) }}"
                                                 method="POST" class="d-inline">
                                                 @csrf
                                                 <button type="submit"
@@ -148,7 +148,7 @@
                                             </form>
                                             @endif
 
-                                            <form action="{{ route('admin.mess.material-management.destroy', $issue->pk) }}"
+                                            <form action="{{ route('admin.mess.material-management.destroy', encrypt($issue->pk)) }}"
                                                 method="POST" class="d-inline"
                                                 onsubmit="return confirm('Are you sure you want to delete this record?');">
                                                 @csrf

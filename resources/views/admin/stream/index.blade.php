@@ -63,7 +63,7 @@
                                             aria-label="Stream actions">
 
                                             <!-- Edit -->
-                                            <a href="{{ route('stream.edit', $stream->pk) }}"
+                                            <a href="{{ route('stream.edit', encrypt($stream->pk)) }}"
                                                 class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
                                                 aria-label="Edit stream">
                                                 <span class="material-symbols-rounded fs-6"
@@ -81,7 +81,7 @@
                                                 <span class="d-none d-md-inline">Delete</span>
                                             </button>
                                             @else
-                                            <form action="{{ route('stream.destroy', $stream->pk) }}" method="POST"
+                                            <form action="{{ route('stream.destroy', encrypt($stream->pk)) }}" method="POST"
                                                 class="d-inline"
                                                 onsubmit="return confirm('Are you sure you want to delete this stream?');">
                                                 @csrf

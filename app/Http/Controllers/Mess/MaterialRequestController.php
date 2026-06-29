@@ -65,13 +65,13 @@ class MaterialRequestController extends Controller
 
     public function show($id)
     {
-        $materialRequest = MaterialRequest::with(['store', 'requester', 'approver', 'items.inventory'])->findOrFail($id);
+        $materialRequest = MaterialRequest::with(['store', 'requester', 'approver', 'items.inventory'])->findOrFail(decrypt($id));
         return view('mess.materialrequests.show', compact('materialRequest'));
     }
 
     public function approve($id)
     {
-        $materialRequest = MaterialRequest::findOrFail($id);
+        $materialRequest = MaterialRequest::findOrFail(decrypt($id));
         return view('mess.materialrequests.approve', compact('materialRequest'));
     }
 
@@ -84,7 +84,7 @@ class MaterialRequestController extends Controller
         ]);
 
         DB::transaction(function () use ($request, $id) {
-            $materialRequest = MaterialRequest::findOrFail($id);
+            $materialRequest = MaterialRequest::findOrFail(decrypt($id));
             $materialRequest->update([
                 'status' => $request->status,
                 'approved_by' => Auth::id(),

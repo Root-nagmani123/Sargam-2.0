@@ -118,7 +118,7 @@
                                     </td>
                                   
                                     <td>
-                                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-sm btn-info" title="View Details">
+                                        <a href="{{ route('admin.issue-management.show', encrypt($issue->pk)) }}" class="btn btn-sm btn-info" title="View Details">
                                             <iconify-icon icon="solar:eye-bold"></iconify-icon>
                                         </a>
                                     </td>

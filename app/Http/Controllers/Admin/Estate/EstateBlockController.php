@@ -31,13 +31,13 @@ class EstateBlockController extends Controller
 
     public function edit(string $id)
     {
-        $item = EstateBlock::findOrFail($id);
+        $item = EstateBlock::findOrFail(decrypt($id));
         return view('admin.estate.define_block_building.form', compact('item'));
     }
 
     public function update(Request $request, string $id)
     {
-        $item = EstateBlock::findOrFail($id);
+        $item = EstateBlock::findOrFail(decrypt($id));
         $validated = $request->validate([
             'block_name' => 'required|string|max:255',
         ]);
@@ -47,7 +47,7 @@ class EstateBlockController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        EstateBlock::findOrFail($id)->delete();
+        EstateBlock::findOrFail(decrypt($id))->delete();
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Estate block/building deleted successfully.']);
         }

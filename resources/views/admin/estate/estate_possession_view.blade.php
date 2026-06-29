@@ -15,7 +15,7 @@
             <form method="POST" action="{{ route('admin.estate.possession-view.store') }}" id="possessionForm" class="needs-validation" novalidate>
                 @csrf
                 @if(isset($record) && $record)
-                    <input type="hidden" name="id" value="{{ $record->pk }}">
+                    <input type="hidden" name="id" value="{{ encrypt($record->pk) }}">
                 @endif
 
                 <div class="row g-3 mb-3">

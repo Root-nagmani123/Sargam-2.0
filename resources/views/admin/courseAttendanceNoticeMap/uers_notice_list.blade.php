@@ -84,7 +84,7 @@
                                     </a>
 
                                     <a href="javascript:void(0)" class="view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" @if ($memo->notice_memo == '1')data-type="notice" data-id="{{ $memo->notice_id }}"@elseif($memo->notice_memo == '2') data-type="memo" data-id="{{ $memo->memo_id }}" @endif
+                                        data-bs-target="#chatOffcanvas" @if ($memo->notice_memo == '1')data-type="notice" data-id="{{ encrypt($memo->notice_id) }}"@elseif($memo->notice_memo == '2') data-type="memo" data-id="{{ encrypt($memo->memo_id) }}" @endif
                                          data-topic="{{ $memo->topic_name }}"
                                         data-bs-toggle="tooltip" title="Quick View">
                                         <i class="material-icons menu-icon material-symbols-rounded"

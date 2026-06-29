@@ -25,11 +25,11 @@
                             $displayName = $item->course_repository_name;
                             $repositoryName = strtolower($displayName);
                             if ($listRouteMode === 'show') {
-                                $routeUrl = route('admin.course-repository.user.show', $item->pk);
+                                $routeUrl = route('admin.course-repository.user.show', encrypt($item->pk));
                             } elseif (strpos($repositoryName, 'foundation course') !== false) {
                                 $routeUrl = route('admin.course-repository.user.foundation-course');
                             } else {
-                                $routeUrl = route('admin.course-repository.user.show', $item->pk);
+                                $routeUrl = route('admin.course-repository.user.show', encrypt($item->pk));
                             }
                             $subCount = $item->children->count() ?? 0;
                             $attachmentCount = $item->getTotalDocumentCount();

@@ -3,7 +3,7 @@
 @section('setup_content')
 <div class="container-fluid">
     <h4>Approve/Reject Material Request</h4>
-    <form method="POST" action="{{ route('admin.mess.materialrequests.processApproval', $materialRequest->id) }}">
+    <form method="POST" action="{{ route('admin.mess.materialrequests.processApproval', encrypt($materialRequest->id)) }}">
         @csrf
         <div class="card">
             <div class="card-body">

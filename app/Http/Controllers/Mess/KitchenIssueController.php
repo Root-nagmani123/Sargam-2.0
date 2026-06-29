@@ -237,7 +237,7 @@ class KitchenIssueController extends Controller
         if (in_array($selectedTypeSlug, ['ot', 'course'], true)) {
             $filterClientTypePkOptions = $otCourses->map(function ($course) {
                 return [
-                    'value' => (string) $course->pk,
+                    'value' => encrypt((int) $course->pk),
                     'text' => (string) $course->course_name,
                 ];
             })->values();
@@ -1132,6 +1132,7 @@ class KitchenIssueController extends Controller
      */
     public function getStudentsByCourse(Request $request, $course_pk)
     {
+        $course_pk = decrypt($course_pk);
         $students = StudentMaster::join(
             'student_master_course__map',
             'student_master.pk',
@@ -1529,7 +1530,7 @@ class KitchenIssueController extends Controller
             'course',
             'employee',
             'student'
-        ])->findOrFail($id);
+        ])->findOrFail(decrypt($id));
 
         if ($request->wantsJson()) {
             $voucher = [
@@ -1595,7 +1596,7 @@ class KitchenIssueController extends Controller
             'student',
             'store',
             'subStore',
-        ])->findOrFail($id);
+        ])->findOrFail(decrypt($id));
 
         if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
             if ($request->wantsJson()) {
@@ -1690,7 +1691,7 @@ class KitchenIssueController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::findOrFail(decrypt($id));
 
         if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
             return redirect()->route('admin.mess.material-management.index')->with('error', 'Edit is disabled for approved voucher.');
@@ -1875,7 +1876,7 @@ class KitchenIssueController extends Controller
      */
     public function destroy($id)
     {
-        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::findOrFail(decrypt($id));
 
         try {
             $kitchenIssue->items()->delete();
@@ -1894,7 +1895,7 @@ class KitchenIssueController extends Controller
      */
     public function returnData(Request $request, $id)
     {
-        $kitchenIssue = KitchenIssueMaster::with(['store', 'items.itemSubcategory'])->findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::with(['store', 'items.itemSubcategory'])->findOrFail(decrypt($id));
 
         if (!$request->wantsJson()) {
             return redirect()->route('admin.mess.material-management.index');
@@ -1926,7 +1927,7 @@ class KitchenIssueController extends Controller
      */
     public function updateReturn(Request $request, $id)
     {
-        $kitchenIssue = KitchenIssueMaster::with('items')->findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::with('items')->findOrFail(decrypt($id));
 
         $request->validate([
             'items' => 'required|array|min:1',
@@ -2028,7 +2029,7 @@ class KitchenIssueController extends Controller
      */
     public function sendForApproval($id)
     {
-        $kitchenIssue = KitchenIssueMaster::findOrFail($id);
+        $kitchenIssue = KitchenIssueMaster::findOrFail(decrypt($id));
 
         if ($kitchenIssue->status == KitchenIssueMaster::STATUS_APPROVED) {
             return back()->with('error', 'Material Management already approved');

@@ -138,7 +138,7 @@ class IssuePriorityController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $priority = IssuePriorityMaster::findOrFail($id);
+        $priority = IssuePriorityMaster::findOrFail(decrypt($id));
 
         $request->validate([
             'priority' => 'required|string|max:100',
@@ -165,7 +165,7 @@ class IssuePriorityController extends Controller
      */
     public function destroy($id)
     {
-        $priority = IssuePriorityMaster::findOrFail($id);
+        $priority = IssuePriorityMaster::findOrFail(decrypt($id));
 
         if ($priority->issueLogs()->count() > 0) {
             return back()->with('error', 'Cannot delete priority with associated issues.');

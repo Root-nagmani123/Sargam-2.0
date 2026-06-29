@@ -34,7 +34,7 @@
 
         <div class="card">
             <div class="card-body">
-                <form action="{{ route('admin.registration.update', $registration->pk) }}" method="POST" novalidate>
+                <form action="{{ route('admin.registration.update', encrypt($registration->pk)) }}" method="POST" novalidate>
                     @csrf
                     @method('PUT')
 

@@ -61,7 +61,7 @@
     @endif
 
     @if($hasFileDownload)
-        <a href="{{ route('course-repository.document.download', $fileDoc->pk) }}?file={{ urlencode($fileDoc->upload_document) }}"
+        <a href="{{ route('course-repository.document.download', encrypt($fileDoc->pk)) }}?file={{ urlencode($fileDoc->upload_document) }}"
            class="btn btn-link btn-sm text-primary p-0 cru-btn-download"
            title="Download file"
            aria-label="Download file">

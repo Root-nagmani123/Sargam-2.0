@@ -52,7 +52,7 @@
 
                         <!-- Export Form -->
                         <div class="col-md-6">
-                            <form method="GET" action="{{ route('admin.peer.export', $selectedGroupId) }}"
+                            <form method="GET" action="{{ route('admin.peer.export', encrypt($selectedGroupId)) }}"
                                 class="d-flex justify-content-center">
                                 <select name="format" id="format" class="form-select me-2" required>
                                     <option value="">Select Format</option>

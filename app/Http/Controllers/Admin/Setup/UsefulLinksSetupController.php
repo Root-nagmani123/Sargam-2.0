@@ -197,7 +197,7 @@ class UsefulLinksSetupController extends Controller
 
         foreach (array_values($ids) as $i => $id) {
             UsefulLink::query()
-                ->where('id', $id)
+                ->where('id', decrypt($id))
                 ->update([
                     'position' => $i + 1,
                     'active_inactive' => 1,

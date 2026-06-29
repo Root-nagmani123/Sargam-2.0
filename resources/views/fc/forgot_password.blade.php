@@ -179,7 +179,6 @@
                     }
                 })
                 .catch(err => {
-                    console.error('Verification error:', err);
                     Swal.fire({
                         title: 'Error',
                         text: 'Something went wrong. Please try again later.',

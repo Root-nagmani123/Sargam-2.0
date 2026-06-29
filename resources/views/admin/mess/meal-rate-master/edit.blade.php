@@ -13,7 +13,7 @@
             </h5>
         </div>
         <div class="card-body">
-            <form action="{{ route('admin.mess.meal-rate-master.update', $rate->id) }}" method="POST">
+            <form action="{{ route('admin.mess.meal-rate-master.update', encrypt($rate->id)) }}" method="POST">
                 @csrf
                 @method('PUT')
 

@@ -65,12 +65,12 @@
                                     <td>{{ $exemption->modifiedByUser->name ?? 'N/A' }}</td>
                                     <td>
                                         <div class="d-flex gap-2">
-                                            <a href="{{ route('admin.fc_exemption.edit', $exemption->pk) }}"
+                                            <a href="{{ route('admin.fc_exemption.edit', encrypt($exemption->pk)) }}"
                                                 class="btn btn-sm btn-info">
                                                 Edit
                                             </a>
 
-                                            <form action="{{ route('admin.fc_exemption.destroy', $exemption->pk) }}"
+                                            <form action="{{ route('admin.fc_exemption.destroy', encrypt($exemption->pk)) }}"
                                                 method="POST" class="d-inline"
                                                 onsubmit="return confirm('Are you sure you want to delete this exemption?');">
                                                 @csrf

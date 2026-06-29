@@ -48,7 +48,7 @@
                 
                 @endif
 
-                <form action="{{ route('admin.issue-management.update', $issue->pk) }}" method="POST" enctype="multipart/form-data">
+                <form action="{{ route('admin.issue-management.update', encrypt($issue->pk)) }}" method="POST" enctype="multipart/form-data">
                     @csrf
                     @method('PUT')
                     @if(request('embed'))
@@ -266,7 +266,7 @@
                     
                    @if($issue->issue_status == 0)
                         <div class="d-flex justify-content-end gap-2 pt-2">
-                            <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="btn btn-secondary rounded">
+                            <a href="{{ route('admin.issue-management.show', encrypt($issue->pk)) }}" class="btn btn-secondary rounded">
                                 Cancel
                             </a>
                             <button type="submit" class="btn btn-primary">
@@ -380,7 +380,6 @@ $(document).ready(function() {
 
         // Convert to integer for proper comparison
         var buildingIdToMatch = currentBuildingId ? parseInt(currentBuildingId) : null;
-        console.log("Loading buildings for type:", type, "with current building ID:", buildingIdToMatch);
         $('#building_section').removeClass('d-none');
         
         $.ajax({

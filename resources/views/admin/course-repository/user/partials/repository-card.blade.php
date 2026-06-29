@@ -10,7 +10,7 @@
         if (strpos($repositoryName, 'foundation course') !== false) {
             $routeUrl = route('admin.course-repository.user.foundation-course');
         } else {
-            $routeUrl = route('admin.course-repository.user.show', $repository->pk);
+            $routeUrl = route('admin.course-repository.user.show', encrypt($repository->pk));
         }
     }
 

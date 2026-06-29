@@ -218,10 +218,10 @@
         {{-- Filter toolbar --}}
         <div class="px-4 py-3 border-bottom">
             <form method="GET" action="{{ route('attendance.OT.student_mark.student', [
-                'group_pk' => $group_pk,
-                'course_pk' => $course_pk,
-                'timetable_pk' => $timetable_pk,
-                'student_pk' => $student_pk
+                'group_pk' => encrypt($group_pk),
+                'course_pk' => encrypt($course_pk),
+                'timetable_pk' => encrypt($timetable_pk),
+                'student_pk' => encrypt($student_pk)
             ]) }}" id="filterForm">
                 <input type="hidden" name="archive_mode" id="archive_mode_input" value="{{ $archiveMode ?? 'active' }}">
 

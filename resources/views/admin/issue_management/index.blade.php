@@ -133,11 +133,11 @@
                                 </td>
                                 <td class="pe-4">
                                     <div class="d-flex justify-content-end gap-1">
-                                        <a href="{{ route('admin.issue-management.show', $issue->pk) }}" class="text-primary" title="View">
+                                        <a href="{{ route('admin.issue-management.show', encrypt($issue->pk)) }}" class="text-primary" title="View">
                                             <i class="material-icons material-symbols-rounded">visibility</i>
                                         </a>
                                         @if($issue->issue_logger == Auth::user()->user_id || $issue->created_by == Auth::user()->user_id)
-                                        <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-action btn-warning " title="Edit">
+                                        <a href="{{ route('admin.issue-management.edit', encrypt($issue->pk)) }}" class="btn btn-action btn-warning " title="Edit">
                                             <iconify-icon icon="solar:pen-bold"></iconify-icon>
                                         </a>
                                         @endif

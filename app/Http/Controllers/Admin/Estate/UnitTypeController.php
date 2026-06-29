@@ -31,13 +31,13 @@ class UnitTypeController extends Controller
 
     public function edit(string $id)
     {
-        $item = UnitType::findOrFail($id);
+        $item = UnitType::findOrFail(decrypt($id));
         return view('admin.estate.define_unit_type.form', compact('item'));
     }
 
     public function update(Request $request, string $id)
     {
-        $item = UnitType::findOrFail($id);
+        $item = UnitType::findOrFail(decrypt($id));
         $validated = $request->validate([
             'unit_type' => 'required|string|max:255',
         ]);
@@ -47,7 +47,7 @@ class UnitTypeController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        UnitType::findOrFail($id)->delete();
+        UnitType::findOrFail(decrypt($id))->delete();
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Unit type deleted successfully.']);
         }

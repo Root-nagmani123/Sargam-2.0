@@ -38,7 +38,7 @@ class QuickLinkController extends Controller
     {
         abort_unless(hasRole('Admin') || hasRole('Super Admin'), 403);
 
-        QuickLink::query()->where('id', $id)->delete();
+        QuickLink::query()->where('id', decrypt($id))->delete();
 
         return redirect()->back()->with('success', 'Quick link deleted successfully.');
     }

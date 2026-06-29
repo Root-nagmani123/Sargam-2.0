@@ -303,7 +303,6 @@
                 topic_id: topic_id,
             },
             success: function (response) {
-                console.log(response);
                 if (response) {
                     $('#venue_name').val(response.venue_name);
                     $('#session_name').val(response.shift_name);

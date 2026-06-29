@@ -640,7 +640,7 @@ class FrontPageController extends Controller
     //destroy method for path page faq
     public function destroyFaq($id)
     {
-        DB::table('fc_path_page_faqs')->where('id', $id)->delete();
+        DB::table('fc_path_page_faqs')->where('id', decrypt($id))->delete();
 
         return back()->with('success', 'FAQ deleted successfully.');
     }
@@ -729,7 +729,7 @@ class FrontPageController extends Controller
     {
 
         $item = DB::table('fc_exemption_master')
-            ->where('pk', $id)
+            ->where('pk', decrypt($id))
             ->where('is_notice', false)
             ->first();
 
@@ -748,7 +748,7 @@ class FrontPageController extends Controller
             'description' => 'required|string'
         ]);
 
-        DB::table('fc_exemption_master')->where('pk', $id)->update([
+        DB::table('fc_exemption_master')->where('pk', decrypt($id))->update([
             'Exemption_name' => $request->Exemption_name,
             'description' => $request->description,
             'modified_by' => auth()->check() ? auth()->user()->id : null,
@@ -793,7 +793,7 @@ class FrontPageController extends Controller
     public function exemptionApplication($id)
     {
         $exemption = DB::table('fc_exemption_master')
-            ->where('pk', $id)
+            ->where('pk', decrypt($id))
             ->where('visible', 1)
             ->first();
 

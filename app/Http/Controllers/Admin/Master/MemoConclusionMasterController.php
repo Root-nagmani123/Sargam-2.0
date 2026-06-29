@@ -89,7 +89,7 @@ class MemoConclusionMasterController extends Controller
     {
         try {
             // 🔹 Find record
-            $memo = MemoConclusionMaster::findOrFail($id);
+            $memo = MemoConclusionMaster::findOrFail(decrypt($id));
 
             // 🔒 Prevent deleting active record
             if ($memo->active_inactive == 1) {

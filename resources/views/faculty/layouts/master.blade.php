@@ -603,7 +603,6 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             }
         } catch (err) {
-            console.warn('DataTables adjust failed after sidebar toggle:', err);
         }
     }
 

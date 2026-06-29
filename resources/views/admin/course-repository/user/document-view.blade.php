@@ -35,7 +35,7 @@
                         <i class="bi bi-arrows-fullscreen" aria-hidden="true"></i>
                     </button>
                     @if($pdfDocument ?? null)
-                        <a href="{{ route('course-repository.document.download', $pdfDocument->pk) }}?file={{ urlencode($pdfDocument->upload_document) }}"
+                        <a href="{{ route('course-repository.document.download', encrypt($pdfDocument->pk)) }}?file={{ urlencode($pdfDocument->upload_document) }}"
                            class="btn btn-sm btn-outline-secondary"
                            title="Download document"
                            aria-label="Download document">
@@ -43,7 +43,7 @@
                         </a>
                     @endif
                     @if($document->videolink ?? null)
-                        <a href="{{ route('admin.course-repository.user.document-video', $document->pk) }}"
+                        <a href="{{ route('admin.course-repository.user.document-video', encrypt($document->pk)) }}"
                            class="btn btn-sm btn-outline-danger"
                            title="View video"
                            aria-label="View video">

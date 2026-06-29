@@ -21,7 +21,7 @@
             <p class="text-muted small mb-4">{{ $item ? 'Update campus details.' : 'Please add new campus.' }}</p>
             <hr class="my-4">
 
-            <form action="{{ $item ? route('admin.estate.define-campus.update', $item->pk) : route('admin.estate.define-campus.store') }}" method="POST">
+            <form action="{{ $item ? route('admin.estate.define-campus.update', encrypt($item->pk)) : route('admin.estate.define-campus.store') }}" method="POST">
                 @csrf
                 @if($item) @method('PUT') @endif
 

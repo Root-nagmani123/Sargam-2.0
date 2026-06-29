@@ -53,7 +53,7 @@
                                                 data-status="{{ e($clientType->status ?? 'active') }}"
                                                 title="Edit"><i class="material-icons material-symbol-rounded">edit</i></button>
                                         @if($canDeleteClientType)
-                                            <form method="POST" action="{{ route('admin.mess.client-types.destroy', $clientType->id) }}" class="d-inline"
+                                            <form method="POST" action="{{ route('admin.mess.client-types.destroy', encrypt($clientType->id)) }}" class="d-inline"
                                                   onsubmit="return confirm('Are you sure you want to delete this client type?');">
                                                 @csrf
                                                 @method('DELETE')

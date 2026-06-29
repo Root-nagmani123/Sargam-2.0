@@ -70,7 +70,7 @@ class SubjectModuleController extends Controller
 
     public function edit($id)
     {
-        SubjectModuleMaster::findOrFail($id);
+        SubjectModuleMaster::findOrFail(decrypt($id));
 
         return redirect()->route('subject-module.index', ['open_edit_module' => $id]);
     }
@@ -84,7 +84,7 @@ class SubjectModuleController extends Controller
         ]);
     
         // Find the module by ID
-        $module = SubjectModuleMaster::findOrFail($id);
+        $module = SubjectModuleMaster::findOrFail(decrypt($id));
     
         // Update module details
         $module->module_name = $request->module_name;

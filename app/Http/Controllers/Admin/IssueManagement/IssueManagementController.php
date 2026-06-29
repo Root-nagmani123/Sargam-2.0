@@ -543,6 +543,7 @@ class IssueManagementController extends Controller
      */
     public function getNodalEmployees($categoryId)
     {
+        $categoryId = decrypt($categoryId);
         try {
             $all = DB::table('issue_category_employee_map as b')
                 ->join('employee_master as d', function ($join) {
@@ -777,7 +778,7 @@ class IssueManagementController extends Controller
             // 'escalationHistory',
             'creator',
             'logger'
-        ])->findOrFail($id);
+        ])->findOrFail(decrypt($id));
 
         if (!hasRole('Admin') && !hasRole('SuperAdmin')) {
             $userId = Auth::user()->user_id;
@@ -882,7 +883,7 @@ class IssueManagementController extends Controller
             'buildingMapping',
             'hostelMapping',
             'creator' 
-        ])->findOrFail($id);
+        ])->findOrFail(decrypt($id));
         
         // Allow complainant (created_by) OR logger (issue_logger) to edit
         $editIds = getEmployeeIdsForUser(Auth::user()->user_id);
@@ -962,7 +963,7 @@ class IssueManagementController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $issue = IssueLogManagement::findOrFail($id);
+        $issue = IssueLogManagement::findOrFail(decrypt($id));
       
         
         // Allow complainant (created_by) OR logger (issue_logger) to update
@@ -1076,6 +1077,7 @@ class IssueManagementController extends Controller
      */
     public function getSubCategories($categoryId)
     {
+        $categoryId = decrypt($categoryId);
         $subCategories = IssueSubCategoryMaster::byCategory($categoryId)
             ->active()
             ->orderBy('issue_sub_category')
@@ -1379,7 +1381,7 @@ class IssueManagementController extends Controller
      */
     public function status_update(Request $request, $id)
     {
-        $issue = IssueLogManagement::findOrFail($id);
+        $issue = IssueLogManagement::findOrFail(decrypt($id));
         $userId = Auth::user()->user_id ?? null;
         $ids = getEmployeeIdsForUser($userId);
         if (empty($ids)) {
@@ -1510,7 +1512,7 @@ class IssueManagementController extends Controller
             'feedback' => 'required|string',
         ]);
 
-        $issue = IssueLogManagement::findOrFail($id);
+        $issue = IssueLogManagement::findOrFail(decrypt($id));
 
         $issue->update([
             'feedback' => $request->feedback,

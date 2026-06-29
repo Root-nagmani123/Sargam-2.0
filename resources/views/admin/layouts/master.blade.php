@@ -902,7 +902,6 @@
                         }
                     }
                 } catch (err) {
-                    console.warn('DataTables adjust failed after sidebar toggle:', err);
                 }
             }
 
@@ -960,8 +959,6 @@
 
             // Initialize sidebar state on page load
             sidebarType = body.getAttribute('data-sidebartype');
-            console.log('Initial sidebar type:', sidebarType);
-            console.log('Icon elements found:', icons.length);
 
             applySidebarVisualState(sidebarType);
             setTimeout(adjustAllDataTables, 300);
@@ -980,7 +977,6 @@
                         icon.classList.remove("rotated");
                     }
                 });
-                console.log('Synced', allIcons.length, 'icon(s) to type:', type);
             }
 
             const observer = new MutationObserver(function (mutations) {
@@ -1017,7 +1013,6 @@
                 });
             }
             } catch (sidebarInitErr) {
-                console.error('Sidebar init failed:', sidebarInitErr);
             } finally {
                 if (typeof window.hideSargamLoader === 'function') {
                     window.hideSargamLoader();
@@ -1140,7 +1135,6 @@
                     ensureDynamicSidebarNavVisible();
                 },
                 error: function (xhr) {
-                    console.error(xhr.responseText);
                 }
             });
         }
@@ -1166,7 +1160,6 @@
                     if (typeof done === 'function') done();
                 },
                 error: function (xhr) {
-                    console.error(xhr.responseText);
                     if (typeof done === 'function') done();
                 }
             });

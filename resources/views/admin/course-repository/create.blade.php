@@ -57,7 +57,7 @@
                                     <i class="fas fa-save"></i> Save
                                 </button>
                                 @if ($parentRepository)
-                                    <a href="{{ route('course-repository.show', $parentRepository->pk) }}" class="btn btn-secondary">
+                                    <a href="{{ route('course-repository.show', encrypt($parentRepository->pk)) }}" class="btn btn-secondary">
                                         <i class="fas fa-arrow-left"></i> Back
                                     </a>
                                 @else

@@ -6,7 +6,7 @@
         <h4>Selling Voucher #{{ $kitchenIssue->pk }}</h4>
         <div>
             @if($kitchenIssue->approve_status != 1 && ($kitchenIssue->status == 0 || $kitchenIssue->status == 'pending'))
-                <a href="{{ route('admin.mess.material-management.edit', $kitchenIssue->pk) }}" class="btn btn-warning">Edit</a>
+                <a href="{{ route('admin.mess.material-management.edit', encrypt($kitchenIssue->pk)) }}" class="btn btn-warning">Edit</a>
             @endif
             <a href="{{ route('admin.mess.material-management.index') }}" class="btn btn-secondary">Back to List</a>
         </div>

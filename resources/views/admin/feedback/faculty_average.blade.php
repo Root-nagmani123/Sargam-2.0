@@ -470,13 +470,6 @@
                 }
             });
 
-            console.log('Export links updated with:', {
-                courseType,
-                programName,
-                facultyName,
-                fromDate,
-                toDate
-            });
         }
 
         // AJAX function to load data without page refresh
@@ -575,7 +568,6 @@
                     document.getElementById('tableContainer').style.display = 'block';
                 })
                 .catch(error => {
-                    console.error('Error loading feedback data:', error);
                     document.getElementById('loadingSpinner').style.display = 'none';
                     document.getElementById('tableContainer').style.display = 'block';
                     document.getElementById('tableContainer').innerHTML =

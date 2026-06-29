@@ -43,7 +43,7 @@ class EligibilityCriteriaController extends Controller
 
     public function edit(string $id)
     {
-        $item = EligibilityCriterion::findOrFail($id);
+        $item = EligibilityCriterion::findOrFail(decrypt($id));
         $payScales = SalaryGrade::whereNotNull('salary_grade')
             ->where('salary_grade', '!=', '')
             ->orderBy('pk')
@@ -56,7 +56,7 @@ class EligibilityCriteriaController extends Controller
 
     public function update(Request $request, string $id)
     {
-        $item = EligibilityCriterion::findOrFail($id);
+        $item = EligibilityCriterion::findOrFail(decrypt($id));
         $validated = $request->validate([
             'salary_grade_master_pk' => 'required|exists:salary_grade_master,pk',
             'estate_unit_type_master_pk' => 'required|exists:estate_unit_type_master,pk',
@@ -68,7 +68,7 @@ class EligibilityCriteriaController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        EligibilityCriterion::findOrFail($id)->delete();
+        EligibilityCriterion::findOrFail(decrypt($id))->delete();
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Eligibility mapping deleted successfully.']);
         }

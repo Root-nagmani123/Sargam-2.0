@@ -384,7 +384,7 @@
                                         <a href="javascript:void(0)" class="text-primary" onclick="editCategory({{ $category->pk }}, '{{ addslashes($category->issue_category) }}', '{{ addslashes($category->description) }}', {{ $category->status }})" title="Edit Category">
                                             <i class="material-icons material-symbols-rounded">edit</i>
                                         </a>
-                                        <form action="{{ route('admin.issue-categories.destroy', $category->pk) }}" 
+                                        <form action="{{ route('admin.issue-categories.destroy', encrypt($category->pk)) }}" 
                                               method="POST" class="d-inline" 
                                               onsubmit="return confirm('Are you sure you want to delete this category?');">
                                             @csrf

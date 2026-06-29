@@ -277,7 +277,7 @@ class EnrollementController extends Controller
         // Transform immediately without filtering by active course
         $transformedStudents = $students->map(function ($student) {
             return [
-                'student_pk' => $student->student_pk,
+                'student_pk' => encrypt($student->student_pk),
                 'student_name' => $student->student_name,
                 'first_name' => $student->first_name,
                 'middle_name' => $student->middle_name,

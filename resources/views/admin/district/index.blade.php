@@ -74,7 +74,7 @@
 
                                             <!-- Edit -->
                                             <li>
-                                                <a href="{{ route('master.district.edit', $district->pk) }}"
+                                                <a href="{{ route('master.district.edit', encrypt($district->pk)) }}"
                                                     class="dropdown-item d-flex align-items-center gap-2">
                                                     <span class="material-symbols-rounded text-primary fs-6">edit</span>
                                                     Edit
@@ -83,7 +83,7 @@
 
                                             <!-- Delete -->
                                             <li>
-                                                <form action="{{ route('master.district.delete', $district->pk) }}"
+                                                <form action="{{ route('master.district.delete', encrypt($district->pk)) }}"
                                                     method="POST" class="d-inline">
                                                     @csrf
                                                     @method('DELETE')

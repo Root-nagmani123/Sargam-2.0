@@ -120,7 +120,7 @@
                                       @if($statusLabel === 'Approved') title="Please collect your ID card from security section" @endif>{{ $statusLabel }}</span>
                                 <small class="text-muted">No further actions available</small>
                                 @if($approvalStage === 2 && $statusLabel === 'Approved' && empty($req->id_card_physical_print_done ?? false))
-                                    <form action="{{ route('admin.security.employee_idcard_approval.markGenerated', $encryptedId) }}" method="POST" class="d-inline mt-1 archive-check-form">
+                                    <form action="{{ route('admin.security.employee_idcard_approval.markGenerated', encrypt($encryptedId)) }}" method="POST" class="d-inline mt-1 archive-check-form">
                                         @csrf
                                         <div class="form-check form-check-inline m-0">
                                             <input class="form-check-input archive-check-input" type="checkbox" id="archive-check-{{ md5((string) $encryptedId . '-' . (string) $index) }}">
@@ -143,15 +143,15 @@
                                 <div class="d-flex gap-1 flex-wrap justify-content-center align-items-center">
                                     @php
                                         $approveRoute = $approvalStage === 1
-                                            ? route('admin.security.employee_idcard_approval.approve1', $encryptedId)
+                                            ? route('admin.security.employee_idcard_approval.approve1', encrypt($encryptedId))
                                             : ($approvalStage === 2
-                                                ? route('admin.security.employee_idcard_approval.approve2', $encryptedId)
-                                                : route('admin.security.employee_idcard_approval.approve3', $encryptedId));
+                                                ? route('admin.security.employee_idcard_approval.approve2', encrypt($encryptedId))
+                                                : route('admin.security.employee_idcard_approval.approve3', encrypt($encryptedId)));
                                         $rejectRoute = $approvalStage === 1
-                                            ? route('admin.security.employee_idcard_approval.reject1', $encryptedId)
+                                            ? route('admin.security.employee_idcard_approval.reject1', encrypt($encryptedId))
                                             : ($approvalStage === 2
-                                                ? route('admin.security.employee_idcard_approval.reject2', $encryptedId)
-                                                : route('admin.security.employee_idcard_approval.reject3', $encryptedId));
+                                                ? route('admin.security.employee_idcard_approval.reject2', encrypt($encryptedId))
+                                                : route('admin.security.employee_idcard_approval.reject3', encrypt($encryptedId)));
                                     @endphp
                                     <form action="{{ $approveRoute }}" method="POST" class="d-inline">
                                         @csrf

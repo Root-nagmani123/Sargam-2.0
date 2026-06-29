@@ -422,7 +422,7 @@
                 <div class="card-body p-3">
                     <div class="d-grid gap-2">
                         @if($request->user_may_edit_request ?? false)
-                        <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="btn btn-primary rounded-2">
+                        <a href="{{ route('admin.employee_idcard.edit', encrypt($request->id)) }}" class="btn btn-primary rounded-2">
                             <i class="material-icons material-symbols-rounded align-middle me-2">edit</i>
                             Edit Request
                         </a>
@@ -432,7 +432,7 @@
                             Back to List
                         </a>
                         @if($request->user_may_edit_request ?? false)
-                        <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="mt-2" onsubmit="return confirm('Are you sure you want to delete this request?');">
+                        <form action="{{ route('admin.employee_idcard.destroy', encrypt($request->id)) }}" method="POST" class="mt-2" onsubmit="return confirm('Are you sure you want to delete this request?');">
                             @csrf
                             @method('DELETE')
                             <button type="submit" class="btn btn-outline-danger rounded-2 w-100">

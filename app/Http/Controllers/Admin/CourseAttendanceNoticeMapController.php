@@ -1004,7 +1004,7 @@ public function store_memo_notice(Request $request)
 
             $data[] = [
                 'course_master_pk'           => $validated['course_master_pk'],
-                'student_pk'                 => $studentId->student_pk,
+                'student_pk'                 => encrypt($studentId->student_pk),
                 'date_'                      => $validated['date_memo_notice'],
                 'subject_master_pk'          => $validated['subject_master_id'],
                 'subject_topic'              => $validated['topic_id'],
@@ -1128,7 +1128,7 @@ function store_memo_notice_bkp(Request $request){
             ->get();
         $data[] = [
             'course_master_pk' => $validated['course_master_pk'],
-            'student_pk' => $student_id->studnet_pk,
+            'student_pk' => encrypt($student_id->studnet_pk),
             'date_' => $validated['date_memo_notice'],
             'subject_master_pk' => $validated['subject_master_id'],
             'subject_topic' => $validated['topic_id'],
@@ -1196,13 +1196,13 @@ public function getNewMessages(Request $request, $id, $type)
 public function deleteMemoNotice($id)
 {
     try {
-        $memoNotice = DB::table('student_notice_status')->where('pk', $id)->first();
+        $memoNotice = DB::table('student_notice_status')->where('pk', decrypt($id))->first();
 
         if (!$memoNotice) {
             return redirect()->back()->with('error', 'Memo/Notice not found.');
         }
 
-        DB::table('student_notice_status')->where('pk', $id)->delete();
+        DB::table('student_notice_status')->where('pk', decrypt($id))->delete();
 
         return redirect()->route('memo.notice.management.index')->with('success', 'Memo/Notice deleted successfully.');
     } catch (\Exception $e) {
@@ -1499,7 +1499,7 @@ public function noticedeleteMessage($id,$type)
     }
 
        $message = DB::table($table)
-        ->where('pk', $id)
+        ->where('pk', decrypt($id))
         ->first();
 
     if ($message && !empty($message->file_name)) {
@@ -1512,7 +1512,7 @@ public function noticedeleteMessage($id,$type)
 
     // Now delete the DB record
     DB::table($table)
-        ->where('pk', $id)
+        ->where('pk', decrypt($id))
         ->delete();
 
     return redirect()->back()->with('success', 'Message and associated file deleted successfully.');
@@ -2118,7 +2118,7 @@ public function getMemoData(Request $request)
     return response()->json([
         'course_master_name' => $memo->course_name ?? '',
         'course_master_pk' => $memo->course_master_pk,
-        'student_pk' => $memo->student_pk,
+        'student_pk' => encrypt($memo->student_pk),
         'student_notice_status_pk' => $memo->pk,
         'date_' => $memo->date_,
         'subject_master_name' => $memo->subject_name ?? '',
@@ -2254,8 +2254,11 @@ $courseMasters_data = [];
 }
 function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
     {
+        $group_pk = decrypt($group_pk);
+        $course_pk = decrypt($course_pk);
+        $timetable_pk = decrypt($timetable_pk);
         try {
-            
+
    $courseGroup = CourseGroupTimetableMapping::with([
                 'course:pk,course_name',
                 'timetable',
@@ -2310,7 +2313,7 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
         foreach ($validated['selected_student_list'] as $studentId) {
             $data[] = [
                 'course_master_pk'           => $validated['course_master_pk'],
-                'student_pk'                 => $studentId,
+                'student_pk'                 => encrypt($studentId),
                 'date_'                      => now()->toDateString(),
                 'subject_master_pk'          => $validated['subject_master_id'],
                 'subject_topic'              => $validated['topic_id'],

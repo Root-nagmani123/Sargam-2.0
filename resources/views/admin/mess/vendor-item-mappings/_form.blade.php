@@ -1,7 +1,7 @@
 @php($mapping = $mapping ?? null)
 @php($isEdit = !empty($mapping))
 @php($editItemIds = $isEdit && $mapping->mapping_type === \App\Models\Mess\VendorItemMapping::MAPPING_TYPE_ITEM_SUB_CATEGORY && $mapping->item_subcategory_id ? [$mapping->item_subcategory_id] : [])
-<form method="POST" action="{{ $isEdit ? route('admin.mess.vendor-item-mappings.update', $mapping->id) : route('admin.mess.vendor-item-mappings.store') }}" id="vendorMappingForm">
+<form method="POST" action="{{ $isEdit ? route('admin.mess.vendor-item-mappings.update', encrypt($mapping->id)) : route('admin.mess.vendor-item-mappings.store') }}" id="vendorMappingForm">
     @csrf
     @if($isEdit)
         @method('PUT')

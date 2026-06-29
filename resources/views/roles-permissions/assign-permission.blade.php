@@ -328,7 +328,7 @@
         let permission = $(this).val();
         let isChecked = $(this).is(':checked') ? 1 : 0;
         $.ajax({
-            url: "{{ route('assign.roles.permissions', $role->id) }}",
+            url: "{{ route('assign.roles.permissions', encrypt($role->id)) }}",
             type: "POST",
             data: {
                 _token: "{{ csrf_token() }}",

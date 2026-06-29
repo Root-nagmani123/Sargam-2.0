@@ -118,7 +118,7 @@ class HostelBuildingFloorRoomMappingController extends Controller
     public function edit($encryptedId)
     {
         $id = safeDecrypt($encryptedId);
-        $hostelFloorMappingRoom = BuildingFloorRoomMapping::findOrFail($id);
+        $hostelFloorMappingRoom = BuildingFloorRoomMapping::findOrFail(decrypt($id));
         
         return view('admin.building_floor_room_mapping.create', array_merge(
             $this->formData(),
@@ -175,7 +175,7 @@ class HostelBuildingFloorRoomMappingController extends Controller
         ]);
 
         try {
-            $mapping = BuildingFloorRoomMapping::findOrFail($request->id);
+            $mapping = BuildingFloorRoomMapping::findOrFail(decrypt($request->id));
             $mapping->comment = $request->comment;
             $mapping->save();
 

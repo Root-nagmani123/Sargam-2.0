@@ -1169,7 +1169,7 @@ class CalendarController extends Controller
      */
     public function eventCard($id)
     {
-        $event = $this->buildEventCardData($id);
+        $event = $this->buildEventCardData(decrypt($id));
         abort_if(!$event, 404, 'Event not found');
 
         $pdfUrl = route('calendar.event.card.pdf', ['id' => $id]);
@@ -1881,7 +1881,7 @@ class CalendarController extends Controller
     }
     function event_edit($id)
     {
-        $event = CalendarEvent::findOrFail($id);
+        $event = CalendarEvent::findOrFail(decrypt($id));
         $event->START_DATE = \Carbon\Carbon::parse($event->START_DATE)->format('Y-m-d');
         $event->END_DATE   = \Carbon\Carbon::parse($event->END_DATE)->format('Y-m-d');
 
@@ -2058,7 +2058,7 @@ class CalendarController extends Controller
     public function delete_event($id)
     {
         abort_unless(hasRole('Training') || hasRole('Super Admin') || hasRole('Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST') || hasRole('Training-Induction'), 403);
-        $event = CalendarEvent::findOrFail($id);
+        $event = CalendarEvent::findOrFail(decrypt($id));
         $event->delete();
         return response()->json(['status' => 'success']);
     }
@@ -2136,7 +2136,7 @@ class CalendarController extends Controller
                 'tf.presentation',
                 'tf.content'
             ])
-            ->where('tf.timetable_pk', $id);
+            ->where('tf.timetable_pk', decrypt($id));
 
         // Faculty ko sirf apna timetable ka feedback dikhana
         if (hasRole('Faculty')) {

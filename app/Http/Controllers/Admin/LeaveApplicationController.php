@@ -402,7 +402,7 @@ class LeaveApplicationController extends Controller
 
     protected function findOwnedApplication(int $studentPk, $id): LeaveApplication
     {
-        return LeaveApplication::where('student_master_pk', $studentPk)->findOrFail($id);
+        return LeaveApplication::where('student_master_pk', $studentPk)->findOrFail(decrypt($id));
     }
 
     protected function getNatures(string $leaveType)

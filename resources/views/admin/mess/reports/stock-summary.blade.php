@@ -382,7 +382,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 var ms = r.headers.get('X-Stock-Summary-Ms');
                 var cache = r.headers.get('X-Stock-Summary-Cache');
                 if (ms) {
-                    console.info('[Stock Summary] server ' + ms + ' ms' + (cache ? ', cache ' + cache : ''));
                 }
                 return r.text();
             })
@@ -394,7 +393,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 }
             })
             .catch(function (e) {
-                console.error('Failed to load stock summary page via AJAX', e);
             });
     }
 

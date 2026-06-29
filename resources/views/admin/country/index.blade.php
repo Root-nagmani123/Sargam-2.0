@@ -65,7 +65,7 @@
                                     aria-label="Country actions">
 
                                     <!-- Edit -->
-                                    <a href="{{ route('master.country.edit', $country->pk) }}"
+                                    <a href="{{ route('master.country.edit', encrypt($country->pk)) }}"
                                         class="btn btn-sm btn-outline-primary d-flex align-items-center gap-1"
                                         aria-label="Edit country">
                                         <span class="material-symbols-rounded fs-6" aria-hidden="true">edit</span>
@@ -81,7 +81,7 @@
                                         <span class="d-none d-md-inline">Delete</span>
                                     </button>
                                     @else
-                                    <form action="{{ route('master.country.delete', $country->pk) }}" method="POST"
+                                    <form action="{{ route('master.country.delete', encrypt($country->pk)) }}" method="POST"
                                         class="d-inline"
                                         onsubmit="return confirm('Are you sure you want to delete this?');">
                                         @csrf

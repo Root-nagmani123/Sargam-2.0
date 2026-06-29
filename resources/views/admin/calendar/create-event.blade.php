@@ -577,7 +577,6 @@
                 renderGroupNames(groupedCache[preselectGroup], preselectNames);
             }
         } catch (err) {
-            console.error('Error loading group types:', err);
         }
     }
 
@@ -616,7 +615,6 @@
             const opts = data.map((s) => ({ value: s.pk, label: s.subject_name }));
             replaceChoices(subjectSelect, opts, 'Select Subject Name', preselect);
         } catch (err) {
-            console.error('Error loading subject names:', err);
         }
     }
     moduleSelect.addEventListener('change', () => loadSubjectNames());

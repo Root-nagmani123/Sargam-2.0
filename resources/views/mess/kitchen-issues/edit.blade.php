@@ -19,7 +19,7 @@
     
     <div class="card">
         <div class="card-body">
-            <form action="{{ route('admin.mess.material-management.update', $kitchenIssue->pk) }}" method="POST">
+            <form action="{{ route('admin.mess.material-management.update', encrypt($kitchenIssue->pk)) }}" method="POST">
                 @csrf
                 @method('PUT')
                 

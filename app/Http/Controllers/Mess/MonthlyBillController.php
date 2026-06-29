@@ -104,7 +104,7 @@ class MonthlyBillController extends Controller
      */
     public function show($id)
     {
-        $bill = MonthlyBill::with('user')->findOrFail($id);
+        $bill = MonthlyBill::with('user')->findOrFail(decrypt($id));
         return view('admin.mess.monthly-bills.show', compact('bill'));
     }
 
@@ -116,7 +116,7 @@ class MonthlyBillController extends Controller
      */
     public function edit($id)
     {
-        $bill = MonthlyBill::findOrFail($id);
+        $bill = MonthlyBill::findOrFail(decrypt($id));
         $users = User::select('pk', 'name', 'email')->get();
         return view('admin.mess.monthly-bills.edit', compact('bill', 'users'));
     }
@@ -130,7 +130,7 @@ class MonthlyBillController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $bill = MonthlyBill::findOrFail($id);
+        $bill = MonthlyBill::findOrFail(decrypt($id));
         
         $validated = $request->validate([
             'paid_amount' => 'nullable|numeric|min:0',
@@ -163,7 +163,7 @@ class MonthlyBillController extends Controller
      */
     public function destroy($id)
     {
-        $bill = MonthlyBill::findOrFail($id);
+        $bill = MonthlyBill::findOrFail(decrypt($id));
         $bill->delete();
         
         return redirect()->route('admin.mess.monthly-bills.index')

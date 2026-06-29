@@ -968,7 +968,7 @@ class FacultyController extends Controller
             'facultyExperienceMap:pk,Years_Of_Experience,Specialization,pre_Institutions,Position_hold,duration,Nature_of_Work,faculty_master_pk',
             'facultyExpertiseMap.facultyExpertise:pk,expertise_name','facultyExpertiseMap:faculty_master_pk,faculty_expertise_pk',
 
-				])->find($id);
+				])->find(decrypt($id));
 		   return response()->json($faculty);
 		}
 

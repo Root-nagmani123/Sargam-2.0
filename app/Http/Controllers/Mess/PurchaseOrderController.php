@@ -372,13 +372,13 @@ class PurchaseOrderController extends Controller
 
     public function show($id)
     {
-        $purchaseOrder = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items.inventory', 'items.itemSubcategory'])->findOrFail($id);
+        $purchaseOrder = PurchaseOrder::with(['vendor', 'store', 'creator', 'approver', 'items.inventory', 'items.itemSubcategory'])->findOrFail(decrypt($id));
         return view('mess.purchaseorders.show', compact('purchaseOrder'));
     }
 
     public function edit($id)
     {
-        $purchaseOrder = PurchaseOrder::with(['vendor', 'store', 'items.itemSubcategory'])->findOrFail($id);
+        $purchaseOrder = PurchaseOrder::with(['vendor', 'store', 'items.itemSubcategory'])->findOrFail(decrypt($id));
         $po = [
             'id' => $purchaseOrder->id,
             'po_number' => $purchaseOrder->po_number,
@@ -416,7 +416,7 @@ class PurchaseOrderController extends Controller
 
     public function update(Request $request, $id)
     {
-        $purchaseOrder = PurchaseOrder::findOrFail($id);
+        $purchaseOrder = PurchaseOrder::findOrFail(decrypt($id));
         $this->normalizePurchaseOrderItemsInRequest($request);
         $request->validate([
             'vendor_id' => 'required|exists:mess_vendors,id',
@@ -504,7 +504,7 @@ class PurchaseOrderController extends Controller
 
     public function destroy($id)
     {
-        $purchaseOrder = PurchaseOrder::findOrFail($id);
+        $purchaseOrder = PurchaseOrder::findOrFail(decrypt($id));
         $purchaseOrder->items()->delete();
         $purchaseOrder->delete();
         self::bumpPurchaseOrderListingCacheEpoch();
@@ -514,7 +514,7 @@ class PurchaseOrderController extends Controller
 
     public function approve($id)
     {
-        $purchaseOrder = PurchaseOrder::findOrFail($id);
+        $purchaseOrder = PurchaseOrder::findOrFail(decrypt($id));
         $purchaseOrder->update([
             'status' => 'approved',
             'approved_by' => Auth::id(),
@@ -527,7 +527,7 @@ class PurchaseOrderController extends Controller
 
     public function reject($id)
     {
-        $purchaseOrder = PurchaseOrder::findOrFail($id);
+        $purchaseOrder = PurchaseOrder::findOrFail(decrypt($id));
         $purchaseOrder->update(['status' => 'rejected']);
         self::bumpPurchaseOrderListingCacheEpoch();
 
@@ -536,6 +536,7 @@ class PurchaseOrderController extends Controller
 
     public function getVendorItems($vendorId)
     {
+        $vendorId = decrypt($vendorId);
         // Vendor-wise filtering is currently disabled.
         // Always return the full active item list so that
         // the item dropdown shows all items regardless of vendor.

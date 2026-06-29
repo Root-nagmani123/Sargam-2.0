@@ -32,7 +32,7 @@
                                         <td>{{ $form->name }}</td>
                                         <td>{{ $form->description }}</td>
                                         <td>
-                                            <a href="{{ route('forms.edit', $form->id) }}"
+                                            <a href="{{ route('forms.edit', encrypt($form->id)) }}"
                                                 class="btn btn-sm btn-warning">Edit</a>
                                         </td>
                                         <td>
@@ -81,7 +81,6 @@
                         }
                     })
                     .catch(err => {
-                        console.error(err);
                         alert('An error occurred while updating visibility.');
                     });
             });

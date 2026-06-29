@@ -47,7 +47,7 @@ class SidebarCategoryController extends Controller
 
     public function edit($id)
     {
-        $category = $this->service->find($id);
+        $category = $this->service->find(decrypt($id));
 
         return view('SidebarMenu.categories.edit', compact('category'));
     }

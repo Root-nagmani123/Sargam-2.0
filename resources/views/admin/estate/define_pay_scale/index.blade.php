@@ -39,7 +39,7 @@
                             <td>{{ $row->unitType ? $row->unitType->name : '-' }}</td>
                             <td>{{ $row->unitSubType ? $row->unitSubType->name : '-' }}</td>
                             <td>
-                                <a href="{{ route('admin.estate.define-pay-scale.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                <a href="{{ route('admin.estate.define-pay-scale.edit', encrypt($row->pk)) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
                             </td>
                         </tr>
                         @empty

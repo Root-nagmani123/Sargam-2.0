@@ -13,7 +13,7 @@
             <div class="card-body">
                 <h4 class="card-title mb-3">Edit District</h4>
                 <hr>
-                <form action="{{ route('master.district.update', $district->pk) }}" method="POST">
+                <form action="{{ route('master.district.update', encrypt($district->pk)) }}" method="POST">
                     @csrf
 
                     <div class="row">

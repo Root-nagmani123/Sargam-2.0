@@ -53,7 +53,7 @@ class FcExemptionMasterController extends Controller
 
     public function edit($id)
     {
-        $exemption = FcExemptionMaster::findOrFail($id);
+        $exemption = FcExemptionMaster::findOrFail(decrypt($id));
         return view('admin.forms.exemption.edit', compact('exemption'));
     }
 
@@ -64,7 +64,7 @@ class FcExemptionMasterController extends Controller
             'description' => 'required|string|',
         ]);
 
-        $exemption = FcExemptionMaster::findOrFail($id);
+        $exemption = FcExemptionMaster::findOrFail(decrypt($id));
         $exemption->update([
             'Exemption_name' => $request->Exemption_name,
             'description' => $request->description,
@@ -78,7 +78,7 @@ class FcExemptionMasterController extends Controller
     public function destroy($id)
     {
         try {
-            $exemption = FcExemptionMaster::findOrFail($id);
+            $exemption = FcExemptionMaster::findOrFail(decrypt($id));
             $exemption->delete();
 
             return redirect()->route('admin.fc_exemption.index')->with('success', 'Exemption deleted successfully.');

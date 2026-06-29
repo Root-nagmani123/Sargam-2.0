@@ -74,7 +74,7 @@
                                                 class="material-icons material-symbol-rounded">edit</i></button>
                                         @if($canDeleteVendor)
                                             <form method="POST"
-                                                action="{{ route('admin.mess.vendors.destroy', $vendor->id) }}"
+                                                action="{{ route('admin.mess.vendors.destroy', encrypt($vendor->id)) }}"
                                                 class="d-inline"
                                                 onsubmit="return confirm('Are you sure you want to delete this vendor?');">
                                                 @csrf

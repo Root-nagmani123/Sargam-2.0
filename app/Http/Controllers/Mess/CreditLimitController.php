@@ -36,7 +36,7 @@ class CreditLimitController extends Controller
 
     public function show($id)
     {
-        $creditLimit = CreditLimit::with('user')->findOrFail($id);
+        $creditLimit = CreditLimit::with('user')->findOrFail(decrypt($id));
         return view('admin.mess.credit-limits.show', compact('creditLimit'));
     }
 
@@ -48,7 +48,7 @@ class CreditLimitController extends Controller
      */
     public function edit($id)
     {
-        $creditLimit = CreditLimit::findOrFail($id);
+        $creditLimit = CreditLimit::findOrFail(decrypt($id));
         $users = User::all();
         return view('admin.mess.credit-limits.edit', compact('creditLimit', 'users'));
     }
@@ -62,7 +62,7 @@ class CreditLimitController extends Controller
      */
     public function update(Request $request, $id)
     {
-        $creditLimit = CreditLimit::findOrFail($id);
+        $creditLimit = CreditLimit::findOrFail(decrypt($id));
 
         $request->validate([
             'user_id' => 'required|exists:user_credentials,pk',
@@ -92,7 +92,7 @@ class CreditLimitController extends Controller
      */
     public function destroy($id)
     {
-        $creditLimit = CreditLimit::findOrFail($id);
+        $creditLimit = CreditLimit::findOrFail(decrypt($id));
         $creditLimit->delete();
 
         return redirect()->route('admin.mess.credit-limits.index')

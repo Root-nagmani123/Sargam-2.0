@@ -458,7 +458,7 @@
                     </p>
                 </div>
             </div>
-            <a href="{{ route('admin.peer.group.members', $group->id) }}" 
+            <a href="{{ route('admin.peer.group.members', encrypt($group->id)) }}" 
                class="btn btn-light btn-lg">
                 <i class="fas fa-arrow-left me-2"></i>
                 Back to Members
@@ -511,7 +511,7 @@
                 </div>
                 <div class="card-body p-4">
                     <form method="POST" 
-                          action="{{ route('admin.peer.group.import-excel', $group->id) }}"
+                          action="{{ route('admin.peer.group.import-excel', encrypt($group->id)) }}"
                           enctype="multipart/form-data" 
                           id="importForm"
                           class="d-flex flex-column h-100">

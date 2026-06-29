@@ -66,7 +66,7 @@ class CasteCategoryMasterController extends Controller
             'group_name' => 'required|string|max:255',
         ]);
 
-        $employeeGroup = \App\Models\EmployeeGroupMaster::findOrFail($id);
+        $employeeGroup = \App\Models\EmployeeGroupMaster::findOrFail(decrypt($id));
         $employeeGroup->update($data);
         return redirect()->route('admin.master.employee_group_master.index')->with('success', 'Employee Group updated successfully.');
     }

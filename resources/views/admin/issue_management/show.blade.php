@@ -60,7 +60,7 @@
                         @endif
                         @endonce
                         @if($canEdit)
-                            <a href="{{ route('admin.issue-management.edit', $issue->pk) }}" class="btn btn-info">
+                            <a href="{{ route('admin.issue-management.edit', encrypt($issue->pk)) }}" class="btn btn-info">
                                 <i class="bi bi-pencil"></i> Edit Issue
                             </a>
                         @endif
@@ -328,7 +328,7 @@
 <div class="modal fade" id="updateStatusModal" tabindex="-1" aria-labelledby="updateStatusModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
-            <form method="POST" action="{{ route('admin.issue-management.status_update', $issue->pk) }}">
+            <form method="POST" action="{{ route('admin.issue-management.status_update', encrypt($issue->pk)) }}">
                 @csrf
                 @method('PUT')
                 <div class="modal-header">

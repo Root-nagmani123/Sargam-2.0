@@ -1034,7 +1034,6 @@ $greeting = $hour < 12 ? 'Good morning' : ($hour < 17 ? 'Good afternoon' : 'Good
                     }
                 })
                 .catch(function(error) {
-                    console.error(error);
                 })
                 .finally(function() {
                     calendarContainer.style.opacity = '1';

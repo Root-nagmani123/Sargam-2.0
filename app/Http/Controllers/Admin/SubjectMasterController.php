@@ -119,7 +119,7 @@ class SubjectMasterController extends Controller
     // Delete a subject
     public function destroy($id)
     {
-        $subject = SubjectMaster::findOrFail($id);
+        $subject = SubjectMaster::findOrFail(decrypt($id));
         $subject->delete();
 
         return redirect()->route('subject.index')->with('success', 'Subject deleted successfully.');

@@ -31,7 +31,7 @@
             <form method="POST" action="{{ route('admin.estate.add-other-estate-request.store') }}">
                 @csrf
                 @if(isset($record) && $record)
-                    <input type="hidden" name="id" value="{{ $record->pk }}">
+                    <input type="hidden" name="id" value="{{ encrypt($record->pk) }}">
                 @endif
                 <div class="row mb-3">
                     <div class="col-md-6">

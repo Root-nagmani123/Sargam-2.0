@@ -39,7 +39,7 @@
                             <td>{{ $row->campus_name }}</td>
                             <td>{{ $row->description ?? '--' }}</td>
                             <td>
-                                <a href="{{ route('admin.estate.define-campus.edit', $row->pk) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
+                                <a href="{{ route('admin.estate.define-campus.edit', encrypt($row->pk)) }}" class="text-primary" title="Edit"><i class="material-icons material-symbols-rounded">edit</i></a>
                             </td>
                         </tr>
                         @empty

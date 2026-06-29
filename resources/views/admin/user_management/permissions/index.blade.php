@@ -45,11 +45,11 @@
                                     <td>{{ $permission->name }}</td>
                                     <td>
                                         <div class="d-flex justify-content-start align-items-start gap-2">
-                                            <a href="{{ route('admin.permissions.edit', $permission->id) }}"
+                                            <a href="{{ route('admin.permissions.edit', encrypt($permission->id)) }}"
                                                 class="btn btn-success text-white btn-sm">
                                                 Edit
                                             </a>
-                                            <form action="{{ route('admin.permissions.destroy', $permission->id) }}" method="POST" class="m-0">
+                                            <form action="{{ route('admin.permissions.destroy', encrypt($permission->id)) }}" method="POST" class="m-0">
                                                 <input type="hidden" name="_token"
                                                     value="7m53OwU7KaFp1PPyJcyUuVMXW7xvrGr12yL6QycA"> <input
                                                     type="hidden" name="_method" value="DELETE"> <button type="submit"

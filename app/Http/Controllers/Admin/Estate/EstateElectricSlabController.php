@@ -37,14 +37,14 @@ class EstateElectricSlabController extends Controller
 
     public function edit(string $id)
     {
-        $item = EstateElectricSlab::findOrFail($id);
+        $item = EstateElectricSlab::findOrFail(decrypt($id));
         $unitTypes = UnitType::orderBy('unit_type')->pluck('unit_type', 'pk');
         return view('admin.estate.define_electric_slab.form', compact('item', 'unitTypes'));
     }
 
     public function update(Request $request, string $id)
     {
-        $item = EstateElectricSlab::findOrFail($id);
+        $item = EstateElectricSlab::findOrFail(decrypt($id));
         $validated = $request->validate([
             'start_unit_range' => 'required|integer|min:0',
             'end_unit_range' => 'required|integer|min:0|gte:start_unit_range',
@@ -58,7 +58,7 @@ class EstateElectricSlabController extends Controller
 
     public function destroy(Request $request, string $id)
     {
-        EstateElectricSlab::findOrFail($id)->delete();
+        EstateElectricSlab::findOrFail(decrypt($id))->delete();
         if ($request->ajax()) {
             return response()->json(['success' => true, 'message' => 'Electric slab deleted successfully.']);
         }

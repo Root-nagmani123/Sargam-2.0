@@ -11,7 +11,7 @@
                 </div>
             </div>
 
-            <form method="POST" action="{{ route('admin.mess.itemsubcategories.update', $itemsubcategory->id) }}">
+            <form method="POST" action="{{ route('admin.mess.itemsubcategories.update', encrypt($itemsubcategory->id)) }}">
                 @csrf
                 @method('PUT')
 

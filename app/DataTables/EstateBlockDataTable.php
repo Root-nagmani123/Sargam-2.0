@@ -20,8 +20,8 @@ class EstateBlockDataTable extends DataTable
                 $query->where('block_name', 'like', "%{$keyword}%");
             })
             ->addColumn('actions', function ($row) {
-                $editUrl = route('admin.estate.define-block-building.edit', $row->pk);
-                $deleteUrl = route('admin.estate.define-block-building.destroy', $row->pk);
+                $editUrl = route('admin.estate.define-block-building.edit', encrypt($row->pk));
+                $deleteUrl = route('admin.estate.define-block-building.destroy', encrypt($row->pk));
                 $token = csrf_token();
 
                 return '<div class="d-flex gap-1 flex-wrap">

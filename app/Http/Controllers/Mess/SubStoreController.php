@@ -52,13 +52,13 @@ class SubStoreController extends Controller
 
     public function edit($id)
     {
-        $subStore = SubStore::findOrFail($id);
+        $subStore = SubStore::findOrFail(decrypt($id));
         return view('mess.sub-stores.edit', compact('subStore'));
     }
 
     public function update(Request $request, $id)
     {
-        $subStore = SubStore::findOrFail($id);
+        $subStore = SubStore::findOrFail(decrypt($id));
         $data = $this->validatedData($request, $subStore);
 
         $subStore->update($data);
@@ -70,7 +70,7 @@ class SubStoreController extends Controller
 
     public function destroy($id)
     {
-        $subStore = SubStore::findOrFail($id);
+        $subStore = SubStore::findOrFail(decrypt($id));
         $subStore->delete();
 
         self::bumpListCacheEpoch();

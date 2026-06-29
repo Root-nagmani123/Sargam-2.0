@@ -58,7 +58,7 @@
                             @foreach($repositories as $repository)
                                 @include('admin.course-repository.user.partials.repository-card', [
                                     'repository' => $repository,
-                                    'cardRoute' => route('admin.course-repository.user.show', $repository->pk),
+                                    'cardRoute' => route('admin.course-repository.user.show', encrypt($repository->pk)),
                                 ])
                             @endforeach
                         </div>

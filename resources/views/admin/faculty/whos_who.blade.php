@@ -557,32 +557,26 @@ document.addEventListener('DOMContentLoaded', function() {
             params.append('sort_by', 'name_asc');
 
             const apiUrl = '{{ route("admin.faculty.whos-who.students") }}?' + params.toString();
-            console.log('Fetching students from:', apiUrl);
             
             const response = await fetch(apiUrl);
             const data = await response.json();
             
-            console.log('API Response:', data);
 
             if (data.success) {
                 if (data.students && data.students.length > 0) {
                     allProfiles = data.students;
                     const courseName = courseFilter.options[courseFilter.selectedIndex]?.text || 'All Courses';
-                    console.log(`✓ Found ${data.pagination.total} total students (showing ${data.students.length} on page ${data.pagination.current_page}) for: ${courseName}`);
                     renderStudents(data.students, data.pagination);
                 } else {
                     allProfiles = [];
                     const selectedCourse = courseFilter.options[courseFilter.selectedIndex]?.text || 'selected course';
-                    console.log(`✗ No students found for: ${selectedCourse} (ID: ${courseId || 'All'})`);
                     renderStudents([], null, courseId ? `No students found for "${selectedCourse}"` : 'No students found');
                 }
             } else {
-                console.error('API Error:', data.message || 'Unknown error');
                 allProfiles = [];
                 renderStudents([], null, data.message || 'Error loading student data');
             }
         } catch (error) {
-            console.error('Error fetching students:', error);
             studentsContainer.innerHTML = `
                 <div class="text-center py-5">
                     <i class="bi bi-exclamation-triangle display-1 text-danger opacity-50"></i>
@@ -620,7 +614,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Check if courses are already loaded (more than just "All Courses")
             if (courseSelect.options.length > 1) {
-                console.log('Courses already loaded, skipping reload');
                 return Promise.resolve();
             }
             
@@ -654,11 +647,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     courseSelect.value = currentValue;
                 }
                 
-                console.log('Courses loaded:', data.courses.length);
             }
             return Promise.resolve();
         } catch (error) {
-            console.error('Error loading courses:', error);
             return Promise.reject(error);
         }
     }

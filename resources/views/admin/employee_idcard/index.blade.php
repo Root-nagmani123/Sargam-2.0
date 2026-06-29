@@ -163,16 +163,16 @@
                                         <td class="text-end pe-4">
                                             @php $canApplicantEdit = $request->user_may_edit_request ?? false; @endphp
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" 
-                                                   class="text-primary {{ $canApplicantEdit ? 'rounded-start-2' : 'rounded-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                <a href="{{ route('admin.employee_idcard.show', encrypt($request->id)) }}" 
+                                                   class="text-primary {{ $canApplicantEdit ? 'rounded-start-2' : 'rounded-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-request-id="{{ $request->id }}" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->id_card_valid_upto ?? '--' }}" data-valid-from="{{ $request->id_card_valid_from ?? '' }}" data-id-number="{{ $request->id_card_number ?? '' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', encrypt($request->id)) }}">
                                                     <i class="material-icons material-symbols-rounded">visibility</i>
                                                 </a>
                                                 @if($canApplicantEdit)
-                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" 
+                                                <a href="{{ route('admin.employee_idcard.edit', encrypt($request->id)) }}" 
                                                    class="text-primary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit" data-bs-toggle="tooltip" data-bs-placement="top">
                                                     <i class="material-icons material-symbols-rounded">edit</i>
                                                 </a>
-                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" 
+                                                <form action="{{ route('admin.employee_idcard.destroy', encrypt($request->id)) }}" 
                                                       method="POST" class="d-inline" 
                                                       onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                     @csrf
@@ -275,14 +275,14 @@
                                         <td class="text-end pe-4">
                                             @php $canApplicantEditDup = $request->user_may_edit_request ?? false; @endphp
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary {{ $canApplicantEditDup ? 'rounded-start-2' : 'rounded-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->request_for == 'Extension' ? ($request->id_card_valid_upto ?? '--') : '--' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                <a href="{{ route('admin.employee_idcard.show', encrypt($request->id)) }}" class="btn btn-outline-primary {{ $canApplicantEditDup ? 'rounded-start-2' : 'rounded-2' }} view-details-btn d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details" data-name="{{ $request->name }}" data-designation="{{ $request->designation ?? '--' }}" data-request-for="{{ $request->request_for ?? '--' }}" data-duplication="{{ $request->duplication_reason ?? '--' }}" data-extension="{{ $request->request_for == 'Extension' ? ($request->id_card_valid_upto ?? '--') : '--' }}" data-valid-upto="{{ $request->id_card_valid_upto ?? '--' }}" data-status="{{ $request->status ?? '--' }}" data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}" data-show-url="{{ route('admin.employee_idcard.show', encrypt($request->id)) }}">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                                 </a>
                                                 @if($canApplicantEditDup)
-                                                <a href="{{ route('admin.employee_idcard.edit', $request->id) }}" class="btn btn-outline-secondary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit">
+                                                <a href="{{ route('admin.employee_idcard.edit', encrypt($request->id)) }}" class="btn btn-outline-secondary rounded-0 d-inline-flex align-items-center gap-1 px-2 py-1" title="Edit">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">edit</i>
                                                 </a>
-                                                <form action="{{ route('admin.employee_idcard.destroy', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
+                                                <form action="{{ route('admin.employee_idcard.destroy', encrypt($request->id)) }}" method="POST" class="d-inline" onsubmit="return confirm('Are you sure you want to archive this request?');">
                                                     @csrf
                                                     @method('DELETE')
                                                     <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Archive">
@@ -373,7 +373,7 @@
                                                         data-duplication=""
                                                         data-status="{{ $request->status ?? '--' }}"
                                                         data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
-                                                        data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                        data-show-url="{{ route('admin.employee_idcard.show', encrypt($request->id)) }}">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;pointer-events:none;">hourglass_bottom</i>
                                                 </button>
                                             @else
@@ -396,7 +396,7 @@
                                                         data-duplication=""
                                                         data-status="{{ $request->status ?? '--' }}"
                                                         data-created="{{ $request->created_at ? $request->created_at->format('d/m/Y') : '--' }}"
-                                                        data-show-url="{{ route('admin.employee_idcard.show', $request->id) }}">
+                                                        data-show-url="{{ route('admin.employee_idcard.show', encrypt($request->id)) }}">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;pointer-events:none;">content_copy</i>
                                                 </button>
                                             @else
@@ -434,17 +434,17 @@
                                         </td>
                                         <td class="text-end pe-4">
                                             <div class="btn-group btn-group-sm" role="group">
-                                                <a href="{{ route('admin.employee_idcard.show', $request->id) }}" class="btn btn-outline-primary {{ $request->status === 'Approved' ? 'rounded-2' : 'rounded-start-2' }} d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details">
+                                                <a href="{{ route('admin.employee_idcard.show', encrypt($request->id)) }}" class="btn btn-outline-primary {{ $request->status === 'Approved' ? 'rounded-2' : 'rounded-start-2' }} d-inline-flex align-items-center gap-1 px-2 py-1" title="View Details">
                                                     <i class="material-icons material-symbols-rounded" style="font-size:18px;">visibility</i>
                                                 </a>
                                                 @if($request->status !== 'Approved')
-                                                    <form action="{{ route('admin.employee_idcard.restore', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
+                                                    <form action="{{ route('admin.employee_idcard.restore', encrypt($request->id)) }}" method="POST" class="d-inline" onsubmit="return confirm('Restore this request?');">
                                                         @csrf
                                                         <button type="submit" class="btn btn-outline-success rounded-0 px-2 py-1" title="Restore">
                                                             <i class="material-icons material-symbols-rounded" style="font-size:18px;">restore</i>
                                                         </button>
                                                     </form>
-                                                    <form action="{{ route('admin.employee_idcard.forceDelete', $request->id) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this request? This action cannot be undone.');">
+                                                    <form action="{{ route('admin.employee_idcard.forceDelete', encrypt($request->id)) }}" method="POST" class="d-inline" onsubmit="return confirm('Permanently delete this request? This action cannot be undone.');">
                                                         @csrf
                                                         @method('DELETE')
                                                         <button type="submit" class="btn btn-outline-danger rounded-end-2 px-2 py-1" title="Delete Permanently">
@@ -817,7 +817,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.classList.add('modal-open');
             }
         } catch (err) {
-            console.error('openViewAmendModal:', err);
         }
     }
 
@@ -833,7 +832,6 @@ document.addEventListener('DOMContentLoaded', function() {
             try {
                 openViewAmendModal(target);
             } catch (err) {
-                console.error('openViewAmendModal error:', err);
             }
         }
     }, true);

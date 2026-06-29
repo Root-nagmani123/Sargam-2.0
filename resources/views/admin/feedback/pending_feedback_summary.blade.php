@@ -445,7 +445,6 @@ $(document).ready(function() {
                 reloadTable();
             },
             error: function(xhr, status, error) {
-                console.error('AJAX Error:', error);
                 $sessionSelect.html('<option value="">Error loading sessions</option>');
                 $sessionSelect.val('').trigger('change.select2');
                 reloadTable();
@@ -570,7 +569,6 @@ $(document).ready(function() {
     // Initial count
     setTimeout(updateCountFromTable, 500);
     
-    console.log('Pending Feedback Summary Ready with Select2 Course & Session Filters');
 });
 </script>
 @endpush

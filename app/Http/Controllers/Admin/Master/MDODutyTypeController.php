@@ -57,7 +57,7 @@ class MDODutyTypeController extends Controller
             ]);
 
             if($request->id){
-                $mdoDutyType = MDODutyTypeMaster::findOrFail($request->id);
+                $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($request->id));
                 $mdoDutyType->update([
                     'mdo_duty_type_name' => $request->mdo_duty_type_name,
                     'active_inactive' => $request->active_inactive
@@ -102,7 +102,7 @@ class MDODutyTypeController extends Controller
     public function delete(Request $request)
     {
         try {
-            $mdoDutyType = MDODutyTypeMaster::findOrFail($request->id);
+            $mdoDutyType = MDODutyTypeMaster::findOrFail(decrypt($request->id));
             $mdoDutyType->delete();
             return redirect()->route('master.mdo_duty_type.index')->with('success', 'MDO Duty Type deleted successfully');
         } catch (\Exception $e) {

@@ -366,7 +366,7 @@ class RegistrationImportController extends Controller
     // }
     public function fc_masteredit($id)
     {
-        $registration = FcRegistrationMaster::findOrFail($id);
+        $registration = FcRegistrationMaster::findOrFail(decrypt($id));
         $serviceMasters = \DB::table('service_master')->pluck('service_name', 'pk');
 
         $cadres = \DB::table('cadre_master')
@@ -391,7 +391,7 @@ class RegistrationImportController extends Controller
             'cadre_master_pk' => 'nullable|string|max:255',
         ]);
 
-        $record = FcRegistrationMaster::findOrFail($id);
+        $record = FcRegistrationMaster::findOrFail(decrypt($id));
         $record->update($request->only([
             'email',
             'contact_no',

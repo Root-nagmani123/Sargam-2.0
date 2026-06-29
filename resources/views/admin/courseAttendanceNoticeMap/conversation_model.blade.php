@@ -275,7 +275,6 @@
                     reloadConversation(true);
                 } else {
                     const msg = (data && data.message) ? data.message : 'Failed to send message.';
-                    alert(msg);
                 }
             }).catch(() => {
                 alert('Failed to send message.');
