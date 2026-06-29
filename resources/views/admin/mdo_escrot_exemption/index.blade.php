@@ -96,6 +96,12 @@ select.mee-filter-control {
     border-radius: 6px;
     margin: 0 0.25rem;
 }
+.mee-student-tag {
+    background-color: #004a93;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+}
 </style>
 <div class="container-fluid mee-master-page">
     <x-breadcrum title="Escort/ Moderator Duty">
