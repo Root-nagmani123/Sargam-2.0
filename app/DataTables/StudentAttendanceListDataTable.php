@@ -27,9 +27,10 @@ class StudentAttendanceListDataTable extends DataTable
             ->addColumn('user_id', fn($row) => '<label class="text-dark">' . ($row->studentsMaster->user_id ?? 'N/A') . '</label>')
             ->addColumn('cadre', fn($row) => '<label class="text-dark">' . ($row->studentsMaster->cadre->cadre_name ?? 'N/A') . '</label>')
             ->addColumn('attendance_status', fn($row) => $this->renderRadioGroup($row, 'attendance_status', [1 => 'Present', 2 => 'Late', 3 => 'Absent']))
-            ->addColumn('mdo_duty', fn($row) => $this->renderMdoDutyCell($row))
-            ->addColumn('escort_duty', fn($row) => $this->renderEscortDutyCell($row))
-            ->addColumn('row_action', fn($row) => $this->renderFingerprintActionIcon($row))
+            ->addColumn('mdo_duty', fn($row) => $this->renderRadio($row, 4, 'MDO'))
+            ->addColumn('escort_duty', fn($row) => $this->renderRadio($row, 5, 'Escort'))
+            ->addColumn('medical_exempt', fn($row) => $this->renderRadio($row, 6, 'Medical Exempted'))
+            ->addColumn('other_exempt', fn($row) => $this->renderRadio($row, 7, 'Other Exempted'))
             ->filterColumn('student_name', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('display_name', 'like', "%{$keyword}%")))
             ->filterColumn('student_code', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('generated_OT_code', 'like', "%{$keyword}%")))
             ->filterColumn('user_id', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('user_id', 'like', "%{$keyword}%")))
@@ -82,28 +83,21 @@ class StudentAttendanceListDataTable extends DataTable
             ->minifiedAjax()
             ->orderBy(1)
             ->parameters([
-                'paging' => true,
-                'pageLength' => 10,
-                'lengthMenu' => [[50, 100, 200, 500, -1], [50, 100, 200, 500, 'All']],
-                'searching' => true,
-                'info' => true,
-                'scrollCollapse' => false,
-                'responsive' => false,
-                'scrollX' => false,
+                'paging' => false,           
+                'searching' => false,         
+                'info' => false,             
+                'scrollY' => '100vh',        
+                'scrollCollapse' => true,
+                'responsive' => true,
+                'scrollX' => true,
                 'autoWidth' => false,
                 'paginationType' => 'full_numbers',
-                'dom' => 'rt<"row d-none sargam-dt-hidden-controls"<"col-sm-12"filp>>',
+
                 'language' => [
-                    'search' => '',
-                    'searchPlaceholder' => 'Search',
-                    'lengthMenu' => 'Showing _MENU_',
-                    'info' => 'of _TOTAL_ items',
-                    'infoEmpty' => 'of 0 items',
-                    'paginate' => [
-                        'previous' => '‹',
-                        'next' => '›',
-                    ],
+                    'search' => '_INPUT_',
+                    'searchPlaceholder' => 'Search OT Name or OT Code...'
                 ],
+
             ]);
     }
 
@@ -279,7 +273,6 @@ class StudentAttendanceListDataTable extends DataTable
    
 
 
-        $checks = [];
         foreach ($options as $value => $label) {
             $labelClass = match ($value) {
                 1 => 'text-success',
@@ -290,16 +283,11 @@ class StudentAttendanceListDataTable extends DataTable
 
             $checked = ($defaultCheckedValue !== null && $defaultCheckedValue == $value) ? 'checked' : '';
 
-            $checks[$value] = "<div class='form-check'>
+            $html .= "<div class='form-check form-check-inline'>
                         <input class='form-check-input' type='radio' name='student[{$studentId}]' value='{$value}' {$checked} id='student[{$studentId}][{$value}]'>
                         <label class='form-check-label {$labelClass}' for='student[{$studentId}][{$value}]'>{$label}</label>
                     </div>";
         }
-
-        $html .= "<div class='mark-att-radio-grid'>";
-        $html .= "<div class='mark-att-radio-row'>" . ($checks[1] ?? '') . ($checks[2] ?? '') . "</div>";
-        $html .= "<div class='mark-att-radio-row'>" . ($checks[3] ?? '') . "</div>";
-        $html .= "</div>";
 
         return $html;
     }

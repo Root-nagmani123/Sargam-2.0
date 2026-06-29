@@ -298,63 +298,45 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
                     }
 
                     $isMarked = (bool) ($markedCache[$cacheKey] ?? false);
+                    $markBtnClass = $isMarked ? 'btn btn-success btn-sm' : 'btn btn-primary btn-sm';
 
         // if ($currentPath === 'user_attendance') {
              if (hasRole('Student-OT')) {
             // Student-OT User Page - Show only their own attendance
             $studentPk = auth()->user()->user_id;
-            return $this->renderAttendanceFingerprintAction(
-                route('attendance.OT.student_mark.student', [
-                    'group_pk' => $row->group_pk,
-                    'course_pk' => $row->Programme_pk,
-                    'timetable_pk' => $row->timetable_pk,
-                    'student_pk' => $studentPk,
-                ]),
-                'Show My Attendance',
-                $isMarked
-            );
-        } elseif (hasRole('Guest Faculty') || hasRole('Internal Faculty')) {
-            // Faculty User Page
-            return $this->renderAttendanceFingerprintAction(
-                route('attendance.student_mark', [
-                    'group_pk' => $row->group_pk,
-                    'course_pk' => $row->Programme_pk,
-                    'timetable_pk' => $row->timetable_pk,
-                ]),
-                'Show Attendance',
-                $isMarked
-            );
-        } elseif ($currentPath === 'send_notice') {
-            return $this->renderAttendanceFingerprintAction(
-                route('attendance.send_notice', [
-                    'group_pk' => $row->group_pk,
-                    'course_pk' => $row->Programme_pk,
-                    'timetable_pk' => $row->timetable_pk,
-                ]),
-                'Send Notice',
-                $isMarked
-            );
-        } elseif (hasRole('Training-Induction') || hasRole('Staff') || hasRole('Admin')) {
-            return $this->renderAttendanceFingerprintAction(
-                route('attendance.mark', [
-                    'group_pk' => $row->group_pk,
-                    'course_pk' => $row->Programme_pk,
-                    'timetable_pk' => $row->timetable_pk,
-                ]),
-                'Mark Attendance',
-                $isMarked
-            );
-        }
-
-        return $this->renderAttendanceFingerprintAction(
-            route('attendance.mark', [
+            return '<a href="' . route('attendance.OT.student_mark.student', [
                 'group_pk' => $row->group_pk,
                 'course_pk' => $row->Programme_pk,
                 'timetable_pk' => $row->timetable_pk,
-            ]),
-            'Mark Attendance',
-            $isMarked
-        );
+                'student_pk' => $studentPk
+            ]) . '" class="btn btn-primary btn-sm 1">Show My Attendance</a>';
+        } elseif (hasRole('Guest Faculty') || hasRole('Internal Faculty')) {
+            // Faculty User Page
+            return '<a href="' . route('attendance.student_mark', [
+                'group_pk' => $row->group_pk,
+                'course_pk' => $row->Programme_pk,
+                'timetable_pk' => $row->timetable_pk
+            ]) . '" class="' . $markBtnClass . '">Show Attendance</a>';
+        }else if($currentPath === 'send_notice'){
+            return '<a href="' . route('attendance.send_notice', [
+            'group_pk' => $row->group_pk,
+            'course_pk' => $row->Programme_pk,
+            'timetable_pk' => $row->timetable_pk
+        ]) . '" class="btn btn-primary btn-sm">Send Notice</a>';
+        }else if(hasRole('Training-Induction') || hasRole('Staff') || hasRole('Admin')){
+             return '<a href="' . route('attendance.mark', [
+            'group_pk' => $row->group_pk,
+            'course_pk' => $row->Programme_pk,
+            'timetable_pk' => $row->timetable_pk
+        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
+        }
+        else{
+            return '<a href="' . route('attendance.mark', [
+            'group_pk' => $row->group_pk,
+            'course_pk' => $row->Programme_pk,
+            'timetable_pk' => $row->timetable_pk
+        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
+        }
 
         // Admin Page
        
@@ -1390,22 +1372,6 @@ $currentPath = $segments[1] ?? null;
         } catch (\Exception $e) {
             return false;
         }
-    }
-
-    /**
-     * Circular fingerprint action control for attendance list (design reference).
-     */
-    private function renderAttendanceFingerprintAction(string $url, string $label, bool $isMarked = false): string
-    {
-        $stateClass = $isMarked ? 'att-fingerprint-btn--marked' : 'att-fingerprint-btn--default';
-
-        return '<a href="' . e($url) . '"'
-            . ' class="att-fingerprint-btn ' . $stateClass . '"'
-            . ' title="' . e($label) . '"'
-            . ' aria-label="' . e($label) . '">'
-            . '<i class="bi bi-fingerprint att-fingerprint-bi" aria-hidden="true"></i>'
-            . '<span class="visually-hidden">' . e($label) . '</span>'
-            . '</a>';
     }
 
     /**

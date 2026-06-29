@@ -1859,19 +1859,10 @@ function drawAttendanceTable() {
                 d.from_date = $('#from_date').val();
                 d.to_date = $('#to_date').val();
                 d.view_type = $('#view_type').val();
-                d.attendance_type = $('input[name="attendance_type"]:checked').val();
-                if (d.attendance_type === 'normal') {
-                    d.session_value = $('#session').val();
-                } else if (d.attendance_type === 'manual') {
-                    d.session_value = $('#manual_session').val();
-                }
             }
         },
         drawCallback: function () {
             $('#attendanceTableCard').removeClass('d-none');
-            if (typeof window.enhanceAttendanceFingerprintActions === 'function') {
-                window.enhanceAttendanceFingerprintActions();
-            }
         },
         columns: [
             { data: 'DT_RowIndex', name: 'DT_RowIndex', orderable: false, searchable: false },
