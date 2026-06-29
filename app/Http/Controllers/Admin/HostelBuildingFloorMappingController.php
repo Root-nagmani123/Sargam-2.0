@@ -68,6 +68,45 @@ class HostelBuildingFloorMappingController extends Controller
         return $dataTable->render('admin.building_floor_mapping.assign_student');
     }
 
+    public function previewAssignHostelToStudent(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'file' => 'required|mimes:xlsx,xls,csv|max:10248',
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors(),
+            ], 422);
+        }
+
+        try {
+            $import = new AssignHostelToStudent(true); // preview only — no DB write
+            Excel::import($import, $request->file('file'));
+
+            if (count($import->failures) > 0) {
+                return response()->json([
+                    'status' => 'error',
+                    'message' => 'Validation errors found in Excel file.',
+                    'failures' => $import->failures,
+                ], 422);
+            }
+
+            return response()->json([
+                'status' => 'success',
+                'rows' => $import->rows,
+            ], 200);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Excel import failed.',
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+
     public function assignHostelToStudent(Request $request)
     {
         $validator = Validator::make($request->all(), [

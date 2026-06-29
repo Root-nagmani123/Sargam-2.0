@@ -244,6 +244,7 @@ Route::prefix('memo-conclusion-master')->name('memo.conclusion.master.')->contro
         Route::post('store', 'store')->name('store');
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/export', 'export')->name('export');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
     });
 
     // Hostel Room Master

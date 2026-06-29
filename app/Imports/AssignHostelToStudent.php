@@ -6,10 +6,22 @@ use Illuminate\Support\Facades\Validator;
 use Maatwebsite\Excel\Concerns\{ToCollection, WithHeadingRow, WithStartRow};
 use App\Models\OTHostelRoomDetails;
 use App\Models\BuildingFloorRoomMapping;
+use App\Models\CourseMaster;
 
 class AssignHostelToStudent implements ToCollection, WithHeadingRow, WithStartRow
 {
     public $failures = [];
+
+    /** Valid, ready-to-insert rows (with display labels) — used for the preview step. */
+    public $rows = [];
+
+    /** When true, the file is only parsed/validated (no DB insert). */
+    public $preview = false;
+
+    public function __construct(bool $preview = false)
+    {
+        $this->preview = $preview;
+    }
 
     public function headingRow(): int
     {
@@ -78,8 +90,22 @@ class AssignHostelToStudent implements ToCollection, WithHeadingRow, WithStartRo
             ];
         }
 
-        // Only insert if no failures
-        if (empty($this->failures)) {
+        // Build display rows (with course name resolved) for the preview step.
+        if (!empty($dataToInsert)) {
+            $courseNames = CourseMaster::whereIn('pk', array_column($dataToInsert, 'course_master_pk'))
+                ->pluck('course_name', 'pk');
+
+            foreach ($dataToInsert as $d) {
+                $this->rows[] = [
+                    'course_name'      => $courseNames[$d['course_master_pk']] ?? $d['course_master_pk'],
+                    'user_name'        => $d['user_name'],
+                    'hostel_room_name' => $d['hostel_room_name'],
+                ];
+            }
+        }
+
+        // Only insert when committing (not previewing) and there are no failures.
+        if (!$this->preview && empty($this->failures)) {
             OTHostelRoomDetails::insert($dataToInsert);
         }
     }
