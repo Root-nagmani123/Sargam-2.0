@@ -1047,20 +1047,159 @@ class UserController extends Controller
      */
     public function studentList()
     {
-        $userId = Auth::user()->user_id;
+        $payload = $this->resolveDashboardStudentListPayload();
+        $students = $payload['students'];
+        $availableCourses = $payload['availableCourses'];
+        $facultyPk = $payload['facultyPk'];
+
+        // Get counsellor type names and courses from group_type_master_course_master_map
+        // From group_type_master_course_master_map, get faculty_id, type_name and course_name
+        // Then match type_name (pk) with course_group_type_master to get the type_name
+        // And match course_name (pk) with course_master to get the course name
+        // Only include counsellor types for active courses (active_inactive = 1 and end_date >= now())
+        // Filter by logged-in faculty if available
+        $counsellorTypesQuery = DB::table('group_type_master_course_master_map as gmap')
+            ->join('course_group_type_master as cgroup', 'gmap.type_name', '=', 'cgroup.pk')
+            ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
+            ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
+            ->where('gmap.active_inactive', 1)
+            ->where('cgroup.active_inactive', 1)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', now())
+            ->where('fm.active_inactive', 1);
+
+        // Filter by logged-in faculty if available
+        if ($facultyPk) {
+            $counsellorTypesQuery->where('gmap.facility_id', $facultyPk);
+        }
+
+        $counsellorTypes = $counsellorTypesQuery
+            ->select(
+                'cgroup.pk as type_pk',
+                'cgroup.type_name as counsellor_type_name'
+            )
+            ->distinct()
+            ->orderBy('cgroup.type_name')
+            ->get();
+
+        // Get courses from group_type_master_course_master_map and merge with available courses
+        // Only include active courses (active_inactive = 1 and end_date >= now())
+        // Filter by logged-in faculty if available
+        $groupMapCoursesQuery = DB::table('group_type_master_course_master_map as gmap')
+            ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
+            ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
+            ->where('gmap.active_inactive', 1)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', now())
+            ->where('fm.active_inactive', 1);
+
+        // Filter by logged-in faculty if available
+        if ($facultyPk) {
+            $groupMapCoursesQuery->where('gmap.facility_id', $facultyPk);
+        }
+
+        $groupMapCourses = $groupMapCoursesQuery
+            ->select(
+                'cm.pk',
+                'cm.course_name'
+            )
+            ->distinct()
+            ->get()
+            ->map(function($course) {
+                return [
+                    'pk' => $course->pk,
+                    'course_name' => $course->course_name
+                ];
+            });
+
+        // Merge courses from students and group_type_master_course_master_map
+        $availableCourses = $availableCourses->merge($groupMapCourses)
+            ->unique('pk')
+            ->sortBy('course_name')
+            ->values();
+
+        // Get group names from group_type_master_course_master_map with their type_name (counsellor type)
+        // Only include groups for active courses (active_inactive = 1 and end_date >= now())
+        // Filter by logged-in faculty if available
+        $groupNamesQuery = DB::table('group_type_master_course_master_map as gmap')
+            ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
+            ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
+            ->where('gmap.active_inactive', 1)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', now())
+            ->where('fm.active_inactive', 1)
+            ->whereNotNull('gmap.group_name')
+            ->where('gmap.group_name', '!=', '');
+
+        // Filter by logged-in faculty if available
+        if ($facultyPk) {
+            $groupNamesQuery->where('gmap.facility_id', $facultyPk);
+        }
+
+        $groupNames = $groupNamesQuery
+            ->select(
+                'gmap.pk as group_pk',
+                'gmap.group_name',
+                'gmap.type_name as counsellor_type_pk'
+            )
+            ->distinct()
+            ->orderBy('gmap.group_name')
+            ->get();
+
+        return view('admin.dashboard.student_list', compact('students', 'availableCourses', 'counsellorTypes', 'groupNames'));
+    }
+
+    /**
+     * Export the dashboard student list as CSV or PDF, honouring active filters.
+     */
+    public function studentListExport(Request $request, string $format)
+    {
+        if (! in_array($format, ['csv', 'pdf'], true)) {
+            abort(404);
+        }
+
+        if (! is_faculty_portal_user()) {
+            abort(403, 'You are not authorized to export the student list.');
+        }
+
+        $payload = $this->resolveDashboardStudentListPayload();
+        $students = $this->applyDashboardStudentListFilters($payload['students'], $request);
+        $exportData = $this->dashboardStudentListExportData($students);
+
+        $timestamp = now()->format('Ymd_His');
+        $fileBase = "student_list_{$timestamp}";
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', [
+                'headings' => $exportData['headings'],
+                'rows' => $exportData['rows'],
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download("{$fileBase}.pdf");
+        }
+
+        return Excel::download(
+            new UsersExport($exportData['headings'], $exportData['rows']),
+            "{$fileBase}.csv",
+            ExcelWriter::CSV
+        );
+    }
+
+    /**
+     * @return array{students: \Illuminate\Support\Collection, availableCourses: \Illuminate\Support\Collection, facultyPk: int|null}
+     */
+    private function resolveDashboardStudentListPayload(): array
+    {
         $students = collect([]);
         $availableCourses = collect([]);
         $facultyPk = null;
 
-        // Check if user is Internal Faculty or Guest Faculty
-        if(hasRole('Internal Faculty') || hasRole('Guest Faculty')){
-            // Get faculty_master.pk from user_id
-            $faculty = FacultyMaster::where('employee_master_pk', $userId)->first();
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
 
-            if ($faculty) {
-                $facultyPk = $faculty->pk;
-
-                // ========== SOURCE 1: CC/ACC Courses ==========
+            if ($facultyPk) {
                 $source1Students = collect([]);
                 $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
 
@@ -1144,25 +1283,16 @@ class UserController extends Controller
                     }
                 }
 
-                // ========== MERGE BOTH SOURCES ==========
-                // Combine Source 1 and Source 2 students manually to avoid getKey() issues
-                // Priority: Source 2 students (they have groupMapping) over Source 1 students
-                $seenStudentPks = [];
+                $seenStudentCourseKeys = [];
                 $uniqueStudents = collect([]);
 
                 foreach ($source2Students->concat($source1Students) as $studentMap) {
                     $studentPk = $studentMap->student_master_pk;
-                    if (!in_array($studentPk, $seenStudentPks)) {
-                        $seenStudentPks[] = $studentPk;
-                        $uniqueStudents->push($studentMap);
-                    }
-                }
+                    $coursePk = $studentMap->course_master_pk ?? 0;
+                    $studentCourseKey = $studentPk . '_' . $coursePk;
 
-                // Process Source 1 students (only if not already added from Source 2)
-                foreach ($source1Students as $studentMap) {
-                    $studentPk = $studentMap->student_master_pk;
-                    if (!in_array($studentPk, $seenStudentPks)) {
-                        $seenStudentPks[] = $studentPk;
+                    if (! in_array($studentCourseKey, $seenStudentCourseKeys, true)) {
+                        $seenStudentCourseKeys[] = $studentCourseKey;
                         $uniqueStudents->push($studentMap);
                     }
                 }
@@ -1213,7 +1343,9 @@ class UserController extends Controller
                     $studentMap->total_memo_count = $memos->count();
                 }
 
-                $students = $uniqueStudents;
+                $students = $uniqueStudents->filter(function ($studentMap) {
+                    return ! empty($studentMap->studentMaster);
+                })->values();
 
                 $availableCourses = $students->pluck('course')
                     ->filter(function ($course) {

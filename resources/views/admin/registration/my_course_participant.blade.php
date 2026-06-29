@@ -79,6 +79,13 @@
                                 </select>
                             </div>
                         </div>
+
+                        <!-- Reset Filters -->
+                        <div class="col-12 d-flex justify-content-end">
+                            <button type="button" id="resetFilters" class="btn btn-outline-secondary btn-lg">
+                                <i class="fas fa-rotate-left me-2"></i>Reset Filters
+                            </button>
+                        </div>
                     </div>
                 </form>
             </div>
@@ -119,6 +126,7 @@
                         {{-- Mirror the active list filters so the export matches the table --}}
                         <input type="hidden" name="course_id" id="exportCourseId">
                         <input type="hidden" name="status" id="exportStatus">
+                        <input type="hidden" name="course_status" id="exportCourseStatus">
                         <input type="hidden" name="search_term" id="exportSearchTerm">
                         <select name="format" class="form-select cp-select" required id="exportFormat">
                             <option value="">Choose export type…</option>
@@ -405,6 +413,37 @@
             });
         });
 
+        // Reset all filters back to their defaults, then refresh dropdown + table
+        $('#resetFilters').on('click', function() {
+            // Default course type back to "Active Courses"
+            $('#course_status_active').prop('checked', true);
+            // Clear course, enrollment status and search
+            $('#course_id').val('');
+            $('#status').val('');
+            $('#participantSearch').val('');
+
+            // Rebuild the course dropdown for the default (active) toggle, then reload
+            $.ajax({
+                url: "{{ route('my.course.participant') }}",
+                type: "GET",
+                data: { course_status: 'active', ajax_courses: true },
+                headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                success: function(response) {
+                    const courseSelect = $('#course_id');
+                    courseSelect.empty().append('<option value="">-- All Courses --</option>');
+                    $.each(response.courses, function(id, name) {
+                        courseSelect.append(new Option(name, id));
+                    });
+                    courseSelect.val('');
+                    dataTable.ajax.reload();
+                },
+                error: function(xhr) {
+                    console.error('Reset filters AJAX error:', xhr.responseText);
+                    dataTable.ajax.reload();
+                }
+            });
+        });
+
         // Export form submission
         $('#exportForm').on('submit', function(e) {
             const format = $('#exportFormat').val();
@@ -416,6 +455,7 @@
             // Carry the active list filters into the export so counts match
             $('#exportCourseId').val($('#course_id').val() || '');
             $('#exportStatus').val($('#status').val() || '');
+            $('#exportCourseStatus').val($('input[name="course_status"]:checked').val() || 'active');
             $('#exportSearchTerm').val($('#participantSearch').val() || '');
         });
 
