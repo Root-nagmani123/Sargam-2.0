@@ -17,9 +17,9 @@ class StationedLeaveMasterController extends Controller
     public function __construct()
     {
         $this->middleware(function ($request, $next) {
-            if (! hasRole('Super Admin') && ! hasRole('Training IST')) {
-                abort(403, 'You are not authorized to access Stationed Leave Master.');
-            }
+            // if (! hasRole('Super Admin') && ! hasRole('Training IST')) {
+            //     abort(403, 'You are not authorized to access Stationed Leave Master.');
+            // }
 
             return $next($request);
         });
@@ -339,9 +339,12 @@ class StationedLeaveMasterController extends Controller
             });
     }
 
+    /**
+     * @return array<int>|null null = all courses (training authority / Super Admin)
+     */
     protected function getAllowedCourseIds(): ?array
     {
-        if (hasRole('Super Admin')) {
+        if (isTrainingOrEstateAuthority()) {
             return null;
         }
 
