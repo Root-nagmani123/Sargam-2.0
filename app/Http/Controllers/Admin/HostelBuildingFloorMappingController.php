@@ -8,7 +8,8 @@ use App\DataTables\HostelBuildingFloorMappingDataTable;
 use App\Models\{
     HostelBuildingFloorMapping,
     HostelBuildingMaster,
-    HostelFloorMaster
+    HostelFloorMaster,
+    CourseMaster
 };
 use App\Imports\AssignHostelToStudent;
 use Maatwebsite\Excel\Facades\Excel;
@@ -65,13 +66,17 @@ class HostelBuildingFloorMappingController extends Controller
 
     public function assignStudent(OTHostelRoomDetailsDataTable $dataTable)
     {
-        return $dataTable->render('admin.building_floor_mapping.assign_student');
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
+        return $dataTable->render('admin.building_floor_mapping.assign_student', compact('courses'));
     }
 
     public function previewAssignHostelToStudent(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|mimes:xlsx,xls,csv|max:10248',
+            'course_master_pk' => 'required|integer|exists:course_master,pk',
+            'file'             => 'required|mimes:xlsx,xls,csv|max:10248',
         ]);
 
         if ($validator->fails()) {
@@ -83,7 +88,7 @@ class HostelBuildingFloorMappingController extends Controller
         }
 
         try {
-            $import = new AssignHostelToStudent(true); // preview only — no DB write
+            $import = new AssignHostelToStudent((int) $request->course_master_pk, true);
             Excel::import($import, $request->file('file'));
 
             if (count($import->failures) > 0) {
@@ -110,7 +115,8 @@ class HostelBuildingFloorMappingController extends Controller
     public function assignHostelToStudent(Request $request)
     {
         $validator = Validator::make($request->all(), [
-            'file' => 'required|mimes:xlsx,xls,csv|max:10248',
+            'course_master_pk' => 'required|integer|exists:course_master,pk',
+            'file'             => 'required|mimes:xlsx,xls,csv|max:10248',
         ]);
 
         if ($validator->fails()) {
@@ -122,7 +128,7 @@ class HostelBuildingFloorMappingController extends Controller
         }
 
         try {
-            $import = new AssignHostelToStudent();
+            $import = new AssignHostelToStudent((int) $request->course_master_pk);
             Excel::import($import, $request->file('file'));
 
             $failures = $import->failures;
@@ -150,40 +156,45 @@ class HostelBuildingFloorMappingController extends Controller
 
     public function import(Request $request)
     {
+        $courses = CourseMaster::where('active_inactive', 1)
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
+
         if ($request->isMethod('post')) {
-            // Validate file input
             $validator = Validator::make($request->all(), [
-                'file' => 'required|mimes:xlsx,xls,csv|max:10248',
+                'course_master_pk' => 'required|integer|exists:course_master,pk',
+                'file'             => 'required|mimes:xlsx,xls,csv|max:10248',
             ]);
 
             if ($validator->fails()) {
                 return redirect()->back()
                     ->withErrors($validator)
-                    ->withInput();
+                    ->withInput()
+                    ->with('courses', $courses);
             }
 
             try {
-                $import = new AssignHostelToStudent();
+                $import = new AssignHostelToStudent((int) $request->course_master_pk);
                 Excel::import($import, $request->file('file'));
 
                 if (!empty($import->failures)) {
-                    // Don't insert anything, show all errors in table
                     return redirect()->back()
                         ->with('failures', $import->failures)
                         ->with('error', 'Import failed. Please fix the errors below.')
+                        ->with('selected_course', $request->course_master_pk)
                         ->withInput();
                 }
 
-                return redirect()->route('hostel.building.map.assign.student')->with('success', 'Students assigned successfully.');
+                return redirect()->route('hostel.building.map.assign.student')
+                    ->with('success', 'Students assigned successfully.');
             } catch (\Throwable $e) {
                 return redirect()->back()
                     ->with('error', 'An unexpected error occurred during import. Please check your file.')
                     ->withInput();
             }
-
-        } else {
-            return view('admin.building_floor_mapping.import');
         }
+
+        return view('admin.building_floor_mapping.import', compact('courses'));
     }
 
     function export()

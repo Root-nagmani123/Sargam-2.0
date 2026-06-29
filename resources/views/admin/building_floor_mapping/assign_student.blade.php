@@ -117,6 +117,21 @@
 
                     {{-- Step 1: upload --}}
                     <div id="asImportStep1">
+
+                        {{-- Course Selector --}}
+                        <div class="mb-3">
+                            <label for="importCourse" class="form-label fw-semibold">
+                                Select Course <span class="text-danger">*</span>
+                            </label>
+                            <select name="course_master_pk" id="importCourse" class="form-select" required>
+                                <option value="">-- Select Course --</option>
+                                @foreach ($courses as $pk => $name)
+                                    <option value="{{ $pk }}">{{ $name }}</option>
+                                @endforeach
+                            </select>
+                            <div class="invalid-feedback d-none" id="importCourseError">Please select a course.</div>
+                        </div>
+
                         <div class="as-upload-dropzone rounded-3 text-center" id="asUploadDropzone" role="button" tabindex="0">
                             <i class="bi bi-file-earmark-arrow-up as-upload-icon d-block mb-2" aria-hidden="true"></i>
                             <p class="fw-semibold text-body mb-1">Drag or click here to upload your file</p>
@@ -146,12 +161,14 @@
 
                     {{-- Step 2: preview --}}
                     <div id="asImportStep2" class="d-none">
+                        <p class="text-muted small mb-2">
+                            Course: <strong id="asPreviewCourseName"></strong>
+                        </p>
                         <div class="table-responsive">
                             <table class="table table-hover align-middle mb-0 w-100 programme-dt-table">
                                 <thead>
                                     <tr>
                                         <th class="text-center">S. No.</th>
-                                        <th>Course Name</th>
                                         <th>User Name</th>
                                         <th>Hostel Room Name</th>
                                     </tr>
@@ -374,8 +391,11 @@
             $('#asImportAssign').addClass('d-none').prop('disabled', false).text('Assign Students Hostel');
             $('#asImportFileName').addClass('d-none').text('');
             $('#importErrors').addClass('d-none');
+            $('#importCourseError').addClass('d-none');
+            $('#importCourse').removeClass('is-invalid');
             $('#importErrorTableBody').empty();
             $('#asPreviewBody').empty();
+            $('#asPreviewCourseName').text('');
             try { $('#importExcelForm')[0].reset(); } catch (e) {}
         }
 
@@ -437,6 +457,18 @@
 
         // Step 1 -> 2 : preview (parse without saving)
         $('#asImportNext').on('click', function () {
+            var courseVal = $('#importCourse').val();
+            var courseText = $('#importCourse option:selected').text();
+
+            // Validate course selection
+            if (!courseVal) {
+                $('#importCourse').addClass('is-invalid');
+                $('#importCourseError').removeClass('d-none');
+                return;
+            }
+            $('#importCourse').removeClass('is-invalid');
+            $('#importCourseError').addClass('d-none');
+
             if (!asValidFile()) { return; }
             $('#importErrors').addClass('d-none');
 
@@ -455,13 +487,13 @@
                 success: function (response) {
                     var rows = (response && response.rows) ? response.rows : [];
                     var $body = $('#asPreviewBody').empty();
+                    $('#asPreviewCourseName').text(courseText);
                     if (!rows.length) {
-                        $body.append('<tr><td colspan="4" class="text-center text-muted py-3">No rows found in the file.</td></tr>');
+                        $body.append('<tr><td colspan="3" class="text-center text-muted py-3">No rows found in the file.</td></tr>');
                     }
                     rows.forEach(function (r, i) {
                         $body.append('<tr>' +
                             '<td class="text-center">' + (i + 1) + '</td>' +
-                            '<td>' + (r.course_name || '') + '</td>' +
                             '<td>' + (r.user_name || '') + '</td>' +
                             '<td>' + (r.hostel_room_name || '') + '</td>' +
                             '</tr>');
