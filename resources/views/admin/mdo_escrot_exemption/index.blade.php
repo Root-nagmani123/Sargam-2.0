@@ -4,6 +4,25 @@
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+<style>
+/* Make the Faculty searchable select match the modal's form-select look */
+.mee-faculty-select2 + .select2-container .select2-selection--single {
+    height: calc(1.5em + 0.75rem + 2px);
+    padding: 0.375rem 0.25rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.5rem;
+    display: flex;
+    align-items: center;
+}
+.mee-faculty-select2 + .select2-container--default .select2-selection--single .select2-selection__arrow {
+    height: 100%;
+}
+.mee-faculty-select2.is-invalid + .select2-container .select2-selection--single {
+    border-color: #dc3545;
+}
+.select2-container--open { z-index: 1060; }
+</style>
 @endpush
 
 @section('setup_content')
@@ -596,14 +615,38 @@ $(document).ready(function() {
             }
         }
 
+        function initFacultySelect2() {
+            var $faculty = $('#faculty_master_pk');
+            if ($faculty.hasClass('select2-hidden-accessible')) {
+                return;
+            }
+            $faculty.select2({
+                placeholder: 'Search Faculty',
+                allowClear: true,
+                width: '100%',
+                dropdownParent: $('#meeAddModal')
+            });
+            // Keep native validation styling in sync with the search box.
+            $faculty.on('change', function() {
+                if ($(this).val()) {
+                    $(this).removeClass('is-invalid');
+                    $('#meeErrorFaculty').addClass('d-none');
+                }
+            });
+        }
+
         function toggleFacultyField() {
             var dutyType = $('#mdo_duty_type_master_pk').val();
             if (meeEscortDutyTypeId && dutyType === meeEscortDutyTypeId) {
                 $('#faculty_field_container').removeClass('d-none');
+                initFacultySelect2();
                 $('#faculty_master_pk').prop('required', true);
             } else {
                 $('#faculty_field_container').addClass('d-none');
                 $('#faculty_master_pk').val('').prop('required', false);
+                if ($('#faculty_master_pk').hasClass('select2-hidden-accessible')) {
+                    $('#faculty_master_pk').trigger('change.select2');
+                }
             }
         }
 
