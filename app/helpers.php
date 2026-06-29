@@ -326,6 +326,14 @@ function hasRole($role)
 }
 
 /**
+ * Officer Trainee portal user (session Student-OT pseudo-role or Spatie Officer Trainee).
+ */
+function isOfficerTraineeUser(): bool
+{
+    return hasRole('Student-OT') || hasRole('Officer Trainee');
+}
+
+/**
  * Whether the user has at least one Spatie role (user management → assign role).
  */
 function userHasAssignedRoles(): bool
@@ -366,13 +374,15 @@ function isEstateHacAuthority(): bool
 }
 
 /**
- * Training authority: Training Induction Admin, Training MCTP Admin, Training IST, or Estate Admin / Super Admin.
- * DB role names match exactly.
+ * Training authority: Spatie training admin roles plus legacy session role names
+ * (Training-Induction, Training-MCTP, IST) used across sidebar and calendar modules.
  */
 function isTrainingOrEstateAuthority(): bool
 {
     return hasRole('Estate Admin') || hasRole('Super Admin')
-        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST')
+        || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST')
+        || hasRole('Training');
 }
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).

@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 use App\Models\StudentMedicalExemption;
+use App\Models\LeaveApplication;
 use App\Models\MDOEscotDutyMap;
 use App\Models\StudentCourseGroupMap;
 use App\Models\DashboardCard;
@@ -1041,196 +1042,10 @@ class UserController extends Controller
      */
     public function studentList()
     {
-        $students = collect([]);
-        $availableCourses = collect([]);
-        $facultyPk = null;
-
-        // Faculty portal users (Faculty / Internal / Guest) — includes CC/ACC coordinators
-        if (is_faculty_portal_user()) {
-            $facultyPk = get_auth_faculty_master_pk();
-
-            if ($facultyPk) {
-                // ========== SOURCE 1: CC/ACC Courses ==========
-                $source1Students = collect([]);
-                $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
-
-                if ($coordinatorCourses->isNotEmpty()) {
-                    // Filter for active courses only
-                    $activeCoordinatorCourses = CourseMaster::whereIn('pk', $coordinatorCourses)
-                        ->where('active_inactive', 1)
-                        ->where('end_date', '>=', now())
-                        ->pluck('pk');
-
-                    if ($activeCoordinatorCourses->isNotEmpty()) {
-                        // Get students from student_master_course_map for Source 1
-                        $source1StudentMaps = StudentMasterCourseMap::with([
-                            'studentMaster.cadre',
-                            'course'
-                        ])
-                            ->whereIn('course_master_pk', $activeCoordinatorCourses)
-                            ->where('active_inactive', 1)
-                            ->get();
-
-                        // Convert Source 1 to stdClass format for consistency
-                        $source1Students = collect([]);
-                        foreach ($source1StudentMaps as $studentMap) {
-                            $stdObj = new \stdClass();
-                            $stdObj->student_master_pk = $studentMap->student_master_pk;
-                            $stdObj->course_master_pk = $studentMap->course_master_pk;
-                            $stdObj->studentMaster = $studentMap->studentMaster;
-                            $stdObj->course = $studentMap->course;
-                            $stdObj->source = 'cc_acc'; // Track source
-                            $source1Students->push($stdObj);
-                        }
-                    }
-                }
-
-                // ========== SOURCE 2: Group Mappings ==========
-                $source2Students = collect([]);
-
-                // Step 1: Find group mappings where faculty is assigned
-                $groupMappings = DB::table('group_type_master_course_master_map')
-                    ->where('facility_id', $facultyPk)
-                    ->where('active_inactive', 1)
-                    ->get();
-
-                if ($groupMappings->isNotEmpty()) {
-                    // Step 2: Get course_name (course_pk) from group mappings
-                    $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
-
-                    // Step 3: Check in course_master if these courses are active
-                    $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
-                        ->where('active_inactive', 1)
-                        ->where('end_date', '>=', now())
-                        ->pluck('pk');
-
-                    if ($activeCourseIds->isNotEmpty()) {
-                        // Step 4: Get group_type_master_course_master_map.pk for active courses
-                        $activeGroupMappingPks = $groupMappings
-                            ->whereIn('course_name', $activeCourseIds)
-                            ->pluck('pk')
-                            ->unique();
-
-                        // Step 5: Get students from student_course_group_map using group mapping pk
-                        if ($activeGroupMappingPks->isNotEmpty()) {
-                            $source2GroupMaps = StudentCourseGroupMap::with([
-                                'student.cadre',
-                                'groupTypeMasterCourseMasterMap.courseGroup',
-                                'groupTypeMasterCourseMasterMap.courseGroupType',
-                                'groupTypeMasterCourseMasterMap.Faculty'
-                            ])
-                                ->whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
-                                ->where('active_inactive', 1)
-                                ->get();
-
-                            // Step 6: Convert to unified format (similar to Source 1 structure)
-                            foreach ($source2GroupMaps as $groupMap) {
-                                $studentPk = $groupMap->student_master_pk;
-                                $coursePk = $groupMap->groupTypeMasterCourseMasterMap->course_name ?? null;
-
-                                if ($coursePk && $groupMap->student) {
-                                    // Get course from relationship (already loaded via with())
-                                    $course = $groupMap->groupTypeMasterCourseMasterMap->courseGroup ?? null;
-
-                                    if ($course) {
-                                        // Create a stdClass object to mimic StudentMasterCourseMap structure
-                                        $studentMap = new \stdClass();
-                                        $studentMap->student_master_pk = $studentPk;
-                                        $studentMap->course_master_pk = $coursePk;
-                                        $studentMap->studentMaster = $groupMap->student; // Use 'student' relationship
-                                        $studentMap->course = $course;
-                                        $studentMap->groupMapping = $groupMap;
-                                        $studentMap->source = 'group_mapping'; // Track source
-
-                                        $source2Students->push($studentMap);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // ========== MERGE BOTH SOURCES ==========
-                // Keep one row per student+course so course filters stay accurate
-                $seenStudentCourseKeys = [];
-                $uniqueStudents = collect([]);
-
-                foreach ($source2Students->concat($source1Students) as $studentMap) {
-                    $studentPk = $studentMap->student_master_pk;
-                    $coursePk = $studentMap->course_master_pk ?? 0;
-                    $studentCourseKey = $studentPk . '_' . $coursePk;
-
-                    if (!in_array($studentCourseKey, $seenStudentCourseKeys, true)) {
-                        $seenStudentCourseKeys[] = $studentCourseKey;
-                        $uniqueStudents->push($studentMap);
-                    }
-                }
-
-                // Load additional data for each student
-                $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
-
-                foreach ($uniqueStudents as $studentMap) {
-                    $studentPk = $studentMap->student_master_pk;
-                    $coursePk = $studentMap->course_master_pk ?? null;
-
-                    // For Source 1 students, get group mapping if not already set
-                    // Load full relationship including group_name
-                    if (!isset($studentMap->groupMapping) && $coursePk) {
-                        $groupMap = StudentCourseGroupMap::with([
-                            'groupTypeMasterCourseMasterMap.courseGroupType',
-                            'groupTypeMasterCourseMasterMap.Faculty',
-                            'groupTypeMasterCourseMasterMap.courseGroup'
-                        ])
-                            ->where('student_master_pk', $studentPk)
-                            ->where('active_inactive', 1)
-                            ->whereHas('groupTypeMasterCourseMasterMap', function($query) use ($coursePk) {
-                                $query->where('course_name', $coursePk);
-                            })
-                            ->first();
-
-                        $studentMap->groupMapping = $groupMap;
-                    }
-
-                    // Get counts for each student
-                    $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)->count();
-
-                    $studentMap->total_medical_exception_count = StudentMedicalExemption::where('student_master_pk', $studentPk)
-                        ->where('active_inactive', 1)
-                        ->count();
-
-                    // Get notices and memos using OTNoticeMemoService
-                    $notices = $noticeMemoService->getNotices($studentPk);
-                    $memos = $noticeMemoService->getMemos($studentPk);
-
-                    $studentMap->total_notice_count = $notices->count();
-                    $studentMap->total_memo_count = $memos->count();
-                }
-
-                $students = $uniqueStudents->filter(function ($studentMap) {
-                    return !empty($studentMap->studentMaster);
-                })->values();
-
-                // Get unique courses from the student list - only active courses
-                $availableCourses = $students->pluck('course')
-                    ->filter(function($course) {
-                        // Filter only active courses
-                        return $course &&
-                               isset($course->active_inactive) &&
-                               $course->active_inactive == 1 &&
-                               isset($course->end_date) &&
-                               \Carbon\Carbon::parse($course->end_date)->gte(now());
-                    })
-                    ->unique('pk')
-                    ->map(function($course) {
-                        return [
-                            'pk' => $course->pk,
-                            'course_name' => $course->course_name
-                        ];
-                    })
-                    ->values()
-                    ->sortBy('course_name');
-            }
-        }
+        $payload = $this->resolveDashboardStudentListPayload();
+        $students = $payload['students'];
+        $availableCourses = $payload['availableCourses'];
+        $facultyPk = $payload['facultyPk'];
 
         // Get counsellor type names and courses from group_type_master_course_master_map
         // From group_type_master_course_master_map, get faculty_id, type_name and course_name
@@ -1327,6 +1142,356 @@ class UserController extends Controller
             ->get();
 
         return view('admin.dashboard.student_list', compact('students', 'availableCourses', 'counsellorTypes', 'groupNames'));
+    }
+
+    /**
+     * Export the dashboard student list as CSV or PDF, honouring active filters.
+     */
+    public function studentListExport(Request $request, string $format)
+    {
+        if (! in_array($format, ['csv', 'pdf'], true)) {
+            abort(404);
+        }
+
+        if (! is_faculty_portal_user()) {
+            abort(403, 'You are not authorized to export the student list.');
+        }
+
+        $payload = $this->resolveDashboardStudentListPayload();
+        $students = $this->applyDashboardStudentListFilters($payload['students'], $request);
+        $exportData = $this->dashboardStudentListExportData($students);
+
+        $timestamp = now()->format('Ymd_His');
+        $fileBase = "student_list_{$timestamp}";
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', [
+                'headings' => $exportData['headings'],
+                'rows' => $exportData['rows'],
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
+            ])->setPaper('a4', 'landscape');
+
+            return $pdf->download("{$fileBase}.pdf");
+        }
+
+        return Excel::download(
+            new UsersExport($exportData['headings'], $exportData['rows']),
+            "{$fileBase}.csv",
+            ExcelWriter::CSV
+        );
+    }
+
+    /**
+     * @return array{students: \Illuminate\Support\Collection, availableCourses: \Illuminate\Support\Collection, facultyPk: int|null}
+     */
+    private function resolveDashboardStudentListPayload(): array
+    {
+        $students = collect([]);
+        $availableCourses = collect([]);
+        $facultyPk = null;
+
+        if (is_faculty_portal_user()) {
+            $facultyPk = get_auth_faculty_master_pk();
+
+            if ($facultyPk) {
+                $source1Students = collect([]);
+                $coordinatorCourses = $this->getCoordinatorCourseIds($facultyPk);
+
+                if ($coordinatorCourses->isNotEmpty()) {
+                    $activeCoordinatorCourses = CourseMaster::whereIn('pk', $coordinatorCourses)
+                        ->where('active_inactive', 1)
+                        ->where('end_date', '>=', now())
+                        ->pluck('pk');
+
+                    if ($activeCoordinatorCourses->isNotEmpty()) {
+                        $source1StudentMaps = StudentMasterCourseMap::with([
+                            'studentMaster.cadre',
+                            'course',
+                        ])
+                            ->whereIn('course_master_pk', $activeCoordinatorCourses)
+                            ->where('active_inactive', 1)
+                            ->get();
+
+                        foreach ($source1StudentMaps as $studentMap) {
+                            $stdObj = new \stdClass();
+                            $stdObj->student_master_pk = $studentMap->student_master_pk;
+                            $stdObj->course_master_pk = $studentMap->course_master_pk;
+                            $stdObj->studentMaster = $studentMap->studentMaster;
+                            $stdObj->course = $studentMap->course;
+                            $stdObj->source = 'cc_acc';
+                            $source1Students->push($stdObj);
+                        }
+                    }
+                }
+
+                $source2Students = collect([]);
+                $groupMappings = DB::table('group_type_master_course_master_map')
+                    ->where('facility_id', $facultyPk)
+                    ->where('active_inactive', 1)
+                    ->get();
+
+                if ($groupMappings->isNotEmpty()) {
+                    $groupMapCourseIds = $groupMappings->pluck('course_name')->unique();
+                    $activeCourseIds = CourseMaster::whereIn('pk', $groupMapCourseIds)
+                        ->where('active_inactive', 1)
+                        ->where('end_date', '>=', now())
+                        ->pluck('pk');
+
+                    if ($activeCourseIds->isNotEmpty()) {
+                        $activeGroupMappingPks = $groupMappings
+                            ->whereIn('course_name', $activeCourseIds)
+                            ->pluck('pk')
+                            ->unique();
+
+                        if ($activeGroupMappingPks->isNotEmpty()) {
+                            $source2GroupMaps = StudentCourseGroupMap::with([
+                                'student.cadre',
+                                'groupTypeMasterCourseMasterMap.courseGroup',
+                                'groupTypeMasterCourseMasterMap.courseGroupType',
+                                'groupTypeMasterCourseMasterMap.Faculty',
+                            ])
+                                ->whereIn('group_type_master_course_master_map_pk', $activeGroupMappingPks)
+                                ->where('active_inactive', 1)
+                                ->get();
+
+                            foreach ($source2GroupMaps as $groupMap) {
+                                $studentPk = $groupMap->student_master_pk;
+                                $coursePk = $groupMap->groupTypeMasterCourseMasterMap->course_name ?? null;
+
+                                if ($coursePk && $groupMap->student) {
+                                    $course = $groupMap->groupTypeMasterCourseMasterMap->courseGroup ?? null;
+
+                                    if ($course) {
+                                        $studentMap = new \stdClass();
+                                        $studentMap->student_master_pk = $studentPk;
+                                        $studentMap->course_master_pk = $coursePk;
+                                        $studentMap->studentMaster = $groupMap->student;
+                                        $studentMap->course = $course;
+                                        $studentMap->groupMapping = $groupMap;
+                                        $studentMap->source = 'group_mapping';
+                                        $source2Students->push($studentMap);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                $seenStudentCourseKeys = [];
+                $uniqueStudents = collect([]);
+
+                foreach ($source2Students->concat($source1Students) as $studentMap) {
+                    $studentPk = $studentMap->student_master_pk;
+                    $coursePk = $studentMap->course_master_pk ?? 0;
+                    $studentCourseKey = $studentPk . '_' . $coursePk;
+
+                    if (! in_array($studentCourseKey, $seenStudentCourseKeys, true)) {
+                        $seenStudentCourseKeys[] = $studentCourseKey;
+                        $uniqueStudents->push($studentMap);
+                    }
+                }
+
+                $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+
+                foreach ($uniqueStudents as $studentMap) {
+                    $studentPk = $studentMap->student_master_pk;
+                    $coursePk = $studentMap->course_master_pk ?? null;
+
+                    if (! isset($studentMap->groupMapping) && $coursePk) {
+                        $groupMap = StudentCourseGroupMap::with([
+                            'groupTypeMasterCourseMasterMap.courseGroupType',
+                            'groupTypeMasterCourseMasterMap.Faculty',
+                            'groupTypeMasterCourseMasterMap.courseGroup',
+                        ])
+                            ->where('student_master_pk', $studentPk)
+                            ->where('active_inactive', 1)
+                            ->whereHas('groupTypeMasterCourseMasterMap', function ($query) use ($coursePk) {
+                                $query->where('course_name', $coursePk);
+                            })
+                            ->first();
+
+                        $studentMap->groupMapping = $groupMap;
+                    }
+
+                    $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)->count();
+                    $studentMap->total_medical_exception_count = StudentMedicalExemption::where('student_master_pk', $studentPk)
+                        ->where('active_inactive', 1)
+                        ->count();
+                    $studentMap->total_pt_exemption_count = LeaveApplication::where('student_master_pk', $studentPk)
+                        ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
+                        ->where('active_inactive', 1)
+                        ->where('status', LeaveApplication::STATUS_APPROVED)
+                        ->count();
+                    $studentMap->total_stationed_leave_count = LeaveApplication::where('student_master_pk', $studentPk)
+                        ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
+                        ->where('active_inactive', 1)
+                        ->whereIn('status', [
+                            LeaveApplication::STATUS_APPROVED,
+                            LeaveApplication::STATUS_PENDING,
+                        ])
+                        ->count();
+
+                    $notices = $noticeMemoService->getNotices($studentPk);
+                    $memos = $noticeMemoService->getMemos($studentPk);
+                    $studentMap->total_notice_count = $notices->count();
+                    $studentMap->total_memo_count = $memos->count();
+                }
+
+                $students = $uniqueStudents->filter(function ($studentMap) {
+                    return ! empty($studentMap->studentMaster);
+                })->values();
+
+                $availableCourses = $students->pluck('course')
+                    ->filter(function ($course) {
+                        return $course
+                            && isset($course->active_inactive)
+                            && $course->active_inactive == 1
+                            && isset($course->end_date)
+                            && Carbon::parse($course->end_date)->gte(now());
+                    })
+                    ->unique('pk')
+                    ->map(function ($course) {
+                        return [
+                            'pk' => $course->pk,
+                            'course_name' => $course->course_name,
+                        ];
+                    })
+                    ->values()
+                    ->sortBy('course_name');
+            }
+        }
+
+        return compact('students', 'availableCourses', 'facultyPk');
+    }
+
+    private function applyDashboardStudentListFilters($students, Request $request)
+    {
+        $courseId = $request->input('course_id');
+        $roleFilter = $request->input('role_filter');
+        $groupPk = $request->input('group_pk');
+        $search = strtolower(trim((string) $request->input('search', '')));
+
+        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $groupPk, $search) {
+            $student = $studentMap->studentMaster;
+            $course = $studentMap->course;
+            $counsellorTypePk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '');
+            $rowGroupPk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->pk ?? '');
+            $rowCourseId = (string) ($course->pk ?? '');
+
+            if ($courseId && $rowCourseId !== (string) $courseId) {
+                return false;
+            }
+
+            if ($roleFilter === 'cc_acc') {
+                if ($counsellorTypePk === '') {
+                    return false;
+                }
+            } elseif ($roleFilter !== null && $roleFilter !== '') {
+                if ($counsellorTypePk !== (string) $roleFilter) {
+                    return false;
+                }
+            }
+
+            if ($groupPk && $rowGroupPk !== (string) $groupPk) {
+                return false;
+            }
+
+            if ($search !== '') {
+                $name = strtolower(trim((string) (($student->display_name ?? '') ?: trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')))));
+                $otCode = strtolower((string) ($student->generated_OT_code ?? ''));
+                $email = strtolower((string) ($student->email ?? ''));
+                $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
+                $cadre = strtolower((string) ($groupName ?: ($student->cadre->cadre_name ?? '')));
+
+                if (
+                    ! str_contains($name, $search)
+                    && ! str_contains($otCode, $search)
+                    && ! str_contains($email, $search)
+                    && ! str_contains($cadre, $search)
+                ) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->values();
+    }
+
+    /**
+     * @return array{headings: array<int, string>, rows: array<int, array<int, mixed>>}
+     */
+    private function dashboardStudentListExportData($students): array
+    {
+        $headings = [
+            'Sl. No.',
+            'Student Name',
+            'OT Code',
+            'Email',
+            'Cadre',
+            'Course',
+            'Total Duty (Count)',
+            'Total Medical Exception (Count)',
+            'Total PT Exemption (Count)',
+            'Total Station Leave (Count)',
+            'Total Memo',
+            'Notice (Count)',
+        ];
+
+        $rows = [];
+        foreach ($students as $index => $studentMap) {
+            $student = $studentMap->studentMaster;
+            $course = $studentMap->course;
+            $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
+            $displayName = $groupName ?: ($student->cadre->cadre_name ?? 'N/A');
+
+            $rows[] = [
+                $index + 1,
+                $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')),
+                $student->generated_OT_code ?? 'N/A',
+                $student->email ?? 'N/A',
+                $displayName,
+                $course->course_name ?? 'N/A',
+                $studentMap->total_duty_count ?? 0,
+                $studentMap->total_medical_exception_count ?? 0,
+                $studentMap->total_pt_exemption_count ?? 0,
+                $studentMap->total_stationed_leave_count ?? 0,
+                $studentMap->total_memo_count ?? 0,
+                $studentMap->total_notice_count ?? 0,
+            ];
+        }
+
+        return compact('headings', 'rows');
+    }
+
+    private function dashboardStudentListFilterSummary(Request $request): string
+    {
+        $parts = [];
+
+        if ($request->filled('course_id')) {
+            $course = CourseMaster::find($request->course_id);
+            $parts[] = 'Course: ' . ($course->course_name ?? $request->course_id);
+        }
+
+        if ($request->filled('role_filter')) {
+            if ($request->role_filter === 'cc_acc') {
+                $parts[] = 'Role: CC/ACC';
+            } else {
+                $type = DB::table('course_group_type_master')->where('pk', $request->role_filter)->value('type_name');
+                $parts[] = 'Role: ' . ($type ?? $request->role_filter);
+            }
+        }
+
+        if ($request->filled('group_pk')) {
+            $group = DB::table('group_type_master_course_master_map')->where('pk', $request->group_pk)->value('group_name');
+            $parts[] = 'Group: ' . ($group ?? $request->group_pk);
+        }
+
+        if ($request->filled('search')) {
+            $parts[] = 'Search: ' . $request->search;
+        }
+
+        return $parts ? implode(' | ', $parts) : 'All students';
     }
 
     /**
@@ -1514,6 +1679,25 @@ class UserController extends Controller
             ->orderBy('from_date', 'desc')
             ->get();
 
+        $ptExemptions = LeaveApplication::with(['course', 'nature', 'approvedByFaculty', 'attachments'])
+            ->where('student_master_pk', $studentPk)
+            ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
+            ->where('active_inactive', 1)
+            ->where('status', LeaveApplication::STATUS_APPROVED)
+            ->orderBy('from_date', 'desc')
+            ->get();
+
+        $stationedLeaves = LeaveApplication::with(['course', 'nature', 'approvedByFaculty', 'attachments'])
+            ->where('student_master_pk', $studentPk)
+            ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
+            ->where('active_inactive', 1)
+            ->whereIn('status', [
+                LeaveApplication::STATUS_APPROVED,
+                LeaveApplication::STATUS_PENDING,
+            ])
+            ->orderBy('from_date', 'desc')
+            ->get();
+
         // Get MDO/Escort duties
         $duties = MDOEscotDutyMap::with(['courseMaster', 'mdoDutyTypeMaster', 'facultyMaster'])
             ->where('selected_student_list', $studentPk)
@@ -1579,6 +1763,8 @@ class UserController extends Controller
         return view('admin.dashboard.student_detail', compact(
             'student',
             'medicalExemptions',
+            'ptExemptions',
+            'stationedLeaves',
             'duties',
             'notices',
             'memos',
