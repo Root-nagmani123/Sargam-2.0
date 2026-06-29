@@ -147,10 +147,10 @@
                 </div>
 
                 <div class="mb-4">
-                    <label class="form-label fw-semibold d-block">Approval Required <span class="text-danger">*</span></label>
+                    <label class="form-label fw-semibold d-block">Approval Required</label>
                     <div class="form-check">
                         <input class="form-check-input" type="checkbox" id="is_faculty_approval_required"
-                            name="is_faculty_approval_required" value="1" required
+                            name="is_faculty_approval_required" value="1"
                             {{ (int) $approvalRequired === 1 ? 'checked' : '' }}>
                         <label class="form-check-label" for="is_faculty_approval_required">
                             Require approval from faculty
@@ -384,9 +384,10 @@ $(function () {
     });
 
     $('#stationed-leave-form').on('submit', function () {
-        if (!$('#is_faculty_approval_required').is(':checked')) {
-            toastr.error('Please check "Require approval from faculty" to continue.');
-            return false;
+        const approvalRequired = $('#is_faculty_approval_required').is(':checked');
+
+        if (!approvalRequired) {
+            return true;
         }
 
         if ($('#faculty-rows-body tr[data-faculty-pk]').length === 0) {

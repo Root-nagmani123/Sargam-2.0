@@ -72,32 +72,40 @@ class StationedLeaveMasterController extends Controller
             'course_master_pk' => 'required|exists:course_master,pk',
             'effective_from' => 'required|date',
             'apply_cutoff_time' => 'required|date_format:H:i',
-            'is_faculty_approval_required' => 'required|accepted',
-            'faculty_rows' => 'required|array|min:1',
+            'is_faculty_approval_required' => 'nullable|in:1',
+            'faculty_rows' => 'nullable|array',
             'faculty_rows.*.faculty_master_pk' => 'required|exists:faculty_master,pk',
             'faculty_rows.*.is_approval_authority' => 'nullable|in:0,1',
         ], [
-            'is_faculty_approval_required.required' => 'Please check "Require approval from faculty" to continue.',
-            'is_faculty_approval_required.accepted' => 'Please check "Require approval from faculty" to continue.',
             'faculty_rows.required' => 'Please add at least one faculty when approval is required.',
             'faculty_rows.min' => 'Please add at least one faculty when approval is required.',
         ]);
 
         $this->assertCourseAllowed((int) $validated['course_master_pk']);
 
-        $approvalRequired = 1;
-        $facultyRows = collect($validated['faculty_rows'])
+        $approvalRequired = $request->has('is_faculty_approval_required') ? 1 : 0;
+        $facultyRows = collect($validated['faculty_rows'] ?? [])
             ->unique('faculty_master_pk')
             ->values();
 
-        $hasAuthority = $facultyRows->contains(function ($row) {
-            return (int) ($row['is_approval_authority'] ?? 0) === 1;
-        });
+        if ($approvalRequired === 1) {
+            if ($facultyRows->isEmpty()) {
+                return back()->withInput()->withErrors([
+                    'faculty_rows' => 'Please add at least one faculty when approval is required.',
+                ]);
+            }
 
-        if (! $hasAuthority) {
-            return back()->withInput()->withErrors([
-                'faculty_rows' => 'Please mark at least one faculty as approval authority.',
-            ]);
+            $hasAuthority = $facultyRows->contains(function ($row) {
+                return (int) ($row['is_approval_authority'] ?? 0) === 1;
+            });
+
+            if (! $hasAuthority) {
+                return back()->withInput()->withErrors([
+                    'faculty_rows' => 'Please mark at least one faculty as approval authority.',
+                ]);
+            }
+        } else {
+            $facultyRows = collect();
         }
 
         $user = Auth::user();
