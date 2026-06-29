@@ -64,6 +64,7 @@
                 @endif
             @endif
 
+            @if(!($readOnly ?? false))
             @if($isPt && ! $ptReady && $upcomingPt)
                 <div class="alert alert-warning py-2 small mb-3">
                     PT exemption for <strong>{{ $course->course_name }}</strong> will be available from
@@ -96,6 +97,7 @@
                     Today's PT timing (<strong>{{ $stationedCutoffTimeDisplay }}</strong>) has passed.
                     You cannot apply for stationed leave starting today. Please select a future start date.
                 </div>
+            @endif
             @endif
 
             <form method="POST" action="{{ $formAction }}" enctype="multipart/form-data" id="leave-apply-form">
