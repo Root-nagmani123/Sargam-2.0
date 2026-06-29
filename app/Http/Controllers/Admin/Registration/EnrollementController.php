@@ -526,8 +526,8 @@ class EnrollementController extends Controller
         // Course scoping: only Super Admin sees all; others see assigned courses only
         $data_course_id = $this->participantCourseScope();
 
-        // Filters are available only to these roles
-        $showFilters = hasRole('Super Admin') || hasRole('Training MCTP Admin');
+        // Filters are visible to all users of this page
+        $showFilters = true;
 
         // Filter inputs
         $courseId = $request->input('course_id');
@@ -545,6 +545,11 @@ class EnrollementController extends Controller
             ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
+
+        // Course IDs matching the current active/archived toggle (already scoped above).
+        // Both the participant listing and the total count are restricted to these,
+        // so the count reflects only active (or archived) courses.
+        $statusCourseIds = $courses->keys()->all();
 
         // AJAX: refresh course dropdown when the active/archived toggle changes
         if ($request->ajax() && $request->has('ajax_courses')) {
@@ -564,7 +569,7 @@ class EnrollementController extends Controller
                 'studentMaster.courseGroupMaps.groupTypeMasterCourseMasterMap',
                 'course'
             ])
-                ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
+                ->whereIn('course_master_pk', $statusCourseIds)
                 ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
                 ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
                 ->when($searchTerm !== '', function ($q) use ($searchTerm) {
@@ -626,9 +631,12 @@ class EnrollementController extends Controller
                 ->make(true);
         }
 
-        // For initial page load - count only the user's scoped participants
+        // For initial page load - count participants only in courses matching the
+        // active/archived toggle (and any selected course / enrollment status filter).
         $totalCount = StudentMasterCourseMap::query()
-            ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
+            ->whereIn('course_master_pk', $statusCourseIds)
+            ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+            ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
             ->count();
         $filteredCount = $totalCount;
 
@@ -660,12 +668,24 @@ class EnrollementController extends Controller
         // Same filters as the listing so the export matches what is on screen
         $courseId = $request->input('course_id');
         $status = $request->input('status');
+        $courseStatus = $request->input('course_status', 'active');
         $searchTerm = trim((string) $request->input('search_term', ''));
+
+        // Courses matching the active/archived toggle (scoped to the user), so the
+        // export is restricted to the same set of courses shown on screen.
+        $statusCourseIds = CourseMaster::query()
+            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1)
+                ->whereDate('end_date', '>=', now()))
+            ->when($courseStatus === 'inactive', fn($q) => $q->where(fn($w) => $w->where('active_inactive', 0)
+                ->orWhereDate('end_date', '<', now())))
+            ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
+            ->pluck('pk')
+            ->all();
 
         $participants = StudentMasterCourseMap::with([
             'studentMaster.cadre'
         ])
-            ->when(!empty($data_course_id), fn($q) => $q->whereIn('course_master_pk', $data_course_id))
+            ->whereIn('course_master_pk', $statusCourseIds)
             ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
             ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
             ->when($searchTerm !== '', function ($q) use ($searchTerm) {
