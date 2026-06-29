@@ -93,9 +93,11 @@
                     <i class="material-icons material-symbols-rounded fs-6">menu</i>
                 </a>
                 <div class="header-brand d-flex align-items-center gap-2 py-2 px-2">
+                     
                     <img src="https://upload.wikimedia.org/wikipedia/commons/5/55/Emblem_of_India.svg" alt="" class="header-logo-emblem" width="44" height="44">
                     <span class="header-brand-divider" aria-hidden="true"></span>
                     <img src="{{ asset('admin_assets/images/logos/logo.svg') }}" alt="Sargam 2.0" class="header-logo">
+
                 </div>
             </div>
 
@@ -476,7 +478,7 @@
                 // Sidebar toggle handler for mobile
                 const sidebarToggler = document.getElementById('headerCollapse');
                 const mobileTabbar = document.querySelector('.mobile-tabbar');
-                
+
                 // Function to get the currently active sidebar (from active tab)
                 function getActiveSidebar() {
                     // First, try to find sidebar in the active sidebar tab pane
@@ -485,15 +487,15 @@
                         const sidebarInPane = activeSidebarPane.querySelector('.side-mini-panel');
                         if (sidebarInPane) return sidebarInPane;
                     }
-                    
+
                     // Fallback: find any visible sidebar
                     const visibleSidebar = document.querySelector('.side-mini-panel:not([style*="display: none"])');
                     if (visibleSidebar) return visibleSidebar;
-                    
+
                     // Last resort: find any sidebar
                     return document.querySelector('.left-sidebar') || document.querySelector('.side-mini-panel');
                 }
-                
+
                 function updateSidebarState() {
                     // Only apply mobile-specific styles on mobile
                     if (window.innerWidth >= 992) {
@@ -501,29 +503,29 @@
                         // Let desktop CSS handle it
                         return;
                     }
-                    
+
                     const sidebar = getActiveSidebar();
                     if (!sidebar) return;
-                    
+
                     const isOpen = sidebar.classList.contains('show-sidebar');
                     const sidebarTabContent = document.getElementById('sidebarTabContent');
-                    
+
                     if (isOpen) {
                         document.body.classList.add('sidebar-open');
-                        
+
                         // Ensure sidebar and its content are visible (mobile only)
                         sidebar.style.left = '0';
                         sidebar.style.visibility = 'visible';
                         sidebar.style.opacity = '1';
                         sidebar.style.display = 'block';
-                        
+
                         // Ensure sidebar tab content is visible
                         if (sidebarTabContent) {
                             sidebarTabContent.style.display = 'block';
                             sidebarTabContent.style.visibility = 'visible';
                             sidebarTabContent.style.opacity = '1';
                         }
-                        
+
                         // Ensure overlay is visible
                         let overlay = document.querySelector('.sidebar-overlay');
                         if (!overlay) {
@@ -532,36 +534,36 @@
                             document.body.appendChild(overlay);
                         }
                         overlay.classList.add('active');
-                        
+
                         // Prevent body scroll when sidebar is open
                         document.body.style.overflow = 'hidden';
                     } else {
                         document.body.classList.remove('sidebar-open');
-                        
+
                         // Hide sidebar (mobile only)
                         const sidebarWidth = sidebar.classList.contains('side-mini-panel') ? '-70px' : '-100%';
                         sidebar.style.left = sidebarWidth;
                         sidebar.style.visibility = 'hidden';
                         sidebar.style.opacity = '0';
-                        
+
                         // Hide sidebar tab content
                         if (sidebarTabContent) {
                             sidebarTabContent.style.display = 'none';
                             sidebarTabContent.style.visibility = 'hidden';
                             sidebarTabContent.style.opacity = '0';
                         }
-                        
+
                         // Hide overlay
                         const overlay = document.querySelector('.sidebar-overlay');
                         if (overlay) {
                             overlay.classList.remove('active');
                         }
-                        
+
                         // Restore body scroll
                         document.body.style.overflow = '';
                     }
                 }
-                
+
                 // Initialize: Hide sidebar by default on mobile only
                 if (window.innerWidth < 992) {
                     const sidebar = getActiveSidebar();
@@ -583,7 +585,7 @@
                         sidebar.style.visibility = '';
                         sidebar.style.opacity = '';
                         sidebar.style.display = '';
-                        
+
                         // Ensure sidebar tab content is visible
                         const sidebarTabContent = document.getElementById('sidebarTabContent');
                         if (sidebarTabContent) {
@@ -593,7 +595,7 @@
                         }
                     }
                 }
-                
+
                 // Observe all sidebar elements for state changes
                 function observeSidebars() {
                     const allSidebars = document.querySelectorAll('.side-mini-panel, .left-sidebar');
@@ -605,16 +607,16 @@
                                 }
                             });
                         });
-                        
+
                         observer.observe(sidebar, {
                             attributes: true,
                             attributeFilter: ['class']
                         });
                     });
                 }
-                
+
                 observeSidebars();
-                
+
                 // Re-observe when tabs change (new sidebar content might be added)
                 document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
                     tab.addEventListener('shown.bs.tab', function() {
@@ -622,7 +624,7 @@
                         updateSidebarState();
                     });
                 });
-                
+
                 // Handle window resize - switch between mobile and desktop
                 let resizeTimeout;
                 window.addEventListener('resize', function() {
@@ -637,7 +639,7 @@
                                 sidebar.style.visibility = '';
                                 sidebar.style.opacity = '';
                                 sidebar.style.display = '';
-                                
+
                                 // Ensure sidebar tab content is visible
                                 const sidebarTabContent = document.getElementById('sidebarTabContent');
                                 if (sidebarTabContent) {
@@ -645,13 +647,13 @@
                                     sidebarTabContent.style.visibility = '';
                                     sidebarTabContent.style.opacity = '';
                                 }
-                                
+
                                 // Remove overlay
                                 const overlay = document.querySelector('.sidebar-overlay');
                                 if (overlay) {
                                     overlay.classList.remove('active');
                                 }
-                                
+
                                 // Restore body scroll
                                 document.body.style.overflow = '';
                                 document.body.classList.remove('sidebar-open');
@@ -662,10 +664,10 @@
                         }
                     }, 150);
                 });
-                
+
                 // Check initial state
                 updateSidebarState();
-                
+
                 // Handle overlay clicks
                 document.addEventListener('click', function(e) {
                     const overlay = document.querySelector('.sidebar-overlay');
@@ -677,7 +679,7 @@
                         }
                     }
                 });
-                
+
                 // Ensure sidebar toggle button works
                 if (sidebarToggler) {
                     sidebarToggler.addEventListener('click', function(e) {
@@ -686,7 +688,7 @@
                             // Don't prevent default on desktop - let existing sidebar toggle handle it
                             return;
                         }
-                        
+
                         // On mobile, handle toggle
                         e.preventDefault();
                         e.stopPropagation();
@@ -697,31 +699,31 @@
                         }
                     });
                 }
-                
+
                 // Mobile collapse: document-level delegation (capture phase)
                 let collapseHandledAt = 0;
                 function handleMobileCollapse(e) {
                     if (window.innerWidth >= 992) return;
-                    
+
                     const trigger = e.target.closest('[data-bs-toggle="collapse"]');
                     if (!trigger) return;
-                    
+
                     const sidebarTabContent = document.getElementById('sidebarTabContent');
                     if (!sidebarTabContent || !sidebarTabContent.contains(trigger)) return;
-                    
+
                     if (!document.querySelector('.side-mini-panel.show-sidebar')) return;
-                    
+
                     // Prevent double-fire from pointerup + click on touch devices
                     const now = Date.now();
                     if (now - collapseHandledAt < 400) return;
                     collapseHandledAt = now;
-                    
+
                     const targetId = (trigger.getAttribute('data-bs-target') || trigger.getAttribute('href') || '').replace(/^#/, '');
                     if (!targetId) return;
-                    
+
                     const targetElement = document.getElementById(targetId);
                     if (!targetElement) return;
-                    
+
                     if (typeof bootstrap !== 'undefined' && bootstrap.Collapse) {
                         let bsCollapse = bootstrap.Collapse.getInstance(targetElement);
                         if (!bsCollapse) {
@@ -736,10 +738,10 @@
                         e.stopPropagation();
                     }
                 }
-                
+
                 document.addEventListener('pointerup', handleMobileCollapse, true);
                 document.addEventListener('click', handleMobileCollapse, true);
-             
+
 
                 // Time format is already set in PHP, no need to override
 
@@ -829,7 +831,7 @@
                             e.preventDefault();
                             return;
                         }
-                        
+
                         // Find corresponding desktop tab and trigger it
                         const desktopTab = document.querySelector(`#mainNavbar .nav-link[href="${href}"]`);
                         if (desktopTab) {
@@ -883,7 +885,7 @@
                         } else if (data.success) {
                             // Fallback: reload if no redirect URL
                             console.log('[Notification][Step 5] success=true but redirect_url missing, triggering reload');
-                            // location.reload(); //ye redirect ho rha h 
+                            // location.reload(); //ye redirect ho rha h
                         } else {
                             console.log('[Notification][Step 5] Failed to mark notification as read', data);
                         }
@@ -1428,7 +1430,7 @@ document.addEventListener('DOMContentLoaded', function() {
     } else {
         console.log('Initial tab fallback to home');
     }
-    
+
     showPane(initial);
 
     // Apply default submenu/content for initial tab (after sidebar init)

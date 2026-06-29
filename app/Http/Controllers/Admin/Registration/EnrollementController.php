@@ -367,10 +367,25 @@ class EnrollementController extends Controller
         $status = $request->input('status');
         $courseStatus = $request->input('course_status', 'active');
 
-        // Course dropdown with both active and inactive courses
+        // Course dropdown — Active vs Archived is determined by the course end
+        // date, NOT the active_inactive flag (mirrors the Course Master /
+        // Faculty Database "current"/"archived" logic in
+        // ScopesSessionFeedbackReports::coursesForFeedbackDatabase()):
+        //   Active   = enabled courses that have not ended (end_date null or >= today)
+        //   Archived = enabled courses whose end_date is in the past (< today)
+        $currentDate = now()->toDateString();
+
         $courses = CourseMaster::query()
-            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
-            ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
+            ->where('active_inactive', 1)
+            ->when($courseStatus === 'active', function ($q) use ($currentDate) {
+                $q->where(function ($q2) use ($currentDate) {
+                    $q2->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $currentDate);
+                });
+            })
+            ->when($courseStatus === 'inactive', function ($q) use ($currentDate) {
+                $q->whereDate('end_date', '<', $currentDate);
+            })
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
 

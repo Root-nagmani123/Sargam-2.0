@@ -24,6 +24,8 @@ class StudentAttendanceListDataTable extends DataTable
             ->addIndexColumn()
             ->addColumn('student_name', fn($row) => '<label class="text-dark">' . $row->studentsMaster->display_name . '</label>')
             ->addColumn('student_code', fn($row) => '<label class="text-dark">' . $row->studentsMaster->generated_OT_code . '</label>')
+            ->addColumn('user_id', fn($row) => '<label class="text-dark">' . ($row->studentsMaster->user_id ?? 'N/A') . '</label>')
+            ->addColumn('cadre', fn($row) => '<label class="text-dark">' . ($row->studentsMaster->cadre->cadre_name ?? 'N/A') . '</label>')
             ->addColumn('attendance_status', fn($row) => $this->renderRadioGroup($row, 'attendance_status', [1 => 'Present', 2 => 'Late', 3 => 'Absent']))
             ->addColumn('mdo_duty', fn($row) => $this->renderRadio($row, 4, 'MDO'))
             ->addColumn('escort_duty', fn($row) => $this->renderRadio($row, 5, 'Escort'))
@@ -31,19 +33,21 @@ class StudentAttendanceListDataTable extends DataTable
             ->addColumn('other_exempt', fn($row) => $this->renderRadio($row, 7, 'Other Exempted'))
             ->filterColumn('student_name', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('display_name', 'like', "%{$keyword}%")))
             ->filterColumn('student_code', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('generated_OT_code', 'like', "%{$keyword}%")))
+            ->filterColumn('user_id', fn($query, $keyword) => $query->whereHas('studentsMaster', fn($q) => $q->where('user_id', 'like', "%{$keyword}%")))
             ->filter(function ($query) {
                 $searchValue = request()->input('search.value');
- 
+
                 if (!empty($searchValue)) {
                     $query->where(function ($subQuery) use ($searchValue) {
                         $subQuery->whereHas('studentsMaster', function ($studentQuery) use ($searchValue) {
                             $studentQuery->where('display_name', 'like', "%{$searchValue}%")
-                                ->orWhere('generated_OT_code', 'like', "%{$searchValue}%");
+                                ->orWhere('generated_OT_code', 'like', "%{$searchValue}%")
+                                ->orWhere('user_id', 'like', "%{$searchValue}%");
                         });
                     });
                 }
             }, true)
-            ->rawColumns(['student_name', 'student_code', 'attendance_status', 'mdo_duty', 'escort_duty', 'medical_exempt', 'other_exempt']);
+            ->rawColumns(['student_name', 'student_code', 'user_id', 'cadre', 'attendance_status', 'mdo_duty', 'escort_duty', 'medical_exempt', 'other_exempt']);
     }
 
     public function query(): QueryBuilder
@@ -55,14 +59,16 @@ class StudentAttendanceListDataTable extends DataTable
         if (!$groupTypeMaster) {
             // Return an empty query to avoid throwing ModelNotFoundException
             return StudentCourseGroupMap::with([
-                'studentsMaster:display_name,generated_OT_code,pk',
+                'studentsMaster:display_name,generated_OT_code,user_id,cadre_master_pk,pk',
+                'studentsMaster.cadre:pk,cadre_name',
                 'attendance' => fn($q) => $q->where('course_master_pk', $this->course_pk)
                                           ->where('group_type_master_course_master_map_pk', $this->group_pk)
             ])->whereRaw('1=0');
         }
 
         return StudentCourseGroupMap::with([
-                'studentsMaster:display_name,generated_OT_code,pk',
+                'studentsMaster:display_name,generated_OT_code,user_id,cadre_master_pk,pk',
+                'studentsMaster.cadre:pk,cadre_name',
                 'attendance' => fn($q) => $q->where('course_master_pk', $this->course_pk)
                                           ->where('group_type_master_course_master_map_pk', $this->group_pk)
             ])
@@ -101,6 +107,8 @@ class StudentAttendanceListDataTable extends DataTable
             Column::computed('DT_RowIndex')->title('#')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('student_name')->title('OT/Participant Name')->addClass('text-center')->orderable(false)->searchable(true),
             Column::make('student_code')->title('OT/Participant Code')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('user_id')->title('User ID')->addClass('text-center')->orderable(false)->searchable(true),
+            Column::make('cadre')->title('Cadre')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('attendance_status')->title('Attendance')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('mdo_duty')->title('MDO Duty')->addClass('text-center')->orderable(false)->searchable(false),
             Column::make('escort_duty')->title('Escort/Moderator Duty')->addClass('text-center')->orderable(false)->searchable(false),

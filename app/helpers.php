@@ -326,6 +326,14 @@ function hasRole($role)
 }
 
 /**
+ * Officer Trainee portal user (session Student-OT pseudo-role or Spatie Officer Trainee).
+ */
+function isOfficerTraineeUser(): bool
+{
+    return hasRole('Student-OT') || hasRole('Officer Trainee');
+}
+
+/**
  * Whether the user has at least one Spatie role (user management → assign role).
  */
 function userHasAssignedRoles(): bool
@@ -366,13 +374,15 @@ function isEstateHacAuthority(): bool
 }
 
 /**
- * Training authority: Training Induction Admin, Training MCTP Admin, Training IST, or Estate Admin / Super Admin.
- * DB role names match exactly.
+ * Training authority: Spatie training admin roles plus legacy session role names
+ * (Training-Induction, Training-MCTP, IST) used across sidebar and calendar modules.
  */
 function isTrainingOrEstateAuthority(): bool
 {
     return hasRole('Estate Admin') || hasRole('Super Admin')
-        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST')
+        || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST')
+        || hasRole('Training');
 }
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
@@ -770,7 +780,8 @@ function get_Role_by_course()
         return [-1];
     }
 
-    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds));
+    $epoch = Cache::get('role_by_course_epoch', 1);
+    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds)) . '_e' . $epoch;
     $role_course = Cache::remember($cacheKey, 600, function () use ($userRoleIds) {
         return DB::table('course_master as cm')
             ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
@@ -781,6 +792,7 @@ function get_Role_by_course()
     if (empty($role_course)) {
         // Non-admin user with roles but no mapped courses should see no data.
         return [-1];
+        // return [-1];
     }
 
     return $role_course;

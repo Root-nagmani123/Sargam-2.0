@@ -173,7 +173,7 @@
                     <div class="col-12">
                         <label class="form-label">Description</label>
                         <textarea name="Description" class="form-control" rows="3"
-                                  placeholder="eg. Lorem ipsum dolor">{{ old('Description') }}</textarea>
+                                  placeholder="">{{ old('Description') }}</textarea>
                         @error('Description')
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
@@ -181,7 +181,12 @@
 
                     <div class="col-12">
                         <label class="form-label">Attachment</label>
-                        <input type="file" name="Doc_upload" class="form-control">
+                        <input type="file" name="Doc_upload" id="Doc_upload" class="form-control"
+                               accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                        <div class="form-text text-muted mt-1">
+                            Allowed types: PDF, JPG, JPEG, PNG, DOC, DOCX &nbsp;|&nbsp; Max size: <strong>5 MB</strong>
+                        </div>
+                        <div id="fileError" class="text-danger small mt-1" style="display:none;"></div>
                         @error('Doc_upload')
                         <small class="text-danger">{{ $message }}</small>
                         @enderror
@@ -246,6 +251,40 @@ $(document).ready(function() {
     // Student -> OT Code
     studentSelect.addEventListener('change', function() {
         $('#otCodeField').val(otMap[studentChoices.getValue(true)] || '');
+    });
+
+    // Attachment validation
+    var ALLOWED_TYPES = ['application/pdf','image/jpeg','image/png','application/msword',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document'];
+    var ALLOWED_EXT  = ['pdf','jpg','jpeg','png','doc','docx'];
+    var MAX_SIZE_MB  = 5;
+
+    document.getElementById('Doc_upload').addEventListener('change', function() {
+        var errEl = document.getElementById('fileError');
+        errEl.style.display = 'none';
+        errEl.textContent = '';
+        if (!this.files.length) return;
+        var file = this.files[0];
+        var ext  = file.name.split('.').pop().toLowerCase();
+        if (!ALLOWED_EXT.includes(ext)) {
+            errEl.textContent = 'Invalid file type. Allowed: PDF, JPG, JPEG, PNG, DOC, DOCX.';
+            errEl.style.display = 'block';
+            this.value = '';
+            return;
+        }
+        if (file.size > MAX_SIZE_MB * 1024 * 1024) {
+            errEl.textContent = 'File size exceeds ' + MAX_SIZE_MB + ' MB limit.';
+            errEl.style.display = 'block';
+            this.value = '';
+        }
+    });
+
+    // Block form submit if file error is visible
+    document.querySelector('.sme-form').addEventListener('submit', function(e) {
+        var errEl = document.getElementById('fileError');
+        if (errEl.style.display !== 'none' && errEl.textContent) {
+            e.preventDefault();
+        }
     });
 });
 </script>
