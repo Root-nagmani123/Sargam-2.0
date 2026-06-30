@@ -265,10 +265,16 @@ class MDOEscrotExemptionController extends Controller
     {
         $escortDutyTypeId = MDOEscotDutyMap::getMdoDutyTypes()['escort'] ?? null;
 
+        // Faculty may be one or many (multi-select). Normalise to an array.
+        $facultyInput = $request->faculty_master_pk;
+        $facultyInput = is_array($facultyInput) ? $facultyInput : ($facultyInput ? [$facultyInput] : []);
+        $request->merge(['faculty_master_pk' => $facultyInput]);
+
         $request->validate([
             'course_master_pk'        => 'required|exists:course_master,pk',
             'mdo_duty_type_master_pk' => 'required|exists:mdo_duty_type_master,pk',
-            'faculty_master_pk'       => 'nullable|exists:faculty_master,pk',
+            'faculty_master_pk'       => 'nullable|array',
+            'faculty_master_pk.*'     => 'exists:faculty_master,pk',
             'bulk_file'               => 'required|file|mimes:xlsx,xls,csv,txt|max:5120',
         ], [
             'bulk_file.required' => 'Please select a file to upload.',
@@ -277,7 +283,8 @@ class MDOEscrotExemptionController extends Controller
         ]);
 
         // Faculty is mandatory only for Escort duty (mirrors the single-add form).
-        if ($escortDutyTypeId && (int) $request->mdo_duty_type_master_pk === (int) $escortDutyTypeId && empty($request->faculty_master_pk)) {
+        $facultyPks = array_values(array_filter($facultyInput));
+        if ($escortDutyTypeId && (int) $request->mdo_duty_type_master_pk === (int) $escortDutyTypeId && empty($facultyPks)) {
             return response()->json([
                 'status'  => false,
                 'message' => 'Faculty is required for Escort duty.',
@@ -286,11 +293,16 @@ class MDOEscrotExemptionController extends Controller
         }
 
         try {
+            // Store the full faculty list as CSV; keep the first as the primary pk.
+            $primaryFaculty = $facultyPks[0] ?? null;
+            $facultyPksCsv = !empty($facultyPks) ? implode(',', $facultyPks) : null;
+
             $import = new MDOEscrotExemptionImport(
                 (int) $request->course_master_pk,
                 (int) $request->mdo_duty_type_master_pk,
-                $request->faculty_master_pk ? (int) $request->faculty_master_pk : null,
-                $request->Remark
+                $primaryFaculty ? (int) $primaryFaculty : null,
+                $request->Remark,
+                $facultyPksCsv
             );
 
             Excel::import($import, $request->file('bulk_file'));

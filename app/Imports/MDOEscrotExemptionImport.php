@@ -37,7 +37,8 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
         private int $coursePk,
         private int $dutyTypePk,
         private ?int $facultyPk = null,
-        private ?string $remark = null
+        private ?string $remark = null,
+        private ?string $facultyPksCsv = null
     ) {}
 
     public function collection(Collection $rows)
@@ -117,6 +118,7 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                     'Remark'                   => $this->remark,
                     'selected_student_list'    => $studentId,
                     'faculty_master_pk'        => $this->facultyPk,
+                    'faculty_master_pks'       => $this->facultyPksCsv,
                 ]);
 
                 $this->insertedRecords[] = ['record' => $record, 'student_id' => (int) $studentId];
