@@ -60,7 +60,10 @@ class PendingFeedbackExport implements
             'Course',
             'Feedback Given',
             'Feedback Not Given',
-            'Session Name',
+            // Summary export uses this column for the per-student total; the detailed
+            // export uses it for the session name on each faculty row.
+            $this->withSessionDetails ? 'Session Name' : 'Total Feedback',
+            'Faculty',
             'Date',
             'Time',
             'Feedback Status',
@@ -84,7 +87,8 @@ class PendingFeedbackExport implements
                 $student['course_summary'] ?? '—',
                 $student['feedback_given'],
                 $student['feedback_not_given'],
-                "{$sessionCount} session(s)",
+                "{$sessionCount} feedback item(s)",
+                '',
                 '',
                 '',
                 '',
@@ -94,7 +98,7 @@ class PendingFeedbackExport implements
                 continue;
             }
 
-            // Session detail rows
+            // Session detail rows — one per faculty
             foreach ($student['sessions'] as $session) {
                 $rows[] = [
                     '',
@@ -104,6 +108,7 @@ class PendingFeedbackExport implements
                     '',
                     '',
                     $session['session_name'] ?? '—',
+                    $session['faculty_name'] ?? '—',
                     $session['date'] ?? '—',
                     $session['time'] ?? '—',
                     $session['feedback_status'] === 'given' ? 'Given' : 'Not Given',
@@ -117,7 +122,7 @@ class PendingFeedbackExport implements
     public function styles(Worksheet $sheet)
     {
         $lastRow = $sheet->getHighestRow();
-        $lastCol = 'J';
+        $lastCol = 'K';
         $dataStart = $this->headerRows + 1; // heading row
         $dataRowStart = $dataStart + 1;     // first data row
 
@@ -172,12 +177,12 @@ class PendingFeedbackExport implements
 
             // Session rows
             foreach ($student['sessions'] as $session) {
-                $sheet->getStyle("D{$currentRow}:J{$currentRow}")->applyFromArray([
+                $sheet->getStyle("D{$currentRow}:K{$currentRow}")->applyFromArray([
                     'font' => ['size' => 9, 'color' => ['rgb' => '555555']],
                 ]);
 
                 // Color the status cell
-                $statusCell = "J{$currentRow}";
+                $statusCell = "K{$currentRow}";
                 if ($session['feedback_status'] === 'given') {
                     $sheet->getStyle($statusCell)->applyFromArray([
                         'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
@@ -194,8 +199,8 @@ class PendingFeedbackExport implements
             }
         }
 
-        // Center certain columns
-        $centerCols = ['A', 'E', 'F', 'H', 'I', 'J'];
+        // Center certain columns (Date=I, Time=J, Status=K after the Faculty column)
+        $centerCols = ['A', 'E', 'F', 'I', 'J', 'K'];
         foreach ($centerCols as $col) {
             if ($lastRow >= $dataRowStart) {
                 $sheet->getStyle("{$col}{$dataRowStart}:{$col}{$lastRow}")
@@ -217,7 +222,7 @@ class PendingFeedbackExport implements
 
                 // ── LBSNAA Header ──
                 // Row 1: Institution name (merged)
-                $sheet->mergeCells('A1:J1');
+                $sheet->mergeCells('A1:K1');
                 $sheet->setCellValue('A1', 'LAL BAHADUR SHASTRI NATIONAL ACADEMY OF ADMINISTRATION');
                 $sheet->getStyle('A1')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 14, 'color' => ['rgb' => '003366']],
@@ -226,7 +231,7 @@ class PendingFeedbackExport implements
                 $sheet->getRowDimension(1)->setRowHeight(28);
 
                 // Row 2: Report title
-                $sheet->mergeCells('A2:J2');
+                $sheet->mergeCells('A2:K2');
                 $sheet->setCellValue('A2', 'PENDING STUDENT FEEDBACK REPORT');
                 $sheet->getStyle('A2')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 12, 'color' => ['rgb' => '004A93']],
@@ -235,7 +240,7 @@ class PendingFeedbackExport implements
                 $sheet->getRowDimension(2)->setRowHeight(22);
 
                 // Row 3: Filter info
-                $sheet->mergeCells('A3:J3');
+                $sheet->mergeCells('A3:K3');
                 $scope = $this->filters['course_scope'] ?? '';
                 $scopePart = $scope !== '' ? "Scope: {$scope}  |  " : '';
                 $filterText = $scopePart
@@ -253,7 +258,7 @@ class PendingFeedbackExport implements
                 $totalStudents = count($this->students);
                 $totalGiven = array_sum(array_column($this->students, 'feedback_given'));
                 $totalNotGiven = array_sum(array_column($this->students, 'feedback_not_given'));
-                $sheet->mergeCells('A4:J4');
+                $sheet->mergeCells('A4:K4');
                 $sheet->setCellValue('A4', "Total Students: {$totalStudents}  |  Feedback Given: {$totalGiven}  |  Feedback Not Given: {$totalNotGiven}");
                 $sheet->getStyle('A4')->applyFromArray([
                     'font' => ['bold' => true, 'size' => 10, 'color' => ['rgb' => '003366']],
@@ -265,7 +270,7 @@ class PendingFeedbackExport implements
                 $sheet->getRowDimension(5)->setRowHeight(6);
 
                 // Header border bottom
-                $sheet->getStyle('A1:J4')->applyFromArray([
+                $sheet->getStyle('A1:K4')->applyFromArray([
                     'borders' => [
                         'outline' => ['borderStyle' => Border::BORDER_MEDIUM, 'color' => ['rgb' => '003366']],
                     ],

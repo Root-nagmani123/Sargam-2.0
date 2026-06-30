@@ -33,17 +33,22 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
     /** shift_name (lower-cased) => ['from' => H:i:s, 'to' => H:i:s]. */
     private array $sessionMap = [];
 
+    /** Set of "studentId|Y-m-d|from|to" for existing duties (fast in-memory conflict check). */
+    private array $existingDutySet = [];
+
     public function __construct(
         private int $coursePk,
         private int $dutyTypePk,
         private ?int $facultyPk = null,
-        private ?string $remark = null
+        private ?string $remark = null,
+        private ?string $facultyPksCsv = null
     ) {}
 
     public function collection(Collection $rows)
     {
         $this->preloadCourseStudents();
         $this->preloadSessions();
+        $this->preloadExistingDuties();
 
         foreach ($rows as $index => $row) {
             // +2 accounts for the heading row + 1-based indexing, matching the user's sheet.
@@ -84,7 +89,7 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
 
                 $mdoDate = $this->parseDate($dateRaw);
                 if (!$mdoDate) {
-                    $this->fail($rowNumber, 'Date is missing or invalid (use YYYY-MM-DD).');
+                    $this->fail($rowNumber, 'Date is missing or invalid (use DD-MM-YYYY).');
                     continue;
                 }
 
@@ -94,14 +99,13 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                // Skip if this student already has a duty for this course + date (mirrors single-add exclusion).
-                $exists = MDOEscotDutyMap::where('course_master_pk', $this->coursePk)
-                    ->where('selected_student_list', $studentId)
-                    ->whereDate('mdo_date', $mdoDate)
-                    ->exists();
-
-                if ($exists) {
-                    $this->fail($rowNumber, "OT Code '{$otCode}' already has a duty assigned on {$mdoDate}.");
+                // Skip only if this student already has a duty for the SAME course + date + time slot
+                // (mirrors single-add exclusion). Different event times on the same day are allowed.
+                // Checked against an in-memory set (preloaded once) instead of a per-row query, so
+                // large files import quickly and don't hang the request.
+                $conflictKey = $studentId . '|' . $mdoDate . '|' . $times['from'] . '|' . $times['to'];
+                if (isset($this->existingDutySet[$conflictKey])) {
+                    $this->fail($rowNumber, "OT Code '{$otCode}' already has a duty assigned on {$mdoDate} from {$times['from']} to {$times['to']}.");
                     continue;
                 }
 
@@ -114,7 +118,11 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                     'Remark'                   => $this->remark,
                     'selected_student_list'    => $studentId,
                     'faculty_master_pk'        => $this->facultyPk,
+                    'faculty_master_pks'       => $this->facultyPksCsv,
                 ]);
+
+                // Track within this run too, so duplicate rows in the same file are skipped.
+                $this->existingDutySet[$conflictKey] = true;
 
                 $this->insertedRecords[] = ['record' => $record, 'student_id' => (int) $studentId];
                 $this->importedCount++;
@@ -147,6 +155,21 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                         'name' => (string) $student->display_name,
                     ];
                 }
+            });
+    }
+
+    /**
+     * Load all existing duties for this course once into an in-memory set so the
+     * per-row conflict check is an array lookup instead of a database query.
+     */
+    private function preloadExistingDuties(): void
+    {
+        MDOEscotDutyMap::where('course_master_pk', $this->coursePk)
+            ->get(['selected_student_list', 'mdo_date', 'Time_from', 'Time_to'])
+            ->each(function ($duty) {
+                $date = $duty->mdo_date ? date('Y-m-d', strtotime((string) $duty->mdo_date)) : '';
+                $key = $duty->selected_student_list . '|' . $date . '|' . $duty->Time_from . '|' . $duty->Time_to;
+                $this->existingDutySet[$key] = true;
             });
     }
 
@@ -216,9 +239,24 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
             return null;
         }
 
-        $key = strtolower(trim($session));
+        $session = trim($session);
+        $key = strtolower($session);
         if (isset($this->sessionMap[$key])) {
             return $this->sessionMap[$key];
+        }
+
+        // Combined "Session 1 (06:00 to 14:00)" form produced by the template dropdown:
+        // the time inside the parenthesis is authoritative, so parse it first. The
+        // label (e.g. "Session 1") is just a friendly name and may not correspond to a
+        // class_session_master row, so only fall back to a name lookup if no time is given.
+        if (preg_match('/^(.*?)\s*\((.+)\)\s*$/', $session, $m)) {
+            if ($range = $this->parseRange($m[2])) {
+                return $range;
+            }
+            $namePart = strtolower(trim($m[1]));
+            if ($namePart !== '' && isset($this->sessionMap[$namePart])) {
+                return $this->sessionMap[$namePart];
+            }
         }
 
         // Fallback: explicit time range like "10:00 to 11:00", "10:00-11:00", "10:00 AM - 11:00 AM".
@@ -240,7 +278,20 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
             }
         }
 
-        $ts = strtotime(trim((string) $value));
+        $value = trim((string) $value);
+
+        // Prefer day-first formats (DD-MM-YYYY / DD/MM/YYYY) to match the template.
+        // strtotime() reads slash dates as US month-first, so parse these explicitly.
+        if (preg_match('/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/', $value, $m)) {
+            $day = (int) $m[1];
+            $month = (int) $m[2];
+            $year = (int) $m[3];
+            if (checkdate($month, $day, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+        }
+
+        $ts = strtotime($value);
         return $ts !== false ? date('Y-m-d', $ts) : null;
     }
 

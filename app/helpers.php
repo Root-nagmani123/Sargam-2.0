@@ -612,6 +612,41 @@ if (!function_exists('get_timetable_faculty_names')) {
     }
 }
 
+if (!function_exists('expected_feedback_count_sql')) {
+    /**
+     * SQL expression for the number of feedbacks EXPECTED for a timetable session.
+     *
+     * Student feedback is collected only for Teaching-role faculty. Each session
+     * stores its faculty in the faculty_details JSON column:
+     *   [{ "faculty_pk": int, "faculty_type": int, "role": string, "feedback": string }, ...]
+     * and the student feedback form lists exactly those entries whose role is
+     * 'Teaching' (CalendarController::studentFeedback). The "expected" count must
+     * match that filter, otherwise Sectional/Administration faculty inflate the
+     * pending count even though no student can ever submit feedback for them.
+     *
+     * Resolution order (per row):
+     *   1. Valid faculty_details JSON -> count of entries with role = 'Teaching'.
+     *   2. Else valid faculty_master JSON array -> its length (legacy rows).
+     *   3. Else -> 1 (legacy scalar faculty_master).
+     *
+     * @param string $alias Timetable table alias used in the query (default 't').
+     * @return string Raw SQL expression, already wrapped in parentheses.
+     */
+    function expected_feedback_count_sql(string $alias = 't'): string
+    {
+        $details = "{$alias}.faculty_details";
+        $master  = "{$alias}.faculty_master";
+
+        return "(CASE
+            WHEN JSON_VALID({$details})
+                THEN COALESCE(JSON_LENGTH(JSON_SEARCH({$details}, 'all', 'Teaching', NULL, '\$[*].role')), 0)
+            WHEN JSON_VALID({$master})
+                THEN JSON_LENGTH({$master})
+            ELSE 1
+        END)";
+    }
+}
+
 /**
  * For employee logins (user_category E) with Internal/Guest Faculty role but no faculty_master row:
  * link an existing faculty by mobile/email, or create a minimal faculty_master linked to employee_master.

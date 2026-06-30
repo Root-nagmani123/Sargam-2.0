@@ -22,6 +22,27 @@
     border-color: #dc3545;
 }
 .select2-container--open { z-index: 1060; }
+
+/*
+ * These modals wrap header/body/footer inside a <form>, which breaks Bootstrap's
+ * .modal-dialog-scrollable (it expects them as direct children of .modal-content).
+ * Make the form a flex column so the body scrolls and the footer (with the action
+ * buttons) stays pinned and always visible, even when the content is long
+ * (e.g. a big "skipped rows" list after a bulk upload).
+ */
+.modal-dialog-scrollable .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    overflow: hidden;
+}
+.modal-dialog-scrollable .modal-content > form > .modal-body {
+    overflow-y: auto;
+}
+.modal-dialog-scrollable .modal-content > form > .modal-header,
+.modal-dialog-scrollable .modal-content > form > .modal-footer {
+    flex-shrink: 0;
+}
 </style>
 @endpush
 
@@ -502,8 +523,8 @@ $(document).ready(function() {
 
     $('#meeDeleteConfirmOk').on('click', function() {
         if (pendingDeleteForm) {
-            pendingDeleteForm.off('submit');
-            pendingDeleteForm[0].submit();
+            // pendingDeleteForm is a native <form> element; submit it natively.
+            pendingDeleteForm.submit();
             pendingDeleteForm = null;
         }
         if (meeDeleteModal) {
@@ -621,14 +642,15 @@ $(document).ready(function() {
                 return;
             }
             $faculty.select2({
-                placeholder: 'Search Faculty',
-                allowClear: true,
+                placeholder: 'Search Faculty (one or more)',
                 width: '100%',
+                closeOnSelect: false,
                 dropdownParent: $('#meeAddModal')
             });
             // Keep native validation styling in sync with the search box.
             $faculty.on('change', function() {
-                if ($(this).val()) {
+                var val = $(this).val();
+                if (val && val.length) {
                     $(this).removeClass('is-invalid');
                     $('#meeErrorFaculty').addClass('d-none');
                 }
@@ -643,7 +665,7 @@ $(document).ready(function() {
                 $('#faculty_master_pk').prop('required', true);
             } else {
                 $('#faculty_field_container').addClass('d-none');
-                $('#faculty_master_pk').val('').prop('required', false);
+                $('#faculty_master_pk').val(null).prop('required', false);
                 if ($('#faculty_master_pk').hasClass('select2-hidden-accessible')) {
                     $('#faculty_master_pk').trigger('change.select2');
                 }
@@ -773,7 +795,9 @@ $(document).ready(function() {
                 data: {
                     _token: csrfToken,
                     selectedCourses: courseId,
-                    selectedDate: selectedDate
+                    selectedDate: selectedDate,
+                    selectedTimeFrom: $('#Time_from').val(),
+                    selectedTimeTo: $('#Time_to').val()
                 }
             });
 
@@ -876,7 +900,8 @@ $(document).ready(function() {
                 $('#Time_to').addClass('is-invalid');
                 valid = false;
             }
-            if (meeEscortDutyTypeId && $('#mdo_duty_type_master_pk').val() === meeEscortDutyTypeId && !$('#faculty_master_pk').val()) {
+            var facultyVal = $('#faculty_master_pk').val();
+            if (meeEscortDutyTypeId && $('#mdo_duty_type_master_pk').val() === meeEscortDutyTypeId && (!facultyVal || !facultyVal.length)) {
                 $('#meeErrorFaculty').removeClass('d-none');
                 $('#faculty_master_pk').addClass('is-invalid');
                 valid = false;
@@ -903,7 +928,9 @@ $(document).ready(function() {
 
         $('#mdo_duty_type_master_pk').on('change', toggleFacultyField);
 
-        $('#meeCourseDropdown, #mdo_date').on('change', function() {
+        // Course, date or time change invalidates the previously picked students,
+        // since the available list depends on all of them (time-slot conflict check).
+        $('#meeCourseDropdown, #mdo_date, #Time_from, #Time_to').on('change', function() {
             meeAssignedStudents = [];
             meeAllStudents = [];
             renderAssignStudentTags();
@@ -921,6 +948,23 @@ $(document).ready(function() {
             if (!$('#mdo_date').val()) {
                 $('#meeErrorDate').removeClass('d-none');
                 $('#mdo_date').addClass('is-invalid').focus();
+                return;
+            }
+            // Time is required so the picker can exclude students already busy in
+            // that slot. Without it we cannot run the time-conflict check.
+            if (!$('#Time_from').val()) {
+                $('#meeErrorTimeFrom').removeClass('d-none');
+                $('#Time_from').addClass('is-invalid').focus();
+                return;
+            }
+            if (!$('#Time_to').val()) {
+                $('#meeErrorTimeTo').removeClass('d-none');
+                $('#Time_to').addClass('is-invalid').focus();
+                return;
+            }
+            if ($('#Time_to').val() <= $('#Time_from').val()) {
+                $('#meeErrorTimeTo').removeClass('d-none').text('End time must be after start time.');
+                $('#Time_to').addClass('is-invalid').focus();
                 return;
             }
 
@@ -1062,6 +1106,21 @@ $(document).ready(function() {
             }
         });
 
+        // Faculty is a multi-select (one or more) for Escort duty.
+        $('#meeEditFaculty').select2({
+            placeholder: 'Search Faculty (one or more)',
+            width: '100%',
+            closeOnSelect: false,
+            dropdownParent: $('#meeEditModal')
+        });
+        $('#meeEditFaculty').on('change', function() {
+            var val = $(this).val();
+            if (val && val.length) {
+                $(this).removeClass('is-invalid');
+                $('#meeEditErrorFaculty').addClass('d-none');
+            }
+        });
+
         function clearEditErrors() {
             $('#meeEditFormAlert').addClass('d-none').removeClass('alert-success alert-danger').empty();
             $('#meeEditForm .text-danger[id^="meeEditError"]').addClass('d-none');
@@ -1075,7 +1134,7 @@ $(document).ready(function() {
                 $('#meeEditFaculty').prop('required', true);
             } else {
                 $('#meeEditFacultyContainer').addClass('d-none');
-                $('#meeEditFaculty').prop('required', false);
+                $('#meeEditFaculty').val(null).trigger('change').prop('required', false);
             }
         }
 
@@ -1090,7 +1149,8 @@ $(document).ready(function() {
                 $('#meeEditErrorTimeTo').removeClass('d-none').text('End time must be after start time.');
                 $('#meeEditTimeTo').addClass('is-invalid'); valid = false;
             }
-            if (editEscortDutyTypeId && $('#meeEditDutyType').val() === editEscortDutyTypeId && !$('#meeEditFaculty').val()) {
+            var editFacultyVal = $('#meeEditFaculty').val();
+            if (editEscortDutyTypeId && $('#meeEditDutyType').val() === editEscortDutyTypeId && (!editFacultyVal || !editFacultyVal.length)) {
                 $('#meeEditErrorFaculty').removeClass('d-none'); $('#meeEditFaculty').addClass('is-invalid'); valid = false;
             }
             return valid;
@@ -1118,7 +1178,8 @@ $(document).ready(function() {
                     $('#meeEditDate').val(record.mdo_date || '');
                     $('#meeEditTimeFrom').val(record.Time_from || '');
                     $('#meeEditTimeTo').val(record.Time_to || '');
-                    $('#meeEditFaculty').val(record.faculty_master_pk || '');
+                    var facultyPks = (record.faculty_master_pks || []).map(String);
+                    $('#meeEditFaculty').val(facultyPks).trigger('change');
                     $('#meeEditStudentDisplay').text(record.student_name || '—');
                     $('#meeEditCourseDisplay').text(record.course_name || '—');
                     toggleEditFaculty();
@@ -1197,6 +1258,21 @@ $(document).ready(function() {
             }
         });
 
+        // Faculty is a multi-select (one or more) for Escort duty.
+        $('#meeBulkFaculty').select2({
+            placeholder: 'Search Faculty (one or more)',
+            width: '100%',
+            closeOnSelect: false,
+            dropdownParent: $('#meeBulkUploadModal')
+        });
+        $('#meeBulkFaculty').on('change', function() {
+            var val = $(this).val();
+            if (val && val.length) {
+                $(this).removeClass('is-invalid');
+                $('#meeBulkErrorFaculty').addClass('d-none');
+            }
+        });
+
         function toggleBulkFaculty() {
             var dutyType = $('#meeBulkDutyType').val();
             if (bulkEscortDutyTypeId && dutyType === bulkEscortDutyTypeId) {
@@ -1204,7 +1280,7 @@ $(document).ready(function() {
                 $('#meeBulkFaculty').prop('required', true);
             } else {
                 $('#meeBulkFacultyContainer').addClass('d-none');
-                $('#meeBulkFaculty').val('').prop('required', false);
+                $('#meeBulkFaculty').val(null).trigger('change').prop('required', false);
             }
         }
 
@@ -1239,7 +1315,8 @@ $(document).ready(function() {
                 $('#meeBulkDutyType').addClass('is-invalid');
                 valid = false;
             }
-            if (bulkEscortDutyTypeId && $('#meeBulkDutyType').val() === bulkEscortDutyTypeId && !$('#meeBulkFaculty').val()) {
+            var bulkFacultyVal = $('#meeBulkFaculty').val();
+            if (bulkEscortDutyTypeId && $('#meeBulkDutyType').val() === bulkEscortDutyTypeId && (!bulkFacultyVal || !bulkFacultyVal.length)) {
                 $('#meeBulkErrorFaculty').removeClass('d-none');
                 $('#meeBulkFaculty').addClass('is-invalid');
                 valid = false;
@@ -1261,9 +1338,18 @@ $(document).ready(function() {
             var errors = response.errors || [];
             if (errors.length) {
                 var $list = $('#meeBulkResultErrorList').empty();
-                errors.forEach(function(err) {
+                // Render at most 100 rows so a huge error list can't flood the modal
+                // (which pushed the Upload button out of view). The rest are summarised.
+                var MAX_SHOWN = 100;
+                errors.slice(0, MAX_SHOWN).forEach(function(err) {
                     $list.append($('<li>').text(err));
                 });
+                if (errors.length > MAX_SHOWN) {
+                    $list.append(
+                        $('<li>').addClass('fw-semibold list-unstyled mt-1')
+                            .text('…and ' + (errors.length - MAX_SHOWN) + ' more row(s) skipped.')
+                    );
+                }
                 $('#meeBulkResultErrors').removeClass('d-none');
             } else {
                 $('#meeBulkResultErrors').addClass('d-none');
@@ -1323,47 +1409,61 @@ $(document).ready(function() {
                     }
                     return xhr;
                 },
+                // 2 minute cap so a hung/slow request can never leave the button stuck.
+                timeout: 120000,
                 success: function(response) {
-                    table.ajax.reload(null, false);
-                    renderBulkResult(response);
-                    $('#meeBulkFormAlert').removeClass('d-none alert-danger').addClass('alert-success')
-                        .text(response.message || 'Upload completed.');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: response.message || 'Bulk upload completed.',
-                        timer: 2400,
-                        showConfirmButton: false
-                    });
-                },
-                error: function(xhr) {
-                    var response = xhr.responseJSON || {};
-                    var message = response.message || 'Something went wrong. Please try again.';
-                    var errors = response.errors || null;
-
-                    if (errors && !response.imported) {
-                        // Laravel validation errors (object of field => messages)
-                        if (!Array.isArray(errors)) {
-                            var map = {
-                                course_master_pk: '#meeBulkCourse',
-                                mdo_duty_type_master_pk: '#meeBulkDutyType',
-                                faculty_master_pk: '#meeBulkFaculty',
-                                bulk_file: '#meeBulkFile'
-                            };
-                            Object.keys(errors).forEach(function(key) {
-                                if (map[key]) {
-                                    $(map[key]).addClass('is-invalid');
-                                }
-                            });
-                            message = Object.values(errors).flat().join('<br>');
-                        }
-                    }
-
-                    $('#meeBulkFormAlert').removeClass('d-none alert-success').addClass('alert-danger').html(message);
-
-                    // Row-level errors from the importer (file processed but nothing imported)
-                    if (response.errors && Array.isArray(response.errors)) {
+                    // Wrapped so a render error can't stop `complete` re-enabling the button.
+                    try {
+                        table.ajax.reload(null, false);
                         renderBulkResult(response);
+                        $('#meeBulkFormAlert').removeClass('d-none alert-danger').addClass('alert-success')
+                            .text(response.message || 'Upload completed.');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: response.message || 'Bulk upload completed.',
+                            timer: 2400,
+                            showConfirmButton: false
+                        });
+                    } catch (err) {
+                        console.error('Bulk upload success handler error:', err);
+                    }
+                },
+                error: function(xhr, textStatus) {
+                    try {
+                        var response = xhr.responseJSON || {};
+                        var message = response.message
+                            || (textStatus === 'timeout'
+                                ? 'The upload took too long and was stopped. Please try a smaller file.'
+                                : 'Something went wrong. Please try again.');
+                        var errors = response.errors || null;
+
+                        if (errors && !response.imported) {
+                            // Laravel validation errors (object of field => messages)
+                            if (!Array.isArray(errors)) {
+                                var map = {
+                                    course_master_pk: '#meeBulkCourse',
+                                    mdo_duty_type_master_pk: '#meeBulkDutyType',
+                                    faculty_master_pk: '#meeBulkFaculty',
+                                    bulk_file: '#meeBulkFile'
+                                };
+                                Object.keys(errors).forEach(function(key) {
+                                    if (map[key]) {
+                                        $(map[key]).addClass('is-invalid');
+                                    }
+                                });
+                                message = Object.values(errors).flat().join('<br>');
+                            }
+                        }
+
+                        $('#meeBulkFormAlert').removeClass('d-none alert-success').addClass('alert-danger').html(message);
+
+                        // Row-level errors from the importer (file processed but nothing imported)
+                        if (response.errors && Array.isArray(response.errors)) {
+                            renderBulkResult(response);
+                        }
+                    } catch (err) {
+                        console.error('Bulk upload error handler error:', err);
                     }
                 },
                 complete: function() {

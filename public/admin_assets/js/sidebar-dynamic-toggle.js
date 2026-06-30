@@ -138,6 +138,31 @@
             true
         );
 
+        // Remove the keyboard highlight once focus leaves the button.
+        els.btn.addEventListener('blur', function () {
+            els.btn.classList.remove('is-key-highlight');
+        });
+
+        // Esc: highlight + focus the collapse button. Enter (while highlighted):
+        // run the expand/collapse toggle.
+        global.document.addEventListener('keydown', function (e) {
+            if (!global.document.body.classList.contains('has-dynamic-sidebar')) {
+                return;
+            }
+            var key = e.key;
+
+            if (key === 'Escape' || key === 'Esc') {
+                els.btn.classList.add('is-key-highlight');
+                els.btn.focus();
+                return;
+            }
+
+            if (key === 'Enter' && els.btn.classList.contains('is-key-highlight')) {
+                e.preventDefault();
+                toggleDynamicSidebarMenu();
+            }
+        });
+
         if (typeof global.hideSargamLoader === 'function') {
             global.hideSargamLoader();
         }
