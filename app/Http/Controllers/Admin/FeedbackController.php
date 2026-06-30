@@ -160,16 +160,20 @@ class FeedbackController extends Controller
             't.pk'
         );
 
-        // Conditional filter (content/presentation with comparison operator)
+        // Conditional filter (content/presentation/average with comparison operator)
         if ($request->filled('cond_field') && $request->filled('cond_operator') && $request->filled('cond_value')) {
-            $allowedFields = ['content', 'presentation'];
+            $allowedFields = ['content', 'presentation', 'average'];
             $allowedOperators = ['>=', '<=', '>', '<', '='];
             $field = $request->cond_field;
             $operator = $request->cond_operator;
             $value = (float) $request->cond_value;
 
             if (in_array($field, $allowedFields) && in_array($operator, $allowedOperators)) {
-                $query->havingRaw("ROUND(AVG(tf.{$field}) * 20, 2) {$operator} ?", [$value]);
+                if ($field === 'average') {
+                    $query->havingRaw("ROUND((AVG(tf.content) * 20 + AVG(tf.presentation) * 20) / 2, 2) {$operator} ?", [$value]);
+                } else {
+                    $query->havingRaw("ROUND(AVG(tf.{$field}) * 20, 2) {$operator} ?", [$value]);
+                }
             }
         }
 
@@ -196,7 +200,7 @@ class FeedbackController extends Controller
                 'search_param' => 'nullable|string|in:all,faculty,topic,conditional',
                 'faculty_id'   => 'nullable|integer',
                 'topic_value'  => 'nullable|string',
-                'cond_field'   => 'nullable|string|in:content,presentation',
+                'cond_field'   => 'nullable|string|in:content,presentation,average',
                 'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
                 'cond_value'   => 'nullable|numeric|min:0|max:100',
                 'per_page'     => 'nullable|integer',
@@ -328,7 +332,7 @@ class FeedbackController extends Controller
                 'export_type'  => 'required|in:excel,csv,pdf',
                 'faculty_id'   => 'nullable|integer',
                 'topic_value'  => 'nullable|string',
-                'cond_field'   => 'nullable|string|in:content,presentation',
+                'cond_field'   => 'nullable|string|in:content,presentation,average',
                 'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
                 'cond_value'   => 'nullable|numeric|min:0|max:100',
             ]);
@@ -383,7 +387,7 @@ class FeedbackController extends Controller
             'faculty_id'   => 'nullable|integer',
             'topic_value'  => 'nullable|string',
             'search_term'  => 'nullable|string|max:200',
-            'cond_field'   => 'nullable|string|in:content,presentation',
+            'cond_field'   => 'nullable|string|in:content,presentation,average',
             'cond_operator' => 'nullable|string|in:>=,<=,>,<,=',
             'cond_value'   => 'nullable|numeric|min:0|max:100',
         ]);
@@ -1006,6 +1010,45 @@ class FeedbackController extends Controller
         return Excel::download(new FacultyFeedback_AvgExport($filters, $processedData, $programs, $faculties), $filename);
     }
 
+    /**
+     * Total participants for the Faculty Feedback Average report.
+     *
+     * Counts course enrollments from student_master_course__map so the figure matches the
+     * Course Wise OTs List (the course roster), rather than only the students who submitted
+     * feedback. When a single program is selected this mirrors the OTs List count for that
+     * course (all enrolment statuses); for "All Programs" it counts enrolments across the
+     * courses in scope for the current course type.
+     */
+    private function facultyAverageTotalParticipants(Request $request): int
+    {
+        $programName = $request->input('program_name');
+        $courseType = $request->input('course_type', 'current');
+
+        $query = DB::table('student_master_course__map as smcm')
+            ->join('course_master as cm', 'smcm.course_master_pk', '=', 'cm.pk');
+
+        if (!empty($programName)) {
+            // Single course: match the Course Wise OTs List row count for that course.
+            $query->where('smcm.course_master_pk', $programName);
+
+            return (int) $query->count();
+        }
+
+        // All Programs: respect the report's course scope + active/archived filter.
+        $this->applyFeedbackReportCourseScope($query);
+
+        if ($courseType === 'archived') {
+            $query->whereDate('cm.end_date', '<', Carbon::today());
+        } else {
+            $query->where(function ($q) {
+                $q->whereNull('cm.end_date')
+                    ->orWhereDate('cm.end_date', '>=', Carbon::today());
+            });
+        }
+
+        return (int) $query->distinct()->count('smcm.student_master_pk');
+    }
+
     // Add this method for PDF export
     public function exportPdf(Request $request)
     {
@@ -1214,6 +1257,7 @@ class FeedbackController extends Controller
             'fromDate' => $fromDate,
             'toDate' => $toDate,
             'courseType' => $courseType,
+            'totalParticipants' => $this->facultyAverageTotalParticipants($request),
         ];
 
         $pdf = Pdf::loadView('admin.feedback.faculty_average_export', $data);
@@ -1329,6 +1373,7 @@ class FeedbackController extends Controller
                 'fromDate' => $fromDate,
                 'toDate' => $toDate,
                 'courseType' => $courseType,
+                'totalParticipants' => $this->facultyAverageTotalParticipants($request),
                 'mode' => 'print',
             ]);
         } catch (\Exception $e) {
@@ -1344,8 +1389,9 @@ class FeedbackController extends Controller
      */
     public function facultyPortalIndex(FacultyFeedbackReportService $reportService)
     {
-       
+    
         $reportService->assertFacultyRole();
+        
 
         $facultyPk = $reportService->resolveFacultyPk();
         if (! $facultyPk) {

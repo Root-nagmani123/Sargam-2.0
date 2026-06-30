@@ -184,6 +184,14 @@ return [
         ],
     ],
 
+    // Leave Request Notifications (faculty approver clicks through to the leave)
+    'leave' => [
+        'StationedLeave' => [
+            'route' => 'faculty.leave-approval.show',
+            'params' => ['id' => 'reference_pk'],
+        ],
+    ],
+
     // Default fallback route
     'default' => [
         'route' => 'admin.dashboard',

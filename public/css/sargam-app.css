@@ -104,6 +104,32 @@ a.dropdown-item:focus-visible {
 }
 
 /* ---------------------------------------------------------------------
+   Select2: hide the native <select> after initialization.
+   The theme (styles.css) styles the Select2 widget but never ships the
+   canonical `.select2-hidden-accessible` rule — that lives only in
+   select2.min.css, which most pages don't load. Without it the original
+   <select> stays visible next to the widget ("two dropdowns"). This is
+   the standard, library-accurate hide rule, applied app-wide. It only
+   ever matches elements Select2 itself has initialized.
+   --------------------------------------------------------------------- */
+.select2-hidden-accessible {
+    border: 0 !important;
+    clip: rect(0 0 0 0) !important;
+    -webkit-clip-path: inset(50%) !important;
+    clip-path: inset(50%) !important;
+    height: 1px !important;
+    overflow: hidden !important;
+    padding: 0 !important;
+    position: absolute !important;
+    width: 1px !important;
+    white-space: nowrap !important;
+}
+
+/* Choices.js styling lives in public/css/choices-theme.css, which is
+   loaded AFTER choices.min.css on each page that uses it (cascade order
+   matters — the CDN base must not win). Not themed globally here. */
+
+/* ---------------------------------------------------------------------
    PROJECT-WIDE PAGE PADDING — single source of truth
    ---------------------------------------------------------------------
    The theme (styles.css) applies a non-grid `padding: 10px` to every

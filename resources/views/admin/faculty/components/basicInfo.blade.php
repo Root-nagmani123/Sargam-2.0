@@ -37,6 +37,7 @@
                 label="Appellation :"
                 formLabelClass="form-label"
                 :options="$appellationMasterList"
+                 labelRequired="true"
                 value="{{ old('appellation', $faculty->appellation ?? '') }}"
                 required
             />
@@ -346,14 +347,15 @@
             </div>
 
             @if(!empty($faculty->photo_uplode_path))
-            <br/>
-            <span class="text-info text-bold">Previously Uploaded Photo</span>
-            <a href="{{ asset('storage/'.$faculty->photo_uplode_path) }}" target="_blank" class="rounded-circle" title="View Photo">
-                <iconify-icon icon="lets-icons:eye" width="24" height="24"></iconify-icon>
-            </a>
+            <div id="previousPhotoWrapper" class="mt-2 d-flex align-items-center gap-2">
+                <!--<span class="text-info text-bold">Previously Uploaded Photo</span>-->
+                <a href="{{ asset('storage/'.$faculty->photo_uplode_path) }}" target="_blank" title="Click to view full photo">
+                    <img src="{{ asset('storage/'.$faculty->photo_uplode_path) }}" alt="Uploaded Photo" class="img-thumbnail" style="width: 80px; height: 80px; object-fit: cover; cursor: pointer;">
+                </a>
+            </div>
         @endif
         <div class="mt-2">
-            <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="max-width: 200px;">
+            <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="width: 80px; height: 80px; object-fit: cover;">
         </div>
     </div>
     <div class="col-md-6 mt-3">

@@ -199,29 +199,35 @@ class StudentMedicalExemptionController extends Controller
                     $editUrl = route('student.medical.exemption.edit', encrypt($row->pk));
                     $deleteUrl = route('student.medical.exemption.delete', encrypt($row->pk));
                     $disabled = $row->active_inactive == 1 ? 'disabled' : '';
+                    $checked  = $row->active_inactive == 1 ? 'checked' : '';
 
                     return '
-                        <a href="' . $editUrl . '">
-                            <i class="material-icons material-symbols-rounded">edit</i>
-                        </a>
+                        <div class="sme-row-actions">
+                            <a href="' . $editUrl . '" class="sme-act sme-act-edit sme-edit-btn" title="Edit" aria-label="Edit">
+                                <i class="material-icons material-symbols-rounded">edit</i>
+                            </a>
 
-                        <a href="javascript:void(0)"
-                           class="delete-btn ' . $disabled . '"
-                           data-url="' . $deleteUrl . '">
-                            <i class="material-icons material-symbols-rounded">delete</i>
-                        </a>';
+                            <div class="form-check form-switch sme-act-switch">
+                                <input class="form-check-input status-toggle"
+                                    type="checkbox"
+                                    role="switch"
+                                    data-table="student_medical_exemption"
+                                    data-column="active_inactive"
+                                    data-id="' . $row->pk . '" ' . $checked . '>
+                            </div>
+
+                            <a href="javascript:void(0)"
+                               class="delete-btn sme-act sme-act-delete ' . $disabled . '"
+                               data-url="' . $deleteUrl . '" title="Delete" aria-label="Delete">
+                                <i class="material-icons material-symbols-rounded">delete</i>
+                            </a>
+                        </div>';
                 })
 
                 ->addColumn('status', function ($row) {
-                    $checked = $row->active_inactive == 1 ? 'checked' : '';
-                    return '
-                        <div class="form-check form-switch">
-                            <input class="form-check-input status-toggle"
-                                type="checkbox"
-                                data-table="student_medical_exemption"
-                                data-column="active_inactive"
-                                data-id="' . $row->pk . '" ' . $checked . '>
-                        </div>';
+                    return $row->active_inactive == 1
+                        ? '<span class="sme-status sme-status-active">Active</span>'
+                        : '<span class="sme-status sme-status-inactive">Inactive</span>';
                 })
 
                 ->rawColumns(['document', 'action', 'status'])
@@ -232,6 +238,7 @@ class StudentMedicalExemptionController extends Controller
          | NORMAL PAGE LOAD
          ========================================================= */
         $courses = CourseMaster::where('active_inactive', '1')
+            ->where('end_date', '>', now())
             ->orderBy('course_name', 'asc')
             ->get();
 
@@ -249,9 +256,9 @@ class StudentMedicalExemptionController extends Controller
 
     $data_course_id = get_Role_by_course();
 
-    if (!empty($data_course_id)) {
-        $courses = $courses->whereIn('pk', $data_course_id);
-    }
+    // if (!empty($data_course_id)) {
+    //     $courses = $courses->whereIn('pk', $data_course_id);
+    // }
 
     $courses = $courses
         ->where('end_date', '>', now())
@@ -328,6 +335,16 @@ class StudentMedicalExemptionController extends Controller
 
     public function store(Request $request)
     {
+        // Catch PHP-level upload errors (e.g. file exceeded upload_max_filesize in php.ini)
+        if ($request->hasFile('Doc_upload')) {
+            $uploadedFile = $request->file('Doc_upload');
+            if (!$uploadedFile->isValid() && in_array($uploadedFile->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE])) {
+                return response()->json([
+                    'message' => 'The attachment file is too large. Please upload a file smaller than 5 MB.',
+                    'errors'  => ['Doc_upload' => ['The attachment file is too large. Please upload a file smaller than 5 MB.']],
+                ], 422);
+            }
+        }
 
         $validated = $request->validate([
             'course_master_pk' => 'required|numeric',
@@ -340,6 +357,11 @@ class StudentMedicalExemptionController extends Controller
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'nullable|boolean',
+            'Doc_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
+        ], [
+            'Doc_upload.file'  => 'The attachment must be a valid file.',
+            'Doc_upload.mimes' => 'Only PDF, JPG, JPEG, PNG, DOC, or DOCX files are allowed.',
+            'Doc_upload.max'   => 'The attachment file must not exceed 5 MB (5120 KB).',
         ]);
 
         // Check for overlapping time ranges for the same student
@@ -350,6 +372,13 @@ class StudentMedicalExemptionController extends Controller
         );
 
         if ($overlapError) {
+            // Modal (AJAX) submits expect 422 JSON so the error surfaces inline.
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => $overlapError,
+                    'errors'  => ['from_date' => [$overlapError]],
+                ], 422);
+            }
             return redirect()
                 ->back()
                 ->withInput()
@@ -436,6 +465,17 @@ class StudentMedicalExemptionController extends Controller
     }
     public function update(Request $request, $id)
     {
+        // Catch PHP-level upload errors (e.g. file exceeded upload_max_filesize in php.ini)
+        if ($request->hasFile('Doc_upload')) {
+            $uploadedFile = $request->file('Doc_upload');
+            if (!$uploadedFile->isValid() && in_array($uploadedFile->getError(), [UPLOAD_ERR_INI_SIZE, UPLOAD_ERR_FORM_SIZE])) {
+                return response()->json([
+                    'message' => 'The attachment file is too large. Please upload a file smaller than 5 MB.',
+                    'errors'  => ['Doc_upload' => ['The attachment file is too large. Please upload a file smaller than 5 MB.']],
+                ], 422);
+            }
+        }
+
         $validated = $request->validate([
             'course_master_pk' => 'required|numeric',
             'student_master_pk' => 'required|numeric',
@@ -447,6 +487,11 @@ class StudentMedicalExemptionController extends Controller
             'exemption_medical_speciality_pk' => 'required|numeric',
             'Description' => 'nullable|string',
             'active_inactive' => 'required|boolean',
+            'Doc_upload' => 'nullable|file|mimes:pdf,jpg,jpeg,png,doc,docx|max:5120',
+        ], [
+            'Doc_upload.file'  => 'The attachment must be a valid file.',
+            'Doc_upload.mimes' => 'Only PDF, JPG, JPEG, PNG, DOC, or DOCX files are allowed.',
+            'Doc_upload.max'   => 'The attachment file must not exceed 5 MB (5120 KB).',
         ]);
 
         $record = StudentMedicalExemption::findOrFail(decrypt($id));
@@ -460,6 +505,13 @@ class StudentMedicalExemptionController extends Controller
         );
 
         if ($overlapError) {
+            // Modal (AJAX) submits expect 422 JSON so the error surfaces inline.
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json([
+                    'message' => $overlapError,
+                    'errors'  => ['from_date' => [$overlapError]],
+                ], 422);
+            }
             return redirect()
                 ->back()
                 ->withInput()

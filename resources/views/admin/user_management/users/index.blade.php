@@ -1,28 +1,104 @@
 @extends('admin.layouts.master')
 
-@section('title', 'User Management - Sargam | Lal Bahadur')
+@section('title', 'User Management')
+
+@push('styles')
+<link rel="stylesheet" href="{{ asset('css/users-admin.css') }}?v={{ @filemtime(public_path('css/users-admin.css')) ?: time() }}">
+<style>
+    #usersTableContainer { transition: opacity .15s ease; }
+    #usersTableContainer.users-loading { opacity: .55; pointer-events: none; }
+    /* Column Visibility modal items */
+    #usersColumnToggleGrid .colvis-item { cursor: pointer; transition: border-color .15s ease, background-color .15s ease; }
+    #usersColumnToggleGrid .colvis-item:hover { border-color: #004a93 !important; background-color: rgba(0,74,147,.04); }
+    #usersColumnToggleGrid .colvis-item .form-check-input { cursor: pointer; flex-shrink: 0; }
+
+    /* ===== Reference-matched polish (presentation only) ===== */
+    /* Print / Download utility buttons */
+    .users-page .users-util-btn {
+        height: 44px; display: inline-flex; align-items: center; gap: 8px;
+        padding: 0 18px; font-weight: 600; font-size: 0.9rem; color: #004a93;
+        background: #fff; border: 1px solid #e2e8f0; border-radius: 8px;
+        transition: border-color .15s ease, box-shadow .15s ease;
+    }
+    .users-page .users-util-btn:hover { border-color: #004a93; box-shadow: 0 1px 3px rgba(16,24,40,.08); }
+
+    /* Filter toolbar */
+    .users-page .users-filters-label { font-weight: 600; color: #1f2937; font-size: 0.9rem; }
+    .users-page .users-filter-select {
+        height: 42px; min-width: 150px; border: 1px solid #d0d5dd; border-radius: 8px;
+        font-size: 0.875rem; color: #1f2937;
+    }
+    .users-page .users-reset-btn {
+        height: 42px; border: 1px solid var(--bs-danger); color: var(--bs-danger);
+        border-radius: 8px; font-weight: 600; font-size: 0.875rem; padding: 0 16px; background: #fff;
+    }
+    .users-page .users-reset-btn:hover { background: var(--bs-danger); color: #fff; }
+    .users-page .users-tool-btn {
+        height: 42px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px;
+        font-size: 0.875rem; font-weight: 600; color: #344054; background: #fff;
+        border: 1px solid #d0d5dd; border-radius: 8px;
+    }
+    .users-page .users-tool-btn:hover { border-color: #b6c0cc; }
+    .users-page .users-search-icon-btn {
+        height: 42px; width: 42px; display: inline-flex; align-items: center; justify-content: center;
+        border: 1px solid #d0d5dd; border-radius: 8px; background: #f3f4f6; color: #475467;
+    }
+    .users-page .users-search-icon-btn:hover { background: #e9eaee; }
+    .users-page .users-search-box { position: relative; display: inline-flex; align-items: center; }
+    .users-page .users-search-box .users-search-input {
+        height: 42px; width: 240px; max-width: 100%; padding-left: 38px; border: 1px solid #d0d5dd; border-radius: 8px; font-size: 0.875rem;
+    }
+    .users-page .users-search-box .users-search-input:focus { border-color: #86b7fe; box-shadow: 0 0 0 0.2rem rgba(13,110,253,0.18); outline: none; }
+    @media (max-width: 575.98px) { .users-page .users-search-box .users-search-input { width: 160px; } }
+    .users-page .users-search-box .users-search-ico {
+        position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: #667085; font-size: 18px; pointer-events: none;
+    }
+
+    /* Table */
+    .users-page .users-table thead th {
+        background: #f3f4f6; color: #667085; text-transform: none;
+        font-weight: 600; font-size: 0.8125rem; padding: 14px; border-bottom: 1px solid #e5e7eb; white-space: nowrap;
+    }
+    .users-page .users-table tbody td { padding: 14px; vertical-align: middle; font-size: 0.9rem; color: #1f2937; border-bottom: 1px solid #f0f1f3; }
+    .users-page .users-usertype { color: #475467; }
+    .users-page .users-assign-link {
+        display: inline-flex; align-items: center; gap: 6px; color: var(--bs-primary);
+        font-weight: 600; font-size: 0.9rem; text-decoration: none;
+    }
+    .users-page .users-assign-link:hover { text-decoration: underline; }
+
+    /* Footer pagination */
+    .users-page .pagination { gap: 4px; margin: 0; flex-wrap: wrap; }
+    .users-page .pagination .page-link {
+        border: 1px solid #e2e8f0; border-radius: 8px; min-width: 36px; height: 36px;
+        display: inline-flex; align-items: center; justify-content: center; color: #1f2937; margin-left: 0;
+    }
+    .users-page .pagination .page-item.active .page-link { background: var(--bs-primary); border-color: var(--bs-primary); color: #fff; }
+    .users-page .pagination .page-item.disabled .page-link { color: #98a2b3; background: #f8fafc; }
+    .users-page .users-per-page-select { width: auto; min-width: 72px; border-radius: 6px; }
+</style>
+@endpush
 
 @section('setup_content')
-<div class="container-fluid">
+<div class="container-fluid users-page py-4">
     <x-breadcrum title="Users"></x-breadcrum>
 
     <x-session_message />
 
+    {{-- Print / Download --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+        <button type="button" id="usersPrintBtn" class="users-util-btn">
+            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">print</i>
+            <span>Print</span>
+        </button>
+        <button type="button" id="usersDownloadBtn" class="users-util-btn">
+            <i class="material-icons material-symbols-rounded" style="font-size:20px;" aria-hidden="true">download</i>
+            <span>Download</span>
+        </button>
+    </div>
+
     <div class="card users-dt-card shadow-sm rounded-3 overflow-hidden border-0">
         <div class="card-body p-3 p-md-4">
-
-            @php
-                // Columns that can be shown/hidden and exported, keyed by the
-                // class suffix used on the matching <th>/<td> cells.
-                $columnDefs = [
-                    'username' => 'Username',
-                    'name'     => 'Name',
-                    'email'    => 'Email',
-                    'mobile'   => 'Mobile',
-                    'usertype' => 'User Type',
-                    'roles'    => 'Roles',
-                ];
-            @endphp
 
             {{-- Filters (reference layout) --}}
             <form method="GET" id="usersFilterForm" class="mb-3 mb-md-4">
@@ -36,154 +112,58 @@
                         <option value="">User Type</option>
                         <option value="S" {{ $user_type === 'S' ? 'selected' : '' }}>Student</option>
                         <option value="E" {{ $user_type === 'E' ? 'selected' : '' }}>Employee</option>
-                        <option value="F" {{ $user_type === 'F' ? 'selected' : '' }}>Faculty</option>
-                        <option value="A" {{ $user_type === 'A' ? 'selected' : '' }}>Admin</option>
                     </select>
 
-                    <button type="button" class="btn users-reset-btn" id="resetUsersFilters">
+                    <button type="button" class="users-reset-btn" id="resetUsersFilters">
                         Reset Filters
                     </button>
 
-                    <div class="users-search-wrap ms-md-auto {{ $search ? 'is-open' : '' }}" id="usersSearchWrap">
-                        <label for="usersSearch" class="visually-hidden">Search users</label>
-                        <input type="text"
-                            name="search"
-                            id="usersSearch"
-                            class="form-control users-search-input"
-                            placeholder="Search..."
-                            value="{{ $search }}"
-                            autocomplete="off">
-                        <button type="submit" class="btn users-search-btn" id="usersSearchBtn" aria-label="Search users">
-                            <i class="bi bi-search" aria-hidden="true"></i>
+                    <div class="ms-md-auto d-flex align-items-center gap-2">
+                        <button type="button" class="users-tool-btn"
+                            id="btnUsersColumns" data-bs-toggle="modal" data-bs-target="#usersColumnVisibilityModal"
+                            title="Show / hide columns">
+                            <span>Columns</span>
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">view_column</i>
                         </button>
-                    </div>
 
-                    {{-- Toolbar: column visibility, export, print --}}
-                    <div class="d-flex align-items-center gap-2"
-                        data-export-base="{{ url('admin/users/export') }}">
-
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-1"
-                                type="button" id="usersColumnsBtn" data-bs-toggle="dropdown"
-                                data-bs-auto-close="outside" aria-expanded="false" title="Manage columns">
-                                <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
-                                <span class="d-none d-md-inline">Columns</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end p-2" aria-labelledby="usersColumnsBtn">
-                                <li class="dropdown-header px-2 pt-0 pb-1 text-uppercase small">Show / Hide</li>
-                                @foreach($columnDefs as $key => $label)
-                                <li>
-                                    <label class="dropdown-item d-flex align-items-center gap-2 mb-0">
-                                        <input type="checkbox" class="form-check-input m-0 js-col-toggle" data-col="{{ $key }}" checked>
-                                        <span>{{ $label }}</span>
-                                    </label>
-                                </li>
-                                @endforeach
-                            </ul>
+                        <div class="users-search-box" id="usersSearchWrap">
+                            <i class="material-icons material-symbols-rounded users-search-ico" aria-hidden="true">search</i>
+                            <label for="usersSearch" class="visually-hidden">Search users</label>
+                            <input type="text"
+                                name="search"
+                                id="usersSearch"
+                                class="form-control users-search-input"
+                                placeholder="Search..."
+                                value="{{ $search }}"
+                                autocomplete="off">
                         </div>
-
-                        <div class="dropdown">
-                            <button class="btn btn-sm btn-outline-secondary dropdown-toggle d-inline-flex align-items-center gap-1"
-                                type="button" id="usersExportBtn" data-bs-toggle="dropdown" aria-expanded="false" title="Export">
-                                <i class="bi bi-download" aria-hidden="true"></i>
-                                <span class="d-none d-md-inline">Export</span>
-                            </button>
-                            <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="usersExportBtn">
-                                <li>
-                                    <a class="dropdown-item d-flex align-items-center gap-2 js-users-export" data-format="xlsx" href="#">
-                                        <i class="bi bi-file-earmark-excel text-success" aria-hidden="true"></i> Excel (.xlsx)
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item d-flex align-items-center gap-2 js-users-export" data-format="csv" href="#">
-                                        <i class="bi bi-filetype-csv text-primary" aria-hidden="true"></i> CSV (.csv)
-                                    </a>
-                                </li>
-                                <li>
-                                    <a class="dropdown-item d-flex align-items-center gap-2 js-users-export" data-format="pdf" href="#">
-                                        <i class="bi bi-file-earmark-pdf text-danger" aria-hidden="true"></i> PDF (.pdf)
-                                    </a>
-                                </li>
-                            </ul>
-                        </div>
-
-                        <button type="button" class="btn btn-sm btn-outline-secondary d-inline-flex align-items-center gap-1"
-                            id="usersPrintBtn" title="Print">
-                            <i class="bi bi-printer" aria-hidden="true"></i>
-                            <span class="d-none d-md-inline">Print</span>
-                        </button>
                     </div>
                 </div>
+            </form>
 
-                <hr>
+            {{-- Table + pagination (AJAX-swapped; partial reused for live search) --}}
+            <div id="usersTableContainer">
+                @include('admin.user_management.users._table')
+            </div>
 
-                <div class="table-responsive datatables">
-                    <table class="table" id="zero_config_table">
-                        <thead>
-                            <tr>
-                                <th scope="col" class="col-sno">S. No.</th>
-                                <th scope="col" class="col-username">Username</th>
-                                <th scope="col" class="col-name">Name</th>
-                                <th scope="col" class="col-email">Email</th>
-                                <th scope="col" class="col-mobile">Mobile</th>
-                                <th scope="col" class="col-usertype">User Type</th>
-                                <th scope="col" class="col-roles">Roles</th>
-                                <th scope="col" class="text-center col-action">Action</th>
-                            </tr>
-                        </thead>
+        </div>
+    </div>
 
-                        <tbody>
-                            @forelse($users as $index => $user)
-                            @php
-                                $typeBadgeClasses = [
-                                    'S' => 'bg-primary',
-                                    'E' => 'bg-success',
-                                    'F' => 'bg-info',
-                                    'A' => 'bg-danger',
-                                ];
-                                $typeBadge = $typeBadgeClasses[$user->User_type] ?? 'bg-secondary';
-                                $typeLabel = \App\Http\Controllers\Admin\UserController::userTypeLabel($user->User_type);
-                            @endphp
-                            <tr>
-                                <td>{{ $users->firstItem() + $index }}</td>
-                                <td>{{ $user->user_name }}</td>
-                                <td>{{ $user->first_name }} {{ $user->last_name }}</td>
-                                <td>{{ $user->email_id }}</td>
-                                <td>{{ $user->mobile_no }}</td>
-                                <td>
-                                    <span class="badge bg-success">
-                                      {{ DB::table('model_has_roles')
-                                        ->join('roles', 'roles.id', '=', 'model_has_roles.role_id')
-                                        ->where('model_has_roles.model_id', $user->pk)
-                                        ->pluck('name')
-                                        ->implode(', ') ?: 'No Role' }}
-                                    </span>
-                                </td>
-                                <td class="text-center col-action">
-                                    <a href="{{ route('admin.users.assignRole', encrypt($user->pk)) }}"
-                                        class="btn btn-sm btn-primary">
-                                        Assign Role
-                                    </a>
-                                </td>
-                            </tr>
-                            @empty
-                            <tr>
-                                <td colspan="8" class="users-empty-state text-center">
-                                    <i class="bi bi-people display-4 text-secondary opacity-50 d-block mb-3" aria-hidden="true"></i>
-                                    <h5 class="fw-semibold text-dark mb-1">No Users Found</h5>
-                                    <p class="text-secondary mb-0">Try adjusting your search or filters.</p>
-                                </td>
-                            </tr>
-                            @endforelse
-                        </tbody>
-                    </table>
+    <!-- Column Visibility Modal -->
+    <div class="modal fade" id="usersColumnVisibilityModal" tabindex="-1" aria-labelledby="usersColumnVisibilityLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0 shadow">
+                <div class="modal-header border-0 pb-2">
+                    <h5 class="modal-title fw-bold" id="usersColumnVisibilityLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-
-                <!-- Pagination -->
-                <div class="mt-3">
-                    {{ $users->links() }}
+                <div class="modal-body pt-0">
+                    <hr class="mt-0">
+                    <div class="row g-3" id="usersColumnToggleGrid"></div>
                 </div>
-
+                <div class="modal-footer border-0">
+                    <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+                </div>
             </div>
         </div>
     </div>
@@ -194,200 +174,218 @@
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     var filterForm = document.getElementById('usersFilterForm');
-    var searchWrap = document.getElementById('usersSearchWrap');
     var searchInput = document.getElementById('usersSearch');
-    var searchBtn = document.getElementById('usersSearchBtn');
     var userTypeSelect = document.getElementById('User_type');
     var resetBtn = document.getElementById('resetUsersFilters');
     var perPageHidden = document.getElementById('usersFilterPerPage');
-    var perPageFooter = document.getElementById('usersPerPageFooter');
+    var container = document.getElementById('usersTableContainer');
 
-    if (!filterForm) {
+    if (!filterForm || !container) {
         return;
     }
 
-    if (searchBtn && searchWrap) {
-        searchBtn.addEventListener('click', function (e) {
-            if (!searchWrap.classList.contains('is-open')) {
-                e.preventDefault();
-                searchWrap.classList.add('is-open');
-                if (searchInput) {
-                    searchInput.focus();
-                }
-            }
-        });
+    var baseUrl = "{{ route('admin.users.index') }}";
+    var ajaxToken = 0;
+
+    // Build a URL from the current filter state (optionally a specific page).
+    function buildUrl(pageUrl) {
+        if (pageUrl) return pageUrl;
+        var params = new URLSearchParams();
+        if (searchInput && searchInput.value.trim() !== '') params.set('search', searchInput.value.trim());
+        if (userTypeSelect && userTypeSelect.value) params.set('User_type', userTypeSelect.value);
+        if (perPageHidden && perPageHidden.value) params.set('per_page', perPageHidden.value);
+        var qs = params.toString();
+        return baseUrl + (qs ? ('?' + qs) : '');
+    }
+
+    // Scroll the table back into view so a single pagination click is clearly
+    // effective (otherwise the content swaps silently below the fold and it
+    // looks like nothing happened, prompting a second click).
+    function scrollTableIntoView() {
+        var card = document.querySelector('.users-dt-card') || container;
+        if (!card) return;
+        var top = card.getBoundingClientRect().top + window.pageYOffset - 90;
+        window.scrollTo({ top: top < 0 ? 0 : top, behavior: 'smooth' });
+    }
+
+    // Fetch the table partial and swap it in — no page reload.
+    function loadUsers(pageUrl, scrollTop) {
+        var url = buildUrl(pageUrl);
+        var token = ++ajaxToken;
+        container.classList.add('users-loading');
+        fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'text/html' } })
+            .then(function (r) { return r.text(); })
+            .then(function (html) {
+                if (token !== ajaxToken) return; // ignore stale (out-of-order) responses
+                container.innerHTML = html;
+                container.classList.remove('users-loading');
+                applyColumnVisibility();
+                try { window.history.replaceState({}, '', url); } catch (e) {}
+                if (scrollTop) scrollTableIntoView();
+            })
+            .catch(function () {
+                container.classList.remove('users-loading');
+            });
     }
 
     if (searchInput) {
+        // Live search as you type (debounced) — and immediately on Enter.
+        searchInput.addEventListener('input', function () {
+            clearTimeout(searchInput._debounce);
+            searchInput._debounce = setTimeout(loadUsers, 350);
+        });
         searchInput.addEventListener('keydown', function (e) {
             if (e.key === 'Enter') {
-                filterForm.submit();
+                e.preventDefault();
+                clearTimeout(searchInput._debounce);
+                loadUsers();
             }
         });
     }
 
     if (userTypeSelect) {
-        userTypeSelect.addEventListener('change', function () {
-            filterForm.submit();
-        });
+        userTypeSelect.addEventListener('change', function () { loadUsers(); });
     }
 
     if (resetBtn) {
         resetBtn.addEventListener('click', function () {
-            if (searchInput) {
-                searchInput.value = '';
-            }
-            if (userTypeSelect) {
-                userTypeSelect.value = '';
-            }
-            if (perPageHidden) {
-                perPageHidden.value = '10';
-            }
-            if (searchWrap) {
-                searchWrap.classList.remove('is-open');
-            }
-            filterForm.submit();
+            if (searchInput) searchInput.value = '';
+            if (userTypeSelect) userTypeSelect.value = '';
+            if (perPageHidden) perPageHidden.value = '10';
+            loadUsers();
         });
     }
 
-    if (perPageFooter && perPageHidden) {
-        perPageFooter.addEventListener('change', function () {
-            perPageHidden.value = this.value;
-            filterForm.submit();
-        });
-    }
-
-    // ---------------------------------------------------------------
-    // Column show / hide (immediate, persisted to localStorage)
-    // ---------------------------------------------------------------
-    var COLS_STORAGE_KEY = 'usersGridHiddenColumns';
-    var colToggles = document.querySelectorAll('.js-col-toggle');
-
-    function readHiddenCols() {
-        try {
-            return JSON.parse(localStorage.getItem(COLS_STORAGE_KEY)) || [];
-        } catch (e) {
-            return [];
+    // Delegated handlers — the table/pagination is replaced on every fetch.
+    container.addEventListener('change', function (e) {
+        if (e.target && e.target.id === 'usersPerPageFooter') {
+            if (perPageHidden) perPageHidden.value = e.target.value;
+            loadUsers(null, true);
         }
+    });
+    container.addEventListener('click', function (e) {
+        var link = e.target.closest('.users-pagination-links a');
+        if (link && link.getAttribute('href')) {
+            e.preventDefault();
+            loadUsers(link.getAttribute('href'), true);
+        }
+    });
+
+    /* ---------------- Column hide / show ---------------- */
+    var columnStorageKey = 'usersGrid:hiddenColumns:v1';
+    var hiddenCols = [];
+    try {
+        var raw = localStorage.getItem(columnStorageKey);
+        if (raw) hiddenCols = JSON.parse(raw) || [];
+    } catch (e) { hiddenCols = []; }
+    if (!Array.isArray(hiddenCols)) hiddenCols = [];
+
+    function persistColumns() {
+        try { localStorage.setItem(columnStorageKey, JSON.stringify(hiddenCols)); } catch (e) {}
     }
 
-    function applyColumn(col, visible) {
-        document.querySelectorAll('.col-' + col).forEach(function (cell) {
-            cell.classList.toggle('d-none', !visible);
+    // Show/hide each column's header + body cells by index (no DataTables here).
+    function applyColumnVisibility() {
+        var table = container.querySelector('#zero_config_table');
+        if (!table) return;
+        var headers = table.querySelectorAll('thead th');
+        headers.forEach(function (th, i) {
+            th.style.display = hiddenCols.indexOf(i) !== -1 ? 'none' : '';
         });
-    }
-
-    function persistHiddenCols() {
-        var hidden = [];
-        colToggles.forEach(function (cb) {
-            if (!cb.checked) {
-                hidden.push(cb.dataset.col);
-            }
-        });
-        try {
-            localStorage.setItem(COLS_STORAGE_KEY, JSON.stringify(hidden));
-        } catch (e) {}
-    }
-
-    if (colToggles.length) {
-        var hiddenCols = readHiddenCols();
-        colToggles.forEach(function (cb) {
-            var col = cb.dataset.col;
-            if (hiddenCols.indexOf(col) !== -1) {
-                cb.checked = false;
-                applyColumn(col, false);
-            }
-            cb.addEventListener('change', function () {
-                applyColumn(col, cb.checked);
-                persistHiddenCols();
+        table.querySelectorAll('tbody tr').forEach(function (tr) {
+            if (tr.children.length <= 1) return; // skip the colspanned empty-state row
+            Array.prototype.forEach.call(tr.children, function (td, i) {
+                td.style.display = hiddenCols.indexOf(i) !== -1 ? 'none' : '';
             });
         });
     }
 
-    function getVisibleColumns() {
-        var visible = [];
-        colToggles.forEach(function (cb) {
-            if (cb.checked) {
-                visible.push(cb.dataset.col);
-            }
+    // Build the modal checkboxes once from the table headers.
+    function buildColumnsModal() {
+        var table = container.querySelector('#zero_config_table');
+        var grid = document.getElementById('usersColumnToggleGrid');
+        if (!table || !grid) return;
+        grid.innerHTML = '';
+        table.querySelectorAll('thead th').forEach(function (th, i) {
+            var header = (th.textContent || '').trim();
+            if (!header) return;
+            var id = 'usercolvis_' + i;
+            var cell = document.createElement('div');
+            cell.className = 'col-12 col-sm-6 col-md-4';
+            var label = document.createElement('label');
+            label.className = 'colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100';
+            label.setAttribute('for', id);
+            var cb = document.createElement('input');
+            cb.type = 'checkbox';
+            cb.className = 'form-check-input m-0';
+            cb.id = id;
+            cb.checked = hiddenCols.indexOf(i) === -1;
+            cb.addEventListener('change', function () {
+                var pos = hiddenCols.indexOf(i);
+                if (cb.checked) { if (pos !== -1) hiddenCols.splice(pos, 1); }
+                else { if (pos === -1) hiddenCols.push(i); }
+                persistColumns();
+                applyColumnVisibility();
+            });
+            var span = document.createElement('span');
+            span.textContent = header;
+            label.appendChild(cb);
+            label.appendChild(span);
+            cell.appendChild(label);
+            grid.appendChild(cell);
         });
-        return visible;
     }
 
-    // ---------------------------------------------------------------
-    // Export (xlsx / csv / pdf) — respects active filters, search and
-    // the currently visible columns.
-    // ---------------------------------------------------------------
-    var toolbar = document.querySelector('[data-export-base]');
-    var exportBase = toolbar ? toolbar.getAttribute('data-export-base') : '';
+    buildColumnsModal();
+    applyColumnVisibility();
 
-    document.querySelectorAll('.js-users-export').forEach(function (link) {
-        link.addEventListener('click', function (e) {
-            e.preventDefault();
-
-            var format = link.dataset.format;
-            var applied = new URLSearchParams(window.location.search);
-            var params = new URLSearchParams();
-
-            if (applied.get('search')) {
-                params.set('search', applied.get('search'));
-            }
-            if (applied.get('User_type')) {
-                params.set('User_type', applied.get('User_type'));
-            }
-
-            var cols = getVisibleColumns();
-            if (cols.length) {
-                params.set('columns', cols.join(','));
-            }
-
-            var qs = params.toString();
-            window.location.href = exportBase + '/' + format + (qs ? ('?' + qs) : '');
-        });
-    });
-
-    // ---------------------------------------------------------------
-    // Print — current page, visible columns, clean A4 output.
-    // ---------------------------------------------------------------
+    /* ---------------- Print (current table) ---------------- */
     var printBtn = document.getElementById('usersPrintBtn');
     if (printBtn) {
         printBtn.addEventListener('click', function () {
-            var table = document.getElementById('zero_config_table');
-            if (!table) {
-                return;
-            }
-
+            var table = container.querySelector('#zero_config_table');
+            if (!table) return;
             var clone = table.cloneNode(true);
-            // Remove the action column and any hidden columns from the printout.
-            clone.querySelectorAll('.col-action, .d-none').forEach(function (cell) {
-                cell.remove();
+            clone.querySelectorAll('tr').forEach(function (tr) {
+                if (tr.children.length > 1) tr.removeChild(tr.children[tr.children.length - 1]); // drop Action
             });
+            var w = window.open('', '_blank');
+            if (!w) return;
+            w.document.write('<!DOCTYPE html><html><head><title>Users</title>' +
+                '<style>body{font-family:Arial,sans-serif;margin:20px}table{width:100%;border-collapse:collapse}' +
+                'th,td{border:1px solid #ccc;padding:8px;text-align:left;font-size:12px}th{background:#004a93;color:#fff}h2{color:#004a93}</style>' +
+                '</head><body><h2>Users</h2>' + clone.outerHTML + '</body></html>');
+            w.document.close();
+            w.onload = function () { w.print(); };
+        });
+    }
 
-            var win = window.open('', '_blank');
-            if (!win) {
-                return;
-            }
-
-            win.document.write(
-                '<!DOCTYPE html><html><head><meta charset="utf-8"><title>Users</title>' +
-                '<style>' +
-                '@page{size:A4 landscape;margin:12mm;}' +
-                'body{font-family:Arial,Helvetica,sans-serif;color:#1f2937;margin:0;}' +
-                'h1{font-size:18px;margin:0 0 12px;}' +
-                'table{width:100%;border-collapse:collapse;font-size:12px;}' +
-                'th,td{border:1px solid #d1d5db;padding:6px 8px;text-align:left;vertical-align:top;}' +
-                'thead th{background:#f3f4f6;}' +
-                '.badge{display:inline-block;border:1px solid #d1d5db;border-radius:10px;padding:1px 7px;font-size:11px;}' +
-                '</style></head><body>' +
-                '<h1>Users</h1>' + clone.outerHTML + '</body></html>'
-            );
-            win.document.close();
-            win.focus();
-            setTimeout(function () {
-                try {
-                    win.print();
-                } catch (e) {}
-            }, 350);
+    /* ---------------- Download (current table → CSV) ---------------- */
+    var downloadBtn = document.getElementById('usersDownloadBtn');
+    if (downloadBtn) {
+        downloadBtn.addEventListener('click', function () {
+            var table = container.querySelector('#zero_config_table');
+            if (!table) return;
+            var rows = [];
+            table.querySelectorAll('tr').forEach(function (tr) {
+                if (tr.children.length <= 1) return; // skip empty-state row
+                var cells = [];
+                for (var i = 0; i < tr.children.length - 1; i++) { // exclude Action column
+                    var txt = (tr.children[i].innerText || '').replace(/\s+/g, ' ').trim().replace(/"/g, '""');
+                    cells.push('"' + txt + '"');
+                }
+                rows.push(cells.join(','));
+            });
+            if (!rows.length) return;
+            var blob = new Blob(['﻿' + rows.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'users_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
         });
     }
 });

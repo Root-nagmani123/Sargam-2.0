@@ -1,347 +1,81 @@
-<!-- Add/Edit Event Modal -->
- <style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, #af2910, #ff7e5f);
-        --card-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        --card-shadow-hover: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
-        --input-focus-glow: 0 0 0 3px rgba(13, 110, 253, 0.1);
+<!-- Add/Edit Event Modal — styles: public/css/calendar-admin.css -->
+<style>
+    /* form between dialog & content was shrinking width (Bootstrap expects dialog > content) */
+    #eventModal .modal-dialog.modal-xl {
+        --bs-modal-width: 1140px;
+        width: min(1140px, calc(100vw - 2rem)) !important;
+        max-width: min(1140px, calc(100vw - 2rem)) !important;
     }
-
-    .modal-body {
-        background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
-    }
-
-    .form-section {
-        background: #ffffff;
-        border-radius: 1rem;
-        border: 1px solid #e9ecef;
-        padding: 1.5rem;
-        transition: all 0.3s ease;
-    }
-
-    .form-section:hover {
-        box-shadow: var(--card-shadow);
-        border-color: #dee2e6;
-    }
-
-    .form-section-header {
-        font-weight: 600;
-        color: #0d6efd;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-    }
-
-    .required::after {
-        content: " *";
-        color: #dc3545;
-        font-weight: 600;
-    }
-
-    .form-label {
-        font-weight: 500;
-        color: #495057;
-        margin-bottom: 0.5rem;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-size: 0.9rem;
-    }
-
-    .form-label i {
-        color: #6c757d;
-        font-size: 0.9em;
-    }
-
-    .form-control,
-    .form-select {
-        border: 2px solid #e9ecef;
-        border-radius: 0.5rem;
-        padding: 0.625rem 0.875rem;
-        transition: all 0.2s ease;
-        font-size: 0.95rem;
-    }
-
-    .form-control:hover,
-    .form-select:hover {
-        border-color: #ced4da;
-    }
-
-    .form-control:focus,
-    .form-select:focus {
-        border-color: #0d6efd;
-        box-shadow: var(--input-focus-glow);
-        transform: translateY(-1px);
-    }
-
-    textarea.form-control {
-        resize: vertical;
-        min-height: 80px;
-    }
-
-    .helper-text {
-        font-size: 0.825rem;
-        color: #6c757d;
-    }
-
-    section h3 {
-        position: relative;
-        padding-bottom: 0.75rem;
-        margin-bottom: 1.5rem !important;
-    }
-
-    section h3::after {
-        content: '';
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 60px;
-        height: 3px;
-        background: var(--primary-gradient);
-        border-radius: 2px;
-    }
-
-    #type_name_container {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 2px dashed #ced4da;
-        border-radius: 0.75rem;
-        padding: 1.25rem;
-        transition: all 0.3s ease;
-        min-height: 60px;
-    }
-
-    #type_name_container:hover {
-        border-color: #adb5bd;
-        background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
-    }
-
-    .form-check-input {
-        cursor: pointer;
-        width: 1.125em;
-        height: 1.125em;
-        border: 2px solid #dee2e6;
-        transition: all 0.2s ease;
-    }
-
-    .form-check-input:checked {
-        background-color: #0d6efd;
-        border-color: #0d6efd;
-        box-shadow: 0 0 0 3px rgba(13, 110, 253, 0.1);
-    }
-
-    .form-check-label {
-        cursor: pointer;
-        user-select: none;
-        color: #495057;
-        font-weight: 400;
-    }
-
-    .form-check:hover .form-check-label {
-        color: #212529;
-    }
-
-    .card {
-        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        border: 1px solid #e9ecef;
-    }
-
-    .card:hover {
-        transform: translateY(-2px);
-        box-shadow: var(--card-shadow-hover);
-    }
-
-    input[type="time"],
-    input[type="date"] {
-        cursor: pointer;
-    }
-
-    .btn {
-        font-weight: 500;
-        padding: 0.625rem 1.25rem;
-        border-radius: 0.5rem;
-        transition: all 0.2s ease;
-    }
-
-    .btn:hover {
-        transform: translateY(-1px);
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-    }
-
-    .btn:active {
-        transform: translateY(0);
-    }
-
-    .modal-header {
-        background: var(--primary-gradient) !important;
-        border-radius: 0;
-    }
-
-    @keyframes fadeInUp {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
-
-    section {
-        animation: fadeInUp 0.4s ease-out;
-    }
-
-    .form-switch .form-check-input {
-        width: 2.5em;
-        height: 1.25em;
-        cursor: pointer;
-    }
-
-    .form-switch .form-check-input:checked {
-        background-color: #198754;
-        border-color: #198754;
-    }
-
-    /* Choices.js bootstrap-like styling inside event modal */
-    #eventModal .choices {
+    #eventModal .modal-content,
+    #eventModal #eventForm {
         width: 100%;
-    }
-
-    #eventModal .choices__inner.form-select {
-        border: 2px solid #e9ecef !important;
-        border-radius: 0.5rem !important;
-        min-height: 42px !important;
-        background: #fff !important;
-        padding: 0.45rem 0.75rem !important;
-    }
-
-    #eventModal .choices.is-focused .choices__inner.form-select,
-    #eventModal .choices.is-open .choices__inner.form-select {
-        border-color: #0d6efd !important;
-        box-shadow: var(--input-focus-glow) !important;
-    }
-
-    #eventModal .choices__list--multiple .choices__item {
-        background: linear-gradient(135deg, #0d6efd 0%, #0a58ca 100%) !important;
-        border: none !important;
-        border-radius: 0.375rem !important;
-        color: #fff !important;
-        font-size: 0.875rem !important;
-    }
-
-    #eventModal .choices__list--dropdown,
-    #eventModal .choices__list[aria-expanded] {
-        border: 2px solid #e9ecef !important;
-        border-radius: 0.5rem !important;
-        box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15) !important;
-        z-index: 2000 !important;
-    }
-
-    /* modal-dialog-scrollable sets overflow:hidden on .modal-content and clips Choices lists */
-    #eventModal .modal-dialog.modal-dialog-scrollable .modal-content {
-        overflow: visible !important;
-        max-height: min(90vh, 920px);
-    }
-
-    #eventModal .modal-body {
-        overflow-x: visible !important;
-        max-height: min(70vh, 780px);
-        overflow-y: auto;
-    }
-
-    #eventModal .choices {
-        position: relative;
-        z-index: 1;
-    }
-
-    #eventModal .choices.is-open {
-        z-index: 10600;
-    }
-
-    #eventModal .choices.is-open .choices__list--dropdown,
-    #eventModal .choices.is-open .choices__list[aria-expanded] {
-        z-index: 10610 !important;
+        max-width: 100%;
     }
 </style>
-
-<div class="modal fade" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-scrollable modal-lg">
-        <form id="eventForm" novalidate>
+<div class="modal fade cal-event-modal" id="eventModal" tabindex="-1" aria-labelledby="eventModalTitle" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable cal-event-modal-dialog">
+        <div class="modal-content border-0 shadow-lg rounded-3 overflow-hidden">
+            <form id="eventForm" class="cal-event-modal-form d-flex flex-column" novalidate>
             @csrf
-            <div class="modal-content">
-                <!-- Modal Header -->
-                <div class="modal-header bg-primary text-white">
-                    <div class="d-flex flex-column w-100">
-                        <div class="d-flex justify-content-between align-items-center">
-                            <h2 class="modal-title h5 mb-0 text-white" id="eventModalTitle">Add Calendar Event</h2>
-                            &nbsp;&nbsp;&nbsp;&nbsp;
-                            <label for="start_datetime" class="form-label text-white me-2 mb-0">
-                                <i class="bi bi-calendar-date me-1" aria-hidden="true"></i>Date:
-                            </label>
-                            <input type="date" name="start_datetime" id="start_datetime"
-                                class="form-control  w-auto text-white" required aria-required="true">
-                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"
-                                aria-label="Close"></button>
-
-                        </div>
-                        <div class="mt-2 d-flex align-items-center">
-
-                        </div>
-                    </div>
+                <div class="modal-header cal-event-modal-header border-0">
+                    <h2 class="modal-title h5 fw-bold mb-0" id="eventModalTitle">Add Event</h2>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
 
-                <!-- Modal Body -->
-                <div class="modal-body">
-                    <!-- Basic Information -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="basicInfoHeading">
-                        <h3 id="basicInfoHeading" class="h6 text-primary mb-3 fw-semibold">
-                            <i class="bi bi-info-circle-fill me-2"></i>Basic Information
-                        </h3>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="Course_name" class="form-label required">
-                                    <i class="bi bi-book"></i>Course Name
-                                </label>
-                                <select name="Course_name" id="Course_name" class="form-control" required
+                <div class="cal-event-modal-progress px-4 pt-1 pb-3">
+                    <div class="d-flex justify-content-end align-items-center mb-2">
+                        <span id="eventModalStepPercent" class="cal-event-modal-percent small fw-semibold text-secondary" aria-live="polite">30%</span>
+                    </div>
+                    <div class="progress cal-event-progress rounded-pill mb-0" role="progressbar"
+                        aria-valuenow="30" aria-valuemin="0" aria-valuemax="100"
+                        aria-labelledby="eventModalStepLabel" id="eventModalProgressWrap">
+                        <div class="progress-bar rounded-pill" id="eventModalProgressBar" style="width: 30%;"></div>
+                    </div>
+                    <span id="eventModalStepLabel" class="visually-hidden">Basic Information.</span>
+                </div>
+
+                <div class="modal-body cal-event-modal-body">
+                    <section class="cal-modal-step" data-cal-step="1" aria-labelledby="basicInfoHeading">
+                        <h3 id="basicInfoHeading" class="cal-modal-section-title h6 fw-bold mb-0 pb-3">Basic Information</h3>
+                        <div class="row g-3 cal-modal-fields pt-1">
+                            <div class="col-md-6 col-lg-4">
+                                <label for="start_datetime" class="form-label required mb-2">Date</label>
+                                <input type="date" name="start_datetime" id="start_datetime"
+                                    class="form-control cal-modal-input" required aria-required="true">
+                            </div>
+                            <div class="col-md-6 col-lg-4">
+                                <label for="Course_name" class="form-label required mb-2">Course Name</label>
+                                <select name="Course_name" id="Course_name" class="form-select form-control cal-modal-input" required
                                     aria-required="true">
-                                    <option value="">Select Course</option>
+                                    <option value="">Select Course Name</option>
                                     @foreach($courseMaster as $course)
                                     <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-
-                            <div class="col-md-6">
-                                <label for="group_type" class="form-label required">
-                                    <i class="bi bi-people"></i>Group Type
-                                </label>
-                                <select name="group_type" id="group_type" class="form-control" required
+                            <div class="col-md-6 col-lg-4">
+                                <label for="group_type" class="form-label required mb-2">Group Type</label>
+                                <select name="group_type" id="group_type" class="form-select form-control cal-modal-input" required
                                     aria-required="true">
                                     <option value="">Select Group Type</option>
                                 </select>
                             </div>
-
                             <div class="col-12">
-                                <label class="form-label required">
-                                    <i class="bi bi-tag"></i>Group Type Name
-                                </label>
-                                <div id="type_name_container" class="border rounded p-3 bg-light-subtle">
-                                    <div class="text-center text-muted" id="groupTypePlaceholder">
-                                        <i class="bi bi-arrow-right-circle me-2"></i>Select a Group Type first
+                                <label class="form-label required mb-2">Group Type Name</label>
+                                <div id="type_name_container" class="cal-modal-group-names">
+                                    <div class="text-center text-muted small py-2" id="groupTypePlaceholder">
+                                        Select a Group Type first
                                     </div>
                                 </div>
-                                <div class="invalid-feedback" id="type_names_error" style="display: none;">
+                                <div class="invalid-feedback d-block" id="type_names_error" style="display: none;">
                                     Please select at least one Group Type Name.
                                 </div>
                             </div>
-
                             <div class="col-md-6">
-                                <label for="subject_module" class="form-label required">
-                                    <i class="bi bi-grid-3x3"></i>Subject Module
-                                </label>
-                                <select name="subject_module" id="subject_module" class="form-control" required
+                                <label for="subject_module" class="form-label required mb-2">Module Name</label>
+                                <select name="subject_module" id="subject_module" class="form-select form-control cal-modal-input" required
                                     aria-required="true">
-                                    <option value="">Select Subject Module</option>
+                                    <option value="">Select Module Name</option>
                                     @foreach($subjects as $subject)
                                     <option value="{{ $subject->pk }}" data-id="{{ $subject->pk }}">
                                         {{ $subject->module_name }}
@@ -349,247 +83,252 @@
                                     @endforeach
                                 </select>
                             </div>
-
                             <div class="col-md-6">
-                                <label for="subject_name" class="form-label required">
-                                    <i class="bi bi-journal-text"></i>Subject Name
-                                </label>
-                                <select name="subject_name" id="subject_name" class="form-control" required
+                                <label for="subject_name" class="form-label required mb-2">Subject Name</label>
+                                <select name="subject_name" id="subject_name" class="form-select form-control cal-modal-input" required
                                     aria-required="true">
                                     <option value="">Select Subject Name</option>
                                 </select>
                             </div>
-
+                            <div class="col-md-6">
+                                <label for="sector" class="form-label mb-2">Sector Name</label>
+                                <select name="sector" id="sector" class="form-select form-control cal-modal-input">
+                                    <option value="">Select Sector</option>
+                                    @foreach($sectors as $sector)
+                                    <option value="{{ $sector->pk }}">{{ $sector->sector_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="col-12">
-                                <label for="topic" class="form-label required">
-                                    <i class="material-icons">edit</i>Topic
-                                </label>
-                                <textarea name="topic" id="topic" class="form-control" rows="3"
-                                    placeholder="Enter topic details" required aria-required="true"></textarea>
+                                <label for="topic" class="form-label required mb-2">Topic</label>
+                                <input type="text" name="topic" id="topic" class="form-control cal-modal-input"
+                                    placeholder="eg. Lorem ipsum dolor sit amet" required aria-required="true">
                             </div>
                         </div>
                     </section>
 
-                    <!-- Faculty & Venue -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="facultyVenueHeading">
-                        <h3 id="facultyVenueHeading" class="h6 text-primary mb-3 fw-semibold">
-                            <i class="bi bi-person-badge me-2"></i>Faculty & Venue
-                        </h3>
-                        <div class="row g-3">
-                            <div class="col-md-6">
-                                <label for="faculty" class="form-label required">
-                                    <i class="bi bi-person-circle"></i>Faculty
-                                </label>
-                                <select name="faculty[]" id="faculty" class="form-control" required aria-required="true" multiple>
-                                    @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                        {{ $faculty->full_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
-                            </div>
-
-                            <div class="col-md-6">
-                                <label for="faculty_type" class="form-label required">
-                                    <i class="bi bi-diagram-3"></i>Faculty Type
-                                </label>
-                                <select name="faculty_type" id="faculty_type" class="form-control" required
-                                    aria-required="true">
-                                    <option value="">Select Faculty Type</option>
-                                    <option value="1">Internal</option>
-                                    <option value="2">Guest</option>
-                                    <option value="3">Research</option>
-                                </select>
-                            </div>
-
-
-                            <div class="col-md-6">
-                                <label for="vanue" class="form-label required">
-                                    <i class="bi bi-geo-alt"></i>Location
-                                </label>
-                                <select name="vanue" id="vanue" class="form-control" required aria-required="true">
+                    <section class="cal-modal-step d-none" data-cal-step="2" aria-labelledby="facultyVenueHeading">
+                        <h3 id="facultyVenueHeading" class="cal-modal-section-title h6 fw-bold mb-0 pb-3">Faculty &amp; Venue</h3>
+                        <div class="row g-3 cal-modal-fields pt-1">
+                            <div class="col-12">
+                                <label for="vanue" class="form-label required mb-2">Location</label>
+                                <select name="vanue" id="vanue" class="form-select form-control cal-modal-input" required aria-required="true">
                                     <option value="">Select Location</option>
                                     @foreach($venueMaster as $loc)
                                     <option value="{{ $loc->venue_id }}">{{ $loc->venue_name }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div class="col-md-6" id="internalFacultyDiv">
-                                <label for="internal_faculty" class="form-label required">
-                                    <i class="bi bi-person-check"></i>Internal Faculty
-                                </label>
-                                <select name="internal_faculty[]" id="internal_faculty" class="form-control" required
-                                    aria-required="true" multiple>
-                                    @foreach($facultyMaster as $faculty)
-                                    <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">
-                                        {{ $faculty->full_name }}
-                                    </option>
-                                    @endforeach
-                                </select>
+                            <div class="col-12">
+                                <div id="modalFacultyRows"></div>
+                                <div class="d-flex justify-content-end mt-2">
+                                    <button type="button" id="btnModalAddFaculty"
+                                        class="btn btn-outline-primary btn-sm d-inline-flex align-items-center gap-1 rounded-2">
+                                        <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">add</i>
+                                        <span>Add Faculty</span>
+                                    </button>
+                                </div>
+                                {{-- hidden inputs for backward-compat (populated by JS from rows) --}}
+                                <input type="hidden" name="faculty_type" id="faculty_type" value="">
+                                <div id="internalFacultyDiv" style="display:none">
+                                    <select name="internal_faculty[]" id="internal_faculty" class="form-select form-control cal-modal-input" multiple style="display:none">
+                                        @foreach($facultyMaster as $faculty)
+                                        <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">{{ $faculty->full_name }}</option>
+                                        @endforeach
+                                    </select>
+                                </div>
                             </div>
                         </div>
                     </section>
 
-                    <!-- Schedule -->
-                    <section class="mb-4 p-4 bg-white rounded-3 shadow-sm" aria-labelledby="scheduleHeading">
-                        <h3 id="scheduleHeading" class="h6 text-primary mb-3 fw-semibold">
-                            <i class="bi bi-clock-history me-2"></i>Schedule
-                        </h3>
-
-                        <!-- Shift Type -->
-                        <div class="mb-3">
-                            <label class="form-label d-block required">
-                                <i class="bi bi-toggle-on"></i>Shift Type
-                            </label>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" name="shift_type" id="normalShift" value="1"
-                                    class="form-check-input" checked aria-controls="shiftSelect">
-                                <label class="form-check-label" for="normalShift">Normal Shift</label>
-                            </div>
-                            <div class="form-check form-check-inline">
-                                <input type="radio" name="shift_type" id="manualShift" value="2"
-                                    class="form-check-input" aria-controls="manualShiftFields">
-                                <label class="form-check-label" for="manualShift">Manual Shift</label>
-                            </div>
-                        </div>
-
-                        <!-- Normal Shift -->
-                        <div id="shiftSelect" class="mb-3">
-                            <label for="shift" class="form-label required">
-                                <i class="bi bi-calendar-range"></i>Shift
-                            </label>
-                            <select name="shift" id="shift" class="form-control" required aria-required="true">
-                                <option value="">Select Shift</option>
-                                @foreach($classSessionMaster as $shift)
-                                <option value="{{ $shift->shift_time }}">
-                                    {{ $shift->shift_name }} ({{ $shift->shift_time }})
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-
-                        <!-- Manual Shift -->
-                        <div id="manualShiftFields" class="d-none">
-                            <div class="mb-3">
-                                <div class="form-check">
-                                    <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
-                                        name="fullDayCheckbox" aria-controls="dateTimeFields">
-                                    <label class="form-check-label" for="fullDayCheckbox">
-                                        Full Day Event
-                                    </label>
+                    <section class="cal-modal-step d-none" data-cal-step="3" aria-labelledby="scheduleHeading">
+                        <h3 id="scheduleHeading" class="cal-modal-section-title h6 fw-bold mb-0 pb-3">Schedule</h3>
+                        <div class="row g-3 cal-modal-fields pt-1 mb-4">
+                            <div class="col-12">
+                                <span class="form-label required d-block mb-2">Shift Type</span>
+                                <div class="d-flex flex-wrap gap-4 cal-modal-radio-row">
+                                    <div class="form-check mb-0">
+                                        <input type="radio" name="shift_type" id="normalShift" value="1"
+                                            class="form-check-input" checked aria-controls="shiftSelect">
+                                        <label class="form-check-label" for="normalShift">Normal Shift</label>
+                                    </div>
+                                    <div class="form-check mb-0">
+                                        <input type="radio" name="shift_type" id="manualShift" value="2"
+                                            class="form-check-input" aria-controls="manualShiftFields">
+                                        <label class="form-check-label" for="manualShift">Manual Shift</label>
+                                    </div>
                                 </div>
                             </div>
 
-                            <div id="dateTimeFields">
-                                <div class="row g-3">
+                            <div class="col-md-6" id="shiftSelect">
+                                <label for="shift" class="form-label required mb-2">Shift</label>
+                                <select name="shift" id="shift" class="form-select form-control cal-modal-input" required aria-required="true">
+                                    <option value="">Select Shift</option>
+                                    @foreach($classSessionMaster as $shift)
+                                    <option value="{{ $shift->shift_time }}">
+                                        {{ $shift->shift_name }} ({{ $shift->shift_time }})
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            <div id="manualShiftFields" class="col-12 d-none">
+                                <div class="mb-3">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" value="1" id="fullDayCheckbox"
+                                            name="fullDayCheckbox" aria-controls="dateTimeFields">
+                                        <label class="form-check-label" for="fullDayCheckbox">Full Day Event</label>
+                                    </div>
+                                </div>
+                                <div id="dateTimeFields" class="row g-3">
                                     <div class="col-md-6">
-                                        <label for="start_time" class="form-label required">
-                                            <i class="bi bi-clock"></i>Start Time
-                                        </label>
-                                        <input type="time" name="start_time" id="start_time" class="form-control"
+                                        <label for="start_time" class="form-label required mb-2">Start Time</label>
+                                        <input type="time" name="start_time" id="start_time" class="form-control cal-modal-input"
                                             aria-describedby="startTimeHelp">
                                         <small id="startTimeHelp" class="form-text text-muted">
                                             Must be at least 1 hour from now
                                         </small>
                                     </div>
                                     <div class="col-md-6">
-                                        <label for="end_time" class="form-label required">
-                                            <i class="bi bi-clock-fill"></i>End Time
-                                        </label>
-                                        <input type="time" name="end_time" id="end_time" class="form-control">
+                                        <label for="end_time" class="form-label required mb-2">End Time</label>
+                                        <input type="time" name="end_time" id="end_time" class="form-control cal-modal-input">
                                     </div>
                                 </div>
                             </div>
                         </div>
-                    </section>
 
-                    <!-- Additional Options -->
-                    <section class="pt-4 border-top" aria-labelledby="additionalOptionsHeading">
-                        <h3 id="additionalOptionsHeading" class="h6 text-primary mb-3 fw-semibold">
-                            <i class="bi bi-sliders me-2"></i>Additional Options
-                        </h3>
-
-                        <div class="row g-3">
-                            <!-- Feedback Group -->
-                            <div class="col-md-8">
-                                <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);">
-                                    <div class="card-body p-3">
-                                        <!-- Feedback Parent -->
-                                        <div class="form-check form-switch mb-3">
-                                            <input class="form-check-input" type="checkbox" id="feedback_checkbox"
-                                                name="feedback_checkbox" value="1" aria-controls="feedbackOptions">
-                                            <label class="form-check-label fw-semibold" for="feedback_checkbox">
-                                                Feedback
-                                            </label>
-                                        </div>
-
-                                        <!-- Feedback Child Options -->
-                                        <div id="feedbackOptions" class="ps-4 border-start d-none">
-                                            <div class="form-check mb-2">
-                                                <input class="form-check-input" type="checkbox" id="remarkCheckbox"
-                                                    name="remarkCheckbox" value="1">
-                                                <label class="form-check-label" for="remarkCheckbox">
-                                                    Remark
-                                                </label>
-                                            </div>
-
-                                            <div class="form-check">
-                                                <input class="form-check-input" type="checkbox" id="ratingCheckbox"
-                                                    name="ratingCheckbox" value="1">
-                                                <label class="form-check-label" for="ratingCheckbox">
-                                                    Rating
-                                                </label>
-                                            </div>
-                                            <!-- <div class="form-check" id="facultyReviewRatingDiv">
-                                                <input class="form-check-input" type="checkbox" id="facultyReviewRating"
-                                                    name="facultyReviewRating" value="1">
-                                                <label class="form-check-label" for="facultyReviewRating">
-                                                    Internal Faculty Feedback<span class="text-muted fs-6">internal
-                                                        faculty can give feedback to guest faculty</span>
-                                                </label>
-                                            </div> -->
-
-                                            <small class="text-muted d-block mt-2">
-                                                Select at least one feedback component.
-                                            </small>
-                                        </div>
+                        <hr class="my-3">
+                        <h3 class="cal-modal-section-title h6 fw-bold mb-0 pb-3">Break (Tea/Lunch/Snacks)</h3>
+                        <div class="row g-3 cal-modal-fields pt-1 mb-3">
+                            <div class="col-12">
+                                <span class="form-label d-block mb-2">Break Type</span>
+                                <div class="d-flex flex-wrap gap-4">
+                                    <div class="form-check mb-0">
+                                        <input type="radio" name="break_type" id="modal_breakTea" value="tea" class="form-check-input">
+                                        <label class="form-check-label" for="modal_breakTea">Tea</label>
+                                    </div>
+                                    <div class="form-check mb-0">
+                                        <input type="radio" name="break_type" id="modal_breakLunch" value="lunch" class="form-check-input">
+                                        <label class="form-check-label" for="modal_breakLunch">Lunch</label>
+                                    </div>
+                                    <div class="form-check mb-0">
+                                        <input type="radio" name="break_type" id="modal_breakSnacks" value="snacks" class="form-check-input">
+                                        <label class="form-check-label" for="modal_breakSnacks">Snacks</label>
                                     </div>
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <label for="modal_break_start_time" class="form-label mb-2">Break Start Time</label>
+                                <input type="time" name="break_start_time" id="modal_break_start_time" class="form-control cal-modal-input">
+                            </div>
+                            <div class="col-md-6">
+                                <label for="modal_break_end_time" class="form-label mb-2">Break End Time</label>
+                                <input type="time" name="break_end_time" id="modal_break_end_time" class="form-control cal-modal-input">
+                            </div>
+                        </div>
 
-                            <!-- Bio Attendance (Independent) -->
-                            <div class="col-md-4">
-                                <div class="card border-0 shadow-sm rounded-4 h-100" style="background: linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%);">
-                                    <div class="card-body p-3 d-flex align-items-center">
-                                        <div class="form-check form-switch">
-                                            <input class="form-check-input" type="checkbox" id="bio_attendanceCheckbox"
-                                                name="bio_attendanceCheckbox" value="1">
-                                            <label class="form-check-label fw-semibold" for="bio_attendanceCheckbox">
-                                                Bio Attendance
-                                            </label>
-                                        </div>
-                                    </div>
+                        <h3 id="additionalOptionsHeading" class="cal-modal-section-title h6 fw-bold mb-0 pb-3 mt-2">Additional Options</h3>
+                        <div class="cal-modal-options-list pt-1">
+                            <div class="cal-modal-option-row">
+                                <span class="cal-modal-option-label">Feedback</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input" type="checkbox" id="feedback_checkbox"
+                                        name="feedback_checkbox" value="1" aria-controls="feedbackOptions">
+                                    <label class="form-check-label visually-hidden" for="feedback_checkbox">Feedback</label>
+                                </div>
+                            </div>
+                            <div id="feedbackOptions" class="cal-modal-feedback-nested ps-3 ms-1 mb-2 d-none">
+                                <div class="form-check mb-2">
+                                    <input class="form-check-input" type="checkbox" id="remarkCheckbox"
+                                        name="remarkCheckbox" value="1">
+                                    <label class="form-check-label" for="remarkCheckbox">Remark</label>
+                                </div>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="ratingCheckbox"
+                                        name="ratingCheckbox" value="1">
+                                    <label class="form-check-label" for="ratingCheckbox">Rating</label>
+                                </div>
+                                <small class="text-muted d-block mt-2">Select at least one feedback component.</small>
+                            </div>
+                            <div class="cal-modal-option-row">
+                                <span class="cal-modal-option-label">Bio Attendance</span>
+                                <div class="form-check form-switch mb-0">
+                                    <input class="form-check-input cal-switch-bio" type="checkbox" id="bio_attendanceCheckbox"
+                                        name="bio_attendanceCheckbox" value="1">
+                                    <label class="form-check-label visually-hidden" for="bio_attendanceCheckbox">Bio Attendance</label>
                                 </div>
                             </div>
                         </div>
                     </section>
-
                 </div>
 
-                <!-- Modal Footer -->
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </button>
-                    <button type="submit" class="btn btn-primary" id="submitEventBtn">
-                        <i class="bi bi-check-circle me-1" aria-hidden="true"></i>
+                <div class="modal-footer cal-event-modal-footer border-0">
+                    <button type="button" class="btn btn-outline-primary rounded-2 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-outline-primary rounded-2 px-4 d-none" id="btnEventModalBack">Back</button>
+                    <button type="button" class="btn btn-primary rounded-2 px-4" id="btnEventModalNext">Next</button>
+                    <button type="submit" class="btn btn-primary rounded-2 px-4 d-none" id="submitEventBtn">
                         <span class="btn-text">Add Event</span>
                     </button>
                 </div>
-            </div>
-        </form>
+            </form>
+        </div>
     </div>
 </div>
+
+{{-- Faculty row template for modal --}}
+<template id="modalFacultyRowTemplate">
+    <div class="border rounded-3 p-3 mb-3" data-modal-faculty-row>
+        <div class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label required">Faculty Name</label>
+                <select name="faculty[__IDX__]" class="form-select modal-ce-faculty-select" required>
+                    <option value="">Select Faculty</option>
+                    @foreach($facultyMaster as $faculty)
+                        <option value="{{ $faculty->pk }}" data-faculty_type="{{ $faculty->faculty_type }}">{{ $faculty->full_name }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label required">Faculty Type</label>
+                <select name="faculty_row_type[__IDX__]" class="form-select" required>
+                    <option value="">Select Type</option>
+                    <option value="1">Internal</option>
+                    <option value="2">Guest</option>
+                    <option value="3">Research</option>
+                </select>
+            </div>
+            <div class="col-md-4">
+                <label class="form-label required">Role</label>
+                <select name="faculty_role[__IDX__]" class="form-select" required>
+                    <option value="">Select Role</option>
+                    @foreach($facultyRoles as $role)
+                        <option value="{{ $role }}">{{ $role }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div class="col-12">
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="text-muted small fw-medium">Feedback</span>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="mfb_remark___IDX__" value="remark">
+                        <label class="form-check-label" for="mfb_remark___IDX__">Remark</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="mfb_rating___IDX__" value="rating">
+                        <label class="form-check-label" for="mfb_rating___IDX__">Rating</label>
+                    </div>
+                    <div class="form-check mb-0">
+                        <input class="form-check-input" type="radio" name="faculty_feedback[__IDX__]" id="mfb_none___IDX__" value="none" checked>
+                        <label class="form-check-label" for="mfb_none___IDX__">None</label>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm ms-auto modal-remove-faculty d-inline-flex align-items-center justify-content-center" aria-label="Remove faculty">
+                        <i class="material-icons material-symbols-rounded fs-6 lh-1" aria-hidden="true">remove</i>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
@@ -597,27 +336,21 @@ document.addEventListener('DOMContentLoaded', function() {
     const feedbackOptions = document.getElementById('feedbackOptions');
     const remark = document.getElementById('remarkCheckbox');
     const rating = document.getElementById('ratingCheckbox');
-    const faculty_review_rating = document.getElementById('facultyReviewRatingDiv');
 
-    feedbackToggle.addEventListener('change', function() {
-        if (this.checked) {
-            feedbackOptions.classList.remove('d-none');
-            // if (internalFacultyDiv.style.display === 'block') {
-            //     faculty_review_rating.classList.remove('d-none');
-            // } else {
-            //     faculty_review_rating.classList.add('d-none');
-            // }
+    if (feedbackToggle && feedbackOptions) {
+        feedbackToggle.addEventListener('change', function() {
+            if (this.checked) {
+                feedbackOptions.classList.remove('d-none');
+            } else {
+                feedbackOptions.classList.add('d-none');
+                if (remark) remark.checked = false;
+                if (rating) rating.checked = false;
+            }
+        });
+    }
 
-        } else {
-            feedbackOptions.classList.add('d-none');
-            remark.checked = false;
-            rating.checked = false;
-        }
-    });
     const internalFacultyDiv = document.getElementById('internalFacultyDiv');
-    const facultySelect = document.getElementById('faculty');
     const faculty_type = document.getElementById('faculty_type');
-    // internalFacultyDiv.style.display = 'none'; // Hide initially
 
     function initChoicesForSelect(el, placeholderText) {
         if (!el || typeof window.Choices === 'undefined') return null;
@@ -634,17 +367,17 @@ document.addEventListener('DOMContentLoaded', function() {
             itemSelectText: '',
             allowHTML: false,
             classNames: {
-                containerInner: ['choices__inner', 'form-select'],
-                input: ['choices__input', 'form-control', 'form-control-sm', 'border-0', 'shadow-none', 'my-1'],
+                containerInner: ['choices__inner', 'form-select', 'cal-modal-input'],
+                input: ['choices__input'],
                 inputCloned: ['choices__input--cloned'],
-                listDropdown: ['choices__list--dropdown', 'dropdown-menu', 'mt-1', 'p-0', 'shadow-sm', 'w-100'],
-                item: ['choices__item', 'dropdown-item', 'rounded-0'],
+                listDropdown: ['choices__list--dropdown'],
+                item: ['choices__item'],
                 itemSelectable: ['choices__item--selectable'],
-                itemDisabled: ['choices__item--disabled', 'disabled'],
+                itemDisabled: ['choices__item--disabled'],
                 itemChoice: ['choices__item--choice'],
-                placeholder: ['choices__placeholder', 'text-muted', 'opacity-75'],
-                highlightedState: ['is-highlighted', 'active'],
-                notice: ['choices__notice', 'dropdown-item-text', 'text-muted', 'small', 'py-2']
+                placeholder: ['choices__placeholder'],
+                highlightedState: ['is-highlighted'],
+                notice: ['choices__notice']
             }
         });
 
@@ -654,9 +387,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function getPlaceholderText(el) {
         if (!el) return 'Select option';
+        const firstOption = el.querySelector('option[value=""]');
+        if (firstOption && firstOption.textContent.trim()) {
+            return firstOption.textContent.trim();
+        }
         const label = document.querySelector(`label[for="${el.id}"]`);
-        const labelText = label ? label.textContent.replace(/\s+/g, ' ').trim() : 'Select option';
-        return labelText || 'Select option';
+        const labelText = label ? label.textContent.replace(/\s*\*\s*$/, '').trim() : '';
+        return labelText ? `Select ${labelText}` : 'Select option';
     }
 
     function syncChoicesFromSelected(el) {
@@ -699,7 +436,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Expose helpers for dynamic dropdown updates from calendar page scripts
     window.calendarModalChoices = {
         init: initAllModalChoices,
         destroy: destroyAllModalChoices,
@@ -713,35 +449,114 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Initialize Choices.js when modal is shown
     $('#eventModal').on('shown.bs.modal', function() {
         initAllModalChoices();
+        if (window.calendarEventModalWizard) {
+            window.calendarEventModalWizard.reset();
+        }
     });
 
-    // Destroy Choices when modal is hidden to prevent conflicts
     $('#eventModal').on('hidden.bs.modal', function() {
         destroyAllModalChoices();
-    });
-
-    // Show/hide internal faculty based on faculty_type dropdown
-    faculty_type.addEventListener('change', function() {
-        const facultyType = this.value;
-        updateinternal_faculty_data(facultyType);
-    });
-
-    function updateinternal_faculty_data(facultyType) {
-        switch (facultyType) {
-            case '1': // Internal
-            case 1:
-                // internalFacultyDiv.style.display = 'none';
-                break;
-            case '2': // Guest
-            case 2:
-                internalFacultyDiv.style.display = 'block';
-                break;
-            default:
-                // internalFacultyDiv.style.display = 'none';
+        if (window.calendarEventModalWizard) {
+            window.calendarEventModalWizard.reset();
         }
+    });
+
+    (function initEventModalWizard() {
+        const steps = [
+            { label: 'Basic Information', percent: 30 },
+            { label: 'Faculty & Venue', percent: 60 },
+            { label: 'Schedule', percent: 100 }
+        ];
+        let currentStep = 1;
+        const stepEls = document.querySelectorAll('#eventModal .cal-modal-step[data-cal-step]');
+        const stepLabel = document.getElementById('eventModalStepLabel');
+        const stepPercent = document.getElementById('eventModalStepPercent');
+        const progressBar = document.getElementById('eventModalProgressBar');
+        const progressWrap = document.getElementById('eventModalProgressWrap');
+        const btnNext = document.getElementById('btnEventModalNext');
+        const btnBack = document.getElementById('btnEventModalBack');
+        const btnSubmit = document.getElementById('submitEventBtn');
+
+        function goToStep(step) {
+            currentStep = step;
+            stepEls.forEach((el) => {
+                const n = parseInt(el.getAttribute('data-cal-step'), 10);
+                el.classList.toggle('d-none', n !== step);
+            });
+            const meta = steps[step - 1];
+            if (stepLabel) stepLabel.textContent = meta.label;
+            if (stepPercent) stepPercent.textContent = meta.percent + '%';
+            if (progressBar) {
+                progressBar.style.width = meta.percent + '%';
+            }
+            if (progressWrap) {
+                progressWrap.setAttribute('aria-valuenow', String(meta.percent));
+            }
+            if (btnBack) btnBack.classList.toggle('d-none', step === 1);
+            if (btnNext) btnNext.classList.toggle('d-none', step === 3);
+            if (btnSubmit) btnSubmit.classList.toggle('d-none', step !== 3);
+        }
+
+        btnNext?.addEventListener('click', () => {
+            if (currentStep < 3) goToStep(currentStep + 1);
+        });
+        btnBack?.addEventListener('click', () => {
+            if (currentStep > 1) goToStep(currentStep - 1);
+        });
+
+        window.calendarEventModalWizard = {
+            reset: function() { goToStep(1); }
+        };
+        goToStep(1);
+    })();
+
+    // ── Modal faculty rows ──────────────────────────────────────────────────
+    const modalFacultyRows = document.getElementById('modalFacultyRows');
+    const modalFacultyTemplate = document.getElementById('modalFacultyRowTemplate');
+    let modalFacultyIdx = 0;
+
+    function addModalFacultyRow(data) {
+        if (!modalFacultyTemplate || !modalFacultyRows) return;
+        const idx = modalFacultyIdx++;
+        const html = modalFacultyTemplate.innerHTML
+            .replace(/__IDX__/g, idx);
+        const wrapper = document.createElement('div');
+        wrapper.innerHTML = html;
+        const row = wrapper.firstElementChild;
+
+        if (data) {
+            const facultySelect = row.querySelector('select[name^="faculty["]');
+            const typeSelect    = row.querySelector('select[name^="faculty_row_type["]');
+            const roleSelect    = row.querySelector('select[name^="faculty_role["]');
+            if (facultySelect) facultySelect.value = String(data.faculty_pk ?? '');
+            if (typeSelect)    typeSelect.value    = String(data.faculty_type ?? '');
+            if (roleSelect)    roleSelect.value    = String(data.role ?? '');
+            if (data.feedback) {
+                const fb = row.querySelector(`input[name^="faculty_feedback["][value="${data.feedback}"]`);
+                if (fb) fb.checked = true;
+            }
+        }
+
+        row.querySelector('.modal-remove-faculty')?.addEventListener('click', () => row.remove());
+        modalFacultyRows.appendChild(row);
     }
+
+    document.getElementById('btnModalAddFaculty')?.addEventListener('click', () => addModalFacultyRow(null));
+
+    // Ensure at least one row when modal opens for create
+    $('#eventModal').on('shown.bs.modal', function() {
+        if (modalFacultyRows && modalFacultyRows.children.length === 0) {
+            addModalFacultyRow(null);
+        }
+    });
+
+    // Expose so populateEditForm can call it
+    window.addModalFacultyRow = addModalFacultyRow;
+    window.clearModalFacultyRows = function() {
+        if (modalFacultyRows) modalFacultyRows.innerHTML = '';
+        modalFacultyIdx = 0;
+    };
 });
 </script>

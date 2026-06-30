@@ -53,7 +53,7 @@
                 <div class="card-body">
                     <div class="row">
                             <div class="col-12">
-                                <label for="sector" class="form-label">Current Sector :</label>
+                                <label for="sector" class="form-label">Current Sector :<span class="text-danger">*</span></label>
                                 <div class="mb-3">
                                     <div class="form-check form-check-inline">
                                         <input class="form-check-input success" type="radio" name="current_sector"
@@ -200,6 +200,7 @@ $(document).ready(function() {
                 errorText.text('');
             }
             photoPreview.addClass('d-none').attr('src', '#');
+            $('#previousPhotoWrapper').removeClass('d-none');
 
             // If no file selected, just return
             if (!file) {
@@ -224,10 +225,11 @@ $(document).ready(function() {
                 return;
             }
 
-            // Valid file — show preview
+            // Valid file — hide previous photo and show new preview
             const reader = new FileReader();
             reader.onload = function (event) {
                 try {
+                    $('#previousPhotoWrapper').addClass('d-none');
                     photoPreview
                         .attr('src', event.target.result)
                         .removeClass('d-none');
