@@ -1,64 +1,62 @@
 @extends('admin.layouts.master')
 
-@section('title', 'PT Exemption Count Configuration - Sargam | Lal Bahadur')
+@section('title', 'Configure PT Exemption')
 
 @section('setup_content')
 <style>
+    .pt-exemption-config .config-table {
+        border: 1px solid #e4e7ec;
+        border-radius: 8px;
+        overflow: hidden;
+    }
     .pt-exemption-config .config-table thead th {
-        background-color: #004a93;
-        color: #fff;
+        background-color: #f2f4f7;
+        color: #667085;
         font-weight: 600;
-        text-transform: uppercase;
-        font-size: 0.8rem;
-        letter-spacing: 0.03em;
-        border: none;
+        font-size: 0.8125rem;
+        border-bottom: 1px solid #e4e7ec;
+        border-top: 0;
+        padding: 0.75rem 1.25rem;
         vertical-align: middle;
     }
     .pt-exemption-config .config-table tbody td {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid #eef2f6;
+        color: #344054;
         vertical-align: middle;
     }
+    .pt-exemption-config .config-table tbody tr:last-child td {
+        border-bottom: 0;
+    }
     .pt-exemption-config .days-input-group {
-        max-width: 220px;
+        max-width: 240px;
     }
     .pt-exemption-config .days-input-group .form-control {
-        border-top-right-radius: 0;
-        border-bottom-right-radius: 0;
+        border-right: 0;
+    }
+    .pt-exemption-config .days-input-group .form-control:focus {
+        box-shadow: none;
+        border-color: #004a93;
+    }
+    .pt-exemption-config .days-input-group:focus-within {
+        border-radius: 0.375rem;
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
     }
     .pt-exemption-config .days-input-group .input-group-text {
-        background: #f8f9fa;
-        border-top-right-radius: 0.375rem;
-        border-bottom-right-radius: 0.375rem;
-        min-width: 52px;
+        background: #f2f4f7;
+        color: #667085;
+        border-left: 0;
+        min-width: 76px;
         justify-content: center;
+        font-size: 0.875rem;
     }
-    .pt-exemption-config .btn-save-config {
-        background-color: #198754;
-        border-color: #198754;
-        color: #fff;
-        min-width: 120px;
-    }
-    .pt-exemption-config .btn-save-config:hover {
-        background-color: #157347;
-        border-color: #146c43;
-        color: #fff;
-    }
-    .pt-exemption-config .info-note {
-        background-color: #e7f1ff;
-        border: 1px solid #b6d4fe;
-        color: #084298;
-        border-radius: 0.375rem;
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
+    .pt-exemption-config .form-label {
+        color: #344054;
     }
 </style>
 
-<div class="container-fluid py-3 pt-exemption-config">
-    <nav aria-label="breadcrumb" class="mb-3">
-        <ol class="breadcrumb mb-0">
-            <li class="breadcrumb-item"><a href="{{ route('admin.pt-exemption-master.index') }}">Leave Management</a></li>
-            <li class="breadcrumb-item active" aria-current="page">PT Exemption Settings</li>
-        </ol>
-    </nav>
+<div class="container-fluid pt-exemption-config">
+    <x-breadcrum title="Configure PT Exemption" :showBack="true" />
 
     <x-session_message />
 
@@ -72,21 +70,25 @@
         </div>
     @endif
 
-    <div class="card shadow-sm border-0 border-start border-4 border-primary rounded-3">
-        <div class="card-body p-3 p-md-4">
-            <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-4">
-                <h2 class="h5 mb-0 fw-semibold text-body">PT Exemption Count Configuration</h2>
-                <a href="{{ route('admin.pt-exemption-master.index') }}" class="btn btn-outline-secondary btn-sm">
-                    <i class="material-icons material-symbols-rounded align-middle" style="font-size:18px;">arrow_back</i>
-                    Back to List
-                </a>
-            </div>
+    @php
+        $cutoffValue = old(
+            'apply_cutoff_time',
+            $maleRecord?->apply_cutoff_time
+                ? \Carbon\Carbon::parse($maleRecord->apply_cutoff_time)->format('H:i')
+                : '06:00'
+        );
+    @endphp
 
+    <div class="card border-0 shadow-sm rounded-3">
+        <div class="card-body p-3 p-md-4">
             <form method="POST" action="{{ route('admin.pt-exemption-master.store') }}" id="exemption-config-form">
                 @csrf
 
-                <div class="row g-3 mb-4">
-                    <div class="col-12 col-md-6 col-lg-4">
+                {{-- PT timing is preserved server-side; not surfaced in this layout. --}}
+                <input type="hidden" id="apply_cutoff_time" name="apply_cutoff_time" value="{{ $cutoffValue }}">
+
+                <div class="row g-4 mb-4">
+                    <div class="col-12 col-md-6">
                         <label for="course_master_pk" class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
                         <select id="course_master_pk" name="course_master_pk" class="form-select" required
                             @if(($isEditing ?? false) || $courses->isEmpty()) disabled @endif>
@@ -103,39 +105,24 @@
                             <input type="hidden" name="course_master_pk" value="{{ old('course_master_pk', $courseMasterPk) }}">
                         @endif
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
+                    <div class="col-12 col-md-6">
                         <label for="effective_from" class="form-label fw-semibold">Effective From <span class="text-danger">*</span></label>
                         <input type="date" id="effective_from" name="effective_from" class="form-control" required
+                            placeholder="Select the date"
                             value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}"
                             @if($isEditing ?? false) readonly @endif>
                     </div>
-                    <div class="col-12 col-md-6 col-lg-4">
-                        <label for="apply_cutoff_time" class="form-label fw-semibold">PT Timing <span class="text-danger">*</span></label>
-                        @php
-                            $cutoffValue = old(
-                                'apply_cutoff_time',
-                                $maleRecord?->apply_cutoff_time
-                                    ? \Carbon\Carbon::parse($maleRecord->apply_cutoff_time)->format('H:i')
-                                    : '06:00'
-                            );
-                        @endphp
-                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control @error('apply_cutoff_time') is-invalid @enderror" required
-                            value="{{ $cutoffValue }}">
-                        @error('apply_cutoff_time')
-                            <div class="invalid-feedback">{{ $message }}</div>
-                        @enderror
-                        <div class="form-text">Officer trainees cannot apply for the same day's exemption after this time.</div>
-                    </div>
                 </div>
 
-                <h3 class="h6 fw-semibold mb-3">PT Exemption Count (Per Academic Year)</h3>
+                <h3 class="h6 fw-semibold mb-2">PT Exemption Count (Per Academic Year)</h3>
+                <hr class="mt-0 mb-3">
 
                 <div class="table-responsive mb-4">
-                    <table class="table table-bordered config-table mb-0">
+                    <table class="table config-table align-middle mb-0">
                         <thead>
                             <tr>
-                                <th style="width: 35%;">Gender</th>
-                                <th style="width: 65%;">PT Exemption Count (Days)</th>
+                                <th style="width: 50%;">Gender</th>
+                                <th style="width: 50%;">PT Exemption</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -147,7 +134,7 @@
                                             id="male_exemption_days" name="male_exemption_days" class="form-control" required
                                             value="{{ old('male_exemption_days', $maleRecord ? number_format((float) $maleRecord->exemption_days, 1, '.', '') : '') }}"
                                             placeholder="0.0">
-                                        <span class="input-group-text">Days</span>
+                                        <span class="input-group-text">In Days</span>
                                     </div>
                                 </td>
                             </tr>
@@ -159,7 +146,7 @@
                                             id="female_exemption_days" name="female_exemption_days" class="form-control" required
                                             value="{{ old('female_exemption_days', $femaleRecord ? number_format((float) $femaleRecord->exemption_days, 1, '.', '') : '') }}"
                                             placeholder="0.0">
-                                        <span class="input-group-text">Days</span>
+                                        <span class="input-group-text">In Days</span>
                                     </div>
                                 </td>
                             </tr>
@@ -167,14 +154,12 @@
                     </table>
                 </div>
 
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-                    <div class="info-note flex-grow-1 mb-0">
-                        <strong>Note:</strong> This count will be applicable to participants of the selected course.
-                        PT timing controls when officer trainees can apply for the same day's exemption (e.g. 06:00 AM).
-                    </div>
-                    <button type="submit" class="btn btn-save-config d-inline-flex align-items-center gap-1 px-4"
+                <div class="d-flex flex-wrap justify-content-end gap-2">
+                    <a href="{{ route('admin.pt-exemption-master.index') }}" class="btn btn-outline-primary px-4 rounded-1 fw-semibold">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-primary px-4 rounded-1 fw-semibold"
                         @if(!($isEditing ?? false) && $courses->isEmpty()) disabled @endif>
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">save</i>
                         Save
                     </button>
                 </div>

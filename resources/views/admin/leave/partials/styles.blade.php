@@ -220,6 +220,197 @@
         }
     }
 
+    /* ── Strict reference layout (Apply Leave) ── */
+    .leave-module .leave-grid-label {
+        font-weight: 600;
+        color: #344054;
+        font-size: 0.9rem;
+        margin-bottom: 0.4rem;
+    }
+
+    .leave-module .leave-type-radios {
+        min-height: 42px;
+        display: flex;
+        align-items: center;
+        gap: 2rem;
+        flex-wrap: wrap;
+    }
+
+    .leave-module .leave-type-radios .form-check {
+        margin: 0;
+        min-height: auto;
+        padding-left: 1.6rem;
+    }
+
+    .leave-module .leave-type-radios .form-check-input {
+        width: 1.05rem;
+        height: 1.05rem;
+        margin-top: 0.15rem;
+        margin-left: -1.6rem;
+        cursor: pointer;
+    }
+
+    .leave-module .leave-type-radios .form-check-input:checked {
+        background-color: #004a93;
+        border-color: #004a93;
+    }
+
+    .leave-module .leave-type-radios .form-check-input:focus {
+        border-color: #84adff;
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+    }
+
+    .leave-module .leave-type-radios .form-check-label {
+        font-weight: 500;
+        color: #344054;
+        cursor: pointer;
+    }
+
+    .leave-module .leave-existing-attach {
+        font-size: 0.85rem;
+    }
+
+    .leave-module .leave-actions-end {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 0.65rem;
+        margin-top: 1.75rem;
+    }
+
+    .leave-module .btn-cancel-outline {
+        background: #fff;
+        border: 1px solid #004a93;
+        color: #004a93;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+    }
+
+    .leave-module .btn-cancel-outline:hover {
+        background: #f0f6ff;
+        color: #004a93;
+    }
+
+    .leave-module .btn-apply {
+        background: #004a93;
+        border-color: #004a93;
+        color: #fff;
+        font-weight: 600;
+        padding: 0.5rem 1.5rem;
+        border-radius: 8px;
+    }
+
+    .leave-module .btn-apply:hover {
+        background: #003d7a;
+        border-color: #003d7a;
+        color: #fff;
+    }
+
+    /* ── My Leave list page (design-system list) ── */
+    .leave-module .fl-filter-select {
+        width: 180px;
+        min-height: 40px;
+        height: 40px;
+        border: 1px solid #d0d5dd;
+        border-radius: 8px;
+        font-size: 0.9375rem;
+        color: #344054;
+        padding: 0.5rem 2.25rem 0.5rem 0.875rem;
+        background-position: right 0.75rem center;
+    }
+
+    .leave-module .fl-filter-select:focus {
+        border-color: #004a93;
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, 0.12);
+    }
+
+    .leave-module .fl-daterange-wrap {
+        position: relative;
+    }
+
+    .leave-module .fl-daterange-input {
+        width: 215px;
+        padding-left: 2.25rem;
+        padding-right: 0.875rem;
+        cursor: pointer;
+        background-image: none;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .leave-module .fl-daterange-input::placeholder {
+        color: #344054;
+    }
+
+    .leave-module .fl-daterange-icon {
+        position: absolute;
+        left: 0.75rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: #667085;
+        font-size: 0.95rem;
+        pointer-events: none;
+    }
+
+    .leave-module .fl-download-btn {
+        height: 40px;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0 1.1rem;
+        font-size: 0.9375rem;
+        font-weight: 500;
+        color: #004a93;
+        border-radius: 8px;
+        background: #fff;
+    }
+
+    .leave-module .fl-download-btn:hover {
+        color: #004a93;
+        background: #fff;
+    }
+
+    .leave-module .fl-download-btn i {
+        font-size: 1rem;
+        line-height: 1;
+    }
+
+    .leave-module .leave-status {
+        font-size: 0.8125rem;
+        font-weight: 500;
+        padding: 0.35rem 0.75rem;
+        line-height: 1.2;
+    }
+
+    .leave-module .leave-status--draft {
+        background: #f2f4f7;
+        color: #475467;
+    }
+
+    .leave-module .leave-status--pending {
+        background: #fef0c7;
+        color: #b54708;
+    }
+
+    .leave-module .leave-status--approved {
+        background: #ecfdf3;
+        color: #027a48;
+    }
+
+    .leave-module .leave-status--rejected {
+        background: #fef3f2;
+        color: #b42318;
+    }
+
+    @media (max-width: 767.98px) {
+        .leave-module .fl-filter-select,
+        .leave-module .fl-daterange-input {
+            width: 100%;
+        }
+    }
+
     /* Shared with balance page */
     .leave-module .pt-balance-card {
         border: 1px solid #d1e7dd;
