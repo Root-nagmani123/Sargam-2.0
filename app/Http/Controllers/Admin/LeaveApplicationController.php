@@ -249,7 +249,8 @@ class LeaveApplicationController extends Controller
                 $context['student_pk'],
                 $validated['from_date'],
                 $validated['to_date'],
-                $application?->pk
+                $application?->pk,
+                $validated['leave_type']
             );
         } catch (\InvalidArgumentException $e) {
             return back()->withInput()->withErrors(['from_date' => $e->getMessage()]);
