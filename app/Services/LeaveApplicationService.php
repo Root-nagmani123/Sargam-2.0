@@ -199,7 +199,8 @@ class LeaveApplicationService
         int $studentPk,
         string $fromDate,
         string $toDate,
-        ?int $ignoreApplicationPk = null
+        ?int $ignoreApplicationPk = null,
+        ?string $leaveType = null
     ): ?LeaveApplication {
         $query = LeaveApplication::query()
             ->where('student_master_pk', $studentPk)
@@ -208,6 +209,7 @@ class LeaveApplicationService
                 LeaveApplication::STATUS_PENDING,
                 LeaveApplication::STATUS_APPROVED,
             ])
+            ->when($leaveType !== null, fn ($q) => $q->where('leave_type', $leaveType))
             ->where(function ($q) use ($fromDate, $toDate) {
                 $q->whereBetween('from_date', [$fromDate, $toDate])
                     ->orWhereBetween('to_date', [$fromDate, $toDate])
@@ -240,9 +242,10 @@ class LeaveApplicationService
         int $studentPk,
         string $fromDate,
         string $toDate,
-        ?int $ignoreApplicationPk = null
+        ?int $ignoreApplicationPk = null,
+        ?string $leaveType = null
     ): void {
-        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk);
+        $existing = $this->findOverlappingApplication($studentPk, $fromDate, $toDate, $ignoreApplicationPk, $leaveType);
 
         if ($existing) {
             throw new \InvalidArgumentException($this->overlapErrorMessage($existing));
