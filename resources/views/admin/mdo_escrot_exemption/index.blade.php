@@ -22,6 +22,27 @@
     border-color: #dc3545;
 }
 .select2-container--open { z-index: 1060; }
+
+/*
+ * These modals wrap header/body/footer inside a <form>, which breaks Bootstrap's
+ * .modal-dialog-scrollable (it expects them as direct children of .modal-content).
+ * Make the form a flex column so the body scrolls and the footer (with the action
+ * buttons) stays pinned and always visible, even when the content is long
+ * (e.g. a big "skipped rows" list after a bulk upload).
+ */
+.modal-dialog-scrollable .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    max-height: 100%;
+    overflow: hidden;
+}
+.modal-dialog-scrollable .modal-content > form > .modal-body {
+    overflow-y: auto;
+}
+.modal-dialog-scrollable .modal-content > form > .modal-header,
+.modal-dialog-scrollable .modal-content > form > .modal-footer {
+    flex-shrink: 0;
+}
 </style>
 @endpush
 
@@ -1317,9 +1338,18 @@ $(document).ready(function() {
             var errors = response.errors || [];
             if (errors.length) {
                 var $list = $('#meeBulkResultErrorList').empty();
-                errors.forEach(function(err) {
+                // Render at most 100 rows so a huge error list can't flood the modal
+                // (which pushed the Upload button out of view). The rest are summarised.
+                var MAX_SHOWN = 100;
+                errors.slice(0, MAX_SHOWN).forEach(function(err) {
                     $list.append($('<li>').text(err));
                 });
+                if (errors.length > MAX_SHOWN) {
+                    $list.append(
+                        $('<li>').addClass('fw-semibold list-unstyled mt-1')
+                            .text('…and ' + (errors.length - MAX_SHOWN) + ' more row(s) skipped.')
+                    );
+                }
                 $('#meeBulkResultErrors').removeClass('d-none');
             } else {
                 $('#meeBulkResultErrors').addClass('d-none');
@@ -1379,47 +1409,61 @@ $(document).ready(function() {
                     }
                     return xhr;
                 },
+                // 2 minute cap so a hung/slow request can never leave the button stuck.
+                timeout: 120000,
                 success: function(response) {
-                    table.ajax.reload(null, false);
-                    renderBulkResult(response);
-                    $('#meeBulkFormAlert').removeClass('d-none alert-danger').addClass('alert-success')
-                        .text(response.message || 'Upload completed.');
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Success',
-                        text: response.message || 'Bulk upload completed.',
-                        timer: 2400,
-                        showConfirmButton: false
-                    });
-                },
-                error: function(xhr) {
-                    var response = xhr.responseJSON || {};
-                    var message = response.message || 'Something went wrong. Please try again.';
-                    var errors = response.errors || null;
-
-                    if (errors && !response.imported) {
-                        // Laravel validation errors (object of field => messages)
-                        if (!Array.isArray(errors)) {
-                            var map = {
-                                course_master_pk: '#meeBulkCourse',
-                                mdo_duty_type_master_pk: '#meeBulkDutyType',
-                                faculty_master_pk: '#meeBulkFaculty',
-                                bulk_file: '#meeBulkFile'
-                            };
-                            Object.keys(errors).forEach(function(key) {
-                                if (map[key]) {
-                                    $(map[key]).addClass('is-invalid');
-                                }
-                            });
-                            message = Object.values(errors).flat().join('<br>');
-                        }
-                    }
-
-                    $('#meeBulkFormAlert').removeClass('d-none alert-success').addClass('alert-danger').html(message);
-
-                    // Row-level errors from the importer (file processed but nothing imported)
-                    if (response.errors && Array.isArray(response.errors)) {
+                    // Wrapped so a render error can't stop `complete` re-enabling the button.
+                    try {
+                        table.ajax.reload(null, false);
                         renderBulkResult(response);
+                        $('#meeBulkFormAlert').removeClass('d-none alert-danger').addClass('alert-success')
+                            .text(response.message || 'Upload completed.');
+                        Swal.fire({
+                            icon: 'success',
+                            title: 'Success',
+                            text: response.message || 'Bulk upload completed.',
+                            timer: 2400,
+                            showConfirmButton: false
+                        });
+                    } catch (err) {
+                        console.error('Bulk upload success handler error:', err);
+                    }
+                },
+                error: function(xhr, textStatus) {
+                    try {
+                        var response = xhr.responseJSON || {};
+                        var message = response.message
+                            || (textStatus === 'timeout'
+                                ? 'The upload took too long and was stopped. Please try a smaller file.'
+                                : 'Something went wrong. Please try again.');
+                        var errors = response.errors || null;
+
+                        if (errors && !response.imported) {
+                            // Laravel validation errors (object of field => messages)
+                            if (!Array.isArray(errors)) {
+                                var map = {
+                                    course_master_pk: '#meeBulkCourse',
+                                    mdo_duty_type_master_pk: '#meeBulkDutyType',
+                                    faculty_master_pk: '#meeBulkFaculty',
+                                    bulk_file: '#meeBulkFile'
+                                };
+                                Object.keys(errors).forEach(function(key) {
+                                    if (map[key]) {
+                                        $(map[key]).addClass('is-invalid');
+                                    }
+                                });
+                                message = Object.values(errors).flat().join('<br>');
+                            }
+                        }
+
+                        $('#meeBulkFormAlert').removeClass('d-none alert-success').addClass('alert-danger').html(message);
+
+                        // Row-level errors from the importer (file processed but nothing imported)
+                        if (response.errors && Array.isArray(response.errors)) {
+                            renderBulkResult(response);
+                        }
+                    } catch (err) {
+                        console.error('Bulk upload error handler error:', err);
                     }
                 },
                 complete: function() {

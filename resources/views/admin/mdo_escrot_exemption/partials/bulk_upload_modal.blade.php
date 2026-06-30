@@ -115,7 +115,8 @@
                                 <h6 class="fw-semibold mb-2" id="meeBulkResultSummary"></h6>
                                 <div id="meeBulkResultErrors" class="small text-danger d-none">
                                     <div class="fw-semibold mb-1">Skipped rows:</div>
-                                    <ul class="mb-0 ps-3" id="meeBulkResultErrorList"></ul>
+                                    <ul class="mb-0 ps-3" id="meeBulkResultErrorList"
+                                        style="max-height: 200px; overflow-y: auto;"></ul>
                                 </div>
                             </div>
                         </div>
