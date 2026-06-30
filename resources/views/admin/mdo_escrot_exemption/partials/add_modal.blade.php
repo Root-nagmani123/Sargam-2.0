@@ -121,7 +121,7 @@
                         <div class="col-12 mee-add-only-field">
                             <label for="textarea" class="form-label cgt-field-label mb-2">Description</label>
                             <textarea class="form-control rounded-3" id="textarea" name="Remark" rows="3"
-                                placeholder="eg. Lorem ipsum dolor"></textarea>
+                                placeholder="Enter a remark or description (optional)"></textarea>
                         </div>
                     </div>
                 </div>
