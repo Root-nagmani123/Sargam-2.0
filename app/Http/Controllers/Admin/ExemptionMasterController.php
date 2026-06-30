@@ -29,7 +29,10 @@ class ExemptionMasterController extends Controller
             return $this->datatable($request);
         }
 
-        return view('admin.exemption_master.index');
+        return view('admin.exemption_master.index', [
+            'coursesActive' => $this->getConfiguredCourses('active'),
+            'coursesArchive' => $this->getConfiguredCourses('archive'),
+        ]);
     }
 
     public function create(Request $request)
@@ -235,12 +238,7 @@ class ExemptionMasterController extends Controller
             }
         }
 
-        $query = ExemptionMaster::with('course')->orderByDesc('pk');
-
-        $courseIds = $this->getAllowedCourseIds();
-        if ($courseIds !== null) {
-            $query->whereIn('course_master_pk', $courseIds);
-        }
+        $query = $this->baseListQuery($request);
 
         return DataTables::of($query)
             ->addIndexColumn()
@@ -272,15 +270,11 @@ class ExemptionMasterController extends Controller
                 return number_format((float) $row->exemption_days, 1) . ' Days';
             })
             ->addColumn('status', function ($row) {
-                $checked = (int) $row->active_inactive === 1 ? 'checked' : '';
+                if ((int) $row->active_inactive === 1) {
+                    return '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>';
+                }
 
-                return '
-                    <div class="form-check form-switch d-inline-block">
-                        <input class="form-check-input exemption-status-toggle"
-                               type="checkbox"
-                               data-id="' . $row->pk . '"
-                               ' . $checked . '>
-                    </div>';
+                return '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
             })
             ->addColumn('action', function ($row) {
                 $url = route('admin.pt-exemption-master.create', [
@@ -288,23 +282,129 @@ class ExemptionMasterController extends Controller
                     'effective_from' => $row->effective_from?->format('Y-m-d'),
                 ]);
 
-                $editBtn = '
-                    <a href="' . $url . '" class="text-primary" title="Edit">
-                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">edit</i>
-                    </a>';
+                $checked = (int) $row->active_inactive === 1 ? 'checked' : '';
+
+                $editBtn = '<a href="' . $url . '" class="programme-action-btn" aria-label="Edit" title="Edit">'
+                    . '<i class="bi bi-pencil" aria-hidden="true"></i></a>';
+
+                $toggle = '<div class="form-check form-switch programme-action-switch mb-0">'
+                    . '<input class="form-check-input plain-status-toggle exemption-status-toggle" type="checkbox" role="switch" '
+                    . 'data-id="' . $row->pk . '" ' . $checked . '></div>';
 
                 $deleteBtn = '';
                 if ((int) $row->active_inactive === 0) {
-                    $deleteBtn = '
-                        <a href="javascript:void(0)" class="text-danger exemption-delete-btn" data-id="' . $row->pk . '" title="Delete">
-                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">delete</i>
-                        </a>';
+                    $deleteBtn = '<a href="javascript:void(0)" class="programme-action-btn programme-action-btn--danger exemption-delete-btn" '
+                        . 'data-id="' . $row->pk . '" aria-label="Delete" title="Delete">'
+                        . '<i class="bi bi-trash3" aria-hidden="true"></i></a>';
                 }
 
-                return '<div class="d-inline-flex align-items-center gap-2">' . $editBtn . $deleteBtn . '</div>';
+                return '<div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">'
+                    . $editBtn . $toggle . $deleteBtn . '</div>';
             })
             ->rawColumns(['status', 'action'])
             ->make(true);
+    }
+
+    protected function baseListQuery(Request $request)
+    {
+        $query = ExemptionMaster::with('course')->orderByDesc('pk');
+
+        $courseIds = $this->getAllowedCourseIds();
+        if ($courseIds !== null) {
+            $query->whereIn('course_master_pk', $courseIds);
+        }
+
+        $statusFilter = (string) $request->input('status_filter', 'active');
+        $today = now()->toDateString();
+        if ($statusFilter === 'archive') {
+            // Archived = the course has already ended (expired).
+            $query->whereHas('course', fn ($q) => $q->whereDate('end_date', '<', $today));
+        } elseif ($statusFilter === 'active') {
+            // Active = the course is still current / upcoming.
+            $query->whereHas('course', fn ($q) => $q->whereDate('end_date', '>=', $today));
+        }
+
+        if ($request->filled('course_filter')) {
+            $query->where('course_master_pk', (int) $request->input('course_filter'));
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('effective_from', '>=', $request->input('from_date'));
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('effective_from', '<=', $request->input('to_date'));
+        }
+
+        return $query;
+    }
+
+    /**
+     * Courses that have at least one PT exemption configured, scoped to the given tab status
+     * by course lifecycle. $status: 'active' = course still current/upcoming,
+     * 'archive' = course already ended, null = any.
+     */
+    protected function getConfiguredCourses(?string $status = null)
+    {
+        $courseIds = $this->getAllowedCourseIds();
+
+        $configuredIds = ExemptionMaster::query()
+            ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds))
+            ->distinct()
+            ->pluck('course_master_pk')
+            ->all();
+
+        if (empty($configuredIds)) {
+            return collect();
+        }
+
+        $today = now()->toDateString();
+
+        return CourseMaster::whereIn('pk', $configuredIds)
+            ->when($status === 'active', fn ($q) => $q->whereDate('end_date', '>=', $today))
+            ->when($status === 'archive', fn ($q) => $q->whereDate('end_date', '<', $today))
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
+    }
+
+    public function export(Request $request)
+    {
+        $query = $this->baseListQuery($request);
+
+        if ($request->filled('search')) {
+            $search = (string) $request->input('search');
+            $query->where(function ($q) use ($search) {
+                $q->where('gender', 'like', "%{$search}%")
+                    ->orWhereHas('course', function ($qc) use ($search) {
+                        $qc->where('course_name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
+        $rows = $query->get();
+
+        $columns = ['S. No.', 'Course', 'Effective From', 'PT Timing', 'Gender', 'PT Exemption Count (Days)', 'Status'];
+        $filename = 'PT_Exemption_Master_' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($rows, $columns) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
+
+            $serial = 1;
+            foreach ($rows as $row) {
+                fputcsv($out, [
+                    $serial++,
+                    $row->course->course_name ?? 'N/A',
+                    $row->effective_from ? $row->effective_from->format('d-m-Y') : 'N/A',
+                    blank($row->apply_cutoff_time) ? 'N/A' : \Carbon\Carbon::parse($row->apply_cutoff_time)->format('h:i A'),
+                    $row->gender,
+                    number_format((float) $row->exemption_days, 1) . ' Days',
+                    (int) $row->active_inactive === 1 ? 'Active' : 'Inactive',
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
     }
 
     protected function getCourses()

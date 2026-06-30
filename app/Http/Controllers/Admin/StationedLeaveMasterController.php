@@ -31,7 +31,9 @@ class StationedLeaveMasterController extends Controller
             return $this->datatable($request);
         }
 
-        return view('admin.stationed_leave_master.index');
+        return view('admin.stationed_leave_master.index', [
+            'courses' => $this->getConfiguredCourses(),
+        ]);
     }
 
     public function create(Request $request)
@@ -231,7 +233,7 @@ class StationedLeaveMasterController extends Controller
         return response()->json(['data' => $faculties]);
     }
 
-    protected function datatable(Request $request)
+    protected function baseListQuery(Request $request)
     {
         $query = StationedLeaveMaster::with(['course', 'approvers'])
             ->withCount('approvers')
@@ -242,7 +244,24 @@ class StationedLeaveMasterController extends Controller
             $query->whereIn('course_master_pk', $courseIds);
         }
 
-        return DataTables::of($query)
+        if ($request->filled('course_filter')) {
+            $query->where('course_master_pk', (int) $request->input('course_filter'));
+        }
+
+        if ($request->filled('from_date')) {
+            $query->whereDate('effective_from', '>=', $request->input('from_date'));
+        }
+
+        if ($request->filled('to_date')) {
+            $query->whereDate('effective_from', '<=', $request->input('to_date'));
+        }
+
+        return $query;
+    }
+
+    protected function datatable(Request $request)
+    {
+        return DataTables::of($this->baseListQuery($request))
             ->addIndexColumn()
             ->filter(function ($query) use ($request) {
                 if (! empty($request->search['value'])) {
@@ -266,15 +285,11 @@ class StationedLeaveMasterController extends Controller
             ->addColumn('approval_required_display', fn ($row) => (int) $row->is_faculty_approval_required === 1 ? 'Yes' : 'No')
             ->addColumn('faculty_count_display', fn ($row) => (int) ($row->approvers_count ?? 0))
             ->addColumn('status', function ($row) {
-                $checked = (int) $row->active_inactive === 1 ? 'checked' : '';
+                if ((int) $row->active_inactive === 1) {
+                    return '<span class="badge rounded-pill programme-status-badge programme-status-badge--active">Active</span>';
+                }
 
-                return '
-                    <div class="form-check form-switch d-inline-block">
-                        <input class="form-check-input stationed-leave-status-toggle"
-                               type="checkbox"
-                               data-id="' . $row->pk . '"
-                               ' . $checked . '>
-                    </div>';
+                return '<span class="badge rounded-pill programme-status-badge programme-status-badge--inactive">Inactive</span>';
             })
             ->addColumn('action', function ($row) {
                 $url = route('admin.stationed-leave-master.create', [
@@ -282,23 +297,77 @@ class StationedLeaveMasterController extends Controller
                     'effective_from' => $row->effective_from?->format('Y-m-d'),
                 ]);
 
-                $editBtn = '
-                    <a href="' . $url . '" class="text-primary" title="Edit">
-                        <i class="material-icons material-symbols-rounded" style="font-size:20px;">edit</i>
-                    </a>';
+                $checked = (int) $row->active_inactive === 1 ? 'checked' : '';
+
+                $editBtn = '<a href="' . $url . '" class="programme-action-btn" aria-label="Edit" title="Edit">'
+                    . '<i class="bi bi-pencil" aria-hidden="true"></i></a>';
+
+                $toggle = '<div class="form-check form-switch programme-action-switch mb-0">'
+                    . '<input class="form-check-input plain-status-toggle stationed-leave-status-toggle" type="checkbox" role="switch" '
+                    . 'data-id="' . $row->pk . '" ' . $checked . '></div>';
 
                 $deleteBtn = '';
                 if ((int) $row->active_inactive === 0) {
-                    $deleteBtn = '
-                        <a href="javascript:void(0)" class="text-danger stationed-leave-delete-btn" data-id="' . $row->pk . '" title="Delete">
-                            <i class="material-icons material-symbols-rounded" style="font-size:20px;">delete</i>
-                        </a>';
+                    $deleteBtn = '<a href="javascript:void(0)" class="programme-action-btn programme-action-btn--danger stationed-leave-delete-btn" '
+                        . 'data-id="' . $row->pk . '" aria-label="Delete" title="Delete">'
+                        . '<i class="bi bi-trash3" aria-hidden="true"></i></a>';
                 }
 
-                return '<div class="d-inline-flex align-items-center gap-2">' . $editBtn . $deleteBtn . '</div>';
+                return '<div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">'
+                    . $editBtn . $toggle . $deleteBtn . '</div>';
             })
             ->rawColumns(['status', 'action'])
             ->make(true);
+    }
+
+    public function export(Request $request)
+    {
+        $rows = $this->baseListQuery($request)->get();
+
+        $columns = ['S. No.', 'Course', 'Effective From', 'PT Timing', 'Approval Required', 'Faculty Count', 'Status'];
+        $filename = 'Stationed_Leave_Master_' . now()->format('Ymd_His') . '.csv';
+
+        return response()->streamDownload(function () use ($rows, $columns) {
+            $out = fopen('php://output', 'w');
+            fputcsv($out, $columns);
+
+            $serial = 1;
+            foreach ($rows as $row) {
+                fputcsv($out, [
+                    $serial++,
+                    $row->course->course_name ?? 'N/A',
+                    $row->effective_from?->format('d-m-Y') ?? 'N/A',
+                    blank($row->apply_cutoff_time) ? 'N/A' : \Carbon\Carbon::parse($row->apply_cutoff_time)->format('h:i A'),
+                    (int) $row->is_faculty_approval_required === 1 ? 'Yes' : 'No',
+                    (int) ($row->approvers_count ?? 0),
+                    (int) $row->active_inactive === 1 ? 'Active' : 'Inactive',
+                ]);
+            }
+
+            fclose($out);
+        }, $filename, ['Content-Type' => 'text/csv']);
+    }
+
+    /**
+     * Courses that already have at least one stationed-leave configuration (for the filter dropdown).
+     */
+    protected function getConfiguredCourses()
+    {
+        $courseIds = $this->getAllowedCourseIds();
+
+        $configuredIds = StationedLeaveMaster::query()
+            ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds))
+            ->distinct()
+            ->pluck('course_master_pk')
+            ->all();
+
+        if (empty($configuredIds)) {
+            return collect();
+        }
+
+        return CourseMaster::whereIn('pk', $configuredIds)
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
     }
 
     protected function getCourses()
