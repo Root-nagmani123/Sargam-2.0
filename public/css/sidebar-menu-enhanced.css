@@ -14,7 +14,7 @@
     --sidebar-text-muted: #6b7280;
     --sidebar-transition: all 0.2s ease;
     --sidebar-border-radius: 0.5rem;
-    --sargam-sidebar-mini-width: 90px;
+    --sargam-sidebar-mini-width: 105px;
     --sargam-sidebar-menu-width: 275px;
     --sargam-sidebar-total-width: calc(var(--sargam-sidebar-mini-width) + var(--sargam-sidebar-menu-width));
 }
@@ -234,8 +234,8 @@
 
 #sidebar-setup .side-mini-panel.sidebar-google-style .mini-nav {
     flex: 0 0 90px;
-    width: 92px;
-    max-width: 92px;
+    width: 100px;
+    max-width: 100px;
 }
 
 #sidebar-setup .side-mini-panel.sidebar-google-style .sidebarmenu {
