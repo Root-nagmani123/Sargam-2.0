@@ -138,6 +138,9 @@ class MDOEscrotExemptionController extends Controller
                 'Time_from' => $mdoDutyType->Time_from ? substr($mdoDutyType->Time_from, 0, 5) : '',
                 'Time_to' => $mdoDutyType->Time_to ? substr($mdoDutyType->Time_to, 0, 5) : '',
                 'faculty_master_pk' => $mdoDutyType->faculty_master_pk,
+                'faculty_master_pks' => $mdoDutyType->faculty_master_pks
+                    ? array_values(array_filter(explode(',', $mdoDutyType->faculty_master_pks)))
+                    : array_values(array_filter([$mdoDutyType->faculty_master_pk])),
                 'student_name' => optional($mdoDutyType->studentMaster)->display_name ?? '—',
                 'course_name' => optional($mdoDutyType->courseMaster)->course_name ?? '—',
             ],
@@ -149,6 +152,13 @@ class MDOEscrotExemptionController extends Controller
         try {
             $insertedRecords = [];
 
+            // Faculty may be one or many. Store the full list as a comma-separated
+            // string in faculty_master_pks and keep faculty_master_pk = first faculty
+            // (for the existing belongsTo relation / list filters).
+            $facultyPks = array_values(array_filter((array) $request->faculty_master_pk));
+            $primaryFaculty = $facultyPks[0] ?? null;
+            $facultyPksCsv = !empty($facultyPks) ? implode(',', $facultyPks) : null;
+
             if ($request->selected_student_list != null) {
                 foreach ($request->selected_student_list as $student_id) {
                     $record = MDOEscotDutyMap::create([
@@ -159,7 +169,8 @@ class MDOEscrotExemptionController extends Controller
                         'Time_to' => $request->Time_to,
                         'Remark' => $request->Remark,
                         'selected_student_list' => $student_id,
-                        'faculty_master_pk' => $request->faculty_master_pk ?? null,
+                        'faculty_master_pk' => $primaryFaculty,
+                        'faculty_master_pks' => $facultyPksCsv,
                     ]);
                     
                     $insertedRecords[] = [
@@ -393,11 +404,22 @@ class MDOEscrotExemptionController extends Controller
 
             if (!empty($course->studentMasterCourseMap)) {
 
-                $alreadyAssignedStudents = MDOEscotDutyMap::
-                where('course_master_pk', $course->pk)
-                ->whereDate('mdo_date', $request->selectedDate)
-                ->pluck('selected_student_list')->toArray();
-                // dd($alreadyAssignedStudents);
+                // Exclude students whose existing duty on this date OVERLAPS the requested
+                // time window. A student may hold multiple duties on one day as long as the
+                // times don't clash, so we treat any overlap (not just an exact slot match)
+                // as a conflict: existing.from < new.to AND existing.to > new.from.
+                $timeFrom = $request->selectedTimeFrom ? date('H:i:s', strtotime($request->selectedTimeFrom)) : null;
+                $timeTo   = $request->selectedTimeTo ? date('H:i:s', strtotime($request->selectedTimeTo)) : null;
+
+                $assignedQuery = MDOEscotDutyMap::where('course_master_pk', $course->pk)
+                    ->whereDate('mdo_date', $request->selectedDate);
+
+                if ($timeFrom && $timeTo) {
+                    $assignedQuery->where('Time_from', '<', $timeTo)
+                        ->where('Time_to', '>', $timeFrom);
+                }
+
+                $alreadyAssignedStudents = $assignedQuery->pluck('selected_student_list')->toArray();
                 $students = [];
                 $students = $course->studentMasterCourseMap->map(function ($student) {
                     $studentMaster = StudentMaster::where('pk', $student['student_master_pk'])->first();
@@ -430,12 +452,17 @@ class MDOEscrotExemptionController extends Controller
             $mdoDutyType = MDOEscotDutyMap::findOrFail(decrypt($request->pk));
             $updateData = $request->only('mdo_duty_type_master_pk', 'mdo_date', 'Time_from', 'Time_to');
             
-            // If duty type is not Escort, set faculty_master_pk to null
+            // If duty type is not Escort, clear faculty. Otherwise store the (possibly
+            // multiple) selected faculty: full list in faculty_master_pks, first in
+            // faculty_master_pk for the existing relation / list filters.
             $escortDutyTypeId = MDOEscotDutyMap::getMdoDutyTypes()['escort'] ?? null;
             if ($request->mdo_duty_type_master_pk != $escortDutyTypeId) {
                 $updateData['faculty_master_pk'] = null;
+                $updateData['faculty_master_pks'] = null;
             } else {
-                $updateData['faculty_master_pk'] = $request->faculty_master_pk ?? null;
+                $facultyPks = array_values(array_filter((array) $request->faculty_master_pk));
+                $updateData['faculty_master_pk'] = $facultyPks[0] ?? null;
+                $updateData['faculty_master_pks'] = !empty($facultyPks) ? implode(',', $facultyPks) : null;
             }
             
             $mdoDutyType->update($updateData);

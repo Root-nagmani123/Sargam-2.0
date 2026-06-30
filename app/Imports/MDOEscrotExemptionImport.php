@@ -84,7 +84,7 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
 
                 $mdoDate = $this->parseDate($dateRaw);
                 if (!$mdoDate) {
-                    $this->fail($rowNumber, 'Date is missing or invalid (use YYYY-MM-DD).');
+                    $this->fail($rowNumber, 'Date is missing or invalid (use DD-MM-YYYY).');
                     continue;
                 }
 
@@ -94,14 +94,17 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                // Skip if this student already has a duty for this course + date (mirrors single-add exclusion).
+                // Skip only if this student already has a duty for the SAME course + date + time slot
+                // (mirrors single-add exclusion). Different event times on the same day are allowed.
                 $exists = MDOEscotDutyMap::where('course_master_pk', $this->coursePk)
                     ->where('selected_student_list', $studentId)
                     ->whereDate('mdo_date', $mdoDate)
+                    ->where('Time_from', $times['from'])
+                    ->where('Time_to', $times['to'])
                     ->exists();
 
                 if ($exists) {
-                    $this->fail($rowNumber, "OT Code '{$otCode}' already has a duty assigned on {$mdoDate}.");
+                    $this->fail($rowNumber, "OT Code '{$otCode}' already has a duty assigned on {$mdoDate} from {$times['from']} to {$times['to']}.");
                     continue;
                 }
 
@@ -216,9 +219,24 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
             return null;
         }
 
-        $key = strtolower(trim($session));
+        $session = trim($session);
+        $key = strtolower($session);
         if (isset($this->sessionMap[$key])) {
             return $this->sessionMap[$key];
+        }
+
+        // Combined "Session 1 (06:00 to 14:00)" form produced by the template dropdown:
+        // the time inside the parenthesis is authoritative, so parse it first. The
+        // label (e.g. "Session 1") is just a friendly name and may not correspond to a
+        // class_session_master row, so only fall back to a name lookup if no time is given.
+        if (preg_match('/^(.*?)\s*\((.+)\)\s*$/', $session, $m)) {
+            if ($range = $this->parseRange($m[2])) {
+                return $range;
+            }
+            $namePart = strtolower(trim($m[1]));
+            if ($namePart !== '' && isset($this->sessionMap[$namePart])) {
+                return $this->sessionMap[$namePart];
+            }
         }
 
         // Fallback: explicit time range like "10:00 to 11:00", "10:00-11:00", "10:00 AM - 11:00 AM".
@@ -240,7 +258,20 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
             }
         }
 
-        $ts = strtotime(trim((string) $value));
+        $value = trim((string) $value);
+
+        // Prefer day-first formats (DD-MM-YYYY / DD/MM/YYYY) to match the template.
+        // strtotime() reads slash dates as US month-first, so parse these explicitly.
+        if (preg_match('/^(\d{1,2})[-\/.](\d{1,2})[-\/.](\d{4})$/', $value, $m)) {
+            $day = (int) $m[1];
+            $month = (int) $m[2];
+            $year = (int) $m[3];
+            if (checkdate($month, $day, $year)) {
+                return sprintf('%04d-%02d-%02d', $year, $month, $day);
+            }
+        }
+
+        $ts = strtotime($value);
         return $ts !== false ? date('Y-m-d', $ts) : null;
     }
 

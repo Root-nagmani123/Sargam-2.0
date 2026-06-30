@@ -502,8 +502,8 @@ $(document).ready(function() {
 
     $('#meeDeleteConfirmOk').on('click', function() {
         if (pendingDeleteForm) {
-            pendingDeleteForm.off('submit');
-            pendingDeleteForm[0].submit();
+            // pendingDeleteForm is a native <form> element; submit it natively.
+            pendingDeleteForm.submit();
             pendingDeleteForm = null;
         }
         if (meeDeleteModal) {
@@ -621,14 +621,15 @@ $(document).ready(function() {
                 return;
             }
             $faculty.select2({
-                placeholder: 'Search Faculty',
-                allowClear: true,
+                placeholder: 'Search Faculty (one or more)',
                 width: '100%',
+                closeOnSelect: false,
                 dropdownParent: $('#meeAddModal')
             });
             // Keep native validation styling in sync with the search box.
             $faculty.on('change', function() {
-                if ($(this).val()) {
+                var val = $(this).val();
+                if (val && val.length) {
                     $(this).removeClass('is-invalid');
                     $('#meeErrorFaculty').addClass('d-none');
                 }
@@ -643,7 +644,7 @@ $(document).ready(function() {
                 $('#faculty_master_pk').prop('required', true);
             } else {
                 $('#faculty_field_container').addClass('d-none');
-                $('#faculty_master_pk').val('').prop('required', false);
+                $('#faculty_master_pk').val(null).prop('required', false);
                 if ($('#faculty_master_pk').hasClass('select2-hidden-accessible')) {
                     $('#faculty_master_pk').trigger('change.select2');
                 }
@@ -773,7 +774,9 @@ $(document).ready(function() {
                 data: {
                     _token: csrfToken,
                     selectedCourses: courseId,
-                    selectedDate: selectedDate
+                    selectedDate: selectedDate,
+                    selectedTimeFrom: $('#Time_from').val(),
+                    selectedTimeTo: $('#Time_to').val()
                 }
             });
 
@@ -876,7 +879,8 @@ $(document).ready(function() {
                 $('#Time_to').addClass('is-invalid');
                 valid = false;
             }
-            if (meeEscortDutyTypeId && $('#mdo_duty_type_master_pk').val() === meeEscortDutyTypeId && !$('#faculty_master_pk').val()) {
+            var facultyVal = $('#faculty_master_pk').val();
+            if (meeEscortDutyTypeId && $('#mdo_duty_type_master_pk').val() === meeEscortDutyTypeId && (!facultyVal || !facultyVal.length)) {
                 $('#meeErrorFaculty').removeClass('d-none');
                 $('#faculty_master_pk').addClass('is-invalid');
                 valid = false;
@@ -903,7 +907,9 @@ $(document).ready(function() {
 
         $('#mdo_duty_type_master_pk').on('change', toggleFacultyField);
 
-        $('#meeCourseDropdown, #mdo_date').on('change', function() {
+        // Course, date or time change invalidates the previously picked students,
+        // since the available list depends on all of them (time-slot conflict check).
+        $('#meeCourseDropdown, #mdo_date, #Time_from, #Time_to').on('change', function() {
             meeAssignedStudents = [];
             meeAllStudents = [];
             renderAssignStudentTags();
@@ -921,6 +927,23 @@ $(document).ready(function() {
             if (!$('#mdo_date').val()) {
                 $('#meeErrorDate').removeClass('d-none');
                 $('#mdo_date').addClass('is-invalid').focus();
+                return;
+            }
+            // Time is required so the picker can exclude students already busy in
+            // that slot. Without it we cannot run the time-conflict check.
+            if (!$('#Time_from').val()) {
+                $('#meeErrorTimeFrom').removeClass('d-none');
+                $('#Time_from').addClass('is-invalid').focus();
+                return;
+            }
+            if (!$('#Time_to').val()) {
+                $('#meeErrorTimeTo').removeClass('d-none');
+                $('#Time_to').addClass('is-invalid').focus();
+                return;
+            }
+            if ($('#Time_to').val() <= $('#Time_from').val()) {
+                $('#meeErrorTimeTo').removeClass('d-none').text('End time must be after start time.');
+                $('#Time_to').addClass('is-invalid').focus();
                 return;
             }
 
@@ -1062,6 +1085,21 @@ $(document).ready(function() {
             }
         });
 
+        // Faculty is a multi-select (one or more) for Escort duty.
+        $('#meeEditFaculty').select2({
+            placeholder: 'Search Faculty (one or more)',
+            width: '100%',
+            closeOnSelect: false,
+            dropdownParent: $('#meeEditModal')
+        });
+        $('#meeEditFaculty').on('change', function() {
+            var val = $(this).val();
+            if (val && val.length) {
+                $(this).removeClass('is-invalid');
+                $('#meeEditErrorFaculty').addClass('d-none');
+            }
+        });
+
         function clearEditErrors() {
             $('#meeEditFormAlert').addClass('d-none').removeClass('alert-success alert-danger').empty();
             $('#meeEditForm .text-danger[id^="meeEditError"]').addClass('d-none');
@@ -1075,7 +1113,7 @@ $(document).ready(function() {
                 $('#meeEditFaculty').prop('required', true);
             } else {
                 $('#meeEditFacultyContainer').addClass('d-none');
-                $('#meeEditFaculty').prop('required', false);
+                $('#meeEditFaculty').val(null).trigger('change').prop('required', false);
             }
         }
 
@@ -1090,7 +1128,8 @@ $(document).ready(function() {
                 $('#meeEditErrorTimeTo').removeClass('d-none').text('End time must be after start time.');
                 $('#meeEditTimeTo').addClass('is-invalid'); valid = false;
             }
-            if (editEscortDutyTypeId && $('#meeEditDutyType').val() === editEscortDutyTypeId && !$('#meeEditFaculty').val()) {
+            var editFacultyVal = $('#meeEditFaculty').val();
+            if (editEscortDutyTypeId && $('#meeEditDutyType').val() === editEscortDutyTypeId && (!editFacultyVal || !editFacultyVal.length)) {
                 $('#meeEditErrorFaculty').removeClass('d-none'); $('#meeEditFaculty').addClass('is-invalid'); valid = false;
             }
             return valid;
@@ -1118,7 +1157,8 @@ $(document).ready(function() {
                     $('#meeEditDate').val(record.mdo_date || '');
                     $('#meeEditTimeFrom').val(record.Time_from || '');
                     $('#meeEditTimeTo').val(record.Time_to || '');
-                    $('#meeEditFaculty').val(record.faculty_master_pk || '');
+                    var facultyPks = (record.faculty_master_pks || []).map(String);
+                    $('#meeEditFaculty').val(facultyPks).trigger('change');
                     $('#meeEditStudentDisplay').text(record.student_name || '—');
                     $('#meeEditCourseDisplay').text(record.course_name || '—');
                     toggleEditFaculty();
