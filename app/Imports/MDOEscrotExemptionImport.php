@@ -33,6 +33,9 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
     /** shift_name (lower-cased) => ['from' => H:i:s, 'to' => H:i:s]. */
     private array $sessionMap = [];
 
+    /** Set of "studentId|Y-m-d|from|to" for existing duties (fast in-memory conflict check). */
+    private array $existingDutySet = [];
+
     public function __construct(
         private int $coursePk,
         private int $dutyTypePk,
@@ -45,6 +48,7 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
     {
         $this->preloadCourseStudents();
         $this->preloadSessions();
+        $this->preloadExistingDuties();
 
         foreach ($rows as $index => $row) {
             // +2 accounts for the heading row + 1-based indexing, matching the user's sheet.
@@ -97,14 +101,10 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
 
                 // Skip only if this student already has a duty for the SAME course + date + time slot
                 // (mirrors single-add exclusion). Different event times on the same day are allowed.
-                $exists = MDOEscotDutyMap::where('course_master_pk', $this->coursePk)
-                    ->where('selected_student_list', $studentId)
-                    ->whereDate('mdo_date', $mdoDate)
-                    ->where('Time_from', $times['from'])
-                    ->where('Time_to', $times['to'])
-                    ->exists();
-
-                if ($exists) {
+                // Checked against an in-memory set (preloaded once) instead of a per-row query, so
+                // large files import quickly and don't hang the request.
+                $conflictKey = $studentId . '|' . $mdoDate . '|' . $times['from'] . '|' . $times['to'];
+                if (isset($this->existingDutySet[$conflictKey])) {
                     $this->fail($rowNumber, "OT Code '{$otCode}' already has a duty assigned on {$mdoDate} from {$times['from']} to {$times['to']}.");
                     continue;
                 }
@@ -120,6 +120,9 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                     'faculty_master_pk'        => $this->facultyPk,
                     'faculty_master_pks'       => $this->facultyPksCsv,
                 ]);
+
+                // Track within this run too, so duplicate rows in the same file are skipped.
+                $this->existingDutySet[$conflictKey] = true;
 
                 $this->insertedRecords[] = ['record' => $record, 'student_id' => (int) $studentId];
                 $this->importedCount++;
@@ -152,6 +155,21 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                         'name' => (string) $student->display_name,
                     ];
                 }
+            });
+    }
+
+    /**
+     * Load all existing duties for this course once into an in-memory set so the
+     * per-row conflict check is an array lookup instead of a database query.
+     */
+    private function preloadExistingDuties(): void
+    {
+        MDOEscotDutyMap::where('course_master_pk', $this->coursePk)
+            ->get(['selected_student_list', 'mdo_date', 'Time_from', 'Time_to'])
+            ->each(function ($duty) {
+                $date = $duty->mdo_date ? date('Y-m-d', strtotime((string) $duty->mdo_date)) : '';
+                $key = $duty->selected_student_list . '|' . $date . '|' . $duty->Time_from . '|' . $duty->Time_to;
+                $this->existingDutySet[$key] = true;
             });
     }
 
