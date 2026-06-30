@@ -203,7 +203,7 @@
 		<x-input
 			name="current_department"
 			label="Organisation :"
-			placeholder="Select Organisation"
+			placeholder="Current Organisation"
 			formLabelClass="form-label"
 			 value="{{ $faculty->current_department}}"
 		/>
