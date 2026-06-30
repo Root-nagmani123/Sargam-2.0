@@ -373,7 +373,7 @@
                 </div>
             </div>
             <hr class="my-3">
-            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4" onsubmit="return false;">
+            <form method="GET" action="{{ route('memo.discipline.index') }}" id="filterForm" class="mb-4">
                 <div class="row g-3">
                     <!-- Program Filter -->
                     <div class="col-md-6 col-lg-3">
@@ -552,21 +552,24 @@
             <!-- Add this JavaScript for enhanced UX -->
             <script>
             document.addEventListener('DOMContentLoaded', function() {
-                // Update active filter count
+                // Update active filter count badge
                 function updateFilterCount() {
                     const form = document.getElementById('filterForm');
+                    if (!form) return;
                     const inputs = form.querySelectorAll('select, input[type="text"], input[type="date"]');
                     let activeCount = 0;
-
-                    inputs.forEach(input => {
+                    inputs.forEach(function(input) {
                         if ((input.tagName === 'SELECT' && input.value !== '') ||
                             (input.type === 'text' && input.value.trim() !== '') ||
                             (input.type === 'date' && input.value !== '')) {
                             activeCount++;
                         }
                     });
+                    const badge = document.getElementById('activeFilterCount');
+                    if (badge) badge.textContent = activeCount;
+                }
 
-                // Apply filters via AJAX (no full page refresh)
+                // Apply filters via AJAX
                 function applyFiltersAjax() {
                     const form = document.getElementById('filterForm');
                     const listContainer = document.getElementById('memoDisciplineListContainer');
@@ -598,7 +601,7 @@
                 }
                 window.applyFiltersAjax = applyFiltersAjax;
 
-                // Prevent form full-page submit; use AJAX
+                // Submit form via AJAX instead of full page reload
                 const filterForm = document.getElementById('filterForm');
                 if (filterForm) {
                     filterForm.addEventListener('submit', function(e) {
@@ -611,27 +614,23 @@
                 updateFilterCount();
 
                 // Update count on input change
-                document.querySelectorAll('#filterForm select, #filterForm input').forEach(input => {
+                document.querySelectorAll('#filterForm select, #filterForm input').forEach(function(input) {
                     input.addEventListener('change', updateFilterCount);
                     input.addEventListener('input', updateFilterCount);
                 });
 
-                // Date validation
-                const fromDate = document.getElementById('from_date');
-                const toDate = document.getElementById('to_date');
-
-                // Clear Filters button (no full page reload)
+                // Clear Filters button
                 const clearFiltersBtn = document.getElementById('clearFiltersBtn');
                 if (clearFiltersBtn && filterForm) {
                     clearFiltersBtn.addEventListener('click', function() {
-                        filterForm.querySelectorAll('select').forEach(s => s.value = '');
-                        filterForm.querySelectorAll('input[type="text"]').forEach(i => i.value = '');
-                        filterForm.querySelectorAll('input[type="date"]').forEach(i => i.value = '');
+                        filterForm.querySelectorAll('select').forEach(function(s) { s.value = ''; });
+                        filterForm.querySelectorAll('input[type="text"]').forEach(function(i) { i.value = ''; });
+                        filterForm.querySelectorAll('input[type="date"]').forEach(function(i) { i.value = ''; });
                         applyFiltersAjax();
                     });
                 }
 
-                // Toggle Active Filters: close hides alert and shows "Show active filter details"; link shows alert again (event delegation for AJAX)
+                // Toggle Active Filters alert visibility
                 document.addEventListener('click', function(e) {
                     const summary = document.getElementById('filterSummary');
                     if (!summary) return;
@@ -650,34 +649,26 @@
                 });
             });
 
-            // Clear all filters
-            function clearFilters() {
-                const form = document.getElementById('filterForm');
-                form.querySelectorAll('select').forEach(select => select.value = '');
-                form.querySelectorAll('input[type="text"]').forEach(input => input.value = '');
-                form.querySelectorAll('input[type="date"]').forEach(input => input.value = '');
-                if (typeof window.applyFiltersAjax === 'function') window.applyFiltersAjax();
-                else form.submit();
-            }
-
-            // Remove specific filter
+            // Remove specific filter and resubmit
             function removeFilter(filterName) {
-                const input = document.querySelector(`[name="${filterName}"]`);
-                if (input) {
-                    if (input.tagName === 'SELECT') {
-                        input.value = '';
-                    } else {
-                        input.value = '';
-                    }
+                const input = document.querySelector('[name="' + filterName + '"]');
+                if (input) input.value = '';
+                if (typeof window.applyFiltersAjax === 'function') {
+                    window.applyFiltersAjax();
+                } else {
+                    document.getElementById('filterForm').submit();
                 }
-                document.getElementById('filterForm').submit();
             }
 
-            // Remove date filters
+            // Remove date filters and resubmit
             function removeDateFilters() {
                 document.getElementById('from_date').value = '';
                 document.getElementById('to_date').value = '';
-                document.getElementById('filterForm').submit();
+                if (typeof window.applyFiltersAjax === 'function') {
+                    window.applyFiltersAjax();
+                } else {
+                    document.getElementById('filterForm').submit();
+                }
             }
             </script>
 
@@ -781,14 +772,20 @@
                                     </a>
                                 </div>
                                 @else
-                                <a class="text-success view-conversation" data-bs-toggle="offcanvas"
-                                    data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                    data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
-                                    <i class="material-icons material-symbols-rounded fs-5">chat</i>
-                                </a>
                                 <span class="badge bg-secondary-subtle text-secondary">
                                     <i class="bi bi-lock me-1"></i> Closed
                                 </span>
+                                <div class="mt-1 d-flex gap-2">
+                                    <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                        class="link-primary small fw-medium">
+                                        View Memo
+                                    </a>
+                                    <a class="text-success view-conversation" data-bs-toggle="offcanvas"
+                                        data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
+                                        data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
+                                        <i class="material-icons material-symbols-rounded fs-5">chat</i>
+                                    </a>
+                                </div>
                                 @endif
                             </td>
 

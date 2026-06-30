@@ -362,6 +362,9 @@ class UserController extends Controller
         $isStudentOT    = hasRole('Student-OT');
         $isFacultyRole  = hasRole('Internal Faculty') || hasRole('Guest Faculty');
 
+        // Role-scoped course IDs for "My Course Participant" ([] = all, [-1] = none, [pks] = restricted)
+        $myCourseIds = get_Role_by_course();
+
         // Hardcoded card definitions: count, link, visibility
         $cardDefinitions = [
             'pending_permanent_id'    => ['count' => $todayPendingPermanentIdCardRequests ?? 0,    'link' => $idCardApprovalRoute,                                          'visible' => $isSecurityRole || $isSuperAdmin],
@@ -381,6 +384,8 @@ class UserController extends Controller
             'total_inhouse_faculty'   => ['count' => $total_internal_faculty,                      'link' => route('admin.dashboard.inhouse_faculty'),                      'visible' => !$isSecurityRole && !$isStudentOT],
             'session_details'         => ['count' => $totalSessions,                               'link' => route('admin.dashboard.sessions'),                             'visible' => !$isSecurityRole && ($isFacultyRole || $isSuperAdmin)],
             'total_students'          => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
+            'student_details'         => ['count' => $totalStudents,                               'link' => route('admin.dashboard.students'),                             'visible' => !$isSecurityRole && (isset($isCCorACC) && $isCCorACC)],
+            'my_course_participant'   => ['count' => StudentMasterCourseMap::query()->when(!empty($myCourseIds), fn($q) => $q->whereIn('course_master_pk', $myCourseIds))->count(), 'link' => route('my.course.participant'),                                'visible' => true],
         ];
 
         // Count map for custom cards added via UI.
@@ -1780,7 +1785,7 @@ class UserController extends Controller
         $user_type = trim((string) $request->input('User_type', ''));
 
         $epoch = DataTableRedisCache::readListEpoch(self::ADMIN_USERS_INDEX_LIST_EPOCH_KEY);
-        $cacheKey = 'admin_users_index:v4:' . md5(json_encode([
+        $cacheKey = 'admin_users_index:v5:' . md5(json_encode([
             'epoch' => $epoch,
             'search' => $search,
             'user_type' => $user_type,
@@ -1838,9 +1843,15 @@ class UserController extends Controller
      */
     private function adminUsersBaseQuery($search, string $user_type)
     {
+        // Roles are managed through Spatie (model_has_roles / roles), which is
+        // what the assign-role flow writes to — read from there so assigned
+        // roles actually surface in the listing.
         $usersQuery = DB::table('user_credentials as uc')
-            ->leftJoin('employee_role_mapping as erm', 'erm.user_credentials_pk', '=', 'uc.pk')
-            ->leftJoin('user_role_master as urm', 'urm.pk', '=', 'erm.user_role_master_pk')
+            ->leftJoin('model_has_roles as mhr', function ($join) {
+                $join->on('mhr.model_id', '=', 'uc.pk')
+                    ->where('mhr.model_type', '=', User::class);
+            })
+            ->leftJoin('roles as r', 'r.id', '=', 'mhr.role_id')
             ->select(
                 'uc.pk',
                 'uc.user_name',
@@ -1849,7 +1860,7 @@ class UserController extends Controller
                 'uc.email_id',
                 'uc.mobile_no',
                 'uc.user_category as User_type',
-                DB::raw("GROUP_CONCAT(urm.user_role_display_name SEPARATOR ', ') as roles")
+                DB::raw("GROUP_CONCAT(DISTINCT r.name ORDER BY r.name SEPARATOR ', ') as roles")
             )
             ->groupBy(
                 'uc.pk',

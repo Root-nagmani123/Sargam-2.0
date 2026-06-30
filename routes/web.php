@@ -616,6 +616,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
         Route::post('/update', 'update')->name('update');
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
+        Route::get('/bulk-template', 'bulkTemplate')->name('bulk.template');
+        Route::post('/bulk-store', 'bulkStore')->name('bulk.store');
     });
 
     // ============================================
@@ -932,6 +934,8 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         });
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
+    Route::get('/send_notice/students', [CourseAttendanceNoticeMapController::class, 'getStudentsForNotice'])->name('send.notice.students');
+    Route::post('/send_notice_direct_save', [CourseAttendanceNoticeMapController::class, 'send_direct_notice_save'])->name('send.notice.direct.save');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
 

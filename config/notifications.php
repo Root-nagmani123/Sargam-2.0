@@ -65,6 +65,11 @@ return [
             'route' => 'memo.notice.management.conversation_student',
             'params' => ['id' => 'reference_pk', 'type' => 'memo'],
         ],
+        // Notice chat replies redirect to the notice conversation
+        'Notice' => [
+            'route' => 'memo.notice.management.conversation_student',
+            'params' => ['id' => 'reference_pk', 'type' => 'notice'],
+        ],
         'MemoNotice' => [
             'route' => 'memo.notice.management.conversation_student',
             'params' => ['id' => 'reference_pk', 'type' => 'memo'],
