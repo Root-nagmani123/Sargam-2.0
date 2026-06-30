@@ -31,6 +31,7 @@ class FcJoiningSampleDocumentSeeder extends Seeder
             'doc_surety_bond_others' => 'sample_surety_bond_other_services7b.pdf',
             'doc_oath_affirmation'   => 'sample_main_assumption_charge.pdf',
             'doc_assumption_charge'  => 'sample_main_assumption_charge.pdf',
+            'doc_group_insurance'    => 'sample_group_insurance.pdf',
             'doc_nps_subscription'   => 'sample_nps_form10.pdf',
             'doc_employee_info_sheet' => 'sample_employee_information11.pdf',
         ];
