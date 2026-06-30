@@ -1237,6 +1237,21 @@ $(document).ready(function() {
             }
         });
 
+        // Faculty is a multi-select (one or more) for Escort duty.
+        $('#meeBulkFaculty').select2({
+            placeholder: 'Search Faculty (one or more)',
+            width: '100%',
+            closeOnSelect: false,
+            dropdownParent: $('#meeBulkUploadModal')
+        });
+        $('#meeBulkFaculty').on('change', function() {
+            var val = $(this).val();
+            if (val && val.length) {
+                $(this).removeClass('is-invalid');
+                $('#meeBulkErrorFaculty').addClass('d-none');
+            }
+        });
+
         function toggleBulkFaculty() {
             var dutyType = $('#meeBulkDutyType').val();
             if (bulkEscortDutyTypeId && dutyType === bulkEscortDutyTypeId) {
@@ -1244,7 +1259,7 @@ $(document).ready(function() {
                 $('#meeBulkFaculty').prop('required', true);
             } else {
                 $('#meeBulkFacultyContainer').addClass('d-none');
-                $('#meeBulkFaculty').val('').prop('required', false);
+                $('#meeBulkFaculty').val(null).trigger('change').prop('required', false);
             }
         }
 
@@ -1279,7 +1294,8 @@ $(document).ready(function() {
                 $('#meeBulkDutyType').addClass('is-invalid');
                 valid = false;
             }
-            if (bulkEscortDutyTypeId && $('#meeBulkDutyType').val() === bulkEscortDutyTypeId && !$('#meeBulkFaculty').val()) {
+            var bulkFacultyVal = $('#meeBulkFaculty').val();
+            if (bulkEscortDutyTypeId && $('#meeBulkDutyType').val() === bulkEscortDutyTypeId && (!bulkFacultyVal || !bulkFacultyVal.length)) {
                 $('#meeBulkErrorFaculty').removeClass('d-none');
                 $('#meeBulkFaculty').addClass('is-invalid');
                 valid = false;
