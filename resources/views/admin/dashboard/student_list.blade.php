@@ -1,6 +1,6 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Student List - Sargam | Lal Bahadur')
+@section('title', 'Student List')
 
 @push('styles')
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
@@ -19,6 +19,23 @@
 
     /* Inside the +3 Filters popover the selects span the menu width. */
     .student-list-page .sl-more-menu .sl-filter-select { width: 100%; }
+
+    /* Relocatable filter items: inline by default, stacked when overflowed into the dropdown. */
+    .student-list-page .sl-filter-item { display: inline-flex; align-items: center; }
+    .student-list-page .sl-filter-label-text { display: none; }
+    .student-list-page .sl-more-menu .sl-filter-item { display: block; margin-bottom: 0.75rem; }
+    .student-list-page .sl-more-menu .sl-filter-item:last-child { margin-bottom: 0; }
+    .student-list-page .sl-more-menu .sl-filter-label-text {
+        display: block;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        color: #475467;
+        margin-bottom: 0.25rem;
+    }
+    .student-list-page .sl-more-menu .sl-filter-item .sl-daterange-wrap { display: block; width: 100%; }
+    .student-list-page .sl-more-menu .sl-filter-item .sl-daterange-input { width: 100%; }
+    /* Divider between overflowed filters and the always-in-menu ones. */
+    .student-list-page .sl-more-menu #slOverflowSlot:not(:empty) { margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #eef2f6; }
 
     .student-list-page .sl-filter-select:focus {
         border-color: #004a93;
@@ -86,11 +103,64 @@
     .student-list-page .programme-dt-table tbody td a.sl-count:hover { text-decoration: underline; }
 
     .student-list-page .sl-extra-filters { border: 1px dashed #e4e7ec; border-radius: 8px; background: #fcfcfd; }
+
+    .student-list-page .sl-status-badge {
+        display: inline-flex;
+        align-items: center;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        line-height: 1;
+        padding: 0.45rem 1.1rem;
+        border-radius: 10px;
+    }
+    .student-list-page .sl-status-absent { color: #b42318; background: #fef3f2; }
+    .student-list-page .sl-status-present { color: #027a48; background: #ecfdf3; }
+
+    /* ── Collapsible search: full field when there's room, icon-only otherwise ── */
+    .student-list-page .sl-search-wrap { position: relative; display: inline-flex; align-items: center; }
+    .student-list-page .sl-search-toggle {
+        display: none;
+        align-items: center;
+        justify-content: center;
+        width: 40px;
+        height: 40px;
+        border: 1px solid #d0d5dd;
+        border-radius: 8px;
+        background: #fff;
+        color: #475467;
+    }
+    .student-list-page .sl-search-toggle:hover { background: #f9fafb; }
+
+    @media (max-width: 991.98px) {
+        .student-list-page .sl-search-toggle { display: inline-flex; }
+        /* The actual search field drops into a small popover anchored to the icon. */
+        .student-list-page .sl-search-wrap .programme-dt-search {
+            position: absolute;
+            top: calc(100% + 6px);
+            right: 0;
+            z-index: 1030;
+            min-width: 240px;
+            padding: 0.5rem;
+            background: #fff;
+            border: 1px solid #e4e7ec;
+            border-radius: 8px;
+            box-shadow: 0 6px 16px rgba(16, 24, 40, 0.12);
+            display: none;
+        }
+        .student-list-page .sl-search-wrap.sl-search-open .programme-dt-search { display: block; }
+        .student-list-page .sl-search-wrap .programme-dt-search .dataTables_filter { margin: 0; width: 100%; }
+        .student-list-page .sl-search-wrap .programme-dt-search .dataTables_filter input { width: 100%; }
+    }
 </style>
 @endpush
 
 @section('content')
-@php $filters = $filters ?? []; @endphp
+@php
+    $filters = $filters ?? [];
+    // The Absent tab uses a slim layout (Status badge, no count columns);
+    // the Present tab keeps the full duty/exemption count breakdown.
+    $isAbsent = ($filters['attendance'] ?? '') === 'absent';
+@endphp
 <div class="container-fluid student-list-page">
     <x-breadcrum title="Student List" :showBack="true" />
     <x-session_message />
@@ -128,32 +198,41 @@
         <div class="card-body p-3 p-md-4">
 
             <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-between gap-3 mb-3 programme-dt-toolbar">
-                <div class="d-flex flex-wrap align-items-center gap-3">
+                <div class="d-flex flex-wrap align-items-center gap-3" id="slFilterRow">
                     <span class="programme-dt-filters-label">Filters</span>
                     @if($availableCourses->isNotEmpty())
-                    <select id="courseFilter" class="form-select sl-filter-select" aria-label="Filter by course">
-                        <option value="">Course</option>
-                        @foreach($availableCourses as $course)
-                            <option value="{{ $course['pk'] }}" {{ (string)($filters['course_id'] ?? '') === (string)$course['pk'] ? 'selected' : '' }}>{{ $course['course_name'] }}</option>
-                        @endforeach
-                    </select>
-                    @endif
-                    <select id="dutyTypeFilter" class="form-select sl-filter-select" aria-label="Filter by duty type">
-                        <option value="">Duty Type</option>
-                        @foreach(($dutyTypes ?? []) as $dt)
-                            <option value="{{ $dt->pk }}" {{ (string)($filters['duty_type'] ?? '') === (string)$dt->pk ? 'selected' : '' }}>{{ $dt->mdo_duty_type_name }}</option>
-                        @endforeach
-                    </select>
-                    <div class="sl-daterange-wrap">
-                        <span class="sl-daterange-label">Time Period</span>
-                        <input type="text" id="timePeriodFilter" class="form-control sl-filter-select sl-daterange-input"
-                            placeholder="Select dates" autocomplete="off" readonly aria-label="Filter by time period"
-                            value="{{ (!empty($filters['from_date']) && !empty($filters['to_date'])) ? \Carbon\Carbon::parse($filters['from_date'])->format('d/m/Y').' - '.\Carbon\Carbon::parse($filters['to_date'])->format('d/m/Y') : '' }}">
+                    <div class="sl-filter-item" id="slItemCourse">
+                        <span class="sl-filter-label-text">Course</span>
+                        <select id="courseFilter" class="form-select sl-filter-select" aria-label="Filter by course">
+                            <option value="">Course</option>
+                            @foreach($availableCourses as $course)
+                                <option value="{{ $course['pk'] }}" {{ (string)($filters['course_id'] ?? '') === (string)$course['pk'] ? 'selected' : '' }}>{{ $course['course_name'] }}</option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="dropdown">
+                    @endif
+                    <div class="sl-filter-item" id="slItemDuty">
+                        <span class="sl-filter-label-text">Duty Type</span>
+                        <select id="dutyTypeFilter" class="form-select sl-filter-select" aria-label="Filter by duty type">
+                            <option value="">Duty Type</option>
+                            @foreach(($dutyTypes ?? []) as $dt)
+                                <option value="{{ $dt->pk }}" {{ (string)($filters['duty_type'] ?? '') === (string)$dt->pk ? 'selected' : '' }}>{{ $dt->mdo_duty_type_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="sl-filter-item" id="slItemPeriod">
+                        <div class="sl-daterange-wrap">
+                            <span class="sl-daterange-label">Time Period</span>
+                            <input type="text" id="timePeriodFilter" class="form-control sl-filter-select sl-daterange-input"
+                                placeholder="Select dates" autocomplete="off" readonly aria-label="Filter by time period"
+                                value="{{ (!empty($filters['from_date']) && !empty($filters['to_date'])) ? \Carbon\Carbon::parse($filters['from_date'])->format('d/m/Y').' - '.\Carbon\Carbon::parse($filters['to_date'])->format('d/m/Y') : '' }}">
+                        </div>
+                    </div>
+                    <div class="dropdown" id="slMoreFiltersWrap">
                         <a href="javascript:void(0)" class="sl-more-filters dropdown-toggle" id="moreFiltersBtn"
                             data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+3 Filters</a>
                         <div class="dropdown-menu sl-more-menu p-3 shadow-sm border rounded-3" aria-labelledby="moreFiltersBtn">
+                            <div id="slOverflowSlot"></div>
                             <div class="mb-2">
                                 <label for="roleFilter" class="form-label small fw-semibold text-secondary">ACC</label>
                                 <select id="roleFilter" class="form-select sl-filter-select w-100">
@@ -193,11 +272,19 @@
                         <span>Columns</span>
                         <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                     </button>
-                    <div id="studentDtSearch" class="programme-dt-search" data-dt-search-for="studentListTable"></div>
+                    <div class="sl-search-wrap" id="studentSearchWrap" @if($isAbsent) style="display:none;" @endif>
+                        <button type="button" class="sl-search-toggle" aria-label="Search"><i class="bi bi-search" aria-hidden="true"></i></button>
+                        <div id="studentDtSearch" class="programme-dt-search" data-dt-search-for="studentListTable"></div>
+                    </div>
+                    <div class="sl-search-wrap" id="studentSearchWrapAbsent" @unless($isAbsent) style="display:none;" @endunless>
+                        <button type="button" class="sl-search-toggle" aria-label="Search"><i class="bi bi-search" aria-hidden="true"></i></button>
+                        <div id="studentDtSearchAbsent" class="programme-dt-search" data-dt-search-for="studentListTableAbsent"></div>
+                    </div>
                 </div>
             </div>
 
-            <div class="programme-dt-panel">
+            {{-- ── Present panel (full layout) ── --}}
+            <div class="programme-dt-panel" id="studentPresentPanel" @if($isAbsent) style="display:none;" @endif>
                 <div class="table-responsive">
                     <table class="table programme-dt-table" id="studentListTable">
                         <thead>
@@ -207,6 +294,7 @@
                                 <th>Name</th>
                                 <th>Email</th>
                                 <th>Cadre</th>
+                                <th>Status</th>
                                 <th>House Name</th>
                                 <th>Total Duty (Count)</th>
                                 <th>Total Medical Exemption Count</th>
@@ -217,13 +305,59 @@
                             </tr>
                         </thead>
                         <tbody>
-                            @forelse($students as $index => $studentMap)
+                            @forelse($presentStudents as $studentMap)
                                 @php
                                     $student = $studentMap->studentMaster;
-                                    $course = $studentMap->course;
-                                    $groupName = $studentMap->groupMapping->groupTypeMasterCourseMasterMap->group_name ?? null;
                                     $cadreName = $student->cadre->cadre_name ?? 'N/A';
                                     $houseName = $studentMap->house_name ?? 'N/A';
+                                    $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
+                                    // Per-count deep links: clicking a count opens the detail page
+                                    // focused on just that section. Clicking the name opens the full view.
+                                    $sectionUrl = fn ($section) => $detailUrl . '?section=' . $section;
+                                @endphp
+                                <tr>
+                                    <td>{{ $loop->iteration }}</td>
+                                    <td>{{ $student->generated_OT_code ?? 'N/A' }}</td>
+                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) }}</a></td>
+                                    <td>{{ $student->email ?? 'N/A' }}</td>
+                                    <td>{{ $cadreName }}</td>
+                                    <td><span class="sl-status-badge sl-status-present">Present</span></td>
+                                    <td>{{ $houseName }}</td>
+                                    <td><a href="{{ $sectionUrl('dutiesSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
+                                    <td><a href="{{ $sectionUrl('medicalExceptionsSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_medical_exception_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
+                                    <td><a href="{{ $sectionUrl('ptExemptionsSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
+                                    <td><a href="{{ $sectionUrl('stationedLeavesSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
+                                    <td><a href="{{ $sectionUrl('noticesSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_notice_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
+                                    <td><a href="{{ $sectionUrl('memosSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_memo_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="13" class="text-center text-muted py-4">Data not found.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+                <div id="studentDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="studentListTable"></div>
+            </div>
+
+            {{-- ── Absent panel (slim layout) ── --}}
+            <div class="programme-dt-panel" id="studentAbsentPanel" @unless($isAbsent) style="display:none;" @endunless>
+                <div class="table-responsive">
+                    <table class="table programme-dt-table" id="studentListTableAbsent">
+                        <thead>
+                            <tr>
+                                <th>S. No.</th>
+                                <th>OT Code</th>
+                                <th>Name</th>
+                                <th>Email</th>
+                                <th>Cadre</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @forelse($absentStudents as $studentMap)
+                                @php
+                                    $student = $studentMap->studentMaster;
+                                    $cadreName = $student->cadre->cadre_name ?? 'N/A';
                                     $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
                                 @endphp
                                 <tr>
@@ -232,21 +366,15 @@
                                     <td><a href="{{ $detailUrl }}" class="sl-count">{{ $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) }}</a></td>
                                     <td>{{ $student->email ?? 'N/A' }}</td>
                                     <td>{{ $cadreName }}</td>
-                                    <td>{{ $houseName }}</td>
-                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ str_pad((string) ($studentMap->total_medical_exception_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ str_pad((string) ($studentMap->total_notice_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ str_pad((string) ($studentMap->total_memo_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
+                                    <td><span class="sl-status-badge sl-status-absent">Absent</span></td>
                                 </tr>
                             @empty
-                                <tr><td colspan="12" class="text-center text-muted py-4">Data not found.</td></tr>
+                                <tr><td colspan="6" class="text-center text-muted py-4">Data not found.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
-                <div id="studentDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="studentListTable"></div>
+                <div id="studentDtFooterAbsent" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="studentListTableAbsent"></div>
             </div>
         </div>
     </div>
@@ -290,8 +418,42 @@
             window.location.search = p.toString();
         }
 
+        /* ── Present / Absent tab switch (no page reload) ── */
+        function switchStudentTab(att) {
+            const isAbsent = att === 'absent';
+            $('.programme-status-tabs .programme-status-pill').removeClass('active');
+            $('.programme-status-tabs .programme-status-pill[data-attendance="' + att + '"]').addClass('active');
+            $('#studentPresentPanel').toggle(!isAbsent);
+            $('#studentAbsentPanel').toggle(isAbsent);
+            // Toggle the search wrappers via display (not jQuery .toggle) so the
+            // CSS inline-flex / collapsible behaviour is preserved.
+            $('#studentSearchWrap').css('display', isAbsent ? 'none' : '');
+            $('#studentSearchWrapAbsent').css('display', isAbsent ? '' : 'none');
+            $('.sl-search-wrap').removeClass('sl-search-open');
+            activeDt = isAbsent ? dtAbsent : dtPresent;
+            if (activeDt) { activeDt.columns.adjust(); setupStudentColumns(activeDt); }
+            // Keep the URL in sync so a refresh / export honours the active tab.
+            const p = new URLSearchParams(window.location.search);
+            if (isAbsent) { p.set('attendance', 'absent'); } else { p.delete('attendance'); }
+            const qs = p.toString();
+            window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+        }
         $('.programme-status-tabs .programme-status-pill').on('click', function() {
-            applyFilter({ attendance: $(this).data('attendance') });
+            switchStudentTab($(this).data('attendance'));
+        });
+
+        /* ── Collapsible search: icon expands the input on small screens ── */
+        $('.sl-search-toggle').on('click', function(e) {
+            e.stopPropagation();
+            const $wrap = $(this).closest('.sl-search-wrap');
+            $('.sl-search-wrap').not($wrap).removeClass('sl-search-open');
+            $wrap.toggleClass('sl-search-open');
+            if ($wrap.hasClass('sl-search-open')) { $wrap.find('input').trigger('focus'); }
+        });
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.sl-search-wrap').length) {
+                $('.sl-search-wrap').removeClass('sl-search-open');
+            }
         });
         $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
         $('#dutyTypeFilter').on('change', function() { applyFilter({ duty_type: this.value }); });
@@ -320,24 +482,29 @@
             applyFilter({ from_date: '', to_date: '' });
         });
 
-        /* ── DataTable: client-side search / pagination / columns over the filtered set ── */
-        let dataTable = null;
-        @if($students->isNotEmpty())
-            dataTable = $('#studentListTable').DataTable({
-                pageLength: 10,
-                lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-                order: [[0, 'asc']],
-                language: { emptyTable: 'Data not found.' },
-                responsive: false,
-            });
+        /* ── DataTables: one per tab, client-side search / pagination / columns ── */
+        const dtOpts = {
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+            order: [[0, 'asc']],
+            language: { emptyTable: 'Data not found.' },
+            responsive: false,
+        };
+        let dtPresent = null, dtAbsent = null;
+        @if($presentStudents->isNotEmpty())
+            dtPresent = $('#studentListTable').DataTable(dtOpts);
         @endif
+        @if($absentStudents->isNotEmpty())
+            dtAbsent = $('#studentListTableAbsent').DataTable(dtOpts);
+        @endif
+        let activeDt = {{ $isAbsent ? 'dtAbsent' : 'dtPresent' }};
 
         $('#studentListPrintBtn').on('click', function() { window.print(); });
 
         function buildExportUrl(format) {
             const params = new URLSearchParams(window.location.search);
             params.delete('attendance');
-            const search = dataTable ? dataTable.search() : '';
+            const search = activeDt ? activeDt.search() : '';
             if (search) params.set('search', search);
             const base = format === 'csv'
                 ? "{{ route('admin.dashboard.students.export', ['format' => 'csv']) }}"
@@ -348,16 +515,17 @@
         $('#studentListDownloadCsv').on('click', function(e) { e.preventDefault(); window.location.href = buildExportUrl('csv'); });
         $('#studentListDownloadPdf').on('click', function(e) { e.preventDefault(); window.open(buildExportUrl('pdf'), '_blank'); });
 
-        /* ---------------- Column show / hide ---------------- */
-        const studentColStorageKey = 'studentListGrid:hiddenColumns:v1';
-        function studentGetHiddenCols() {
-            try { const raw = localStorage.getItem(studentColStorageKey); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
+        /* ---------------- Column show / hide (per active table) ---------------- */
+        function studentColKey(dt) { return 'studentListGrid:hiddenColumns:v1:' + dt.table().node().id; }
+        function studentGetHiddenCols(key) {
+            try { const raw = localStorage.getItem(key); const arr = raw ? JSON.parse(raw) : []; return Array.isArray(arr) ? arr : []; }
             catch (e) { return []; }
         }
-        function studentPersistHiddenCols(arr) { try { localStorage.setItem(studentColStorageKey, JSON.stringify(arr)); } catch (e) {} }
+        function studentPersistHiddenCols(key, arr) { try { localStorage.setItem(key, JSON.stringify(arr)); } catch (e) {} }
         function setupStudentColumns(dt) {
             if (!dt) { return; }
-            const hidden = studentGetHiddenCols();
+            const key = studentColKey(dt);
+            const hidden = studentGetHiddenCols(key);
             dt.columns().every(function() { const idx = this.index(); this.visible(hidden.indexOf(idx) === -1, false); });
             dt.columns.adjust();
             const $grid = $('#studentColumnToggleGrid');
@@ -372,10 +540,10 @@
                 const $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>').attr('for', inputId);
                 const $cb = $('<input type="checkbox" class="form-check-input m-0">').attr('id', inputId).prop('checked', hidden.indexOf(idx) === -1);
                 $cb.on('change', function() {
-                    const h = studentGetHiddenCols();
+                    const h = studentGetHiddenCols(key);
                     const pos = h.indexOf(idx);
                     if (this.checked) { if (pos !== -1) h.splice(pos, 1); } else { if (pos === -1) h.push(idx); }
-                    studentPersistHiddenCols(h);
+                    studentPersistHiddenCols(key, h);
                     dt.column(idx).visible(this.checked, false);
                     dt.columns.adjust();
                 });
@@ -384,7 +552,54 @@
                 $grid.append($cell);
             });
         }
-        if (dataTable) { setupStudentColumns(dataTable); }
+        if (activeDt) { setupStudentColumns(activeDt); }
+
+        /* ── Responsive filters: overflow inline filters into the +Filters dropdown ── */
+        const $filterRow = $('#slFilterRow');
+        const $overflowSlot = $('#slOverflowSlot');
+        const $moreWrap = $('#slMoreFiltersWrap');
+        const $moreBtn = $('#moreFiltersBtn');
+        const inlineFilterIds = ['#slItemCourse', '#slItemDuty', '#slItemPeriod'];
+        const STATIC_DROPDOWN_COUNT = 3; // ACC, Cadre, House — always live in the menu.
+
+        function updateMoreFiltersLabel() {
+            const moved = $overflowSlot.children('.sl-filter-item').length;
+            $moreBtn.text('+' + (STATIC_DROPDOWN_COUNT + moved) + ' Filters');
+        }
+        function filterRowWraps(baseTop) {
+            let wraps = false;
+            $filterRow.children(':visible').each(function() {
+                if (this.getBoundingClientRect().top > baseTop + 2) { wraps = true; return false; }
+            });
+            return wraps;
+        }
+        function reflowFilters() {
+            // 1. Put every inline filter back in its original order before the dropdown.
+            inlineFilterIds.forEach(function(sel) {
+                const el = document.querySelector(sel);
+                if (el) { $(el).insertBefore($moreWrap); }
+            });
+            // 2. Move trailing filters into the dropdown until the row stops wrapping.
+            const first = $filterRow.children(':visible').first()[0];
+            if (first) {
+                const baseTop = first.getBoundingClientRect().top;
+                let guard = 0;
+                while (filterRowWraps(baseTop) && guard < 10) {
+                    const $last = $filterRow.children('.sl-filter-item').last();
+                    if (!$last.length) { break; }
+                    $overflowSlot.prepend($last); // prepend keeps Course → Duty → Time order
+                    guard++;
+                }
+            }
+            updateMoreFiltersLabel();
+        }
+        reflowFilters();
+        $(window).on('load', reflowFilters);
+        let filterReflowTimer = null;
+        $(window).on('resize', function() {
+            clearTimeout(filterReflowTimer);
+            filterReflowTimer = setTimeout(reflowFilters, 150);
+        });
     });
 </script>
 @endpush

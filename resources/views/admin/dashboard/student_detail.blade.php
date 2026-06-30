@@ -65,6 +65,24 @@
     <x-breadcrum title="Student Details" :showBack="true" />
     <x-session_message />
 
+    @php
+        // When a count is clicked on the student list, only the relevant section is shown.
+        $validSections = ['medicalExceptionsSection', 'ptExemptionsSection', 'stationedLeavesSection', 'dutiesSection', 'noticesSection', 'memosSection'];
+        $focusSection = request('section');
+        if (!in_array($focusSection, $validSections, true)) {
+            $focusSection = null;
+        }
+    @endphp
+
+    @if($focusSection)
+        <div class="alert alert-light border d-flex align-items-center justify-content-between rounded-3 mb-4">
+            <span class="text-secondary"><i class="bi bi-funnel me-2"></i>Showing a single section only.</span>
+            <a href="{{ route('admin.dashboard.students.detail', request()->route('id')) }}" class="btn btn-sm btn-outline-primary rounded-2">
+                <i class="bi bi-grid me-1"></i>View full details
+            </a>
+        </div>
+    @endif
+
     <!-- Student Basic Information -->
     <div class="card border-0 shadow-sm rounded-3 mb-4">
         <div class="card-body p-3 p-md-4">
@@ -90,6 +108,7 @@
     </div>
 
     <!-- Summary Cards -->
+    @unless($focusSection)
     <div class="row g-3 mb-4">
         @php
             $sdStats = [
@@ -113,8 +132,10 @@
             </div>
         @endforeach
     </div>
+    @endunless
 
     <!-- Medical Exceptions -->
+    @if(!$focusSection || $focusSection === 'medicalExceptionsSection')
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="medicalExceptionsSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-heartbeat me-2"></i>Medical Exceptions ({{ $medicalExemptions->count() }})</h5>
@@ -173,7 +194,10 @@
         </div>
     </div>
 
+    @endif
+
     <!-- PT Exemptions -->
+    @if(!$focusSection || $focusSection === 'ptExemptionsSection')
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="ptExemptionsSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-running me-2"></i>PT Exemptions ({{ $ptExemptions->count() }})</h5>
@@ -237,7 +261,10 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Station Leave -->
+    @if(!$focusSection || $focusSection === 'stationedLeavesSection')
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="stationedLeavesSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-map-marker-alt me-2"></i>Station Leave ({{ $stationedLeaves->count() }})</h5>
@@ -303,7 +330,10 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Duties Assigned -->
+    @if(!$focusSection || $focusSection === 'dutiesSection')
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="dutiesSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-tasks me-2"></i>Duties Assigned ({{ $duties->count() }})</h5>
@@ -356,7 +386,10 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Notices Received -->
+    @if(!$focusSection || $focusSection === 'noticesSection')
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="noticesSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-bell me-2"></i>Notices Received ({{ $notices->count() }})</h5>
@@ -407,7 +440,10 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Memos Issued -->
+    @if(!$focusSection || $focusSection === 'memosSection')
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section" id="memosSection">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-file-alt me-2"></i>Memos Issued ({{ $memos->count() }})</h5>
@@ -462,8 +498,10 @@
         </div>
     </div>
 
+    @endif
+
     <!-- Attendance Summary -->
-    @if($attendanceSummary && $attendanceSummary->total_sessions > 0)
+    @if(!$focusSection && $attendanceSummary && $attendanceSummary->total_sessions > 0)
     <div class="card border-0 shadow-sm rounded-3 mb-4 sd-section">
         <div class="card-header d-flex justify-content-between align-items-center">
             <h5 class="mb-0"><i class="fas fa-calendar-check me-2"></i>Attendance Summary</h5>

@@ -171,7 +171,7 @@
 
                 @if($notifications->count() > 0)
                     @foreach($notifications as $notification)
-                        <li>
+                        <li class="px-2 py-2">
                             <a class="dropdown-item notification-item {{ $notification->is_read ? '' : 'unread' }}"
                                href="javascript:void(0)"
                                onclick="markAsRead({{ $notification->pk }})">

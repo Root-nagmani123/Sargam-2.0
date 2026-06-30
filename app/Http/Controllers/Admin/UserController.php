@@ -1157,12 +1157,13 @@ class UserController extends Controller
         // Server-side filters (Course / ACC / Group / Cadre / House) + Present-Absent attendance tab.
         $students = $this->applyDashboardStudentListFilters($students, $request);
 
+        // Split into both tabs so the view can render both panels and switch
+        // between them client-side (no page reload on tab change).
+        $presentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
+        $absentStudents = $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values();
+
         $attendance = $request->input('attendance', 'present');
-        if ($attendance === 'absent') {
-            $students = $students->filter(fn ($m) => ($m->attendance_present ?? true) === false)->values();
-        } else {
-            $students = $students->filter(fn ($m) => ($m->attendance_present ?? true) === true)->values();
-        }
+        $students = $attendance === 'absent' ? $absentStudents : $presentStudents;
 
         $dutyTypes = DB::table('mdo_duty_type_master')
             ->where('active_inactive', 1)
@@ -1181,7 +1182,7 @@ class UserController extends Controller
             'house' => (string) $request->input('house', ''),
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'availableCourses', 'counsellorTypes', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
     }
 
     /**

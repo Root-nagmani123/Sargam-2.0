@@ -271,7 +271,10 @@
         }
 
         if ($length.length) {
-            var $pageSize = $length.find('select').addClass('form-select form-select-sm');
+            // Detach (not empty) the select first: emptying the <label> would run
+            // jQuery cleanData over the <select> and strip the change.DT handler
+            // DataTables binds to it, leaving the "Showing N" picker dead.
+            var $pageSize = $length.find('select').addClass('form-select form-select-sm').detach();
             $length.find('label')
                 .empty()
                 .append(document.createTextNode('Showing '))
