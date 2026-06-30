@@ -94,14 +94,17 @@ class MDOEscrotExemptionImport implements ToCollection, WithHeadingRow
                     continue;
                 }
 
-                // Skip if this student already has a duty for this course + date (mirrors single-add exclusion).
+                // Skip only if this student already has a duty for the SAME course + date + time slot
+                // (mirrors single-add exclusion). Different event times on the same day are allowed.
                 $exists = MDOEscotDutyMap::where('course_master_pk', $this->coursePk)
                     ->where('selected_student_list', $studentId)
                     ->whereDate('mdo_date', $mdoDate)
+                    ->where('Time_from', $times['from'])
+                    ->where('Time_to', $times['to'])
                     ->exists();
 
                 if ($exists) {
-                    $this->fail($rowNumber, "OT Code '{$otCode}' already has a duty assigned on {$mdoDate}.");
+                    $this->fail($rowNumber, "OT Code '{$otCode}' already has a duty assigned on {$mdoDate} from {$times['from']} to {$times['to']}.");
                     continue;
                 }
 

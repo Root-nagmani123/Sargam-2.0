@@ -2,7 +2,6 @@
 
 namespace App\Exports;
 
-use App\Models\{StudentMaster, StudentMasterCourseMap};
 use Maatwebsite\Excel\Concerns\FromArray;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\ShouldAutoSize;
@@ -36,34 +35,18 @@ class MDOEscrotExemptionTemplateExport implements FromArray, WithHeadings, Shoul
     public function array(): array
     {
         $options = $this->sessionOptions();
-        // Use the earliest and latest sessions for the two illustrative rows so the
+        // Use the morning and evening sessions for the two illustrative rows so the
         // examples are always real, selectable dropdown values.
         $morning = $options[0] ?? '';
         $evening = empty($options) ? '' : end($options);
 
-        if (!$this->coursePk) {
-            // No course context: provide example rows to illustrate the format.
-            return [
-                ['John Doe', 'OT-101', '01-07-2026', $morning],
-                ['Jane Smith', 'OT-102', '01-07-2026', $evening],
-            ];
-        }
-
-        $studentIds = StudentMasterCourseMap::where('course_master_pk', $this->coursePk)
-            ->where('active_inactive', 1)
-            ->pluck('student_master_pk')
-            ->all();
-
-        if (empty($studentIds)) {
-            return [['', '', '', '']];
-        }
-
-        return StudentMaster::whereIn('pk', $studentIds)
-            ->whereNotNull('generated_OT_code')
-            ->orderBy('display_name')
-            ->get(['display_name', 'generated_OT_code'])
-            ->map(fn ($s) => [$s->display_name, $s->generated_OT_code, '', ''])
-            ->all();
+        // Always provide exactly two example rows (morning + evening) regardless of
+        // the selected course. The template is just a format sample — users fill in
+        // their own rows; we never dump the full course roster here.
+        return [
+            ['John Doe', 'OT-101', '01-07-2026', $morning],
+            ['Jane Smith', 'OT-102', '01-07-2026', $evening],
+        ];
     }
 
     public function registerEvents(): array
