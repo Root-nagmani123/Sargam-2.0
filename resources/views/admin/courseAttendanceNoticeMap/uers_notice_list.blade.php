@@ -74,7 +74,7 @@
                                 @endif
                             </td>
                             <td class="date">{{ $memo->date_ }}</td>
-                            <td>{{ $memo->topic_name }}</td>
+                            <td>{{ $memo->topic_name ?? 'N/A' }}</td>
                             <td>
                                 <div class="d-flex gap-2 flex-nowrap">
                                     <a href="{{ route('memo.notice.management.conversation_student', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
@@ -83,12 +83,24 @@
                                         <i class="bi bi-chat-dots"></i> Notice
                                     </a>
 
-                                    <a href="javascript:void(0)" class="view-conversation" data-bs-toggle="offcanvas"
-                                        data-bs-target="#chatOffcanvas" @if ($memo->notice_memo == '1')data-type="notice" data-id="{{ $memo->notice_id }}"@elseif($memo->notice_memo == '2') data-type="memo" data-id="{{ $memo->memo_id }}" @endif
-                                         data-topic="{{ $memo->topic_name }}"
-                                        data-bs-toggle="tooltip" title="Quick View">
+                                    <a href="javascript:void(0)" class="view-conversation position-relative"
+                                        data-bs-target="#chatOffcanvas"
+                                        @if ($memo->notice_memo == '1') data-type="notice" data-id="{{ $memo->notice_id }}"
+                                        @elseif($memo->notice_memo == '2') data-type="memo" data-id="{{ $memo->memo_id ?? $memo->notice_id }}"
+                                        @else data-type="notice" data-id="{{ $memo->notice_id }}"
+                                        @endif
+                                        data-topic="{{ $memo->topic_name }}"
+                                        data-bs-toggle="tooltip"
+                                        title="Reply">
                                         <i class="material-icons menu-icon material-symbols-rounded"
-                                            style="font-size: 24px;">visibility</i>
+                                            style="font-size: 24px;">reply</i>
+                                        @if (($memo->chat_unread ?? 0) > 0)
+                                        <span class="position-absolute translate-middle badge rounded-pill bg-danger chat-unread-badge"
+                                            style="top: 2px; left: 100%; font-size: 9px;">
+                                            {{ $memo->chat_unread > 99 ? '99+' : $memo->chat_unread }}
+                                            <span class="visually-hidden">unread messages</span>
+                                        </span>
+                                        @endif
                                     </a>
 
                                     @if($memo->type_notice_memo == 'Memo')
@@ -153,6 +165,33 @@
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script>
 $(document).ready(function() {
+    let pollInterval = null;
+    const chatOffcanvasEl = document.getElementById('chatOffcanvas');
+
+    function loadConversation(memoId, type, userType) {
+        return fetch('/admin/memo-notice-management/get_conversation_model/'
+            + encodeURIComponent(memoId) + '/' + encodeURIComponent(type) + '/' + encodeURIComponent(userType),
+            { headers: { 'X-Requested-With': 'XMLHttpRequest' } }
+        ).then(r => r.text());
+    }
+
+    function applyConversationHtml(html, memoId, scrollToBottom) {
+        const chatBody = document.getElementById('chatBody');
+        const w = chatBody && chatBody.querySelector('.chat-wrapper');
+        // Bail if user switched to a different conversation while loading
+        if (w && w.dataset.memoId !== String(memoId)) return;
+
+        const scroll = document.querySelector('#conversationScroll');
+        const wasAtBottom = !scroll || (scroll.scrollHeight - scroll.scrollTop - scroll.clientHeight < 60);
+
+        $('#chatBody').html(html); // jQuery html() executes scripts on first load
+
+        const newScroll = document.querySelector('#conversationScroll');
+        if (newScroll && (scrollToBottom || wasAtBottom)) {
+            newScroll.scrollTop = newScroll.scrollHeight;
+        }
+    }
+
     $('.view-conversation').on('click', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
@@ -160,27 +199,42 @@ $(document).ready(function() {
         $('#userType').val(type);
         let user_type = 'student';
 
-        $('#conversationTopic').text(topic);
+        // Opening the chat marks it read server-side; clear the badge immediately for feedback.
+        $(this).find('.chat-unread-badge').remove();
+
         $('#conversationTopic').text(topic);
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
-        $.ajax({
-            url: '/admin/memo-notice-management/get_conversation_model/' + memoId + '/' + type + '/' + user_type,
-
-            type: 'GET',
-            success: function(res) {
-                $('#chatBody').html(res);
-            },
-            error: function() {
-                $('#chatBody').html(
-                    '<p class="text-danger text-center">Failed to load conversation.</p>'
-                );
-            }
-        });
+        loadConversation(memoId, type, user_type)
+            .then(html => applyConversationHtml(html, memoId, true))
+            .catch(() => {
+                $('#chatBody').html('<p class="text-danger text-center">Failed to load conversation.</p>');
+            });
 
         // Show offcanvas
-        let chatOffcanvas = new bootstrap.Offcanvas(document.getElementById('chatOffcanvas'));
+        let chatOffcanvas = new bootstrap.Offcanvas(chatOffcanvasEl);
         chatOffcanvas.show();
+    });
+
+    // Start real-time polling when offcanvas is visible
+    chatOffcanvasEl.addEventListener('shown.bs.offcanvas', function() {
+        if (pollInterval) clearInterval(pollInterval);
+        pollInterval = setInterval(function() {
+            const w = document.querySelector('#chatBody .chat-wrapper');
+            if (!w) return;
+            const memoId   = w.dataset.memoId;
+            const type     = w.dataset.type;
+            const userType = w.dataset.userType;
+            if (!memoId) return;
+            loadConversation(memoId, type, userType)
+                .then(html => applyConversationHtml(html, memoId, false))
+                .catch(() => {});
+        }, 5000); // poll every 5 seconds
+    });
+
+    // Stop polling when offcanvas closes
+    chatOffcanvasEl.addEventListener('hide.bs.offcanvas', function() {
+        if (pollInterval) { clearInterval(pollInterval); pollInterval = null; }
     });
 });
 </script>

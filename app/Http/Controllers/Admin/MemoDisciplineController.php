@@ -20,6 +20,8 @@ class MemoDisciplineController extends Controller
 {
  public function index(Request $request)
 {
+    $data_course_id = get_Role_by_course();
+
     // Courses
     if (hasRole('Student-OT')) {
         $courses = DB::table('student_master_course__map as smcm')
@@ -28,9 +30,12 @@ class MemoDisciplineController extends Controller
             ->select('cm.*')
             ->get();
     } else {
-        $courses = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>', now())
-            ->get();
+        $courseQuery = CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '>', now());
+        if (!empty($data_course_id)) {
+            $courseQuery->whereIn('pk', $data_course_id);
+        }
+        $courses = $courseQuery->orderBy('course_name')->get();
     }
 
     // Filters
@@ -55,8 +60,10 @@ class MemoDisciplineController extends Controller
 
         ->when(hasRole('Student-OT'), function ($q) use ($courses) {
             $q->where('student_master_pk', Auth::user()->user_id);
-            
             $q->whereIn('course_master_pk', $courses->pluck('pk'));
+        })
+        ->when(!hasRole('Student-OT') && !empty($data_course_id ?? null), function ($q) use ($data_course_id) {
+            $q->whereIn('course_master_pk', $data_course_id);
         })
         ->when($programNameFilter, function ($q) use ($programNameFilter) {
             $q->where('course_master_pk', $programNameFilter);
@@ -98,9 +105,16 @@ class MemoDisciplineController extends Controller
 
     public function create()
     {
-        $activeCourses = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>', now())
-            ->get();
+        $data_course_id = get_Role_by_course();
+
+        $query = CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '>', now());
+
+        if (!empty($data_course_id)) {
+            $query->whereIn('pk', $data_course_id);
+        }
+
+        $activeCourses = $query->orderBy('course_name')->get();
 
             $disciplines = DisciplineMaster::where('active_inactive', 1)
                 ->get();
@@ -143,16 +157,6 @@ class MemoDisciplineController extends Controller
               $discipline_master_data  = DB::table('discipline_master')->where('course_master_pk', $courseId)->where('active_inactive', 1)->get();
 
 
-        // If no students found, return empty array instead of error
-        // This allows the UI to handle empty state gracefully
-        if ($attendance->isEmpty()) {
-            return response()->json([
-                'status' => true,
-                'message' => 'No students found for this course.',
-                'students' => []
-            ]);
-        }
-
         // Format the attendance data
         $students = $attendance->map(function ($student) {
             return [
@@ -160,7 +164,7 @@ class MemoDisciplineController extends Controller
                 'display_name' => $student->display_name,
                 'generated_OT_code' => $student->generated_OT_code,
             ];
-        })->values(); // Reset array keys
+        })->values();
 
         return response()->json([
             'status' => true,
@@ -189,7 +193,7 @@ class MemoDisciplineController extends Controller
             return response()->json('Discipline and Course are required.');
         }
 
-        $discipline = DisciplineMaster::find($discipline_master_pk)->where('course_master_pk', $course_id)->where('active_inactive', 1)->first();
+        $discipline = DisciplineMaster::where('pk', $discipline_master_pk)->where('course_master_pk', $course_id)->where('active_inactive', 1)->first();
 
         if (!$discipline) {
             return response()->json('Discipline not found.');
@@ -447,14 +451,20 @@ class MemoDisciplineController extends Controller
         'messages.student:pk,display_name',
         'template:course_master_pk,content,director_name,director_designation'
     ])->find($decryptedId);
- $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
+    $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
+    $conclusion_type_name = null;
+    if ($memo && $memo->conclusion_type_pk) {
+        $conclusion_type_name = DB::table('memo_conclusion_master')
+            ->where('pk', $memo->conclusion_type_pk)
+            ->value('discussion_name');
+    }
     if (!$memo) {
         return back()->with('error', 'Memo not found.');
     }
 
     return view(
         'admin.memo_discipline.template_show',
-        compact('memo','memo_conclusion_master')
+        compact('memo', 'memo_conclusion_master', 'conclusion_type_name')
     );
 }
 
