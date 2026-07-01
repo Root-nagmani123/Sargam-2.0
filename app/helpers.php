@@ -399,7 +399,8 @@ function is_faculty_portal_user(): bool
         return true;
     }
 
-    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty');
+    return hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Faculty')
+        || hasRole('CC') || hasRole('ACC');
 }
 
 /**
