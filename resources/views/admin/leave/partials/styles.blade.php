@@ -424,4 +424,65 @@
         color: #084298;
         border-radius: 0.5rem;
     }
+
+    /* ── Apply Leave two-column layout (aside + form) ── */
+    .leave-module .leave-note-card {
+        border: 1px solid #fde68a;
+        background: #fffbeb;
+        border-radius: 12px;
+        padding: 1rem 1.1rem;
+        display: flex;
+        gap: 0.6rem;
+    }
+
+    .leave-module .leave-note-card .note-icon {
+        color: #f59e0b;
+        font-size: 20px;
+        line-height: 1.4;
+        flex-shrink: 0;
+    }
+
+    .leave-module .leave-note-card .leave-note-text {
+        color: #344054;
+        font-size: 0.85rem;
+        line-height: 1.5;
+        margin-bottom: 0;
+    }
+
+    .leave-module .pt-balance-box {
+        border: 1px solid #e5e7eb;
+        background: #fff;
+        border-radius: 12px;
+        padding: 1.1rem 1.25rem;
+        margin-top: 1rem;
+        box-shadow: 0 1px 3px rgba(16, 24, 40, .06);
+    }
+
+    .leave-module .pt-balance-box .pt-balance-head {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        color: #101828;
+        font-size: 0.95rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .leave-module .pt-balance-box .pt-balance-head .material-icons {
+        font-size: 20px;
+        color: #344054;
+    }
+
+    .leave-module .pt-balance-box .pt-balance-num {
+        color: #004a93;
+        font-size: 1.9rem;
+        font-weight: 700;
+        line-height: 1.1;
+    }
+
+    .leave-module .pt-balance-box .pt-balance-sub {
+        color: #667085;
+        font-size: 0.8rem;
+        margin-top: 0.15rem;
+    }
 </style>
