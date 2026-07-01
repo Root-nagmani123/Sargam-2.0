@@ -37,9 +37,8 @@ return new class extends Migration
                     ->where('mhr.role_id', $roleId)
                     ->where('mhr.model_type', $modelType);
             })
-            ->orderBy('uc.pk')
             ->select('uc.pk')
-            ->chunk(500, function ($rows) use ($roleId, $modelType) {
+            ->chunkById(500, function ($rows) use ($roleId, $modelType) {
                 $insert = [];
                 foreach ($rows as $row) {
                     $insert[] = [
@@ -51,7 +50,7 @@ return new class extends Migration
                 if ($insert) {
                     DB::table('model_has_roles')->insertOrIgnore($insert);
                 }
-            });
+            }, 'pk', 'uc');
     }
 
     public function down(): void

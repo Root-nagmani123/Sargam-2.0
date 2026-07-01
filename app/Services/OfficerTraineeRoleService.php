@@ -80,10 +80,10 @@ class OfficerTraineeRoleService
 
         $scopeQuery($baseQuery);
 
+        // chunkById (not chunk): offset-based chunk skips rows once inserts shrink the result set.
         $baseQuery
-            ->orderBy('uc.pk')
             ->select('uc.pk')
-            ->chunk(500, function ($rows) use ($roleId, $modelType, &$assigned) {
+            ->chunkById(500, function ($rows) use ($roleId, $modelType, &$assigned) {
                 $insert = [];
                 foreach ($rows as $row) {
                     $insert[] = [
@@ -97,7 +97,7 @@ class OfficerTraineeRoleService
                     DB::table('model_has_roles')->insertOrIgnore($insert);
                     $assigned += count($insert);
                 }
-            });
+            }, 'pk', 'uc');
 
         if ($assigned > 0) {
             $this->forgetPermissionCache();
