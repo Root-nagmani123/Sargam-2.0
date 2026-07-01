@@ -438,11 +438,8 @@ input.is-invalid {
                         <div>
                             <h4 class="card-title">Qualification Details</h4>
                             <hr>
-                            <div id="education_fields" class="my-4"></div>
-
-                            <div class="row degree-row" id="education_fields">
+                            <div class="row degree-row mb-3">
                                 <div class="col-12 col-sm-6 col-md-3">
-
                                     <x-input
                                         name="degree[]"
                                         label="Degree :"
@@ -450,7 +447,6 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         helperSmallText="Bachelors, Masters, PhD"
                                         />
-
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
@@ -461,7 +457,7 @@ input.is-invalid {
                                         />
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
-                                       <x-select
+                                    <x-select
                                         name="year_of_passing[]"
                                         label="Year of Passing :"
                                         placeholder="Year of Passing"
@@ -480,10 +476,8 @@ input.is-invalid {
                                         placeholder="Percentage/CGPA"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3 mt-3">
-
                                     <x-input
                                         type="file"
                                         name="certificate[]"
@@ -492,12 +486,17 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         helperSmallText="Please upload your certificates/documents, if any"
                                         />
-                                  </div>
-								  <div class="existing-certificate"></div>
-                                <div class="col-9">
-                                    <label for="Schoolname" class="form-label"></label>
-                                    <div class="mb-3 float-end">
-                                        <button onclick="education_fields();" class="btn btn-success fw-medium" type="button">
+                                    <div class="existing-certificate"></div>
+                                </div>
+                            </div>
+                            <div id="education_fields"></div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="mb-3 float-end d-flex gap-2">
+                                        <button onclick="remove_last_education_field();" class="btn btn-danger btn-sm" type="button">
+                                            <i class="material-icons menu-icon">remove</i>
+                                        </button>
+                                        <button onclick="education_fields();" class="btn btn-success btn-sm" type="button">
                                             <i class="material-icons menu-icon">add</i>
                                         </button>
                                     </div>
@@ -512,8 +511,7 @@ input.is-invalid {
                     <div class="card-body">
                         <h4 class="card-title">Experience Details</h4>
                             <hr>
-                            <div id="experience_fields_wrapper" class="my-4"></div>
-                            <div class="row experience-row" id="experience_fields">
+                            <div class="row experience-row mb-3">
                                 <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
                                         name="experience[]"
@@ -523,14 +521,12 @@ input.is-invalid {
                                         />
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
-
                                     <x-input
                                         name="specialization[]"
                                         label="Area of Specialization :"
-                                        placeholder="Area of Specialization blade file"
+                                        placeholder="Area of Specialization"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3">
                                     <x-input
@@ -547,7 +543,6 @@ input.is-invalid {
                                         placeholder="Position Held"
                                         formLabelClass="form-label"
                                         />
-
                                 </div>
                                 <div class="col-12 col-sm-6 col-md-3 mt-3">
                                     <x-input
@@ -567,10 +562,14 @@ input.is-invalid {
                                         formLabelClass="form-label"
                                         />
                                 </div>
-                                <div class="col-6">
-
-                                    <label for="Schoolname" class="form-label"></label>
-                                    <div class="mb-3 float-end">
+                            </div>
+                            <div id="experience_fields"></div>
+                            <div class="row">
+                                <div class="col-12">
+                                    <div class="mb-3 float-end d-flex gap-2">
+                                        <button onclick="remove_last_experience_field();" class="btn btn-danger btn-sm" type="button">
+                                            <i class="material-icons menu-icon">remove</i>
+                                        </button>
                                         <button onclick="experience_fields();" class="btn btn-success btn-sm" type="button">
                                             <i class="material-icons menu-icon">add</i>
                                         </button>
