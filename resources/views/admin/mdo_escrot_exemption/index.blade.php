@@ -591,10 +591,15 @@ $(document).ready(function() {
         var meePickerStudentsMap = {};
         var meeStudentsRequest = null;
         var meeEscortDutyTypeId = null;
+        var meeOtherDutyTypeId = null;
 
         $('#mdo_duty_type_master_pk option').each(function() {
-            if ($(this).text().trim().toLowerCase() === 'escort') {
+            var optText = $(this).text().trim().toLowerCase();
+            if (optText === 'escort') {
                 meeEscortDutyTypeId = $(this).val();
+            }
+            if (optText === 'other') {
+                meeOtherDutyTypeId = $(this).val();
             }
         });
 
@@ -624,6 +629,7 @@ $(document).ready(function() {
                     Time_from: '#Time_from',
                     Time_to: '#Time_to',
                     faculty_master_pk: '#faculty_master_pk',
+                    duty_other: '#duty_other',
                     selected_student_list: '#meeAssignStudentsTrigger'
                 };
                 Object.keys(errors).forEach(function(key) {
@@ -669,6 +675,19 @@ $(document).ready(function() {
                 if ($('#faculty_master_pk').hasClass('select2-hidden-accessible')) {
                     $('#faculty_master_pk').trigger('change.select2');
                 }
+            }
+        }
+
+        function toggleDutyOtherField() {
+            var dutyType = $('#mdo_duty_type_master_pk').val();
+            if (meeOtherDutyTypeId && dutyType === meeOtherDutyTypeId) {
+                $('#duty_other_container').removeClass('d-none');
+                $('#duty_other').prop('required', true);
+            } else {
+                $('#duty_other_container').addClass('d-none');
+                $('#duty_other').val('').prop('required', false);
+                $('#meeErrorDutyOther').addClass('d-none');
+                $('#duty_other').removeClass('is-invalid');
             }
         }
 
@@ -857,6 +876,7 @@ $(document).ready(function() {
             $('#meeRecordPk').val('');
             $('#meeEditStudentName, #meeEditCourseName').text('—');
             toggleFacultyField();
+            toggleDutyOtherField();
             renderAssignStudentTags();
             renderPickerTags();
             $('#meeStudentListEmpty').removeClass('d-none').text('Select course and start date to load students.');
@@ -906,6 +926,11 @@ $(document).ready(function() {
                 $('#faculty_master_pk').addClass('is-invalid');
                 valid = false;
             }
+            if (meeOtherDutyTypeId && $('#mdo_duty_type_master_pk').val() === meeOtherDutyTypeId && !$('#duty_other').val().trim()) {
+                $('#meeErrorDutyOther').removeClass('d-none');
+                $('#duty_other').addClass('is-invalid');
+                valid = false;
+            }
             if (!isEdit && !meeAssignedStudents.length) {
                 $('#meeErrorStudents').removeClass('d-none');
                 $('#meeAssignStudentsTrigger').addClass('is-invalid');
@@ -926,7 +951,10 @@ $(document).ready(function() {
             resetMeeAddForm();
         });
 
-        $('#mdo_duty_type_master_pk').on('change', toggleFacultyField);
+        $('#mdo_duty_type_master_pk').on('change', function() {
+            toggleFacultyField();
+            toggleDutyOtherField();
+        });
 
         // Course, date or time change invalidates the previously picked students,
         // since the available list depends on all of them (time-slot conflict check).
