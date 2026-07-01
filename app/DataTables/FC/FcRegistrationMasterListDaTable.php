@@ -225,6 +225,14 @@ class FcRegistrationMasterListDaTable extends DataTable
                 'scrollX' => true,
                 'autoWidth' => false,
                 'order' => [],
+                // Standard visible layout. The table is marked `dt-legacy-layout`
+                // in the view so the global datatable-global-ui.js enhancer skips
+                // it; without an explicit dom it would inherit the enhancer's
+                // hidden-row default and the search / length / pagination controls
+                // would never render.
+                'dom' => "<'row align-items-center mb-2'<'col-sm-12 col-md-6'l><'col-sm-12 col-md-6'f>>" .
+                    "<'row'<'col-sm-12'tr>>" .
+                    "<'row align-items-center mt-2'<'col-sm-12 col-md-5'i><'col-sm-12 col-md-7'p>>",
                 'rowCallback' => "function(row, data) {
                 if (parseInt(data.email_count) > 1) {
                     $(row).css('background-color', '#ffe6e6');
