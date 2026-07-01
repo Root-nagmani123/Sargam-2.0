@@ -917,6 +917,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
             Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
             Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
+            Route::post('/end-chat', 'endChat')->name('endChat');
             Route::post('/memo_notice_conversation', 'memo_notice_conversation')->name('memo_notice_conversation');
             Route::post('/memo_notice_conversation_student', 'memo_notice_conversation_student')->name('memo_notice_conversation_student');
             Route::post('/memo_notice_conversation_model', 'memo_notice_conversation_model')->name('memo_notice_conversation_model');
@@ -930,11 +931,13 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::post('/memo/get-data', 'getMemoData')->name('get_memo_data');
             Route::post('/memo/get-generated-data', 'getGeneratedMemoData')->name('get_generated_memo_data');
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
+            Route::get('/export-csv', 'exportCsv')->name('export_csv');
             Route::get('/messages/{id}/{type}', 'getNewMessages')->name('getNewMessages');
         });
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
     Route::get('/send_notice/students', [CourseAttendanceNoticeMapController::class, 'getStudentsForNotice'])->name('send.notice.students');
+    Route::get('/send_notice/list/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'noticeListModal'])->name('send.notice.list.modal');
     Route::post('/send_notice_direct_save', [CourseAttendanceNoticeMapController::class, 'send_direct_notice_save'])->name('send.notice.direct.save');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
@@ -959,6 +962,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
     });
     Route::prefix('memo/discipline')->name('memo.discipline.')->group(function () {
         Route::get('/', [MemoDisciplineController::class, 'index'])->name('index');
+        Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');
         Route::get('edit/{id}', [MemoDisciplineController::class, 'edit'])->name('edit');
         Route::post('/discipline_generate_memo_store', [MemoDisciplineController::class, 'discipline_generate_memo_store'])->name('discipline_generate_memo_store');

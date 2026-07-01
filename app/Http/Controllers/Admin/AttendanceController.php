@@ -278,6 +278,19 @@ class AttendanceController extends Controller
                 ->addColumn('faculty_name', function ($row) {
                     return $this->resolveTimetableFacultyNames($row->timetable);
                 })
+                ->addColumn('eligible_ot', function ($row) use ($currentPath) {
+                    // Only the Send Direct Notice listing needs this count; skip the
+                    // extra per-row query for every other context.
+                    if ($currentPath !== 'send_notice') {
+                        return 0;
+                    }
+
+                    return CourseStudentAttendance::where([
+                        'course_master_pk' => $row->Programme_pk,
+                        'group_type_master_course_master_map_pk' => $row->group_pk,
+                        'timetable_pk' => $row->timetable_pk,
+                    ])->whereRaw("TRIM(status) REGEXP '^(2|3)$'")->count();
+                })
                 ->addColumn('actions', function ($row) use ($currentPath) {
                     // Mark Attendance button turns green only when all students are saved (status != 0)
                     static $markedCache = [];
@@ -322,11 +335,11 @@ class AttendanceController extends Controller
                 'timetable_pk' => $row->timetable_pk
             ]) . '" class="' . $markBtnClass . '">Show Attendance</a>';
         }else if($currentPath === 'send_notice'){
-            return '<a href="' . route('attendance.send_notice', [
+            return '<a href="' . route('send.notice.list.modal', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="btn btn-primary btn-sm">Send Notice</a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1 js-open-notice" title="Send Notice"><i class="material-icons material-symbols-rounded" style="font-size: 2rem;">send</i><span class="small mt-1">Notice</span></a>';
         }else if(hasRole('Training-Induction') || hasRole('Staff') || hasRole('Admin')){
              return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,

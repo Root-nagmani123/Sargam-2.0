@@ -277,6 +277,8 @@ class CourseAttendanceNoticeMapController extends Controller
     // Get memo type and venues if needed
     $venue = VenueMaster::where('active_inactive', 1)->get();
     $memo_master = MemoTypeMaster::where('active_inactive', 1)->get();
+    // Conclusion types for the chat panel's "End Chat" action.
+    $conclusions = \App\Models\MemoConclusionMaster::where('active_inactive', 1)->get();
     
     // Get courses for Program Name filter - only active courses (active_inactive = 1 and end_date > now)
     $courses = CourseMaster::where('active_inactive', 1)
@@ -300,10 +302,100 @@ $noticeCount = $memos->groupBy(function($item) {
 })->map(function ($group) {
     return $group->where('type_notice_memo', 'Notice')->count();
 });
-    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount'));
+    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'conclusions', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount'));
 }
 
     public function exportPdf(Request $request)
+    {
+        $data = $this->noticeMemoExportData($request);
+
+        // Generate PDF
+        $pdf = Pdf::loadView('admin.courseAttendanceNoticeMap.export_pdf', $data)
+            ->setPaper('a4', 'landscape');
+
+        $fileName = 'Notice_Memo_Report_' . date('Y-m-d_His') . '.pdf';
+        return $pdf->download($fileName);
+    }
+
+    /**
+     * Download the Send Memo / Notice listing as a CSV, using the same
+     * filtered dataset as the PDF export, in the mess-style layout:
+     * a title block (report name + applied filters), the column-header row, then data rows.
+     */
+    public function exportCsv(Request $request)
+    {
+        $data = $this->noticeMemoExportData($request);
+        $memos = $data['memos'];
+
+        $courseName = optional($data['selectedCourse'])->course_name ?? 'All';
+        $typeText = $data['typeFilter'] === '1' ? 'Notice' : ($data['typeFilter'] === '0' ? 'Memo' : 'All');
+        $statusText = $data['statusFilter'] === '1' ? 'Open' : ($data['statusFilter'] === '0' ? 'Close' : 'All');
+        $dateRange = ($data['fromDateFilter'] || $data['toDateFilter'])
+            ? (($data['fromDateFilter'] ? Carbon::parse($data['fromDateFilter'])->format('d-m-Y') : '—') . ' to ' . ($data['toDateFilter'] ? Carbon::parse($data['toDateFilter'])->format('d-m-Y') : '—'))
+            : 'All Dates';
+
+        $headers = ['S. No.', 'Program Name', 'Participant Name', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Status'];
+
+        $rows = [];
+        $i = 0;
+        foreach ($memos as $memo) {
+            $isNotice = ($memo->type_notice_memo ?? '') == 'Notice';
+            $st = $memo->status ?? null;
+            $cs = $memo->communication_status ?? null;
+            if ($isNotice) {
+                $statusLabel = $st == 1 ? 'Notice Sent' : 'Notice Chat Closed';
+            } elseif ($cs == 1) {
+                $statusLabel = 'Memo Chat Open';
+            } elseif ($cs == 2) {
+                $statusLabel = 'Memo Chat Closed';
+            } else {
+                $statusLabel = 'Memo Sent';
+            }
+            $sessionDate = $memo->session_date ?? $memo->date_ ?? null;
+
+            $rows[] = [
+                ++$i,
+                $memo->course_name ?? 'N/A',
+                $memo->student_name ?? 'N/A',
+                $isNotice ? 'Notice' : 'Memo',
+                $sessionDate ? Carbon::parse($sessionDate)->format('d-m-Y') : 'N/A',
+                $memo->topic_name ?? 'N/A',
+                ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A',
+                ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A',
+                $statusLabel,
+            ];
+        }
+
+        $titleBlock = [
+            ['Send Memo / Notice'],
+            ['Date Range', $dateRange, 'Program', $courseName, 'Type', $typeText, 'Status', $statusText],
+            ['Generated On', now()->format('d-m-Y H:i:s')],
+            [],
+        ];
+
+        $fileName = 'send-memo-notice-' . now()->format('Y-m-d_His') . '.csv';
+
+        return response()->streamDownload(function () use ($titleBlock, $headers, $rows) {
+            $out = fopen('php://output', 'w');
+            fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
+            foreach ($titleBlock as $line) {
+                fputcsv($out, $line);
+            }
+            fputcsv($out, $headers);
+            foreach ($rows as $row) {
+                fputcsv($out, $row);
+            }
+            fclose($out);
+        }, $fileName, [
+            'Content-Type' => 'text/csv; charset=UTF-8',
+        ]);
+    }
+
+    /**
+     * Build the filtered Notice/Memo collection + filter context shared by the
+     * PDF and CSV exports. Mirrors the filter logic of exportPdf/index.
+     */
+    private function noticeMemoExportData(Request $request): array
     {
         // Get filter parameters (same as index method)
         $programNameFilter = $request->get('program_name', '');
@@ -312,7 +404,7 @@ $noticeCount = $memos->groupBy(function($item) {
         $searchFilter = $request->get('search', '');
         $fromDateFilter = $request->get('from_date', '');
         $toDateFilter = $request->get('to_date', '');
-        
+
         // Set default to today's date if no date filters are provided
         if (empty($fromDateFilter) && empty($toDateFilter)) {
             $fromDateFilter = Carbon::today()->toDateString();
@@ -549,8 +641,7 @@ $noticeCount = $memos->groupBy(function($item) {
             $selectedCourse = CourseMaster::find($programNameFilter);
         }
 
-        // Generate PDF
-        $pdf = Pdf::loadView('admin.courseAttendanceNoticeMap.export_pdf', [
+        return [
             'memos' => $memos,
             'programNameFilter' => $programNameFilter,
             'typeFilter' => $typeFilter,
@@ -559,10 +650,7 @@ $noticeCount = $memos->groupBy(function($item) {
             'fromDateFilter' => $fromDateFilter,
             'toDateFilter' => $toDateFilter,
             'selectedCourse' => $selectedCourse,
-        ])->setPaper('a4', 'landscape');
-
-        $fileName = 'Notice_Memo_Report_' . date('Y-m-d_His') . '.pdf';
-        return $pdf->download($fileName);
+        ];
     }
 
     public function index_bkp()
@@ -2431,7 +2519,45 @@ public function store_memo_status(Request $request)
     ]);
 
     return redirect()->back()->with('success', 'Memo saved successfully.');
-  
+
+}
+
+/**
+ * Conclude (close) a notice/memo conversation from the chat panel's "End Chat" action.
+ * Memo  → sets status/communication_status to closed and records the conclusion type + remark.
+ * Notice → closes the notice (status = 2).
+ */
+public function endChat(Request $request)
+{
+    $validated = $request->validate([
+        'id'                        => 'required|integer',
+        'type'                      => 'required|in:notice,memo',
+        'memo_conclusion_master_pk' => 'nullable|integer',
+        'conclusion_remark'         => 'nullable|string',
+    ]);
+
+    try {
+        if ($validated['type'] === 'memo') {
+            DB::table('student_memo_status')
+                ->where('pk', $validated['id'])
+                ->update([
+                    'status'                    => 2,
+                    'communication_status'      => 2,
+                    'memo_conclusion_master_pk' => $validated['memo_conclusion_master_pk'],
+                    'conclusion_remark'         => $validated['conclusion_remark'],
+                    'modified_date'             => now(),
+                ]);
+        } else {
+            DB::table('student_notice_status')
+                ->where('pk', $validated['id'])
+                ->update(['status' => 2]);
+        }
+
+        return response()->json(['success' => true, 'message' => 'Conversation ended successfully.']);
+    } catch (\Exception $e) {
+        \Log::error('End chat failed: ' . $e->getMessage());
+        return response()->json(['success' => false, 'message' => 'Failed to end conversation.'], 500);
+    }
 }
 public function send_direct_notice_save(Request $request)
     {
@@ -2491,14 +2617,26 @@ public function send_direct_notice_save(Request $request)
     }
 
     function send_only_notice(Request $request){
+        // Session dropdowns mirror the Attendance filter shell so the shared
+        // get.attendance.list endpoint (page_context = send_notice) can be reused.
+        $sessions = ClassSessionMaster::get();
+
+        $maunalSessions = Timetable::select('class_session')
+            ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
+            ->groupBy('class_session')
+            ->get();
+
         $courseMasters = CourseMaster::where('active_inactive', 1)
-            ->where('end_date', '>', now())
-            ->orderBy('course_name')
-            ->select('course_name', 'pk')
+            ->where(function ($q) {
+                $q->whereNull('end_date')
+                    ->orWhere('end_date', '>=', now()->toDateString());
+            })
+            ->orderBy('couse_short_name')
+            ->select('couse_short_name', 'course_name', 'pk')
             ->get()
             ->toArray();
 
-        return view('admin.courseAttendanceNoticeMap.send_only_notice', compact('courseMasters'));
+        return view('admin.courseAttendanceNoticeMap.send_only_notice', compact('courseMasters', 'sessions', 'maunalSessions'));
     }
 function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
     {
@@ -2537,6 +2675,35 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
             \Log::error('Error fetching attendance data: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while fetching attendance data: ' . $e->getMessage());
         }
+    }
+
+    /**
+     * Notice-list partial rendered inside the "Notice List" modal on the
+     * Send Direct Notice page. Same dataset as view_all_notice_list() (the
+     * session's Late/Absent OTs) but returns a bare partial for AJAX injection.
+     */
+    public function noticeListModal($group_pk, $course_pk, $timetable_pk)
+    {
+        $courseGroup = CourseGroupTimetableMapping::with([
+                'course:pk,course_name',
+                'timetable',
+                'timetable.faculty:pk,full_name',
+                'timetable.classSession:pk,start_time,end_time'
+            ])
+            ->where('group_pk', $group_pk)
+            ->where('Programme_pk', $course_pk)
+            ->where('timetable_pk', $timetable_pk)
+            ->first();
+
+        $students = DB::table('course_student_attendance as csa')
+            ->leftJoin('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
+            ->where('csa.course_master_pk', $course_pk)
+            ->where('csa.timetable_pk', $timetable_pk)
+            ->whereRaw("TRIM(csa.status) REGEXP '^(2|3)$'")
+            ->select('csa.*', 'sm.display_name', 'sm.pk as student_id', 'sm.generated_OT_code as generated_OT_code')
+            ->get();
+
+        return view('admin.courseAttendanceNoticeMap.partials.notice_list_modal', compact('students', 'courseGroup', 'group_pk', 'course_pk', 'timetable_pk'));
     }
     function notice_direct_save(Request $request){
        

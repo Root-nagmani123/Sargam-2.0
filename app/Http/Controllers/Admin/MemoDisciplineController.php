@@ -55,7 +55,7 @@ class MemoDisciplineController extends Controller
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
-            'student:pk,display_name'
+            'student:pk,display_name,generated_OT_code'
         ])
 
         ->when(hasRole('Student-OT'), function ($q) use ($courses) {
@@ -92,6 +92,10 @@ class MemoDisciplineController extends Controller
         ->paginate(10)
         ->appends($request->all());
 
+    // Optional Session/Venue selects shown in the Generate Discipline Memo modal.
+    $sessions = \App\Models\ClassSessionMaster::all();
+    $venues   = \App\Models\VenueMaster::where('active_inactive', 1)->orderBy('venue_name')->get();
+
     return view('admin.memo_discipline.index', compact(
         'memos',
         'courses',
@@ -99,8 +103,138 @@ class MemoDisciplineController extends Controller
         'statusFilter',
         'searchFilter',
         'fromDateFilter',
-        'toDateFilter'
+        'toDateFilter',
+        'sessions',
+        'venues'
     ));
+}
+
+/**
+ * Download the Send Discipline Memo listing as a CSV.
+ * Same filters/dataset as index() (minus pagination), in the mess-style layout:
+ * a title block (report name + applied filters), then the column-header row, then data rows.
+ */
+public function exportCsv(Request $request)
+{
+    $data_course_id = get_Role_by_course();
+
+    // Filters (identical to index)
+    $programNameFilter = $request->program_name;
+    $statusFilter      = $request->status;
+    $searchFilter      = $request->search;
+
+    if (!$request->has('from_date') && !$request->has('to_date')) {
+        $fromDateFilter = Carbon::today()->toDateString();
+        $toDateFilter   = Carbon::today()->toDateString();
+    } else {
+        $fromDateFilter = $request->get('from_date') ?: null;
+        $toDateFilter   = $request->get('to_date') ?: null;
+    }
+
+    $studentCourses = null;
+    if (hasRole('Student-OT')) {
+        $studentCourses = DB::table('student_master_course__map')
+            ->where('student_master_pk', Auth::user()->user_id)
+            ->pluck('course_master_pk');
+    }
+
+    $memos = MemoDiscipline::with([
+            'course:pk,course_name',
+            'discipline:pk,discipline_name,active_inactive',
+            'student:pk,display_name,generated_OT_code'
+        ])
+        ->when(hasRole('Student-OT'), function ($q) use ($studentCourses) {
+            $q->where('student_master_pk', Auth::user()->user_id);
+            $q->whereIn('course_master_pk', $studentCourses ?? collect());
+        })
+        ->when(!hasRole('Student-OT') && !empty($data_course_id ?? null), function ($q) use ($data_course_id) {
+            $q->whereIn('course_master_pk', $data_course_id);
+        })
+        ->when($programNameFilter, function ($q) use ($programNameFilter) {
+            $q->where('course_master_pk', $programNameFilter);
+        })
+        ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
+            $q->where('status', $statusFilter);
+        })
+        ->when($searchFilter, function ($q) use ($searchFilter) {
+            $q->where(function ($sub) use ($searchFilter) {
+                $sub->whereHas('student', function ($s) use ($searchFilter) {
+                        $s->where('display_name', 'like', "%{$searchFilter}%");
+                    })
+                    ->orWhereHas('discipline', function ($d) use ($searchFilter) {
+                        $d->where('discipline_name', 'like', "%{$searchFilter}%");
+                    })
+                    ->orWhere('remarks', 'like', "%{$searchFilter}%");
+            });
+        })
+        ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
+            $q->whereBetween('date', [$fromDateFilter, $toDateFilter]);
+        })
+        ->whereHas('discipline', function ($q) {
+            $q->where('active_inactive', 1);
+        })
+        ->orderBy('pk', 'desc')
+        ->get();
+
+    $courseName = $programNameFilter ? (optional(CourseMaster::find($programNameFilter))->course_name ?? 'All') : 'All';
+    $statusText = ($statusFilter === null || $statusFilter === '')
+        ? 'All'
+        : (['1' => 'Recorded', '2' => 'Memo Sent'][(string) $statusFilter] ?? 'Closed');
+    $dateRange = ($fromDateFilter || $toDateFilter)
+        ? (($fromDateFilter ? Carbon::parse($fromDateFilter)->format('d-m-Y') : '—') . ' to ' . ($toDateFilter ? Carbon::parse($toDateFilter)->format('d-m-Y') : '—'))
+        : 'All Dates';
+
+    $headers = ['S. No.', 'Program Name', 'Participant Name', 'Date', 'Discipline', 'Submitted', 'Final', 'Status'];
+
+    $rows = [];
+    foreach ($memos as $i => $memo) {
+        $participant = trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A'));
+        $statusLabel = $memo->status == 1 ? 'Recorded' : ($memo->status == 2 ? 'Memo Sent' : 'Closed');
+        $rows[] = [
+            $i + 1,
+            $memo->course->course_name ?? 'N/A',
+            $participant,
+            $memo->date ? Carbon::parse($memo->date)->format('d M Y') : 'N/A',
+            $memo->discipline->discipline_name ?? 'N/A',
+            $memo->mark_deduction_submit,
+            $memo->final_mark_deduction,
+            $statusLabel,
+        ];
+    }
+
+    $titleBlock = [
+        ['Send Discipline Memo'],
+        ['Date Range', $dateRange, 'Program', $courseName, 'Status', $statusText],
+        ['Generated On', now()->format('d-m-Y H:i:s')],
+        [],
+    ];
+
+    $fileName = 'send-discipline-memo-' . now()->format('Y-m-d_His') . '.csv';
+
+    return $this->streamCsv($fileName, $titleBlock, $headers, $rows);
+}
+
+/**
+ * Stream a CSV download in the mess-style layout: title/meta rows, a header row, then data rows.
+ * A UTF-8 BOM is prepended so Excel renders names/diacritics correctly.
+ */
+private function streamCsv(string $fileName, array $titleBlock, array $headers, array $rows)
+{
+    return response()->streamDownload(function () use ($titleBlock, $headers, $rows) {
+        $out = fopen('php://output', 'w');
+        fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM for Excel
+
+        foreach ($titleBlock as $line) {
+            fputcsv($out, $line);
+        }
+        fputcsv($out, $headers);
+        foreach ($rows as $row) {
+            fputcsv($out, $row);
+        }
+        fclose($out);
+    }, $fileName, [
+        'Content-Type' => 'text/csv; charset=UTF-8',
+    ]);
 }
 
     public function create()
