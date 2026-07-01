@@ -135,12 +135,13 @@ final class DataTableRedisCache
     {
         $enabled = ! in_array(strtolower((string) env($envKeys['enabled'], 'true')), ['0', 'false', 'no', 'off'], true);
         $ttl = max(30, (int) env($envKeys['seconds'], 300));
-        $storeName = RedisBackedCache::projectDefaultStoreName();
-        $repository = RedisBackedCache::repositoryForStore($storeName);
         if (! $enabled) {
             return $callback();
         }
+        $storeName = 'unknown';
         try {
+            $storeName = RedisBackedCache::projectDefaultStoreName();
+            $repository = RedisBackedCache::repositoryForStore($storeName);
             return $repository->remember($cacheKey, $ttl, $callback);
         } catch (\Throwable $e) {
             Log::warning("{$logLabel}: cache store failed, using DB only.", [
