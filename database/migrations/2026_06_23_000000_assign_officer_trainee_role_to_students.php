@@ -28,16 +28,16 @@ return new class extends Migration
         $modelType = 'App\\Models\\User';
 
         // Insert (role_id, model_type, model_id) for every 'S' user missing it.
-        DB::table('user_credentials as uc')
-            ->where('uc.user_category', 'S')
+        DB::table('user_credentials')
+            ->where('user_category', 'S')
             ->whereNotExists(function ($q) use ($roleId, $modelType) {
                 $q->select(DB::raw(1))
                     ->from('model_has_roles as mhr')
-                    ->whereColumn('mhr.model_id', 'uc.pk')
+                    ->whereColumn('mhr.model_id', 'user_credentials.pk')
                     ->where('mhr.role_id', $roleId)
                     ->where('mhr.model_type', $modelType);
             })
-            ->select('uc.pk')
+            ->select('pk')
             ->chunkById(500, function ($rows) use ($roleId, $modelType) {
                 $insert = [];
                 foreach ($rows as $row) {
@@ -50,7 +50,7 @@ return new class extends Migration
                 if ($insert) {
                     DB::table('model_has_roles')->insertOrIgnore($insert);
                 }
-            }, 'pk', 'uc');
+            }, 'pk');
     }
 
     public function down(): void

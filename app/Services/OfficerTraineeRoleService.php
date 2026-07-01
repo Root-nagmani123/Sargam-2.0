@@ -40,7 +40,7 @@ class OfficerTraineeRoleService
         }
 
         return $this->insertMissingRoleAssignments(function ($query) use ($userCredentialPks) {
-            $query->whereIn('uc.pk', $userCredentialPks);
+            $query->whereIn('pk', $userCredentialPks);
         });
     }
 
@@ -50,7 +50,7 @@ class OfficerTraineeRoleService
     public function assignToAllMissingStudents(): int
     {
         return $this->insertMissingRoleAssignments(function ($query) {
-            $query->where('uc.user_category', 'S');
+            // Base query already scopes user_category = 'S'.
         });
     }
 
@@ -68,12 +68,12 @@ class OfficerTraineeRoleService
         $modelType = User::class;
         $assigned = 0;
 
-        $baseQuery = DB::table('user_credentials as uc')
-            ->where('uc.user_category', 'S')
+        $baseQuery = DB::table('user_credentials')
+            ->where('user_category', 'S')
             ->whereNotExists(function ($q) use ($roleId, $modelType) {
                 $q->select(DB::raw(1))
                     ->from('model_has_roles as mhr')
-                    ->whereColumn('mhr.model_id', 'uc.pk')
+                    ->whereColumn('mhr.model_id', 'user_credentials.pk')
                     ->where('mhr.role_id', $roleId)
                     ->where('mhr.model_type', $modelType);
             });
@@ -82,7 +82,7 @@ class OfficerTraineeRoleService
 
         // chunkById (not chunk): offset-based chunk skips rows once inserts shrink the result set.
         $baseQuery
-            ->select('uc.pk')
+            ->select('pk')
             ->chunkById(500, function ($rows) use ($roleId, $modelType, &$assigned) {
                 $insert = [];
                 foreach ($rows as $row) {
@@ -97,7 +97,7 @@ class OfficerTraineeRoleService
                     DB::table('model_has_roles')->insertOrIgnore($insert);
                     $assigned += count($insert);
                 }
-            }, 'pk', 'uc');
+            }, 'pk');
 
         if ($assigned > 0) {
             $this->forgetPermissionCache();
