@@ -84,11 +84,8 @@
             <form method="POST" action="{{ route('admin.pt-exemption-master.store') }}" id="exemption-config-form">
                 @csrf
 
-                {{-- PT timing is preserved server-side; not surfaced in this layout. --}}
-                <input type="hidden" id="apply_cutoff_time" name="apply_cutoff_time" value="{{ $cutoffValue }}">
-
                 <div class="row g-4 mb-4">
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-4">
                         <label for="course_master_pk" class="form-label fw-semibold">Select Course <span class="text-danger">*</span></label>
                         <select id="course_master_pk" name="course_master_pk" class="form-select" required
                             @if(($isEditing ?? false) || $courses->isEmpty()) disabled @endif>
@@ -105,12 +102,18 @@
                             <input type="hidden" name="course_master_pk" value="{{ old('course_master_pk', $courseMasterPk) }}">
                         @endif
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-4">
                         <label for="effective_from" class="form-label fw-semibold">Effective From <span class="text-danger">*</span></label>
                         <input type="date" id="effective_from" name="effective_from" class="form-control" required
                             placeholder="Select the date"
                             value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}"
                             @if($isEditing ?? false) readonly @endif>
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="apply_cutoff_time" class="form-label fw-semibold">PT Time <span class="text-danger">*</span></label>
+                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control" required
+                            placeholder="Select the time"
+                            value="{{ $cutoffValue }}">
                     </div>
                 </div>
 

@@ -32,7 +32,7 @@
 @endphp
 
 <div class="container-fluid leave-module">
-    <x-breadcrum :title="$pageTitle" :showBack="true" />
+    <x-breadcrum :title="$pageTitle" />
     <x-session_message />
 
     @if(empty($course_is_running))
@@ -98,6 +98,37 @@
         @endif
     @endif
 
+    <div class="row g-4 leave-apply-layout">
+        {{-- Aside: info note + PT balance --}}
+        <div class="col-12 col-lg-4 order-2 order-lg-1">
+            @php
+                $applyCutoffDisplay = $isPt ? ($ptCutoffTimeDisplay ?? null) : ($stationedCutoffTimeDisplay ?? null);
+                $leaveTypeLabel = $isPt ? 'PT exemption' : 'Stationed leave';
+            @endphp
+            <div class="leave-note-card">
+                <i class="material-icons material-symbols-rounded note-icon">info</i>
+                <p class="leave-note-text">
+                    {{ $leaveTypeLabel }} is approved automatically on submit.
+                    @if($applyCutoffDisplay)
+                        Same day applications are allowed only before {{ $applyCutoffDisplay }}.
+                    @endif
+                </p>
+            </div>
+
+            @if($isPt)
+                <div class="pt-balance-box">
+                    <div class="pt-balance-head">
+                        <i class="material-icons material-symbols-rounded">calendar_month</i>
+                        <span>PT Balance</span>
+                    </div>
+                    <div class="pt-balance-num">{{ number_format((float) ($ptBalance['remaining'] ?? 0), 1) }} Days</div>
+                    <div class="pt-balance-sub">As on {{ $ptBalance['as_on'] ?? now()->format('d M Y') }}</div>
+                </div>
+            @endif
+        </div>
+
+        {{-- Form --}}
+        <div class="col-12 col-lg-8 order-1 order-lg-2">
     <div class="card leave-apply-card border-0 shadow-sm rounded-3">
         <div class="card-body p-3 p-md-4">
             <form method="POST" action="{{ $formAction }}" enctype="multipart/form-data" id="leave-apply-form">
@@ -254,6 +285,8 @@
                 </div>
                 @endif
             </form>
+        </div>
+    </div>
         </div>
     </div>
 </div>
