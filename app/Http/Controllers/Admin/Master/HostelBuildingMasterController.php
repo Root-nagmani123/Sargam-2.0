@@ -19,7 +19,7 @@ class HostelBuildingMasterController extends Controller
     }
     // public function index(HostelBuildingMasterDataTable $dataTable){
     public function index(BuildingMasterDataTable $dataTable){
-        return $dataTable->render('admin.master.hostel_building.index');
+        return $dataTable->render('admin.master.hostel_building.index', ['buildingType' => $this->buildingType]);
     }
 
     public function create(){
@@ -27,11 +27,14 @@ class HostelBuildingMasterController extends Controller
     }
 
     public function store(Request $request){
-        
+
         $request->validate([
-            'building_name' => 'required|string|max:255|unique:building_master,building_name,' . ($request->pk ? decrypt($request->pk) : 'null').',pk',
+            'building_name'  => 'required|string|max:255|unique:building_master,building_name,' . ($request->pk ? decrypt($request->pk) : 'null').',pk',
+            'no_of_floors'   => 'required|integer|min:0',
+            'no_of_rooms'    => 'required|integer|min:0',
+            'building_type'  => 'required|string|max:255',
         ]);
-        
+
         if($request->pk) {
             $message = 'Building updated successfully.';
             $buildingMaster = BuildingMaster::findOrFail(decrypt($request->pk));
@@ -44,9 +47,17 @@ class HostelBuildingMasterController extends Controller
         $buildingMaster->no_of_floors = $request->no_of_floors;
         $buildingMaster->no_of_rooms = $request->no_of_rooms;
         $buildingMaster->building_type = $request->building_type;
-        $buildingMaster->active_inactive = 1;
+        // Preserve existing behaviour (default active) while allowing the modal's
+        // Building Status field to set it when provided.
+        $buildingMaster->active_inactive = $request->filled('active_inactive')
+            ? (int) $request->active_inactive
+            : ($buildingMaster->active_inactive ?? 1);
 
         $buildingMaster->save();
+
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['status' => 'success', 'message' => $message]);
+        }
 
         return redirect()->route('master.hostel.building.index')->with('success', $message);
     }
