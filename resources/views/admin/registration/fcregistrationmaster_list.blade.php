@@ -298,7 +298,7 @@
                 </div>
 
                 <div class="table-responsive">
-                    {{ $dataTable->table(['class' => 'table table-hover table-bordered text-nowrap align-middle mb-0', 'id' => 'fcregistrationmasterlistdatable-table']) }}
+                    {{ $dataTable->table(['class' => 'table table-hover table-bordered text-nowrap align-middle mb-0 dt-legacy-layout', 'id' => 'fcregistrationmasterlistdatable-table']) }}
                 </div>
             </div>
         </div>
