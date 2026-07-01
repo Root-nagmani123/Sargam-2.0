@@ -159,9 +159,12 @@ class AttendanceController extends Controller
 
     function getAttendanceList(Request $request)
     {
-        $backUrl = url()->previous();        // Full previous URL
-$segments = explode('/', trim($backUrl, '/')); // Split by '/'
- $currentPath = end($segments);   
+        $currentPath = $request->input('page_context', '');
+        if (empty($currentPath)) {
+            $backUrl = url()->previous();
+            $segments = explode('/', trim($backUrl, '/'));
+            $currentPath = end($segments);
+        }
         
         try {
             $fromDate = $request->from_date ? date('Y-m-d', strtotime($request->from_date)) : null;
@@ -299,6 +302,7 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
 
                     $isMarked = (bool) ($markedCache[$cacheKey] ?? false);
                     $markBtnClass = $isMarked ? 'btn btn-success btn-sm' : 'btn btn-primary btn-sm';
+                    $markBtnLabel = $isMarked ? 'Attendance Marked' : 'Mark Attendance';
 
         // if ($currentPath === 'user_attendance') {
              if (hasRole('Student-OT')) {
@@ -328,14 +332,14 @@ $segments = explode('/', trim($backUrl, '/')); // Split by '/'
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
+        ]) . '" class="' . $markBtnClass . '">' . $markBtnLabel . '</a>';
         }
         else{
             return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="' . $markBtnClass . '">Mark Attendance</a>';
+        ]) . '" class="' . $markBtnClass . '">' . $markBtnLabel . '</a>';
         }
 
         // Admin Page

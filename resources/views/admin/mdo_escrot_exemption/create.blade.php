@@ -616,7 +616,9 @@ $(document).ready(function() {
             data: {
                 _token: $('meta[name="csrf-token"]').attr('content'),
                 selectedCourses: courses,
-                selectedDate: selectedDate
+                selectedDate: selectedDate,
+                selectedTimeFrom: $('#Time_from').val(),
+                selectedTimeTo: $('#Time_to').val()
             },
             success: function(response) {
                 console.log('AJAX Response:', response);

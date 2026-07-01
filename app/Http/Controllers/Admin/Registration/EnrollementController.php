@@ -14,6 +14,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\StudentEnrollmentExport as StudentsExport;
 use Barryvdh\DomPDF\Facade\Pdf;
 use App\Exports\StudentEnrollmentExport;
+use App\Exports\CourseParticipantExport;
 use Illuminate\Validation\Rule;
 use Mpdf\Mpdf;
 use Yajra\DataTables\Facades\DataTables;
@@ -366,10 +367,25 @@ class EnrollementController extends Controller
         $status = $request->input('status');
         $courseStatus = $request->input('course_status', 'active');
 
-        // Course dropdown with both active and inactive courses
+        // Course dropdown — Active vs Archived is determined by the course end
+        // date, NOT the active_inactive flag (mirrors the Course Master /
+        // Faculty Database "current"/"archived" logic in
+        // ScopesSessionFeedbackReports::coursesForFeedbackDatabase()):
+        //   Active   = enabled courses that have not ended (end_date null or >= today)
+        //   Archived = enabled courses whose end_date is in the past (< today)
+        $currentDate = now()->toDateString();
+
         $courses = CourseMaster::query()
-            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1))
-            ->when($courseStatus === 'inactive', fn($q) => $q->where('active_inactive', 0))
+            ->where('active_inactive', 1)
+            ->when($courseStatus === 'active', function ($q) use ($currentDate) {
+                $q->where(function ($q2) use ($currentDate) {
+                    $q2->whereNull('end_date')
+                        ->orWhereDate('end_date', '>=', $currentDate);
+                });
+            })
+            ->when($courseStatus === 'inactive', function ($q) use ($currentDate) {
+                $q->whereDate('end_date', '<', $currentDate);
+            })
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
 
@@ -460,6 +476,252 @@ class EnrollementController extends Controller
             'status',
             'courseStatus'
         ));
+    }
+
+    /**
+     * My Course Participant – replica of studentCourses().
+     * Self-contained so the original Course Wise OTs List page is unaffected.
+     */
+    /**
+     * Course scoping for the My Course Participant page.
+     * Super Admin and Faculty see all courses; every other role (Admin, PA,
+     * IST, Induction, etc.) is restricted to the courses mapped to their role(s).
+     *
+     * @return array [] = all, [-1] = none, [pks...] = restricted
+     */
+    private function participantCourseScope(): array
+    {
+        $user = auth()->user();
+
+        if (!$user) {
+            return [-1];
+        }
+
+        // Super Admin and Faculty are unrestricted on this page
+        if (hasRole('Super Admin') || hasRole('Faculty')) {
+            return [];
+        }
+
+        $userRoleIds = DB::table('model_has_roles')
+            ->where('model_id', $user->pk)
+            ->where('model_type', \App\Models\User::class)
+            ->pluck('role_id')
+            ->toArray();
+
+        if (empty($userRoleIds)) {
+            return [-1];
+        }
+
+        $courses = DB::table('course_master as cm')
+            ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
+            ->whereIn('r.id', $userRoleIds)
+            ->pluck('cm.pk')
+            ->toArray();
+
+        return empty($courses) ? [-1] : $courses;
+    }
+
+    public function myCourseParticipant(Request $request)
+    {
+        // Course scoping: only Super Admin sees all; others see assigned courses only
+        $data_course_id = $this->participantCourseScope();
+
+        // Filters are visible to all users of this page
+        $showFilters = true;
+
+        // Filter inputs
+        $courseId = $request->input('course_id');
+        $status = $request->input('status');
+        $courseStatus = $request->input('course_status', 'active');
+
+        // Course dropdown (scoped to the user's courses + active/archived toggle)
+        // Active  = flagged active AND not yet ended (end_date today or later)
+        // Archived = flagged inactive OR already ended
+        $courses = CourseMaster::query()
+            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1)
+                ->whereDate('end_date', '>=', now()))
+            ->when($courseStatus === 'inactive', fn($q) => $q->where(fn($w) => $w->where('active_inactive', 0)
+                ->orWhereDate('end_date', '<', now())))
+            ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
+            ->orderBy('course_name')
+            ->pluck('course_name', 'pk');
+
+        // Course IDs matching the current active/archived toggle (already scoped above).
+        // Both the participant listing and the total count are restricted to these,
+        // so the count reflects only active (or archived) courses.
+        $statusCourseIds = $courses->keys()->all();
+
+        // AJAX: refresh course dropdown when the active/archived toggle changes
+        if ($request->ajax() && $request->has('ajax_courses')) {
+            return response()->json([
+                'success' => true,
+                'courses' => $courses,
+            ]);
+        }
+
+        // For AJAX requests from DataTables - list participants of the user's courses
+        if ($request->ajax() && $request->has('draw')) {
+            // Universal search term from the table header search box
+            $searchTerm = trim((string) $request->input('search_term', ''));
+
+            $query = StudentMasterCourseMap::with([
+                'studentMaster.cadre',
+                'studentMaster.courseGroupMaps.groupTypeMasterCourseMasterMap',
+                'course'
+            ])
+                ->whereIn('course_master_pk', $statusCourseIds)
+                ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+                ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+                ->when($searchTerm !== '', function ($q) use ($searchTerm) {
+                    $q->whereHas('studentMaster', function ($sq) use ($searchTerm) {
+                        $sq->where('user_id', 'like', "%{$searchTerm}%")
+                            ->orWhere('display_name', 'like', "%{$searchTerm}%")
+                            ->orWhere('generated_OT_code', 'like', "%{$searchTerm}%")
+                            ->orWhere('email', 'like', "%{$searchTerm}%")
+                            ->orWhere('contact_no', 'like', "%{$searchTerm}%")
+                            ->orWhereHas('cadre', function ($cq) use ($searchTerm) {
+                                $cq->where('cadre_name', 'like', "%{$searchTerm}%");
+                            });
+                    })
+                    ->orWhereHas('course', function ($cq) use ($searchTerm) {
+                        $cq->where('couse_short_name', 'like', "%{$searchTerm}%");
+                    });
+                })
+                ->orderByDesc('created_date');
+
+            return DataTables::of($query)
+                ->addIndexColumn()
+                ->addColumn('user_name', function ($row) {
+                    return $row->studentMaster->user_id ?? 'N/A';
+                })
+                ->addColumn('name', function ($row) {
+                    return $row->studentMaster->display_name ?? 'N/A';
+                })
+                ->addColumn('course_code', function ($row) {
+                    return $row->course->couse_short_name ?? 'N/A';
+                })
+                ->addColumn('ot_code', function ($row) {
+                    return $row->studentMaster->generated_OT_code ?? 'N/A';
+                })
+                ->addColumn('email_id', function ($row) {
+                    return $row->studentMaster->email ?? 'N/A';
+                })
+                ->addColumn('mobile_no', function ($row) {
+                    return $row->studentMaster->contact_no ?? 'N/A';
+                })
+                ->addColumn('cadre', function ($row) {
+                    return $row->studentMaster->cadre->cadre_name ?? 'N/A';
+                })
+                ->addColumn('participant_group', function ($row) {
+                    $groups = optional($row->studentMaster)->courseGroupMaps;
+                    if (!$groups) {
+                        return 'N/A';
+                    }
+
+                    // Only the group(s) belonging to this row's course
+                    $names = $groups
+                        ->filter(fn($g) => optional($g->groupTypeMasterCourseMasterMap)->course_name == $row->course_master_pk)
+                        ->map(fn($g) => $g->groupTypeMasterCourseMasterMap->group_name ?? null)
+                        ->filter()
+                        ->unique()
+                        ->implode(', ');
+
+                    return $names !== '' ? $names : 'N/A';
+                })
+                ->make(true);
+        }
+
+        // For initial page load - count participants only in courses matching the
+        // active/archived toggle (and any selected course / enrollment status filter).
+        $totalCount = StudentMasterCourseMap::query()
+            ->whereIn('course_master_pk', $statusCourseIds)
+            ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+            ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+            ->count();
+        $filteredCount = $totalCount;
+
+        return view('admin.registration.my_course_participant', compact(
+            'totalCount',
+            'filteredCount',
+            'showFilters',
+            'courses',
+            'courseId',
+            'status',
+            'courseStatus'
+        ));
+    }
+
+    /**
+     * Dedicated export for My Course Participant (user_name, Name, ot code, email_id, mobile no, cadre).
+     * Lean output so large datasets don't exhaust memory on PDF.
+     */
+    public function myCourseParticipantExport(Request $request)
+    {
+        @ini_set('memory_limit', '1024M');
+        @set_time_limit(300);
+
+        $format = $request->input('format');
+
+        // Course scoping (same as the listing): only Super Admin sees all
+        $data_course_id = $this->participantCourseScope();
+
+        // Same filters as the listing so the export matches what is on screen
+        $courseId = $request->input('course_id');
+        $status = $request->input('status');
+        $courseStatus = $request->input('course_status', 'active');
+        $searchTerm = trim((string) $request->input('search_term', ''));
+
+        // Courses matching the active/archived toggle (scoped to the user), so the
+        // export is restricted to the same set of courses shown on screen.
+        $statusCourseIds = CourseMaster::query()
+            ->when($courseStatus === 'active', fn($q) => $q->where('active_inactive', 1)
+                ->whereDate('end_date', '>=', now()))
+            ->when($courseStatus === 'inactive', fn($q) => $q->where(fn($w) => $w->where('active_inactive', 0)
+                ->orWhereDate('end_date', '<', now())))
+            ->when(!empty($data_course_id), fn($q) => $q->whereIn('pk', $data_course_id))
+            ->pluck('pk')
+            ->all();
+
+        $participants = StudentMasterCourseMap::with([
+            'studentMaster.cadre'
+        ])
+            ->whereIn('course_master_pk', $statusCourseIds)
+            ->when($courseId, fn($q) => $q->where('course_master_pk', $courseId))
+            ->when($status !== null && $status !== '', fn($q) => $q->where('active_inactive', $status))
+            ->when($searchTerm !== '', function ($q) use ($searchTerm) {
+                $q->whereHas('studentMaster', function ($sq) use ($searchTerm) {
+                    $sq->where('user_id', 'like', "%{$searchTerm}%")
+                        ->orWhere('display_name', 'like', "%{$searchTerm}%")
+                        ->orWhere('generated_OT_code', 'like', "%{$searchTerm}%")
+                        ->orWhere('email', 'like', "%{$searchTerm}%")
+                        ->orWhere('contact_no', 'like', "%{$searchTerm}%")
+                        ->orWhereHas('cadre', function ($cq) use ($searchTerm) {
+                            $cq->where('cadre_name', 'like', "%{$searchTerm}%");
+                        });
+                })
+                ->orWhereHas('course', function ($cq) use ($searchTerm) {
+                    $cq->where('couse_short_name', 'like', "%{$searchTerm}%");
+                });
+            })
+            ->orderByDesc('created_date')
+            ->get();
+
+        $totalCount = $participants->count();
+
+        if ($format === 'xlsx') {
+            return Excel::download(new CourseParticipantExport($participants), 'course_participants.xlsx');
+        }
+
+        if ($format === 'csv') {
+            return Excel::download(new CourseParticipantExport($participants), 'course_participants.csv');
+        }
+
+        if ($format === 'pdf') {
+            $pdf = Pdf::loadView('admin.report.course_participant_pdf', compact('participants', 'totalCount'));
+            return $pdf->setPaper('a4', 'landscape')->download('course_participants.pdf');
+        }
+
+        return back()->with('error', 'Invalid export format selected.');
     }
 
     public function StudenEnroll_export(Request $request)

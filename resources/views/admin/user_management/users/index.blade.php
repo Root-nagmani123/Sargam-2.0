@@ -198,8 +198,18 @@ document.addEventListener('DOMContentLoaded', function () {
         return baseUrl + (qs ? ('?' + qs) : '');
     }
 
+    // Scroll the table back into view so a single pagination click is clearly
+    // effective (otherwise the content swaps silently below the fold and it
+    // looks like nothing happened, prompting a second click).
+    function scrollTableIntoView() {
+        var card = document.querySelector('.users-dt-card') || container;
+        if (!card) return;
+        var top = card.getBoundingClientRect().top + window.pageYOffset - 90;
+        window.scrollTo({ top: top < 0 ? 0 : top, behavior: 'smooth' });
+    }
+
     // Fetch the table partial and swap it in — no page reload.
-    function loadUsers(pageUrl) {
+    function loadUsers(pageUrl, scrollTop) {
         var url = buildUrl(pageUrl);
         var token = ++ajaxToken;
         container.classList.add('users-loading');
@@ -211,6 +221,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 container.classList.remove('users-loading');
                 applyColumnVisibility();
                 try { window.history.replaceState({}, '', url); } catch (e) {}
+                if (scrollTop) scrollTableIntoView();
             })
             .catch(function () {
                 container.classList.remove('users-loading');
@@ -249,14 +260,14 @@ document.addEventListener('DOMContentLoaded', function () {
     container.addEventListener('change', function (e) {
         if (e.target && e.target.id === 'usersPerPageFooter') {
             if (perPageHidden) perPageHidden.value = e.target.value;
-            loadUsers();
+            loadUsers(null, true);
         }
     });
     container.addEventListener('click', function (e) {
         var link = e.target.closest('.users-pagination-links a');
         if (link && link.getAttribute('href')) {
             e.preventDefault();
-            loadUsers(link.getAttribute('href'));
+            loadUsers(link.getAttribute('href'), true);
         }
     });
 

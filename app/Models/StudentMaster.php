@@ -35,6 +35,12 @@ class StudentMaster extends Model
         );
     }
 
+    // Groups the student is mapped to (per course)
+    public function courseGroupMaps()
+    {
+        return $this->hasMany(StudentCourseGroupMap::class, 'student_master_pk', 'pk');
+    }
+
     // Relation with cadre
     public function cadre()
     {

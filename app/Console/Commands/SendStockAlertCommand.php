@@ -143,7 +143,7 @@ class SendStockAlertCommand extends Command
         $roleBased = User::query()
             ->where('user_category', '!=', 'S')
             ->whereHas('roles', function ($q) {
-                $q->whereRaw('LOWER(user_role_name) = ?', ['mess staff']);
+                $q->whereRaw('LOWER(name) = ?', ['mess staff']);
             })
             ->pluck('user_id')
             ->filter()

@@ -37,11 +37,12 @@ class CourseAttendanceNoticeMapController extends Controller
     }
 
     // Get initial notice records with course name
-    $noticesQuery = DB::table('course_student_attendance as csa')
-        ->join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
-        ->leftJoin('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
-        ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-        ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
+    // Start from student_notice_status so direct notices (course_student_attendance_pk=0) are included
+    $noticesQuery = DB::table('student_notice_status as sns')
+        ->leftJoin('course_student_attendance as csa', 'csa.pk', '=', 'sns.course_student_attendance_pk')
+        ->leftJoin('student_master as sm', 'sm.pk', '=', 'sns.student_pk')
+        ->leftJoin('timetable as t', 't.pk', '=', 'sns.subject_topic')
+        ->leftJoin('course_master as cm', 'cm.pk', '=', 'sns.course_master_pk')
         ->select(
             'sns.pk as notice_id',
             'sns.pk as memo_notice_id',
@@ -59,7 +60,7 @@ class CourseAttendanceNoticeMapController extends Controller
             'sm.display_name as student_name',
             'sm.pk as student_id',
             't.subject_topic as topic_name',
-            't.START_DATE as session_date',
+            DB::raw('COALESCE(t.START_DATE, sns.date_) as session_date'),
             'cm.course_name',
             DB::raw('"Notice" as type_notice_memo')
         );
@@ -85,12 +86,24 @@ class CourseAttendanceNoticeMapController extends Controller
         }
     }
 
-    // Apply date range filter by session date
+    // Apply date range filter — use session date for attendance-based, notice date for direct
     if ($fromDateFilter) {
-        $noticesQuery->whereDate('t.START_DATE', '>=', $fromDateFilter);
+        $noticesQuery->where(function ($q) use ($fromDateFilter) {
+            $q->whereDate('t.START_DATE', '>=', $fromDateFilter)
+              ->orWhere(function ($q2) use ($fromDateFilter) {
+                  $q2->whereNull('t.START_DATE')
+                     ->whereDate('sns.date_', '>=', $fromDateFilter);
+              });
+        });
     }
     if ($toDateFilter) {
-        $noticesQuery->whereDate('t.START_DATE', '<=', $toDateFilter);
+        $noticesQuery->where(function ($q) use ($toDateFilter) {
+            $q->whereDate('t.START_DATE', '<=', $toDateFilter)
+              ->orWhere(function ($q2) use ($toDateFilter) {
+                  $q2->whereNull('t.START_DATE')
+                     ->whereDate('sns.date_', '<=', $toDateFilter);
+              });
+        });
     }
 
     $notices = $noticesQuery->get();
@@ -1541,9 +1554,12 @@ public function noticedeleteMessage($id,$type)
       if(hasRole('Student-OT')){
         $notices->where('student_notice_status.student_pk', auth()->user()->user_id);
     }
-    $notices->leftJoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', 'csa.pk');
-    $notices->leftJoin('student_master as sm', 'csa.Student_master_pk', 'sm.pk');
-    $notices->leftJoin('timetable as t', 'student_notice_status.subject_topic', 't.pk');
+    $notices->leftJoin('course_student_attendance as csa', 'student_notice_status.course_student_attendance_pk', '=', 'csa.pk');
+    // For direct notices course_student_attendance_pk=0, so csa is NULL; fall back to student_notice_status.student_pk
+    $notices->leftJoin('student_master as sm', function ($join) {
+        $join->whereRaw('sm.pk = COALESCE(csa.Student_master_pk, student_notice_status.student_pk)');
+    });
+    $notices->leftJoin('timetable as t', 'student_notice_status.subject_topic', '=', 't.pk');
     $notices->select(
         'student_notice_status.pk as notice_id',
         'student_notice_status.student_pk',
@@ -1563,53 +1579,59 @@ public function noticedeleteMessage($id,$type)
     );
     $notices = $notices->get();
 
+    // Batch-fetch all memo data for status-2 notices in one query (fixes N+1)
+    $status2Ids = $notices->where('status', 2)->pluck('notice_id')->filter()->values()->all();
+
+    $memosByNoticeId = collect();
+    if (!empty($status2Ids)) {
+        $memosByNoticeId = DB::table('student_memo_status')
+            ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
+            ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
+            ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
+            ->whereIn('student_memo_status.student_notice_status_pk', $status2Ids)
+            ->select(
+                'student_memo_status.pk as memo_id',
+                'student_memo_status.student_notice_status_pk as notice_id',
+                'student_memo_status.student_pk',
+                'student_memo_status.course_master_pk',
+                'student_memo_status.date as date_',
+                DB::raw('NULL as subject_master_pk'),
+                DB::raw('NULL as subject_topic'),
+                DB::raw('NULL as venue_id'),
+                DB::raw('NULL as class_session_master_pk'),
+                DB::raw('NULL as faculty_master_pk'),
+                'student_memo_status.message',
+                DB::raw('2 as notice_memo'),
+                'student_memo_status.status',
+                'sm.display_name as student_name',
+                'sm.pk as student_id',
+                't.subject_topic as topic_name',
+                DB::raw('"Memo" as type_notice_memo')
+            )
+            ->get()
+            ->keyBy('notice_id');
+    }
+
     $memos = collect();
 
     foreach ($notices as $notice) {
-        if ($notice->status == 2) {
-            $memoData = DB::table('student_memo_status')
-                ->leftJoin('student_master as sm', 'student_memo_status.student_pk', '=', 'sm.pk')
-                ->leftJoin('student_notice_status as sns', 'student_memo_status.student_notice_status_pk', '=', 'sns.pk')
-                ->leftJoin('timetable as t', 'sns.subject_topic', '=', 't.pk')
-                ->where('student_memo_status.student_notice_status_pk', $notice->notice_id)
-                ->select(
-                    'student_memo_status.pk as memo_id',
-                     'student_memo_status.student_notice_status_pk as notice_id',
-                    'student_memo_status.student_pk',
-                    'student_memo_status.course_master_pk',
-                    'student_memo_status.date as date_',
-                    DB::raw('NULL as subject_master_pk'),
-                    DB::raw('NULL as subject_topic'),
-                    DB::raw('NULL as venue_id'),
-                    DB::raw('NULL as class_session_master_pk'),
-                    DB::raw('NULL as faculty_master_pk'),
-                    'student_memo_status.message',
-                    DB::raw('2 as notice_memo'),
-                    'student_memo_status.status',
-                    'sm.display_name as student_name',
-                    'sm.pk as student_id',
-                    't.subject_topic as topic_name',
-                    DB::raw('"Memo" as type_notice_memo')
-                )
-                ->first();
-
-            if ($memoData) {
-                $memos->push($memoData);
-            }else{
-                $notice->type_notice_memo = 'Notice'; // Tag as Notice
-                $memos->push($notice);
-            }
+        if ($notice->status == 2 && isset($memosByNoticeId[$notice->notice_id])) {
+            $memos->push($memosByNoticeId[$notice->notice_id]);
         } else {
-            $notice->type_notice_memo = 'Notice'; // Tag as Notice
+            $notice->type_notice_memo = 'Notice';
             $memos->push($notice);
         }
     }
-    // print_r($memos);die;
 
     // Paginate the collection
     $perPage = 10;
     $currentPage = request()->get('page', 1);
     $pagedData = $memos->slice(($currentPage - 1) * $perPage, $perPage)->values();
+
+    // Attach the unread student-reply count (for the current viewer) used by the reply-icon badge.
+    // Counts come from the same notifications table that feeds the header bell, so badge + bell stay in sync.
+    $this->attachChatUnreadCounts($pagedData);
+
     $memos = new \Illuminate\Pagination\LengthAwarePaginator(
         $pagedData,
         $memos->count(),
@@ -1621,11 +1643,82 @@ public function noticedeleteMessage($id,$type)
     return view('admin.courseAttendanceNoticeMap.uers_notice_list', compact('memos'));
 }
 
+/**
+ * Populate $row->chat_unread on each listing row with the number of unread student-reply
+ * notifications for the current viewer. Notice rows are keyed by notice id (module "Notice"),
+ * memo rows by memo id (module "Memo"), matching how the bell notifications are created.
+ *
+ * @param  \Illuminate\Support\Collection  $rows
+ */
+private function attachChatUnreadCounts($rows): void
+{
+    foreach ($rows as $row) {
+        $row->chat_unread = 0;
+    }
+
+    $viewerId = auth()->user()->user_id ?? null;
+    if (!$viewerId || $rows->isEmpty()) {
+        return;
+    }
+
+    $noticeIds = [];
+    $memoIds   = [];
+    foreach ($rows as $row) {
+        if (($row->type_notice_memo ?? '') === 'Memo') {
+            if (!empty($row->memo_id)) {
+                $memoIds[] = $row->memo_id;
+            }
+        } elseif (!empty($row->notice_id)) {
+            $noticeIds[] = $row->notice_id;
+        }
+    }
+
+    if (empty($noticeIds) && empty($memoIds)) {
+        return;
+    }
+
+    $counts = DB::table('notifications')
+        ->where('receiver_user_id', $viewerId)
+        ->where('type', 'memo_notice')
+        ->where('is_read', 0)
+        ->where(function ($q) use ($noticeIds, $memoIds) {
+            if (!empty($noticeIds)) {
+                $q->orWhere(function ($w) use ($noticeIds) {
+                    $w->where('module_name', 'Notice')->whereIn('reference_pk', $noticeIds);
+                });
+            }
+            if (!empty($memoIds)) {
+                $q->orWhere(function ($w) use ($memoIds) {
+                    $w->where('module_name', 'Memo')->whereIn('reference_pk', $memoIds);
+                });
+            }
+        })
+        ->select('module_name', 'reference_pk', DB::raw('COUNT(*) as cnt'))
+        ->groupBy('module_name', 'reference_pk')
+        ->get();
+
+    $lookup = ['Notice' => [], 'Memo' => []];
+    foreach ($counts as $c) {
+        $lookup[$c->module_name][(string) $c->reference_pk] = (int) $c->cnt;
+    }
+
+    foreach ($rows as $row) {
+        if (($row->type_notice_memo ?? '') === 'Memo') {
+            $row->chat_unread = $lookup['Memo'][(string) ($row->memo_id ?? '')] ?? 0;
+        } else {
+            $row->chat_unread = $lookup['Notice'][(string) ($row->notice_id ?? '')] ?? 0;
+        }
+    }
+}
+
 public function conversation_student($id ,$type, Request $request){
 
 if (!$id || !is_numeric($id)) {
         return redirect()->back()->with('error', 'Invalid Memo/Notice ID.');
     }
+
+    // Viewing the conversation clears the viewer's unread badge + bell for this thread.
+    $this->markMemoNoticeChatRead($id, in_array($type, ['memo', 'notice']) ? $type : 'notice');
 
     $memoNotice = collect(); // default empty collection
 
@@ -1746,8 +1839,21 @@ if (!$id || !is_numeric($id)) {
 
     $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
 
-    
-   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details', 'memo_conclusion_master', 'memo_conclusion_master'));
+    // Resolve the student PK reliably for both attendance-based and direct notices.
+    // For direct notices course_student_attendance_pk = 0, so csa join yields NULL.
+    // student_notice_status.student_pk is always set for direct notices.
+    if ($type === 'notice') {
+        $snsRow = DB::table('student_notice_status as sns')
+            ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+            ->where('sns.pk', $id)
+            ->select(DB::raw('COALESCE(csa.Student_master_pk, sns.student_pk) as student_pk'))
+            ->first();
+        $noticeStudentPk = (int) ($snsRow->student_pk ?? 0);
+    } else {
+        $noticeStudentPk = (int) DB::table('student_memo_status')->where('pk', $id)->value('student_pk');
+    }
+
+   return view('admin.courseAttendanceNoticeMap.chat', compact('id', 'memoNotice', 'type', 'template_details', 'memo_conclusion_master', 'noticeStudentPk'));
 }
 public function memo_notice_conversation_student(Request $request)
 {
@@ -1790,20 +1896,16 @@ public function memo_notice_conversation_student(Request $request)
         'created_date' => now('UTC'),
     ]);
 
-    // Notify admin users that the OT has replied
+    // Notify the admin/incharge who issued this notice/memo that the OT has replied.
     if ($inserted) {
         try {
-            $memoTypeLabel = ucfirst($type);
-            $adminCredentials = DB::table('user_credentials')
-                ->whereIn('user_category', ['F', 'A'])
-                ->limit(20)
-                ->pluck('pk')
-                ->toArray();
-            if (!empty($adminCredentials)) {
+            $memoTypeLabel = ucfirst($type); // 'Notice' or 'Memo' (also used as notification module name)
+            $receiverIds = $this->resolveMemoNoticeReceiverIds($validated['memo_notice_id'], $type);
+            if (!empty($receiverIds)) {
                 app(NotificationService::class)->createMultiple(
-                    $adminCredentials,
+                    $receiverIds,
                     'memo_notice',
-                    'Memo/Notice',
+                    $memoTypeLabel,
                     $validated['memo_notice_id'],
                     "OT Replied to {$memoTypeLabel}",
                     "A participant has replied to the {$memoTypeLabel}. Please review."
@@ -1817,6 +1919,82 @@ public function memo_notice_conversation_student(Request $request)
     }
 
     return redirect()->back()->with('error', 'Failed to create ' . ucfirst($type) . ' message. Please try again.');
+}
+
+/**
+ * Resolve the bell notification receiver ids (user_credentials.user_id) for the admin/incharge
+ * who issued a notice/memo. The notice's faculty_master_pk (scalar or JSON array like "[14,9]")
+ * maps to faculty_master.employee_master_pk, which equals user_credentials.user_id used by the header bell.
+ *
+ * @return int[]
+ */
+private function resolveMemoNoticeReceiverIds($id, $type): array
+{
+    if ($type === 'memo') {
+        $facultyRaw = DB::table('student_memo_status as sms')
+            ->leftJoin('student_notice_status as sns', 'sms.student_notice_status_pk', '=', 'sns.pk')
+            ->where('sms.pk', $id)
+            ->value('sns.faculty_master_pk');
+    } else {
+        $facultyRaw = DB::table('student_notice_status')
+            ->where('pk', $id)
+            ->value('faculty_master_pk');
+    }
+
+    if ($facultyRaw === null || $facultyRaw === '') {
+        return [];
+    }
+
+    // faculty_master_pk may be stored as a JSON array ("[14,9]") or as a single scalar value.
+    $trimmed = trim((string) $facultyRaw);
+    if (str_starts_with($trimmed, '[')) {
+        $decoded = json_decode($trimmed, true);
+        $facultyIds = is_array($decoded) ? $decoded : [];
+    } else {
+        $facultyIds = [$facultyRaw];
+    }
+
+    $facultyIds = array_values(array_filter(array_map('intval', $facultyIds)));
+    if (empty($facultyIds)) {
+        return [];
+    }
+
+    return DB::table('faculty_master')
+        ->whereIn('pk', $facultyIds)
+        ->whereNotNull('employee_master_pk')
+        ->pluck('employee_master_pk')
+        ->map(fn ($v) => (int) $v)
+        ->filter()
+        ->unique()
+        ->values()
+        ->all();
+}
+
+/**
+ * Mark the current viewer's unread chat notifications for a given conversation as read.
+ * Called when an admin opens a notice/memo conversation so the reply-icon badge and header
+ * bell clear for messages they have now seen.
+ */
+private function markMemoNoticeChatRead($id, $type): void
+{
+    $user = auth()->user();
+    if (!$user || empty($user->user_id)) {
+        return;
+    }
+
+    $module = $type === 'memo' ? 'Memo' : 'Notice';
+
+    try {
+        DB::table('notifications')
+            ->where('receiver_user_id', $user->user_id)
+            ->where('type', 'memo_notice')
+            ->where('module_name', $module)
+            ->where('reference_pk', $id)
+            ->where('is_read', 0)
+            ->update(['is_read' => 1]);
+    } catch (\Exception $e) {
+        \Log::error('Mark memo/notice chat read failed: ' . $e->getMessage());
+    }
 }
 
 public function memo_notice_conversation_student_bkp(Request $request){
@@ -1858,6 +2036,9 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
         $type = 'notice';
     }
 
+    // Opening the conversation clears the viewer's unread badge + bell for this thread.
+    $this->markMemoNoticeChatRead($id, $type);
+
     if ($type == 'memo') {
         $conversations = DB::table('memo_message_student_decip_incharge as mmsdi')
             ->join('student_memo_status as sms', 'mmsdi.student_memo_status_pk', '=', 'sms.pk')
@@ -1875,10 +2056,13 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
             // print_r($conversations);die;
 
     } else {
+        // Use LEFT JOINs so direct notices (course_student_attendance_pk=0) are not excluded
         $conversations = DB::table('notice_message_student_decip_incharge as nmsdi')
-            ->join('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
-            ->join('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
-            ->join('student_master as sm', 'csa.Student_master_pk', '=', 'sm.pk')
+            ->leftJoin('student_notice_status as sns', 'nmsdi.student_notice_status_pk', '=', 'sns.pk')
+            ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+            ->leftJoin('student_master as sm', function ($join) {
+                $join->whereRaw('sm.pk = COALESCE(csa.Student_master_pk, sns.student_pk)');
+            })
             ->where('nmsdi.student_notice_status_pk', $id)
             ->orderBy('nmsdi.created_date', 'asc')
             ->select(
@@ -1889,6 +2073,22 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
                 'sm.display_name as student_name'
             )
             ->get();
+    }
+
+    // Resolve notice status + student PK directly from the source record,
+    // so the reply form works even when conversations collection is empty.
+    if ($type === 'notice') {
+        $snsRow = DB::table('student_notice_status as sns')
+            ->leftJoin('course_student_attendance as csa', 'sns.course_student_attendance_pk', '=', 'csa.pk')
+            ->where('sns.pk', $id)
+            ->select('sns.status as notice_status', DB::raw('COALESCE(csa.Student_master_pk, sns.student_pk) as student_pk'))
+            ->first();
+        $noticeStatus = (int) ($snsRow->notice_status ?? 0);
+        $studentPk    = (int) ($snsRow->student_pk ?? 0);
+    } else {
+        $smsRow = DB::table('student_memo_status')->where('pk', $id)->first();
+        $noticeStatus = (int) ($smsRow->communication_status ?? 0);
+        $studentPk    = (int) ($smsRow->student_pk ?? 0);
     }
 
     // Common mapper - fix N+1 by pre-fetching all users/students in bulk
@@ -1912,8 +2112,7 @@ public function get_conversation_model($id, $type, $user_type, Request $request)
         return $item;
     });
 
-    // print_r($conversations);die;
-    return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations','type','id','user_type'));
+    return view('admin.courseAttendanceNoticeMap.conversation_model', compact('conversations', 'type', 'id', 'user_type', 'noticeStatus', 'studentPk'));
 }
 
 public function get_conversation_model_bkp($id,$type, Request $request)
@@ -2234,24 +2433,73 @@ public function store_memo_status(Request $request)
     return redirect()->back()->with('success', 'Memo saved successfully.');
   
 }
-function send_only_notice(Request $request){
-    $courseMasterPK = CalendarEvent::active()->select('course_master_pk')->groupBy('course_master_pk')->get()->toArray();
-     $courseMasters = CourseMaster::whereIn('course_master.pk', $courseMasterPK)
-                        ->select('course_master.course_name', 'course_master.pk');
-                    $courseMasters->where('course_master.active_inactive', 1);
-                    $courseMasters = $courseMasters->get()->toArray();
-            $sessions = ClassSessionMaster::get();
-             $maunalSessions = Timetable::select('class_session')
-                ->where('class_session', 'REGEXP', '[0-9]{2}:[0-9]{2} [AP]M - [0-9]{2}:[0-9]{2} [AP]M')
-                ->groupBy('class_session')
-                ->select('class_session')
-                ->get();
+public function send_direct_notice_save(Request $request)
+    {
+        $request->validate([
+            'course_master_pk'     => 'required|exists:course_master,pk',
+            'date_of_notice'       => 'required|date',
+            'selected_student_list'=> 'required|array|min:1',
+            'remark'               => 'nullable|string',
+        ]);
 
-$courseMasters_data = [];
-    return view('admin.courseAttendanceNoticeMap.send_only_notice', compact('courseMasters', 'sessions', 'maunalSessions','courseMasters_data'));
+        $rows = [];
+        foreach ($request->selected_student_list as $studentPk) {
+            $rows[] = [
+                'course_master_pk'            => $request->course_master_pk,
+                'date_'                       => $request->date_of_notice,
+                'student_pk'                  => $studentPk,
+                'message'                     => $request->remark,
+                'notice_memo'                 => 1,
+                'venue_id'                    => 0,
+                'faculty_master_pk'           => '',
+                'course_student_attendance_pk'=> 0,
+                'status'                      => 1,
+            ];
+        }
 
-    
-}
+        DB::table('student_notice_status')->insert($rows);
+
+        return redirect()->route('memo.notice.management.index')
+            ->with('success', 'Notices sent successfully.');
+    }
+
+    public function getStudentsForNotice(Request $request)
+    {
+        $courseId = (int) $request->course_id;
+
+        if (!$courseId) {
+            return response()->json(['status' => false, 'message' => 'Course is required.']);
+        }
+
+        $students = DB::table('student_master_course__map as a')
+            ->join('student_master as s', 'a.student_master_pk', '=', 's.pk')
+            ->where('a.course_master_pk', $courseId)
+            ->where('a.active_inactive', 1)
+            ->whereNotNull('s.display_name')
+            ->where('s.display_name', '!=', '')
+            ->orderBy('s.display_name')
+            ->select('s.pk', 's.display_name', 's.generated_OT_code')
+            ->get()
+            ->map(fn($s) => [
+                'pk'                => (int) $s->pk,
+                'display_name'      => $s->display_name,
+                'generated_OT_code' => $s->generated_OT_code,
+            ])
+            ->values();
+
+        return response()->json(['status' => true, 'students' => $students]);
+    }
+
+    function send_only_notice(Request $request){
+        $courseMasters = CourseMaster::where('active_inactive', 1)
+            ->where('end_date', '>', now())
+            ->orderBy('course_name')
+            ->select('course_name', 'pk')
+            ->get()
+            ->toArray();
+
+        return view('admin.courseAttendanceNoticeMap.send_only_notice', compact('courseMasters'));
+    }
 function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
     {
         try {
