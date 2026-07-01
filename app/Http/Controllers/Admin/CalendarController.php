@@ -2557,6 +2557,7 @@ class CalendarController extends Controller
                     't.Ratting_checkbox',
                     't.feedback_checkbox',
                     't.Remark_checkbox',
+                    't.faculty_details',
                     't.faculty_master as faculty_json', // Keep original JSON
                     'f.pk as faculty_pk', // Get individual faculty PK
                     'f.full_name as faculty_name',
@@ -2612,6 +2613,14 @@ class CalendarController extends Controller
                         ->where('tf.faculty_pk', DB::raw('f.pk')) // Check for this specific faculty
                         ->where('tf.is_submitted', 1);
                 })
+                // Only show Teaching-role faculty — strict filter.
+                ->whereRaw("
+                    JSON_VALID(t.faculty_details) = 1
+                    AND JSON_CONTAINS(
+                        t.faculty_details,
+                        JSON_OBJECT('faculty_pk', f.pk, 'role', 'Teaching')
+                    ) = 1
+                ")
                 // Show only sessions whose end time has passed (handles both "HH:MM AM - HH:MM PM" and "HH:MM to HH:MM")
                 ->whereRaw("
                 TIMESTAMP(
@@ -2640,6 +2649,10 @@ class CalendarController extends Controller
                 ->unique(function ($item) {
                     // Ensure each faculty-timetable combination is unique
                     return $item->timetable_pk . '_' . $item->faculty_pk;
+                })
+                ->map(function ($item) {
+                    $item->faculty_feedback_type = $this->resolveFacultyFeedbackType($item->faculty_details, $item->faculty_pk);
+                    return $item;
                 })
                 ->values(); // Reset array keys
 
