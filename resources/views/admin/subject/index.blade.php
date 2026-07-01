@@ -31,16 +31,6 @@
                     <span>Columns</span>
                     <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
                 </button>
-                <form method="GET" id="smSearchForm" class="programme-dt-search m-0" role="search">
-                    <div class="dataTables_filter">
-                        <label class="mb-0 w-100">
-                            <input type="search" name="search" id="smCustomSearch"
-                                class="form-control shadow-none" placeholder="Search"
-                                value="{{ request('search') }}"
-                                aria-label="Search subjects" autocomplete="off">
-                        </label>
-                    </div>
-                </form>
             </div>
 
             <div id="zero_config_table">

@@ -1,344 +1,246 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Medical Exception OT View - Sargam | Lal Bahadur')
+@section('title', 'Medical Exception OT View')
 
 @section('setup_content')
-
 <style>
-/* =======================
-   GLOBAL CARD STYLES
-======================= */
-.info-card {
-    background: #ffffff;
-    border-left: 4px solid #004a93;
-    border-radius: .75rem;
-    box-shadow: 0 .25rem .75rem rgba(0,0,0,.05);
-}
-
-.section-divider {
-    border-top: 1px solid #e9ecef;
-    margin: 1.5rem 0;
-}
-
-/* =======================
-   STUDENT HEADER
-======================= */
-.student-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 1rem;
-    padding-bottom: 1rem;
-    border-bottom: 1px dashed #dee2e6;
-}
-
-/* =======================
-   BADGES
-======================= */
-.exemption-count-badge {
-    display: inline-flex;
-    align-items: center;
-    gap: .5rem;
-    background: linear-gradient(135deg, #ffc107, #ff9800);
-    color: #212529;
-    font-weight: 600;
-    padding: .5rem 1rem;
-    border-radius: 10px;
-    font-size: .9rem;
-}
-
-/* =======================
-   EXEMPTION CARDS
-======================= */
-.exemption-item {
-    background: #f8f9fa;
-    border-left: 3px solid #b72a2a;
-    border-radius: .5rem;
-    padding: 1rem;
-    margin-bottom: 1rem;
-}
-
-.exemption-details {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: .75rem;
-}
-
-/* =======================
-   LABEL / VALUE
-======================= */
-.detail-label {
-    font-size: .7rem;
-    text-transform: uppercase;
-    letter-spacing: .04em;
-    color: #6c757d;
-    font-weight: 600;
-}
-
-.detail-value {
-    font-size: .9rem;
-    font-weight: 500;
-    color: #212529;
-}
-
-/* =======================
-   PRINT MODE
-======================= */
-@media print {
-    /* Hide unnecessary elements */
-    .btn,
-    .breadcrumb,
-    nav,
-    .navbar,
-    .sidebar,
-    .header,
-    footer,
-    .d-print-none {
-        display: none !important;
+    /* Clean, flat styling built on the design-system tokens (--ds-*). */
+    .mex-page .mex-table thead th {
+        background: var(--ds-surface-2);
+        color: var(--ds-primary);
+        font-size: 0.75rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        white-space: nowrap;
+        border-bottom: 1px solid var(--ds-line);
+        padding: 0.75rem 1rem;
     }
-    
-    /* Reset body and container */
-    body {
-        background: white !important;
-        margin: 0 !important;
-        padding: 20px !important;
+    .mex-page .mex-table tbody td {
+        font-size: 0.875rem;
+        color: var(--ds-ink);
+        vertical-align: middle;
+        padding: 0.75rem 1rem;
     }
-    
-    .container-fluid {
-        width: 100% !important;
-        margin: 0 !important;
-        padding: 0 !important;
+    .mex-page .mex-table tbody tr:last-child td { border-bottom: 0; }
+
+    /* Soft "count" badge (medical → red tint) */
+    .mex-page .mex-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        line-height: 1;
+        padding: 0.4rem 0.75rem;
+        border-radius: 999px;
+        color: #b42318;
+        background: #fef3f2;
     }
-    
-    /* Card styling for print */
-    .card {
-        box-shadow: none !important;
-        border: 1px solid #dee2e6 !important;
-        page-break-inside: avoid;
+    .mex-page .mex-badge .material-icons { font-size: 0.95rem; }
+
+    /* Student info detail grid */
+    .mex-page .mex-detail-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: var(--ds-space-3);
     }
-    
-    .info-card {
-        margin-bottom: 1rem !important;
+    .mex-page .mex-detail-label {
+        font-size: 0.72rem;
+        font-weight: 600;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--ds-ink-muted);
+        margin-bottom: 0.15rem;
     }
-    
-    /* Prevent page breaks inside exemption items */
-    .exemption-item {
-        page-break-inside: avoid;
+    .mex-page .mex-detail-value { font-size: 0.9rem; font-weight: 500; color: var(--ds-ink); }
+
+    /* Admin per-student header bar */
+    .mex-page .mex-student-head {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 0.5rem;
+        padding: var(--ds-space-3);
+        background: var(--ds-surface-2);
+        border-bottom: 1px solid var(--ds-line);
+        border-left: 3px solid var(--ds-primary);
     }
-    
-    /* Optimize colors for print */
-    .exemption-count-badge {
-        background: #f8f9fa !important;
-        border: 1px solid #dee2e6 !important;
-        color: #212529 !important;
-    }
-    
-    /* Ensure text is readable */
-    .detail-value,
-    .detail-label {
-        color: #000 !important;
-    }
-}
+    .mex-page .mex-student-name { margin: 0; font-weight: 600; font-size: 1rem; color: var(--ds-ink); }
+    .mex-page .mex-student-name .mex-ot { color: var(--ds-ink-muted); font-weight: 400; }
+
+    .mex-page .ds-stat-icon .material-icons { font-size: 1.15rem; }
 </style>
 
-<div class="container-fluid">
+<div class="container-fluid mex-page">
     <div class="d-print-none">
         <x-breadcrum title="Medical Exception OT View"></x-breadcrum>
     </div>
 
-    <div class="card info-card">
-        <div class="card-body">
-
-            <!-- HEADER -->
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <div>
-                    <h4 class="mb-1 fw-semibold">Medical Exception OT View</h4>
-                    <small class="text-muted">Medical exemption summary and history</small>
-                </div>
-
-                <button type="button"
-                        class="btn btn-outline-primary btn-sm d-flex align-items-center gap-1"
-                        onclick="window.print()">
-                    <i class="material-icons material-symbols-rounded fs-6">print</i>
-                    Print
-                </button>
-            </div>
-
-            <div class="section-divider"></div>
-
-            @php
-                $isStudentView = isset($studentData)
-                    && isset($studentData['student_name'])
-                    && isset($studentData['ot_code']);
-            @endphp
-
-            {{-- ============================
-               STUDENT LOGIN VIEW
-            ============================ --}}
-            @if($isStudentView)
-
-                <div class="card info-card mb-4">
-                    <div class="card-body">
-                        <div class="row g-4">
-                            <div class="col-md-3">
-                                <div class="detail-label">Student Name</div>
-                                <div class="detail-value fs-6">{{ $studentData['student_name'] }}</div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <div class="detail-label">OT Code</div>
-                                <div class="detail-value fs-6">{{ $studentData['ot_code'] }}</div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <div class="detail-label">Email</div>
-                                <div class="detail-value fs-6">{{ $studentData['email'] ?? 'N/A' }}</div>
-                            </div>
-
-                            <div class="col-md-3">
-                                <div class="detail-label">Total Exemptions</div>
-                                <div class="detail-value fs-6 fw-bold text-primary">
-                                    {{ $studentData['total_exemption_count'] }}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {{-- EXEMPTIONS --}}
-                @if(isset($studentData['has_exemptions']) && $studentData['has_exemptions'] && count($studentData['exemptions']) > 0)
-                    @foreach($studentData['exemptions'] as $exemption)
-                        <div class="exemption-item">
-                            <h6 class="fw-semibold text-primary mb-3 d-flex align-items-center gap-2">
-                                <i class="material-icons material-symbols-rounded fs-6">school</i>
-                                {{ $exemption['course_name'] }}
-                            </h6>
-
-                            <div class="exemption-details">
-                                <div>
-                                    <div class="detail-label">From Date</div>
-                                    <div class="detail-value">
-                                        {{ $exemption['from_date'] ? \Carbon\Carbon::parse($exemption['from_date'])->format('d/m/Y') : 'N/A' }}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="detail-label">To Date</div>
-                                    <div class="detail-value">
-                                        {{ $exemption['to_date'] ? \Carbon\Carbon::parse($exemption['to_date'])->format('d/m/Y') : 'Ongoing' }}
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <div class="detail-label">OPD Category</div>
-                                    <div class="detail-value">{{ $exemption['opd_category'] ?? 'N/A' }}</div>
-                                </div>
-
-                                @if($exemption['doc_upload'])
-                                <div>
-                                    <div class="detail-label">Document</div>
-                                    <a href="{{ asset('storage/' . $exemption['doc_upload']) }}"
-                                       target="_blank"
-                                       class="btn btn-sm btn-outline-primary">
-                                        View
-                                    </a>
-                                </div>
-                                @endif
-
-                                @if($exemption['description'])
-                                <div style="grid-column: 1 / -1;">
-                                    <div class="detail-label">Description</div>
-                                    <div class="detail-value">{{ $exemption['description'] }}</div>
-                                </div>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                @else
-                    <div class="alert alert-info text-center">
-                        No medical exemptions found.
-                    </div>
-                @endif
-
-            {{-- ============================
-               ADMIN VIEW
-            ============================ --}}
-            @else
-
-                @if(isset($studentData) && count($studentData) > 0)
-                    @foreach($studentData as $student)
-                        <div class="card info-card mb-4">
-                            <div class="card-body">
-
-                                <div class="student-header mb-3">
-                                    <h6 class="mb-0 fw-semibold">
-                                        {{ $student['student_name'] }}
-                                        <span class="text-muted fw-normal">({{ $student['ot_code'] }})</span>
-                                    </h6>
-
-                                    <span class="exemption-count-badge">
-                                        {{ $student['exemption_count'] }} Exemptions
-                                    </span>
-                                </div>
-
-                                @if($student['exemptions']->count() > 0)
-                                    @foreach($student['exemptions'] as $exemption)
-                                        <div class="exemption-item">
-                                            <div class="exemption-details">
-                                                <div>
-                                                    <div class="detail-label">Course</div>
-                                                    <div class="detail-value">{{ $exemption->course->course_name ?? 'N/A' }}</div>
-                                                </div>
-
-                                                <div>
-                                                    <div class="detail-label">Category</div>
-                                                    <div class="detail-value">{{ $exemption->category->exemption_category_name ?? 'N/A' }}</div>
-                                                </div>
-
-                                                <div>
-                                                    <div class="detail-label">Speciality</div>
-                                                    <div class="detail-value">{{ $exemption->speciality->exemption_medical_speciality_name ?? 'N/A' }}</div>
-                                                </div>
-
-                                                <div>
-                                                    <div class="detail-label">From Date</div>
-                                                    <div class="detail-value">
-                                                        {{ $exemption->from_date ? \Carbon\Carbon::parse($exemption->from_date)->format('d/m/Y') : 'N/A' }}
-                                                    </div>
-                                                </div>
-
-                                                <div>
-                                                    <div class="detail-label">To Date</div>
-                                                    <div class="detail-value">
-                                                        {{ $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d/m/Y') : 'Ongoing' }}
-                                                    </div>
-                                                </div>
-
-                                                @if($exemption->Description)
-                                                <div style="grid-column: 1 / -1;">
-                                                    <div class="detail-label">Description</div>
-                                                    <div class="detail-value">{{ $exemption->Description }}</div>
-                                                </div>
-                                                @endif
-                                            </div>
-                                        </div>
-                                    @endforeach
-                                @else
-                                    <p class="text-muted mb-0">No medical exemptions found.</p>
-                                @endif
-                            </div>
-                        </div>
-                    @endforeach
-                @else
-                    <div class="alert alert-info text-center">
-                        No student data found.
-                    </div>
-                @endif
-
-            @endif
-
-        </div>
+    {{-- Title + Print --}}
+    <div class="d-flex flex-wrap align-items-end justify-content-end gap-2 mb-4 d-print-none">
+        <button type="button" class="btn btn-primary d-inline-flex align-items-center gap-2 rounded-1 bg-white text-primary border-0" onclick="window.print()">
+            <i class="material-icons material-symbols-rounded" style="font-size: 20px;">print</i>
+            <span>Print</span>
+        </button>
     </div>
+
+    @php
+        $isStudentView = isset($studentData)
+            && isset($studentData['student_name'])
+            && isset($studentData['ot_code']);
+    @endphp
+
+    {{-- ============================
+        STUDENT LOGIN VIEW
+    ============================ --}}
+    @if($isStudentView)
+
+        {{-- Student info --}}
+        <div class="ds-card ds-section">
+            <div class="card-header">
+                <i class="material-icons material-symbols-rounded" style="color: var(--ds-primary);">person</i>
+                <span>Student Information</span>
+            </div>
+            <div class="card-body">
+                <div class="mex-detail-grid">
+                    <div>
+                        <div class="mex-detail-label">Student Name</div>
+                        <div class="mex-detail-value">{{ $studentData['student_name'] }}</div>
+                    </div>
+                    <div>
+                        <div class="mex-detail-label">OT Code</div>
+                        <div class="mex-detail-value">{{ $studentData['ot_code'] }}</div>
+                    </div>
+                    <div>
+                        <div class="mex-detail-label">Email</div>
+                        <div class="mex-detail-value">{{ $studentData['email'] ?? 'N/A' }}</div>
+                    </div>
+                    <div>
+                        <div class="mex-detail-label">Total Exemptions</div>
+                        <div class="mex-detail-value"><span class="mex-badge"><i class="material-icons material-symbols-rounded">medical_services</i>{{ $studentData['total_exemption_count'] }}</span></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {{-- Exemptions --}}
+        @if(isset($studentData['has_exemptions']) && $studentData['has_exemptions'] && count($studentData['exemptions']) > 0)
+            <div class="ds-card ds-section">
+                <div class="card-header">
+                    <i class="material-icons material-symbols-rounded" style="color: var(--ds-primary);">history</i>
+                    <span>Medical Exemptions</span>
+                </div>
+                <div class="card-body">
+                    <div class="ds-table-wrap">
+                        <table class="table align-middle mb-0 mex-table">
+                            <thead>
+                                <tr>
+                                    <th>Course</th>
+                                    <th>From Date</th>
+                                    <th>To Date</th>
+                                    <th>OPD Category</th>
+                                    <th>Description</th>
+                                    <th class="text-center">Document</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach($studentData['exemptions'] as $exemption)
+                                    <tr>
+                                        <td><strong>{{ $exemption['course_name'] }}</strong></td>
+                                        <td>{{ $exemption['from_date'] ? \Carbon\Carbon::parse($exemption['from_date'])->format('d/m/Y') : 'N/A' }}</td>
+                                        <td>{{ $exemption['to_date'] ? \Carbon\Carbon::parse($exemption['to_date'])->format('d/m/Y') : 'Ongoing' }}</td>
+                                        <td>{{ $exemption['opd_category'] ?? 'N/A' }}</td>
+                                        <td style="max-width: 280px; word-wrap: break-word;">{{ $exemption['description'] ?: '-' }}</td>
+                                        <td class="text-center">
+                                            @if($exemption['doc_upload'])
+                                                <a href="{{ asset('storage/' . $exemption['doc_upload']) }}" target="_blank"
+                                                    class="btn btn-sm btn-outline-primary rounded-1 d-inline-flex align-items-center gap-1">
+                                                    <i class="material-icons material-symbols-rounded" style="font-size: 16px;">description</i>
+                                                    View
+                                                </a>
+                                            @else
+                                                <span class="text-muted">N/A</span>
+                                            @endif
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        @else
+            <div class="ds-empty-state">
+                <i class="material-icons material-symbols-rounded d-block mb-2 opacity-50" style="font-size: 48px;">info</i>
+                <p class="mb-0">No medical exemptions found.</p>
+            </div>
+        @endif
+
+    {{-- ============================
+        ADMIN VIEW
+    ============================ --}}
+    @else
+
+        @if(isset($studentData) && count($studentData) > 0)
+            @foreach($studentData as $student)
+                <div class="ds-card ds-section">
+                    <div class="mex-student-head">
+                        <h6 class="mex-student-name">
+                            {{ $student['student_name'] }}
+                            <span class="mex-ot">({{ $student['ot_code'] }})</span>
+                        </h6>
+                        <span class="mex-badge">
+                            <i class="material-icons material-symbols-rounded">medical_services</i>
+                            {{ $student['exemption_count'] }} Exemption(s)
+                        </span>
+                    </div>
+
+                    <div class="card-body">
+                        @if($student['exemptions']->count() > 0)
+                            <div class="ds-table-wrap">
+                                <table class="table align-middle mb-0 mex-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Course</th>
+                                            <th>Category</th>
+                                            <th>Speciality</th>
+                                            <th>From Date</th>
+                                            <th>To Date</th>
+                                            <th>Description</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        @foreach($student['exemptions'] as $exemption)
+                                            <tr>
+                                                <td><strong>{{ $exemption->course->course_name ?? 'N/A' }}</strong></td>
+                                                <td>{{ $exemption->category->exemption_category_name ?? 'N/A' }}</td>
+                                                <td>{{ $exemption->speciality->exemption_medical_speciality_name ?? 'N/A' }}</td>
+                                                <td>{{ $exemption->from_date ? \Carbon\Carbon::parse($exemption->from_date)->format('d/m/Y') : 'N/A' }}</td>
+                                                <td>{{ $exemption->to_date ? \Carbon\Carbon::parse($exemption->to_date)->format('d/m/Y') : 'Ongoing' }}</td>
+                                                <td style="max-width: 280px; word-wrap: break-word;">{{ $exemption->Description ?: '-' }}</td>
+                                            </tr>
+                                        @endforeach
+                                    </tbody>
+                                </table>
+                            </div>
+                        @else
+                            <div class="ds-empty-state">
+                                <p class="mb-0">No medical exemptions found.</p>
+                            </div>
+                        @endif
+                    </div>
+                </div>
+            @endforeach
+        @else
+            <div class="ds-empty-state">
+                <i class="material-icons material-symbols-rounded d-block mb-2 opacity-50" style="font-size: 48px;">info</i>
+                <p class="mb-0">No student data found.</p>
+            </div>
+        @endif
+
+    @endif
 </div>
 
 @endsection
