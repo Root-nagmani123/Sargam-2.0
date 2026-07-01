@@ -184,11 +184,7 @@ class PendingFeedbackSummaryDataTable extends DataTable
 
                     DB::raw("
                         (
-                            CASE 
-                                WHEN JSON_VALID(t.faculty_master) 
-                                THEN JSON_LENGTH(t.faculty_master)
-                                ELSE 1
-                            END
+                            " . expected_feedback_count_sql('t') . "
                         )
                         -
                         COALESCE(tf.submitted_count, 0)
@@ -264,11 +260,7 @@ class PendingFeedbackSummaryDataTable extends DataTable
                 DB::raw("
                     SUM(
                         (
-                            CASE 
-                                WHEN JSON_VALID(t.faculty_master) 
-                                THEN JSON_LENGTH(t.faculty_master)
-                                ELSE 1
-                            END
+                            " . expected_feedback_count_sql('t') . "
                         )
                         -
                         COALESCE(tf.submitted_count, 0)

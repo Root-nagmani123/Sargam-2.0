@@ -1749,6 +1749,7 @@ function performAttendanceSearch() {
             to_date: toDate,
             session_value: sessionTypeValue,
             attendance_type: attendanceType,
+            page_context: (typeof window.attendancePageContext !== 'undefined') ? window.attendancePageContext : '',
             // view_type: viewType
         },
         beforeSend: function () {
@@ -1859,6 +1860,7 @@ function drawAttendanceTable() {
                 d.from_date = $('#from_date').val();
                 d.to_date = $('#to_date').val();
                 d.view_type = $('#view_type').val();
+                d.page_context = (typeof window.attendancePageContext !== 'undefined') ? window.attendancePageContext : '';
             }
         },
         drawCallback: function () {
