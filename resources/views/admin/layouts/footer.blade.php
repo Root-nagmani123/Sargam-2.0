@@ -69,6 +69,7 @@
   <script src="https://cdn.datatables.net/1.13.8/js/dataTables.bootstrap5.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/dataTables.responsive.min.js"></script>
   <script src="https://cdn.datatables.net/responsive/2.5.0/js/responsive.bootstrap5.min.js"></script>
+  <script src="{{ asset('js/datatable-global-ui.js') }}?v={{ @filemtime(public_path('js/datatable-global-ui.js')) ?: time() }}"></script>
   <script src="{{asset('js/dropdown-search.js')}}"></script>
   <script src="{{asset('admin_assets/js/forms/form-wizard.js')}}"></script>
   <script>
@@ -150,22 +151,23 @@
                   next: '&rsaquo;'
                 }
               },
+              dom: (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_DOM) || undefined,
+              pagingType: 'full_numbers',
+              language: $.extend(true, {}, (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_LANGUAGE) || {}, {
+                search: 'Search:',
+                searchPlaceholder: 'Type to filter...'
+              },
+              dom: (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_DOM) || undefined,
+              pagingType: 'full_numbers',
+              language: $.extend(true, {}, (window.SargamDataTableUI && window.SargamDataTableUI.DEFAULT_LANGUAGE) || {}, {
+                search: 'Search:',
+                searchPlaceholder: 'Type to filter...'
+              }),
               initComplete: function() {
                 try {
-                  const api = this.api();
-                  const $container = $(api.table().container());
-                  $container.addClass('dt-length-style-' + lengthStyle);
-
-                  // Pixel-exact footer: "Showing [<select>] of N items".
-                  // Move the length <select> to sit between a "Showing" label
-                  // and the info text, all inside the same flex group.
-                  const $info = $container.find('.dataTables_info');
-                  const $length = $container.find('.dataTables_length');
-                  if ($info.length && $length.length && !$container.find('.dt-showing-label').length) {
-                    // Build "Showing [<select>] of N items" in that visual order.
-                    const $label = $('<span class="dt-showing-label">Showing</span>');
-                    $label.insertBefore($info);   // Showing ... (before "of N items")
-                    $length.insertBefore($info);  // Showing [select] of N items
+                  $(this.api().table().container()).addClass('dt-length-style-' + lengthStyle);
+                  if (window.SargamDataTableUI) {
+                    window.SargamDataTableUI.enhance(this.api());
                   }
                 } catch (e) {}
               }
@@ -174,7 +176,8 @@
             if (hasButtons && showExport) {
               tableOptions.dom = "<'row mb-3 align-items-center'<'col-md-6 d-flex align-items-center gap-2 flex-wrap'B><'col-md-6 dt-toolbar-search'f>>" +
                                  "<'row'<'col-12'tr>>" +
-                                 "<'row mt-3 align-items-center dt-bottom-bar'<'col-md-6 dt-bottom-paginate'p><'col-md-6 dt-bottom-info d-flex align-items-center justify-content-md-end gap-2'il>>";
+                                 "<'row d-none sargam-dt-hidden-controls'<'col-sm-12'ilp>>";
+              tableOptions.sargamDtUi = false;
               tableOptions.buttons = [
                 { extend: 'copyHtml5', className: 'btn btn-outline-primary btn-sm' },
                 { extend: 'csvHtml5', className: 'btn btn-outline-primary btn-sm' },
@@ -183,9 +186,7 @@
                 { extend: 'print', className: 'btn btn-outline-primary btn-sm' }
               ];
             } else {
-              tableOptions.dom = "<'row mb-3 align-items-center'<'col-md-6'><'col-md-6 dt-toolbar-search'f>>" +
-                                 "<'row'<'col-12'tr>>" +
-                                 "<'row mt-3 align-items-center dt-bottom-bar'<'col-md-6 dt-bottom-paginate'p><'col-md-6 dt-bottom-info d-flex align-items-center justify-content-md-end gap-2'il>>";
+              tableOptions.sargamDtUi = true;
             }
 
             $table.DataTable(tableOptions);

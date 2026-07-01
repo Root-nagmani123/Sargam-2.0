@@ -43,6 +43,10 @@ use App\Http\Controllers\Admin\{
     EstateController,
     QuickLinkController,
     TimetableReportController,
+    ExemptionMasterController,
+    StationedLeaveMasterController,
+    LeaveApplicationController,
+    FacultyLeaveApprovalController,
 };
 use App\Http\Controllers\Dashboard\Calendar1Controller;
 use App\Http\Controllers\Admin\MemoNoticeController;
@@ -155,6 +159,7 @@ Route::middleware(['auth'])->group(function () {
         ->name('admin.navigation.error');
     Route::get('/dashboard/feed', [UserController::class, 'dashboardFeed'])->name('admin.dashboard.feed');
     Route::get('/dashboard/students', [UserController::class, 'studentList'])->name('admin.dashboard.students');
+    Route::get('/dashboard/students/export/{format}', [UserController::class, 'studentListExport'])->name('admin.dashboard.students.export');
     Route::get('/dashboard/my-counselee', [UserController::class, 'myCounselee'])->name('admin.dashboard.my-counselee');
     Route::get('/dashboard/students/{id}/detail', [UserController::class, 'studentDetail'])->name('admin.dashboard.students.detail');
     Route::get('/directory/lbsnaa', [DirectoryController::class, 'lbsnaa'])->name('admin.directory.lbsnaa');
@@ -469,16 +474,22 @@ Route::middleware(['auth'])->group(function () {
     });
     Route::prefix('calendar')->name('calendar.')->group(function () {
         Route::get('/', [CalendarController::class, 'index'])->name('index');
+        Route::get('/event/create', [CalendarController::class, 'createEvent'])->name('event.create');
         Route::get('/get-subject-Name', [CalendarController::class, 'getSubjectName'])->name('get.subject.name');
         Route::post('/events', [CalendarController::class, 'store'])->name('event.store');
         Route::get('/full-calendar-details', [CalendarController::class, 'fullCalendarDetails'])->name('event.calendar-details');
         Route::get('/single-calendar-details', [CalendarController::class, 'SingleCalendarDetails'])->name('event.Singlecalendar-details');
 
-        Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('calendar.event.show');
-        Route::post('/event-update/{id}', [CalendarController::class, 'update_event'])->name('calendar.event.update');
+        // Event Card — printable / downloadable PDF representation
+        Route::get('/event-card/{id}', [CalendarController::class, 'eventCard'])->name('event.card');
+        Route::get('/event-card/{id}/pdf', [CalendarController::class, 'eventCardPdf'])->name('event.card.pdf');
+
+        Route::get('/event-edit/{id}', [CalendarController::class, 'event_edit'])->name('event.show');
+        Route::get('/event/{hash}/edit', [CalendarController::class, 'editEventPage'])->name('event.edit.page');
+        Route::post('/event-update/{hash}', [CalendarController::class, 'update_event'])->name('event.update');
         Route::get('/get-group-types', [CalendarController::class, 'getGroupTypes'])->name('get.group.types');
 
-        Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('calendar.event.delete');
+        Route::delete('/event-delete/{id}', [CalendarController::class, 'delete_event'])->name('event.delete');
 
         Route::get('/get-week', [CalendarController::class, 'weeklyTimetable'])->name('getWeek');
 
@@ -489,6 +500,16 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/single-calendar-details', [CalendarController::class, 'otSingleCalendarDetails'])->name('event.Singlecalendar-details');
             Route::get('/download', [CalendarController::class, 'otDownloadPdf'])->name('download');
         });
+        // Academic time table (flat session list) — printable / downloadable PDF
+        Route::get('/timetable/pdf', [CalendarController::class, 'downloadTimetablePdf'])->name('timetable.pdf');
+        Route::get('/timetable/preview', [CalendarController::class, 'previewTimetablePdf'])->name('timetable.preview');
+        // Whole-week timetable — printable / downloadable PDF
+        Route::get('/weekly-timetable/pdf', [CalendarController::class, 'weeklyTimetablePdf'])->name('weekly-timetable.pdf');
+        Route::get('/weekly-timetable/preview', [CalendarController::class, 'previewWeeklyTimetablePdf'])->name('weekly-timetable.preview');
+        // Course Information + Resource Persons (Faculty for the Week) — printable / downloadable PDF
+        Route::get('/weekly-info/pdf', [CalendarController::class, 'weeklyInfoPdf'])->name('weekly-info.pdf');
+        Route::get('/weekly-info/meta', [CalendarController::class, 'weeklyInfoMeta'])->name('weekly-info.meta');
+        Route::post('/weekly-info/save', [CalendarController::class, 'saveWeeklyInfo'])->name('weekly-info.save');
     });
 
     // Timetable Report
@@ -537,6 +558,10 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('student-delete', 'deleteStudent')->name('student.delete');
         Route::post('send-message', 'sendMessage')->name('send.message');
         Route::get('export-student-list/{id?}', 'exportStudentList')->name('export.student.list');
+        Route::get('filter-faculties', 'filterFaculties')->name('filter.faculties');
+        Route::get('filter-courses', 'filterCourses')->name('filter.courses');
+        Route::get('download-pdf', 'downloadPdf')->name('download.pdf');
+        Route::get('download-csv', 'downloadCsv')->name('download.csv');
         Route::delete('delete/{id}', 'delete')->name('delete');
     });
 
@@ -591,6 +616,8 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/destroy/{id}', 'destroy')->name('destroy');
         Route::post('/update', 'update')->name('update');
         Route::post('get-student-list-according-to-course', 'getStudentListAccordingToCourse')->name('get.student.list.according.to.course');
+        Route::get('/bulk-template', 'bulkTemplate')->name('bulk.template');
+        Route::post('/bulk-store', 'bulkStore')->name('bulk.store');
     });
 
     // ============================================
@@ -801,6 +828,45 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         Route::delete('/delete/{id}', 'delete')->name('delete');
     });
 
+    // PT Exemption Master (Leave Management)
+    Route::prefix('admin/pt-exemption-master')->name('admin.pt-exemption-master.')->controller(ExemptionMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::post('/status/{id}', 'status')->name('status');
+        Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    });
+
+    // Stationed Leave Master (Leave Management)
+    Route::prefix('admin/stationed-leave-master')->name('admin.stationed-leave-master.')->controller(StationedLeaveMasterController::class)->group(function () {
+        Route::get('/', 'index')->name('index');
+        Route::get('/create', 'create')->name('create');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/faculties', 'faculties')->name('faculties');
+        Route::post('/status/{id}', 'status')->name('status');
+        Route::delete('/delete/{id}', 'destroy')->name('destroy');
+    });
+
+    // Faculty — Leave Approval (menu route: faculty-leave-approval)
+    Route::controller(FacultyLeaveApprovalController::class)->group(function () {
+        Route::get('/faculty-leave-approval', 'index')->name('faculty.leave-approval.index');
+        Route::get('/faculty-leave-approval/{id}', 'show')->name('faculty.leave-approval.show');
+        Route::post('/faculty-leave-approval/{id}/approve', 'approve')->name('faculty.leave-approval.approve');
+        Route::post('/faculty-leave-approval/{id}/reject', 'reject')->name('faculty.leave-approval.reject');
+    });
+
+    // Officer Trainee — Leave Application (User Side)
+    Route::prefix('leave')->name('leave.')->controller(LeaveApplicationController::class)->group(function () {
+        Route::get('/apply', 'apply')->name('apply');
+        Route::post('/store', 'store')->name('store');
+        Route::get('/my-leave', 'myLeave')->name('my-leave');
+        Route::get('/balance', 'balance')->name('balance');
+        Route::get('/{id}/edit', 'edit')->name('edit');
+        Route::put('/{id}', 'update')->name('update');
+        Route::get('/{id}/view', 'view')->name('view');
+        Route::delete('/{id}', 'destroy')->name('destroy');
+    });
+
     // Medical Exception Views
     Route::get('/medical-exception-faculty-view', [MedicalExceptionFacultyViewController::class, 'index'])->name('medical.exception.faculty.view');
 
@@ -868,6 +934,8 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
         });
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
+    Route::get('/send_notice/students', [CourseAttendanceNoticeMapController::class, 'getStudentsForNotice'])->name('send.notice.students');
+    Route::post('/send_notice_direct_save', [CourseAttendanceNoticeMapController::class, 'send_direct_notice_save'])->name('send.notice.direct.save');
     Route::get('/attendance_send_notice/{group_pk}/{course_pk}/{timetable_pk}', [CourseAttendanceNoticeMapController::class, 'view_all_notice_list'])->name('attendance.send_notice');
     Route::post('/notice_direct_save', [CourseAttendanceNoticeMapController::class, 'notice_direct_save'])->name('notice.direct.save');
 
@@ -1142,6 +1210,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/faculty/whos-who', [WhosWhoController::class, 'index'])->name('admin.faculty.whos-who');
     Route::get('/faculty/whos-who/courses', [WhosWhoController::class, 'getCourses'])->name('admin.faculty.whos-who.courses');
     Route::get('/faculty/whos-who/students', [WhosWhoController::class, 'getStudents'])->name('admin.faculty.whos-who.students');
+    Route::get('/faculty/whos-who/download-pdf', [WhosWhoController::class, 'downloadPdf'])->name('admin.faculty.whos-who.download-pdf');
     Route::get('/faculty/whos-who/static-info', [WhosWhoController::class, 'getStaticInfo'])->name('admin.faculty.whos-who.static-info');
     Route::get('/sessions', [DashboardController::class, 'sessions'])->name('admin.dashboard.sessions');
 
@@ -1226,6 +1295,11 @@ Route::middleware(['auth'])->group(function () {
 });
 
 Route::get('/student-faculty-feedback', [CalendarController::class, 'studentFacultyFeedback'])->name('feedback.get.studentFacultyFeedback');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/faculty-internal-feedback', [CalendarController::class, 'facultyInternalFeedback'])->name('feedback.get.facultyInternalFeedback');
+    Route::get('/faculty-internal-feedback/pending-count', [CalendarController::class, 'facultyPendingFeedbackCount'])->name('feedback.faculty.pendingCount');
+    Route::post('/faculty-internal-feedback/submit', [CalendarController::class, 'submitFacultyInternalFeedback'])->name('feedback.submit.facultyInternalFeedback');
+});
 Route::get('/feedback/student-feedback-url', [CalendarController::class, 'studentFeedback_url'])->name('feedback.get.studentFeedbackUrl');
 // Route::get('/admin/feedback/pending-students', [FeedbackController::class, 'pendingStudents'])->name('admin.feedback.pending.students');
 // Route::get('admin/get-sessions-by-course', [FeedbackController::class, 'getSessionsByCourse'])->name('admin.get.sessions.by.course');

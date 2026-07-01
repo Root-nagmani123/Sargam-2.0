@@ -3,11 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Models\CadreMaster;
 use App\Models\CourseMaster;
+use App\Models\ServiceMaster;
 use App\Models\StudentMaster;
 use App\Models\StudentMasterCourseMap;
 use App\Models\State;
 use App\Support\DataTableRedisCache;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Carbon\Carbon;
@@ -30,7 +33,10 @@ class WhosWhoController extends Controller
             fn () => $this->queryActiveCoursesForWhosWho()
         );
 
-        return view('admin.faculty.whos_who', compact('courses'));
+        $cadres = CadreMaster::orderBy('cadre_name')->get(['pk', 'cadre_name']);
+        $services = ServiceMaster::orderBy('service_name')->get(['pk', 'service_name']);
+
+        return view('admin.faculty.whos_who', compact('courses', 'cadres', 'services'));
     }
 
     /**
@@ -91,11 +97,11 @@ class WhosWhoController extends Controller
         try {
             $name = $request->input('name', '');
             $courseId = $request->input('course_id', '');
-            $category = $request->input('category', '');
-            $status = $request->input('status', '');
+            $cadreId = $request->input('cadre_id', '');
+            $serviceId = $request->input('service_id', '');
             $page = $request->input('page', 1);
             $perPage = $request->input('per_page', 10);
-            $sortBy = $request->input('sort_by', 'name_asc'); // Default sort by name ascending
+            $sortBy = $request->input('sort_by', 'name_asc');
 
             // Convert course_id to integer if provided and validate
             if (!empty($courseId)) {
@@ -105,6 +111,18 @@ class WhosWhoController extends Controller
                 }
             } else {
                 $courseId = '';
+            }
+
+            if (!empty($cadreId) && (int) $cadreId > 0) {
+                $cadreId = (int) $cadreId;
+            } else {
+                $cadreId = '';
+            }
+
+            if (!empty($serviceId) && (int) $serviceId > 0) {
+                $serviceId = (int) $serviceId;
+            } else {
+                $serviceId = '';
             }
 
             if (!empty($courseId) && $courseId > 0) {
@@ -118,11 +136,11 @@ class WhosWhoController extends Controller
                 }
             }
 
-            $cacheKey = 'whos_who_students:v1:' . md5(json_encode([
+            $cacheKey = 'whos_who_students:v2:' . md5(json_encode([
                 'name' => $name,
                 'course_id' => $courseId,
-                'category' => $category,
-                'status' => $status,
+                'cadre_id' => $cadreId,
+                'service_id' => $serviceId,
                 'page' => $page,
                 'per_page' => $perPage,
                 'sort_by' => $sortBy,
@@ -157,20 +175,30 @@ class WhosWhoController extends Controller
     {
         $name = $request->input('name', '');
         $courseId = $request->input('course_id', '');
-        $category = $request->input('category', '');
-        $status = $request->input('status', '');
+        $cadreId = $request->input('cadre_id', '');
+        $serviceId = $request->input('service_id', '');
         $page = $request->input('page', 1);
         $perPage = $request->input('per_page', 10);
-        $sortBy = $request->input('sort_by', 'name_asc'); // Default sort by name ascending
+        $sortBy = $request->input('sort_by', 'name_asc');
+        $forExport = filter_var($request->input('for_export'), FILTER_VALIDATE_BOOLEAN);
 
         // Convert course_id to integer if provided and validate
-        if (!empty($courseId)) {
+        if (!empty($courseId) && $courseId > 0) {
             $courseId = (int) $courseId;
-            if ($courseId <= 0) {
-                $courseId = '';
-            }
         } else {
             $courseId = '';
+        }
+
+        if (!empty($cadreId) && (int) $cadreId > 0) {
+            $cadreId = (int) $cadreId;
+        } else {
+            $cadreId = '';
+        }
+
+        if (!empty($serviceId) && (int) $serviceId > 0) {
+            $serviceId = (int) $serviceId;
+        } else {
+            $serviceId = '';
         }
 
         /**
@@ -210,17 +238,17 @@ class WhosWhoController extends Controller
             });
         }
 
-        // Filter by category (service)
-        if (!empty($category)) {
-            $query->whereHas('studentMaster.service', function ($q) use ($category) {
-                $q->where('service_name', 'like', '%' . $category . '%');
+        // Filter by cadre
+        if (!empty($cadreId)) {
+            $query->whereHas('studentMaster', function ($q) use ($cadreId) {
+                $q->where('cadre_master_pk', $cadreId);
             });
         }
 
-        // Filter by status
-        if (!empty($status)) {
-            $query->whereHas('studentMaster', function ($q) use ($status) {
-                $q->where('status', $status);
+        // Filter by service
+        if (!empty($serviceId)) {
+            $query->whereHas('studentMaster', function ($q) use ($serviceId) {
+                $q->where('service_master_pk', $serviceId);
             });
         }
 
@@ -228,8 +256,8 @@ class WhosWhoController extends Controller
         \Log::info('Who\'s Who Query - Using student_master_course__map', [
             'course_id' => $courseId,
             'name' => $name,
-            'category' => $category,
-            'status' => $status,
+            'cadre_id' => $cadreId,
+            'service_id' => $serviceId,
             'table' => 'student_master_course__map',
             'filter_column' => 'course_master_pk',
         ]);
@@ -240,11 +268,18 @@ class WhosWhoController extends Controller
 
         // Apply pagination
         $currentPage = max(1, (int) $page);
-        $perPage = max(1, min(100, (int) $perPage)); // Limit between 1 and 100
-        $totalPages = ceil($totalCount / $perPage);
+        if ($forExport) {
+            $perPage = max(1, $totalCount);
+            $totalPages = 1;
+            $currentPage = 1;
+            $sortBy = 'roll_asc';
+        } else {
+            $perPage = max(1, min(100, (int) $perPage));
+            $totalPages = ceil($totalCount / $perPage);
+        }
 
         // Ensure current page is valid
-        if ($currentPage > $totalPages && $totalPages > 0) {
+        if (!$forExport && $currentPage > $totalPages && $totalPages > 0) {
             $currentPage = $totalPages;
         }
 
@@ -338,6 +373,38 @@ class WhosWhoController extends Controller
             ->limit($perPage)
             ->get();
 
+        $studentPks = $studentMaps->pluck('student_master_pk')->unique()->filter()->values();
+        $counsellorHouseLookup = $studentPks->isNotEmpty()
+            ? $this->loadCounsellorAndHouseLookup($studentPks)
+            : collect();
+
+        $categoryPks = $studentMaps
+            ->map(fn ($map) => $map->studentMaster?->admission_category_pk)
+            ->filter()
+            ->unique()
+            ->values();
+        $categoriesByPk = $categoryPks->isNotEmpty()
+            ? DB::table('admission_category_master')->whereIn('pk', $categoryPks)->get()->keyBy('pk')
+            : collect();
+
+        $statePks = $studentMaps
+            ->map(fn ($map) => $map->studentMaster?->state_master_pk)
+            ->filter()
+            ->unique()
+            ->values();
+        $statesByPk = $statePks->isNotEmpty()
+            ? State::whereIn('pk', $statePks)->pluck('state_name', 'pk')
+            : collect();
+
+        $streamPks = $studentMaps
+            ->map(fn ($map) => $map->studentMaster?->highest_stream_pk)
+            ->filter()
+            ->unique()
+            ->values();
+        $streamsByPk = $streamPks->isNotEmpty()
+            ? DB::table('stream_master')->whereIn('pk', $streamPks)->pluck('stream_name', 'pk')
+            : collect();
+
         // Log results
         \Log::info('Who\'s Who Query Results from student_master_course__map', [
             'total_count' => $totalCount,
@@ -392,15 +459,17 @@ class WhosWhoController extends Controller
 
             /**
              * Get all courses this student is enrolled in from student_master_course__map
-             * This queries the mapping table to find all course_master_pk values for this student
              */
-            $enrolledCourses = StudentMasterCourseMap::with('course')
-                ->where('student_master_pk', $student->pk)
-                ->where('active_inactive', 1)
-                ->whereHas('course', function ($q) {
-                    $q->where('active_inactive', 1);
-                })
-                ->get();
+            $enrolledCourses = collect();
+            if (!$forExport) {
+                $enrolledCourses = StudentMasterCourseMap::with('course')
+                    ->where('student_master_pk', $student->pk)
+                    ->where('active_inactive', 1)
+                    ->whereHas('course', function ($q) {
+                        $q->where('active_inactive', 1);
+                    })
+                    ->get();
+            }
 
             // Format education (if available in database, otherwise empty)
             $education = [];
@@ -410,19 +479,42 @@ class WhosWhoController extends Controller
             $hobbies = [];
             // You can add hobbies data from a separate table if available
 
-            // Get state name
-            $stateName = 'N/A';
-            if ($student->domicile_state_pk) {
-                $state = State::find($student->domicile_state_pk);
-                $stateName = $state ? $state->state_name : 'State ID: ' . $student->domicile_state_pk;
+            $counsellorName = 'N/A';
+            $houseName = 'N/A';
+            $lookupKey = $student->pk . '_' . $map->course_master_pk;
+            $groupInfo = $counsellorHouseLookup->get($lookupKey);
+            if ($groupInfo) {
+                $counsellorName = filled($groupInfo->counsellor_name)
+                    ? $groupInfo->counsellor_name
+                    : 'N/A';
+                $houseName = filled($groupInfo->house_group)
+                    ? $groupInfo->house_group
+                    : 'N/A';
             }
 
-            // Get stream name if available
-            $streamName = 'N/A';
-            if ($student->highest_stream_pk) {
-                $stream = DB::table('stream_master')->where('pk', $student->highest_stream_pk)->first();
-                $streamName = $stream ? $stream->stream_name : 'Stream ID: ' . $student->highest_stream_pk;
+            // Domicile state: state_master.state_name via student_master.state_master_pk
+            $stateName = 'N/A';
+            if ($student->state_master_pk) {
+                $stateName = $statesByPk[$student->state_master_pk] ?? 'N/A';
             }
+
+            // District column maps to student_master.city (per Who's Who SQL)
+            $cityName = filled($student->city) ? $student->city : 'N/A';
+
+            $categoryName = 'N/A';
+            if ($student->admission_category_pk && isset($categoriesByPk[$student->admission_category_pk])) {
+                $categoryRow = $categoriesByPk[$student->admission_category_pk];
+                $categoryName = $categoryRow->Seat_name ?? $categoryRow->seat_name ?? 'N/A';
+            }
+
+            $fullAddress = filled($student->address) ? $student->address : 'N/A';
+
+            $streamName = 'N/A';
+            if ($student->highest_stream_pk && isset($streamsByPk[$student->highest_stream_pk])) {
+                $streamName = $streamsByPk[$student->highest_stream_pk];
+            }
+
+            $cadreName = $student->cadre->cadre_name ?? null;
 
             // Format batch
             $batch = 'N/A';
@@ -434,14 +526,23 @@ class WhosWhoController extends Controller
             $students[] = [
                 'id' => $student->generated_OT_code ?? ('STU-' . $student->pk),
                 'name' => $student->display_name ?? (trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? ''))),
+                'rank' => $student->rank ?? 'N/A',
+                'cadre' => filled($cadreName) ? $cadreName : 'N/A',
+                'code' => $student->generated_OT_code ?? 'N/A',
+                'counsellor' => $counsellorName,
+                'house' => $houseName,
                 'roll' => 'Roll ' . ($student->rank ?? 'N/A'),
                 'service' => $student->service->service_name ?? 'N/A',
                 'courseName' => $course->course_name ?? 'N/A',
                 'courseCode' => $course->couse_short_name ?? $course->course_name ?? 'N/A',
                 'batch' => $batch,
                 'image' => $student->photo_path ? asset('storage/' . $student->photo_path) : 'https://via.placeholder.com/180x180?text=' . urlencode(substr($student->display_name ?? 'Student', 0, 1)),
-                'dob' => $student->dob ? Carbon::parse($student->dob)->format('m/d/Y') : 'N/A',
-                'domicile' => $stateName,
+                'image_src' => $forExport ? $this->resolveStudentPhotoDataUri($student->photo_path) : null,
+                'dob' => $student->dob ? Carbon::parse($student->dob)->format('d-M-y') : 'N/A',
+                'domicile' => strtoupper($stateName),
+                'district' => strtoupper($cityName),
+                'category' => strtoupper($categoryName),
+                'address' => $fullAddress,
                 'attempts' => $student->rank ?? 'N/A',
                 'stream' => $streamName,
                 'room' => $student->room_no ?? 'N/A',
@@ -484,11 +585,145 @@ class WhosWhoController extends Controller
             'filters' => [
                 'course_id' => $courseId,
                 'name' => $name,
-                'category' => $category,
-                'status' => $status,
+                'cadre_id' => $cadreId,
+                'service_id' => $serviceId,
             ],
         ];
     }
+    /**
+     * Download Who's Who directory PDF (respects current filters).
+     */
+    public function downloadPdf(Request $request)
+    {
+        try {
+            $exportRequest = $request->duplicate();
+            $exportRequest->merge([
+                'for_export' => true,
+                'sort_by' => 'roll_asc',
+            ]);
+
+            $payload = $this->buildStudentsResponsePayload($exportRequest);
+            $students = $payload['students'] ?? [];
+
+            if (empty($students)) {
+                return redirect()
+                    ->route('admin.faculty.whos-who')
+                    ->with('error', 'No students found for the selected filters.');
+            }
+
+            $courseId = $request->input('course_id', '');
+            $cadreId = $request->input('cadre_id', '');
+            $serviceId = $request->input('service_id', '');
+            $search = trim((string) $request->input('name', ''));
+
+            $courseLabel = $courseId
+                ? (optional(CourseMaster::find((int) $courseId))->course_name ?? 'Selected Course')
+                : 'All Courses';
+            $cadreLabel = $cadreId
+                ? (optional(CadreMaster::find((int) $cadreId))->cadre_name ?? 'Selected Cadre')
+                : 'All Cadres';
+            $serviceLabel = $serviceId
+                ? (optional(ServiceMaster::find((int) $serviceId))->service_name ?? 'Selected Service')
+                : 'All Services';
+
+            $pdf = Pdf::loadView('admin.faculty.whos_who_pdf', [
+                'students'     => $students,
+                'courseLabel'  => $courseLabel,
+                'cadreLabel'   => $cadreLabel,
+                'serviceLabel' => $serviceLabel,
+                'searchLabel'  => $search,
+                'generatedAt'  => Carbon::now()->format('d M Y, h:i A'),
+            ])
+                ->setPaper('a4', 'portrait')
+                ->setOptions([
+                    'defaultFont'          => 'DejaVu Sans',
+                    'isHtml5ParserEnabled' => true,
+                    'isRemoteEnabled'      => true,
+                    'dpi'                  => 96,
+                ]);
+
+            $filename = 'whos-who-' . now()->format('Y-m-d_H-i-s') . '.pdf';
+
+            return $pdf->download($filename);
+        } catch (\Exception $e) {
+            return redirect()
+                ->route('admin.faculty.whos-who')
+                ->with('error', 'Error generating PDF: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Counsellor name and house group per student/course (matches Who's Who SQL logic).
+     *
+     * @param  \Illuminate\Support\Collection<int, int|string>  $studentPks
+     * @return \Illuminate\Support\Collection<string, object>
+     */
+    private function loadCounsellorAndHouseLookup($studentPks)
+    {
+        $rows = DB::table('student_course_group_map as c')
+            ->join('group_type_master_course_master_map as d', 'c.group_type_master_course_master_map_pk', '=', 'd.pk')
+            ->leftJoin('course_group_type_master as e', 'd.type_name', '=', 'e.pk')
+            ->leftJoin('faculty_master as cf', 'cf.pk', '=', 'd.facility_id')
+            ->whereIn('c.student_master_pk', $studentPks)
+            ->where('c.active_inactive', 1)
+            ->select([
+                'c.student_master_pk',
+                'd.course_name as course_master_pk',
+                DB::raw("MAX(CASE WHEN e.type_name LIKE '%Counsellor%' THEN TRIM(CONCAT_WS(' ', cf.first_name, cf.last_name)) END) AS counsellor_name"),
+                DB::raw("MAX(CASE WHEN e.type_name LIKE '%Counsellor%' THEN cf.full_name END) AS counsellor_full_name"),
+                DB::raw("MAX(CASE WHEN e.type_name LIKE '%Counsellor%' THEN d.group_name END) AS counsellor_group_state"),
+                DB::raw("MAX(CASE WHEN e.type_name LIKE '%House%' THEN d.group_name END) AS house_group"),
+            ])
+            ->groupBy('c.student_master_pk', 'd.course_name')
+            ->get();
+
+        return $rows->mapWithKeys(function ($row) {
+            $counsellorName = trim((string) ($row->counsellor_name ?? ''));
+            if ($counsellorName === '') {
+                $counsellorName = trim((string) ($row->counsellor_full_name ?? ''));
+            }
+            $row->counsellor_name = $counsellorName !== '' ? $counsellorName : null;
+
+            return [$row->student_master_pk . '_' . $row->course_master_pk => $row];
+        });
+    }
+
+    /**
+     * Embed student photo for DomPDF rendering.
+     */
+    private function resolveStudentPhotoDataUri(?string $photoPath): ?string
+    {
+        if (empty($photoPath)) {
+            return null;
+        }
+
+        foreach ([
+            storage_path('app/public/' . ltrim($photoPath, '/')),
+            public_path('storage/' . ltrim($photoPath, '/')),
+        ] as $fullPath) {
+            if (!is_file($fullPath) || !is_readable($fullPath)) {
+                continue;
+            }
+
+            $raw = @file_get_contents($fullPath);
+            if ($raw === false) {
+                continue;
+            }
+
+            $ext = strtolower(pathinfo($fullPath, PATHINFO_EXTENSION));
+            $mime = match ($ext) {
+                'png' => 'image/png',
+                'gif' => 'image/gif',
+                'webp' => 'image/webp',
+                default => 'image/jpeg',
+            };
+
+            return 'data:' . $mime . ';base64,' . base64_encode($raw);
+        }
+
+        return null;
+    }
+
     /**
      * Get static info (tutor group, tutor name, house name, house tutors)
      * This can be customized based on your database structure

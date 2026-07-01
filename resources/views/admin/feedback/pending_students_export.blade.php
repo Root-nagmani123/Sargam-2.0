@@ -370,11 +370,12 @@
             <th width="13%">Course</th>
             <th class="text-center" width="6%">Given</th>
             <th class="text-center" width="6%">Not Given</th>
-            <th width="12%">Program</th>
-            <th width="14%">Session</th>
-            <th class="text-center" width="8%">Date</th>
-            <th class="text-center" width="8%">Time</th>
-            <th class="text-center" width="8%">Status</th>
+            <th width="11%">Program</th>
+            <th width="12%">Session</th>
+            <th width="11%">Faculty</th>
+            <th class="text-center" width="7%">Date</th>
+            <th class="text-center" width="7%">Time</th>
+            <th class="text-center" width="7%">Status</th>
         </tr>
     </thead>
     <tbody>
@@ -393,8 +394,8 @@
                 <td style="font-size:8px; font-weight:normal;">{{ $student['course_summary'] ?? '—' }}</td>
                 <td class="text-center"><span class="badge-given">{{ $student['feedback_given'] }}</span></td>
                 <td class="text-center"><span class="badge-not-given">{{ $student['feedback_not_given'] }}</span></td>
-                <td colspan="5" style="font-size:8px; color:#555; font-weight:normal;">
-                    {{ $sessionCount }} session(s) attended
+                <td colspan="6" style="font-size:8px; color:#555; font-weight:normal;">
+                    {{ $sessionCount }} feedback item(s)
                 </td>
             </tr>
 
@@ -408,6 +409,7 @@
                 <td></td>
                 <td class="session-indent">{{ $session['course_name'] ?? '—' }}</td>
                 <td class="session-indent">{{ $session['session_name'] ?? '—' }}</td>
+                <td class="session-indent">{{ $session['faculty_name'] ?? '—' }}</td>
                 <td class="text-center">{{ $session['date'] ?? '—' }}</td>
                 <td class="text-center">{{ $session['time'] ?? '—' }}</td>
                 <td class="text-center">

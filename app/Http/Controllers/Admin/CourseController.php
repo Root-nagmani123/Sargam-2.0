@@ -16,6 +16,7 @@ use App\Support\DataTableRedisCache;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use App\Services\CourseService;
+use Illuminate\Support\Facades\Cache;
 
 
 class CourseController extends Controller
@@ -112,8 +113,8 @@ class CourseController extends Controller
             'Club Society' => 'Club Society'
         ];
         
-        $isSuperAdmin = hasRole('Super Admin');
-        if ($isSuperAdmin) {
+        $isPrivileged = hasRole('Super Admin') || hasRole('Admin');
+        if ($isPrivileged) {
             $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
             $selectedSupportingSection = old('supportingsection', '');
         } else {
@@ -158,8 +159,8 @@ class CourseController extends Controller
                 'Discipline' => 'Discipline',
                 'Club Society' => 'Club Society'
             ];
-            $isSuperAdmin = hasRole('Super Admin');
-            if ($isSuperAdmin) {
+            $isPrivileged = hasRole('Super Admin') || hasRole('Admin');
+            if ($isPrivileged) {
                 $supportingSectionList = Role::orderBy('name')->pluck('name', 'id')->toArray();
             } else {
                 $userRoleIds = \Illuminate\Support\Facades\DB::table('model_has_roles')
@@ -190,6 +191,7 @@ class CourseController extends Controller
             DB::commit();
 
             CourseMasterDataTable::bumpListingCacheEpoch();
+            Cache::increment('role_by_course_epoch');
 
             return redirect()->route('programme.index')->with('success', 'Course created successfully');
 

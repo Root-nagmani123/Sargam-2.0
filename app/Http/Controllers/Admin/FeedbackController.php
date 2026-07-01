@@ -1389,8 +1389,9 @@ class FeedbackController extends Controller
      */
     public function facultyPortalIndex(FacultyFeedbackReportService $reportService)
     {
-       
+    
         $reportService->assertFacultyRole();
+        
 
         $facultyPk = $reportService->resolveFacultyPk();
         if (! $facultyPk) {
@@ -3658,7 +3659,7 @@ class FeedbackController extends Controller
      */
     private function pendingStudentsPendingExpressionSql(): string
     {
-        return '(CASE WHEN JSON_VALID(t.faculty_master) THEN JSON_LENGTH(t.faculty_master) ELSE 1 END - COALESCE(tf.submitted_count, 0))';
+        return '(' . expected_feedback_count_sql('t') . ' - COALESCE(tf.submitted_count, 0))';
     }
 
     /**
@@ -3749,6 +3750,7 @@ class FeedbackController extends Controller
     private function buildPendingStudentsAggregateSubquery(Request $request): \Illuminate\Database\Query\Builder
     {
         $pExpr = $this->pendingStudentsPendingExpressionSql();
+        $expectedExpr = expected_feedback_count_sql('t');
 
         $aggSub = (clone $this->buildPendingStudentsGroupedBaseQuery($request))
             ->select([
@@ -3756,8 +3758,11 @@ class FeedbackController extends Controller
                 DB::raw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,''))) as student_name"),
                 'sm.email',
                 'sm.generated_OT_code',
-                DB::raw("SUM(CASE WHEN {$pExpr} > 0 THEN 1 ELSE 0 END) as feedback_not_given"),
-                DB::raw("SUM(CASE WHEN {$pExpr} <= 0 THEN 1 ELSE 0 END) as feedback_given"),
+                // Count per-faculty feedback ITEMS, not sessions: a session with N
+                // Teaching faculty contributes N expected feedbacks. This makes the
+                // totals match the student feedback page (one feedback per faculty).
+                DB::raw("SUM(GREATEST({$pExpr}, 0)) as feedback_not_given"),
+                DB::raw("SUM(LEAST(COALESCE(tf.submitted_count, 0), {$expectedExpr})) as feedback_given"),
                 DB::raw("GROUP_CONCAT(DISTINCT c.course_name ORDER BY c.course_name SEPARATOR ', ') as course_summary_build"),
             ])
             ->groupBy('sm.pk', 'sm.first_name', 'sm.middle_name', 'sm.last_name', 'sm.email', 'sm.generated_OT_code');
@@ -3795,12 +3800,43 @@ class FeedbackController extends Controller
                 't.START_DATE as date',
                 't.class_session as time',
                 'c.course_name',
-                DB::raw('CASE WHEN JSON_VALID(t.faculty_master) THEN JSON_LENGTH(t.faculty_master) ELSE 1 END as faculty_count'),
-                DB::raw('COALESCE(tf.submitted_count, 0) as submitted_count'),
+                't.faculty_details',
+                't.faculty_master',
             ])
             ->orderByRaw("TRIM(CONCAT(COALESCE(sm.first_name,''),' ',COALESCE(sm.middle_name,''),' ',COALESCE(sm.last_name,'')))")
             ->orderBy('t.START_DATE')
             ->get();
+
+        // Which faculty the student has actually submitted feedback for, keyed by
+        // "timetablePk_studentPk" -> [faculty_pk, ...]. Used to mark each faculty
+        // row given/not-given.
+        $submittedMap = [];
+        $ttPks = $detailRows->pluck('timetable_pk')->unique()->values()->all();
+        if (!empty($ttPks)) {
+            DB::table('topic_feedback')
+                ->whereIn('timetable_pk', $ttPks)
+                ->whereIn('student_master_pk', $pks)
+                ->where('is_submitted', 1)
+                ->select('timetable_pk', 'student_master_pk', 'faculty_pk')
+                ->get()
+                ->each(function ($r) use (&$submittedMap) {
+                    $submittedMap[$r->timetable_pk . '_' . $r->student_master_pk][] = (int) $r->faculty_pk;
+                });
+        }
+
+        // Resolve the feedback faculty list per session up-front, then batch-load names.
+        $facultyByRowKey = [];
+        $facultyNamePks = [];
+        foreach ($detailRows as $idx => $row) {
+            $facultyPks = $this->resolveSessionFeedbackFacultyPks($row->faculty_details, $row->faculty_master);
+            $facultyByRowKey[$idx] = $facultyPks;
+            foreach ($facultyPks as $fpk) {
+                $facultyNamePks[$fpk] = true;
+            }
+        }
+        $facultyNames = empty($facultyNamePks)
+            ? collect()
+            : DB::table('faculty_master')->whereIn('pk', array_keys($facultyNamePks))->pluck('full_name', 'pk');
 
         $studentsByPk = [];
         foreach ($aggRows as $r) {
@@ -3814,20 +3850,38 @@ class FeedbackController extends Controller
             ];
         }
 
-        foreach ($detailRows as $row) {
-            $pending = (int) $row->faculty_count - (int) $row->submitted_count;
-            $status = $pending > 0 ? 'not_given' : 'given';
+        foreach ($detailRows as $idx => $row) {
             $pk = $row->student_pk;
             if (!isset($studentsByPk[$pk])) {
                 continue;
             }
-            $studentsByPk[$pk]['sessions'][] = [
+
+            $submitted = $submittedMap[$row->timetable_pk . '_' . $pk] ?? [];
+            $facultyPks = $facultyByRowKey[$idx];
+
+            $base = [
                 'session_name' => $row->session_name,
                 'date' => $row->date ? date('d-m-Y', strtotime($row->date)) : '—',
                 'time' => $row->time ?? '—',
                 'course_name' => $row->course_name,
-                'feedback_status' => $status,
             ];
+
+            // One detail row per faculty so multi-faculty sessions list each faculty
+            // separately and reconcile with the per-faculty totals above.
+            if (empty($facultyPks)) {
+                $studentsByPk[$pk]['sessions'][] = $base + [
+                    'faculty_name' => '—',
+                    'feedback_status' => empty($submitted) ? 'not_given' : 'given',
+                ];
+                continue;
+            }
+
+            foreach ($facultyPks as $fpk) {
+                $studentsByPk[$pk]['sessions'][] = $base + [
+                    'faculty_name' => $facultyNames[$fpk] ?? ('Faculty #' . $fpk),
+                    'feedback_status' => in_array($fpk, $submitted, true) ? 'given' : 'not_given',
+                ];
+            }
         }
 
         $ordered = [];
@@ -3836,6 +3890,34 @@ class FeedbackController extends Controller
         }
 
         return $this->enrichGroupedStudentsWithCourseSummary($ordered);
+    }
+
+    /**
+     * Faculty a student is expected to give feedback for in a session.
+     *
+     * Mirrors expected_feedback_count_sql(): when faculty_details JSON is present we
+     * return the Teaching-role faculty (the only ones the student feedback form
+     * lists); otherwise we fall back to the legacy faculty_master id list.
+     *
+     * @return array<int>
+     */
+    private function resolveSessionFeedbackFacultyPks(?string $facultyDetailsJson, $facultyMasterRaw): array
+    {
+        if (!empty($facultyDetailsJson)) {
+            $details = json_decode($facultyDetailsJson, true);
+            if (is_array($details)) {
+                $teaching = [];
+                foreach ($details as $d) {
+                    if (($d['role'] ?? null) === 'Teaching' && !empty($d['faculty_pk'])) {
+                        $teaching[] = (int) $d['faculty_pk'];
+                    }
+                }
+
+                return array_values(array_unique($teaching));
+            }
+        }
+
+        return extract_faculty_ids_from_raw($facultyMasterRaw);
     }
 
     /**
@@ -4183,11 +4265,7 @@ class FeedbackController extends Controller
                 //  correct pending logic
                 DB::raw("
                 (
-                    CASE 
-                        WHEN JSON_VALID(t.faculty_master) 
-                        THEN JSON_LENGTH(t.faculty_master)
-                        ELSE 1
-                    END
+                    " . expected_feedback_count_sql('t') . "
                 )
                 -
                 COALESCE(tf.submitted_count, 0)
@@ -4603,11 +4681,7 @@ class FeedbackController extends Controller
                 DB::raw("
                 SUM(
                     (
-                        CASE 
-                            WHEN JSON_VALID(t.faculty_master) 
-                            THEN JSON_LENGTH(t.faculty_master)
-                            ELSE 1
-                        END
+                        " . expected_feedback_count_sql('t') . "
                     )
                     -
                     COALESCE(tf.submitted_count, 0)
@@ -4707,11 +4781,7 @@ class FeedbackController extends Controller
 
                 DB::raw("
                 (
-                    CASE 
-                        WHEN JSON_VALID(t.faculty_master) 
-                        THEN JSON_LENGTH(t.faculty_master)
-                        ELSE 1
-                    END
+                    " . expected_feedback_count_sql('t') . "
                 )
                 -
                 COALESCE(tf.submitted_count, 0)
@@ -4737,11 +4807,7 @@ class FeedbackController extends Controller
             ->whereRaw("
             (
                 (
-                    CASE 
-                        WHEN JSON_VALID(t.faculty_master) 
-                        THEN JSON_LENGTH(t.faculty_master)
-                        ELSE 1
-                    END
+                    " . expected_feedback_count_sql('t') . "
                 )
                 - COALESCE(tf.submitted_count, 0)
             ) > 0

@@ -150,7 +150,7 @@ class LoginController extends Controller
 
         $roles = ($user->user_category === 'S')
             ? ['Student-OT']
-            : $user->roles()->pluck('user_role_name')->toArray();
+            : $user->roles()->pluck('name')->toArray();
 
         Session::put('user_roles', $roles);
 
@@ -227,7 +227,7 @@ class LoginController extends Controller
                 if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
                     }else{
-                    $roles = $user->roles()->pluck('user_role_name')->toArray();
+                    $roles = $user->roles()->pluck('name')->toArray();
                     }
                     Session::put('user_roles', $roles);
 
@@ -259,7 +259,7 @@ class LoginController extends Controller
                     if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
                     }else{
-                    $roles = $user->roles()->pluck('user_role_name')->toArray();
+                    $roles = $user->roles()->pluck('name')->toArray();
 
                     }
 
@@ -279,7 +279,7 @@ class LoginController extends Controller
                     if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
                     }else{
-                    $roles = $user->roles()->pluck('user_role_name')->toArray();
+                    $roles = $user->roles()->pluck('name')->toArray();
 
                     }
 
@@ -333,7 +333,7 @@ class LoginController extends Controller
                     $roles = ['Student-OT'];
                        Session::put('user_roles', $roles);
                     }else{
-                    $roles = $user->roles()->pluck('user_role_name')->toArray();
+                    $roles = $user->roles()->pluck('name')->toArray();
                     }
                     // print_r($roles); exit;
                     Session::put('user_role_master_pk', $coursedate->user_role_master_pk);
@@ -370,7 +370,7 @@ class LoginController extends Controller
                     if($user->user_category == 'S'){
                     $roles = ['Student-OT'];
                     }else{
-                    $roles = $user->roles()->pluck('user_role_name')->toArray();
+                    $roles = $user->roles()->pluck('name')->toArray();
 
                     }
 

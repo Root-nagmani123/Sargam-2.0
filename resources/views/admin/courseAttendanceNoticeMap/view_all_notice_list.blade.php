@@ -62,10 +62,7 @@
                         </div>
                     </div>
 
-                    <div
-                        class="alert customize-alert rounded-pill alert-success bg-success text-white mt-4 mb-0 border-0 fade show text-center fw-bold">
-                        Attendance has been Marked for the Session
-                    </div>
+                   
                 </div>
             </div>
 
@@ -74,7 +71,7 @@
                     <div class="d-flex justify-content-between align-items-center mb-3">
                         <h4 class="card-title">Attendance</h4>
                         <div class="">
-                            <a href="{{ route('attendance.index') }}" class="btn btn-secondary">Back</a>
+                            <a href="{{ url()->previous() }}" class="btn btn-secondary">Back</a>
                             
                         </div>
                         <div class="clearfix">
@@ -126,7 +123,7 @@
                                     @endforeach
                                 @else
                                     <tr>
-                                        <td colspan="10" class="text-center text-muted">No students found.</td>
+                                        <td colspan="10" class="text-center text-muted">Late or Absent students not found.</td>
                                     </tr>
                                 @endif
                             </tbody>

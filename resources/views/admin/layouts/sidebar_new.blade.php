@@ -80,7 +80,7 @@
                                 </div>
                             </ul>
                         </div>
-                        <div class="sidebarmenu" id="sidebar-setup-menu" style="background:#ffffff !important;margin-top:120px;">
+                        <div class="sidebarmenu" id="sidebar-setup-menu" style="background:#ffffff !important;">
                             <nav class="sidebar-nav d-block left-none simplebar-scrollable-y" data-simplebar="init" style="background:#ffffff !important;">
                                 <div class="simplebar-wrapper" style="margin: 0px;">
                                     <div class="simplebar-height-auto-observer-wrapper">
@@ -145,6 +145,26 @@
         #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler:hover .material-icons,
         #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler:hover .sidebar-google-label {
             color: #111827 !important;
+        }
+
+        /* Keyboard highlight: applied when the toggle button is focused via Esc */
+        #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler.is-key-highlight,
+        #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler:focus-visible {
+            outline: none;
+        }
+
+        #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler.is-key-highlight .sidebar-google-icon-wrap,
+        #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler:focus-visible .sidebar-google-icon-wrap {
+            background: #e0e7ff !important;
+            border-color: #6366f1 !important;
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.35);
+        }
+
+        #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler.is-key-highlight .material-icons,
+        #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler.is-key-highlight .sidebar-google-label,
+        #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler:focus-visible .material-icons,
+        #sidebar-setup .sidebar-google-style .sidebar-google-hamburger .sidebar-menu-toggler:focus-visible .sidebar-google-label {
+            color: #4338ca !important;
         }
 
         /* Collapse button icon-wrap - subtle grey box like reference */

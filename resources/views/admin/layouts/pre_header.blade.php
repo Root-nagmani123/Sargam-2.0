@@ -31,6 +31,8 @@
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <!-- Sidebar Menu Enhanced CSS -->
 <link rel="stylesheet" href="{{asset('css/sidebar-menu-enhanced.css')}}">
+<!-- Sidebar Modern Layout — positions sidebar below header, loads after styles.css + sidebar-menu-enhanced.css -->
+<link rel="stylesheet" href="{{ asset('admin_assets/css/sidebar-modern.css') }}">
 <!-- Sargam Design System (tokens + refinements + components) — must load LAST -->
 <link rel="stylesheet" href="{{ asset('css/sargam-app.css') }}?v={{ @filemtime(public_path('css/sargam-app.css')) ?: time() }}">
 <style>

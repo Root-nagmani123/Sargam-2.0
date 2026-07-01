@@ -101,7 +101,7 @@
 
                         <input type="hidden" name="memo_notice_id" value="{{ $id }}">
                         <input type="hidden" name="type" value="{{ $type }}">
-                        <input type="hidden" name="student_id" value="{{ $memoNotice[0]->student_id ?? '' }}">
+                        <input type="hidden" name="student_id" value="{{ ($memoNotice->isNotEmpty() && !empty($memoNotice->first()->student_id)) ? $memoNotice->first()->student_id : $noticeStudentPk }}">
 
                         <div class="row g-3 mb-3">
                             <div class="col-6">

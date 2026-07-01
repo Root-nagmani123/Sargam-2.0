@@ -463,6 +463,93 @@
     <script src="{{ asset('admin_assets/js/tab-memory.js') }}" defer></script>
     @stack('scripts')
     @yield('scripts')
+
+    @auth
+    <script>
+    (function () {
+        var POPUP_KEY = 'fac_feedback_popup_' + (new Date().toDateString());
+        var feedbackUrl = '{{ route('feedback.get.facultyInternalFeedback') }}';
+        var countUrl    = '{{ route('feedback.faculty.pendingCount') }}';
+
+        function loadFeedbackBell() {
+            fetch(countUrl, {
+                credentials: 'same-origin',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': (document.querySelector('meta[name="csrf-token"]') || {}).content || ''
+                }
+            })
+            .then(function (r) {
+                if (!r.ok) { return null; }
+                return r.json();
+            })
+            .then(function (data) {
+                if (!data) return;
+                var count = data.count || 0;
+                var wrap  = document.getElementById('facultyFeedbackBellWrap');
+                var badge = document.getElementById('facultyFeedbackBadge');
+                var list  = document.getElementById('facultyFeedbackList');
+
+                if (!wrap) return;
+
+                if (count > 0) {
+                    wrap.classList.remove('d-none');
+
+                    badge.textContent = count > 9 ? '9+' : count;
+                    badge.style.display = '';
+
+                    // Populate dropdown list
+                    list.innerHTML = '';
+                    (data.items || []).slice(0, 5).forEach(function (item) {
+                        var li = document.createElement('li');
+                        li.className = 'border-bottom';
+                        li.innerHTML =
+                            '<a href="' + feedbackUrl + '" class="d-block px-3 py-2 text-decoration-none text-dark">' +
+                            '<div class="fw-semibold text-truncate" style="font-size:13px;max-width:260px">' + (item.main_faculty_name || '') + '</div>' +
+                            '<div class="text-muted text-truncate" style="font-size:12px;max-width:260px">' + (item.subject_topic || item.course_name || '') + '</div>' +
+                            '<div class="text-muted" style="font-size:11px">' + (item.from_date || '') + ' &bull; ' + (item.class_session || '') + '</div>' +
+                            '</a>';
+                        list.appendChild(li);
+                    });
+                    if (count > 5) {
+                        var more = document.createElement('li');
+                        more.className = 'text-center text-muted py-1';
+                        more.style.fontSize = '12px';
+                        more.textContent = '+' + (count - 5) + ' more pending';
+                        list.appendChild(more);
+                    }
+
+                    // Show popup once per session
+                    if (!sessionStorage.getItem(POPUP_KEY) && typeof Swal !== 'undefined') {
+                        sessionStorage.setItem(POPUP_KEY, '1');
+                        Swal.fire({
+                            icon: 'warning',
+                            title: 'Pending Feedback',
+                            html: 'You have <strong>' + count + '</strong> pending feedback session' + (count > 1 ? 's' : '') + ' awaiting your response.',
+                            confirmButtonText: 'Give Feedback Now',
+                            confirmButtonColor: '#b30000',
+                            showCancelButton: true,
+                            cancelButtonText: 'Later',
+                        }).then(function (result) {
+                            if (result.isConfirmed) {
+                                window.location.href = feedbackUrl;
+                            }
+                        });
+                    }
+                }
+            })
+            .catch(function (err) { console.warn('Faculty feedback bell error:', err); });
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadFeedbackBell);
+        } else {
+            loadFeedbackBell();
+        }
+    })();
+    </script>
+    @endauth
     <script>
 document.addEventListener('DOMContentLoaded', function () {
     const toggle = document.getElementById('searchToggle');

@@ -326,6 +326,14 @@ function hasRole($role)
 }
 
 /**
+ * Officer Trainee portal user (session Student-OT pseudo-role or Spatie Officer Trainee).
+ */
+function isOfficerTraineeUser(): bool
+{
+    return hasRole('Student-OT') || hasRole('Officer Trainee');
+}
+
+/**
  * Whether the user has at least one Spatie role (user management → assign role).
  */
 function userHasAssignedRoles(): bool
@@ -366,13 +374,15 @@ function isEstateHacAuthority(): bool
 }
 
 /**
- * Training authority: Training Induction Admin, Training MCTP Admin, Training IST, or Estate Admin / Super Admin.
- * DB role names match exactly.
+ * Training authority: Spatie training admin roles plus legacy session role names
+ * (Training-Induction, Training-MCTP, IST) used across sidebar and calendar modules.
  */
 function isTrainingOrEstateAuthority(): bool
 {
     return hasRole('Estate Admin') || hasRole('Super Admin')
-        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST');
+        || hasRole('Training Induction Admin') || hasRole('Training MCTP Admin') || hasRole('Training IST')
+        || hasRole('Training-Induction') || hasRole('Training-MCTP') || hasRole('IST')
+        || hasRole('Training');
 }
 /**
  * Faculty portal / faculty-facing modules (matches menu + CalendarController checks).
@@ -602,6 +612,41 @@ if (!function_exists('get_timetable_faculty_names')) {
     }
 }
 
+if (!function_exists('expected_feedback_count_sql')) {
+    /**
+     * SQL expression for the number of feedbacks EXPECTED for a timetable session.
+     *
+     * Student feedback is collected only for Teaching-role faculty. Each session
+     * stores its faculty in the faculty_details JSON column:
+     *   [{ "faculty_pk": int, "faculty_type": int, "role": string, "feedback": string }, ...]
+     * and the student feedback form lists exactly those entries whose role is
+     * 'Teaching' (CalendarController::studentFeedback). The "expected" count must
+     * match that filter, otherwise Sectional/Administration faculty inflate the
+     * pending count even though no student can ever submit feedback for them.
+     *
+     * Resolution order (per row):
+     *   1. Valid faculty_details JSON -> count of entries with role = 'Teaching'.
+     *   2. Else valid faculty_master JSON array -> its length (legacy rows).
+     *   3. Else -> 1 (legacy scalar faculty_master).
+     *
+     * @param string $alias Timetable table alias used in the query (default 't').
+     * @return string Raw SQL expression, already wrapped in parentheses.
+     */
+    function expected_feedback_count_sql(string $alias = 't'): string
+    {
+        $details = "{$alias}.faculty_details";
+        $master  = "{$alias}.faculty_master";
+
+        return "(CASE
+            WHEN JSON_VALID({$details})
+                THEN COALESCE(JSON_LENGTH(JSON_SEARCH({$details}, 'all', 'Teaching', NULL, '\$[*].role')), 0)
+            WHEN JSON_VALID({$master})
+                THEN JSON_LENGTH({$master})
+            ELSE 1
+        END)";
+    }
+}
+
 /**
  * For employee logins (user_category E) with Internal/Guest Faculty role but no faculty_master row:
  * link an existing faculty by mobile/email, or create a minimal faculty_master linked to employee_master.
@@ -770,7 +815,8 @@ function get_Role_by_course()
         return [-1];
     }
 
-    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds));
+    $epoch = Cache::get('role_by_course_epoch', 1);
+    $cacheKey = 'role_by_course_v2_' . $user->pk . '_' . md5(implode(',', $userRoleIds)) . '_e' . $epoch;
     $role_course = Cache::remember($cacheKey, 600, function () use ($userRoleIds) {
         return DB::table('course_master as cm')
             ->join('roles as r', 'cm.user_role_master_pk', '=', 'r.id')
@@ -781,6 +827,7 @@ function get_Role_by_course()
     if (empty($role_course)) {
         // Non-admin user with roles but no mapped courses should see no data.
         return [-1];
+        // return [-1];
     }
 
     return $role_course;
