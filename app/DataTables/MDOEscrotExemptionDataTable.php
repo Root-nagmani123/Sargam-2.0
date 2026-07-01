@@ -21,7 +21,13 @@ class MDOEscrotExemptionDataTable extends DataTable
             ->editColumn('Time_from', fn($row) => $row->Time_from ?? 'N/A')
             ->editColumn('Time_to', fn($row) => $row->Time_to ?? 'N/A')
             ->editColumn('course_name', fn($row) => optional($row->courseMaster)->course_name ?? 'N/A')
-            ->editColumn('mdo_name', fn($row) => optional($row->mdoDutyTypeMaster)->mdo_duty_type_name ?? 'N/A')
+            ->editColumn('mdo_name', function ($row) {
+                $name = optional($row->mdoDutyTypeMaster)->mdo_duty_type_name ?? 'N/A';
+                if (!empty($row->duty_other)) {
+                    $name .= ' (' . e($row->duty_other) . ')';
+                }
+                return $name;
+            })
             ->editColumn('faculty_name', fn($row) => $row->faculty_names !== '' ? $row->faculty_names : 'N/A')
             ->editColumn('Remark', fn($row) => $row->Remark ?? 'N/A')
             ->filterColumn('student_name', function ($query, $keyword) {
