@@ -176,7 +176,7 @@
                             <tr>
                                 <td colspan="8" class="text-center py-5 text-muted">
                                     <i class="material-symbols-rounded d-block mb-3 text-primary" style="font-size: 4rem;">inbox</i>
-                                    <div class="fw-semibold fs-5 mb-1">No bills found</div>
+                                    <div class="fw-semibold fs-5 mb-1">No Generated Mess Bills</div>
                                     <div class="small">Try another date range, or confirm your mess account is linked to your employee or student record.</div>
                                 </td>
                             </tr>
@@ -215,7 +215,7 @@
     'searchPlaceholder' => 'Search invoice no. or type',
     'orderColumn' => [[0, 'asc']],
     'actionColumnIndex' => 7,
-    'infoLabel' => 'bills',
+    'infoLabel' => 'generated mess bills',
 ])
 @endsection
 
