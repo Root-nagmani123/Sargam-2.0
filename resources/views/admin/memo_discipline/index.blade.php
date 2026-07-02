@@ -77,6 +77,13 @@
                                 <label class="form-label">Discipline Marks <span class="text-danger">*</span></label>
                                 <input type="number" step="0.01" min="0" class="form-control" name="discipline_marks" id="gmMarks" placeholder="eg. 24.50" required>
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Template</label>
+                                <select class="form-select" name="memo_notice_template_pk" id="gmTemplate">
+                                    <option value="">Select Discipline first</option>
+                                </select>
+                                <small class="text-muted">Notice template to use. Options depend on the selected discipline.</small>
+                            </div>
                             <div class="col-12">
                                 <label class="form-label">Select Students <span class="text-danger">*</span></label>
                                 <button type="button" class="gm-picker-trigger" id="gmSelectStudents">
@@ -457,22 +464,25 @@
                                 <!-- Action -->
                                 @if(! hasRole('Officer Trainee'))
                                 <td class="text-end">
-                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super
-                                    Admin')
-                                    || hasRole('Training Induction Admin'))
+                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin'))
                                     @if($memo->status == 1)
-                                    <button class="btn btn-sm btn-outline-primary" data-discipline="{{ $memo->pk }}"
+                                    <button class="btn btn-sm btn-outline-primary border-0 bg-transparent text-primary" data-discipline="{{ $memo->pk }}"
                                         id="sendMemoBtn">
-                                        <i class="bi bi-envelope-paper me-1"></i> Send
+                                        <i class="material-icons material-symbols-rounded fs-5">send</i>
                                     </button>
                                     @elseif($memo->status == 2)
                                     <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
-                                        class="btn btn-sm btn-outline-danger">
-                                        <i class="bi bi-x-circle me-1"></i> Close
+                                        class="btn btn-sm btn-outline-danger border-0 bg-transparent text-primary">
+                                        <i class="material-icons material-symbols-rounded fs-5">close</i> Close
                                     </a>
                                     @else
                                     <span class="text-muted small">—</span>
                                     @endif
+                                    {{-- Delete: admins/faculty only, hard-deletes the discipline memo + its chat --}}
+                                    <a href="javascript:void(0)" class="btn btn-sm btn-outline-danger discipline-delete-record ms-1 border-0 bg-transparent text-primary"
+                                        data-id="{{ $memo->pk }}" title="Delete">
+                                        <i class="material-icons material-symbols-rounded fs-5">delete</i>
+                                    </a>
                                     @else
                                     <span class="text-muted small">—</span>
                                     @endif
@@ -753,9 +763,10 @@ $(document).ready(function() {
 <script>
 /* ── Generate Discipline Memo modal + Student picker ── */
 $(function () {
-    var routeStudents = "{{ route('memo.discipline.getStudentByCourse') }}";
-    var routeMark     = "{{ route('memo.discipline.getMarkDeduction') }}";
-    var todayStr      = "{{ date('Y-m-d') }}";
+    var routeStudents  = "{{ route('memo.discipline.getStudentByCourse') }}";
+    var routeMark      = "{{ route('memo.discipline.getMarkDeduction') }}";
+    var routeTemplates = "{{ route('memo.discipline.templatesByDiscipline') }}";
+    var todayStr       = "{{ date('Y-m-d') }}";
 
     var gmDefaulters = [];   // [{pk, name}] for the current course
     var gmSelected   = [];   // array of selected pks (strings)
@@ -823,6 +834,7 @@ $(function () {
         gmSelected = [];
         $('#gmDiscipline').html('<option value="">Select Discipline</option>');
         $('#gmMarks').val('');
+        $('#gmTemplate').html('<option value="">Select Discipline first</option>');
         syncSelection();
         updatePreview();
         if (!courseId) return;
@@ -839,6 +851,32 @@ $(function () {
         });
     });
 
+    function loadTemplates() {
+        var course = $('#gmCourse').val();
+        var disc   = $('#gmDiscipline').val();
+        var $t = $('#gmTemplate');
+        if (!course || !disc) {
+            $t.html('<option value="">Select Discipline first</option>');
+            return;
+        }
+        $t.html('<option value="">Loading templates...</option>');
+        $.get(routeTemplates, { course_id: course, discipline_master_pk: disc }).done(function (res) {
+            $t.empty();
+            if (Array.isArray(res) && res.length) {
+                res.forEach(function (t) {
+                    var label = t.title + (t.discipline_master_pk ? '' : ' (course default)');
+                    $t.append($('<option>').val(t.pk).text(label));
+                });
+                // Discipline-specific template is ordered first — preselect it.
+                $t.val(String(res[0].pk));
+            } else {
+                $t.append('<option value="">No template configured</option>');
+            }
+        }).fail(function () {
+            $t.html('<option value="">Failed to load templates</option>');
+        });
+    }
+
     $('#gmDiscipline').on('change', function () {
         var disc = $(this).val();
         var course = $('#gmCourse').val();
@@ -847,8 +885,10 @@ $(function () {
                 $('#gmMarks').val(typeof res === 'number' ? res : (res || ''));
                 updatePreview();
             });
+            loadTemplates();
         } else {
             $('#gmMarks').val('');
+            $('#gmTemplate').html('<option value="">Select Discipline first</option>');
             updatePreview();
         }
     });
@@ -927,6 +967,40 @@ $(function () {
             e.preventDefault();
             alert('Please select at least one student.');
         }
+    });
+
+    /* ── Delete a discipline memo (admins only) ── */
+    $(document).on('click', '.discipline-delete-record', function () {
+        var id = $(this).data('id');
+        if (!id) { return; }
+
+        Swal.fire({
+            title: 'Delete this discipline memo?',
+            text: 'This will permanently remove the memo and its conversation. This cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel',
+        }).then(function (result) {
+            if (!result.isConfirmed) { return; }
+
+            var url = "{{ route('memo.discipline.destroy', ['id' => '__ID__']) }}".replace('__ID__', id);
+
+            $.ajax({
+                url: url,
+                type: 'DELETE',
+                data: { _token: "{{ csrf_token() }}" },
+                success: function (res) {
+                    toastr.success(res.message || 'Deleted successfully.');
+                    setTimeout(function () { window.location.reload(); }, 600);
+                },
+                error: function (xhr) {
+                    toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to delete.');
+                }
+            });
+        });
     });
 });
 </script>

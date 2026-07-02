@@ -24,6 +24,7 @@ class MemoDiscipline extends Model
         'status',
         'conclusion_type_pk',
         'conclusion_remark',
+        'memo_notice_template_pk',
         'created_date',
         'modified_date'
     ];
@@ -57,6 +58,23 @@ public function template()
 {
     return $this->hasOne(MemoNoticeTemplate::class, 'course_master_pk', 'course_master_pk')
         ->where('memo_notice_type', 'Discipline Memo');
+}
+
+/**
+ * The exact template chosen at send time (pinned). Falls back to the course-level
+ * template() when a memo predates this feature.
+ */
+public function chosenTemplate()
+{
+    return $this->belongsTo(MemoNoticeTemplate::class, 'memo_notice_template_pk', 'pk');
+}
+
+/**
+ * Effective template for display: the pinned one if set, else the course-level default.
+ */
+public function getResolvedTemplateAttribute()
+{
+    return $this->chosenTemplate ?: $this->template;
 }
 
 }

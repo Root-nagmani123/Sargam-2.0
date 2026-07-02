@@ -93,7 +93,12 @@ class MemoNoticeController extends Controller
         $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name', 'start_year', 'end_date']);
 
-        return view('admin.courseAttendanceNoticeMap.memo_notice_create', compact('courses'));
+        // Disciplines (for the discipline-specific "Discipline Memo" template); filtered by course client-side.
+        $disciplines = \App\Models\DisciplineMaster::where('active_inactive', 1)
+            ->orderBy('discipline_name')
+            ->get(['pk', 'discipline_name', 'course_master_pk']);
+
+        return view('admin.courseAttendanceNoticeMap.memo_notice_create', compact('courses', 'disciplines'));
     }
 
 
@@ -102,23 +107,35 @@ class MemoNoticeController extends Controller
     try {
         $validated = $request->validate([
             'course_master_pk' => 'nullable|integer',
+            'discipline_master_pk' => 'nullable|integer|exists:discipline_master,pk|required_if:memo_notice_type,Discipline Memo',
             'title' => 'required|string|max:255',
             'director' => 'required|string|max:255',
             'designation' => 'required|string|max:255',
             'content' => 'required|string',
             'memo_notice_type' => 'required|string|in:Memo,Notice,Discipline Memo',
             'signature_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ], [
+            'discipline_master_pk.required_if' => 'Please select a discipline for a Discipline Memo template.',
         ]);
 
-        // Prevent Duplicate Active Memo/Notice
-        $alreadyExists = MemoNoticeTemplate::where('course_master_pk', $validated['course_master_pk'])
-            ->where('memo_notice_type', $validated['memo_notice_type'])
-            ->where('active_inactive', 1)
-            ->exists();
+        // A discipline only applies to Discipline Memo templates; other types stay course-wide.
+        $disciplinePk = $validated['memo_notice_type'] === 'Discipline Memo'
+            ? ($validated['discipline_master_pk'] ?? null)
+            : null;
 
-        if ($alreadyExists) {
-            return back()->withInput()->with('error',
-                'An active ' . $validated['memo_notice_type'] . ' already exists for this course.');
+        // Notice/Memo may have several templates per course (picked at send time);
+        // only Discipline Memo is limited to one active template per course + discipline.
+        if ($validated['memo_notice_type'] === 'Discipline Memo') {
+            $alreadyExists = MemoNoticeTemplate::where('course_master_pk', $validated['course_master_pk'])
+                ->where('memo_notice_type', 'Discipline Memo')
+                ->where('active_inactive', 1)
+                ->where('discipline_master_pk', $disciplinePk)
+                ->exists();
+
+            if ($alreadyExists) {
+                return back()->withInput()->with('error',
+                    'An active Discipline Memo already exists for this course and discipline.');
+            }
         }
 
         $signaturePath = null;
@@ -128,6 +145,7 @@ class MemoNoticeController extends Controller
 
         MemoNoticeTemplate::create([
             'course_master_pk' => $validated['course_master_pk'] ?: null,
+            'discipline_master_pk' => $disciplinePk,
             'title' => $validated['title'],
             'director_name' => $validated['director'],
             'director_designation' => $validated['designation'],
@@ -179,7 +197,11 @@ class MemoNoticeController extends Controller
         $courses = $courses->orderBy('course_name')
             ->get(['pk', 'course_name']);
 
-        return view('admin.courseAttendanceNoticeMap.memo_notice_edit', compact('template', 'courses'));
+        $disciplines = \App\Models\DisciplineMaster::where('active_inactive', 1)
+            ->orderBy('discipline_name')
+            ->get(['pk', 'discipline_name', 'course_master_pk']);
+
+        return view('admin.courseAttendanceNoticeMap.memo_notice_edit', compact('template', 'courses', 'disciplines'));
     }
 
 
@@ -191,27 +213,40 @@ class MemoNoticeController extends Controller
 
         $validated = $request->validate([
             'course_master_pk' => 'nullable|integer',
+            'discipline_master_pk' => 'nullable|integer|exists:discipline_master,pk|required_if:memo_notice_type,Discipline Memo',
             'title' => 'required|string|max:255',
             'director' => 'required|string|max:255',
             'designation' => 'required|string|max:255',
             'content' => 'required|string',
             'memo_notice_type' => 'required|string|in:Memo,Notice,Discipline Memo',
             'signature_image' => 'nullable|image|mimes:jpeg,png,jpg,gif|max:2048',
+        ], [
+            'discipline_master_pk.required_if' => 'Please select a discipline for a Discipline Memo template.',
         ]);
 
-        $alreadyExists = MemoNoticeTemplate::where('course_master_pk', $validated['course_master_pk'])
-            ->where('memo_notice_type', $validated['memo_notice_type'])
-            ->where('active_inactive', 1)
-            ->where('pk', '!=', $template->pk)
-            ->exists();
+        $disciplinePk = $validated['memo_notice_type'] === 'Discipline Memo'
+            ? ($validated['discipline_master_pk'] ?? null)
+            : null;
 
-        if ($alreadyExists) {
-            return back()->withInput()->with('error',
-                'An active ' . $validated['memo_notice_type'] . ' already exists for this course.');
+        // Only Discipline Memo is limited to one active template per course + discipline;
+        // Notice/Memo may have several per course.
+        if ($validated['memo_notice_type'] === 'Discipline Memo') {
+            $alreadyExists = MemoNoticeTemplate::where('course_master_pk', $validated['course_master_pk'])
+                ->where('memo_notice_type', 'Discipline Memo')
+                ->where('active_inactive', 1)
+                ->where('pk', '!=', $template->pk)
+                ->where('discipline_master_pk', $disciplinePk)
+                ->exists();
+
+            if ($alreadyExists) {
+                return back()->withInput()->with('error',
+                    'An active Discipline Memo already exists for this course and discipline.');
+            }
         }
 
         $updateData = [
             'course_master_pk' => $validated['course_master_pk'] ?: null,
+            'discipline_master_pk' => $disciplinePk,
             'title' => $validated['title'],
             'director_name' => $validated['director'],
             'director_designation' => $validated['designation'],

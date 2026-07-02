@@ -73,6 +73,13 @@
                                 <input type="text" class="form-control" id="anFacultyName" placeholder="Auto-filled from topic" readonly>
                                 <input type="hidden" name="faculty_master_pk" id="anFacultyPk">
                             </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Template</label>
+                                <select class="form-select" name="memo_notice_template_pk" id="anTemplate">
+                                    <option value="">Select Course first</option>
+                                </select>
+                                <small class="text-muted">Notice template to use. Depends on the course.</small>
+                            </div>
                         </div>
 
                         <h6 class="an-section-title">Student List (Late &amp; Absentee)</h6>
@@ -303,6 +310,15 @@
                                     @else
                                     <span class="mnm-action disabled" title="Memo not available yet"><i class="bi bi-file-earmark"></i><span>Memo</span></span>
                                     @endif
+
+                                    {{-- Delete: admins/faculty only, hard-deletes the notice/memo + its chat --}}
+                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin'))
+                                    <a href="javascript:void(0)" class="mnm-action mnm-delete-record" style="color:#d92d20;"
+                                        data-id="{{ $isNotice ? $memo->notice_id : $memo->memo_id }}"
+                                        data-type="{{ $isNotice ? 'notice' : 'memo' }}" title="Delete">
+                                        <i class="bi bi-trash3"></i><span>Delete</span>
+                                    </a>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -470,6 +486,11 @@
                                 @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
+                                <label for="memoTemplate" class="form-label">Template</label>
+                                <select name="memo_notice_template_pk" id="memoTemplate" class="form-select">
+                                    <option value="">Select Template</option>
+                                </select>
+                                <small class="text-muted">Memo template to use. Depends on the course.</small>
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
@@ -719,11 +740,26 @@ $(document).ready(function() {
 
     initMemoChoices();
 
+    // Load Memo templates for a course into the Generate Memo picker (optionally preselect one).
+    function loadMemoTemplates(courseId, selectedPk) {
+        var $t = $('#memoTemplate');
+        $t.html('<option value="">Select Template</option>');
+        if (!courseId) { return; }
+        $.get("{{ route('memo.notice.management.getTemplatesByType') }}", { course_id: courseId, type: 'Memo' })
+            .done(function (res) {
+                (res || []).forEach(function (tpl) {
+                    $t.append($('<option>').val(tpl.pk).text(tpl.title));
+                });
+                if (selectedPk) { $t.val(String(selectedPk)); }
+                else if ((res || []).length === 1) { $t.val(String(res[0].pk)); }
+            });
+    }
+
     // Filter form submission on change
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
         $('#filterForm').submit();
     });
-    
+
     // Handle Generate Memo button (editable mode)
     $('.generate-memo-btn').on('click', function() {
         let memoId = $(this).data('id');
@@ -758,6 +794,9 @@ $(document).ready(function() {
                 // Set memo_date to the notice date by default
                 const today = new Date().toISOString().split('T')[0];
                 $('#memo_date').val(today);
+
+                // Load Memo templates for this course so the sender can pick one.
+                loadMemoTemplates(res.course_master_pk, null);
             },
             error: function() {
                 alert('Something went wrong!');
@@ -954,6 +993,7 @@ $(function () {
     var routeTtDetails = "{{ route('memo.notice.management.gettimetableDetailsBytopic') }}";
     var routeStudents  = "{{ route('memo.notice.management.getStudentAttendanceBytopic') }}";
     var routeTpl       = "{{ route('memo.notice.management.getTemplateByCourse') }}";
+    var routeTpl2      = "{{ route('memo.notice.management.getTemplatesByType') }}";
     var csrf           = "{{ csrf_token() }}";
     var todayStr       = "{{ date('Y-m-d') }}";
 
@@ -1050,27 +1090,54 @@ $(function () {
             });
     }
 
-    function loadTemplate(courseId) {
-        if (!courseId) { $('#anPreviewWrap, #anPreviewNone').hide(); return; }
-        $.get(routeTpl, { course_id: courseId, type: 'Notice' }).done(function (tpl) {
-            if (tpl && (tpl.content || tpl.director_name)) {
-                $('#anTplCourse').text($('#anCourse option:selected').text());
-                $('#anTplType').text('SHOW CAUSE NOTICE');
-                $('#anTplDate').text((new Date()).toLocaleDateString('en-GB'));
-                $('#anTplContent').html(tpl.content || '');
-                $('#anTplDirector').text(tpl.director_name || '');
-                $('#anTplDesig').text(tpl.director_designation || '');
-                $('#anPreviewNone').hide();
-                $('#anPreviewWrap').show();
-            } else {
-                $('#anPreviewWrap').hide();
-                $('#anPreviewNone').show();
-            }
-        }).fail(function () {
+    var anTemplateCache = [];   // Notice templates for the selected course
+
+    function renderTemplatePreview(tpl) {
+        if (tpl && (tpl.content || tpl.director_name)) {
+            $('#anTplCourse').text($('#anCourse option:selected').text());
+            $('#anTplType').text('SHOW CAUSE NOTICE');
+            $('#anTplDate').text((new Date()).toLocaleDateString('en-GB'));
+            $('#anTplContent').html(tpl.content || '');
+            $('#anTplDirector').text(tpl.director_name || '');
+            $('#anTplDesig').text(tpl.director_designation || '');
+            $('#anPreviewNone').hide();
+            $('#anPreviewWrap').show();
+        } else {
             $('#anPreviewWrap').hide();
             $('#anPreviewNone').show();
+        }
+    }
+
+    // Populate the Notice template picker for a course; preview reflects the selected one.
+    function loadTemplate(courseId) {
+        var $sel = $('#anTemplate');
+        anTemplateCache = [];
+        $sel.html('<option value="">Select Course first</option>');
+        if (!courseId) { $('#anPreviewWrap, #anPreviewNone').hide(); return; }
+        $.get(routeTpl2, { course_id: courseId, type: 'Notice' }).done(function (list) {
+            anTemplateCache = list || [];
+            if (anTemplateCache.length) {
+                $sel.empty();
+                anTemplateCache.forEach(function (tpl) {
+                    $sel.append($('<option>').val(tpl.pk).text(tpl.title));
+                });
+                $sel.val(String(anTemplateCache[0].pk));
+                renderTemplatePreview(anTemplateCache[0]);
+            } else {
+                $sel.html('<option value="">No template configured</option>');
+                renderTemplatePreview(null);
+            }
+        }).fail(function () {
+            $sel.html('<option value="">Failed to load templates</option>');
+            renderTemplatePreview(null);
         });
     }
+
+    $('#anTemplate').on('change', function () {
+        var pk = String($(this).val() || '');
+        var tpl = anTemplateCache.find(function (t) { return String(t.pk) === pk; });
+        renderTemplatePreview(tpl || null);
+    });
 
     // Default the date when the modal opens.
     $('#addNoticeModal').on('show.bs.modal', function () {
@@ -1128,6 +1195,49 @@ $(function () {
         var $h = $('#anHiddenInputs').empty();
         pks.forEach(function (pk) {
             $h.append($('<input type="hidden" name="selected_student_list[]">').val(pk));
+        });
+    });
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+/* ── Delete a notice/memo row (admins only) ── */
+$(function () {
+    $(document).on('click', '.mnm-delete-record', function () {
+        var id = $(this).data('id');
+        var type = ($(this).data('type') || 'notice').toString();
+        if (!id) { return; }
+
+        var label = type === 'memo' ? 'memo' : 'notice';
+        Swal.fire({
+            title: 'Delete this ' + label + '?',
+            text: 'This will permanently remove the ' + label + ' and its conversation. This cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel',
+        }).then(function (result) {
+            if (!result.isConfirmed) { return; }
+
+            var url = "{{ route('memo.notice.management.destroy', ['id' => '__ID__', 'type' => '__TYPE__']) }}"
+                .replace('__ID__', id).replace('__TYPE__', type);
+
+            $.ajax({
+                url: url,
+                type: 'DELETE',
+                data: { _token: "{{ csrf_token() }}" },
+                success: function (res) {
+                    toastr.success(res.message || 'Deleted successfully.');
+                    setTimeout(function () { window.location.reload(); }, 600);
+                },
+                error: function (xhr) {
+                    toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to delete.');
+                }
+            });
         });
     });
 });

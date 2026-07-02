@@ -705,6 +705,30 @@ public function getTemplateByCourse(Request $request)
     return response()->json($template);
 }
 
+/**
+ * List active templates for a course + type ('Notice' or 'Memo') so the sender can
+ * pick one at send time. Returns [{pk, title}].
+ */
+public function getTemplatesByType(Request $request)
+{
+    $courseId = $request->course_id;
+    $type     = $request->type === 'Memo' ? 'Memo' : 'Notice';
+
+    if (! $courseId) {
+        return response()->json([]);
+    }
+
+    $templates = DB::table('memo_notice_templates')
+        ->where('course_master_pk', $courseId)
+        ->where('memo_notice_type', $type)
+        ->where('active_inactive', 1)
+        ->whereNull('deleted_at')
+        ->orderBy('title')
+        ->get(['pk', 'title', 'content', 'director_name', 'director_designation']);
+
+    return response()->json($templates);
+}
+
 public function getSubjectByCourse(Request $request)
 {
     $courseId = $request->course_id;
@@ -827,10 +851,8 @@ $memo_conclusion_master = collect(); // default empty collection
     ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
     ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
     ->leftJoin('memo_notice_templates as mnt', function($join) {
-        $join->on('mnt.course_master_pk', '=', 'sns.course_master_pk')
-             ->where('mnt.memo_notice_type', 'Notice')
-             ->where('mnt.active_inactive', 1)
-             ->whereNull('mnt.deleted_at');
+        // Prefer the template pinned at send time; else the latest active Notice template for the course.
+        $join->on(DB::raw('mnt.pk'), '=', DB::raw("COALESCE(sns.memo_notice_template_pk, (SELECT t2.pk FROM memo_notice_templates t2 WHERE t2.course_master_pk = sns.course_master_pk AND t2.memo_notice_type = 'Notice' AND t2.active_inactive = 1 AND t2.deleted_at IS NULL ORDER BY t2.pk DESC LIMIT 1))"));
     })
     ->where('sns.pk', $id)
     ->select(
@@ -881,10 +903,8 @@ $memo_conclusion_master = collect(); // default empty collection
     ->leftJoin('course_master as cm', 'sms.course_master_pk', '=', 'cm.pk')
     ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
     ->leftJoin('memo_notice_templates as mnt', function($join) {
-        $join->on('mnt.course_master_pk', '=', 'sms.course_master_pk')
-             ->where('mnt.memo_notice_type', 'Memo')
-             ->where('mnt.active_inactive', 1)
-             ->whereNull('mnt.deleted_at');
+        // Prefer the template pinned at send time; else the latest active Memo template for the course.
+        $join->on(DB::raw('mnt.pk'), '=', DB::raw("COALESCE(sms.memo_notice_template_pk, (SELECT t2.pk FROM memo_notice_templates t2 WHERE t2.course_master_pk = sms.course_master_pk AND t2.memo_notice_type = 'Memo' AND t2.active_inactive = 1 AND t2.deleted_at IS NULL ORDER BY t2.pk DESC LIMIT 1))"));
     })
     ->where('sms.pk', $id)
     ->select(
@@ -1001,14 +1021,20 @@ public function getStudentAttendanceBytopic(Request $request)
             ->pluck('student_pk')
             ->toArray();
 
-        // Query to get students with Late (2) or Absent (3) status
-        // Handle both integer and string status values
+        // Students marked Late (label '2') or Absent (label '3') for this session.
+        // NOTE: course_student_attendance.status is ENUM('0','1',...,'7'). Because the
+        // labels are numeric strings, a plain `= 3` / `IN (2,3)` compares against the
+        // ENUM *index* (off-by-one) and silently drops Absent. CAST(... AS CHAR) forces
+        // a label comparison so both Late and Absent are matched reliably.
+        //
+        // The attendance row itself is the source of truth for who was late/absent in
+        // this timetable session, so we no longer inner-join student_course_group_map
+        // (that group-PK-only join could drop absent defaulters whose group row was
+        // inactive/mismatched, which is what hid them from this list).
         $attendance = DB::table('course_student_attendance as a')
                 ->join('student_master as s', 'a.Student_master_pk', '=', 's.pk')
-                ->join('student_course_group_map as scgm', 'a.group_type_master_course_master_map_pk', '=', 'scgm.group_type_master_course_master_map_pk')
                 ->where('a.timetable_pk', $topicId)
-                ->where('scgm.active_inactive', 1)
-                ->whereRaw("TRIM(a.status) REGEXP '^(2|3)$'")
+                ->whereRaw("CAST(a.status AS CHAR) IN ('2', '3')")
                 ->whereNotNull('s.pk')
                 ->whereNotNull('s.display_name')
                 ->where('s.display_name', '!=', '')
@@ -1074,6 +1100,7 @@ public function store_memo_notice(Request $request)
         'selected_student_list' => 'required|array|min:1',
         'Remark' => 'nullable|string|max:500',
         'submission_type' => 'required|in:1,2',
+        'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
     ]);
 
     // ✅ Fetch all required student info in one query
@@ -1114,6 +1141,7 @@ public function store_memo_notice(Request $request)
                 'faculty_master_pk'          => $validated['faculty_master_pk'],
                 'course_student_attendance_pk' => $studentId->course_attendance_pk,
                 'message'                    => $validated['Remark'],
+                'memo_notice_template_pk'    => $validated['memo_notice_template_pk'] ?? null,
                 'notice_memo'                => $validated['submission_type'],
             ];
           
@@ -1309,6 +1337,66 @@ public function deleteMemoNotice($id)
     } catch (\Exception $e) {
         return redirect()->back()->with('error', 'Failed to delete Memo/Notice. Please try again.');
     }
+}
+
+/**
+ * Hard-delete a notice or memo row (with its conversation messages + uploaded files).
+ * Deleting a notice also removes any memos that were generated from it.
+ */
+public function destroyRecord($id, $type)
+{
+    if (! $this->userCanManageMemoNotice()) {
+        return response()->json(['success' => false, 'message' => 'You are not authorized to delete this record.'], 403);
+    }
+
+    $type = $type === 'memo' ? 'memo' : 'notice';
+
+    try {
+        DB::transaction(function () use ($id, $type) {
+            if ($type === 'memo') {
+                $this->deleteMemoWithConversation((int) $id);
+            } else {
+                // A notice can spawn memos; remove those (and their chats) first to avoid orphans.
+                $memoIds = DB::table('student_memo_status')
+                    ->where('student_notice_status_pk', $id)
+                    ->pluck('pk');
+                foreach ($memoIds as $memoId) {
+                    $this->deleteMemoWithConversation((int) $memoId);
+                }
+
+                $this->deleteConversationFiles('notice_message_student_decip_incharge', 'student_notice_status_pk', (int) $id);
+                DB::table('notice_message_student_decip_incharge')->where('student_notice_status_pk', $id)->delete();
+                DB::table('student_notice_status')->where('pk', $id)->delete();
+            }
+        });
+
+        return response()->json(['success' => true, 'message' => ucfirst($type) . ' deleted successfully.']);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => 'Failed to delete the record. Please try again.'], 500);
+    }
+}
+
+protected function deleteMemoWithConversation(int $memoId): void
+{
+    $this->deleteConversationFiles('memo_message_student_decip_incharge', 'student_memo_status_pk', $memoId);
+    DB::table('memo_message_student_decip_incharge')->where('student_memo_status_pk', $memoId)->delete();
+    DB::table('student_memo_status')->where('pk', $memoId)->delete();
+}
+
+protected function deleteConversationFiles(string $table, string $fk, int $id): void
+{
+    $files = DB::table($table)->where($fk, $id)->pluck('doc_upload')->filter();
+    foreach ($files as $file) {
+        if ($file && Storage::disk('public')->exists($file)) {
+            Storage::disk('public')->delete($file);
+        }
+    }
+}
+
+protected function userCanManageMemoNotice(): bool
+{
+    return hasRole('Internal Faculty') || hasRole('Guest Faculty')
+        || hasRole('Super Admin') || hasRole('Training Induction Admin');
 }
 public function memo_notice_conversation(Request $request)
 {
@@ -1832,10 +1920,8 @@ if (!$id || !is_numeric($id)) {
             ->leftJoin('course_master as cm', 'sns.course_master_pk', '=', 'cm.pk')
             ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
             ->leftJoin('memo_notice_templates as mnt', function($join) {
-                $join->on('mnt.course_master_pk', '=', 'sns.course_master_pk')
-                     ->where('mnt.memo_notice_type', 'Notice')
-                     ->where('mnt.active_inactive', 1)
-                     ->whereNull('mnt.deleted_at');
+                // Prefer the template pinned at send time; else the latest active Notice template for the course.
+                $join->on(DB::raw('mnt.pk'), '=', DB::raw("COALESCE(sns.memo_notice_template_pk, (SELECT t2.pk FROM memo_notice_templates t2 WHERE t2.course_master_pk = sns.course_master_pk AND t2.memo_notice_type = 'Notice' AND t2.active_inactive = 1 AND t2.deleted_at IS NULL ORDER BY t2.pk DESC LIMIT 1))"));
             })
             ->where('sns.pk', $id)
             ->select(
@@ -1883,10 +1969,8 @@ if (!$id || !is_numeric($id)) {
             ->leftJoin('course_master as cm', 'sms.course_master_pk', '=', 'cm.pk')
             ->leftJoin('faculty_master as fm', DB::raw('fm.pk'), '=', DB::raw("CASE WHEN sns.faculty_master_pk LIKE '[%' THEN JSON_UNQUOTE(JSON_EXTRACT(sns.faculty_master_pk, '$[0]')) ELSE sns.faculty_master_pk END"))
             ->leftJoin('memo_notice_templates as mnt', function($join) {
-                $join->on('mnt.course_master_pk', '=', 'sms.course_master_pk')
-                     ->where('mnt.memo_notice_type', 'Memo')
-                     ->where('mnt.active_inactive', 1)
-                     ->whereNull('mnt.deleted_at');
+                // Prefer the template pinned at send time; else the latest active Memo template for the course.
+                $join->on(DB::raw('mnt.pk'), '=', DB::raw("COALESCE(sms.memo_notice_template_pk, (SELECT t2.pk FROM memo_notice_templates t2 WHERE t2.course_master_pk = sms.course_master_pk AND t2.memo_notice_type = 'Memo' AND t2.active_inactive = 1 AND t2.deleted_at IS NULL ORDER BY t2.pk DESC LIMIT 1))"));
             })
             ->where('sms.pk', $id)
             ->select(
@@ -2498,6 +2582,7 @@ public function store_memo_status(Request $request)
         'date_memo_notice'               => 'required|date',
         'venue'                          => 'required|integer',
         'meeting_time'                   => 'required|date_format:H:i',
+        'memo_notice_template_pk'        => 'nullable|exists:memo_notice_templates,pk',
         'Remark'                         => 'nullable|string',
     ]);
 
@@ -2512,6 +2597,7 @@ public function store_memo_status(Request $request)
         'date'                            => $validated['date_memo_notice'],
         'start_time'                      => $validated['meeting_time'],
         'message'                         => $validated['Remark'] ?? null,
+        'memo_notice_template_pk'         => $validated['memo_notice_template_pk'] ?? null,
         'created_date'                      => now(),
         'modified_date'                      => now(),
         'status'                      => 1,
@@ -2724,7 +2810,16 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
             ->orderBy('sm.display_name')
             ->get();
 
-        return view('admin.courseAttendanceNoticeMap.partials.notice_list_modal', compact('students', 'courseGroup', 'group_pk', 'course_pk', 'timetable_pk'));
+        // Notice templates for this course — offered as a picker at send time.
+        $noticeTemplates = DB::table('memo_notice_templates')
+            ->where('course_master_pk', $course_pk)
+            ->where('memo_notice_type', 'Notice')
+            ->where('active_inactive', 1)
+            ->whereNull('deleted_at')
+            ->orderBy('title')
+            ->get(['pk', 'title']);
+
+        return view('admin.courseAttendanceNoticeMap.partials.notice_list_modal', compact('students', 'courseGroup', 'group_pk', 'course_pk', 'timetable_pk', 'noticeTemplates'));
     }
     function notice_direct_save(Request $request){
        
@@ -2736,13 +2831,14 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
             'venue_id' => 'required',
             'class_session_master_pk' => 'required',
             'faculty_master_pk' => 'required',
+            'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
             'selected_student_list' => 'required|array',
-            
-            
-        ]);
-        
 
-        
+
+        ]);
+
+
+
         foreach ($validated['selected_student_list'] as $studentId) {
             $data[] = [
                 'course_master_pk'           => $validated['course_master_pk'],
@@ -2754,6 +2850,7 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
                 'class_session_master_pk'    => $validated['class_session_master_pk'],
                 'faculty_master_pk'          => $validated['faculty_master_pk'],
                 'course_student_attendance_pk' =>$request->input('attendance_pk_'.$studentId),
+                'memo_notice_template_pk'    => $validated['memo_notice_template_pk'] ?? null,
                 'notice_memo'                => 1,
             ];
 

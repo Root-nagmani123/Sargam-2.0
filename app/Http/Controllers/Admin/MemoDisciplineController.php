@@ -110,6 +110,43 @@ class MemoDisciplineController extends Controller
 }
 
 /**
+ * Hard-delete a discipline memo along with its conversation messages and uploaded files.
+ */
+public function destroy($id)
+{
+    if (! (hasRole('Internal Faculty') || hasRole('Guest Faculty')
+        || hasRole('Super Admin') || hasRole('Training Induction Admin'))) {
+        return response()->json(['success' => false, 'message' => 'You are not authorized to delete this record.'], 403);
+    }
+
+    $memo = MemoDiscipline::find($id);
+    if (! $memo) {
+        return response()->json(['success' => false, 'message' => 'Discipline memo not found.'], 404);
+    }
+
+    try {
+        DB::transaction(function () use ($id) {
+            $files = DB::table('discipline_message_student_decip_incharge')
+                ->where('discipline_memo_status_pk', $id)
+                ->pluck('doc_upload')
+                ->filter();
+            foreach ($files as $file) {
+                if ($file && Storage::disk('public')->exists($file)) {
+                    Storage::disk('public')->delete($file);
+                }
+            }
+
+            DB::table('discipline_message_student_decip_incharge')->where('discipline_memo_status_pk', $id)->delete();
+            DB::table('discipline_memo_status')->where('pk', $id)->delete();
+        });
+
+        return response()->json(['success' => true, 'message' => 'Discipline memo deleted successfully.']);
+    } catch (\Exception $e) {
+        return response()->json(['success' => false, 'message' => 'Failed to delete the discipline memo. Please try again.'], 500);
+    }
+}
+
+/**
  * Download the Send Discipline Memo listing as a CSV.
  * Same filters/dataset as index() (minus pagination), in the mess-style layout:
  * a title block (report name + applied filters), then the column-header row, then data rows.
@@ -334,14 +371,47 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         }
 
         return response()->json($discipline->mark_deduction);
-        
+
     }
+
+    /**
+     * Templates offered when generating a discipline memo: active "Discipline Memo"
+     * templates for the course that either target the chosen discipline or are
+     * course-wide (discipline_master_pk null) as a fallback. Discipline-specific first.
+     */
+    function getTemplatesByDiscipline(Request $request)
+    {
+        $courseId     = $request->course_id;
+        $disciplineId = $request->discipline_master_pk;
+
+        if (!$courseId) {
+            return response()->json([]);
+        }
+
+        $templates = MemoNoticeTemplate::query()
+            ->where('memo_notice_type', 'Discipline Memo')
+            ->where('active_inactive', 1)
+            ->whereNull('deleted_at')
+            ->where('course_master_pk', $courseId)
+            ->where(function ($q) use ($disciplineId) {
+                $q->whereNull('discipline_master_pk');
+                if ($disciplineId) {
+                    $q->orWhere('discipline_master_pk', $disciplineId);
+                }
+            })
+            ->orderByRaw('discipline_master_pk IS NULL') // discipline-specific first, course-wide fallback last
+            ->orderBy('title')
+            ->get(['pk', 'title', 'director_name', 'director_designation', 'discipline_master_pk']);
+
+        return response()->json($templates);
+    }
+
     function discipline_generate_memo_store(Request $request){
         // return $request->all();
           $validated = $request->validate([
         'course_master_pk' => 'required|exists:course_master,pk',
         'discipline_master_pk' => 'required|exists:discipline_master,pk',
-        
+        'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
         'date_of_memo' => 'required|date',
         'discipline_marks' => 'required|numeric|min:0',
         'selected_student_list' => 'required|array|min:1',
@@ -355,6 +425,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
                 DB::table('discipline_memo_status')->insert([
                     'course_master_pk' => $request->course_master_pk,
                     'discipline_master_pk' => $request->discipline_master_pk,
+                    'memo_notice_template_pk' => $request->memo_notice_template_pk ?: null,
                     'student_master_pk' => $student_pk,
                     'date' => $request->date_of_memo,
                     'mark_deduction_submit' => $request->discipline_marks,
@@ -583,8 +654,12 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         'discipline:pk,discipline_name',
         'student:pk,display_name',
         'messages.student:pk,display_name',
-        'template:course_master_pk,content,director_name,director_designation'
+        'template',        // course-level fallback
+        'chosenTemplate',  // template pinned at send time
     ])->find($decryptedId);
+
+    // Prefer the template chosen at send time; fall back to the course-level one for older memos.
+    $template = $memo ? ($memo->chosenTemplate ?: $memo->template) : null;
     $memo_conclusion_master = DB::table('memo_conclusion_master')->where('active_inactive', 1)->get();
     $conclusion_type_name = null;
     if ($memo && $memo->conclusion_type_pk) {
@@ -598,7 +673,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
 
     return view(
         'admin.memo_discipline.template_show',
-        compact('memo', 'memo_conclusion_master', 'conclusion_type_name')
+        compact('memo', 'memo_conclusion_master', 'conclusion_type_name', 'template')
     );
 }
 
