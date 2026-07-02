@@ -146,6 +146,8 @@
         </div>
     </div>
 
+    @include('admin.partials.memo_global_search')
+
     {{-- Tabs + Download --}}
   <div class="py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="mnm-tabs">
@@ -885,6 +887,25 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(function () {
+    // ── DataTable sorting for #mnmTable ──
+    if ($('#mnmTable tbody tr td[colspan]').length === 0) {
+        $('#mnmTable').DataTable({
+            paging: false,
+            searching: false,
+            ordering: true,
+            info: false,
+            columnDefs: [
+                { orderable: false, targets: [0, 9] }
+            ]
+        });
+    }
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+$(function () {
     // ── Time Period presets → from/to dates, then submit ──
     function mnmFmt(d) { return d.toISOString().split('T')[0]; }
     $('#mnmTimePeriod').on('change', function () {
@@ -958,12 +979,21 @@ $(function () {
     var todayStr       = "{{ date('Y-m-d') }}";
 
     function makeItem(s) {
-        var label = s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '');
-        return $('<label class="an-item">')
+        var label = s.display_name
+            + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '')
+            + (s.attendance_label ? ' — ' + s.attendance_label : '');
+        var $badge = s.attendance_label
+            ? $('<span class="ms-1 badge ' + (s.attendance_label === 'Late' ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger') + '" style="font-size:0.7em;">').text(s.attendance_label)
+            : null;
+        var $text = $('<span>').text(s.display_name
+            + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : ''));
+        var $item = $('<label class="an-item">')
             .attr('data-pk', s.pk)
             .attr('data-search', label.toLowerCase())
             .append($('<input type="checkbox" class="form-check-input an-check">'))
-            .append($('<span>').text(label));
+            .append($text);
+        if ($badge) $item.append($badge);
+        return $item;
     }
 
     function refreshPlaceholders() {

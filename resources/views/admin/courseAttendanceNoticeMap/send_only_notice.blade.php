@@ -14,6 +14,8 @@
     <x-breadcrum title="Send Direct Notice" />
     <x-session_message />
 
+    @include('admin.partials.memo_global_search')
+
     {{-- Tabs --}}
     <div class="py-3">
         <div class="sn-tabs">
@@ -264,9 +266,7 @@ $(function() {
             },
             {
                 data: 'session_time',
-                name: 'session_time',
-                orderable: false,
-                searchable: false
+                name: 'session_time'
             },
             {
                 data: 'venue_name',
@@ -287,7 +287,6 @@ $(function() {
             {
                 data: 'eligible_ot',
                 name: 'eligible_ot',
-                orderable: false,
                 searchable: false,
                 className: 'text-center'
             },

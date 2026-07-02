@@ -174,6 +174,8 @@
         </div>
     </div>
 
+    @include('admin.partials.memo_global_search')
+
     {{-- Tabs + Download --}}
     <div class="card-body py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div class="disc-tabs">
@@ -204,6 +206,15 @@
                         <option value="{{ $course->pk }}"
                             {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}>
                             {{ $course->course_name }}</option>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select" id="discipline_master_pk" name="discipline_master_pk" aria-label="Discipline Type">
+                        <option value="">Discipline Type</option>
+                        @foreach($disciplines as $disc)
+                        <option value="{{ $disc->pk }}" {{ (string)$disciplineFilter == (string)$disc->pk ? 'selected' : '' }}>
+                            {{ $disc->discipline_name }}
+                        </option>
                         @endforeach
                     </select>
 
@@ -298,6 +309,9 @@
                         })
                         .finally(function() {
                             listContainer.style.opacity = '1';
+                            if (typeof window.reinitDiscTable === 'function') {
+                                window.reinitDiscTable();
+                            }
                         });
                 }
                 window.applyFiltersAjax = applyFiltersAjax;
@@ -387,11 +401,14 @@
                             <tr>
                                 <th>S. No.</th>
                                 <th>Program Name</th>
-                                <th>Participant Name</th>
-                                <th>Date</th>
-                                <th>Discipline</th>
+                                <th>Name</th>
+                                <th>OT/Participant Code</th>
+                                <th>Cadre</th>
+                                <th>Date of Infraction</th>
+                                <th>Infraction</th>
                                 <th class="text-center">Submitted</th>
                                 <th class="text-center">Final</th>
+                                <th>Remarks</th>
                                 <th>Status</th>
                                 @if(! hasRole('Officer Trainee'))
                                 <th class="text-end">Action</th>
@@ -404,16 +421,14 @@
                             <tr>
                                 <td class="fw-semibold text-muted">{{ $memos->firstItem() + $index }}</td>
                                 <td class="fw-semibold">{{ $memo->course->course_name ?? 'N/A' }}</td>
-                                <td class="fw-semibold">
-                                    {{ trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A')) }}
-                                </td>
-                                <td class="text-muted">
-                                    {{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
-                                <td><span
-                                        class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span>
-                                </td>
+                                <td class="fw-semibold">{{ $memo->student->display_name ?? 'N/A' }}</td>
+                                <td class="text-muted">{{ $memo->student->generated_OT_code ?? 'N/A' }}</td>
+                                <td class="text-muted">{{ $memo->student->cadre->cadre_name ?? 'N/A' }}</td>
+                                <td class="text-muted">{{ $memo->date ? \Carbon\Carbon::parse($memo->date)->format('d M Y') : 'N/A' }}</td>
+                                <td><span class="badge bg-info-subtle text-info">{{ $memo->discipline->discipline_name ?? 'N/A' }}</span></td>
                                 <td class="text-center fw-semibold text-warning">{{ $memo->mark_deduction_submit }}</td>
                                 <td class="text-center fw-semibold text-danger">{{ $memo->final_mark_deduction }}</td>
+                                <td class="text-muted">{{ $memo->remarks ?? '—' }}</td>
 
                                 <!-- Status -->
                                 <td>
@@ -461,6 +476,10 @@
                                     Admin')
                                     || hasRole('Training Induction Admin'))
                                     @if($memo->status == 1)
+                                    <button class="btn btn-sm btn-outline-secondary btn-edit-memo me-1"
+                                        data-id="{{ $memo->pk }}" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </button>
                                     <button class="btn btn-sm btn-outline-primary" data-discipline="{{ $memo->pk }}"
                                         id="sendMemoBtn">
                                         <i class="bi bi-envelope-paper me-1"></i> Send
@@ -481,7 +500,7 @@
                             </tr>
                             @empty
                             <tr>
-                                <td colspan="9" class="text-center py-5 text-muted">
+                                <td colspan="{{ hasRole('Officer Trainee') ? 11 : 12 }}" class="text-center py-5 text-muted">
                                     <i class="bi bi-inbox fs-1 d-block mb-2"></i>
                                     <span class="fw-medium">No memo records available</span>
                                 </td>
@@ -505,6 +524,56 @@
         </div>
     </div>
     <!-- end Zero Configuration -->
+
+    {{-- Edit Discipline Memo modal --}}
+    <div class="modal fade" id="editMemoModal" tabindex="-1" aria-labelledby="editMemoModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered modal-lg">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold" id="editMemoModalLabel">Edit Discipline Memo</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="editMemoForm">
+                    @csrf
+                    <input type="hidden" id="editMemoPk">
+                    <div class="modal-body">
+                        <div class="row g-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Course</label>
+                                <input type="text" id="editMemoCourse" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Participant</label>
+                                <input type="text" id="editMemoStudent" class="form-control" readonly>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Date <span class="text-danger">*</span></label>
+                                <input type="date" id="editMemoDate" name="date" class="form-control" max="{{ date('Y-m-d') }}" required>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Discipline <span class="text-danger">*</span></label>
+                                <select id="editMemoDiscipline" name="discipline_master_pk" class="form-select" required>
+                                    <option value="">Select Discipline</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold">Discipline Marks <span class="text-danger">*</span></label>
+                                <input type="number" step="0.01" min="0" id="editMemoMarks" name="mark_deduction_submit" class="form-control" required>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label fw-semibold">Remarks</label>
+                                <textarea id="editMemoRemarks" name="remarks" class="form-control" rows="3" placeholder="Enter remarks..."></textarea>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4" id="editMemoSaveBtn">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
     <!-- Enhanced Offcanvas with GIGW Guidelines -->
     <div class="offcanvas offcanvas-end" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic"
@@ -546,7 +615,37 @@
 @push('scripts')
 <script>
 $(document).ready(function() {
-    const disciplineChoicesIds = ['program_name', 'status', 'discTimePeriod'];
+
+    @php
+        $discActionTargets = hasRole('Officer Trainee') ? '[0]' : '[0, -1]';
+    @endphp
+
+    window.reinitDiscTable = function () {
+        if ($.fn.DataTable.isDataTable('#discTable')) {
+            $('#discTable').DataTable().destroy();
+        }
+        if ($('#discTable tbody tr td[colspan]').length === 0) {
+            $('#discTable').DataTable({
+                paging: false,
+                searching: false,
+                ordering: true,
+                info: false,
+                columnDefs: [
+                    { orderable: false, targets: {!! $discActionTargets !!} }
+                ]
+            });
+        }
+    };
+
+    window.reinitDiscTable();
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+$(document).ready(function() {
+    const disciplineChoicesIds = ['program_name', 'discipline_master_pk', 'status', 'discTimePeriod'];
 
     function initDisciplineChoices() {
         if (typeof window.Choices === 'undefined') return;
@@ -598,7 +697,7 @@ $(document).ready(function() {
         }
     }
 
-    $('#program_name, #status, #from_date, #to_date').on('change', discRunFilter);
+    $('#program_name, #discipline_master_pk, #status, #from_date, #to_date').on('change', discRunFilter);
 
     /* ── Time Period presets → from/to dates ── */
     function discFmt(d) {
@@ -927,6 +1026,93 @@ $(function () {
             e.preventDefault();
             alert('Please select at least one student.');
         }
+    });
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+$(function () {
+    var editMemoModalEl = document.getElementById('editMemoModal');
+    var editMemoModal   = new bootstrap.Modal(editMemoModalEl);
+    var editRouteBase   = "{{ rtrim(route('memo.discipline.edit', ''), '/') }}/";
+    var updateRouteBase = "{{ rtrim(route('memo.discipline.update', ''), '/') }}/";
+    var markRoute       = "{{ route('memo.discipline.getMarkDeduction') }}";
+    var csrf            = "{{ csrf_token() }}";
+
+    // ── Open modal: fetch memo data + disciplines ──
+    $(document).on('click', '.btn-edit-memo', function () {
+        var id = $(this).data('id');
+        $('#editMemoForm')[0].reset();
+        $('#editMemoPk').val('');
+        $('#editMemoDiscipline').html('<option value="">Loading…</option>');
+        $('#editMemoSaveBtn').prop('disabled', true);
+
+        $.get(editRouteBase + id).done(function (data) {
+            $('#editMemoPk').val(data.pk);
+            $('#editMemoCourse').val(data.course_name);
+            $('#editMemoStudent').val(data.student_name);
+            $('#editMemoDate').val(data.date);
+            $('#editMemoMarks').val(data.mark_deduction_submit);
+            $('#editMemoRemarks').val(data.remarks);
+
+            var $sel = $('#editMemoDiscipline').empty().append('<option value="">Select Discipline</option>');
+            (data.disciplines || []).forEach(function (d) {
+                $sel.append(
+                    $('<option>').val(d.pk).text(d.discipline_name)
+                                 .attr('data-mark', d.mark_deduction)
+                );
+            });
+            $sel.val(data.discipline_master_pk);
+            $('#editMemoSaveBtn').prop('disabled', false);
+        }).fail(function () {
+            alert('Failed to load memo data.');
+        });
+
+        editMemoModal.show();
+    });
+
+    // ── Auto-fill marks when discipline changes ──
+    $('#editMemoDiscipline').on('change', function () {
+        var mark = $('option:selected', this).data('mark');
+        if (mark !== undefined && mark !== '') {
+            $('#editMemoMarks').val(mark);
+        }
+    });
+
+    // ── Submit edit form ──
+    $('#editMemoForm').on('submit', function (e) {
+        e.preventDefault();
+        var id  = $('#editMemoPk').val();
+        var $btn = $('#editMemoSaveBtn').prop('disabled', true).text('Saving…');
+
+        $.ajax({
+            url: updateRouteBase + id,
+            type: 'POST',
+            data: {
+                _token:                csrf,
+                date:                  $('#editMemoDate').val(),
+                discipline_master_pk:  $('#editMemoDiscipline').val(),
+                mark_deduction_submit: $('#editMemoMarks').val(),
+                remarks:               $('#editMemoRemarks').val(),
+            },
+            success: function (res) {
+                if (res.success) {
+                    editMemoModal.hide();
+                    Swal.fire({ icon: 'success', title: 'Updated!', text: res.message, timer: 1500, showConfirmButton: false })
+                        .then(function () { location.reload(); });
+                } else {
+                    alert(res.message || 'Update failed.');
+                    $btn.prop('disabled', false).text('Save Changes');
+                }
+            },
+            error: function (xhr) {
+                var msg = (xhr.responseJSON && xhr.responseJSON.message) ? xhr.responseJSON.message : 'Something went wrong.';
+                alert(msg);
+                $btn.prop('disabled', false).text('Save Changes');
+            }
+        });
     });
 });
 </script>
