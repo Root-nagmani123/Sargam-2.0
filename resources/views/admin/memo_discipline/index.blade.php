@@ -46,26 +46,8 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                                <label class="form-label">Date <span class="text-danger">*</span></label>
                                 <input type="date" class="form-control" name="date_of_memo" id="gmDate" max="{{ date('Y-m-d') }}">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Session</label>
-                                <select class="form-select" name="session_name" id="gmSession">
-                                    <option value="">Select Session</option>
-                                    @foreach($sessions as $s)
-                                        <option value="{{ $s->pk }}">{{ $s->shift_name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Venue</label>
-                                <select class="form-select" name="venue_name" id="gmVenue">
-                                    <option value="">Select Venue</option>
-                                    @foreach($venues as $v)
-                                        <option value="{{ $v->pk }}">{{ $v->venue_name }}</option>
-                                    @endforeach
-                                </select>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Discipline <span class="text-danger">*</span></label>
@@ -252,8 +234,14 @@
                         </button>
                         <button type="button" class="disc-icon-btn" id="discSearchToggle" aria-label="Search"><i
                                 class="bi bi-search"></i></button>
-                        <input type="text" class="disc-search-input {{ $searchFilter ? '' : 'd-none' }}" id="search"
-                            name="search" placeholder="Search..." value="{{ $searchFilter }}">
+                        <div class="disc-search-wrap {{ $searchFilter ? '' : 'd-none' }}" id="discSearchWrap" style="position:relative;">
+                            <input type="text" class="disc-search-input" id="search" name="search"
+                                placeholder="Search..." value="{{ $searchFilter }}" autocomplete="off" style="padding-right:1.9rem;">
+                            <button type="button" id="discSearchClear" aria-label="Clear search" title="Clear"
+                                style="position:absolute;top:50%;right:.35rem;transform:translateY(-50%);border:0;background:transparent;color:#94a3b8;line-height:1;padding:.15rem;{{ $searchFilter ? '' : 'display:none;' }}">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </form>
@@ -740,18 +728,35 @@ $(document).ready(function() {
         discRunFilter();
     });
 
-    /* ── Search toggle + submit on Enter ── */
+    /* ── Search: toggle, live (debounced) filtering, clear ── */
     $('#discSearchToggle').on('click', function() {
-        $('#search').toggleClass('d-none');
-        if (!$('#search').hasClass('d-none')) {
+        var $wrap = $('#discSearchWrap');
+        $wrap.toggleClass('d-none');
+        if (!$wrap.hasClass('d-none')) {
             $('#search').trigger('focus');
         }
+    });
+
+    var discSearchTimer = null;
+    $('#search').on('input', function() {
+        $('#discSearchClear').toggle(this.value.length > 0);
+        clearTimeout(discSearchTimer);
+        discSearchTimer = setTimeout(discRunFilter, 350); // search as you type
     });
     $('#search').on('keydown', function(e) {
         if (e.key === 'Enter') {
             e.preventDefault();
+            clearTimeout(discSearchTimer);
             discRunFilter();
         }
+    });
+    $('#discSearchClear').on('click', function() {
+        var $s = $('#search');
+        $s.val('');
+        $(this).hide();
+        clearTimeout(discSearchTimer);
+        discRunFilter();
+        $s.trigger('focus');
     });
 
     /* ── Column Visibility modal (built from the actual header cells) ── */
@@ -832,8 +837,8 @@ $(document).ready(function() {
         let memoId = $(this).data('id');
         let type = $(this).data('type');
 
-        $('#conversationTopic').text("Topic: Discipline Conversation");
-        $('#type_side_menu').text(type);
+        $('#conversationTopic').text("Discipline Memo Conversation");
+        $('#type_side_menu').text(type === 'OT' ? 'Officer Trainee view' : 'Incharge view');
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({

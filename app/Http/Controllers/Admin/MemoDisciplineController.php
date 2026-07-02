@@ -537,7 +537,11 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             return '<p class="text-danger text-center">Memo not found.</p>';
         }
 
-        return view('admin.memo_discipline.partials.conversation_model', compact('conversations','type','memoId'))->render();
+        // Memo status drives the composer even when there are no messages yet
+        // (2 = Memo Sent / open, 3 = Closed).
+        $noticeStatus = (int) (DB::table('discipline_memo_status')->where('pk', $memoId)->value('status') ?? 0);
+
+        return view('admin.memo_discipline.partials.conversation_model', compact('conversations','type','memoId','noticeStatus'))->render();
         
     }
     public function memoDisciplineConversationStore(Request $request)
@@ -639,19 +643,28 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         }
 
         DB::commit();
-// return redirect()
-//     ->route('memo.discipline.index')
-//     ->with('success', 'Message sent successfully.');
-    return back()->with('success', 'Message sent successfully.')->withInput();
 
-        // return back()->with('success', 'Message sent successfully.');
+        // The chat composer sends via fetch and expects JSON so it can refresh the
+        // conversation in place without a full page reload.
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => true, 'message' => 'Message sent successfully.']);
+        }
+
+        return back()->with('success', 'Message sent successfully.')->withInput();
+
     } catch (\Throwable $e) {
         DB::rollBack();
         \Log::error('Error in memoDisciplineConversationStore inner: ' . $e->getMessage());
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => false, 'message' => 'Something went wrong.'], 500);
+        }
         return back()->with('error', 'Something went wrong. '. $e->getMessage())->withInput();
     }
     }catch(\Exception $e){
         \Log::error('Error in memoDisciplineConversationStore: ' . $e->getMessage());
+        if ($request->ajax() || $request->wantsJson()) {
+            return response()->json(['success' => false, 'message' => 'An unexpected error occurred.'], 500);
+        }
         return back()->with('error', 'An unexpected error occurred.' . $e->getMessage())->withInput();
     }
 }
