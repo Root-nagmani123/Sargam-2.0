@@ -75,6 +75,29 @@
         line-height: 1;
     }
 
+    .stationed-leave-page .sl-status-tabs {
+        display: inline-flex;
+        gap: 0.2rem;
+        padding: 0.28rem;
+        border-radius: 10px;
+        background: #f2f4f7;
+    }
+
+    .stationed-leave-page .sl-status-tab {
+        border: 0;
+        background: transparent;
+        color: #475467;
+        font-weight: 600;
+        font-size: 1rem;
+        padding: 0.6rem 1.35rem;
+        border-radius: 8px;
+    }
+
+    .stationed-leave-page .sl-status-tab.active {
+        background: #004a93;
+        color: #fff;
+    }
+
     @media (max-width: 767.98px) {
         .stationed-leave-page .sl-filter-select,
         .stationed-leave-page .sl-daterange-input {
@@ -95,7 +118,11 @@
 
     <x-session_message />
 
-    <div class="d-flex justify-content-end mb-3">
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+        <div class="sl-status-tabs" role="tablist" aria-label="Record status">
+            <button type="button" class="sl-status-tab active" data-status-filter="active" role="tab" aria-selected="true">Active: {{ (int) ($activeCount ?? 0) }}</button>
+            <button type="button" class="sl-status-tab" data-status-filter="archive" role="tab" aria-selected="false">Archived: {{ (int) ($archiveCount ?? 0) }}</button>
+        </div>
         <button type="button" id="stationedDownload" class="btn sl-download-btn">
             <i class="bi bi-download" aria-hidden="true"></i>
             <span>Download</span>
@@ -111,7 +138,7 @@
                         <span class="programme-dt-filters-label">Filters</span>
                         <select id="courseFilter" class="form-select sl-filter-select" aria-label="Filter by course">
                             <option value="">Course Name</option>
-                            @foreach ($courses ?? [] as $pk => $name)
+                            @foreach ($activeCourses ?? [] as $pk => $name)
                                 <option value="{{ $pk }}">{{ $name }}</option>
                             @endforeach
                         </select>
@@ -197,6 +224,62 @@
 <script>
 $(function () {
     const exportUrl = "{{ route('admin.stationed-leave-master.export') }}";
+    const query = new URLSearchParams(window.location.search);
+    let statusFilter = (query.get('status_filter') || 'active').toLowerCase() === 'archive' ? 'archive' : 'active';
+    let courseFilterFromUrl = query.get('course_filter') || '';
+    const activeCourses = @json(($activeCourses ?? collect())->toArray());
+    const archiveCourses = @json(($archiveCourses ?? collect())->toArray());
+
+    function syncListUrl() {
+        const params = new URLSearchParams(window.location.search);
+        if (statusFilter === 'archive') {
+            params.set('status_filter', 'archive');
+        } else {
+            params.delete('status_filter');
+        }
+
+        const selectedCourse = $('#courseFilter').val() || '';
+        if (selectedCourse) {
+            params.set('course_filter', selectedCourse);
+        } else {
+            params.delete('course_filter');
+        }
+
+        const next = params.toString();
+        window.history.replaceState(null, '', window.location.pathname + (next ? '?' + next : ''));
+    }
+
+    function applyStatusTabUi() {
+        $('.sl-status-tab').removeClass('active').attr('aria-selected', 'false');
+        $('.sl-status-tab[data-status-filter="' + statusFilter + '"]').addClass('active').attr('aria-selected', 'true');
+    }
+
+    function getCoursesForStatus(status) {
+        return status === 'archive' ? archiveCourses : activeCourses;
+    }
+
+    function setCourseFilterOptions(status, keepCurrent, preferredValue) {
+        const selectedBefore = keepCurrent ? ($('#courseFilter').val() || '') : '';
+        const targetValue = preferredValue || selectedBefore || '';
+        const courses = getCoursesForStatus(status);
+        const $courseFilter = $('#courseFilter');
+
+        $courseFilter.empty();
+        $courseFilter.append('<option value="">Course Name</option>');
+
+        Object.keys(courses || {}).forEach(function (pk) {
+            $courseFilter.append($('<option></option>').val(pk).text(courses[pk]));
+        });
+
+        if (targetValue && Object.prototype.hasOwnProperty.call(courses || {}, targetValue)) {
+            $courseFilter.val(targetValue);
+        } else {
+            $courseFilter.val('');
+        }
+    }
+
+    applyStatusTabUi();
+    setCourseFilterOptions(statusFilter, false, courseFilterFromUrl);
 
     const table = $('#stationed-leave-table').DataTable({
         processing: true,
@@ -209,6 +292,7 @@ $(function () {
                 d.course_filter = $('#courseFilter').val();
                 d.from_date = $('#timePeriodFilter').data('from') || '';
                 d.to_date = $('#timePeriodFilter').data('to') || '';
+                d.status_filter = statusFilter;
             }
         },
         columns: [
@@ -260,13 +344,15 @@ $(function () {
 
     /* ── Course filter ── */
     $('#courseFilter').on('change', function () {
+        syncListUrl();
         table.ajax.reload();
     });
 
     $('#resetFilters').on('click', function () {
-        $('#courseFilter').val('');
+        setCourseFilterOptions(statusFilter, false, '');
         $period.val('').removeData('from').removeData('to');
         table.search('');
+        syncListUrl();
         table.ajax.reload();
     });
 
@@ -276,8 +362,22 @@ $(function () {
             course_filter: $('#courseFilter').val() || '',
             from_date: $period.data('from') || '',
             to_date: $period.data('to') || '',
+            status_filter: statusFilter,
         });
         window.location.href = exportUrl + '?' + params;
+    });
+
+    /* ── Active / Archive tabs ── */
+    $(document).on('click', '.sl-status-tab', function () {
+        const next = ($(this).data('status-filter') || '').toString();
+        if (!next || next === statusFilter) {
+            return;
+        }
+        statusFilter = next;
+        applyStatusTabUi();
+        setCourseFilterOptions(statusFilter, false, '');
+        syncListUrl();
+        table.ajax.reload();
     });
 
     /* ── Status toggle ── */
