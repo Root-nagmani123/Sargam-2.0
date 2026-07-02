@@ -52,11 +52,17 @@ class HostelBuildingFloorRoomMappingController extends Controller
             });
         }
         
-        $mappings = $query->paginate(10);
+        $perPage = (int) $request->input('per_page', 10);
+        if ($perPage < 1) {
+            $perPage = 10;
+        }
+
+        $mappings = $query->paginate($perPage)->withQueryString();
         $buildings = BuildingMaster::active()->get();
+        $floors = FloorMaster::active()->get();
         $roomTypes = $this->roomTypes;
-        
-        return view('admin.building_floor_room_mapping.index', compact('mappings', 'buildings', 'roomTypes'));
+
+        return view('admin.building_floor_room_mapping.index', compact('mappings', 'buildings', 'floors', 'roomTypes'));
     }
 
     public function create()
@@ -66,19 +72,19 @@ class HostelBuildingFloorRoomMappingController extends Controller
 
     public function store(Request $request)
     {
-        try{
-            $request->validate([
-                'building_master_pk' => 'required|exists:building_master,pk',
-                'floor_master_pk' => 'required|exists:floor_master,pk',
-                'capacity' => 'required|integer|min:1',
-                'room_type' => [
-                    'required',
-                    \Illuminate\Validation\Rule::in(array_keys(BuildingFloorRoomMapping::$roomTypes))
-                ],
-            ]);
-            
+        $request->validate([
+            'building_master_pk' => 'required|exists:building_master,pk',
+            'floor_master_pk' => 'required|exists:floor_master,pk',
+            'capacity' => 'required|integer|min:1',
+            'room_type' => [
+                'required',
+                \Illuminate\Validation\Rule::in(array_keys(BuildingFloorRoomMapping::$roomTypes))
+            ],
+            'comment' => 'nullable|string|max:255',
+            'active_inactive' => 'nullable|in:0,1',
+        ]);
 
-            
+        try{
             $room_name = '';
             $building = BuildingMaster::where('pk', $request->building_master_pk)->first();
             $floor = FloorMaster::where('pk', $request->floor_master_pk)->first();
@@ -92,24 +98,42 @@ class HostelBuildingFloorRoomMappingController extends Controller
             if(isset($request->pk)){
                 $decryptedPk = safeDecrypt($request->pk);
                 $mapping = BuildingFloorRoomMapping::findOrFail($decryptedPk);
+                $message = 'Hostel Floor Room mapping updated successfully.';
             }
             else{
                 $mapping = new BuildingFloorRoomMapping();
+                $message = 'Hostel Floor Room mapping created successfully.';
             }
             $mapping->building_master_pk = $request->building_master_pk;
             $mapping->floor_master_pk = $request->floor_master_pk;
             $mapping->room_name = $room_name;
             $mapping->room_type = $request->room_type;
             $mapping->capacity = $request->capacity;
+            // Only touch these when the request actually carries them, so the
+            // legacy full-page form (which omits them) keeps working unchanged.
+            if ($request->has('comment')) {
+                $mapping->comment = $request->comment;
+            }
+            if ($request->filled('active_inactive')) {
+                $mapping->active_inactive = (int) $request->active_inactive;
+            }
             $mapping->save();
 
-            return redirect()->route('hostel.building.floor.room.map.index')->with('success', 'Hostel Floor Room mapping created successfully.');
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'success', 'message' => $message]);
+            }
+
+            return redirect()->route('hostel.building.floor.room.map.index')->with('success', $message);
         }
         catch(\Exception $e) {
             \Log::error($e->getMessage(), [
                 'stack' => $e->getTraceAsString(),
                 'request_data' => $request->all()
             ]);
+
+            if ($request->ajax() || $request->wantsJson()) {
+                return response()->json(['status' => 'error', 'message' => 'Something went wrong'], 500);
+            }
 
             return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Something went wrong');
         }
@@ -165,6 +189,18 @@ class HostelBuildingFloorRoomMappingController extends Controller
             return \Excel::download(new \App\Exports\FloorRoomMappingExport($request->all()), 'floor_room_mapping.xlsx');
         } catch (\Exception $e) {
             return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Error exporting data: ' . $e->getMessage());
+        }
+    }
+
+    function destroy($id) {
+        try {
+            $id = safeDecrypt($id);
+            $mapping = BuildingFloorRoomMapping::findOrFail($id);
+            $mapping->delete();
+
+            return redirect()->route('hostel.building.floor.room.map.index')->with('success', 'Hostel Floor Room mapping deleted successfully.');
+        } catch (\Exception $e) {
+            return redirect()->route('hostel.building.floor.room.map.index')->with('error', 'Something went wrong while deleting.');
         }
     }
 

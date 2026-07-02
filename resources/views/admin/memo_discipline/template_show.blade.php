@@ -59,17 +59,18 @@
                     <li>Reply to this Memo online through this <a href="#">conversation</a></li>
                     <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
                 </ul>
-                <p>{!! $memo->template->content ?? '' !!}</p>
+                <p>{!! ($template->content ?? $memo->template->content) ?? '' !!}</p>
             </div>
 
             <p><strong>{{ $memo->student->display_name ?? 'Student Name' }}, {{ $memo->student->generated_OT_code ?? 'OT Code' }}</strong><br>
                 Remarks: Show Cause Memo for {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
 
             <div class="text-end">
-                @if(!empty($memo->template->signature_image))
-                    <img src="{{ Storage::url($memo->template->signature_image) }}" alt="Signature" style="max-height:60px;display:block;margin-left:auto;margin-bottom:4px;">
+                @php($resolvedTemplate = $template ?? ($memo->template ?? null))
+                @if(!empty($resolvedTemplate?->signature_image))
+                    <img src="{{ Storage::url($resolvedTemplate->signature_image) }}" alt="Signature" style="max-height:60px;display:block;margin-left:auto;margin-bottom:4px;">
                 @endif
-                <strong>{{ $memo->template->director_name ?? 'Director Name' }}</strong><br>{{ $memo->template->director_designation ?? 'Director Designation' }}
+                <strong>{{ $resolvedTemplate->director_name ?? 'Director Name' }}</strong><br>{{ $resolvedTemplate->director_designation ?? 'Director Designation' }}
             </div>
 
             <!-- Exemption Table -->

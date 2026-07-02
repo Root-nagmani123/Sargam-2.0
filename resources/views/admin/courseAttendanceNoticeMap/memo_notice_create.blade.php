@@ -18,10 +18,10 @@
 
                         <div class="col-6">
                             <label class="form-label">Select Course <span class="text-danger">*</span></label>
-                            <select name="course_master_pk" class="form-select" required>
+                            <select name="course_master_pk" id="mtCourse" class="form-select" required>
                                 <option value="" disabled selected>Select Course</option>
                                 @foreach ($courses as $course)
-                                    <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                    <option value="{{ $course->pk }}" {{ old('course_master_pk') == $course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
                                 @endforeach
                             </select>
                             <small class="text-muted">Select an active course if this memo/notice is course-specific</small>
@@ -47,12 +47,21 @@
 
                         <div class="col-2">
                             <label class="form-label">Memo / Notice Type <span class="text-danger">*</span></label>
-                            <select name="memo_notice_type" class="form-select" required>
-                                <option value="" disabled selected>Select Type</option>
-                                <option value="Memo">Memo</option>
-                                <option value="Notice">Notice</option>
-                                <option value="Discipline Memo">Discipline Memo</option>
+                            <select name="memo_notice_type" id="mtType" class="form-select" required>
+                                <option value="" disabled {{ old('memo_notice_type') ? '' : 'selected' }}>Select Type</option>
+                                <option value="Memo" {{ old('memo_notice_type') === 'Memo' ? 'selected' : '' }}>Memo</option>
+                                <option value="Notice" {{ old('memo_notice_type') === 'Notice' ? 'selected' : '' }}>Notice</option>
+                                <option value="Discipline Memo" {{ old('memo_notice_type') === 'Discipline Memo' ? 'selected' : '' }}>Discipline Memo</option>
                             </select>
+                        </div>
+
+                        {{-- Discipline: only relevant for Discipline Memo templates (per-discipline template). --}}
+                        <div class="col-6 d-none" id="mtDisciplineWrap">
+                            <label class="form-label">Discipline <span class="text-danger">*</span></label>
+                            <select name="discipline_master_pk" id="mtDiscipline" class="form-select" data-old="{{ old('discipline_master_pk') }}">
+                                <option value="">Select Discipline</option>
+                            </select>
+                            <small class="text-muted">This template will be offered when generating a memo for this discipline.</small>
                         </div>
 
                         <div class="col-12">
@@ -97,6 +106,35 @@
                 height: 300
             });
 
+            // ── Discipline field: only for "Discipline Memo" type, filtered by course ──
+            var mtDisciplines = @json($disciplines);
+
+            function populateDisciplines() {
+                var courseId = String($('#mtCourse').val() || '');
+                var $sel = $('#mtDiscipline');
+                var previous = $sel.attr('data-old') || $sel.val() || '';
+                $sel.empty().append('<option value="">Select Discipline</option>');
+                mtDisciplines
+                    .filter(function (d) { return String(d.course_master_pk) === courseId; })
+                    .forEach(function (d) {
+                        $sel.append($('<option>').val(d.pk).text(d.discipline_name));
+                    });
+                if (previous) { $sel.val(String(previous)); }
+                $sel.removeAttr('data-old');
+            }
+
+            function toggleDisciplineField() {
+                var isDiscipline = $('#mtType').val() === 'Discipline Memo';
+                $('#mtDisciplineWrap').toggleClass('d-none', !isDiscipline);
+                $('#mtDiscipline').prop('required', isDiscipline);
+                if (isDiscipline) { populateDisciplines(); }
+            }
+
+            $('#mtType').on('change', toggleDisciplineField);
+            $('#mtCourse').on('change', function () {
+                if ($('#mtType').val() === 'Discipline Memo') { populateDisciplines(); }
+            });
+            toggleDisciplineField(); // reflect old() state on validation errors
         });
     </script>
 @endsection

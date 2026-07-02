@@ -914,6 +914,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::get('/Topic-by-subject', 'getTopicBysubject')->name('getTopicBysubject'); // <-- New AJAX route
             Route::get('/get-timetable-Details-By-topic', 'gettimetableDetailsBytopic')->name('gettimetableDetailsBytopic'); // <-- New AJAX route
             Route::get('/get-template-by-course', 'getTemplateByCourse')->name('getTemplateByCourse'); // <-- Template AJAX route
+            Route::get('/templates-by-type', 'getTemplatesByType')->name('getTemplatesByType'); // list templates for a course+type picker
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
             Route::post('/store_memo_notice', 'store_memo_notice')->name('store_memo_notice');
             Route::post('/store_memo_status', 'store_memo_status')->name('store_memo_status');
@@ -923,6 +924,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::post('/memo_notice_conversation_model', 'memo_notice_conversation_model')->name('memo_notice_conversation_model');
             Route::delete('/notice-delete-Message/{id}/{type}', [CourseAttendanceNoticeMapController::class, 'noticedeleteMessage'])
                 ->name('noticedeleteMessage');
+            Route::delete('/record-delete/{id}/{type}', 'destroyRecord')->name('destroy');
             //  Route::get('/user_chat', function () {
             //     return view('admin.courseAttendanceNoticeMap.chat');
             // })->name('admin.courseAttendanceNoticeMap.chat');
@@ -963,6 +965,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
     });
     Route::prefix('memo/discipline')->name('memo.discipline.')->group(function () {
         Route::get('/', [MemoDisciplineController::class, 'index'])->name('index');
+        Route::delete('/delete/{id}', [MemoDisciplineController::class, 'destroy'])->name('destroy');
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');
         Route::get('edit/{id}', [MemoDisciplineController::class, 'edit'])->name('edit');
@@ -971,6 +974,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
 
         Route::get('/get-student-by-course', [MemoDisciplineController::class, 'getStudentByCourse'])->name('getStudentByCourse');
         Route::get('/getMarkDeduction', [MemoDisciplineController::class, 'getMarkDeduction'])->name('getMarkDeduction');
+        Route::get('/templates-by-discipline', [MemoDisciplineController::class, 'getTemplatesByDiscipline'])->name('templatesByDiscipline');
 
         Route::post('/send-memo', [MemoDisciplineController::class, 'sendMemo'])->name('sendMemo');
         Route::post('/close-memo', [MemoDisciplineController::class, 'closeMemo'])->name('closeMemo');
@@ -996,6 +1000,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/edit/{id}', 'edit')->name('edit');
 
         Route::get('assign-student', 'assignStudent')->name('assign.student');
+        Route::post('assign-hostel-student-preview', 'previewAssignHostelToStudent')->name('assign.hostel.to.student.preview');
         Route::post('assign-hostel-student', 'assignHostelToStudent')->name('assign.hostel.to.student');
         Route::get('export', 'export')->name('export');
         Route::get('import', 'import')->name('import');
@@ -1009,6 +1014,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/edit/{id}', 'edit')->name('edit');
         Route::get('/export', 'export')->name('export');
         Route::post('/update-comment', 'updateComment')->name('update.comment');
+        Route::delete('/destroy/{id}', 'destroy')->name('destroy');
     });
 });
 

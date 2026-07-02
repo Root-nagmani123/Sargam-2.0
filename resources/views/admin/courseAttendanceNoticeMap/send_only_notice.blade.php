@@ -50,15 +50,15 @@
                 {{-- Time Period --}}
                 <select id="snTimePeriod" class="sn-control" aria-label="Time Period">
                     <option value="">Time Period</option>
-                    <option value="today">Today</option>
+                    <option value="today" selected>Today</option>
                     <option value="week">This Week</option>
                     <option value="month">This Month</option>
                     <option value="custom">Custom Range</option>
                 </select>
                 <input type="text" id="snDateRange" class="sn-date-range d-none" placeholder="Select date range"
                     aria-label="Custom date range" readonly>
-                <input type="hidden" id="snFromDate">
-                <input type="hidden" id="snToDate">
+                <input type="hidden" id="snFromDate" value="{{ date('Y-m-d') }}">
+                <input type="hidden" id="snToDate" value="{{ date('Y-m-d') }}">
 
                 {{-- Attendance Type --}}
                 <select id="snAttendanceType" class="sn-control" aria-label="Attendance Type">
@@ -393,7 +393,6 @@ $(function() {
     // ── Reset ──
     $('#snReset').on('click', function() {
         resetChoice('snCourse');
-        resetChoice('snTimePeriod');
         resetChoice('snAttendanceType');
         resetChoice('snNormalSession');
         resetChoice('snManualSession');
@@ -401,7 +400,15 @@ $(function() {
         showControl('snManualSession', false);
         if (snRangePicker) snRangePicker.clear();
         $('#snDateRange').addClass('d-none');
-        $('#snFromDate, #snToDate').val('');
+        // Time Period resets back to its default (Today), not "all".
+        var todayStr = fmt(new Date());
+        try {
+            choicesMap['snTimePeriod'].setChoiceByValue('today');
+        } catch (e) {
+            $('#snTimePeriod').val('today');
+        }
+        $('#snFromDate').val(todayStr);
+        $('#snToDate').val(todayStr);
         $('#snSearch').val('');
         table.search(''); // cleared term is sent on the reload below
         reloadTable();
@@ -500,7 +507,7 @@ $(function () {
 
         var $f = $('<form>', { method: 'POST', action: $src.attr('action') }).hide();
         $f.append($('<input type="hidden" name="_token">').val($src.find('input[name="_token"]').val()));
-        ['subject_master_id', 'course_master_pk', 'topic_id', 'venue_id', 'class_session_master_pk', 'faculty_master_pk']
+        ['subject_master_id', 'course_master_pk', 'topic_id', 'venue_id', 'class_session_master_pk', 'faculty_master_pk', 'memo_notice_template_pk']
             .forEach(function (n) {
                 $f.append($('<input type="hidden">').attr('name', n).val($src.find('[name="' + n + '"]').val()));
             });

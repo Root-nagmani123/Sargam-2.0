@@ -22,6 +22,17 @@
     <input type="hidden" name="class_session_master_pk" value="{{ $classSession }}">
     <input type="hidden" name="faculty_master_pk" value="{{ $resolvedFacultyPayload }}">
 
+    @if(isset($noticeTemplates) && $noticeTemplates->count())
+        <div class="px-3 pt-3">
+            <label for="noticeTemplateSelect" class="form-label mb-1 fw-semibold">Notice Template</label>
+            <select name="memo_notice_template_pk" id="noticeTemplateSelect" class="form-select form-select-sm">
+                @foreach($noticeTemplates as $tpl)
+                    <option value="{{ $tpl->pk }}">{{ $tpl->title }}</option>
+                @endforeach
+            </select>
+        </div>
+    @endif
+
     <div class="nlm-toolbar">
         <div class="nlm-search">
             <i class="bi bi-search"></i>

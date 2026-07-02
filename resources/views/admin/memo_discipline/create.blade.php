@@ -127,9 +127,13 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     const today = new Date().toISOString().split('T')[0];
-    const dateInput = document.getElementById('date_memo_notice');
-    dateInput.value = today; // Set today's date
-    dateInput.max = today; // Prevent future dates
+    const dateInput = document.getElementById('date_of_memo');
+    if (dateInput) {
+        if (!dateInput.value) {
+            dateInput.value = today; // Default to today
+        }
+        dateInput.max = today; // Prevent future dates
+    }
 });
 
 $('#courseSelectTogetStudent').on('change', function() {

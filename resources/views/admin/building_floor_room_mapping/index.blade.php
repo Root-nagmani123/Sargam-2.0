@@ -1,204 +1,535 @@
 @extends('admin.layouts.master')
 
-@section('title', 'Hostel Building Floor Room Mapping')
+@section('title', 'Hostel Floor Room Map')
+
+@push('styles')
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+<style>
+    /* Inline-editable comment: looks like text, editable on focus */
+    .hostel-room-page .comment-input {
+        border: 1px solid transparent;
+        background: transparent;
+        border-radius: 6px;
+        padding: .35rem .5rem;
+        font-size: .875rem;
+        color: #344054;
+        min-width: 140px;
+    }
+    .hostel-room-page .comment-input:hover {
+        border-color: #e4e7ec;
+        background: #fff;
+    }
+    .hostel-room-page .comment-input:focus {
+        outline: 0;
+        border-color: #004a93;
+        background: #fff;
+        box-shadow: 0 0 0 3px rgba(0, 74, 147, .12);
+    }
+    .hostel-room-page .programme-dt-filter-select select { min-width: 150px; }
+</style>
+@endpush
 
 @section('setup_content')
-<div class="container-fluid">
+@php
+    $currentQuery = request()->getQueryString();
+    $exportUrl = route('hostel.building.floor.room.map.export') . ($currentQuery ? ('?' . $currentQuery) : '');
+@endphp
+<div class="container-fluid hostel-room-page">
+    <x-breadcrum title="Hostel Floor Room Map">
+        <button type="button"
+                class="btn btn-primary d-inline-flex align-items-center gap-2 px-4 rounded-1 fw-semibold shadow-sm"
+                id="hrAddBtn" data-bs-toggle="modal" data-bs-target="#hrFormModal">
+            <i class="material-icons material-symbols-rounded" style="font-size:18px;" aria-hidden="true">add</i>
+            <span>Add Hostel Floor Room</span>
+        </button>
+    </x-breadcrum>
 
-    <x-breadcrum title="Hostel Building Floor Room Mapping" />
     <x-session_message />
 
-    <div class="datatables">
-        <!-- start Zero Configuration -->
-        <div class="card" >
-            <div class="card-body">
-                <div class="row mb-3">
-                    <div class="col-6">
-                        <h4>Hostel Building Floor Room Mapping</h4>
+    {{-- Secondary actions (Print / Download) --}}
+    <div class="d-flex flex-wrap justify-content-end gap-2 mb-3">
+        <button type="button" class="btn programme-dt-btn-columns" id="hrPrintBtn" title="Print">
+            <i class="bi bi-printer" aria-hidden="true"></i>
+            <span>Print</span>
+        </button>
+        <a href="{{ $exportUrl }}" class="btn programme-dt-btn-columns" title="Download">
+            <i class="bi bi-download" aria-hidden="true"></i>
+            <span>Download</span>
+        </a>
+    </div>
+
+    <div class="card overflow-hidden rounded-3">
+        <div class="card-body p-3 p-md-4">
+
+            {{-- Filters + Columns + Search --}}
+            <form method="GET" action="{{ route('hostel.building.floor.room.map.index') }}" id="hrFilterForm"
+                  class="d-flex flex-column flex-xl-row align-items-xl-center justify-content-between gap-3 mb-4">
+                <input type="hidden" name="per_page" id="hrPerPage" value="{{ request('per_page', 10) }}">
+
+                <div class="d-flex flex-wrap align-items-center gap-3">
+                    <span class="programme-dt-filters-label">Filters</span>
+                    <div class="programme-dt-filter-select">
+                        <select name="building_id" class="form-select form-select-sm js-hr-filter" aria-label="Filter by building">
+                            <option value="">Building</option>
+                            @foreach($buildings as $building)
+                                <option value="{{ $building->pk }}" {{ request('building_id') == $building->pk ? 'selected' : '' }}>
+                                    {{ $building->building_name }}
+                                </option>
+                            @endforeach
+                        </select>
                     </div>
-                    <div class="col-6">
-                        <div class="float-end gap-2">
-                            <a href="{{route('hostel.building.floor.room.map.create')}}" class="btn btn-primary">+ Add
-                                Hostel Building Floor Room</a>
-                            <a href="{{ route('hostel.building.floor.room.map.export') }}"
-                                class="btn btn-secondary">Export All</a>
+                    <div class="programme-dt-filter-select">
+                        <select name="room_type" class="form-select form-select-sm js-hr-filter" aria-label="Filter by room type">
+                            <option value="">Room Type</option>
+                            @foreach($roomTypes as $key => $type)
+                                <option value="{{ $key }}" {{ request('room_type') == $key ? 'selected' : '' }}>{{ $type }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div class="programme-dt-filter-select">
+                        <select name="status" class="form-select form-select-sm js-hr-filter" aria-label="Filter by status">
+                            <option value="">Status</option>
+                            <option value="1" {{ request('status') === '1' ? 'selected' : '' }}>Active</option>
+                            <option value="0" {{ request('status') === '0' ? 'selected' : '' }}>Inactive</option>
+                        </select>
+                    </div>
+                    <a href="{{ route('hostel.building.floor.room.map.index') }}" class="btn programme-dt-btn-reset">Reset Filters</a>
+                </div>
+
+                <div class="d-flex flex-wrap align-items-center gap-2 ms-xl-auto">
+                    <button type="button" class="btn programme-dt-btn-columns" id="hrBtnColumns"
+                        data-bs-toggle="modal" data-bs-target="#hrColumnVisibilityModal" title="Show / hide columns" style="border: 1px solid #d0d5dd; background: #fff; color: #344054;">
+                        <span>Columns</span> <i class="bi bi-layout-three-columns" aria-hidden="true"></i>
+                    </button>
+                    <div class="programme-dt-search">
+                        <div class="dataTables_filter">
+                            <label class="mb-0 w-100">
+                                <input type="search" name="search" class="form-control shadow-none"
+                                       placeholder="Search" value="{{ request('search') }}" aria-label="Search rooms">
+                            </label>
                         </div>
                     </div>
                 </div>
+            </form>
 
-                <!-- Filters -->
-                <form method="GET" action="{{ route('hostel.building.floor.room.map.index') }}" class="mb-3">
-                    <div class="row g-2">
-                        <div class="col-md-3">
-                            <input type="text" name="search" class="form-control "
-                                placeholder="Search..." value="{{ request('search') }}">
-                        </div>
-                        <div class="col-md-2">
-                            <select name="building_id" class="form-select form-select-sm">
-                                <option value="">All Buildings</option>
-                                @foreach($buildings as $building)
-                                <option value="{{ $building->pk }}"
-                                    {{ request('building_id') == $building->pk ? 'selected' : '' }}>
-                                    {{ $building->building_name }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select name="room_type" class="form-select form-select-sm">
-                                <option value="">All Room Types</option>
-                                @foreach($roomTypes as $key => $type)
-                                <option value="{{ $key }}" {{ request('room_type') == $key ? 'selected' : '' }}>
-                                    {{ $type }}
-                                </option>
-                                @endforeach
-                            </select>
-                        </div>
-                        <div class="col-md-2">
-                            <select name="status" class="form-select form-select-sm">
-                                <option value="">All Status</option>
-                                <option value="1" {{ request('status') == '1' ? 'selected' : '' }}>Active</option>
-                                <option value="0" {{ request('status') == '0' ? 'selected' : '' }}>Inactive</option>
-                            </select>
-                        </div>
-                        <div class="col-md-3">
-                            <button type="submit" class="btn btn-primary btn-sm">Filter</button>
-                            <a href="{{ route('hostel.building.floor.room.map.index') }}"
-                                class="btn btn-secondary btn-sm">Reset</a>
-                        </div>
-                    </div>
-                </form>
-
-                <hr>
-
-                <!-- Table -->
+            {{-- Table --}}
+            <div class="programme-dt-panel">
                 <div class="table-responsive">
-                    <table class="table table-hover text-nowrap">
-                        <thead class="table-light">
+                    <table class="table table-hover align-middle mb-0 w-100 programme-dt-table" id="hrRoomTable">
+                        <thead>
                             <tr>
-                                <th width="5%" style="background-color: #af2910; font-weight: 600;">#</th>
-                                <th width="15%" style="background-color: #af2910; font-weight: 600;">Building Name</th>
-                                <th width="10%" style="background-color: #af2910; font-weight: 600;">Floor Name</th>
-                                <th width="15%" style="background-color: #af2910; font-weight: 600;">Room Name</th>
-                                <th width="10%" style="background-color: #af2910; font-weight: 600;">Room Type</th>
-                                <th width="8%" style="background-color: #af2910; font-weight: 600;">Capacity</th>
-                                <th width="20%" style="background-color: #af2910; font-weight: 600;">Comment</th>
-                                <th width="8%" style="background-color: #af2910; font-weight: 600;">Status</th>
-                                <th width="9%" style="background-color: #af2910; font-weight: 600;">Actions</th>
+                                <th class="text-center">S. No.</th>
+                                <th>Building Name</th>
+                                <th>Floor Name</th>
+                                <th>Room Name</th>
+                                <th>Room Type</th>
+                                <th class="text-center">Capacity</th>
+                                <th>Comment</th>
+                                <th class="text-center">Status</th>
+                                <th class="text-center">Action</th>
                             </tr>
                         </thead>
                         <tbody>
                             @forelse($mappings as $index => $row)
-                            <tr>
-                                <td>{{ $mappings->firstItem() + $index }}</td>
-                                <td>{{ $row->building->building_name ?? '—' }}</td>
-                                <td>{{ $row->floor->floor_name ?? '—' }}</td>
-                                <td>{{ $row->room_name }}</td>
-                                <td>{{ $row->room_type }}</td>
-                                <td>{{ $row->capacity }}</td>
-                                <td>
-                                    <input type="text" class="form-control  comment-input"
-                                        data-id="{{ $row->pk }}" value="{{ $row->comment }}">
-                                </td>
-                                <td>
-                                    <div class="form-check form-switch d-inline-block">
-                                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                                            data-table="building_floor_room_mapping" data-column="active_inactive"
-                                            data-id="{{ $row->pk }}" {{ $row->active_inactive == 1 ? 'checked' : '' }}>
-                                    </div>
-                                </td>
-                                <td>
-                                    <a href="{{ route('hostel.building.floor.room.map.edit', encrypt($row->pk)) }}"
-                                        class="btn btn-sm btn-primary">Edit</a>
-                                </td>
-                            </tr>
+                                <tr>
+                                    <td class="text-center">{{ $mappings->firstItem() + $index }}</td>
+                                    <td>{{ $row->building->building_name ?? '—' }}</td>
+                                    <td>{{ $row->floor->floor_name ?? '—' }}</td>
+                                    <td>{{ $row->room_name }}</td>
+                                    <td>{{ $row->room_type }}</td>
+                                    <td class="text-center">{{ $row->capacity }}</td>
+                                    <td>
+                                        <input type="text" class="comment-input" data-id="{{ $row->pk }}"
+                                               value="{{ $row->comment }}" placeholder="Add comment">
+                                    </td>
+                                    <td class="text-center">
+                                        @if($row->active_inactive == 1)
+                                            <span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>
+                                        @else
+                                            <span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>
+                                        @endif
+                                    </td>
+                                    <td class="text-center">
+                                        @php
+                                            $rn = $row->room_name ?? '';
+                                            $roomMiddle = '';
+                                            if ($rn !== '') {
+                                                $roomSuffix = substr($rn, 6);
+                                                $roomMiddle = explode('-', $roomSuffix)[0] ?? '';
+                                            }
+                                        @endphp
+                                        <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
+                                            <button type="button" class="programme-action-btn hr-edit-btn" aria-label="Edit room"
+                                                    data-id="{{ encrypt($row->pk) }}"
+                                                    data-building="{{ $row->building_master_pk }}"
+                                                    data-floor="{{ $row->floor_master_pk }}"
+                                                    data-roomtype="{{ $row->room_type }}"
+                                                    data-roomname="{{ $roomMiddle }}"
+                                                    data-capacity="{{ $row->capacity }}"
+                                                    data-comment="{{ $row->comment }}"
+                                                    data-status="{{ (int) $row->active_inactive }}">
+                                                <i class="bi bi-pencil" aria-hidden="true"></i>
+                                            </button>
+                                            <div class="form-check form-switch programme-action-switch mb-0">
+                                                <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                                                       data-table="building_floor_room_mapping" data-column="active_inactive"
+                                                       data-id="{{ $row->pk }}" {{ $row->active_inactive == 1 ? 'checked' : '' }}>
+                                            </div>
+                                            <form action="{{ route('hostel.building.floor.room.map.destroy', encrypt($row->pk)) }}"
+                                                  method="POST" class="d-inline-flex m-0"
+                                                  onsubmit="return confirm('Are you sure you want to delete this room mapping?')">
+                                                @csrf
+                                                @method('DELETE')
+                                                <button type="submit" class="programme-action-btn programme-action-btn--danger" aria-label="Delete room">
+                                                    <i class="bi bi-trash3" aria-hidden="true"></i>
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
                             @empty
-                            <tr>
-                                <td colspan="9" class="text-center">No records found</td>
-                            </tr>
+                                <tr>
+                                    <td colspan="9" class="text-center py-4 text-muted">No records found</td>
+                                </tr>
                             @endforelse
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Pagination -->
-
-                <div class="d-flex justify-content-between align-items-center mt-3 flex-wrap">
-
-                    <div class="text-muted small mb-2">
-                        Showing {{ $mappings->firstItem() }}
-                        to {{ $mappings->lastItem() }}
-                        of {{ $mappings->total() }} items
-                    </div>
-
-                    <div class="text-end mb-2">
+                {{-- Footer: pagination + count + page size --}}
+                <div class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3">
+                    <div class="programme-dt-pagination">
                         {{ $mappings->links('vendor.pagination.custom') }}
                     </div>
-
-                              
+                    <div class="programme-dt-count d-flex flex-wrap align-items-center gap-2 ms-lg-auto">
+                        <label class="d-inline-flex align-items-center gap-2 mb-0">
+                            <span>Showing</span>
+                            <select id="rowsPerPage" class="form-select form-select-sm" style="width:auto;">
+                                @foreach([10, 25, 50, 100, 200] as $size)
+                                    <option value="{{ $size }}" {{ (int) request('per_page', 10) === $size ? 'selected' : '' }}>{{ $size }}</option>
+                                @endforeach
+                            </select>
+                        </label>
+                        <span class="text-muted">of {{ number_format($mappings->total()) }} items</span>
+                    </div>
                 </div>
             </div>
+
         </div>
-        <!-- end Zero Configuration -->
     </div>
 </div>
 
+<!-- Add / Edit Hostel Floor Room Modal -->
+<div class="modal fade" id="hrFormModal" tabindex="-1" aria-labelledby="hrFormModalLabel" aria-hidden="true"
+     data-bs-backdrop="static" data-bs-keyboard="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 shadow rounded-4">
+            <form id="hrRoomForm" action="{{ route('hostel.building.floor.room.map.store') }}" method="POST" novalidate>
+                @csrf
+                <input type="hidden" name="pk" id="hrPk" value="">
+                <div class="modal-header border-bottom">
+                    <h5 class="modal-title fw-bold mb-0" id="hrFormModalLabel">Add Hostel Floor Room</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div id="hrFormAlert" class="alert d-none mb-3" role="alert"></div>
 
+                    <div class="mb-3">
+                        <label for="hrBuilding" class="form-label fw-semibold">Building <span class="text-danger">*</span></label>
+                        <select class="form-select" id="hrBuilding" name="building_master_pk" required>
+                            <option value="">Select Building</option>
+                            @foreach($buildings as $building)
+                                <option value="{{ $building->pk }}">{{ $building->building_name }}</option>
+                            @endforeach
+                        </select>
+                        <div class="invalid-feedback" data-field="building_master_pk"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hrFloor" class="form-label fw-semibold">Floor <span class="text-danger">*</span></label>
+                        <select class="form-select" id="hrFloor" name="floor_master_pk" required>
+                            <option value="">Select Floor</option>
+                            @foreach($floors as $floor)
+                                <option value="{{ $floor->pk }}">{{ $floor->floor_name }}</option>
+                            @endforeach
+                        </select>
+                        <div class="invalid-feedback" data-field="floor_master_pk"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hrRoomType" class="form-label fw-semibold">Room Type <span class="text-danger">*</span></label>
+                        <select class="form-select" id="hrRoomType" name="room_type" required>
+                            <option value="">Select Type</option>
+                            @foreach($roomTypes as $key => $type)
+                                <option value="{{ $key }}">{{ $type }}</option>
+                            @endforeach
+                        </select>
+                        <div class="invalid-feedback" data-field="room_type"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hrRoomName" class="form-label fw-semibold">Room Name <span class="text-danger">*</span></label>
+                        <input type="text" class="form-control" id="hrRoomName" name="room_name"
+                               placeholder="eg. Naramada Hostel" maxlength="255" required>
+                        <div class="invalid-feedback" data-field="room_name"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hrCapacity" class="form-label fw-semibold">Capacity of Room <span class="text-danger">*</span></label>
+                        <input type="number" class="form-control" id="hrCapacity" name="capacity"
+                               placeholder="eg. 25" min="1" required>
+                        <div class="invalid-feedback" data-field="capacity"></div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="hrStatus" class="form-label fw-semibold">Building Status <span class="text-danger">*</span></label>
+                        <select class="form-select" id="hrStatus" name="active_inactive" required>
+                            <option value="">Select Status</option>
+                            <option value="1">Active</option>
+                            <option value="0">Inactive</option>
+                        </select>
+                        <div class="invalid-feedback" data-field="active_inactive"></div>
+                    </div>
+
+                    <div class="mb-0">
+                        <label for="hrComment" class="form-label fw-semibold">Comments</label>
+                        <input type="text" class="form-control" id="hrComment" name="comment"
+                               placeholder="eg. Lorem ipsum dolor sit amet" maxlength="255">
+                        <div class="invalid-feedback" data-field="comment"></div>
+                    </div>
+                </div>
+                <div class="modal-footer border-0 gap-2 justify-content-end">
+                    <button type="button" class="btn btn-outline-primary rounded-1 px-4" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary rounded-1 px-4" id="hrSubmitBtn">Add Hostel Floor Room</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Column Visibility Modal -->
+<div class="modal fade" id="hrColumnVisibilityModal" tabindex="-1" aria-labelledby="hrColumnVisibilityLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+        <div class="modal-content rounded-4 border-0 shadow">
+            <div class="modal-header border-0 pb-2">
+                <h5 class="modal-title fw-bold" id="hrColumnVisibilityLabel">Column Visibility</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body pt-0">
+                <hr class="mt-0">
+                <div class="row g-3" id="hrColumnToggleGrid"></div>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn btn-outline-primary rounded-3 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
 @endsection
+
 @push('scripts')
-
 <script>
-$(document).on('change', '.comment-input', function() {
-    var id = $(this).data('id');
-    var value = $(this).val();
+    $(document).ready(function () {
+        /* ---- Filters auto-apply ---- */
+        $('.js-hr-filter').on('change', function () {
+            $('#hrFilterForm').trigger('submit');
+        });
 
-    $.ajax({
-        url: '{{ route("hostel.building.floor.room.map.update.comment") }}',
-        type: 'POST',
-        data: {
-            _token: $('meta[name="csrf-token"]').attr('content'),
-            id: id,
-            comment: value
-        },
-        success: function(response) {
-            if (response.success) {
-                toastr.success('Comment updated successfully');
-            } else {
-                toastr.error('Failed to update comment');
+        /* ---- Page size ---- */
+        $('#rowsPerPage').on('change', function () {
+            var url = new URL(window.location.href);
+            url.searchParams.set('per_page', this.value);
+            url.searchParams.delete('page');
+            window.location.href = url.toString();
+        });
+
+        /* ---- Print ---- */
+        $('#hrPrintBtn').on('click', function () {
+            window.print();
+        });
+
+        /* ---- Inline comment edit (unchanged behaviour) ---- */
+        $(document).on('change', '.comment-input', function () {
+            var id = $(this).data('id');
+            var value = $(this).val();
+
+            $.ajax({
+                url: '{{ route("hostel.building.floor.room.map.update.comment") }}',
+                type: 'POST',
+                data: {
+                    _token: $('meta[name="csrf-token"]').attr('content'),
+                    id: id,
+                    comment: value
+                },
+                success: function (response) {
+                    if (response.success) {
+                        if (typeof toastr !== 'undefined') toastr.success('Comment updated successfully');
+                    } else {
+                        if (typeof toastr !== 'undefined') toastr.error('Failed to update comment');
+                    }
+                },
+                error: function () {
+                    if (typeof toastr !== 'undefined') toastr.error('Error occurred');
+                }
+            });
+        });
+
+        /* ---- Column show / hide (manual table) ---- */
+        var hrColStorageKey = 'hrGrid:hiddenColumns:v1';
+        var $table = $('#hrRoomTable');
+
+        function hrGetHiddenCols() {
+            try {
+                var raw = localStorage.getItem(hrColStorageKey);
+                var arr = raw ? JSON.parse(raw) : [];
+                return Array.isArray(arr) ? arr : [];
+            } catch (e) {
+                return [];
             }
-        },
-        error: function() {
-            toastr.error('Error occurred');
         }
+
+        function hrPersistHiddenCols(arr) {
+            try { localStorage.setItem(hrColStorageKey, JSON.stringify(arr)); } catch (e) {}
+        }
+
+        function hrApplyCols() {
+            var hidden = hrGetHiddenCols();
+            $table.find('tr').each(function () {
+                $(this).children().each(function (idx) {
+                    $(this).toggle(hidden.indexOf(idx) === -1);
+                });
+            });
+        }
+
+        function hrBuildColumnGrid() {
+            var hidden = hrGetHiddenCols();
+            var $grid = $('#hrColumnToggleGrid').empty();
+
+            $table.find('thead th').each(function (idx) {
+                var title = $(this).text().replace(/\s+/g, ' ').trim();
+                if (!title) {
+                    return;
+                }
+                var inputId = 'hrcolvis_' + idx;
+                var $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
+                var $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>')
+                    .attr('for', inputId);
+                var $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', hidden.indexOf(idx) === -1);
+
+                $cb.on('change', function () {
+                    var h = hrGetHiddenCols();
+                    var pos = h.indexOf(idx);
+                    if (this.checked) {
+                        if (pos !== -1) h.splice(pos, 1);
+                    } else {
+                        if (pos === -1) h.push(idx);
+                    }
+                    hrPersistHiddenCols(h);
+                    hrApplyCols();
+                });
+
+                $label.append($cb).append($('<span></span>').text(title));
+                $cell.append($label);
+                $grid.append($cell);
+            });
+        }
+
+        hrApplyCols();
+        hrBuildColumnGrid();
+
+        /* ---- Add / Edit modal ---- */
+        var $form = $('#hrRoomForm');
+        var $alert = $('#hrFormAlert');
+
+        function hrClearErrors() {
+            $form.find('.is-invalid').removeClass('is-invalid');
+            $form.find('.invalid-feedback').text('');
+            $alert.addClass('d-none').removeClass('alert-danger alert-success').empty();
+        }
+
+        function hrResetForm() {
+            $form[0].reset();
+            $('#hrPk').val('');
+            hrClearErrors();
+        }
+
+        // Open for "Add"
+        $('#hrAddBtn').on('click', function () {
+            hrResetForm();
+            $('#hrFormModalLabel').text('Add Hostel Floor Room');
+            $('#hrSubmitBtn').text('Add Hostel Floor Room');
+            $('#hrStatus').val('1');
+        });
+
+        // Open for "Edit"
+        $(document).on('click', '.hr-edit-btn', function () {
+            var $btn = $(this);
+            hrResetForm();
+            $('#hrFormModalLabel').text('Edit Hostel Floor Room');
+            $('#hrSubmitBtn').text('Update');
+
+            $('#hrPk').val($btn.data('id'));
+            $('#hrBuilding').val(String($btn.data('building')));
+            $('#hrFloor').val(String($btn.data('floor')));
+            $('#hrRoomType').val(String($btn.data('roomtype')));
+            $('#hrRoomName').val($btn.data('roomname'));
+            $('#hrCapacity').val($btn.data('capacity'));
+            $('#hrStatus').val(String($btn.data('status')));
+            $('#hrComment').val($btn.data('comment'));
+
+            bootstrap.Modal.getOrCreateInstance(document.getElementById('hrFormModal')).show();
+        });
+
+        // AJAX submit (create + update share the store route)
+        $form.on('submit', function (e) {
+            e.preventDefault();
+            hrClearErrors();
+
+            var $submit = $('#hrSubmitBtn');
+            var originalText = $submit.text();
+            $submit.prop('disabled', true)
+                   .html('<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Saving...');
+
+            $.ajax({
+                url: $form.attr('action'),
+                type: 'POST',
+                data: $form.serialize(),
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'Accept': 'application/json'
+                },
+                success: function (response) {
+                    $alert.removeClass('d-none alert-danger').addClass('alert-success')
+                          .html('<i class="bi bi-check-circle me-1"></i>' + (response.message || 'Saved successfully.'));
+                    setTimeout(function () { window.location.reload(); }, 800);
+                },
+                error: function (xhr) {
+                    if (xhr.status === 422 && xhr.responseJSON && xhr.responseJSON.errors) {
+                        var errors = xhr.responseJSON.errors;
+                        Object.keys(errors).forEach(function (field) {
+                            $form.find('[name="' + field + '"]').addClass('is-invalid');
+                            $form.find('.invalid-feedback[data-field="' + field + '"]').text(errors[field][0]);
+                        });
+                    } else {
+                        var msg = (xhr.responseJSON && xhr.responseJSON.message)
+                            ? xhr.responseJSON.message
+                            : 'An error occurred while saving. Please try again.';
+                        $alert.removeClass('d-none alert-success').addClass('alert-danger')
+                              .html('<i class="bi bi-exclamation-circle me-1"></i>' + msg);
+                    }
+                    $submit.prop('disabled', false).text(originalText);
+                }
+            });
+        });
+
+        // Reset on close so a stale edit can't leak into Add
+        document.getElementById('hrFormModal').addEventListener('hidden.bs.modal', function () {
+            hrResetForm();
+            $('#hrFormModalLabel').text('Add Hostel Floor Room');
+            $('#hrSubmitBtn').text('Add Hostel Floor Room');
+        });
     });
-});
-
-// Rows per page functionality
-$('#rowsPerPage').on('change', function() {
-    const value = $(this).val();
-    const url = new URL(window.location.href);
-
-    if (value === 'all') {
-        url.searchParams.set('per_page', 10000);
-    } else {
-        url.searchParams.set('per_page', value);
-    }
-
-    window.location.href = url.toString();
-});
-
-// Set current rows per page value
-$(document).ready(function() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const perPage = urlParams.get('per_page');
-
-    if (perPage) {
-        if (perPage >= 10000) {
-            $('#rowsPerPage').val('all');
-        } else {
-            $('#rowsPerPage').val(perPage);
-        }
-    }
-});
 </script>
 @endpush
