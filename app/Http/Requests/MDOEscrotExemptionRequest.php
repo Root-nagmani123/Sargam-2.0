@@ -51,11 +51,21 @@ class MDOEscrotExemptionRequest extends FormRequest
             'faculty_master_pk.*' => 'exists:faculty_master,pk',
         ];
 
+        $dutyTypes = MDOEscotDutyMap::getMdoDutyTypes();
+
         // If duty type is Escort, at least one faculty is required.
-        $escortDutyTypeId = MDOEscotDutyMap::getMdoDutyTypes()['escort'] ?? null;
+        $escortDutyTypeId = $dutyTypes['escort'] ?? null;
         if ($this->mdo_duty_type_master_pk == $escortDutyTypeId) {
             $rules['faculty_master_pk'] = 'required|array|min:1';
             $rules['faculty_master_pk.*'] = 'exists:faculty_master,pk';
+        }
+
+        // If duty type is Other, the free-text duty name is required.
+        $otherDutyTypeId = $dutyTypes['other'] ?? null;
+        if ($otherDutyTypeId && $this->mdo_duty_type_master_pk == $otherDutyTypeId) {
+            $rules['duty_other'] = 'required|string|max:255';
+        } else {
+            $rules['duty_other'] = 'nullable|string|max:255';
         }
 
         return $rules;
@@ -76,6 +86,8 @@ class MDOEscrotExemptionRequest extends FormRequest
             'faculty_master_pk.required' => 'The faculty field is required when Duty Type is Escort.',
             'faculty_master_pk.min' => 'The faculty field is required when Duty Type is Escort.',
             'faculty_master_pk.*.exists' => 'The selected faculty is invalid.',
+            'duty_other.required' => 'The duty other field is required when Duty Type is Other.',
+            'duty_other.max' => 'The duty other may not be greater than 255 characters.',
         ];
     }
 }

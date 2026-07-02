@@ -28,29 +28,47 @@ class BuildingMasterDataTable extends DataTable
             ->addColumn('no_of_floors', fn($row) => $row->no_of_floors ?? '-')
             ->addColumn('no_of_rooms', fn($row) => $row->no_of_rooms ?? '-')
             ->addColumn('building_type', fn($row) => $row->building_type ?? '-')
-            ->addColumn('action', function ($row) {
-                $editUrl = route('master.hostel.building.edit', ['id' => encrypt($row->pk)]);
-                
-                $deleteUrl = route('master.hostel.building.destroy', ['id' => encrypt($row->pk)]);
-                return '
-                    <a href="' . $editUrl . '" class="btn btn-primary btn-sm">Edit</a>
-                    <form action="' . $deleteUrl . '" method="POST" class="d-inline" onsubmit="return confirm(\'Are you sure?\')">
-                        ' . csrf_field() . '
-                        ' . method_field('DELETE') . '
-                        <button type="submit" class="btn btn-danger btn-sm" ' . ($row->active_inactive == 0 ? '' : 'disabled') . '>Delete</button>
-                    </form>
-                ';
-            })
             ->addColumn('status', function ($row) {
-                $checked = $row->active_inactive == 1 ? 'checked' : '';
-                return '<div class="form-check form-switch d-inline-block ms-2">
-                <input class="form-check-input status-toggle" type="checkbox" role="switch"
-                    data-table="building_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
-            </div>';
+                return (int) $row->active_inactive === 1
+                    ? '<span class="badge rounded-1 programme-status-badge programme-status-badge--active">Active</span>'
+                    : '<span class="badge rounded-1 programme-status-badge programme-status-badge--inactive">Inactive</span>';
             })
+            ->addColumn('action', function ($row) {
+                $deleteUrl = route('master.hostel.building.destroy', ['id' => encrypt($row->pk)]);
+                $isActive  = (int) $row->active_inactive === 1;
+                $checked   = $isActive ? 'checked' : '';
+                $deleteDisabled = $isActive ? 'disabled' : '';
+                $csrf = csrf_token();
 
+                $editBtn = '<button type="button" class="programme-action-btn hb-edit-btn" aria-label="Edit building"'
+                        . ' data-id="' . encrypt($row->pk) . '"'
+                        . ' data-name="' . e($row->building_name) . '"'
+                        . ' data-floors="' . e($row->no_of_floors) . '"'
+                        . ' data-rooms="' . e($row->no_of_rooms) . '"'
+                        . ' data-type="' . e($row->building_type) . '"'
+                        . ' data-status="' . (int) $row->active_inactive . '">'
+                        . '<i class="bi bi-pencil" aria-hidden="true"></i>'
+                        . '</button>';
+
+                $deleteHtml = '<form action="' . $deleteUrl . '" method="POST" class="d-inline-flex m-0" onsubmit="return confirm(\'Are you sure you want to delete this building?\')">'
+                        . '<input type="hidden" name="_token" value="' . $csrf . '">'
+                        . '<input type="hidden" name="_method" value="DELETE">'
+                        . '<button type="submit" class="programme-action-btn programme-action-btn--danger" aria-label="Delete building" ' . $deleteDisabled . '>'
+                        . '<i class="bi bi-trash3" aria-hidden="true"></i>'
+                        . '</button>'
+                        . '</form>';
+
+                return '
+                <div class="d-inline-flex align-items-center justify-content-center programme-action-group" role="group" aria-label="Row actions">
+                    ' . $editBtn . '
+                    <div class="form-check form-switch programme-action-switch mb-0">
+                        <input class="form-check-input status-toggle" type="checkbox" role="switch"
+                            data-table="building_master" data-column="active_inactive" data-id="' . $row->pk . '" ' . $checked . '>
+                    </div>
+                    ' . $deleteHtml . '
+                </div>';
+            })
             ->setRowId('pk')
-            ->setRowClass('text-center')
             ->filterColumn('building_name', function ($query, $keyword) {
                 $query->where('building_name', 'like', "%{$keyword}%");
             })
@@ -79,11 +97,30 @@ class BuildingMasterDataTable extends DataTable
                     ->setTableId('hostelbuildingmaster-table')
                     ->columns($this->getColumns())
                     ->minifiedAjax()
-                    //->dom('Bfrtip')
-                    // ->orderBy(1)
                     ->selectStyleSingle()
+                    ->responsive(true)
                     ->parameters([
-                        'order' => [],
+                        'responsive'   => true,
+                        'scrollX'      => false,
+                        'autoWidth'    => false,
+                        'ordering'     => false,
+                        'searching'    => true,
+                        'lengthChange' => true,
+                        'pageLength'   => 10,
+                        'lengthMenu'   => [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+                        'order'        => [],
+                        'language'     => [
+                            'search'           => '',
+                            'searchPlaceholder' => 'Search',
+                            'paginate'         => [
+                                'previous' => '‹',
+                                'next'     => '›',
+                            ],
+                            'lengthMenu'   => 'Showing _MENU_',
+                            'info'         => 'of _TOTAL_ items',
+                            'infoEmpty'    => 'of 0 items',
+                            'infoFiltered' => 'of _MAX_ items',
+                        ],
                     ])
                     ->buttons([
                         Button::make('excel'),
@@ -91,7 +128,7 @@ class BuildingMasterDataTable extends DataTable
                         Button::make('pdf'),
                         Button::make('print'),
                         Button::make('reset'),
-                        Button::make('reload')
+                        Button::make('reload'),
                     ]);
     }
 
@@ -103,13 +140,13 @@ class BuildingMasterDataTable extends DataTable
     public function getColumns(): array
     {
         return [
-            Column::computed('DT_RowIndex')->title('S.No.')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::make('building_name')->title('Building Name')->orderable(false)->addClass('text-center'),
+            Column::computed('DT_RowIndex')->title('S. No.')->searchable(false)->orderable(false)->addClass('text-center'),
+            Column::make('building_name')->title('Building Name')->orderable(false),
             Column::make('no_of_floors')->title('No. of Floors')->orderable(false)->addClass('text-center'),
             Column::make('no_of_rooms')->title('No. of Rooms')->orderable(false)->addClass('text-center'),
-            Column::make('building_type')->title('Building Type')->orderable(false)->addClass('text-center'),
+            Column::make('building_type')->title('Building Type')->orderable(false),
+            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center'),
             Column::make('action')->title('Action')->searchable(false)->orderable(false)->addClass('text-center'),
-            Column::computed('status')->title('Status')->searchable(false)->orderable(false)->addClass('text-center')
         ];
     }
 

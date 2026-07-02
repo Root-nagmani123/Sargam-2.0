@@ -94,6 +94,32 @@
     }
     .student-list-page .sl-more-filters:hover { text-decoration: underline; }
 
+    .student-list-page .sl-table-shell { position: relative; }
+    .student-list-page .sl-table-loading {
+        position: absolute;
+        inset: 0;
+        background: rgba(255, 255, 255, 0.74);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 30;
+        backdrop-filter: blur(1px);
+    }
+    .student-list-page .sl-table-loading.is-active { display: flex; }
+    .student-list-page .sl-table-loading-card {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.7rem 0.95rem;
+        border: 1px solid #d0d5dd;
+        border-radius: 10px;
+        background: #fff;
+        box-shadow: 0 8px 22px rgba(16, 24, 40, 0.12);
+        color: #344054;
+        font-weight: 600;
+        font-size: 0.9rem;
+    }
+
     .student-list-page .programme-dt-table tbody td a.sl-count {
         color: #004a93;
         font-weight: 600;
@@ -115,6 +141,52 @@
     }
     .student-list-page .sl-status-absent { color: #b42318; background: #fef3f2; }
     .student-list-page .sl-status-present { color: #027a48; background: #ecfdf3; }
+
+    /* Wide table with frozen first three columns (S.No., OT Code, Name). */
+    .student-list-page .programme-dt-table { width: 100% !important; }
+    .student-list-page .programme-dt-table th,
+    .student-list-page .programme-dt-table td { white-space: nowrap; }
+    .student-list-page .programme-dt-table th:nth-child(1),
+    .student-list-page .programme-dt-table td:nth-child(1) { min-width: 90px; }
+    .student-list-page .programme-dt-table th:nth-child(2),
+    .student-list-page .programme-dt-table td:nth-child(2) { min-width: 130px; }
+    .student-list-page .programme-dt-table th:nth-child(3),
+    .student-list-page .programme-dt-table td:nth-child(3) { min-width: 260px; }
+
+    /* Let DataTables scrollX be the only horizontal scroller. */
+    .student-list-page .sl-dt-scroll-host { overflow: visible; }
+
+    /* Custom pinned columns for DataTables scroll head/body. */
+    .student-list-page .dataTables_wrapper {
+        --sl-pin-left-0: 0px;
+        --sl-pin-left-1: 90px;
+        --sl-pin-left-2: 220px;
+    }
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(1),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(1),
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(2),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(2),
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(3),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(3) {
+        position: sticky;
+        background: #fff;
+    }
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(1),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(1) { left: var(--sl-pin-left-0); }
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(2),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(2) { left: var(--sl-pin-left-1); }
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(3),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(3) { left: var(--sl-pin-left-2); }
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(1),
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(2),
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(3) { z-index: 8; }
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(1),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(2),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(3) { z-index: 4; }
+    .student-list-page .dataTables_scrollHead table thead th:nth-child(3),
+    .student-list-page .dataTables_scrollBody table tbody td:nth-child(3) {
+        box-shadow: 1px 0 0 #e5e7eb;
+    }
 
     /* ── Collapsible search: full field when there's room, icon-only otherwise ── */
     .student-list-page .sl-search-wrap { position: relative; display: inline-flex; align-items: center; }
@@ -283,9 +355,17 @@
                 </div>
             </div>
 
+            <div class="sl-table-shell">
+                <div class="sl-table-loading" id="studentTableLoading" aria-live="polite" aria-busy="false">
+                    <div class="sl-table-loading-card">
+                        <span class="spinner-border spinner-border-sm text-primary" role="status" aria-hidden="true"></span>
+                        <span>Loading students...</span>
+                    </div>
+                </div>
+
             {{-- ── Present panel (full layout) ── --}}
             <div class="programme-dt-panel" id="studentPresentPanel" @if($isAbsent) style="display:none;" @endif>
-                <div class="table-responsive">
+                <div class="sl-dt-scroll-host">
                     <table class="table programme-dt-table" id="studentListTable">
                         <thead>
                             <tr>
@@ -295,6 +375,8 @@
                                 <th>Email</th>
                                 <th>Cadre</th>
                                 <th>Status</th>
+                                <th>Date &amp; Session</th>
+                                <th>Topic</th>
                                 <th>House Name</th>
                                 <th>Total Duty (Count)</th>
                                 <th>Total Medical Exemption Count</th>
@@ -304,36 +386,7 @@
                                 <th>Total Discipline Memo</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($presentStudents as $studentMap)
-                                @php
-                                    $student = $studentMap->studentMaster;
-                                    $cadreName = $student->cadre->cadre_name ?? 'N/A';
-                                    $houseName = $studentMap->house_name ?? 'N/A';
-                                    $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
-                                    // Per-count deep links: clicking a count opens the detail page
-                                    // focused on just that section. Clicking the name opens the full view.
-                                    $sectionUrl = fn ($section) => $detailUrl . '?section=' . $section;
-                                @endphp
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $student->generated_OT_code ?? 'N/A' }}</td>
-                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) }}</a></td>
-                                    <td>{{ $student->email ?? 'N/A' }}</td>
-                                    <td>{{ $cadreName }}</td>
-                                    <td><span class="sl-status-badge sl-status-present">Present</span></td>
-                                    <td>{{ $houseName }}</td>
-                                    <td><a href="{{ $sectionUrl('dutiesSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_duty_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $sectionUrl('medicalExceptionsSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_medical_exception_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $sectionUrl('ptExemptionsSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_pt_exemption_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $sectionUrl('stationedLeavesSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_stationed_leave_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $sectionUrl('noticesSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_notice_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                    <td><a href="{{ $sectionUrl('memosSection') }}" class="sl-count">{{ str_pad((string) ($studentMap->total_memo_count ?? 0), 2, '0', STR_PAD_LEFT) }}</a></td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="13" class="text-center text-muted py-4">Data not found.</td></tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
                 <div id="studentDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="studentListTable"></div>
@@ -341,7 +394,7 @@
 
             {{-- ── Absent panel (slim layout) ── --}}
             <div class="programme-dt-panel" id="studentAbsentPanel" @unless($isAbsent) style="display:none;" @endunless>
-                <div class="table-responsive">
+                <div class="sl-dt-scroll-host">
                     <table class="table programme-dt-table" id="studentListTableAbsent">
                         <thead>
                             <tr>
@@ -351,30 +404,15 @@
                                 <th>Email</th>
                                 <th>Cadre</th>
                                 <th>Status</th>
+                                <th>Date &amp; Session</th>
+                                <th>Topic</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            @forelse($absentStudents as $studentMap)
-                                @php
-                                    $student = $studentMap->studentMaster;
-                                    $cadreName = $student->cadre->cadre_name ?? 'N/A';
-                                    $detailUrl = route('admin.dashboard.students.detail', encrypt($student->pk));
-                                @endphp
-                                <tr>
-                                    <td>{{ $loop->iteration }}</td>
-                                    <td>{{ $student->generated_OT_code ?? 'N/A' }}</td>
-                                    <td><a href="{{ $detailUrl }}" class="sl-count">{{ $student->display_name ?? trim(($student->first_name ?? '') . ' ' . ($student->last_name ?? '')) }}</a></td>
-                                    <td>{{ $student->email ?? 'N/A' }}</td>
-                                    <td>{{ $cadreName }}</td>
-                                    <td><span class="sl-status-badge sl-status-absent">Absent</span></td>
-                                </tr>
-                            @empty
-                                <tr><td colspan="6" class="text-center text-muted py-4">Data not found.</td></tr>
-                            @endforelse
-                        </tbody>
+                        <tbody></tbody>
                     </table>
                 </div>
                 <div id="studentDtFooterAbsent" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3" data-dt-footer-for="studentListTableAbsent"></div>
+            </div>
             </div>
         </div>
     </div>
@@ -405,18 +443,162 @@
 <script>
     $(document).ready(function() {
         const filters = @json($filters ?? []);
-        const allGroupNames = @json($groupNames ?? []);
         const baseUrl = "{{ route('admin.dashboard.students') }}";
+        const LOCKED_COLUMNS = [0, 1, 2];
+        let dtPresent = null;
+        let dtAbsent = null;
+        let activeDt = null;
+        let loadingRequests = 0;
 
-        /* ── Reload-based server-side filtering ── */
-        function applyFilter(changes) {
-            const p = new URLSearchParams(window.location.search);
-            Object.entries(changes).forEach(([k, v]) => {
-                if (v === '' || v === null || v === undefined) { p.delete(k); }
-                else { p.set(k, v); }
-            });
-            window.location.search = p.toString();
+        function setTableLoading(show) {
+            const $loader = $('#studentTableLoading');
+            if (!$loader.length) { return; }
+            if (show) {
+                loadingRequests += 1;
+            } else {
+                loadingRequests = Math.max(loadingRequests - 1, 0);
+            }
+            const active = loadingRequests > 0;
+            $loader.toggleClass('is-active', active).attr('aria-busy', active ? 'true' : 'false');
         }
+
+        function getFilterState() {
+            return {
+                course_id: $('#courseFilter').val() || '',
+                duty_type: $('#dutyTypeFilter').val() || '',
+                role_filter: $('#roleFilter').val() || '',
+                cadre: $('#cadreFilter').val() || '',
+                house: $('#houseFilter').val() || '',
+                from_date: (filters.from_date || '').toString(),
+                to_date: (filters.to_date || '').toString(),
+            };
+        }
+
+        function syncUrl(attendanceOverride) {
+            const p = new URLSearchParams(window.location.search);
+            const state = getFilterState();
+
+            Object.entries(state).forEach(([k, v]) => {
+                if (v === '' || v === null || v === undefined) {
+                    p.delete(k);
+                } else {
+                    p.set(k, v);
+                }
+            });
+
+            const activeAttendance = attendanceOverride || (activeDt === dtAbsent ? 'absent' : 'present');
+            if (activeAttendance === 'absent') {
+                p.set('attendance', 'absent');
+            } else {
+                p.delete('attendance');
+            }
+
+            const qs = p.toString();
+            window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+        }
+
+        function applyFilter(changes) {
+            Object.entries(changes || {}).forEach(([k, v]) => {
+                if (k === 'from_date' || k === 'to_date') {
+                    filters[k] = v || '';
+                }
+            });
+            syncUrl();
+            if (activeDt) {
+                activeDt.ajax.reload(null, true);
+            }
+        }
+
+        function buildAjaxConfig(attendance) {
+            return {
+                url: baseUrl,
+                type: 'GET',
+                data: function(d) {
+                    const state = getFilterState();
+                    d.course_id = state.course_id;
+                    d.duty_type = state.duty_type;
+                    d.role_filter = state.role_filter;
+                    d.cadre = state.cadre;
+                    d.house = state.house;
+                    d.from_date = state.from_date;
+                    d.to_date = state.to_date;
+                    d.attendance = attendance;
+                }
+            };
+        }
+
+        const dtBaseOpts = {
+            processing: true,
+            serverSide: true,
+            deferRender: true,
+            searchDelay: 400,
+            pageLength: 10,
+            lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
+            order: [[0, 'asc']],
+            language: { emptyTable: 'Data not found.' },
+            responsive: false,
+            scrollX: true,
+            scrollCollapse: true,
+            autoWidth: false,
+        };
+
+        function relayoutPinnedColumns(dt) {
+            if (!dt) { return; }
+            const $container = $(dt.table().container());
+            if (!$container.length) { return; }
+            const $headCells = $container.find('.dataTables_scrollHead table thead th');
+            if (!$headCells.length) { return; }
+
+            const fallbackWidths = [90, 130, 260];
+            let runningLeft = 0;
+            LOCKED_COLUMNS.forEach(function(colIdx, i) {
+                const $cell = $headCells.eq(colIdx);
+                const width = Math.max(0, Math.round(($cell.outerWidth() || fallbackWidths[i] || 100)));
+                $container[0].style.setProperty('--sl-pin-left-' + i, runningLeft + 'px');
+                runningLeft += width;
+            });
+        }
+
+        dtPresent = $('#studentListTable').DataTable($.extend(true, {}, dtBaseOpts, {
+            ajax: buildAjaxConfig('present'),
+            columns: [
+                { data: 's_no', name: 's_no' },
+                { data: 'ot_code', name: 'ot_code' },
+                { data: 'name', name: 'name', orderable: true, searchable: true },
+                { data: 'email', name: 'email' },
+                { data: 'cadre', name: 'cadre' },
+                { data: 'status', name: 'status', searchable: false },
+                { data: 'date_session', name: 'date_session' },
+                { data: 'topic', name: 'topic' },
+                { data: 'house_name', name: 'house_name' },
+                { data: 'total_duty_count', name: 'total_duty_count', searchable: false },
+                { data: 'total_medical_exception_count', name: 'total_medical_exception_count', searchable: false },
+                { data: 'total_pt_exemption_count', name: 'total_pt_exemption_count', searchable: false },
+                { data: 'total_stationed_leave_count', name: 'total_stationed_leave_count', searchable: false },
+                { data: 'total_notice_count', name: 'total_notice_count', searchable: false },
+                { data: 'total_memo_count', name: 'total_memo_count', searchable: false },
+            ]
+        }));
+
+        dtAbsent = $('#studentListTableAbsent').DataTable($.extend(true, {}, dtBaseOpts, {
+            ajax: buildAjaxConfig('absent'),
+            columns: [
+                { data: 's_no', name: 's_no' },
+                { data: 'ot_code', name: 'ot_code' },
+                { data: 'name', name: 'name', orderable: true, searchable: true },
+                { data: 'email', name: 'email' },
+                { data: 'cadre', name: 'cadre' },
+                { data: 'status', name: 'status', searchable: false },
+                { data: 'date_session', name: 'date_session' },
+                { data: 'topic', name: 'topic' },
+            ]
+        }));
+
+        $('#studentListTable, #studentListTableAbsent')
+            .on('preXhr.dt', function() { setTableLoading(true); })
+            .on('xhr.dt error.dt', function() { setTableLoading(false); });
+
+        activeDt = (filters.attendance || 'present') === 'absent' ? dtAbsent : dtPresent;
 
         /* ── Present / Absent tab switch (no page reload) ── */
         function switchStudentTab(att) {
@@ -431,12 +613,13 @@
             $('#studentSearchWrapAbsent').css('display', isAbsent ? '' : 'none');
             $('.sl-search-wrap').removeClass('sl-search-open');
             activeDt = isAbsent ? dtAbsent : dtPresent;
-            if (activeDt) { activeDt.columns.adjust(); setupStudentColumns(activeDt); }
-            // Keep the URL in sync so a refresh / export honours the active tab.
-            const p = new URLSearchParams(window.location.search);
-            if (isAbsent) { p.set('attendance', 'absent'); } else { p.delete('attendance'); }
-            const qs = p.toString();
-            window.history.replaceState(null, '', window.location.pathname + (qs ? '?' + qs : ''));
+            if (activeDt) {
+                activeDt.columns.adjust();
+                relayoutPinnedColumns(activeDt);
+                activeDt.ajax.reload(null, false);
+                setupStudentColumns(activeDt);
+            }
+            syncUrl(att);
         }
         $('.programme-status-tabs .programme-status-pill').on('click', function() {
             switchStudentTab($(this).data('attendance'));
@@ -476,28 +659,13 @@
             },
         });
         $period.on('apply.daterangepicker', function(ev, picker) {
+            $period.val(picker.startDate.format('DD/MM/YYYY') + ' - ' + picker.endDate.format('DD/MM/YYYY'));
             applyFilter({ from_date: picker.startDate.format('YYYY-MM-DD'), to_date: picker.endDate.format('YYYY-MM-DD') });
         });
         $period.on('cancel.daterangepicker', function() {
+            $period.val('');
             applyFilter({ from_date: '', to_date: '' });
         });
-
-        /* ── DataTables: one per tab, client-side search / pagination / columns ── */
-        const dtOpts = {
-            pageLength: 10,
-            lengthMenu: [[10, 25, 50, 100, 200], [10, 25, 50, 100, 200]],
-            order: [[0, 'asc']],
-            language: { emptyTable: 'Data not found.' },
-            responsive: false,
-        };
-        let dtPresent = null, dtAbsent = null;
-        @if($presentStudents->isNotEmpty())
-            dtPresent = $('#studentListTable').DataTable(dtOpts);
-        @endif
-        @if($absentStudents->isNotEmpty())
-            dtAbsent = $('#studentListTableAbsent').DataTable(dtOpts);
-        @endif
-        let activeDt = {{ $isAbsent ? 'dtAbsent' : 'dtPresent' }};
 
         $('#studentListPrintBtn').on('click', function() { window.print(); });
 
@@ -525,9 +693,18 @@
         function setupStudentColumns(dt) {
             if (!dt) { return; }
             const key = studentColKey(dt);
-            const hidden = studentGetHiddenCols(key);
-            dt.columns().every(function() { const idx = this.index(); this.visible(hidden.indexOf(idx) === -1, false); });
+            const hidden = studentGetHiddenCols(key).filter(idx => LOCKED_COLUMNS.indexOf(idx) === -1);
+            studentPersistHiddenCols(key, hidden);
+            dt.columns().every(function() {
+                const idx = this.index();
+                if (LOCKED_COLUMNS.indexOf(idx) !== -1) {
+                    this.visible(true, false);
+                    return;
+                }
+                this.visible(hidden.indexOf(idx) === -1, false);
+            });
             dt.columns.adjust();
+            relayoutPinnedColumns(dt);
             const $grid = $('#studentColumnToggleGrid');
             if (!$grid.length) { return; }
             $grid.empty();
@@ -535,17 +712,23 @@
                 const idx = this.index();
                 const title = $(this.header()).text().replace(/\s+/g, ' ').trim();
                 if (!title) { return; }
+                const isLocked = LOCKED_COLUMNS.indexOf(idx) !== -1;
                 const inputId = 'studentcolvis_' + idx;
                 const $cell = $('<div class="col-12 col-sm-6 col-md-4"></div>');
                 const $label = $('<label class="colvis-item d-flex align-items-center gap-2 border rounded-3 px-3 py-2 mb-0 w-100"></label>').attr('for', inputId);
-                const $cb = $('<input type="checkbox" class="form-check-input m-0">').attr('id', inputId).prop('checked', hidden.indexOf(idx) === -1);
+                const $cb = $('<input type="checkbox" class="form-check-input m-0">')
+                    .attr('id', inputId)
+                    .prop('checked', isLocked || hidden.indexOf(idx) === -1)
+                    .prop('disabled', isLocked);
                 $cb.on('change', function() {
+                    if (isLocked) { return; }
                     const h = studentGetHiddenCols(key);
                     const pos = h.indexOf(idx);
                     if (this.checked) { if (pos !== -1) h.splice(pos, 1); } else { if (pos === -1) h.push(idx); }
                     studentPersistHiddenCols(key, h);
                     dt.column(idx).visible(this.checked, false);
                     dt.columns.adjust();
+                    relayoutPinnedColumns(dt);
                 });
                 $label.append($cb).append($('<span></span>').text(title));
                 $cell.append($label);
@@ -553,6 +736,20 @@
             });
         }
         if (activeDt) { setupStudentColumns(activeDt); }
+
+        [dtPresent, dtAbsent].forEach(function(dt) {
+            if (!dt) { return; }
+            dt.on('draw.dt column-visibility.dt', function() {
+                relayoutPinnedColumns(dt);
+            });
+        });
+
+        $(window).on('resize', function() {
+            if (activeDt) {
+                activeDt.columns.adjust();
+                relayoutPinnedColumns(activeDt);
+            }
+        });
 
         /* ── Responsive filters: overflow inline filters into the +Filters dropdown ── */
         const $filterRow = $('#slFilterRow');
