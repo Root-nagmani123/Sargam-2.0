@@ -9,13 +9,11 @@
 <link rel="stylesheet" href="{{ asset('css/notice-memo-discipline.css') }}?v={{ @filemtime(public_path('css/notice-memo-discipline.css')) ?: time() }}">
 <div class="container-fluid mnm-page py-2 py-md-3">
     <x-breadcrum title="Send Memo / Notice">
-        @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
         <button type="button" data-bs-toggle="modal" data-bs-target="#addNoticeModal"
             class="btn btn-primary d-inline-flex align-items-center gap-1 px-3 shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
             Create Memo/ Notice
         </button>
-        @endif
     </x-breadcrum>
     <x-session_message />
 
@@ -31,17 +29,8 @@
                 <form action="{{ route('memo.notice.management.store_memo_notice') }}" method="POST" id="addNoticeForm">
                     @csrf
                     <input type="hidden" name="submission_type" value="1">
-                <div class="modal-body">
-                    @if($errors->any() && old('submission_type') == '1')
-                    <div class="alert alert-danger alert-dismissible py-2 mb-3" role="alert">
-                        <ul class="mb-0 ps-3 small">
-                            @foreach($errors->all() as $err)<li>{{ $err }}</li>@endforeach
-                        </ul>
-                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-                    </div>
-                    @endif
+                    <div class="modal-body">
                         <div class="row g-3 mb-3">
-                            {{-- Row 1: Course | Date --}}
                             <div class="col-md-6">
                                 <label class="form-label">Course Name <span class="text-danger">*</span></label>
                                 <select class="form-select" name="course_master_pk" id="anCourse" required>
@@ -56,21 +45,6 @@
                                 <input type="date" class="form-control" name="date_memo_notice" id="anDate" max="{{ date('Y-m-d') }}">
                             </div>
 
-                            {{-- Row 2: Session | Venue (auto-filled from topic) --}}
-                            <div class="col-md-6">
-                                <label class="form-label">Session</label>
-                                <select class="form-select" name="class_session_master_pk" id="anSessionPk" disabled>
-                                    <option value="">Auto-filled from topic</option>
-                                </select>
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Venue</label>
-                                <select class="form-select" name="venue_id" id="anVenueId" disabled>
-                                    <option value="">Auto-filled from topic</option>
-                                </select>
-                            </div>
-
-                            {{-- Row 3: Subject | Topic --}}
                             <div class="col-md-6">
                                 <label class="form-label">Subject <span class="text-danger">*</span></label>
                                 <select class="form-select" name="subject_master_id" id="anSubject" required>
@@ -78,21 +52,41 @@
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Topic <span class="text-danger">*</span></label>
-                                <select class="form-select" name="topic_id" id="anTopic" required>
+                                <label class="form-label">Topic</label>
+                                <select class="form-select" name="topic_id" id="anTopic">
                                     <option value="">Select Topic</option>
                                 </select>
                             </div>
 
-                            {{-- Faculty hidden (still submitted) --}}
-                            <input type="hidden" name="faculty_master_pk" id="anFacultyPk">
+                            <div class="col-md-6">
+                                <label class="form-label">Venue <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control" id="anVenueName" placeholder="Auto-filled from topic" readonly>
+                                <input type="hidden" name="venue_id" id="anVenueId">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Session</label>
+                                <input type="text" class="form-control" id="anSessionName" placeholder="Auto-filled from topic" readonly>
+                                <input type="hidden" name="class_session_master_pk" id="anSessionPk">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Faculty Name</label>
+                                <input type="text" class="form-control" id="anFacultyName" placeholder="Auto-filled from topic" readonly>
+                                <input type="hidden" name="faculty_master_pk" id="anFacultyPk">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Template</label>
+                                <select class="form-select" name="memo_notice_template_pk" id="anTemplate">
+                                    <option value="">Select Course first</option>
+                                </select>
+                                <small class="text-muted">Notice template to use. Depends on the course.</small>
+                            </div>
                         </div>
 
-                        <h6 class="an-section-title">Student List</h6>
+                        <h6 class="an-section-title">Student List (Late &amp; Absentee)</h6>
 
                         <div class="an-dual">
                             <div class="an-panel">
-                                <div class="an-panel-title">Defaulter Students</div>
+                                <div class="an-panel-title">Available Students</div>
                                 <div class="an-search"><i class="bi bi-search"></i><input type="text" class="an-filter" data-target="anAvailable" placeholder="Search"></div>
                                 <label class="an-selectall"><input type="checkbox" class="form-check-input an-select-all" data-panel="anAvailable"> Select All</label>
                                 <div class="an-list" id="anAvailable">
@@ -117,15 +111,6 @@
                             </div>
                         </div>
 
-                        {{-- Template moved below student list (full width) --}}
-                        <div class="mt-3">
-                            <label class="form-label">Select Template <span class="text-danger">*</span></label>
-                            <select class="form-select" name="memo_notice_template_pk" id="anTemplate">
-                                <option value="">Select Course first</option>
-                            </select>
-                            <small class="text-muted">Notice template to use. Options depend on the selected course.</small>
-                        </div>
-
                         <h6 class="an-section-title mt-4">Notice Preview</h6>
                         <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
                         <div id="anPreviewWrap" class="an-preview" style="display:none;">
@@ -141,12 +126,11 @@
 
                         <div id="anHiddenInputs"></div>
                     </div>
-                </div>{{-- end modal-body --}}
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4" id="anSendBtn">Send</button>
+                    </div>
                 </form>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                    <button type="submit" form="addNoticeForm" class="btn btn-primary px-4" id="anSendBtn">Send</button>
-                </div>
             </div>
         </div>
     </div>
@@ -174,13 +158,9 @@
     {{-- Tabs + Download --}}
   <div class="py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="mnm-tabs">
-                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
                 <a href="{{ route('send.notice.management.index') }}" class="mnm-tab js-nav-tab">Send Direct Notice</a>
-                @endif
                 <a href="{{ route('memo.notice.management.index') }}" class="mnm-tab js-nav-tab active">Send Memo / Notice</a>
-                @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
                 <a href="{{ route('memo.discipline.index') }}" class="mnm-tab js-nav-tab">Send Discipline Memo</a>
-                @endif
             </div>
             <a href="{{ route('memo.notice.management.export_csv', request()->query()) }}" class="mnm-download">
                 <i class="bi bi-download"></i> Download
@@ -501,10 +481,8 @@
                                 @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
-                                <label for="student_name" class="form-label">Participant Name</label>
-                                <select id="student_name" class="form-select">
-                                    <option value="">Loading…</option>
-                                </select>
+                                <label for="student_name" class="form-label">Student Name</label>
+                                <input type="text" id="student_name" class="form-control" value="{{ old('student_name') }}" readonly>
                                 @error('student_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -779,37 +757,6 @@ $(document).ready(function() {
             });
     }
 
-    // Reload templates whenever memo type changes so user can pick appropriate one.
-    $('#memo_generate').on('change', '#memo_type_master_pk', function () {
-        var courseId = $('#course_master_pk').val();
-        if (courseId) { loadMemoTemplates(courseId, null); }
-    });
-
-    // Load all students for a course into the participant select.
-    var routeStudentsByCourse = "{{ route('memo.notice.management.students_by_course') }}";
-    function loadCourseStudents(courseId, selectedPk) {
-        var $s = $('#student_name');
-        $s.html('<option value="">Loading…</option>');
-        if (!courseId) { $s.html('<option value="">—</option>'); return; }
-        $.get(routeStudentsByCourse, { course_id: courseId })
-            .done(function (students) {
-                $s.html('<option value="">Select Participant</option>');
-                (students || []).forEach(function (st) {
-                    var label = st.display_name + (st.generated_OT_code ? ' (' + st.generated_OT_code + ')' : '');
-                    $s.append($('<option>').val(st.pk).text(label));
-                });
-                if (selectedPk) { $s.val(String(selectedPk)); }
-                // sync hidden student_pk
-                $('#student_pk').val($s.val());
-            })
-            .fail(function () { $s.html('<option value="">Failed to load</option>'); });
-    }
-
-    // Keep hidden student_pk in sync when participant is changed.
-    $('#memo_generate').on('change', '#student_name', function () {
-        $('#student_pk').val($(this).val());
-    });
-
     // Filter form submission on change
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
         $('#filterForm').submit();
@@ -852,8 +799,6 @@ $(document).ready(function() {
 
                 // Load Memo templates for this course so the sender can pick one.
                 loadMemoTemplates(res.course_master_pk, null);
-                // Load participants for this course and pre-select current student.
-                loadCourseStudents(res.course_master_pk, res.student_pk);
             },
             error: function() {
                 alert('Something went wrong!');
@@ -886,6 +831,7 @@ $(document).ready(function() {
                 // Populate all modal fields from the response
                 $('#course_master_name').val(res.course_master_name || '');
                 $('#date_memo_notice').val(res.date_ || '');
+                $('#student_name').val(res.student_name || '');
                 $('#subject_master_id').val(res.subject_master_name || res.student_name || '');
                 $('#topic_id').val(res.subject_topic || '');
                 $('#student_notice_status_pk').val(res.student_notice_status_pk || '');
@@ -916,9 +862,6 @@ $(document).ready(function() {
                 if (res.message) {
                     $('#textarea').val(res.message);
                 }
-                // Load participants and pre-select saved student; also load saved template.
-                loadCourseStudents(res.course_master_pk || '', res.student_pk || '');
-                loadMemoTemplates(res.course_master_pk || '', res.memo_notice_template_pk || null);
             },
             error: function(xhr, status, error) {
                 console.error('Error fetching memo data:', error);
@@ -940,7 +883,6 @@ $(document).ready(function() {
             // Preview mode: make all fields read-only
             form.find('input[type="text"], input[type="date"], input[type="time"], textarea').prop('readonly', true);
             form.find('select').prop('disabled', true);
-            $('#student_name').prop('disabled', true);
             // Hide save button in preview mode
             saveButton.hide();
             modalTitle.text('Preview Memo');
@@ -949,9 +891,9 @@ $(document).ready(function() {
             form.find('input, textarea').prop('readonly', false);
             form.find('select').prop('disabled', false);
             // Keep readonly fields as readonly
-            $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #memo_number').prop('readonly', true);
-            // Keep non-editable selects disabled (student_name is now editable select)
-            form.find('select').not('#memo_type_master_pk, #venue, #student_name').prop('disabled', true);
+            $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #student_name, #memo_number').prop('readonly', true);
+            // Keep non-editable selects disabled
+            form.find('select').not('#memo_type_master_pk, #venue').prop('disabled', true);
             // Show save button in generate mode
             saveButton.show();
             modalTitle.text('Generate Memo');
@@ -976,13 +918,6 @@ $(document).ready(function() {
     }
     syncMemoChoicesById('memo_type_master_pk');
     syncMemoChoicesById('venue');
-    @endif
-
-    @if($errors->any() && old('submission_type') == '1')
-    const addNoticeModalEl = document.getElementById('addNoticeModal');
-    if (addNoticeModalEl) {
-        (new bootstrap.Modal(addNoticeModalEl)).show();
-    }
     @endif
 });
 </script>
@@ -1121,9 +1056,8 @@ $(function () {
     }
 
     function clearTimetableDetails() {
-        $('#anSessionPk').html('<option value="">Auto-filled from topic</option>').prop('disabled', true);
-        $('#anVenueId').html('<option value="">Auto-filled from topic</option>').prop('disabled', true);
-        $('#anFacultyPk').val('');
+        $('#anVenueName, #anSessionName, #anFacultyName').val('');
+        $('#anVenueId, #anSessionPk, #anFacultyPk').val('');
     }
 
     // Course/Date → Subjects
@@ -1165,12 +1099,11 @@ $(function () {
 
         $.get(routeTtDetails, { topic_id: topic }).done(function (res) {
             if (res) {
-                $('#anSessionPk')
-                    .html($('<option>').val(res.shift_name || '').text(res.shift_name || '—'))
-                    .prop('disabled', false);
-                $('#anVenueId')
-                    .html($('<option>').val(res.venue_id || '').text(res.venue_name || '—'))
-                    .prop('disabled', false);
+                $('#anVenueName').val(res.venue_name || '');
+                $('#anSessionName').val(res.shift_name || '');
+                $('#anFacultyName').val(res.faculty_name || '');
+                $('#anVenueId').val(res.venue_id || '');
+                $('#anSessionPk').val(res.shift_name || '');
                 $('#anFacultyPk').val(res.faculty_master || '');
             }
         });
