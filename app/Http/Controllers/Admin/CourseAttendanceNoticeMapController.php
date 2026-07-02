@@ -1045,6 +1045,7 @@ public function getStudentAttendanceBytopic(Request $request)
                     'a.pk as studnet_pk',
                     's.pk as pk',
                     's.display_name as display_name',
+                    's.generated_OT_code as generated_OT_code',
                     'a.status as attendance_status'
                 )
                 ->distinct()
@@ -1063,9 +1064,12 @@ public function getStudentAttendanceBytopic(Request $request)
 
         // Format the attendance data
         $students = $attendance->map(function ($student) {
+            $statusLabel = ((int) $student->attendance_status === 2) ? 'Late' : 'Absent';
             return [
-                'pk' => (int) $student->pk,
-                'display_name' => $student->display_name
+                'pk'               => (int) $student->pk,
+                'display_name'     => $student->display_name,
+                'generated_OT_code'=> $student->generated_OT_code,
+                'attendance_label' => $statusLabel,
             ];
         })->values(); // Reset array keys
 
@@ -2864,9 +2868,139 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
             \Log::error('Error saving notice data: ' . $e->getMessage());
             return redirect()->back()->with('error', 'An error occurred while saving notice data: ' . $e->getMessage());
         }
-       
+
 
 }
+
+    public function globalSearch(Request $request)
+    {
+        $q = trim($request->get('q', ''));
+        if (strlen($q) < 2) {
+            return response()->json(['results' => [], 'query' => $q]);
+        }
+
+        $like = '%' . $q . '%';
+        $results = [];
+
+        // --- Notices & Direct Notices ---
+        $notices = DB::table('student_notice_status as sns')
+            ->join('student_master as sm', 'sm.pk', '=', 'sns.student_pk')
+            ->join('course_master as cm', 'cm.pk', '=', 'sns.course_master_pk')
+            ->where(function ($q2) use ($like) {
+                $q2->where('sm.display_name', 'like', $like)
+                   ->orWhere('sm.generated_OT_code', 'like', $like)
+                   ->orWhere('cm.course_name', 'like', $like);
+            })
+            ->select(
+                'sns.pk',
+                'sns.course_student_attendance_pk',
+                'sns.status',
+                'sns.date_ as notice_date',
+                'sm.display_name as student_name',
+                'sm.generated_OT_code',
+                'cm.course_name'
+            )
+            ->orderByDesc('sns.date_')
+            ->limit(20)
+            ->get();
+
+        foreach ($notices as $row) {
+            $isDirect = ($row->course_student_attendance_pk == 0);
+            $results[] = [
+                'type'         => $isDirect ? 'Direct Notice' : 'Notice',
+                'type_key'     => $isDirect ? 'direct_notice' : 'notice',
+                'student_name' => $row->student_name,
+                'ot_code'      => $row->generated_OT_code,
+                'course_name'  => $row->course_name,
+                'detail'       => '—',
+                'date'         => $row->notice_date,
+                'status'       => $row->status,
+                'pk'           => $row->pk,
+            ];
+        }
+
+        // --- Memos ---
+        $memos = DB::table('student_memo_status as sms')
+            ->join('student_master as sm', 'sm.pk', '=', 'sms.student_pk')
+            ->join('course_master as cm', 'cm.pk', '=', 'sms.course_master_pk')
+            ->where(function ($q2) use ($like) {
+                $q2->where('sm.display_name', 'like', $like)
+                   ->orWhere('sm.generated_OT_code', 'like', $like)
+                   ->orWhere('cm.course_name', 'like', $like);
+            })
+            ->select(
+                'sms.pk',
+                'sms.status',
+                'sms.date as memo_date',
+                'sm.display_name as student_name',
+                'sm.generated_OT_code',
+                'cm.course_name'
+            )
+            ->orderByDesc('sms.date')
+            ->limit(20)
+            ->get();
+
+        foreach ($memos as $row) {
+            $results[] = [
+                'type'         => 'Memo',
+                'type_key'     => 'memo',
+                'student_name' => $row->student_name,
+                'ot_code'      => $row->generated_OT_code,
+                'course_name'  => $row->course_name,
+                'detail'       => '—',
+                'date'         => $row->memo_date,
+                'status'       => $row->status,
+                'pk'           => $row->pk,
+            ];
+        }
+
+        // --- Discipline Memos ---
+        $disciplines = DB::table('discipline_memo_status as dms')
+            ->join('student_master as sm', 'sm.pk', '=', 'dms.student_master_pk')
+            ->join('course_master as cm', 'cm.pk', '=', 'dms.course_master_pk')
+            ->leftJoin('discipline_master as dm', 'dm.pk', '=', 'dms.discipline_master_pk')
+            ->where(function ($q2) use ($like) {
+                $q2->where('sm.display_name', 'like', $like)
+                   ->orWhere('sm.generated_OT_code', 'like', $like)
+                   ->orWhere('cm.course_name', 'like', $like)
+                   ->orWhere('dm.discipline_name', 'like', $like)
+                   ->orWhere('dms.remarks', 'like', $like);
+            })
+            ->select(
+                'dms.pk',
+                'dms.status',
+                'dms.date_of_infraction',
+                'dms.remarks',
+                'sm.display_name as student_name',
+                'sm.generated_OT_code',
+                'cm.course_name',
+                'dm.discipline_name'
+            )
+            ->orderByDesc('dms.date_of_infraction')
+            ->limit(20)
+            ->get();
+
+        foreach ($disciplines as $row) {
+            $results[] = [
+                'type'         => 'Discipline',
+                'type_key'     => 'discipline',
+                'student_name' => $row->student_name,
+                'ot_code'      => $row->generated_OT_code,
+                'course_name'  => $row->course_name,
+                'detail'       => $row->discipline_name ?? '—',
+                'date'         => $row->date_of_infraction,
+                'status'       => $row->status,
+                'pk'           => $row->pk,
+            ];
+        }
+
+        // Sort all results by date descending
+        usort($results, function ($a, $b) {
+            return strcmp($b['date'] ?? '', $a['date'] ?? '');
+        });
+
+        return response()->json(['results' => array_slice($results, 0, 30), 'query' => $q]);
+    }
 
 
 

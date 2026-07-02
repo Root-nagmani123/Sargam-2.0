@@ -39,9 +39,10 @@ class MemoDisciplineController extends Controller
     }
 
     // Filters
-    $programNameFilter = $request->program_name;
-    $statusFilter      = $request->status;
-    $searchFilter      = $request->search;
+    $programNameFilter   = $request->program_name;
+    $statusFilter        = $request->status;
+    $searchFilter        = $request->search;
+    $disciplineFilter    = $request->discipline_master_pk;
 
     // First load (no date params in URL) = show today's data; Clear Filters (empty date params) = show all data
     if (!$request->has('from_date') && !$request->has('to_date')) {
@@ -52,10 +53,13 @@ class MemoDisciplineController extends Controller
         $toDateFilter   = $request->get('to_date') ?: null;
     }
 
+    $disciplines = DisciplineMaster::where('active_inactive', 1)->orderBy('discipline_name')->get();
+
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
-            'student:pk,display_name,generated_OT_code'
+            'student:pk,display_name,generated_OT_code,cadre_master_pk',
+            'student.cadre:pk,cadre_name',
         ])
 
         ->when(hasRole('Student-OT'), function ($q) use ($courses) {
@@ -71,6 +75,9 @@ class MemoDisciplineController extends Controller
         ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
             $q->where('status', $statusFilter);
         })
+        ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
+            $q->where('discipline_master_pk', $disciplineFilter);
+        })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
                 $sub->whereHas('student', function ($s) use ($searchFilter) {
@@ -85,9 +92,9 @@ class MemoDisciplineController extends Controller
         ->when($fromDateFilter && $toDateFilter, function ($q) use ($fromDateFilter, $toDateFilter) {
             $q->whereBetween('date', [$fromDateFilter, $toDateFilter]);
         })
-         ->whereHas('discipline', function ($q) {
-        $q->where('active_inactive', 1);
-    })
+        ->whereHas('discipline', function ($q) {
+            $q->where('active_inactive', 1);
+        })
         ->orderBy('pk', 'desc')
         ->paginate(10)
         ->appends($request->all());
@@ -99,8 +106,10 @@ class MemoDisciplineController extends Controller
     return view('admin.memo_discipline.index', compact(
         'memos',
         'courses',
+        'disciplines',
         'programNameFilter',
         'statusFilter',
+        'disciplineFilter',
         'searchFilter',
         'fromDateFilter',
         'toDateFilter',
@@ -159,6 +168,7 @@ public function exportCsv(Request $request)
     $programNameFilter = $request->program_name;
     $statusFilter      = $request->status;
     $searchFilter      = $request->search;
+    $disciplineFilter  = $request->discipline_master_pk;
 
     if (!$request->has('from_date') && !$request->has('to_date')) {
         $fromDateFilter = Carbon::today()->toDateString();
@@ -178,7 +188,8 @@ public function exportCsv(Request $request)
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
             'discipline:pk,discipline_name,active_inactive',
-            'student:pk,display_name,generated_OT_code'
+            'student:pk,display_name,generated_OT_code,cadre_master_pk',
+            'student.cadre:pk,cadre_name',
         ])
         ->when(hasRole('Student-OT'), function ($q) use ($studentCourses) {
             $q->where('student_master_pk', Auth::user()->user_id);
@@ -192,6 +203,9 @@ public function exportCsv(Request $request)
         })
         ->when($statusFilter !== null && $statusFilter !== '', function ($q) use ($statusFilter) {
             $q->where('status', $statusFilter);
+        })
+        ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
+            $q->where('discipline_master_pk', $disciplineFilter);
         })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
@@ -214,34 +228,27 @@ public function exportCsv(Request $request)
         ->get();
 
     $courseName = $programNameFilter ? (optional(CourseMaster::find($programNameFilter))->course_name ?? 'All') : 'All';
-    $statusText = ($statusFilter === null || $statusFilter === '')
-        ? 'All'
-        : (['1' => 'Recorded', '2' => 'Memo Sent'][(string) $statusFilter] ?? 'Closed');
     $dateRange = ($fromDateFilter || $toDateFilter)
         ? (($fromDateFilter ? Carbon::parse($fromDateFilter)->format('d-m-Y') : '—') . ' to ' . ($toDateFilter ? Carbon::parse($toDateFilter)->format('d-m-Y') : '—'))
         : 'All Dates';
 
-    $headers = ['S. No.', 'Program Name', 'Participant Name', 'Date', 'Discipline', 'Submitted', 'Final', 'Status'];
+    $headers = ['Name', 'OT/Participant Code', 'Cadre', 'Infraction', 'Date of Infraction', 'Remarks'];
 
     $rows = [];
-    foreach ($memos as $i => $memo) {
-        $participant = trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A'));
-        $statusLabel = $memo->status == 1 ? 'Recorded' : ($memo->status == 2 ? 'Memo Sent' : 'Closed');
+    foreach ($memos as $memo) {
         $rows[] = [
-            $i + 1,
-            $memo->course->course_name ?? 'N/A',
-            $participant,
-            $memo->date ? Carbon::parse($memo->date)->format('d M Y') : 'N/A',
+            $memo->student->display_name ?? 'N/A',
+            $memo->student->generated_OT_code ?? 'N/A',
+            $memo->student->cadre->cadre_name ?? 'N/A',
             $memo->discipline->discipline_name ?? 'N/A',
-            $memo->mark_deduction_submit,
-            $memo->final_mark_deduction,
-            $statusLabel,
+            $memo->date ? Carbon::parse($memo->date)->format('d M Y') : 'N/A',
+            $memo->remarks ?? '',
         ];
     }
 
     $titleBlock = [
-        ['Send Discipline Memo'],
-        ['Date Range', $dateRange, 'Program', $courseName, 'Status', $statusText],
+        ['Discipline Memo'],
+        ['Date Range', $dateRange, 'Program', $courseName],
         ['Generated On', now()->format('d-m-Y H:i:s')],
         [],
     ];
@@ -659,6 +666,56 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
 }
     
     
+    public function edit($id)
+    {
+        $memo = MemoDiscipline::with([
+            'course:pk,course_name',
+            'student:pk,display_name,generated_OT_code',
+        ])->findOrFail($id);
+
+        $disciplines = DisciplineMaster::where('course_master_pk', $memo->course_master_pk)
+            ->where('active_inactive', 1)
+            ->orderBy('discipline_name')
+            ->get(['pk', 'discipline_name', 'mark_deduction']);
+
+        return response()->json([
+            'pk'                   => $memo->pk,
+            'course_name'          => $memo->course->course_name ?? 'N/A',
+            'student_name'         => trim(($memo->student->generated_OT_code ? $memo->student->generated_OT_code . '- ' : '') . ($memo->student->display_name ?? 'N/A')),
+            'date'                 => $memo->date,
+            'discipline_master_pk' => $memo->discipline_master_pk,
+            'mark_deduction_submit' => $memo->mark_deduction_submit,
+            'remarks'              => $memo->remarks ?? '',
+            'disciplines'          => $disciplines,
+        ]);
+    }
+
+    public function update(Request $request, $id)
+    {
+        $memo = MemoDiscipline::findOrFail($id);
+
+        if ($memo->status == 3) {
+            return response()->json(['success' => false, 'message' => 'Closed memos cannot be edited.'], 422);
+        }
+
+        $validated = $request->validate([
+            'date'                  => 'required|date',
+            'discipline_master_pk'  => 'required|exists:discipline_master,pk',
+            'mark_deduction_submit' => 'required|numeric|min:0',
+            'remarks'               => 'nullable|string|max:500',
+        ]);
+
+        $memo->update([
+            'date'                  => $validated['date'],
+            'discipline_master_pk'  => $validated['discipline_master_pk'],
+            'mark_deduction_submit' => $validated['mark_deduction_submit'],
+            'remarks'               => $validated['remarks'] ?? null,
+            'modified_date'         => now(),
+        ]);
+
+        return response()->json(['success' => true, 'message' => 'Discipline memo updated successfully.']);
+    }
+
     public function memo_show(Request $request, $id)
 {
     $decryptedId = decrypt($id);

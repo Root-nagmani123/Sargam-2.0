@@ -935,6 +935,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::get('/export-pdf', 'exportPdf')->name('export_pdf');
             Route::get('/export-csv', 'exportCsv')->name('export_csv');
             Route::get('/messages/{id}/{type}', 'getNewMessages')->name('getNewMessages');
+            Route::get('/global-search', 'globalSearch')->name('global_search');
         });
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');
@@ -968,6 +969,7 @@ Route::prefix('admin/appellation')->name('master.appellation.')->middleware('aut
         Route::get('/export-csv', [MemoDisciplineController::class, 'exportCsv'])->name('export_csv');
         Route::get('create', [MemoDisciplineController::class, 'create'])->name('create');
         Route::get('edit/{id}', [MemoDisciplineController::class, 'edit'])->name('edit');
+        Route::post('update/{id}', [MemoDisciplineController::class, 'update'])->name('update');
         Route::post('/discipline_generate_memo_store', [MemoDisciplineController::class, 'discipline_generate_memo_store'])->name('discipline_generate_memo_store');
 
         Route::get('/get-student-by-course', [MemoDisciplineController::class, 'getStudentByCourse'])->name('getStudentByCourse');
