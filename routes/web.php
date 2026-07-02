@@ -936,6 +936,7 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::get('/export-csv', 'exportCsv')->name('export_csv');
             Route::get('/messages/{id}/{type}', 'getNewMessages')->name('getNewMessages');
             Route::get('/global-search', 'globalSearch')->name('global_search');
+            Route::get('/students-by-course', 'getStudentsByCourse')->name('students_by_course');
         });
 
     Route::get('/send_notice', [CourseAttendanceNoticeMapController::class, 'send_only_notice'])->name('send.notice.management.index');

@@ -81,17 +81,19 @@
                             <h5 class="text-center fw-bold mb-1" id="gmPvCourse">Course Name</h5>
                             <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
                             <hr>
-                            <p class="mb-1 fw-semibold">SHOW CAUSE NOTICE</p>
                             <p class="mb-2"><strong>Date:</strong> <span id="gmPvDate">—</span></p>
-                            <p class="mb-2 small">It is brought to the notice of the undersigned that you were found in breach of discipline
-                                (<span id="gmPvDiscipline">—</span>) with a mark deduction of <strong id="gmPvMarks">—</strong>.</p>
+                            {{-- Template body rendered here --}}
+                            <div id="gmPvTemplateContent" class="mb-2 small text-muted fst-italic">Select a discipline and template to preview content.</div>
                             <div class="table-responsive">
                                 <table class="table table-sm mb-2">
                                     <thead><tr><th>#</th><th>OT</th></tr></thead>
                                     <tbody id="gmPvStudents"><tr><td colspan="2" class="text-muted">No students selected.</td></tr></tbody>
                                 </table>
                             </div>
-                            <p class="text-end mb-0 small"><strong>Director</strong><br>LBSNAA, Mussoorie</p>
+                            <div class="text-end mb-0 small" id="gmPvDirectorBlock" style="display:none;">
+                                <div id="gmPvSignature"></div>
+                                <strong id="gmPvDirectorName"></strong><br><span id="gmPvDirectorDesig"></span>
+                            </div>
                         </div>
 
                         <div class="col-12">
@@ -168,8 +170,10 @@
     {{-- Tabs + Download --}}
     <div class="card-body py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div class="disc-tabs">
+            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
             <a href="{{ route('send.notice.management.index') }}" class="disc-tab js-nav-tab">Send Direct Notice</a>
             <a href="{{ route('memo.notice.management.index') }}" class="disc-tab js-nav-tab">Send Memo / Notice</a>
+            @endif
             <a href="{{ route('memo.discipline.index') }}" class="disc-tab js-nav-tab active">Send Discipline Memo</a>
         </div>
         <a href="{{ route('memo.discipline.export_csv', request()->query()) }}" class="disc-download">
@@ -442,7 +446,7 @@
                                         </a>
                                         <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                             data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
+                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
                                             <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                         </a>
                                     </div>
@@ -457,7 +461,7 @@
                                         </a>
                                         <a class="text-success view-conversation" data-bs-toggle="offcanvas"
                                             data-bs-target="#chatOffcanvas" data-id="{{ $memo->pk }}"
-                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'admin' : 'OT' }}">
+                                            data-type="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'admin' : 'OT' }}">
                                             <i class="material-icons material-symbols-rounded fs-5">chat</i>
                                         </a>
                                     </div>
@@ -467,7 +471,7 @@
                                 <!-- Action -->
                                 @if(! hasRole('Officer Trainee'))
                                 <td class="text-end">
-                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin'))
+                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
                                     @if($memo->status == 1)
                                     <button class="btn btn-sm btn-outline-secondary btn-edit-memo me-1"
                                         data-id="{{ $memo->pk }}" title="Edit">
@@ -874,6 +878,7 @@ $(function () {
 
     var gmDefaulters = [];   // [{pk, name}] for the current course
     var gmSelected   = [];   // array of selected pks (strings)
+    var gmTemplateMap = {};  // pk → template object (includes content, director fields)
 
     var genModalEl = document.getElementById('genMemoModal');
     var pickerModalEl = document.getElementById('studentPickerModal');
@@ -927,8 +932,32 @@ $(function () {
         $('#gmPvCourse').text($('#gmCourse option:selected').text() || 'Course Name');
         var d = $('#gmDate').val();
         $('#gmPvDate').text(d ? d.split('-').reverse().join('/') : '—');
-        $('#gmPvDiscipline').text($('#gmDiscipline option:selected').text() && $('#gmDiscipline').val() ? $('#gmDiscipline option:selected').text() : '—');
-        $('#gmPvMarks').text($('#gmMarks').val() || '—');
+    }
+
+    function updateTemplatePreview() {
+        var pk = $('#gmTemplate').val();
+        var tpl = pk ? gmTemplateMap[pk] : null;
+        var $content = $('#gmPvTemplateContent');
+        var $dirBlock = $('#gmPvDirectorBlock');
+
+        if (tpl && tpl.content) {
+            $content.removeClass('text-muted fst-italic').html(tpl.content);
+        } else {
+            $content.addClass('text-muted fst-italic').text(pk ? 'No content in this template.' : 'Select a discipline and template to preview content.');
+        }
+
+        if (tpl && (tpl.director_name || tpl.director_designation)) {
+            if (tpl.signature_image) {
+                $('#gmPvSignature').html('<img src="/storage/' + tpl.signature_image + '" style="max-height:50px;display:block;margin-left:auto;margin-bottom:4px;" alt="Signature">');
+            } else {
+                $('#gmPvSignature').empty();
+            }
+            $('#gmPvDirectorName').text(tpl.director_name || '');
+            $('#gmPvDirectorDesig').text(tpl.director_designation || '');
+            $dirBlock.show();
+        } else {
+            $dirBlock.hide();
+        }
     }
 
     // ── Course change → load defaulters + disciplines ──
@@ -961,25 +990,35 @@ $(function () {
         var $t = $('#gmTemplate');
         if (!course || !disc) {
             $t.html('<option value="">Select Discipline first</option>');
+            gmTemplateMap = {};
+            updateTemplatePreview();
             return;
         }
         $t.html('<option value="">Loading templates...</option>');
         $.get(routeTemplates, { course_id: course, discipline_master_pk: disc }).done(function (res) {
             $t.empty();
+            gmTemplateMap = {};
             if (Array.isArray(res) && res.length) {
                 res.forEach(function (t) {
                     var label = t.title + (t.discipline_master_pk ? '' : ' (course default)');
                     $t.append($('<option>').val(t.pk).text(label));
+                    gmTemplateMap[String(t.pk)] = t;
                 });
                 // Discipline-specific template is ordered first — preselect it.
                 $t.val(String(res[0].pk));
             } else {
                 $t.append('<option value="">No template configured</option>');
             }
+            updateTemplatePreview();
         }).fail(function () {
             $t.html('<option value="">Failed to load templates</option>');
+            updateTemplatePreview();
         });
     }
+
+    $('#gmTemplate').on('change', function () {
+        updateTemplatePreview();
+    });
 
     $('#gmDiscipline').on('change', function () {
         var disc = $(this).val();

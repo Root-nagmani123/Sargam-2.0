@@ -21,56 +21,25 @@
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
             <hr>
 
-            <p class="mb-1">SHOW CAUSE Memo</p>
-            <p><strong>Date:</strong> {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
-
-            <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
-                from
-                following session(s)...</p>
-
-           {{-- <div class="table-responsive mb-3">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th>Date</th>
-                            <th>No. of Session(s)</th>
-                            <th>Topics</th>
-                            <th>
-                                Venue
-                            </th>
-                            <th>Session(s)</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <tr>
-                            <td>{{ \Carbon\Carbon::now()->format('d/m/Y') }}</td>
-                            <td>1</td>
-                            <td>{{ $memo->subject_topic ?? 'Topic Name' }}</td>
-                            <td>{{ $memo->venue_name ?? 'Venue' }}</td>
-                            <td>{{ $memo->session_time ?? '06:00-07:00' }}</td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div> --}}
-
-            <div class="mb-4">
-                <p class="fw-bold">You are advised to do the following:</p>
-                <ul>
-                    <li>Reply to this Memo online through this <a href="#">conversation</a></li>
-                    <li>Appear <a href="#">in person before the undersigned at 1800 hrs on next working day</a></li>
-                </ul>
-                <p>{!! ($template->content ?? $memo->template->content) ?? '' !!}</p>
-            </div>
-
-            <p><strong>{{ $memo->student->display_name ?? 'Student Name' }}, {{ $memo->student->generated_OT_code ?? 'OT Code' }}</strong><br>
-                Remarks: Show Cause Memo for {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
-
-            <div class="text-end">
-                @php($resolvedTemplate = $template ?? ($memo->template ?? null))
-                @if(!empty($resolvedTemplate?->signature_image))
-                    <img src="{{ Storage::url($resolvedTemplate->signature_image) }}" alt="Signature" style="max-height:60px;display:block;margin-left:auto;margin-bottom:4px;">
+            <div class="row g-2 mb-3">
+                <div class="col-md-4">
+                    <span class="text-muted small">Date</span>
+                    <div class="fw-semibold">{{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</div>
+                </div>
+                <div class="col-md-4">
+                    <span class="text-muted small">Discipline</span>
+                    <div class="fw-semibold">{{ $memo->discipline->discipline_name ?? '—' }}</div>
+                </div>
+                <div class="col-md-4">
+                    <span class="text-muted small">Participant</span>
+                    <div class="fw-semibold">{{ $memo->student->display_name ?? '—' }}{{ $memo->student->generated_OT_code ? ' (' . $memo->student->generated_OT_code . ')' : '' }}</div>
+                </div>
+                @if(!empty($memo->remarks))
+                <div class="col-12">
+                    <span class="text-muted small">Remarks</span>
+                    <div class="fw-semibold">{{ $memo->remarks }}</div>
+                </div>
                 @endif
-                <strong>{{ $resolvedTemplate->director_name ?? 'Director Name' }}</strong><br>{{ $resolvedTemplate->director_designation ?? 'Director Designation' }}
             </div>
 
             <!-- Exemption Table -->

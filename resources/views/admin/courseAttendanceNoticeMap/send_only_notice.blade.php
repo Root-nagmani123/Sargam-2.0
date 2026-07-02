@@ -17,10 +17,11 @@
     {{-- Tabs --}}
     <div class="py-3">
         <div class="sn-tabs">
-            <a href="{{ route('send.notice.management.index') }}" class="sn-tab js-nav-tab active">Send Direct
-                Notice</a>
+            <a href="{{ route('send.notice.management.index') }}" class="sn-tab js-nav-tab active">Send Direct Notice</a>
             <a href="{{ route('memo.notice.management.index') }}" class="sn-tab js-nav-tab">Send Memo / Notice</a>
+            @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))
             <a href="{{ route('memo.discipline.index') }}" class="sn-tab js-nav-tab">Send Discipline Memo</a>
+            @endif
         </div>
     </div>
 

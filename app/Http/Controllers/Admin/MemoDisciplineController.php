@@ -412,7 +412,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             })
             ->orderByRaw('discipline_master_pk IS NULL') // discipline-specific first, course-wide fallback last
             ->orderBy('title')
-            ->get(['pk', 'title', 'director_name', 'director_designation', 'discipline_master_pk']);
+            ->get(['pk', 'title', 'content', 'director_name', 'director_designation', 'signature_image', 'discipline_master_pk']);
 
         return response()->json($templates);
     }
@@ -561,7 +561,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         $request->validate([
             'conclusion_type' => 'required|exists:memo_conclusion_master,pk',
             'mark_of_deduction' => 'required|numeric|min:0',
-            'conclusion_remarks' => 'nullable|string|max:500',
+            'conclusion_remark' => 'nullable|string|max:500',
         ]);
     }
 
@@ -577,7 +577,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         if($request->role_type == 'OT'){
            $request->role_type = 's';
         }
-     
+
         DB::table('discipline_message_student_decip_incharge')->insert([
             'discipline_memo_status_pk' => $request->memo_discipline_id,
             'created_by' => Auth::user()->user_id,
@@ -636,7 +636,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             MemoDiscipline::where('pk', $request->memo_discipline_id)->update([
                 'status' => 3,
                 'final_mark_deduction' => $request->mark_of_deduction,
-                'conclusion_remark' => $request->conclusion_remarks,
+                'conclusion_remark' => $request->conclusion_remark,
                 'conclusion_type_pk' => $request->conclusion_type,
                 'modified_date' => now(),
             ]);
@@ -651,7 +651,6 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         }
 
         return back()->with('success', 'Message sent successfully.')->withInput();
-
     } catch (\Throwable $e) {
         DB::rollBack();
         \Log::error('Error in memoDisciplineConversationStore inner: ' . $e->getMessage());
@@ -660,7 +659,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         }
         return back()->with('error', 'Something went wrong. '. $e->getMessage())->withInput();
     }
-    }catch(\Exception $e){
+    } catch(\Exception $e) {
         \Log::error('Error in memoDisciplineConversationStore: ' . $e->getMessage());
         if ($request->ajax() || $request->wantsJson()) {
             return response()->json(['success' => false, 'message' => 'An unexpected error occurred.'], 500);

@@ -729,6 +729,26 @@ public function getTemplatesByType(Request $request)
     return response()->json($templates);
 }
 
+public function getStudentsByCourse(Request $request)
+{
+    $courseId = (int) $request->course_id;
+    if (!$courseId) {
+        return response()->json([]);
+    }
+
+    $students = DB::table('student_master_course__map as a')
+        ->join('student_master as s', 'a.student_master_pk', '=', 's.pk')
+        ->where('a.course_master_pk', $courseId)
+        ->where('a.active_inactive', 1)
+        ->whereNotNull('s.display_name')
+        ->where('s.display_name', '!=', '')
+        ->select('s.pk', 's.display_name', 's.generated_OT_code')
+        ->orderBy('s.display_name')
+        ->get();
+
+    return response()->json($students);
+}
+
 public function getSubjectByCourse(Request $request)
 {
     $courseId = $request->course_id;
@@ -1098,14 +1118,17 @@ public function store_memo_notice(Request $request)
         'date_memo_notice' => 'required|date',
         'subject_master_id' => 'required|exists:subject_master,pk',
         'topic_id' => 'required|exists:timetable,pk',
-        'venue_id' => 'required',
-        'class_session_master_pk' => 'required',
-        'faculty_master_pk' => 'required',
+        'venue_id' => 'nullable',
+        'class_session_master_pk' => 'nullable',
+        'faculty_master_pk' => 'nullable',
         'selected_student_list' => 'required|array|min:1',
         'Remark' => 'nullable|string|max:500',
         'submission_type' => 'required|in:1,2',
         'memo_notice_template_pk' => 'nullable|exists:memo_notice_templates,pk',
     ]);
+
+    // Guard: only include memo_notice_template_pk if the column exists (migration may not have run)
+    $hasTplCol = \Illuminate\Support\Facades\Schema::hasColumn('student_notice_status', 'memo_notice_template_pk');
 
     // ✅ Fetch all required student info in one query
     $students = DB::table('course_student_attendance as a')
@@ -1134,20 +1157,23 @@ public function store_memo_notice(Request $request)
     }
 
 
-            $data[] = [
-                'course_master_pk'           => $validated['course_master_pk'],
-                'student_pk'                 => $studentId->student_pk,
-                'date_'                      => $validated['date_memo_notice'],
-                'subject_master_pk'          => $validated['subject_master_id'],
-                'subject_topic'              => $validated['topic_id'],
-                'venue_id'                   => $validated['venue_id'],
-                'class_session_master_pk'    => $validated['class_session_master_pk'],
-                'faculty_master_pk'          => $validated['faculty_master_pk'],
+            $row = [
+                'course_master_pk'             => $validated['course_master_pk'],
+                'student_pk'                   => $studentId->student_pk,
+                'date_'                        => $validated['date_memo_notice'],
+                'subject_master_pk'            => $validated['subject_master_id'],
+                'subject_topic'                => $validated['topic_id'],
+                'venue_id'                     => $validated['venue_id'] ?? null,
+                'class_session_master_pk'      => $validated['class_session_master_pk'] ?? null,
+                'faculty_master_pk'            => $validated['faculty_master_pk'] ?? null,
                 'course_student_attendance_pk' => $studentId->course_attendance_pk,
-                'message'                    => $validated['Remark'],
-                'memo_notice_template_pk'    => $validated['memo_notice_template_pk'] ?? null,
-                'notice_memo'                => $validated['submission_type'],
+                'message'                      => $validated['Remark'],
+                'notice_memo'                  => $validated['submission_type'],
             ];
+            if ($hasTplCol) {
+                $row['memo_notice_template_pk'] = $validated['memo_notice_template_pk'] ?? null;
+            }
+            $data[] = $row;
           
         }
     // }
