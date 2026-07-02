@@ -20,22 +20,45 @@
     /* Inside the +3 Filters popover the selects span the menu width. */
     .student-list-page .sl-more-menu .sl-filter-select { width: 100%; }
 
-    /* Relocatable filter items: inline by default, stacked when overflowed into the dropdown. */
+    /* Relocatable filter items: inline by default, floating-label boxes when in the dropdown. */
     .student-list-page .sl-filter-item { display: inline-flex; align-items: center; }
     .student-list-page .sl-filter-label-text { display: none; }
-    .student-list-page .sl-more-menu .sl-filter-item { display: block; margin-bottom: 0.75rem; }
+
+    /* ── Inside the +N Filters popover: each filter is a floating-label box ── */
+    .student-list-page .sl-more-menu-header {
+        font-size: 0.9375rem;
+        font-weight: 600;
+        color: #101828;
+        padding-bottom: 0.65rem;
+        margin-bottom: 0.85rem;
+        border-bottom: 1px solid #eef2f6;
+    }
+    .student-list-page .sl-more-menu .sl-filter-item { display: block; position: relative; margin-bottom: 0.75rem; }
     .student-list-page .sl-more-menu .sl-filter-item:last-child { margin-bottom: 0; }
     .student-list-page .sl-more-menu .sl-filter-label-text {
         display: block;
-        font-size: 0.8125rem;
-        font-weight: 600;
-        color: #475467;
-        margin-bottom: 0.25rem;
+        position: absolute;
+        top: 6px;
+        left: 0.875rem;
+        z-index: 2;
+        font-size: 0.7rem;
+        font-weight: 400;
+        color: #667085;
+        margin: 0;
+        pointer-events: none;
+    }
+    .student-list-page .sl-more-menu .sl-filter-select {
+        width: 100%;
+        height: 52px;
+        border-radius: 10px;
+        padding-top: 1.35rem;
+        padding-bottom: 0.35rem;
+        color: #101828;
+        background-position: right 0.75rem center;
     }
     .student-list-page .sl-more-menu .sl-filter-item .sl-daterange-wrap { display: block; width: 100%; }
-    .student-list-page .sl-more-menu .sl-filter-item .sl-daterange-input { width: 100%; }
-    /* Divider between overflowed filters and the always-in-menu ones. */
-    .student-list-page .sl-more-menu #slOverflowSlot:not(:empty) { margin-bottom: 0.75rem; padding-bottom: 0.75rem; border-bottom: 1px solid #eef2f6; }
+    .student-list-page .sl-more-menu .sl-filter-item .sl-daterange-input { width: 100%; height: 52px; border-radius: 10px; }
+    .student-list-page .sl-more-menu #slOverflowSlot:not(:empty) { margin-bottom: 0.75rem; }
 
     .student-list-page .sl-filter-select:focus {
         border-color: #004a93;
@@ -65,7 +88,7 @@
         pointer-events: none;
     }
 
-    .student-list-page .sl-more-menu { min-width: 240px; }
+    .student-list-page .sl-more-menu { min-width: 264px; }
     .student-list-page .sl-more-menu .form-label { margin-bottom: 0.25rem; }
     .student-list-page .sl-more-filters.dropdown-toggle::after { display: none; }
 
@@ -304,10 +327,11 @@
                         <a href="javascript:void(0)" class="sl-more-filters dropdown-toggle" id="moreFiltersBtn"
                             data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false">+3 Filters</a>
                         <div class="dropdown-menu sl-more-menu p-3 shadow-sm border rounded-3" aria-labelledby="moreFiltersBtn">
+                            <div class="sl-more-menu-header">Filters</div>
                             <div id="slOverflowSlot"></div>
-                            <div class="mb-2">
-                                <label for="roleFilter" class="form-label small fw-semibold text-secondary">ACC</label>
-                                <select id="roleFilter" class="form-select sl-filter-select w-100">
+                            <div class="sl-filter-item">
+                                <span class="sl-filter-label-text">ACC</span>
+                                <select id="roleFilter" class="form-select sl-filter-select w-100" aria-label="Filter by ACC">
                                     <option value="">All</option>
                                     <option value="cc_acc" {{ ($filters['role_filter'] ?? '') === 'cc_acc' ? 'selected' : '' }}>CC/ACC</option>
                                     @if(isset($counsellorTypes) && $counsellorTypes->isNotEmpty())
@@ -317,18 +341,18 @@
                                     @endif
                                 </select>
                             </div>
-                            <div class="mb-2">
-                                <label for="cadreFilter" class="form-label small fw-semibold text-secondary">Cadre</label>
-                                <select id="cadreFilter" class="form-select sl-filter-select w-100">
+                            <div class="sl-filter-item">
+                                <span class="sl-filter-label-text">Cadre</span>
+                                <select id="cadreFilter" class="form-select sl-filter-select w-100" aria-label="Filter by cadre">
                                     <option value="">All</option>
                                     @foreach(($cadreOptions ?? []) as $cadre)
                                         <option value="{{ $cadre }}" {{ (string)($filters['cadre'] ?? '') === (string)$cadre ? 'selected' : '' }}>{{ $cadre }}</option>
                                     @endforeach
                                 </select>
                             </div>
-                            <div>
-                                <label for="houseFilter" class="form-label small fw-semibold text-secondary">House Name</label>
-                                <select id="houseFilter" class="form-select sl-filter-select w-100">
+                            <div class="sl-filter-item">
+                                <span class="sl-filter-label-text">House Name</span>
+                                <select id="houseFilter" class="form-select sl-filter-select w-100" aria-label="Filter by house name">
                                     <option value="">All</option>
                                     @foreach(($houseOptions ?? []) as $house)
                                         <option value="{{ $house }}" {{ (string)($filters['house'] ?? '') === (string)$house ? 'selected' : '' }}>{{ $house }}</option>
