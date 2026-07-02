@@ -1198,7 +1198,7 @@ class UserController extends Controller
             abort(404);
         }
 
-        if (! is_faculty_portal_user()) {
+        if (! is_faculty_portal_user() && ! hasRole('Super Admin')) {
             abort(403, 'You are not authorized to export the student list.');
         }
 
@@ -1478,9 +1478,143 @@ class UserController extends Controller
                     ->values()
                     ->sortBy('course_name');
             }
+        } elseif (hasRole('Super Admin')) {
+            $activeCourseIds = CourseMaster::where('active_inactive', 1)
+                ->where('end_date', '>=', now())
+                ->pluck('pk');
+
+            $superAdminStudentMaps = StudentMasterCourseMap::with([
+                'studentMaster.cadre',
+                'course',
+            ])
+                ->whereIn('course_master_pk', $activeCourseIds)
+                ->where('active_inactive', 1)
+                ->get();
+
+            $seenStudentCourseKeys = [];
+            $uniqueStudents = collect([]);
+
+            foreach ($superAdminStudentMaps as $studentMap) {
+                $stdObj = new \stdClass();
+                $stdObj->student_master_pk = $studentMap->student_master_pk;
+                $stdObj->course_master_pk = $studentMap->course_master_pk;
+                $stdObj->studentMaster = $studentMap->studentMaster;
+                $stdObj->course = $studentMap->course;
+                $stdObj->source = 'super_admin';
+
+                $key = $stdObj->student_master_pk . '_' . ($stdObj->course_master_pk ?? 0);
+                if (! in_array($key, $seenStudentCourseKeys, true)) {
+                    $seenStudentCourseKeys[] = $key;
+                    $uniqueStudents->push($stdObj);
+                }
+            }
+
+            $this->augmentStudentListEntries($uniqueStudents, $request);
+
+            $students = $uniqueStudents->filter(fn ($m) => ! empty($m->studentMaster))->values();
+
+            $availableCourses = $students->pluck('course')
+                ->filter(function ($course) {
+                    return $course
+                        && isset($course->active_inactive)
+                        && $course->active_inactive == 1
+                        && isset($course->end_date)
+                        && Carbon::parse($course->end_date)->gte(now());
+                })
+                ->unique('pk')
+                ->map(fn ($c) => ['pk' => $c->pk, 'course_name' => $c->course_name])
+                ->values()
+                ->sortBy('course_name');
         }
 
         return compact('students', 'availableCourses', 'facultyPk');
+    }
+
+    private function augmentStudentListEntries(\Illuminate\Support\Collection $uniqueStudents, ?Request $request = null): void
+    {
+        $noticeMemoService = app(\App\Services\OTNoticeMemoService::class);
+
+        $fromDate = $request?->input('from_date') ?: null;
+        $toDate = $request?->input('to_date') ?: null;
+        $dutyType = $request?->input('duty_type') ?: null;
+
+        $studentPks = $uniqueStudents->pluck('student_master_pk')->filter()->unique()->values()->all();
+        $userIds = $uniqueStudents
+            ->map(fn ($m) => $m->studentMaster->user_id ?? null)
+            ->filter()->unique()->values()->all();
+
+        $houseByUser = ! empty($userIds)
+            ? DB::table('ot_hostel_room_details')
+                ->where('active_inactive', 1)
+                ->whereIn('user_name', $userIds)
+                ->pluck('hostel_room_name', 'user_name')
+            : collect();
+
+        $latestAttendance = ! empty($studentPks)
+            ? DB::table('course_student_attendance')
+                ->whereIn('Student_master_pk', $studentPks)
+                ->orderByDesc('pk')
+                ->get(['Student_master_pk', 'status'])
+                ->groupBy('Student_master_pk')
+                ->map(fn ($g) => (int) $g->first()->status)
+            : collect();
+
+        foreach ($uniqueStudents as $studentMap) {
+            $studentPk = $studentMap->student_master_pk;
+            $coursePk = $studentMap->course_master_pk ?? null;
+
+            if (! isset($studentMap->groupMapping) && $coursePk) {
+                $groupMap = StudentCourseGroupMap::with([
+                    'groupTypeMasterCourseMasterMap.courseGroupType',
+                    'groupTypeMasterCourseMasterMap.Faculty',
+                    'groupTypeMasterCourseMasterMap.courseGroup',
+                ])
+                    ->where('student_master_pk', $studentPk)
+                    ->where('active_inactive', 1)
+                    ->whereHas('groupTypeMasterCourseMasterMap', function ($query) use ($coursePk) {
+                        $query->where('course_name', $coursePk);
+                    })
+                    ->first();
+
+                $studentMap->groupMapping = $groupMap;
+            }
+
+            $studentMap->total_duty_count = MDOEscotDutyMap::where('selected_student_list', $studentPk)
+                ->when($dutyType, fn ($q) => $q->where('mdo_duty_type_master_pk', $dutyType))
+                ->when($fromDate, fn ($q) => $q->whereDate('mdo_date', '>=', $fromDate))
+                ->when($toDate, fn ($q) => $q->whereDate('mdo_date', '<=', $toDate))
+                ->count();
+            $studentMap->total_medical_exception_count = StudentMedicalExemption::where('student_master_pk', $studentPk)
+                ->where('active_inactive', 1)
+                ->count();
+            $studentMap->total_pt_exemption_count = LeaveApplication::where('student_master_pk', $studentPk)
+                ->where('leave_type', LeaveApplication::TYPE_PT_EXEMPTION)
+                ->where('active_inactive', 1)
+                ->where('status', LeaveApplication::STATUS_APPROVED)
+                ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+                ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
+                ->count();
+            $studentMap->total_stationed_leave_count = LeaveApplication::where('student_master_pk', $studentPk)
+                ->where('leave_type', LeaveApplication::TYPE_STATIONED_LEAVE)
+                ->where('active_inactive', 1)
+                ->whereIn('status', [
+                    LeaveApplication::STATUS_APPROVED,
+                    LeaveApplication::STATUS_PENDING,
+                ])
+                ->when($fromDate, fn ($q) => $q->whereDate('from_date', '>=', $fromDate))
+                ->when($toDate, fn ($q) => $q->whereDate('from_date', '<=', $toDate))
+                ->count();
+
+            $notices = $noticeMemoService->getNotices($studentPk);
+            $memos = $noticeMemoService->getMemos($studentPk);
+            $studentMap->total_notice_count = $notices->count();
+            $studentMap->total_memo_count = $memos->count();
+
+            $uid = $studentMap->studentMaster->user_id ?? null;
+            $studentMap->house_name = ($uid && isset($houseByUser[$uid])) ? $houseByUser[$uid] : null;
+            $attStatus = $latestAttendance[$studentPk] ?? null;
+            $studentMap->attendance_present = ($attStatus === 3) ? false : true;
+        }
     }
 
     private function applyDashboardStudentListFilters($students, Request $request)
