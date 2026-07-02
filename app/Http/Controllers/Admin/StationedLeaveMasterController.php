@@ -31,8 +31,13 @@ class StationedLeaveMasterController extends Controller
             return $this->datatable($request);
         }
 
+        $statusCounts = $this->getStatusCounts();
+
         return view('admin.stationed_leave_master.index', [
-            'courses' => $this->getConfiguredCourses(),
+            'activeCourses' => $this->getConfiguredCoursesByStatus(1),
+            'archiveCourses' => $this->getConfiguredCoursesByStatus(0, true),
+            'activeCount' => $statusCounts['active'],
+            'archiveCount' => $statusCounts['archive'],
         ]);
     }
 
@@ -235,9 +240,17 @@ class StationedLeaveMasterController extends Controller
 
     protected function baseListQuery(Request $request)
     {
+        $statusFilter = strtolower((string) $request->input('status_filter', 'active'));
+
         $query = StationedLeaveMaster::with(['course', 'approvers'])
             ->withCount('approvers')
             ->orderByDesc('pk');
+
+        if ($statusFilter === 'archive') {
+            $query->where('active_inactive', 0);
+        } else {
+            $query->where('active_inactive', 1);
+        }
 
         $courseIds = $this->getAllowedCourseIds();
         if ($courseIds !== null) {
@@ -349,25 +362,56 @@ class StationedLeaveMasterController extends Controller
     }
 
     /**
-     * Courses that already have at least one stationed-leave configuration (for the filter dropdown).
+     * Courses that have at least one stationed-leave configuration by status.
      */
-    protected function getConfiguredCourses()
+    protected function getConfiguredCoursesByStatus(int $status, bool $includeEndedCourses = false)
     {
         $courseIds = $this->getAllowedCourseIds();
 
         $configuredIds = StationedLeaveMaster::query()
+            ->where('active_inactive', $status)
             ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds))
             ->distinct()
             ->pluck('course_master_pk')
             ->all();
 
-        if (empty($configuredIds)) {
+        $coursePool = $configuredIds;
+        if ($status === 0 && $includeEndedCourses) {
+            $endedCourseIds = CourseMaster::query()
+                ->when($courseIds !== null, fn ($q) => $q->whereIn('pk', $courseIds))
+                ->where(function ($q) {
+                    $q->where('active_inactive', 0)
+                        ->orWhereDate('end_date', '<', now()->toDateString());
+                })
+                ->pluck('pk')
+                ->all();
+
+            $coursePool = array_values(array_unique(array_merge($configuredIds, $endedCourseIds)));
+        }
+
+        if (empty($coursePool)) {
             return collect();
         }
 
-        return CourseMaster::whereIn('pk', $configuredIds)
+        return CourseMaster::whereIn('pk', $coursePool)
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
+    }
+
+    protected function getStatusCounts(): array
+    {
+        $courseIds = $this->getAllowedCourseIds();
+
+        $counts = StationedLeaveMaster::query()
+            ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds))
+            ->selectRaw('active_inactive, COUNT(*) as aggregate')
+            ->groupBy('active_inactive')
+            ->pluck('aggregate', 'active_inactive');
+
+        return [
+            'active' => (int) ($counts[1] ?? 0),
+            'archive' => (int) ($counts[0] ?? 0),
+        ];
     }
 
     protected function getCourses()
