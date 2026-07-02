@@ -3,33 +3,30 @@
 
 @section('content')
 @include('fc.registration.partials.fc-form-theme')
-@php
-    $val = fn ($name) => old($name, $data[$name] ?? '');
-    $timeOpts = $template['sections'][0]['fields'][5]['options'] ?? ['Forenoon (FN)', 'Afternoon (AN)'];
-@endphp
+@php $val = fn ($name) => old($name, $data[$name] ?? ''); $tm = $val('time_of_assumption'); @endphp
 
 @push('styles')
 <style>
-    .ac-paper{ background:#fff; border:1px solid var(--fc-line); border-radius:14px;
-        box-shadow:0 6px 22px rgba(0,40,90,.06); padding:2.4rem 2.6rem; margin-bottom:1.25rem; }
+    .ac-paper{ background:#fff; border:1px solid var(--fc-line); border-radius:14px; box-shadow:0 6px 22px rgba(0,40,90,.06);
+        padding:2.4rem 2.6rem; margin-bottom:1.25rem; font-family:'Times New Roman', Georgia, serif; color:#111; }
     @media (max-width:575.98px){ .ac-paper{ padding:1.6rem 1.1rem; } }
-    .ac-doc{ font-family:'Times New Roman', Georgia, serif; color:#111; max-width:820px; margin:0 auto; }
-    .ac-doc + .ac-doc{ border-top:2px dashed #cbd5e1; margin-top:2.2rem; padding-top:2.2rem; }
-    .ac-title{ text-align:center; font-weight:700; font-size:1.18rem; text-decoration:underline; letter-spacing:.3px; margin:0; }
-    .ac-title-hi{ text-align:center; font-weight:700; font-size:1.05rem; margin:.4rem 0 0; }
-    .ac-body{ font-size:1.05rem; line-height:2.3; text-align:justify; margin:1.9rem 0 0; }
-    .ac-hindi .ac-body{ line-height:2.45; }
-    .ac-lines{ margin:2rem 0 0; font-size:1.02rem; line-height:2.2; }
-    .ac-sign{ margin-top:2.4rem; text-align:right; font-weight:600; }
-    .lang-tag{ display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.6px; color:#64748b;
-        border:1px solid var(--fc-line); border-radius:20px; padding:.1rem .6rem; margin-bottom:.5rem; text-transform:uppercase; }
+    .ac-doc{ max-width:820px; margin:0 auto; }
+    .ac-title-hi{ text-align:center; font-weight:700; font-size:1.15rem; margin:0; }
+    .ac-title{ text-align:center; font-weight:700; font-size:1.1rem; text-decoration:underline; margin:.15rem 0 0; }
+    .ac-body{ font-size:1.05rem; line-height:2.15; text-align:justify; margin:1.6rem 0 0; text-indent:2rem; }
+    .ac-body.hi{ margin-top:1.3rem; }
+    .ac-foot{ margin-top:2rem; font-size:1.02rem; line-height:2.1; }
+    .ac-foot .r{ float:right; text-align:left; }
     .blank{ border:0; border-bottom:1px dotted #64748b; background:transparent; font-family:inherit; font-size:inherit;
-        padding:0 .35rem 1px; color:#0b3d91; font-weight:600; outline:none; min-width:70px; }
+        padding:0 .35rem 1px; color:#0b3d91; font-weight:600; outline:none; min-width:110px; }
     .blank:focus{ border-bottom-color:var(--fc-blue); background:#eef6ff; }
-    .blank--name{ min-width:210px; }
+    .blank--mid{ min-width:200px; }
     .blank--sm{ min-width:120px; }
     select.blank{ border-bottom:1px dotted #64748b; }
-    .mirror-out{ color:#0b3d91; font-weight:600; border-bottom:1px dotted #94a3b8; padding:0 .3rem; display:inline-block; min-width:70px; }
+    .mirror-out{ color:#0b3d91; font-weight:600; border-bottom:1px dotted #94a3b8; padding:0 .3rem; display:inline-block; min-width:90px; }
+    .lang-tag{ display:inline-block; font-size:.68rem; font-weight:700; letter-spacing:.6px; color:#64748b;
+        border:1px solid var(--fc-line); border-radius:20px; padding:.1rem .6rem; margin-bottom:.4rem; text-transform:uppercase; }
+    .ac-copies{ text-align:center; font-size:.8rem; color:#7a8699; margin-top:1.2rem; }
 </style>
 @endpush
 
@@ -38,13 +35,8 @@
     <div class="fc-band">
         <div class="fc-band__row">
             <div class="fc-band__ico"><i class="bi bi-pencil-square"></i></div>
-            <div>
-                <h4>{{ $template['title'] }}</h4>
-                <p>{{ $template['title_hi'] ?? '' }}</p>
-            </div>
-            <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3">
-                <i class="bi bi-arrow-left me-1"></i>Back to Documents
-            </a>
+            <div><h4>{{ $template['title'] }}</h4><p>{{ $template['title_hi'] ?? '' }}</p></div>
+            <a href="{{ route('fc-reg.forms.step', [$form, $step]) }}" class="btn btn-light btn-sm ms-auto rounded-pill px-3"><i class="bi bi-arrow-left me-1"></i>Back to Documents</a>
         </div>
     </div>
 
@@ -59,88 +51,64 @@
         @csrf
 
         <div class="ac-paper">
-            {{-- ─────────────── ENGLISH ─────────────── --}}
-            <div class="ac-doc" lang="en">
-                <span class="lang-tag">English</span>
-                <h2 class="ac-title">CERTIFICATE OF ASSUMPTION OF CHARGE</h2>
+            <div class="ac-doc">
+                <div class="ac-title-hi">कार्यभार-ग्रहण प्रमाणपत्र</div>
+                <div class="ac-title">CERTIFICATE OF ASSUMPTION OF CHARGE</div>
 
-                <p class="ac-body">
-                    Certified that I,
-                    <input type="text" name="officer_name" class="blank blank--name" required
-                           value="{{ $val('officer_name') }}" data-mirror="name" autocomplete="off">
-                    (Name),
-                    <input type="text" name="designation" class="blank blank--name"
-                           value="{{ $val('designation') }}" data-mirror="designation" autocomplete="off">
-                    (Designation), have assumed charge of the post of
-                    <input type="text" name="post_assumed" class="blank blank--name"
-                           value="{{ $val('post_assumed') }}" data-mirror="post" autocomplete="off">
-                    at
-                    <input type="text" name="place_of_posting" class="blank"
-                           value="{{ $val('place_of_posting') }}" data-mirror="posting" autocomplete="off">
-                    on
-                    <input type="date" name="date_of_assumption" class="blank blank--sm"
-                           value="{{ $val('date_of_assumption') }}" data-mirror="adate">
-                    in the
-                    <select name="time_of_assumption" class="blank" data-mirror="time">
-                        <option value="">—</option>
-                        @foreach($timeOpts as $opt)
-                            <option value="{{ $opt }}" {{ (string)$val('time_of_assumption')===(string)$opt?'selected':'' }}>{{ $opt }}</option>
-                        @endforeach
-                    </select>.
+                {{-- Hindi certificate (fillable) --}}
+                <p class="ac-body hi">
+                    प्रमाणित किया जाता है कि मैंने आज दिनांक
+                    <input type="date" name="date_of_assumption" class="blank blank--sm" value="{{ $val('date_of_assumption') }}" data-mirror="doa">
+                    <select name="time_of_assumption" class="blank" data-mirror="tm">
+                        <option value="">पूर्वाह्न / अपराह्न</option>
+                        <option value="Forenoon" {{ $tm==='Forenoon'?'selected':'' }}>पूर्वाह्न (Forenoon)</option>
+                        <option value="Afternoon" {{ $tm==='Afternoon'?'selected':'' }}>अपराह्न (Afternoon)</option>
+                    </select>
+                    में लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी में (सेवा)
+                    <input type="text" name="service" class="blank blank--mid" value="{{ $val('service') }}" data-mirror="svc" placeholder="सेवा का नाम">
+                    के पद का कार्यभार ग्रहण कर लिया है।
                 </p>
 
-                <div class="ac-lines">
-                    Place: <input type="text" name="place" class="blank" value="{{ $val('place') }}" data-mirror="place">
-                    &nbsp;&nbsp;&nbsp;
-                    Date: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}" data-mirror="ddate">
-                </div>
-                <div class="ac-sign">Signature of the Officer</div>
-            </div>
-
-            {{-- ─────────────── HINDI (mirrors the same values) ─────────────── --}}
-            <div class="ac-doc ac-hindi" lang="hi">
-                <span class="lang-tag">हिन्दी</span>
-                <h2 class="ac-title-hi">कार्यभार ग्रहण प्रमाण-पत्र</h2>
-
+                {{-- English certificate (mirrors the same values) --}}
                 <p class="ac-body">
-                    प्रमाणित किया जाता है कि मैंने,
-                    <span class="mirror-out" data-mirror-out="name">&nbsp;</span> (नाम),
-                    <span class="mirror-out" data-mirror-out="designation">&nbsp;</span> (पद नाम), ने
-                    <span class="mirror-out" data-mirror-out="post">&nbsp;</span> पद का कार्यभार
-                    <span class="mirror-out" data-mirror-out="posting">&nbsp;</span> में दिनांक
-                    <span class="mirror-out" data-mirror-out="adate">&nbsp;</span> को
-                    <span class="mirror-out" data-mirror-out="time">&nbsp;</span> ग्रहण कर लिया है।
+                    Certified that I have on the <span class="mirror-out" data-mirror-out="tm">forenoon / afternoon</span> of this day
+                    <span class="mirror-out" data-mirror-out="doa">&nbsp;</span> assumed the charge of the office of
+                    <span class="mirror-out" data-mirror-out="svc">&nbsp;</span> (Service) in Lal Bahadur Shastri National Academy of
+                    Administration, Mussoorie.
                 </p>
 
-                <div class="ac-lines">
-                    स्थान: <span class="mirror-out" data-mirror-out="place">&nbsp;</span>
-                    &nbsp;&nbsp;&nbsp;
-                    दिनांक: <span class="mirror-out" data-mirror-out="ddate">&nbsp;</span>
+                <div class="ac-foot">
+                    <div class="ac-foot r">
+                        हस्ताक्षर / Signature: ______________________<br>
+                        नाम / Name: <input type="text" name="officer_name" class="blank blank--mid" required value="{{ $val('officer_name') }}"><br>
+                        पदनाम / Designation: <input type="text" name="designation" class="blank blank--mid" value="{{ $val('designation') }}">
+                    </div>
+                    <div>स्थान / Place: <strong>मसूरी / Mussoorie</strong></div>
+                    <div>दिनांक / Dated: <input type="date" name="declaration_date" class="blank blank--sm" value="{{ $val('declaration_date') }}"></div>
+                    <div style="clear:both;"></div>
                 </div>
-                <div class="ac-sign">अधिकारी के हस्ताक्षर</div>
+
+                <div class="ac-copies"><i class="bi bi-info-circle me-1"></i>The generated PDF prints <strong>two identical copies</strong> of this certificate on one page (one for you, one for the office record).</div>
             </div>
         </div>
 
-        {{-- Signature upload (optional — same as every other doc form) --}}
+        {{-- Signature upload --}}
         @if(! empty($template['signatures']))
             <div class="card fc-card border-0 shadow-sm mb-3">
-                <div class="card-header bg-white py-3">
-                    <h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6>
-                </div>
+                <div class="card-header bg-white py-3"><h6 class="mb-0 text-uppercase small fw-bold text-muted">Signatures / हस्ताक्षर</h6></div>
                 <div class="card-body">
                     <div class="row g-3">
                         @foreach($template['signatures'] as $i => $sig)
                             @php $existingSig = $data['_signatures'][$i] ?? null; @endphp
                             <div class="col-md-6">
                                 <label class="form-label small fw-semibold">{!! $sig !!}</label>
-                                <input type="file" name="signature[{{ $i }}]"
-                                       class="form-control form-control-sm @error('signature.'.$i) is-invalid @enderror" accept="image/*">
+                                <input type="file" name="signature[{{ $i }}]" class="form-control form-control-sm @error('signature.'.$i) is-invalid @enderror" accept="image/*">
                                 @error('signature.'.$i)<div class="text-danger small mt-1">{{ $message }}</div>@enderror
                                 @if($existingSig)<div class="mt-2"><img src="{{ asset('storage/'.$existingSig) }}" style="max-height:48px;border:1px solid #ddd;padding:2px;background:#fff;"></div>@endif
                             </div>
                         @endforeach
                     </div>
-                    <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i>Upload a scanned/photographed signature image (PNG/JPG, max 2&nbsp;MB). Optional — you may also print the generated PDF and sign it physically.</small>
+                    <small class="text-muted d-block mt-2"><i class="bi bi-info-circle me-1"></i>Optional — you may also print the generated PDF and sign it physically.</small>
                 </div>
             </div>
         @endif
@@ -159,14 +127,12 @@
     function fmtDate(v){ var m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(v||''); return m?(m[3]+'-'+m[2]+'-'+m[1]):(v||''); }
     function sync(el){
         var key = el.getAttribute('data-mirror');
-        var raw = el.value || '';
-        var text = (el.type === 'date') ? fmtDate(raw) : raw;
-        document.querySelectorAll('[data-mirror-out="' + key + '"]').forEach(function (o){ o.textContent = text || ' '; });
+        var v = (el.type === 'date') ? fmtDate(el.value) : (el.value || '');
+        if (key === 'tm' && !v) v = 'forenoon / afternoon';
+        document.querySelectorAll('[data-mirror-out="' + key + '"]').forEach(function (o){ o.textContent = v || ' '; });
     }
     document.querySelectorAll('[data-mirror]').forEach(function (el){
-        el.addEventListener('input', function(){ sync(el); });
-        el.addEventListener('change', function(){ sync(el); });
-        sync(el);
+        el.addEventListener('input', function(){ sync(el); }); el.addEventListener('change', function(){ sync(el); }); sync(el);
     });
 })();
 </script>

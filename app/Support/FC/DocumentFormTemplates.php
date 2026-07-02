@@ -884,7 +884,7 @@ class DocumentFormTemplates
         return [
             'key'      => 'assumption_charge',
             'title'    => 'Certificate of Assumption of Charge',
-            'title_hi' => 'कार्यभार ग्रहण प्रमाण-पत्र',
+            'title_hi' => 'कार्यभार-ग्रहण प्रमाणपत्र',
             // Dedicated document-faithful, bilingual prose certificate (fill-in-the-blank).
             'form_view' => 'fc.registration.document-forms.assumption_charge',
             'pdf_view'  => 'fc.registration.document-forms.pdf.assumption_charge',
@@ -893,16 +893,15 @@ class DocumentFormTemplates
                     'heading' => 'Charge Details / कार्यभार विवरण',
                     'fields'  => [
                         ['name' => 'officer_name', 'label' => 'Name / नाम', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
-                        ['name' => 'designation', 'label' => 'Designation / पद नाम', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'post_assumed', 'label' => 'Post Assumed / ग्रहण किया गया पद', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'place_of_posting', 'label' => 'Place of Posting / तैनाती का स्थान', 'type' => 'text', 'width' => 'col-md-6'],
-                        ['name' => 'date_of_assumption', 'label' => 'Date of Assumption / कार्यभार ग्रहण की तिथि', 'type' => 'date', 'width' => 'col-md-6'],
-                        ['name' => 'time_of_assumption', 'label' => 'Time (FN / AN) / समय (पूर्वाह्न / अपराह्न)', 'type' => 'select', 'options' => ['Forenoon (FN)', 'Afternoon (AN)'], 'width' => 'col-md-6'],
+                        ['name' => 'designation', 'label' => 'Designation / पदनाम', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'service', 'label' => 'Service / सेवा', 'type' => 'text', 'width' => 'col-md-6'],
+                        ['name' => 'date_of_assumption', 'label' => 'Date of Assumption / कार्यभार ग्रहण की तिथि', 'type' => 'date', 'width' => 'col-md-3'],
+                        ['name' => 'time_of_assumption', 'label' => 'Forenoon / Afternoon / पूर्वाह्न / अपराह्न', 'type' => 'select', 'options' => ['Forenoon', 'Afternoon'], 'width' => 'col-md-3'],
                     ],
                 ],
             ],
-            'declaration' => 'Certified that I have assumed charge of the post indicated above on the date and time stated. / प्रमाणित किया जाता है कि मैंने उपर्युक्त दर्शाए गए पद का कार्यभार उल्लिखित तिथि और समय पर ग्रहण कर लिया है।',
-            'sections_footer' => [self::placeDateSection()],
+            'declaration' => 'Certified that I have, on the forenoon/afternoon of this day, assumed the charge of the office of the said Service in the Lal Bahadur Shastri National Academy of Administration, Mussoorie. / प्रमाणित किया जाता है कि मैंने आज पूर्वाह्न/अपराह्न में लाल बहादुर शास्त्री राष्ट्रीय प्रशासन अकादमी, मसूरी में उक्त सेवा के पद का कार्यभार ग्रहण कर लिया है।',
+            'sections_footer' => [self::dateOnlySection()],
             'signatures' => ['Signature of the Officer / अधिकारी के हस्ताक्षर'],
         ];
     }
