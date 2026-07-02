@@ -61,7 +61,7 @@
                     </div>
 
                     <hr>
-                    {!! $dataTable->table(['class' => 'table']) !!}
+                    {!! $dataTable->table(['class' => 'table', 'data-sargam-dt-ui' => 'false']) !!}
                 </div>
             </div>
         </div>

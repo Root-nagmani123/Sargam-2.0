@@ -273,7 +273,12 @@ width: 170px;
                 <div class="col-md-4">
                     <div class="label-sm">Current Sector</div>
                     <div class="data-line">
-                        {{ $faculty->faculty_sector == 1 ? 'Government Sector' : 'Private Sector' }}
+                        @php
+                            $sectorName = \Illuminate\Support\Facades\DB::table('faculty_sector_master')
+                                ->where('pk', $faculty->faculty_sector)
+                                ->value('name');
+                        @endphp
+                        {{ $sectorName ?? '-' }}
                     </div>
                 </div>
             </div>
