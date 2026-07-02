@@ -2653,22 +2653,30 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
                 ->where('timetable_pk', $timetable_pk)
                 ->first();
                 
-            
 
 
 
-          $students = DB::table('course_student_attendance as csa')
-    ->leftJoin('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
-    ->where('csa.course_master_pk', $course_pk)
-    ->where('csa.timetable_pk', $timetable_pk)
-    ->whereRaw("TRIM(csa.status) REGEXP '^(2|3)$'")
-    ->select(
-        'csa.*',
-        'sm.display_name',
-        'sm.pk as student_id',
-        'sm.generated_OT_code as generated_OT_code'
-    )
-    ->paginate(30);
+
+                      $students = DB::table('student_course_group_map as scgm')
+                ->join('student_master as sm', 'sm.pk', '=', 'scgm.student_master_pk')
+                ->leftJoin('course_student_attendance as csa', function ($join) use ($course_pk, $group_pk, $timetable_pk) {
+                    $join->on('csa.Student_master_pk', '=', 'scgm.student_master_pk')
+                        ->where('csa.course_master_pk', '=', $course_pk)
+                        ->where('csa.group_type_master_course_master_map_pk', '=', $group_pk)
+                        ->where('csa.timetable_pk', '=', $timetable_pk);
+                })
+                ->where('scgm.group_type_master_course_master_map_pk', $group_pk)
+                ->where('scgm.active_inactive', 1)
+                ->select(
+                    'csa.pk',
+                    'csa.status',
+                    'scgm.student_master_pk as Student_master_pk',
+                    'sm.display_name',
+                    'sm.pk as student_id',
+                    'sm.generated_OT_code as generated_OT_code'
+                )
+                ->orderBy('sm.display_name')
+                ->paginate(30);
 
             return view('admin.courseAttendanceNoticeMap.view_all_notice_list', compact('students','courseGroup', 'group_pk', 'course_pk', 'timetable_pk'));
 } catch (\Exception $e) {
@@ -2679,8 +2687,8 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
 
     /**
      * Notice-list partial rendered inside the "Notice List" modal on the
-     * Send Direct Notice page. Same dataset as view_all_notice_list() (the
-     * session's Late/Absent OTs) but returns a bare partial for AJAX injection.
+     * Send Direct Notice page. Returns the full student roster for the
+     * selected course-group + timetable session.
      */
     public function noticeListModal($group_pk, $course_pk, $timetable_pk)
     {
@@ -2695,12 +2703,25 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
             ->where('timetable_pk', $timetable_pk)
             ->first();
 
-        $students = DB::table('course_student_attendance as csa')
-            ->leftJoin('student_master as sm', 'sm.pk', '=', 'csa.Student_master_pk')
-            ->where('csa.course_master_pk', $course_pk)
-            ->where('csa.timetable_pk', $timetable_pk)
-            ->whereRaw("TRIM(csa.status) REGEXP '^(2|3)$'")
-            ->select('csa.*', 'sm.display_name', 'sm.pk as student_id', 'sm.generated_OT_code as generated_OT_code')
+        $students = DB::table('student_course_group_map as scgm')
+            ->join('student_master as sm', 'sm.pk', '=', 'scgm.student_master_pk')
+            ->leftJoin('course_student_attendance as csa', function ($join) use ($course_pk, $group_pk, $timetable_pk) {
+                $join->on('csa.Student_master_pk', '=', 'scgm.student_master_pk')
+                    ->where('csa.course_master_pk', '=', $course_pk)
+                    ->where('csa.group_type_master_course_master_map_pk', '=', $group_pk)
+                    ->where('csa.timetable_pk', '=', $timetable_pk);
+            })
+            ->where('scgm.group_type_master_course_master_map_pk', $group_pk)
+            ->where('scgm.active_inactive', 1)
+            ->select(
+                'csa.pk',
+                'csa.status',
+                'scgm.student_master_pk as Student_master_pk',
+                'sm.display_name',
+                'sm.pk as student_id',
+                'sm.generated_OT_code as generated_OT_code'
+            )
+            ->orderBy('sm.display_name')
             ->get();
 
         return view('admin.courseAttendanceNoticeMap.partials.notice_list_modal', compact('students', 'courseGroup', 'group_pk', 'course_pk', 'timetable_pk'));

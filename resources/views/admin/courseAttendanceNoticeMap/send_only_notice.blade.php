@@ -104,7 +104,7 @@
                             <th>Group</th>
                             <th>Topic</th>
                             <th>Faculty</th>
-                            <th>Eligible OT</th>
+                            <th>Total OT</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -410,7 +410,7 @@ $(function() {
 
     // ── Column Visibility modal ──
     var headers = ['S. No.', 'Course Name', 'Date', 'Session', 'Venue', 'Group', 'Topic', 'Faculty',
-        'Eligible OT', 'Action'
+        'Total OT', 'Action'
     ];
     var $grid = $('#snColumnGrid');
     headers.forEach(function(label, i) {

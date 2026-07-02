@@ -54,25 +54,27 @@
                         <td class="fw-medium">{{ $row->display_name ?? 'N/A' }}</td>
                         <td>{{ $row->generated_OT_code ?? 'N/A' }}</td>
                         <td>
-                            @if($row->status == 2)
+                            @if($row->status == 1)
+                                <span class="nlm-badge nlm-badge--present">Present</span>
+                            @elseif($row->status == 2)
                                 <span class="nlm-badge nlm-badge--late">Late</span>
                             @elseif($row->status == 3)
                                 <span class="nlm-badge nlm-badge--absent">Absent</span>
                             @else
-                                <span class="text-muted">—</span>
+                                <span class="text-muted">Not Marked</span>
                             @endif
                         </td>
                         <td class="text-end">
                             <a href="#" class="nlm-row-notice js-row-notice" data-student="{{ $studentId }}" data-attendance="{{ $row->pk }}" title="Send Notice">
-                                <i class="bi bi-send-fill"></i><span>Notice</span>
+                                <i class="material-icons material-icons-rounded">send</i><span>Notice</span>
                             </a>
                         </td>
                     </tr>
                 @empty
                     <tr>
                         <td colspan="6" class="text-center text-muted py-5">
-                            <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                            Late or Absent OTs not found for this session.
+                            <i class="material-icons material-icons-rounded">inbox</i>
+                            No students found for this session.
                         </td>
                     </tr>
                 @endforelse

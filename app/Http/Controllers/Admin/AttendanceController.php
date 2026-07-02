@@ -285,11 +285,9 @@ class AttendanceController extends Controller
                         return 0;
                     }
 
-                    return CourseStudentAttendance::where([
-                        'course_master_pk' => $row->Programme_pk,
-                        'group_type_master_course_master_map_pk' => $row->group_pk,
-                        'timetable_pk' => $row->timetable_pk,
-                    ])->whereRaw("TRIM(status) REGEXP '^(2|3)$'")->count();
+                    return StudentCourseGroupMap::where('group_type_master_course_master_map_pk', $row->group_pk)
+                        ->where('active_inactive', 1)
+                        ->count();
                 })
                 ->addColumn('actions', function ($row) use ($currentPath) {
                     // Mark Attendance button turns green only when all students are saved (status != 0)

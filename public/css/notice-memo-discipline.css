@@ -948,6 +948,11 @@
     color: #b54708;
 }
 
+.notice-list-modal .nlm-badge--present {
+    background: #ecfdf3;
+    color: #027a48;
+}
+
 .notice-list-modal .nlm-badge--absent {
     background: #fef3f2;
     color: #b42318;
