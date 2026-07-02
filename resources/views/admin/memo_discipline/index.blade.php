@@ -359,7 +359,7 @@
 
                         <!-- Add Group Mapping -->
                         @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') ||
-                        hasRole('Training Induction Admin'))
+                        hasRole('Training Induction Admin') || hasRole('Training-Induction'))
                         <a href="{{ route('memo.discipline.create') }}"
                             class="btn btn-primary d-flex align-items-center">
                             <i class="material-icons menu-icon material-symbols-rounded"

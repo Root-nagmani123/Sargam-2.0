@@ -164,7 +164,7 @@
                                         <i class="material-symbols-rounded" style="font-size: 1.1rem;">visibility</i>
                                         <span class="d-none d-sm-inline">Details</span>
                                     </button>
-                                    <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id]) }}?date_from={{ urlencode($effectiveDateFromYmd ?? '') }}&date_to={{ urlencode($effectiveDateToYmd ?? '') }}"
+                                    <a href="{{ route('admin.mess.process-mess-bills-employee.print-receipt', ['id' => $cb->combined_id]) }}?my_bills=1&date_from={{ urlencode($effectiveDateFromYmd ?? '') }}&date_to={{ urlencode($effectiveDateToYmd ?? '') }}"
                                        target="_blank"
                                        class="btn btn-sm btn-outline-secondary shadow-sm d-inline-flex align-items-center gap-1 px-2"
                                        title="Print receipt">
@@ -176,7 +176,7 @@
                             <tr>
                                 <td colspan="8" class="text-center py-5 text-muted">
                                     <i class="material-symbols-rounded d-block mb-3 text-primary" style="font-size: 4rem;">inbox</i>
-                                    <div class="fw-semibold fs-5 mb-1">No bills found</div>
+                                    <div class="fw-semibold fs-5 mb-1">No Generated Mess Bills</div>
                                     <div class="small">Try another date range, or confirm your mess account is linked to your employee or student record.</div>
                                 </td>
                             </tr>
@@ -215,7 +215,7 @@
     'searchPlaceholder' => 'Search invoice no. or type',
     'orderColumn' => [[0, 'asc']],
     'actionColumnIndex' => 7,
-    'infoLabel' => 'bills',
+    'infoLabel' => 'generated mess bills',
 ])
 @endsection
 
@@ -334,11 +334,11 @@
         var content = document.getElementById('myBillDetailsContent');
         if (content) content.innerHTML = '<div class="text-center py-4 text-muted">Loading…</div>';
         var url = paymentDetailsUrl.replace('__ID__', encodeURIComponent(billId));
-        if (String(billId).indexOf('combined-') === 0 && (myBillDetailsDateFrom || myBillDetailsDateTo)) {
-            var params = [];
+        if (String(billId).indexOf('combined-') === 0) {
+            var params = ['my_bills=1'];
             if (myBillDetailsDateFrom) params.push('date_from=' + encodeURIComponent(myBillDetailsDateFrom));
             if (myBillDetailsDateTo) params.push('date_to=' + encodeURIComponent(myBillDetailsDateTo));
-            if (params.length) url += (url.indexOf('?') >= 0 ? '&' : '?') + params.join('&');
+            url += (url.indexOf('?') >= 0 ? '&' : '?') + params.join('&');
         }
         fetch(url, { headers: { 'Accept': 'application/json' } }).then(function (r) { return r.json(); })
             .then(function (data) {
@@ -374,8 +374,11 @@
             var receiptId = myBillDetailsBillId;
             if (!receiptId) return;
             var printUrl = printReceiptBaseUrl.replace('__ID__', encodeURIComponent(receiptId));
-            if (String(receiptId).indexOf('combined-') === 0 && (myBillDetailsDateFrom || myBillDetailsDateTo)) {
-                printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'date_from=' + encodeURIComponent(myBillDetailsDateFrom || '') + '&date_to=' + encodeURIComponent(myBillDetailsDateTo || '');
+            if (String(receiptId).indexOf('combined-') === 0) {
+                printUrl += (printUrl.indexOf('?') >= 0 ? '&' : '?') + 'my_bills=1';
+                if (myBillDetailsDateFrom || myBillDetailsDateTo) {
+                    printUrl += '&date_from=' + encodeURIComponent(myBillDetailsDateFrom || '') + '&date_to=' + encodeURIComponent(myBillDetailsDateTo || '');
+                }
             }
             window.open(printUrl, '_blank');
         });

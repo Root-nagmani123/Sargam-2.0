@@ -164,6 +164,18 @@
 
     <!-- Main Content -->
     <div class="container-fluid session-feedback-main p-0 py-2 px-2">
+
+        <!-- Logged-in student identity — shows whose feedback listing this is -->
+        <div class="mb-3">
+            <h5 class="fw-bold mb-2" style="color:#004a93;">
+                <i class="bi bi-chat-square-text me-1"></i> Session Feedback
+            </h5>
+            <span class="d-inline-flex align-items-center gap-2 fw-bold"
+                  style="background:#004a93;color:#fff;border-radius:.5rem;padding:.5rem 1rem;font-size:1.05rem;letter-spacing:.2px;box-shadow:0 .25rem .6rem rgba(0,74,147,.25);">
+                <i class="bi bi-person-circle"></i>{{ $authFullName ?? (auth()->user()->user_name ?? '') }}
+            </span>
+        </div>
+
          <!-- Toolbar: status pills (tabs) + bulk submit -->
             <div class="sf-toolbar">
                 <div class="row align-items-center g-3">

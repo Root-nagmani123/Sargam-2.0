@@ -318,7 +318,10 @@ select.mee-filter-control {
 
                 <div class="programme-dt-panel mee-dt-panel">
                     <div class="table-responsive mee-dt-scroll">
-                        {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table']) !!}
+                        {{-- This page renders its own bottom bar (pagination + "Showing … of N items")
+                             via the custom DataTables dom + .mee-dt-* CSS. Opt out of the global
+                             datatable-global-ui.js so it doesn't relocate/duplicate those controls. --}}
+                        {!! $dataTable->table(['class' => 'table table-hover align-middle mb-0 w-100 programme-dt-table', 'data-sargam-dt-ui' => 'false']) !!}
                     </div>
                 </div>
             </div>
@@ -536,37 +539,112 @@ $(document).ready(function() {
         pendingDeleteForm = null;
     });
 
-    function meeGetExportTableClone() {
-        var tableClone = $('#mdoescot-table').clone();
-        tableClone.find('th:last-child, td:last-child').remove();
-        var html = tableClone[0].outerHTML;
-        html = html.replace(/<th[^>]*>Actions<\/th>/gi, '');
-        html = html.replace(/<td[^>]*>[\s\S]*?(edit|delete|Actions)[\s\S]*?<\/td>/gi, '');
-        return html;
+    // Export columns = every visible table column except the "Action" column.
+    function meeExportColumns() {
+        var cols = [];
+        (table.settings()[0].aoColumns || []).forEach(function(c) {
+            if (c.data === 'actions') {
+                return;
+            }
+            cols.push({ data: c.data, title: $('<div>').html(c.sTitle || '').text() });
+        });
+        return cols;
+    }
+
+    // Strip HTML/entities from a rendered cell value for plain-text export.
+    function meeExportCellText(value) {
+        return $('<div>').html(value == null ? '' : String(value)).text()
+            .replace(/\s+/g, ' ').trim();
+    }
+
+    // Fetch the FULL filtered dataset from the DataTables endpoint (length = -1 so
+    // the server returns every matching row, not just the current page). Mirrors the
+    // filters applied in preXhr.dt so the export respects the on-screen filters.
+    function meeFetchAllFilteredRows(onSuccess, onError) {
+        var params = table.ajax.params();
+        params.start = 0;
+        params.length = -1; // Yajra: -1 disables pagination and returns all rows.
+        params.filter = $('#filter_status').val() || 'active';
+        params.course_filter = $('#course_filter').val();
+        params.year_filter = $('#year_filter').val();
+        params.duty_type_filter = $('#duty_type_filter').val();
+        params.time_from_filter = $('#time_from_filter').val();
+        params.time_to_filter = $('#time_to_filter').val();
+        params.from_date_filter = $('#from_date_filter').val();
+        params.to_date_filter = $('#to_date_filter').val();
+
+        $.ajax({
+            url: table.ajax.url(),
+            type: 'GET',
+            data: params,
+            dataType: 'json',
+            success: function(res) {
+                onSuccess((res && res.data) ? res.data : []);
+            },
+            error: function() {
+                if (typeof onError === 'function') {
+                    onError();
+                }
+            }
+        });
     }
 
     $('#printDownloadBtn').on('click', function() {
+        // Open the window synchronously (inside the click gesture) so it isn't blocked,
+        // then fill it once the full filtered dataset has been fetched.
         var printWindow = window.open('', '_blank');
-        var tableHtml = '<!DOCTYPE html><html><head><title>MDO/Escort Exemption</title>';
-        tableHtml += '<style>';
-        tableHtml += 'body { font-family: Arial, sans-serif; margin: 20px; }';
-        tableHtml += 'table { border-collapse: collapse; width: 100%; margin-top: 20px; }';
-        tableHtml += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }';
-        tableHtml += 'th { background-color: #b72a2a; color: white; font-weight: bold; }';
-        tableHtml += 'tr:nth-child(even) { background-color: #f7f7f7; }';
-        tableHtml += 'h2 { color: #004a93; margin-bottom: 20px; }';
-        tableHtml += '@media print { body { margin: 0; } @page { margin: 1cm; } }';
-        tableHtml += '</style></head><body>';
-        tableHtml += '<h2>MDO/Escort Exemption</h2>';
-        tableHtml += meeGetExportTableClone();
-        tableHtml += '</body></html>';
+        if (printWindow) {
+            printWindow.document.write('<!DOCTYPE html><html><head><title>MDO/Escort Exemption</title></head>' +
+                '<body style="font-family:Arial,sans-serif;margin:20px;">Preparing print…</body></html>');
+        }
 
-        printWindow.document.write(tableHtml);
-        printWindow.document.close();
+        var $btn = $(this).prop('disabled', true);
 
-        setTimeout(function() {
-            printWindow.print();
-        }, 250);
+        meeFetchAllFilteredRows(function(rows) {
+            $btn.prop('disabled', false);
+            if (!printWindow) {
+                return;
+            }
+
+            var columns = meeExportColumns();
+            var head = '<tr>' + columns.map(function(c) {
+                return '<th>' + $('<div>').text(c.title).html() + '</th>';
+            }).join('') + '</tr>';
+
+            var body = rows.map(function(row) {
+                return '<tr>' + columns.map(function(c) {
+                    return '<td>' + $('<div>').text(meeExportCellText(row[c.data])).html() + '</td>';
+                }).join('') + '</tr>';
+            }).join('');
+
+            var tableHtml = '<!DOCTYPE html><html><head><title>MDO/Escort Exemption</title>';
+            tableHtml += '<style>';
+            tableHtml += 'body { font-family: Arial, sans-serif; margin: 20px; }';
+            tableHtml += 'table { border-collapse: collapse; width: 100%; margin-top: 20px; }';
+            tableHtml += 'th, td { border: 1px solid #ddd; padding: 8px; text-align: center; }';
+            tableHtml += 'th { background-color: #b72a2a; color: white; font-weight: bold; }';
+            tableHtml += 'tr:nth-child(even) { background-color: #f7f7f7; }';
+            tableHtml += 'h2 { color: #004a93; margin-bottom: 20px; }';
+            tableHtml += '@media print { body { margin: 0; } @page { margin: 1cm; } }';
+            tableHtml += '</style></head><body>';
+            tableHtml += '<h2>MDO/Escort Exemption</h2>';
+            tableHtml += '<table><thead>' + head + '</thead><tbody>' + body + '</tbody></table>';
+            tableHtml += '</body></html>';
+
+            printWindow.document.open();
+            printWindow.document.write(tableHtml);
+            printWindow.document.close();
+
+            setTimeout(function() {
+                printWindow.print();
+            }, 250);
+        }, function() {
+            $btn.prop('disabled', false);
+            if (printWindow) {
+                printWindow.close();
+            }
+            alert('Unable to prepare the print view. Please try again.');
+        });
     });
 
     function initMeeAddModal(table) {
@@ -591,10 +669,15 @@ $(document).ready(function() {
         var meePickerStudentsMap = {};
         var meeStudentsRequest = null;
         var meeEscortDutyTypeId = null;
+        var meeOtherDutyTypeId = null;
 
         $('#mdo_duty_type_master_pk option').each(function() {
-            if ($(this).text().trim().toLowerCase() === 'escort') {
+            var optText = $(this).text().trim().toLowerCase();
+            if (optText === 'escort') {
                 meeEscortDutyTypeId = $(this).val();
+            }
+            if (optText === 'other') {
+                meeOtherDutyTypeId = $(this).val();
             }
         });
 
@@ -624,6 +707,7 @@ $(document).ready(function() {
                     Time_from: '#Time_from',
                     Time_to: '#Time_to',
                     faculty_master_pk: '#faculty_master_pk',
+                    duty_other: '#duty_other',
                     selected_student_list: '#meeAssignStudentsTrigger'
                 };
                 Object.keys(errors).forEach(function(key) {
@@ -669,6 +753,19 @@ $(document).ready(function() {
                 if ($('#faculty_master_pk').hasClass('select2-hidden-accessible')) {
                     $('#faculty_master_pk').trigger('change.select2');
                 }
+            }
+        }
+
+        function toggleDutyOtherField() {
+            var dutyType = $('#mdo_duty_type_master_pk').val();
+            if (meeOtherDutyTypeId && dutyType === meeOtherDutyTypeId) {
+                $('#duty_other_container').removeClass('d-none');
+                $('#duty_other').prop('required', true);
+            } else {
+                $('#duty_other_container').addClass('d-none');
+                $('#duty_other').val('').prop('required', false);
+                $('#meeErrorDutyOther').addClass('d-none');
+                $('#duty_other').removeClass('is-invalid');
             }
         }
 
@@ -857,6 +954,7 @@ $(document).ready(function() {
             $('#meeRecordPk').val('');
             $('#meeEditStudentName, #meeEditCourseName').text('—');
             toggleFacultyField();
+            toggleDutyOtherField();
             renderAssignStudentTags();
             renderPickerTags();
             $('#meeStudentListEmpty').removeClass('d-none').text('Select course and start date to load students.');
@@ -906,6 +1004,11 @@ $(document).ready(function() {
                 $('#faculty_master_pk').addClass('is-invalid');
                 valid = false;
             }
+            if (meeOtherDutyTypeId && $('#mdo_duty_type_master_pk').val() === meeOtherDutyTypeId && !$('#duty_other').val().trim()) {
+                $('#meeErrorDutyOther').removeClass('d-none');
+                $('#duty_other').addClass('is-invalid');
+                valid = false;
+            }
             if (!isEdit && !meeAssignedStudents.length) {
                 $('#meeErrorStudents').removeClass('d-none');
                 $('#meeAssignStudentsTrigger').addClass('is-invalid');
@@ -926,7 +1029,10 @@ $(document).ready(function() {
             resetMeeAddForm();
         });
 
-        $('#mdo_duty_type_master_pk').on('change', toggleFacultyField);
+        $('#mdo_duty_type_master_pk').on('change', function() {
+            toggleFacultyField();
+            toggleDutyOtherField();
+        });
 
         // Course, date or time change invalidates the previously picked students,
         // since the available list depends on all of them (time-slot conflict check).
@@ -1475,37 +1581,41 @@ $(document).ready(function() {
     }
 
     $('#downloadBtn').on('click', function() {
-        var $table = $('<div>').html(meeGetExportTableClone()).find('table');
-        if (!$table.length) {
-            return;
-        }
+        var $btn = $(this).prop('disabled', true);
 
-        var rows = [];
-        $table.find('tr').each(function() {
-            var cells = [];
-            $(this).find('th, td').each(function() {
-                var text = $(this).text().replace(/\s+/g, ' ').trim().replace(/"/g, '""');
-                cells.push('"' + text + '"');
-            });
-            if (cells.length) {
-                rows.push(cells.join(','));
+        meeFetchAllFilteredRows(function(data) {
+            $btn.prop('disabled', false);
+
+            var columns = meeExportColumns();
+
+            function csvCell(text) {
+                return '"' + String(text).replace(/"/g, '""') + '"';
             }
+
+            var rows = [];
+            // Header row
+            rows.push(columns.map(function(c) { return csvCell(c.title); }).join(','));
+            // Data rows (full filtered dataset)
+            data.forEach(function(row) {
+                rows.push(columns.map(function(c) {
+                    return csvCell(meeExportCellText(row[c.data]));
+                }).join(','));
+            });
+
+            var csv = rows.join('\r\n');
+            var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            var url = URL.createObjectURL(blob);
+            var link = document.createElement('a');
+            link.href = url;
+            link.download = 'MDO_Escort_Exemption_' + new Date().toISOString().slice(0, 10) + '.csv';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+        }, function() {
+            $btn.prop('disabled', false);
+            alert('Unable to download the data. Please try again.');
         });
-
-        if (!rows.length) {
-            return;
-        }
-
-        var csv = rows.join('\r\n');
-        var blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-        var url = URL.createObjectURL(blob);
-        var link = document.createElement('a');
-        link.href = url;
-        link.download = 'MDO_Escort_Exemption_' + new Date().toISOString().slice(0, 10) + '.csv';
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-        URL.revokeObjectURL(url);
     });
 });
 </script>
