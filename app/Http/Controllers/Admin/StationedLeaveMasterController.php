@@ -31,8 +31,13 @@ class StationedLeaveMasterController extends Controller
             return $this->datatable($request);
         }
 
+        $statusCounts = $this->getStatusCounts();
+
         return view('admin.stationed_leave_master.index', [
-            'courses' => $this->getConfiguredCourses(),
+            'activeCourses' => $this->getConfiguredCoursesByStatus('active'),
+            'archiveCourses' => $this->getConfiguredCoursesByStatus('archive'),
+            'activeCount' => $statusCounts['active'],
+            'archiveCount' => $statusCounts['archive'],
         ]);
     }
 
@@ -235,9 +240,15 @@ class StationedLeaveMasterController extends Controller
 
     protected function baseListQuery(Request $request)
     {
+        $statusFilter = strtolower((string) $request->input('status_filter', 'active'));
+
         $query = StationedLeaveMaster::with(['course', 'approvers'])
             ->withCount('approvers')
             ->orderByDesc('pk');
+
+        // Tabs are driven by the linked course's status: Active shows configs of
+        // running courses, Archived shows configs of ended/inactive courses.
+        $this->applyCourseStatusFilter($query, $statusFilter);
 
         $courseIds = $this->getAllowedCourseIds();
         if ($courseIds !== null) {
@@ -349,9 +360,36 @@ class StationedLeaveMasterController extends Controller
     }
 
     /**
-     * Courses that already have at least one stationed-leave configuration (for the filter dropdown).
+     * Constrain a StationedLeaveMaster query to configs whose linked course is
+     * active (running) or archived (inactive / past its end date).
      */
-    protected function getConfiguredCourses()
+    protected function applyCourseStatusFilter($query, string $statusFilter)
+    {
+        $today = now()->toDateString();
+
+        if ($statusFilter === 'archive') {
+            $query->whereHas('course', function ($q) use ($today) {
+                $q->where('active_inactive', 0)
+                    ->orWhereDate('end_date', '<', $today);
+            });
+        } else {
+            $query->whereHas('course', function ($q) use ($today) {
+                $q->where('active_inactive', 1)
+                    ->where(function ($q2) use ($today) {
+                        $q2->whereNull('end_date')
+                            ->orWhereDate('end_date', '>=', $today);
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Courses that have at least one stationed-leave configuration, filtered by
+     * the course's active/archive status.
+     */
+    protected function getConfiguredCoursesByStatus(string $statusFilter)
     {
         $courseIds = $this->getAllowedCourseIds();
 
@@ -365,9 +403,36 @@ class StationedLeaveMasterController extends Controller
             return collect();
         }
 
+        $today = now()->toDateString();
+
         return CourseMaster::whereIn('pk', $configuredIds)
+            ->when($statusFilter === 'archive', function ($q) use ($today) {
+                $q->where(function ($q2) use ($today) {
+                    $q2->where('active_inactive', 0)
+                        ->orWhereDate('end_date', '<', $today);
+                });
+            }, function ($q) use ($today) {
+                $q->where('active_inactive', 1)
+                    ->where(function ($q2) use ($today) {
+                        $q2->whereNull('end_date')
+                            ->orWhereDate('end_date', '>=', $today);
+                    });
+            })
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
+    }
+
+    protected function getStatusCounts(): array
+    {
+        $courseIds = $this->getAllowedCourseIds();
+
+        $base = fn () => StationedLeaveMaster::query()
+            ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds));
+
+        return [
+            'active' => $this->applyCourseStatusFilter($base(), 'active')->count(),
+            'archive' => $this->applyCourseStatusFilter($base(), 'archive')->count(),
+        ];
     }
 
     protected function getCourses()

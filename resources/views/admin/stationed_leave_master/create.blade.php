@@ -93,6 +93,21 @@
         background: #fee4e2;
         color: #b42318;
     }
+    .stationed-leave-config .sl-authority-check {
+        width: 1.15rem;
+        height: 1.15rem;
+        margin: 0;
+        float: none;
+        cursor: pointer;
+    }
+    .stationed-leave-config .sl-authority-check:checked {
+        background-color: #004a93;
+        border-color: #004a93;
+    }
+    .stationed-leave-config .sl-authority-check:focus {
+        border-color: #004a93;
+        box-shadow: 0 0 0 0.2rem rgba(0, 74, 147, 0.15);
+    }
     .stationed-leave-config .btn-cancel-outline {
         background: #fff;
         border: 1px solid #004a93;
@@ -180,11 +195,8 @@
             <form method="POST" action="{{ route('admin.stationed-leave-master.store') }}" id="stationed-leave-form">
                 @csrf
 
-                {{-- PT timing preserved server-side; not surfaced in this layout. --}}
-                <input type="hidden" id="apply_cutoff_time" name="apply_cutoff_time" value="{{ $cutoffValue }}">
-
                 <div class="row g-4 mb-4">
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-4">
                         <label for="course_master_pk" class="leave-grid-label d-block">Select Course <span class="text-danger">*</span></label>
                         <select id="course_master_pk" name="course_master_pk" class="form-select" required>
                             <option value="">Select Course</option>
@@ -197,11 +209,17 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-12 col-md-6">
+                    <div class="col-12 col-md-4">
                         <label for="effective_from" class="leave-grid-label d-block">Effective From <span class="text-danger">*</span></label>
                         <input type="date" id="effective_from" name="effective_from" class="form-control" required
                             placeholder="Select the date"
                             value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}">
+                    </div>
+                    <div class="col-12 col-md-4">
+                        <label for="apply_cutoff_time" class="leave-grid-label d-block">PT Timing <span class="text-danger">*</span></label>
+                        <input type="time" id="apply_cutoff_time" name="apply_cutoff_time" class="form-control" required
+                            placeholder="Select the time"
+                            value="{{ $cutoffValue }}">
                     </div>
                 </div>
 
@@ -238,11 +256,12 @@
                         <table class="table config-table align-middle mb-0" id="faculty-approval-table">
                             <thead>
                                 <tr>
-                                    <th style="width:8%;">S. No.</th>
-                                    <th style="width:28%;">Faculty Name</th>
-                                    <th style="width:24%;">Designation</th>
-                                    <th style="width:28%;">Email</th>
-                                    <th style="width:12%;" class="text-end">Action</th>
+                                    <th style="width:6%;">S. No.</th>
+                                    <th style="width:24%;">Faculty Name</th>
+                                    <th style="width:20%;">Designation</th>
+                                    <th style="width:26%;">Email</th>
+                                    <th style="width:14%;" class="text-center">Approval Authority</th>
+                                    <th style="width:10%;" class="text-end">Action</th>
                                 </tr>
                             </thead>
                             <tbody id="faculty-rows-body">
@@ -252,10 +271,15 @@
                                         <td>
                                             {{ $row['name'] }}
                                             <input type="hidden" name="faculty_rows[{{ $index }}][faculty_master_pk]" value="{{ $row['faculty_master_pk'] }}">
-                                            <input type="hidden" name="faculty_rows[{{ $index }}][is_approval_authority]" value="1">
                                         </td>
                                         <td>{{ $row['designation'] }}</td>
                                         <td>{{ $row['email'] }}</td>
+                                        <td class="text-center">
+                                            <input type="hidden" name="faculty_rows[{{ $index }}][is_approval_authority]" value="0">
+                                            <input class="form-check-input sl-authority-check" type="checkbox"
+                                                name="faculty_rows[{{ $index }}][is_approval_authority]" value="1"
+                                                {{ (int) ($row['is_approval_authority'] ?? 0) === 1 ? 'checked' : '' }}>
+                                        </td>
                                         <td class="text-end">
                                             <button type="button" class="sl-remove-btn remove-faculty-row" title="Remove" aria-label="Remove">
                                                 <i class="material-icons material-symbols-rounded" style="font-size:18px;">remove</i>
@@ -264,7 +288,7 @@
                                     </tr>
                                 @empty
                                     <tr id="faculty-empty-row">
-                                        <td colspan="5" class="text-center text-muted py-4">No faculty added yet. Click "Add Faculty".</td>
+                                        <td colspan="6" class="text-center text-muted py-4">No faculty added yet. Click "Add Faculty".</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -289,9 +313,8 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
             <div class="modal-body">
-                <label for="faculty_picker" class="form-label">Select Faculty</label>
-                <select id="faculty_picker" class="form-select">
-                    <option value="">-- Select Faculty --</option>
+                <label for="faculty_picker" class="form-label">Select Faculty <span class="text-muted small">(you can select multiple)</span></label>
+                <select id="faculty_picker" class="form-select" multiple>
                     @foreach ($faculties as $faculty)
                         <option value="{{ $faculty['pk'] }}"
                             data-name="{{ $faculty['name'] }}"
@@ -328,6 +351,7 @@ $(function () {
             searchEnabled: true,
             searchPlaceholderValue: 'Search faculty...',
             shouldSort: false,
+            removeItemButton: true,
             itemSelectText: '',
             allowHTML: false,
             placeholder: true,
@@ -345,9 +369,9 @@ $(function () {
 
     function resetFacultyPicker() {
         if (facultyChoices) {
-            facultyChoices.setChoiceByValue('');
+            facultyChoices.removeActiveItems();
         } else {
-            $('#faculty_picker').val('');
+            $('#faculty_picker').val(null);
         }
     }
 
@@ -391,41 +415,68 @@ $(function () {
     }
 
     $('#confirmAddFaculty').on('click', function () {
-        const $option = $('#faculty_picker option:selected');
-        const facultyPk = $option.val();
+        const $selected = $('#faculty_picker option:selected');
 
-        if (!facultyPk) {
-            toastr.error('Please select a faculty.');
+        if ($selected.length === 0) {
+            toastr.error('Please select at least one faculty.');
             return;
         }
 
-        if (getSelectedFacultyIds().includes(String(facultyPk))) {
-            toastr.warning('This faculty is already added.');
+        const existingIds = getSelectedFacultyIds();
+        let addedCount = 0;
+        let duplicateCount = 0;
+
+        $selected.each(function () {
+            const $option = $(this);
+            const facultyPk = $option.val();
+
+            if (!facultyPk) {
+                return;
+            }
+
+            if (existingIds.includes(String(facultyPk))) {
+                duplicateCount++;
+                return;
+            }
+
+            existingIds.push(String(facultyPk));
+            $('#faculty-empty-row').remove();
+
+            const rowHtml = `
+                <tr data-faculty-pk="${facultyPk}">
+                    <td class="row-serial"></td>
+                    <td>
+                        ${$option.data('name')}
+                        <input type="hidden" name="faculty_rows[${rowIndex}][faculty_master_pk]" value="${facultyPk}">
+                    </td>
+                    <td>${$option.data('designation')}</td>
+                    <td>${$option.data('email')}</td>
+                    <td class="text-center">
+                        <input type="hidden" name="faculty_rows[${rowIndex}][is_approval_authority]" value="0">
+                        <input class="form-check-input sl-authority-check" type="checkbox"
+                            name="faculty_rows[${rowIndex}][is_approval_authority]" value="1">
+                    </td>
+                    <td class="text-end">
+                        <button type="button" class="sl-remove-btn remove-faculty-row" title="Remove" aria-label="Remove">
+                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">remove</i>
+                        </button>
+                    </td>
+                </tr>
+            `;
+
+            $('#faculty-rows-body').append(rowHtml);
+            rowIndex++;
+            addedCount++;
+        });
+
+        if (duplicateCount > 0) {
+            toastr.warning(duplicateCount + ' faculty already added and skipped.');
+        }
+
+        if (addedCount === 0) {
             return;
         }
 
-        $('#faculty-empty-row').remove();
-
-        const rowHtml = `
-            <tr data-faculty-pk="${facultyPk}">
-                <td class="row-serial"></td>
-                <td>
-                    ${$option.data('name')}
-                    <input type="hidden" name="faculty_rows[${rowIndex}][faculty_master_pk]" value="${facultyPk}">
-                    <input type="hidden" name="faculty_rows[${rowIndex}][is_approval_authority]" value="1">
-                </td>
-                <td>${$option.data('designation')}</td>
-                <td>${$option.data('email')}</td>
-                <td class="text-end">
-                    <button type="button" class="sl-remove-btn remove-faculty-row" title="Remove" aria-label="Remove">
-                        <i class="material-icons material-symbols-rounded" style="font-size:18px;">remove</i>
-                    </button>
-                </td>
-            </tr>
-        `;
-
-        $('#faculty-rows-body').append(rowHtml);
-        rowIndex++;
         refreshSerialNumbers();
         resetFacultyPicker();
         bootstrap.Modal.getInstance(document.getElementById('addFacultyModal')).hide();
@@ -438,7 +489,7 @@ $(function () {
         if ($('#faculty-rows-body tr[data-faculty-pk]').length === 0) {
             $('#faculty-rows-body').html(`
                 <tr id="faculty-empty-row">
-                    <td colspan="5" class="text-center text-muted py-4">No faculty added yet. Click "Add Faculty".</td>
+                    <td colspan="6" class="text-center text-muted py-4">No faculty added yet. Click "Add Faculty".</td>
                 </tr>
             `);
         }
@@ -453,6 +504,11 @@ $(function () {
 
         if ($('#faculty-rows-body tr[data-faculty-pk]').length === 0) {
             toastr.error('Please add at least one faculty when approval is required.');
+            return false;
+        }
+
+        if ($('#faculty-rows-body .sl-authority-check:checked').length === 0) {
+            toastr.error('Please mark at least one faculty as approval authority.');
             return false;
         }
 
