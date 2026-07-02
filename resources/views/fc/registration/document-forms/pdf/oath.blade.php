@@ -38,7 +38,7 @@
 
     {{-- ─────────────────────────── PAGE 1 · ENGLISH ─────────────────────────── --}}
     <div class="doc-title">FORM OF OATH/AFFIRMATION</div>
-    <div class="doc-subtitle">[MHA OM No. 31/3/65-Estt.(A) dated 23-3-1964 - as amended from time to time]</div>
+    <div class="doc-subtitle">[MHA OM No. 31/3/65-Estt.(A) dated 23-3-1964- as amended from time to time]</div>
 
     <div class="doc-body">
         &ldquo;I, {!! $blank($name, '250px') !!} (Name of the Probationer) do swear/solemnly affirm

@@ -235,6 +235,9 @@ class DocumentFormTemplates
             'title'    => 'Form No. 3: Details of Family',
             'subtitle' => '[See Rule 54 (12) of CCS (Pension) Rules, 1972]',
             'title_hi' => 'फ़ॉर्म सं. 3 : परिवार का विवरण',
+            // Dedicated document-faithful, bilingual Document-1 layout (Form No. 3, 10-row grid + notes).
+            'form_view' => 'fc.registration.document-forms.family_details',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.family_details',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
@@ -519,11 +522,15 @@ class DocumentFormTemplates
             'title'    => 'Statement of Debts and Other Liabilities on First Appointment',
             'title_hi' => 'प्रथम नियुक्ति पर ऋणों तथा अन्य देयताओं का विवरण',
             'subtitle' => 'Form No. 6-C',
+            // Dedicated document-faithful, bilingual Document-6-C layout (numbered columns).
+            'form_view' => 'fc.registration.document-forms.debts_liabilities',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.debts_liabilities',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
                     'fields'  => [
-                        ['name' => 'officer_name', 'label' => 'Name of the Officer (in full) and Service to which he/she belongs / अधिकारी का नाम (पूर्ण रूप में) तथा वह सेवा जिससे वह संबंधित है', 'type' => 'text', 'required' => true, 'width' => 'col-md-8'],
+                        ['name' => 'officer_name', 'label' => 'Name (in Block Letters) / नाम (स्पष्ट अक्षरों में)', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
+                        ['name' => 'service', 'label' => 'Service (Name of Service) / सेवा', 'type' => 'text', 'width' => 'col-md-6'],
                         ['name' => 'present_post', 'label' => 'Present Post held / वर्तमान में धारित पद', 'type' => 'text', 'width' => 'col-md-4'],
                         ['name' => 'as_on_date', 'label' => 'Statement as on Date / जिस तिथि तक विवरण है', 'type' => 'date', 'width' => 'col-md-4'],
                     ],
@@ -559,6 +566,9 @@ class DocumentFormTemplates
             'title'    => 'Statement of Immovable Property on First Appointment',
             'title_hi' => 'प्रथम नियुक्ति पर अचल संपत्ति का विवरण',
             'subtitle' => 'Form No. 6-A (Form 1 — see Rule 16 AIS (Conduct) Rules / Rule 18 CCS (Conduct) Rules)',
+            // Dedicated document-faithful, bilingual Document-6(a) layout (numbered columns).
+            'form_view' => 'fc.registration.document-forms.immovable_property',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.immovable_property',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
@@ -566,6 +576,7 @@ class DocumentFormTemplates
                         ['name' => 'officer_name', 'label' => 'Name of the Officer (in full) and Service to which he/she belongs / अधिकारी का नाम (पूर्ण रूप में) तथा वह सेवा जिससे वह संबंधित है', 'type' => 'text', 'required' => true, 'width' => 'col-md-6'],
                         ['name' => 'present_post', 'label' => 'Present Post held / वर्तमान में धारित पद', 'type' => 'text', 'width' => 'col-md-3'],
                         ['name' => 'cadre', 'label' => 'Cadre of the State on which borne / जिस राज्य के संवर्ग में सम्मिलित है', 'type' => 'text', 'width' => 'col-md-3'],
+                        ['name' => 'present_pay', 'label' => 'Present Pay (₹) / वर्तमान वेतन (₹)', 'type' => 'text', 'width' => 'col-md-3'],
                     ],
                 ],
             ],
@@ -597,6 +608,9 @@ class DocumentFormTemplates
             'title'    => 'Statement of Movable Property on First Appointment',
             'title_hi' => 'प्रथम नियुक्ति पर चल संपत्ति का विवरण',
             'subtitle' => 'Form No. 6-B',
+            // Dedicated document-faithful, bilingual Document-6-B layout (5 numbered columns).
+            'form_view' => 'fc.registration.document-forms.movable_property',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.movable_property',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
@@ -643,6 +657,9 @@ class DocumentFormTemplates
             'title'    => 'Declaration of Close Relations who are Foreign Nationals / Domiciled Abroad',
             'title_hi' => 'विदेशी नागरिक / विदेश में अधिवासित निकट संबंधियों की घोषणा',
             'subtitle' => 'Form to be filled by Government employees on first appointment (MHA O.M. No. F.3/12(S)/64-Ests.(B), dated 12-10-1965)',
+            // Dedicated document-faithful, bilingual Document-2 layout (fixed relation rows i–vii).
+            'form_view' => 'fc.registration.document-forms.close_relation',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.close_relation',
             'intro'    => 'Give particulars of close relations (father, mother, wife/husband, sons, daughters, brothers, sisters) who are (A) nationals of, or domiciled in, other countries, or (B) of non-Indian origin residing in India. If there are no such relations, write &ldquo;NIL&rdquo;. ऐसे निकट संबंधियों (पिता, माता, पत्नी/पति, पुत्र, पुत्रियाँ, भाई, बहन) का विवरण दें जो (क) अन्य देशों के नागरिक हैं या वहाँ अधिवासित हैं, अथवा (ख) भारत में निवास कर रहे गैर-भारतीय मूल के हैं। यदि ऐसा कोई संबंधी नहीं है, तो &ldquo;निरंक&rdquo; लिखें।',
             'sections' => [
                 [
@@ -682,6 +699,9 @@ class DocumentFormTemplates
             'title'    => 'Dowry Declaration',
             'title_hi' => 'दहेज घोषणा',
             'subtitle' => 'Under the Dowry Prohibition Act, 1961 (Rule 13-A, CCS (Conduct) Rules, 1964)',
+            // Dedicated document-faithful, bilingual Document-3 layout (declaration + rule clarification).
+            'form_view' => 'fc.registration.document-forms.dowry_declaration',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.dowry_declaration',
             'sections' => [
                 [
                     'heading' => 'Declarant Details / घोषणाकर्ता विवरण',
@@ -707,6 +727,9 @@ class DocumentFormTemplates
             'title'    => 'Home Town Declaration',
             'title_hi' => 'गृह नगर घोषणा',
             'subtitle' => 'For the purpose of Leave Travel Concession (MHA Memo No. 43/715/57-Ests.(A), dated 24-06-1958)',
+            // Dedicated document-faithful, bilingual Document-5 declaration layout.
+            'form_view' => 'fc.registration.document-forms.home_town',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.home_town',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
@@ -739,6 +762,9 @@ class DocumentFormTemplates
             'title'    => 'Declaration Regarding Marital Status',
             'title_hi' => 'वैवाहिक स्थिति संबंधी घोषणा',
             'subtitle' => 'Under Rule 21, CCS (Conduct) Rules, 1964',
+            // Dedicated document-faithful, bilingual Document-4 layout (declaration + exemption application).
+            'form_view' => 'fc.registration.document-forms.marital_status',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.marital_status',
             'sections' => [
                 [
                     'heading' => 'Government Servant Details / सरकारी कर्मचारी का विवरण',
@@ -766,7 +792,7 @@ class DocumentFormTemplates
         return [
             'key'      => 'oath_affirmation',
             'title'    => 'FORM OF OATH/AFFIRMATION',
-            'subtitle' => '[MHA OM No. 31/3/65-Estt.(A) dated 23-3-1964 - as amended from time to time]',
+            'subtitle' => '[MHA OM No. 31/3/65-Estt.(A) dated 23-3-1964- as amended from time to time]',
             'title_hi' => 'शपथ / पुष्टि प्रपत्र',
             // Dedicated document-faithful, bilingual views (fill-in-the-blank layout).
             'form_view' => 'fc.registration.document-forms.oath',
@@ -792,6 +818,9 @@ class DocumentFormTemplates
             'title'    => 'Surety Bond (IAS / IPS / IFoS)',
             'title_hi' => 'प्रतिभूति बंधपत्र (आई.ए.एस. / आई.पी.एस. / आई.एफ़.ओ.एस.)',
             'subtitle' => 'To be executed on Non-Judicial Stamp Paper of ₹100',
+            // Dedicated document-faithful, bilingual bond (Document-7-A) — fill-in-the-blank prose.
+            'form_view' => 'fc.registration.document-forms.surety_bond_ias',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.surety_bond_ias',
             'intro'    => 'Bond executed by the Probationer together with one Surety, binding the Probationer to serve the Government for the prescribed period and to refund the cost of training / pay and allowances in the event of default, in accordance with the applicable Service Rules. / परिवीक्षाधीन अधिकारी द्वारा एक प्रतिभू के साथ निष्पादित बंधपत्र, जो परिवीक्षाधीन अधिकारी को निर्धारित अवधि तक सरकार की सेवा करने और चूक की स्थिति में लागू सेवा नियमों के अनुसार प्रशिक्षण की लागत / वेतन एवं भत्तों की प्रतिपूर्ति करने के लिए आबद्ध करता है।',
             'sections' => [
                 [
@@ -843,6 +872,9 @@ class DocumentFormTemplates
         $tpl['title_hi'] = 'प्रतिभूति बंधपत्र (केंद्रीय सिविल सेवाएँ, समूह-क — अखिल भारतीय सेवाओं से इतर)';
         // Service becomes a free-text field for other services.
         $tpl['sections'][0]['fields'][1] = ['name' => 'service', 'label' => 'Name of Service / सेवा का नाम', 'type' => 'text', 'width' => 'col-md-3'];
+        // Dedicated document-faithful, bilingual bond (Document-7-B) — fill-in-the-blank prose.
+        $tpl['form_view'] = 'fc.registration.document-forms.surety_bond_others';
+        $tpl['pdf_view']  = 'fc.registration.document-forms.pdf.surety_bond_others';
 
         return $tpl;
     }
@@ -853,6 +885,9 @@ class DocumentFormTemplates
             'key'      => 'assumption_charge',
             'title'    => 'Certificate of Assumption of Charge',
             'title_hi' => 'कार्यभार ग्रहण प्रमाण-पत्र',
+            // Dedicated document-faithful, bilingual prose certificate (fill-in-the-blank).
+            'form_view' => 'fc.registration.document-forms.assumption_charge',
+            'pdf_view'  => 'fc.registration.document-forms.pdf.assumption_charge',
             'sections' => [
                 [
                     'heading' => 'Charge Details / कार्यभार विवरण',
