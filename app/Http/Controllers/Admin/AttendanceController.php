@@ -347,11 +347,11 @@ class AttendanceController extends Controller
                 'timetable_pk' => $row->timetable_pk
             ]) . '" class="' . $markBtnClass . '">Show Attendance</a>';
         }else if($currentPath === 'send_notice'){
-            return '<a href="' . route('send.notice.list.modal', [
+            return '<a href="' . route('send.notice.list.page', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1 js-open-notice" title="Send Notice"><i class="material-icons material-symbols-rounded" style="font-size: 2rem;">send</i><span class="small mt-1">Notice</span></a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="Send Notice"><i class="material-icons material-symbols-rounded" style="font-size: 2rem;">send</i><span class="small mt-1">Notice</span></a>';
         }else if(hasRole('Training-Induction') || hasRole('Staff') || hasRole('Admin')){
              return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,

@@ -2808,6 +2808,28 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
      */
     public function noticeListModal($group_pk, $course_pk, $timetable_pk)
     {
+        $data = $this->resolveNoticeListData($group_pk, $course_pk, $timetable_pk);
+
+        return view('admin.courseAttendanceNoticeMap.partials.notice_list_modal', $data);
+    }
+
+    /**
+     * Full-page version of the notice list (replaces the in-page modal). Opened
+     * directly from the "Notice" action on the Send Direct Notice table.
+     */
+    public function noticeListPage($group_pk, $course_pk, $timetable_pk)
+    {
+        $data = $this->resolveNoticeListData($group_pk, $course_pk, $timetable_pk);
+
+        return view('admin.courseAttendanceNoticeMap.notice_list', $data);
+    }
+
+    /**
+     * Shared roster + notice-template lookup for the notice list (modal + page).
+     * Returns the student roster for the selected course-group + timetable session.
+     */
+    protected function resolveNoticeListData($group_pk, $course_pk, $timetable_pk)
+    {
         $courseGroup = CourseGroupTimetableMapping::with([
                 'course:pk,course_name',
                 'timetable',
@@ -2849,7 +2871,7 @@ function view_all_notice_list($group_pk, $course_pk, $timetable_pk)
             ->orderBy('title')
             ->get(['pk', 'title']);
 
-        return view('admin.courseAttendanceNoticeMap.partials.notice_list_modal', compact('students', 'courseGroup', 'group_pk', 'course_pk', 'timetable_pk', 'noticeTemplates'));
+        return compact('students', 'courseGroup', 'group_pk', 'course_pk', 'timetable_pk', 'noticeTemplates');
     }
     function notice_direct_save(Request $request){
        

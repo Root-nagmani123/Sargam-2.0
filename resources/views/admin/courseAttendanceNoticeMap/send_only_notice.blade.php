@@ -134,24 +134,8 @@
         </div>
     </div>
 
-    {{-- Notice List modal (opens when a row's "Notice" action is clicked) --}}
-    <div class="modal fade notice-list-modal" id="noticeListModal" tabindex="-1" aria-labelledby="noticeListModalLabel"
-        aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <div class="d-flex align-items-center gap-2">
-                        <button type="button" class="btn-back" data-bs-dismiss="modal" aria-label="Back">
-                            <i class="bi bi-arrow-left"></i>
-                        </button>
-                        <h5 class="modal-title" id="noticeListModalLabel">Notice List</h5>
-                    </div>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body p-0" id="noticeListModalBody"></div>
-            </div>
-        </div>
-    </div>
+    {{-- The row "Notice" action now opens the Notice List on its own full page
+         (see CourseAttendanceNoticeMapController@noticeListPage). --}}
 </div>
 @endsection
 
@@ -441,79 +425,6 @@ $(function() {
             e.preventDefault();
             window.location.assign(href);
         }
-    });
-});
-</script>
-
-<script>
-/* ── Notice List modal (Send Direct Notice) ── */
-$(function () {
-    var noticeModalEl = document.getElementById('noticeListModal');
-    var noticeModal = (noticeModalEl && window.bootstrap) ? new bootstrap.Modal(noticeModalEl) : null;
-
-    function syncSendAll() {
-        var any = $('#noticeListModalBody .notice-row-check:checked').length > 0;
-        $('#noticeSendAllBtn').prop('disabled', !any);
-    }
-
-    // Open the modal and load the session's OT list.
-    $(document).on('click', '.js-open-notice', function (e) {
-        e.preventDefault();
-        var url = this.getAttribute('href');
-        var $body = $('#noticeListModalBody');
-        $body.html('<div class="text-center py-5"><div class="spinner-border text-primary" role="status"></div></div>');
-        if (noticeModal) noticeModal.show();
-        $.get(url).done(function (html) {
-            $body.html(html);
-            syncSendAll();
-        }).fail(function () {
-            $body.html('<div class="text-center text-danger py-5">Failed to load the notice list.</div>');
-        });
-    });
-
-    // Select-all toggles every row checkbox.
-    $(document).on('change', '#noticeSelectAll', function () {
-        $('#noticeListModalBody .notice-row-check').prop('checked', this.checked);
-        syncSendAll();
-    });
-
-    // Keep select-all + Send button in sync when a row is toggled.
-    $(document).on('change', '.notice-row-check', function () {
-        var $all = $('#noticeListModalBody .notice-row-check');
-        $('#noticeSelectAll').prop('checked', $all.length > 0 && $all.filter(':checked').length === $all.length);
-        syncSendAll();
-    });
-
-    // Client-side search over OT name / code.
-    $(document).on('input', '#noticeSearch', function () {
-        var q = this.value.toLowerCase();
-        $('#noticeListModalBody tr.notice-row').each(function () {
-            $(this).toggle((($(this).data('search') || '') + '').indexOf(q) > -1);
-        });
-    });
-    // Enter in search must not submit the form.
-    $(document).on('keydown', '#noticeSearch', function (e) {
-        if (e.key === 'Enter') e.preventDefault();
-    });
-
-    // Per-row "Notice": send a notice to just that OT (build a one-off POST).
-    $(document).on('click', '.js-row-notice', function (e) {
-        e.preventDefault();
-        var student = $(this).data('student');
-        var attPk = $(this).data('attendance');
-        var $src = $('#noticeListForm');
-        if (!$src.length || student == null) return;
-
-        var $f = $('<form>', { method: 'POST', action: $src.attr('action') }).hide();
-        $f.append($('<input type="hidden" name="_token">').val($src.find('input[name="_token"]').val()));
-        ['subject_master_id', 'course_master_pk', 'topic_id', 'venue_id', 'class_session_master_pk', 'faculty_master_pk', 'memo_notice_template_pk']
-            .forEach(function (n) {
-                $f.append($('<input type="hidden">').attr('name', n).val($src.find('[name="' + n + '"]').val()));
-            });
-        $f.append($('<input type="hidden" name="selected_student_list[]">').val(student));
-        $f.append($('<input type="hidden">').attr('name', 'attendance_pk_' + student).val(attPk));
-        $('body').append($f);
-        $f.trigger('submit');
     });
 });
 </script>
