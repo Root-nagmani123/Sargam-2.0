@@ -24,9 +24,7 @@
             <p class="mb-1">{{ $type == 'memo' ? 'SHOW CAUSE MEMO' : 'SHOW CAUSE NOTICE' }}</p>
             <p><strong>Date:</strong> {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }} </p>
 
-            <p>It has been brought to the notice of the undersigned that you were absent without prior authorization
-                from
-                following session(s)...</p>
+           
 
             <div class="table-responsive mb-3">
                 <table class="table">
@@ -54,11 +52,11 @@
             </div>
 
             <div class="mb-4">
-                {!! $template_details->content ?? '<p>It has been brought to the notice of the undersigned that you were absent without prior authorization from following session(s).</p>' !!}
+                {!! $template_details->content !!}
             </div>
 
             <p>
-                <strong>{{ $template_details->display_name ?? 'Student Name' }}, {{ $template_details->generated_OT_code ?? 'OT Code' }}</strong><br>
+                <strong>{{ $template_details->display_name  }}, {{ $template_details->generated_OT_code  }}</strong><br>
                 Remarks: {{ $type == 'memo' ? 'Show Cause Memo' : 'Show Cause Notice' }} for {{ $template_details && $template_details->session_date ? \Carbon\Carbon::parse($template_details->session_date)->format('d/m/Y') : \Carbon\Carbon::now()->format('d/m/Y') }}
             </p>
 
