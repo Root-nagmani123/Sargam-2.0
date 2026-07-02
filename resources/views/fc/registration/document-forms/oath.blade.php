@@ -74,7 +74,7 @@
             <div class="oath-doc" lang="en">
                 <span class="lang-tag">English</span>
                 <h2 class="oath-title">FORM OF OATH/AFFIRMATION</h2>
-                <p class="oath-subtitle">[MHA OM No. 31/3/65-Estt.(A) dated 23-3-1964 - as amended from time to time]</p>
+                <p class="oath-subtitle">[MHA OM No. 31/3/65-Estt.(A) dated 23-3-1964- as amended from time to time]</p>
 
                 <p class="oath-body">
                     &ldquo;I,
