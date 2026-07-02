@@ -34,8 +34,8 @@ class StationedLeaveMasterController extends Controller
         $statusCounts = $this->getStatusCounts();
 
         return view('admin.stationed_leave_master.index', [
-            'activeCourses' => $this->getConfiguredCoursesByStatus(1),
-            'archiveCourses' => $this->getConfiguredCoursesByStatus(0, true),
+            'activeCourses' => $this->getConfiguredCoursesByStatus('active'),
+            'archiveCourses' => $this->getConfiguredCoursesByStatus('archive'),
             'activeCount' => $statusCounts['active'],
             'archiveCount' => $statusCounts['archive'],
         ]);
@@ -246,11 +246,9 @@ class StationedLeaveMasterController extends Controller
             ->withCount('approvers')
             ->orderByDesc('pk');
 
-        if ($statusFilter === 'archive') {
-            $query->where('active_inactive', 0);
-        } else {
-            $query->where('active_inactive', 1);
-        }
+        // Tabs are driven by the linked course's status: Active shows configs of
+        // running courses, Archived shows configs of ended/inactive courses.
+        $this->applyCourseStatusFilter($query, $statusFilter);
 
         $courseIds = $this->getAllowedCourseIds();
         if ($courseIds !== null) {
@@ -362,38 +360,64 @@ class StationedLeaveMasterController extends Controller
     }
 
     /**
-     * Courses that have at least one stationed-leave configuration by status.
+     * Constrain a StationedLeaveMaster query to configs whose linked course is
+     * active (running) or archived (inactive / past its end date).
      */
-    protected function getConfiguredCoursesByStatus(int $status, bool $includeEndedCourses = false)
+    protected function applyCourseStatusFilter($query, string $statusFilter)
+    {
+        $today = now()->toDateString();
+
+        if ($statusFilter === 'archive') {
+            $query->whereHas('course', function ($q) use ($today) {
+                $q->where('active_inactive', 0)
+                    ->orWhereDate('end_date', '<', $today);
+            });
+        } else {
+            $query->whereHas('course', function ($q) use ($today) {
+                $q->where('active_inactive', 1)
+                    ->where(function ($q2) use ($today) {
+                        $q2->whereNull('end_date')
+                            ->orWhereDate('end_date', '>=', $today);
+                    });
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Courses that have at least one stationed-leave configuration, filtered by
+     * the course's active/archive status.
+     */
+    protected function getConfiguredCoursesByStatus(string $statusFilter)
     {
         $courseIds = $this->getAllowedCourseIds();
 
         $configuredIds = StationedLeaveMaster::query()
-            ->where('active_inactive', $status)
             ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds))
             ->distinct()
             ->pluck('course_master_pk')
             ->all();
 
-        $coursePool = $configuredIds;
-        if ($status === 0 && $includeEndedCourses) {
-            $endedCourseIds = CourseMaster::query()
-                ->when($courseIds !== null, fn ($q) => $q->whereIn('pk', $courseIds))
-                ->where(function ($q) {
-                    $q->where('active_inactive', 0)
-                        ->orWhereDate('end_date', '<', now()->toDateString());
-                })
-                ->pluck('pk')
-                ->all();
-
-            $coursePool = array_values(array_unique(array_merge($configuredIds, $endedCourseIds)));
-        }
-
-        if (empty($coursePool)) {
+        if (empty($configuredIds)) {
             return collect();
         }
 
-        return CourseMaster::whereIn('pk', $coursePool)
+        $today = now()->toDateString();
+
+        return CourseMaster::whereIn('pk', $configuredIds)
+            ->when($statusFilter === 'archive', function ($q) use ($today) {
+                $q->where(function ($q2) use ($today) {
+                    $q2->where('active_inactive', 0)
+                        ->orWhereDate('end_date', '<', $today);
+                });
+            }, function ($q) use ($today) {
+                $q->where('active_inactive', 1)
+                    ->where(function ($q2) use ($today) {
+                        $q2->whereNull('end_date')
+                            ->orWhereDate('end_date', '>=', $today);
+                    });
+            })
             ->orderBy('course_name')
             ->pluck('course_name', 'pk');
     }
@@ -402,15 +426,12 @@ class StationedLeaveMasterController extends Controller
     {
         $courseIds = $this->getAllowedCourseIds();
 
-        $counts = StationedLeaveMaster::query()
-            ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds))
-            ->selectRaw('active_inactive, COUNT(*) as aggregate')
-            ->groupBy('active_inactive')
-            ->pluck('aggregate', 'active_inactive');
+        $base = fn () => StationedLeaveMaster::query()
+            ->when($courseIds !== null, fn ($q) => $q->whereIn('course_master_pk', $courseIds));
 
         return [
-            'active' => (int) ($counts[1] ?? 0),
-            'archive' => (int) ($counts[0] ?? 0),
+            'active' => $this->applyCourseStatusFilter($base(), 'active')->count(),
+            'archive' => $this->applyCourseStatusFilter($base(), 'archive')->count(),
         ];
     }
 
