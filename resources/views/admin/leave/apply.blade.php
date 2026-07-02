@@ -140,6 +140,7 @@
                 <input type="hidden" name="leave_type" value="{{ $selectedLeaveType }}">
 
                 <div class="row g-4">
+
                     {{-- Leave Type --}}
                     <div class="col-12 col-md-6">
                         <label class="leave-grid-label d-block">Leave Type <span class="text-danger">*</span></label>
@@ -157,6 +158,12 @@
                                 <label class="form-check-label" for="lt_stationed">Stationed Leave</label>
                             </div>
                         </div>
+                    </div>
+                    {{-- Course Name (auto-derived from enrollment, read-only) --}}
+                    <div class="col-6">
+                        <label for="course_name_display" class="leave-grid-label d-block">Course Name</label>
+                        <input type="text" id="course_name_display" class="form-control" readonly
+                            value="{{ $course->course_name ?? '' }}">
                     </div>
 
                     {{-- Nature --}}
@@ -214,7 +221,7 @@
                     <div class="col-12 col-md-6">
                         <label for="reason" class="leave-grid-label d-block">Reason <span class="text-danger">*</span></label>
                         <textarea name="reason" id="reason" rows="3" class="form-control" required
-                            placeholder="eg. Lorem ipsum dolor sit amet"
+                            placeholder="eg. Enter reason for leave here..."
                             {{ $isReadOnly ? 'readonly' : '' }}>{{ old('reason', $application->reason ?? '') }}</textarea>
                     </div>
 
@@ -231,9 +238,9 @@
                         @enderror
                     </div>
 
-                    {{-- Upload Picture --}}
-                    <div class="col-12 col-md-6">
-                        <label for="leave_attachment" class="leave-grid-label d-block">Upload Picture</label>
+                    {{-- Attachments --}}
+                    <div class="col-12">
+                        <label class="leave-grid-label d-block">Attachments</label>
 
                         @if(($application ?? null) && $application->attachments->isNotEmpty())
                             <div class="leave-existing-attach mb-2">
@@ -241,7 +248,7 @@
                                     <div class="d-flex align-items-center gap-2 mb-1">
                                         <i class="material-icons material-symbols-rounded text-secondary" style="font-size:18px;">attach_file</i>
                                         <a href="{{ asset('storage/' . $attachment->file_path) }}" target="_blank">
-                                            {{ $attachment->original_file_name }}
+                                            {{ $attachment->attachment_title ? $attachment->attachment_title . ' — ' : '' }}{{ $attachment->original_file_name }}
                                         </a>
                                         @if(! $isReadOnly)
                                             <input type="hidden" name="existing_attachments[]" value="{{ $attachment->pk }}">
@@ -252,13 +259,33 @@
                         @endif
 
                         @if(! $isReadOnly)
-                            {{-- Hidden title ensures attachments[0] appears in request input() so the file is processed. --}}
-                            <input type="hidden" name="attachments[0][title]" value="Picture">
-                            <input type="file" name="attachments[0][file]" id="leave_attachment"
-                                class="form-control leave-attachment-file"
-                                accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                            <div id="leave-attachments-wrap">
+                                <div class="leave-attachment-row row g-2 align-items-center mb-2" data-index="0">
+                                    <div class="col-12 col-md-5">
+                                        <input type="text" name="attachments[0][title]"
+                                            class="form-control leave-attachment-title"
+                                            placeholder="Attachment name (eg. Medical certificate)">
+                                    </div>
+                                    <div class="col-12 col-md-6">
+                                        <input type="file" name="attachments[0][file]"
+                                            class="form-control leave-attachment-file"
+                                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">
+                                    </div>
+                                    <div class="col-12 col-md-1 d-flex">
+                                        <button type="button"
+                                            class="btn btn-sm btn-outline-danger leave-attachment-remove d-none"
+                                            title="Remove attachment">
+                                            <i class="material-icons material-symbols-rounded" style="font-size:18px;">close</i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                            <button type="button" class="btn btn-sm btn-outline-secondary mt-1" id="leave-attachment-add">
+                                <i class="material-icons material-symbols-rounded" style="font-size:16px;vertical-align:middle;">add</i>
+                                Add attachment
+                            </button>
                             <div class="form-text">
-                                PDF, JPG, JPEG, PNG, DOC, DOCX &middot; max 5 MB.
+                                PDF, JPG, JPEG, PNG, DOC, DOCX &middot; max 5 MB each.
                             </div>
                         @endif
 
@@ -344,6 +371,43 @@ $(function () {
         }
     });
 
+    /* ── Add / remove attachment rows ── */
+    let attachmentIndex = $('#leave-attachments-wrap .leave-attachment-row').length;
+
+    function refreshRemoveButtons() {
+        const $rows = $('#leave-attachments-wrap .leave-attachment-row');
+        $rows.find('.leave-attachment-remove').toggleClass('d-none', $rows.length <= 1);
+    }
+
+    $('#leave-attachment-add').on('click', function () {
+        const index = attachmentIndex++;
+        const row =
+            '<div class="leave-attachment-row row g-2 align-items-center mb-2" data-index="' + index + '">' +
+                '<div class="col-12 col-md-5">' +
+                    '<input type="text" name="attachments[' + index + '][title]" ' +
+                        'class="form-control leave-attachment-title" ' +
+                        'placeholder="Attachment name (eg. Medical certificate)">' +
+                '</div>' +
+                '<div class="col-12 col-md-6">' +
+                    '<input type="file" name="attachments[' + index + '][file]" ' +
+                        'class="form-control leave-attachment-file" ' +
+                        'accept=".pdf,.jpg,.jpeg,.png,.doc,.docx">' +
+                '</div>' +
+                '<div class="col-12 col-md-1 d-flex">' +
+                    '<button type="button" class="btn btn-sm btn-outline-danger leave-attachment-remove" title="Remove attachment">' +
+                        '<i class="material-icons material-symbols-rounded" style="font-size:18px;">close</i>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+        $('#leave-attachments-wrap').append(row);
+        refreshRemoveButtons();
+    });
+
+    $(document).on('click', '.leave-attachment-remove', function () {
+        $(this).closest('.leave-attachment-row').remove();
+        refreshRemoveButtons();
+    });
+
     /* ── Date sync + total days ── */
     function syncEndDateMin() {
         const from = $('#from_date').val();
@@ -385,13 +449,20 @@ $(function () {
 
     /* ── Block submit on invalid attachment ── */
     $('#leave-apply-form').on('submit', function (e) {
-        const fileInput = $('.leave-attachment-file')[0];
-        const file = fileInput && fileInput.files && fileInput.files[0];
-        const error = validateAttachmentFile(file);
-        if (error) {
-            clearAttachmentError();
-            $('.leave-attachment-file').addClass('is-invalid');
-            showAttachmentError(error);
+        clearAttachmentError();
+        let firstError = null;
+        $('.leave-attachment-file').each(function () {
+            const file = this.files && this.files[0];
+            const error = validateAttachmentFile(file);
+            if (error) {
+                $(this).addClass('is-invalid');
+                if (!firstError) {
+                    firstError = error;
+                }
+            }
+        });
+        if (firstError) {
+            showAttachmentError(firstError);
             e.preventDefault();
         }
     });
