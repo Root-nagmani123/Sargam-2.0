@@ -219,7 +219,7 @@
                     <select class="form-select" id="discipline_master_pk" name="discipline_master_pk" aria-label="Discipline Type">
                         <option value="">Discipline Type</option>
                         @foreach($disciplines as $disc)
-                        <option value="{{ $disc->pk }}" {{ (string)$disciplineFilter == (string)$disc->pk ? 'selected' : '' }}>
+                        <option value="{{ $disc->discipline_name }}" {{ $disciplineFilter == $disc->discipline_name ? 'selected' : '' }}>
                             {{ $disc->discipline_name }}
                         </option>
                         @endforeach

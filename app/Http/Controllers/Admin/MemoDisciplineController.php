@@ -53,7 +53,11 @@ class MemoDisciplineController extends Controller
         $toDateFilter   = $request->get('to_date') ?: null;
     }
 
-    $disciplines = DisciplineMaster::where('active_inactive', 1)->orderBy('discipline_name')->get();
+    $disciplines = DisciplineMaster::where('active_inactive', 1)
+        ->select('discipline_name')
+        ->distinct()
+        ->orderBy('discipline_name')
+        ->get();
 
     $memos = MemoDiscipline::with([
             'course:pk,course_name',
@@ -76,7 +80,7 @@ class MemoDisciplineController extends Controller
             $q->where('status', $statusFilter);
         })
         ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
-            $q->where('discipline_master_pk', $disciplineFilter);
+            $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
         })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
@@ -205,7 +209,7 @@ public function exportCsv(Request $request)
             $q->where('status', $statusFilter);
         })
         ->when($disciplineFilter, function ($q) use ($disciplineFilter) {
-            $q->where('discipline_master_pk', $disciplineFilter);
+            $q->whereHas('discipline', fn($d) => $d->where('discipline_name', $disciplineFilter));
         })
         ->when($searchFilter, function ($q) use ($searchFilter) {
             $q->where(function ($sub) use ($searchFilter) {
