@@ -32,7 +32,7 @@ class FacultyRequest extends FormRequest
             // Basic Info
             'facultyType' => 'required|exists:faculty_type_master,pk',
             'country' => 'required|exists:country_master,pk',
-            'current_sector' => 'required|integer|in:1,2',
+            'current_sector' => 'required|exists:faculty_sector_master,pk',
             //'joiningdate' => 'required|date',
             'email' => 'nullable|email:rfc,dns',
             'alternativeEmail' => 'nullable|email:rfc,dns',
@@ -50,7 +50,7 @@ class FacultyRequest extends FormRequest
             'facultyType.exists'   => 'Selected Faculty Type is invalid.',
             'current_sector.required' => 'Please select the current sector.',
             'current_sector.integer' => 'The sector field must be a valid selection.',
-            'current_sector.in' => 'Please select a valid sector (Government Sector or Private Sector).',
+            'current_sector.exists' => 'Please select a valid sector.',
             // 'facultyType.required' => 'Faculty type is required',
             // 'firstName.required' => 'First name is required',
             // 'middlename.required' => 'Middle name is required',

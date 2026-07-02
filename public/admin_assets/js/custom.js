@@ -600,8 +600,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
 
         // current_sector
-        let currentSector = $('input[name="current_sector"]:checked').val();
+        let currentSector = $('select[name="current_sector"]').val();
         formData.append('current_sector', currentSector);
+
+        // service_master_pk
+        let serviceMasterPk = $('select[name="service_master_pk"]').val();
+        formData.append('service_master_pk', serviceMasterPk ?? '');
 
         // append csrf token
         formData.append('_token', $('meta[name="csrf-token"]').attr('content'));

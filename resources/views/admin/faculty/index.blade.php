@@ -32,44 +32,8 @@
                         </h4>
                     </div>
 
-                    <div class="col-6">
-                        <div class="d-flex justify-content-end align-items-center gap-3">
-
-                            <!-- Add Faculty -->
-                            <a href="{{ route('faculty.create') }}"
-                                class="btn btn-primary d-flex align-items-center gap-1 shadow-sm"
-                                style="background-color:#004a93; border-color:#004a93;"
-                                aria-label="Add New Faculty">
-                                <span class="material-symbols-rounded fs-5">add</span>
-                                Add Faculty
-                            </a>
-
-                            <!-- Export Excel -->
-                            <a href="{{ route('faculty.excel.export') }}"
-                                class="btn btn-outline-primary d-flex align-items-center gap-1 shadow-sm"
-                                style="border-color:#004a93; color:#004a93;" aria-label="Export Faculty Excel">
-                                <span class="material-symbols-rounded fs-5">export_notes</span>
-                                Export Excel
-                            </a>
-                            <a href="{{ route('faculty.printBlank') }}"  class="btn btn-outline-success">
-                                <i class="material-icons">print</i> Print Blank Form
-                            </a>
-
-                        </div>
-                    </div>
-                </div>
-
-                <hr>
-
-                <div class="d-flex flex-column flex-lg-row align-items-lg-center justify-content-end gap-3 mb-3">
-                    <div id="facultyDtSearch" class="programme-dt-search ms-lg-auto"></div>
-                </div>
-
-                <div class="programme-dt-panel">
-                    <div class="table-responsive">
-                        {!! $dataTable->table(['class' => 'table programme-dt-table align-middle mb-0 w-100']) !!}
-                    </div>
-                    <div id="facultyDtFooter" class="programme-dt-footer d-flex flex-wrap align-items-center justify-content-between gap-3"></div>
+                    <hr>
+                    {!! $dataTable->table(['class' => 'table', 'data-sargam-dt-ui' => 'false']) !!}
                 </div>
             </div>
         </div>
