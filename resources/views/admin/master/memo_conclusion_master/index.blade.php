@@ -308,12 +308,7 @@ $(document).on('click', '.editshowConclusionAlert', function() {
 
 $(document).on('click', '.deleteBtn', function () {
 
- //   const pk  = $(this).data('pk');
     const url = $(this).data('url');
-
-    // Debug (optional)
-    // alert(pk);
-    alert(url);
 
     Swal.fire({
         title: 'Are you sure?',
