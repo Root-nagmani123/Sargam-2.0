@@ -210,6 +210,7 @@ class StationedLeaveMasterController extends Controller
 
         $query = FacultyMaster::query()
             ->where('active_inactive', 1)
+            ->where('faculty_type', 1) // Internal faculty only
             ->orderBy('full_name');
 
         if ($search !== '') {
@@ -455,6 +456,7 @@ class StationedLeaveMasterController extends Controller
     {
         return FacultyMaster::query()
             ->where('active_inactive', 1)
+            ->where('faculty_type', 1) // Internal faculty only
             ->orderBy('full_name')
             ->get()
             ->map(function ($faculty) {
