@@ -341,6 +341,16 @@
                                     @endif
                                 </select>
                             </div>
+                            {{-- Faculty filter: revealed only when ACC = CC/ACC --}}
+                            <div class="sl-filter-item" id="slItemFaculty" @unless(($filters['role_filter'] ?? '') === 'cc_acc') style="display:none;" @endunless>
+                                <span class="sl-filter-label-text">Faculty</span>
+                                <select id="facultyFilter" class="form-select sl-filter-select w-100" aria-label="Filter by faculty">
+                                    <option value="">All</option>
+                                    @foreach(($facultyOptions ?? []) as $faculty)
+                                        <option value="{{ $faculty->faculty_pk }}" {{ (string)($filters['faculty_filter'] ?? '') === (string)$faculty->faculty_pk ? 'selected' : '' }}>{{ $faculty->faculty_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
                             <div class="sl-filter-item">
                                 <span class="sl-filter-label-text">Cadre</span>
                                 <select id="cadreFilter" class="form-select sl-filter-select w-100" aria-label="Filter by cadre">
@@ -491,6 +501,7 @@
                 course_id: $('#courseFilter').val() || '',
                 duty_type: $('#dutyTypeFilter').val() || '',
                 role_filter: $('#roleFilter').val() || '',
+                faculty_filter: $('#facultyFilter').val() || '',
                 cadre: $('#cadreFilter').val() || '',
                 house: $('#houseFilter').val() || '',
                 from_date: (filters.from_date || '').toString(),
@@ -542,6 +553,7 @@
                     d.course_id = state.course_id;
                     d.duty_type = state.duty_type;
                     d.role_filter = state.role_filter;
+                    d.faculty_filter = state.faculty_filter;
                     d.cadre = state.cadre;
                     d.house = state.house;
                     d.from_date = state.from_date;
@@ -664,7 +676,19 @@
         });
         $('#courseFilter').on('change', function() { applyFilter({ course_id: this.value }); });
         $('#dutyTypeFilter').on('change', function() { applyFilter({ duty_type: this.value }); });
-        $('#roleFilter').on('change', function() { applyFilter({ role_filter: this.value }); });
+        function toggleFacultyFilter() {
+            var isCcAcc = $('#roleFilter').val() === 'cc_acc';
+            $('#slItemFaculty').toggle(isCcAcc);
+            if (!isCcAcc && $('#facultyFilter').val()) {
+                $('#facultyFilter').val('');
+            }
+        }
+        $('#roleFilter').on('change', function() {
+            // Reveal/hide + clear the Faculty filter BEFORE reloading so getFilterState is current.
+            toggleFacultyFilter();
+            applyFilter({ role_filter: this.value });
+        });
+        $('#facultyFilter').on('change', function() { applyFilter({ faculty_filter: this.value }); });
         $('#cadreFilter').on('change', function() { applyFilter({ cadre: this.value }); });
         $('#houseFilter').on('change', function() { applyFilter({ house: this.value }); });
         $('#resetFilters').on('click', function() { window.location.href = baseUrl; });

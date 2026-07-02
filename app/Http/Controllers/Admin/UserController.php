@@ -1086,6 +1086,31 @@ class UserController extends Controller
             ->orderBy('cgroup.type_name')
             ->get();
 
+        // CC/ACC faculty options — surfaced as the "Faculty" filter when the ACC
+        // filter is set to "CC/ACC". Mirrors the counsellor-type scoping above.
+        $facultyOptionsQuery = DB::table('group_type_master_course_master_map as gmap')
+            ->join('course_group_type_master as cgroup', 'gmap.type_name', '=', 'cgroup.pk')
+            ->join('course_master as cm', 'gmap.course_name', '=', 'cm.pk')
+            ->join('faculty_master as fm', 'gmap.facility_id', '=', 'fm.pk')
+            ->where('gmap.active_inactive', 1)
+            ->where('cgroup.active_inactive', 1)
+            ->where('cm.active_inactive', 1)
+            ->where('cm.end_date', '>=', now())
+            ->where('fm.active_inactive', 1);
+
+        if ($facultyPk) {
+            $facultyOptionsQuery->where('gmap.facility_id', $facultyPk);
+        }
+
+        $facultyOptions = $facultyOptionsQuery
+            ->select(
+                'fm.pk as faculty_pk',
+                'fm.full_name as faculty_name'
+            )
+            ->distinct()
+            ->orderBy('fm.full_name')
+            ->get();
+
         // Get courses from group_type_master_course_master_map and merge with available courses
         // Only include active courses (active_inactive = 1 and end_date >= now())
         // Filter by logged-in faculty if available
@@ -1177,6 +1202,7 @@ class UserController extends Controller
         $filters = [
             'course_id' => (string) $request->input('course_id', ''),
             'role_filter' => (string) $request->input('role_filter', ''),
+            'faculty_filter' => (string) $request->input('faculty_filter', ''),
             'group_pk' => (string) $request->input('group_pk', ''),
             'duty_type' => (string) $request->input('duty_type', ''),
             'from_date' => (string) $request->input('from_date', ''),
@@ -1186,7 +1212,7 @@ class UserController extends Controller
             'house' => (string) $request->input('house', ''),
         ];
 
-        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
+        return view('admin.dashboard.student_list', compact('students', 'presentStudents', 'absentStudents', 'availableCourses', 'counsellorTypes', 'facultyOptions', 'groupNames', 'dutyTypes', 'filters', 'cadreOptions', 'houseOptions'));
     }
 
     /**
@@ -1621,6 +1647,7 @@ class UserController extends Controller
     {
         $courseId = $request->input('course_id');
         $roleFilter = $request->input('role_filter');
+        $facultyFilter = $request->input('faculty_filter');
         $groupPk = $request->input('group_pk');
         $cadre = $request->input('cadre');
         $house = $request->input('house');
@@ -1628,10 +1655,11 @@ class UserController extends Controller
         $searchValue = is_array($searchInput) ? ($searchInput['value'] ?? '') : $searchInput;
         $search = strtolower(trim((string) $searchValue));
 
-        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $groupPk, $cadre, $house, $search) {
+        return $students->filter(function ($studentMap) use ($courseId, $roleFilter, $facultyFilter, $groupPk, $cadre, $house, $search) {
             $student = $studentMap->studentMaster;
             $course = $studentMap->course;
             $counsellorTypePk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->type_name ?? '');
+            $rowFacilityId = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->facility_id ?? '');
             $rowGroupPk = (string) ($studentMap->groupMapping->groupTypeMasterCourseMasterMap->pk ?? '');
             $rowCourseId = (string) ($course->pk ?? '');
 
@@ -1653,6 +1681,13 @@ class UserController extends Controller
                 }
             } elseif ($roleFilter !== null && $roleFilter !== '') {
                 if ($counsellorTypePk !== (string) $roleFilter) {
+                    return false;
+                }
+            }
+
+            // Faculty filter (shown when ACC = CC/ACC): narrow to a specific CC/ACC faculty.
+            if ($facultyFilter !== null && $facultyFilter !== '') {
+                if ($rowFacilityId !== (string) $facultyFilter) {
                     return false;
                 }
             }
@@ -1880,6 +1915,11 @@ class UserController extends Controller
                 $type = DB::table('course_group_type_master')->where('pk', $request->role_filter)->value('type_name');
                 $parts[] = 'Role: ' . ($type ?? $request->role_filter);
             }
+        }
+
+        if ($request->filled('faculty_filter')) {
+            $facultyName = DB::table('faculty_master')->where('pk', $request->faculty_filter)->value('full_name');
+            $parts[] = 'Faculty: ' . ($facultyName ?? $request->faculty_filter);
         }
 
         if ($request->filled('group_pk')) {
