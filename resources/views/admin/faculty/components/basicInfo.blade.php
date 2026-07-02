@@ -76,7 +76,6 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-
             <x-input
                 name="lastname"
                 label="Last Name :"
@@ -87,24 +86,9 @@
                 value="{{ $faculty->last_name }}"
                 formInputClass="only-letters"
                 />
-
         </div>
     </div>
-    <!--<div class="col-md-6">
-        <div class="mb-3">
-
-            <x-input
-                name="fullname"
-                label="Full Name :"
-                placeholder="Full Name"
-                formLabelClass="form-label"
-
-                value="{{ $faculty->full_name }}"
-                />
-
-        </div>
-    </div>-->
-            <div class="col-md-3">
+     <div class="col-md-3">
                 <div class="mb-3">
                     <x-input
                         name="fullname"
@@ -114,9 +98,7 @@
                         required
                         :labelRequired="true"
                         value="{{ $faculty->full_name }}"
-
                         />
-
                 </div>
             </div>
             <div class="col-md-3">
@@ -158,7 +140,6 @@
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-
             <x-input
                 type="text"
                 name="landline"
@@ -220,12 +201,10 @@
 
                 value="{{ $faculty->country_master_pk }}"
                 />
-
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-
             <x-select
                 name="state"
                 label="State :"
@@ -235,79 +214,69 @@
 
                 value="{{ $faculty->state_master_pk }}"
                 />
-
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-
             <x-select
                 name="district"
                 label="District :"
                 placeholder="District"
                 formLabelClass="form-label"
                 :options="$district"
-
                 value="{{ $faculty->state_district_mapping_pk }}"
                 />
-
         </div>
     </div>
     <div class="col-md-6">
         <div class="mb-3">
-
             <x-select
                 name="city"
                 label="City :"
                 placeholder="City"
                 formLabelClass="form-label"
                 :options="$city"
-
                 value="{{ $faculty->city_master_pk }}"
                 />
-
         </div>
     </div>
      <div class="col-md-6">
-                                <div class="mb-3">
-                                <x-input
-                                    name="residence_address"
-                                    label="Residence Address :"
-                                    placeholder="Residence Address :"
-                                    formLabelClass="form-label"
-                                    value="{{ $faculty->Residence_address }}"
-                                    />
-                                </div>
+    <div class="mb-3">
+    <x-input
+        name="residence_address"
+        label="Residence Address :"
+        placeholder="Residence Address :"
+        formLabelClass="form-label"
+        value="{{ $faculty->Residence_address }}"
+        />
+    </div>
 
-                            </div>
-                             <div class="col-md-6">
-                                <div class="mb-3">
-                                <x-input
-                                    name="permanent_address"
-                                    label="Permanent Address :"
-                                    placeholder="Permanent Address :"
-                                    formLabelClass="form-label"
-                                    value="{{ $faculty->Permanent_Address }}"
-                                    />
-                                </div>
+    </div>
+        <div class="col-md-6">
+        <div class="mb-3">
+        <x-input
+            name="permanent_address"
+            label="Permanent Address :"
+            placeholder="Permanent Address :"
+            formLabelClass="form-label"
+            value="{{ $faculty->Permanent_Address }}"
+            />
+        </div>
+    </div>
 
-                            </div>
     <div class="col-md-6 d-none" id="otherCityContainer">
         <div class="mb-3">
-
             <x-input
                 name="other_city"
                 label="Other City :"
                 placeholder="Other City"
                 formLabelClass="form-label"
-
                 value=""
                 />
-
         </div>
     </div>
-    <div class="col-md-6">
 
+    <div class="col-md-6">
         <x-input
             name="email"
             label="Email :"
@@ -315,8 +284,8 @@
             formLabelClass="form-label"
             value="{{ $faculty->email_id }}"
             />
-
     </div>
+
     <div class="col-md-6">
         <x-input
             name="alternativeEmail"
@@ -326,6 +295,7 @@
             value="{{ $faculty->alternate_email_id }}"
             />
     </div>
+
     <div class="col-md-6">
         <div class="mb-3">
             <x-select
@@ -338,6 +308,7 @@
             />
         </div>
     </div>
+
     <div class="col-md-6 mt-3">
         <x-input
             type="file"
@@ -368,6 +339,7 @@
             <img id="photoPreview" src="#" alt="Photo Preview" class="img-thumbnail d-none" style="width: 80px; height: 80px; object-fit: cover;">
         </div>
     </div>
+
     <div class="col-md-6 mt-3">
         <x-input
             type="file"
@@ -386,4 +358,5 @@
             </a>
             @endif
     </div>
+
 </div>
