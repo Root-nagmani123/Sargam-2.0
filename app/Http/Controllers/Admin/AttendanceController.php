@@ -185,7 +185,15 @@ class AttendanceController extends Controller
                     'timetable.venue:venue_id,venue_name',
                 ]);
 
-            $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request) {
+            $isSendNotice = ($currentPath === 'send_notice');
+
+            $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request, $isSendNotice) {
+                // Send Direct Notice lists course-groups independent of any session, so
+                // it is not narrowed by date / session / attendance-type (it still
+                // requires the mapping to have a timetable for the notice payload).
+                if ($isSendNotice) {
+                    return;
+                }
 
                 if ($fromDate) {
                     $q->whereDate('START_DATE', '>=', $fromDate);
@@ -234,6 +242,12 @@ class AttendanceController extends Controller
 
             if (!empty($request->programme)) {
                 $query->where('Programme_pk', $request->programme);
+            }
+
+            // Send Direct Notice: collapse the per-session rows to one row per
+            // course-group, keeping the latest mapping row as the representative.
+            if ($isSendNotice) {
+                $query->whereRaw('course_group_timetable_mapping.pk = (SELECT MAX(m2.pk) FROM course_group_timetable_mapping m2 WHERE m2.Programme_pk = course_group_timetable_mapping.Programme_pk AND m2.group_pk = course_group_timetable_mapping.group_pk)');
             }
 
             return DataTables::of($query)

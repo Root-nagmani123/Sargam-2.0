@@ -14,8 +14,6 @@
     <x-breadcrum title="Send Direct Notice" />
     <x-session_message />
 
-    @include('admin.partials.memo_global_search')
-
     {{-- Tabs --}}
     <div class="py-3">
         <div class="sn-tabs">
