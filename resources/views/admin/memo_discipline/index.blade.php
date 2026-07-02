@@ -733,8 +733,8 @@ $(document).ready(function() {
         let memoId = $(this).data('id');
         let type = $(this).data('type');
 
-        $('#conversationTopic').text("Topic: Discipline Conversation");
-        $('#type_side_menu').text(type);
+        $('#conversationTopic').text("Discipline Memo Conversation");
+        $('#type_side_menu').text(type === 'OT' ? 'Officer Trainee view' : 'Incharge view');
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
