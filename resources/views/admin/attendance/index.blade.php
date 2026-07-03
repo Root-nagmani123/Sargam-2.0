@@ -218,7 +218,7 @@ hr {
         </ul>
     </div>
 
-    <div class="card attendance-main-card border-start border-4 border-primary">
+    <div class="card attendance-main-card">
         <div class="attendance-topbar px-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <h4 class="fw-bold page-title mb-0">Attendance</h4>
             <span class="badge rounded-pill text-bg-primary-subtle text-primary-emphasis px-3 py-2 fw-semibold">Filter and manage records</span>

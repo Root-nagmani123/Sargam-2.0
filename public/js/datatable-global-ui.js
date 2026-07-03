@@ -366,6 +366,77 @@
 
     applyGlobalDefaults();
 
+    /**
+     * Global column-sorting: make every data column client-side sortable so
+     * users can click any header to sort the loaded rows. We normalise the init
+     * options BEFORE DataTables builds the table (the only reliable point to
+     * change column orderability).
+     *
+     * Rules:
+     *  - Server-side tables are left untouched (ordering is delegated to the
+     *    backend there; computed/formatted columns can't be ordered in SQL).
+     *  - `ordering: false` is flipped on so headers are clickable.
+     *  - column-level `orderable: false` is cleared, EXCEPT for Action-like /
+     *    checkbox columns (detected by data/name/title/className).
+     *  - columnDefs are left as-is: their `orderable:false` usually targets the
+     *    Action / checkbox / row-index columns by numeric index, which we want
+     *    to keep unsortable and can't safely distinguish here.
+     */
+    function looksLikeActionColumn(col) {
+        if (!col) { return false; }
+        var key = String(col.title || col.name || col.data || '').trim().toLowerCase();
+        if (key === 'action' || key === 'actions' || key === 'dt_rowindex') {
+            return true;
+        }
+        var cls = String(col.className || col.class || '').toLowerCase();
+        return /(^|\s)(action|actions|no-sort|dt-nosort|select-checkbox)(\s|$)/.test(cls);
+    }
+
+    function normalizeSortingOptions(options) {
+        if (!options || typeof options !== 'object' || options.serverSide === true) {
+            return options;
+        }
+
+        if (options.ordering === false) {
+            options.ordering = true;
+        }
+
+        if (Array.isArray(options.columns)) {
+            options.columns.forEach(function (col) {
+                if (col && col.orderable === false && !looksLikeActionColumn(col)) {
+                    col.orderable = true;
+                }
+            });
+        }
+
+        return options;
+    }
+
+    // Patch the DataTables initialisers once so the normalisation applies to
+    // every table on the page, without touching each call site.
+    (function patchDataTableInit() {
+        if (!$.fn.DataTable || $.fn.DataTable.__sargamSortPatched) {
+            return;
+        }
+
+        var origDataTable = $.fn.DataTable;
+        var origLegacy = $.fn.dataTable;
+
+        $.fn.DataTable = function (options) {
+            return origDataTable.call(this, normalizeSortingOptions(options));
+        };
+        $.extend($.fn.DataTable, origDataTable);
+        $.fn.DataTable.__sargamSortPatched = true;
+
+        if (typeof origLegacy === 'function') {
+            $.fn.dataTable = function (options) {
+                return origLegacy.call(this, normalizeSortingOptions(options));
+            };
+            $.extend($.fn.dataTable, origLegacy);
+            $.fn.dataTable.__sargamSortPatched = true;
+        }
+    })();
+
     $(document).on('preInit.dt' + NS, function (e, settings) {
         var api = new $.fn.dataTable.Api(settings);
         var $table = $(api.table().node());
