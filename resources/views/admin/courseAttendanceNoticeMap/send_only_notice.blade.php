@@ -34,7 +34,7 @@
 
                 {{-- Course Name --}}
                 <select id="snCourse" class="sn-control" aria-label="Course Name">
-                    <option value="">Course Name</option>
+                    <option value="">Course Short Name</option>
                     @foreach($courseMasters as $course)
                     @php
                     $full = trim((string) ($course['course_name'] ?? ''));
@@ -98,7 +98,7 @@
                     <thead>
                         <tr>
                             <th>S. No.</th>
-                            <th>Course Name</th>
+                            <th>Course Short Name</th>
                             <th>Date</th>
                             <th>Session</th>
                             <th>Venue</th>

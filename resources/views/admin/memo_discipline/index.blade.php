@@ -165,8 +165,6 @@
         </div>
     </div>
 
-    @include('admin.partials.memo_global_search')
-
     {{-- Tabs + Download --}}
     <div class="card-body py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
         <div class="disc-tabs">

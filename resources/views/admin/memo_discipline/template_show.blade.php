@@ -15,7 +15,12 @@
     <div class="card" >
         <div class="card-body">
             <div class="gap-2 text-end">
-                    <a href="{{ route('memo.discipline.index') }}" class="btn btn-outline-secondary">Back</a>
+                    {{-- Go back to the exact page the user came from (preserves the
+                         filtered/searched list state); fall back to the plain index
+                         when opened directly / in a new tab. --}}
+                    <a href="{{ route('memo.discipline.index') }}"
+                       onclick="if(history.length>1){history.back();return false;}"
+                       class="btn btn-outline-secondary">Back</a>
                 </div>
             <h5 class="text-center fw-bold mb-3">{{ $memo->course->course_name ?? 'Course Name' }}</h5>
             <p class="text-center mb-0">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
@@ -170,7 +175,9 @@
                     <hr>
                     <div class="gap-2 text-end">
                         <button type="submit" class="btn btn-primary">Send</button>
-                        <a href="{{route('memo.discipline.index')}}" class="btn btn-outline-secondary">Back</a>
+                        <a href="{{ route('memo.discipline.index') }}"
+                           onclick="if(history.length>1){history.back();return false;}"
+                           class="btn btn-outline-secondary">Back</a>
                     </div>
                 </form>
                 @endif

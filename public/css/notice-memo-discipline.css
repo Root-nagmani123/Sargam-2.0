@@ -1152,3 +1152,26 @@
     max-height: 300px;
     overflow: auto;
 }
+
+/* The Generate modal wraps its .modal-body AND .modal-footer inside a <form>.
+   That breaks Bootstrap's `modal-dialog-scrollable` layout: the body is no
+   longer a direct flex child of .modal-content, so it can't scroll — instead
+   the form overflows and .modal-content (overflow:hidden) clips the footer out
+   of view, hiding the Cancel / Send Discipline Memo buttons. Making the form
+   the flex column restores the intended behaviour: the body scrolls and the
+   footer stays pinned and visible. */
+.gen-memo-modal .modal-dialog-scrollable .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+.gen-memo-modal .modal-dialog-scrollable .modal-content > form > .modal-body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+}
+.gen-memo-modal .modal-dialog-scrollable .modal-content > form > .modal-footer {
+    flex-shrink: 0;
+}
