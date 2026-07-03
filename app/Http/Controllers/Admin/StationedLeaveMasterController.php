@@ -43,15 +43,37 @@ class StationedLeaveMasterController extends Controller
 
     public function create(Request $request)
     {
-        $courses = $this->getCourses();
         $faculties = $this->getFacultyOptions();
         $config = null;
         $approvers = collect();
 
         $courseMasterPk = $request->query('course_master_pk');
         $effectiveFrom = $request->query('effective_from');
+        $isEditing = $courseMasterPk && $effectiveFrom;
 
-        if ($courseMasterPk && $effectiveFrom) {
+        // Only courses with an *active* stationed-leave configuration should be
+        // blocked from being configured again. Inactive rows must not exclude a
+        // course from the dropdown (delete already frees it up; inactive behaves
+        // the same). This mirrors the PT Exemption Master behaviour.
+        $configuredCourseIds = StationedLeaveMaster::query()
+            ->where('active_inactive', 1)
+            ->when($isEditing, fn ($q) => $q->where('course_master_pk', '!=', $courseMasterPk))
+            ->distinct()
+            ->pluck('course_master_pk')
+            ->all();
+
+        $courses = $this->getCourses()->reject(
+            fn ($course) => in_array($course->pk, $configuredCourseIds, true)
+        );
+
+        if ($isEditing && $courses->doesntContain('pk', (int) $courseMasterPk)) {
+            $editingCourse = CourseMaster::find($courseMasterPk);
+            if ($editingCourse) {
+                $courses->prepend($editingCourse);
+            }
+        }
+
+        if ($isEditing) {
             $config = StationedLeaveMaster::with(['approvers.faculty'])
                 ->where('course_master_pk', $courseMasterPk)
                 ->whereDate('effective_from', $effectiveFrom)
@@ -69,7 +91,8 @@ class StationedLeaveMasterController extends Controller
             'config',
             'approvers',
             'courseMasterPk',
-            'effectiveFrom'
+            'effectiveFrom',
+            'isEditing'
         ));
     }
 
@@ -89,6 +112,15 @@ class StationedLeaveMasterController extends Controller
         ]);
 
         $this->assertCourseAllowed((int) $validated['course_master_pk']);
+
+        if ($this->courseHasConflictingConfig(
+            (int) $validated['course_master_pk'],
+            $validated['effective_from']
+        )) {
+            return back()->withInput()->withErrors([
+                'course_master_pk' => 'Stationed leave is already configured for this course. Please edit the existing record.',
+            ]);
+        }
 
         $approvalRequired = $request->has('is_faculty_approval_required') ? 1 : 0;
         $facultyRows = collect($validated['faculty_rows'] ?? [])
@@ -159,6 +191,28 @@ class StationedLeaveMasterController extends Controller
         return redirect()
             ->route('admin.stationed-leave-master.index')
             ->with('success', 'Stationed leave configuration saved successfully.');
+    }
+
+    /**
+     * A course may only have one active stationed-leave configuration. An active
+     * config for a *different* effective-from date blocks creating a new one, so
+     * the user must edit the existing record instead. Inactive configs do not
+     * block re-configuration. Mirrors the PT Exemption Master rule.
+     */
+    protected function courseHasConflictingConfig(int $courseMasterPk, string $effectiveFrom): bool
+    {
+        $existingForCourse = StationedLeaveMaster::where('course_master_pk', $courseMasterPk)
+            ->where('active_inactive', 1)
+            ->exists();
+
+        if (! $existingForCourse) {
+            return false;
+        }
+
+        return ! StationedLeaveMaster::where('course_master_pk', $courseMasterPk)
+            ->where('active_inactive', 1)
+            ->whereDate('effective_from', $effectiveFrom)
+            ->exists();
     }
 
     public function status(Request $request, $id)

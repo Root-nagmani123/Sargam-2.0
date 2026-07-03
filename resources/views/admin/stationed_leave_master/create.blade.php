@@ -190,6 +190,12 @@
         <div class="alert alert-danger">{{ $errors->first('is_faculty_approval_required') }}</div>
     @endif
 
+    @if (!($isEditing ?? false) && $courses->isEmpty())
+        <div class="alert alert-warning">
+            All eligible courses already have a stationed leave configuration. Use Edit on the list page to update an existing record.
+        </div>
+    @endif
+
     <div class="card border-0 shadow-sm rounded-3">
         <div class="card-body p-3 p-md-4">
             <form method="POST" action="{{ route('admin.stationed-leave-master.store') }}" id="stationed-leave-form">
@@ -198,7 +204,8 @@
                 <div class="row g-4 mb-4">
                     <div class="col-12 col-md-4">
                         <label for="course_master_pk" class="leave-grid-label d-block">Select Course <span class="text-danger">*</span></label>
-                        <select id="course_master_pk" name="course_master_pk" class="form-select" required>
+                        <select id="course_master_pk" name="course_master_pk" class="form-select" required
+                            @if(($isEditing ?? false) || $courses->isEmpty()) disabled @endif>
                             <option value="">Select Course</option>
                             @foreach ($courses as $course)
                                 <option value="{{ $course->pk }}"
@@ -208,12 +215,19 @@
                                 </option>
                             @endforeach
                         </select>
+                        @if($isEditing ?? false)
+                            <input type="hidden" name="course_master_pk" value="{{ old('course_master_pk', $courseMasterPk) }}">
+                        @endif
+                        @error('course_master_pk')
+                            <div class="text-danger small mt-1">{{ $message }}</div>
+                        @enderror
                     </div>
                     <div class="col-12 col-md-4">
                         <label for="effective_from" class="leave-grid-label d-block">Effective From <span class="text-danger">*</span></label>
                         <input type="date" id="effective_from" name="effective_from" class="form-control" required
                             placeholder="Select the date"
-                            value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}">
+                            value="{{ old('effective_from', $effectiveFrom ? \Carbon\Carbon::parse($effectiveFrom)->format('Y-m-d') : '') }}"
+                            @if($isEditing ?? false) readonly @endif>
                     </div>
                     <div class="col-12 col-md-4">
                         <label for="apply_cutoff_time" class="leave-grid-label d-block">PT Timing <span class="text-danger">*</span></label>
@@ -298,7 +312,8 @@
 
                 <div class="d-flex flex-wrap justify-content-end gap-2">
                     <a href="{{ route('admin.stationed-leave-master.index') }}" class="btn btn-cancel-outline">Cancel</a>
-                    <button type="submit" class="btn btn-apply">Save</button>
+                    <button type="submit" class="btn btn-apply"
+                        @if(!($isEditing ?? false) && $courses->isEmpty()) disabled @endif>Save</button>
                 </div>
             </form>
         </div>
