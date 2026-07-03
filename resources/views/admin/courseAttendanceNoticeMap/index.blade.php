@@ -319,12 +319,18 @@
                                         <i class="bi bi-file-earmark-check"></i><span>Memo</span>
                                         @if($cs == 1)<span class="mnm-dot"></span>@endif
                                     </a>
+                                    @if($canManageMemoNotice && $cs != 2)
+                                    <a href="javascript:void(0)" class="mnm-action edit-memo-btn" data-memo-id="{{ $memo->memo_id }}"
+                                        data-bs-toggle="modal" data-bs-target="#memo_generate" title="Edit Memo">
+                                        <i class="bi bi-pencil"></i><span>Edit</span>
+                                    </a>
+                                    @endif
                                     @else
                                     <span class="mnm-action disabled" title="Memo not available yet"><i class="bi bi-file-earmark"></i><span>Memo</span></span>
                                     @endif
 
                                     {{-- Delete: admins/faculty only, hard-deletes the notice/memo + its chat --}}
-                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin'))
+                                    @if($canManageMemoNotice)
                                     <a href="javascript:void(0)" class="mnm-action mnm-delete-record" style="color:#d92d20;"
                                         data-id="{{ $isNotice ? $memo->notice_id : $memo->memo_id }}"
                                         data-type="{{ $isNotice ? 'notice' : 'memo' }}" title="Delete">
@@ -493,6 +499,10 @@
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="student_name" class="form-label">Student Name</label>
                                 <input type="text" id="student_name" class="form-control" value="{{ old('student_name') }}" readonly>
+                                <select id="student_pk_select" class="form-select d-none">
+                                    <option value="">Select Student</option>
+                                </select>
+                                <small class="text-muted d-none" id="studentReassignHint">Reassign this memo to a different student enrolled in the same course.</small>
                                 @error('student_name')
                                 <span class="text-danger">{{ $message }}</span>
                                 @enderror
@@ -560,6 +570,18 @@
                                 @enderror
                             </div>
                         </div>
+
+                        <h6 class="an-section-title mt-2">Template Preview</h6>
+                        <div id="memoPreviewWrap" class="an-preview" style="display:none;">
+                            <h5 class="text-center fw-bold mb-2" id="memoPvCourse"></h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-1"><strong>Date:</strong> <span id="memoPvDate"></span></p>
+                            <div id="memoPvContent" class="mb-3"></div>
+                            <div id="memoPvSignature" class="text-end mb-2"></div>
+                            <p class="text-end mb-0"><strong id="memoPvDirector"></strong><br><span id="memoPvDesig"></span></p>
+                        </div>
+                        <div id="memoPreviewNone" class="an-preview-none text-muted" style="display:none;">No matching template found — select a Memo Type and/or Template.</div>
 
                 </div>
                 <div class="modal-footer bg-light">
@@ -752,20 +774,59 @@ $(document).ready(function() {
 
     initMemoChoices();
 
-    // Load Memo templates for a course into the Generate Memo picker (optionally preselect one).
-    function loadMemoTemplates(courseId, selectedPk) {
-        var $t = $('#memoTemplate');
-        $t.html('<option value="">Select Template</option>');
-        if (!courseId) { return; }
-        $.get("{{ route('memo.notice.management.getTemplatesByType') }}", { course_id: courseId, type: 'Memo' })
-            .done(function (res) {
-                (res || []).forEach(function (tpl) {
-                    $t.append($('<option>').val(tpl.pk).text(tpl.title));
-                });
-                if (selectedPk) { $t.val(String(selectedPk)); }
-                else if ((res || []).length === 1) { $t.val(String(res[0].pk)); }
-            });
+    var memoTemplateCache = []; // Memo templates for the currently-loaded course (+ memo type)
+
+    function renderMemoTemplatePreview(tpl) {
+        if (tpl && (tpl.content || tpl.director_name)) {
+            $('#memoPvCourse').text($('#course_master_name').val() || '');
+            $('#memoPvDate').text($('#memo_date').val() || $('#date_memo_notice').val() || '');
+            $('#memoPvContent').html(tpl.content || '');
+            $('#memoPvDirector').text(tpl.director_name || '');
+            $('#memoPvDesig').text(tpl.director_designation || '');
+            $('#memoPvSignature').html(tpl.signature_image
+                ? '<img src="/storage/' + tpl.signature_image + '" alt="Signature" style="max-height:60px;">'
+                : '');
+            $('#memoPreviewNone').hide();
+            $('#memoPreviewWrap').show();
+        } else {
+            $('#memoPreviewWrap').hide();
+            $('#memoPreviewNone').show();
+        }
     }
+
+    // Load Memo templates for a course (+ optional memo type filter) into the picker.
+    function loadMemoTemplates(courseId, selectedPk, memoTypeMasterPk) {
+        var $t = $('#memoTemplate');
+        memoTemplateCache = [];
+        $t.html('<option value="">Select Template</option>');
+        if (!courseId) { renderMemoTemplatePreview(null); return; }
+        $.get("{{ route('memo.notice.management.getTemplatesByType') }}", {
+            course_id: courseId,
+            type: 'Memo',
+            memo_type_master_pk: memoTypeMasterPk || ''
+        }).done(function (res) {
+            memoTemplateCache = res || [];
+            memoTemplateCache.forEach(function (tpl) {
+                $t.append($('<option>').val(tpl.pk).text(tpl.title));
+            });
+            if (selectedPk) { $t.val(String(selectedPk)); }
+            else if (memoTemplateCache.length === 1) { $t.val(String(memoTemplateCache[0].pk)); }
+            var chosen = memoTemplateCache.find(function (t) { return String(t.pk) === String($t.val()); });
+            renderMemoTemplatePreview(chosen || null);
+        });
+    }
+
+    $('#memoTemplate').on('change', function () {
+        var pk = String($(this).val() || '');
+        var tpl = memoTemplateCache.find(function (t) { return String(t.pk) === pk; });
+        renderMemoTemplatePreview(tpl || null);
+    });
+
+    // Memo Type changed → reload the Template list filtered to that type.
+    $('#memo_type_master_pk').on('change', function () {
+        var courseId = $('#course_master_pk').val();
+        loadMemoTemplates(courseId, null, $(this).val());
+    });
 
     // Filter form submission on change
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
@@ -808,7 +869,7 @@ $(document).ready(function() {
                 $('#memo_date').val(today);
 
                 // Load Memo templates for this course so the sender can pick one.
-                loadMemoTemplates(res.course_master_pk, null);
+                loadMemoTemplates(res.course_master_pk, null, $('#memo_type_master_pk').val());
             },
             error: function() {
                 alert('Something went wrong!');
@@ -872,6 +933,10 @@ $(document).ready(function() {
                 if (res.message) {
                     $('#textarea').val(res.message);
                 }
+
+                // Fetch the actual template content so the detail/view mode shows
+                // what the memo document says, not just the field selections.
+                loadMemoTemplates(res.course_master_pk, res.memo_notice_template_pk, res.memo_type_master_pk);
             },
             error: function(xhr, status, error) {
                 console.error('Error fetching memo data:', error);
@@ -881,21 +946,106 @@ $(document).ready(function() {
         });
     });
 
-    // Function to set modal mode (generate or preview)
+    var currentEditMemoId = null;
+
+    // Populate the student-reassignment picker for a course, preselecting the current student.
+    function loadMemoStudentRoster(courseId, selectedStudentPk) {
+        var $sel = $('#student_pk_select');
+        $sel.html('<option value="">Select Student</option>');
+        if (!courseId) { return; }
+        $.get("{{ route('memo.notice.management.students_by_course') }}", { course_id: courseId })
+            .done(function (res) {
+                (res || []).forEach(function (s) {
+                    var label = s.display_name + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '');
+                    $sel.append($('<option>').val(s.pk).text(label));
+                });
+                if (selectedStudentPk) { $sel.val(String(selectedStudentPk)); }
+            });
+    }
+
+    // Handle Edit Memo button (editable mode, existing memo)
+    $(document).on('click', '.edit-memo-btn', function() {
+        var memoId = $(this).data('memo-id');
+        currentEditMemoId = memoId;
+        setModalMode('edit');
+
+        if (!memoId) {
+            alert('Memo ID not found!');
+            return;
+        }
+
+        $.ajax({
+            url: "{{ route('memo.notice.management.get_generated_memo_data') }}",
+            type: "POST",
+            data: {
+                _token: "{{ csrf_token() }}",
+                memo_id: memoId
+            },
+            success: function(res) {
+                $('#course_master_name').val(res.course_master_name || '');
+                $('#date_memo_notice').val(res.date_ || '');
+                $('#student_name').val(res.student_name || '');
+                $('#subject_master_id').val(res.subject_master_name || res.student_name || '');
+                $('#topic_id').val(res.subject_topic || '');
+                $('#student_notice_status_pk').val(res.student_notice_status_pk || '');
+                $('#course_master_pk').val(res.course_master_pk || '');
+                $('#memo_count').val(res.memo_count || '');
+
+                $('#session_name').val(res.session_name || '');
+                $('#class_session_master_pk').val(res.class_session_master_pk || '');
+                $('#faculty_name').val(res.faculty_name || '');
+                $('#student_pk').val(res.student_pk || '');
+                $('#memo_number').val(res.memo_number || '');
+
+                if (res.memo_type_master_pk) {
+                    $('#memo_type_master_pk').val(res.memo_type_master_pk);
+                    syncMemoChoicesById('memo_type_master_pk');
+                }
+                if (res.venue_master_pk) {
+                    $('#venue').val(res.venue_master_pk);
+                    syncMemoChoicesById('venue');
+                }
+                if (res.date) { $('#memo_date').val(res.date); }
+                if (res.start_time) { $('#meeting_time').val(res.start_time); }
+                if (res.message) { $('#textarea').val(res.message); }
+
+                loadMemoTemplates(res.course_master_pk, res.memo_notice_template_pk, res.memo_type_master_pk);
+                loadMemoStudentRoster(res.course_master_pk, res.student_pk);
+            },
+            error: function(xhr) {
+                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to load memo data.');
+            }
+        });
+    });
+
+    // Function to set modal mode (generate, edit, or preview)
+    var currentModalMode = 'generate';
     function setModalMode(mode) {
+        currentModalMode = mode;
         const modal = $('#memo_generate');
         const form = modal.find('form');
         // Use more specific selector for save button
         const saveButton = modal.find('.modal-footer').find('button[type="submit"]');
         const modalTitle = $('#memo_generateLabel');
 
+        // Student field: text display in generate/preview, a reassignable select in edit mode.
+        $('#student_name').toggleClass('d-none', mode === 'edit');
+        $('#student_pk_select').toggleClass('d-none', mode !== 'edit');
+        $('#studentReassignHint').toggleClass('d-none', mode !== 'edit');
+
         if (mode === 'preview') {
             // Preview mode: make all fields read-only
             form.find('input[type="text"], input[type="date"], input[type="time"], textarea').prop('readonly', true);
             form.find('select').prop('disabled', true);
-            // Hide save button in preview mode
             saveButton.hide();
             modalTitle.text('Preview Memo');
+        } else if (mode === 'edit') {
+            // Edit mode: an already-generated memo — everything correctable is editable.
+            form.find('input, textarea').prop('readonly', false);
+            form.find('select').prop('disabled', false);
+            $('#course_master_name, #date_memo_notice, #subject_master_id, #topic_id, #class_session_master_pk, #faculty_name, #memo_number').prop('readonly', true);
+            saveButton.show().text('Save Changes');
+            modalTitle.text('Edit Memo');
         } else {
             // Generate mode: enable editable fields
             form.find('input, textarea').prop('readonly', false);
@@ -905,7 +1055,7 @@ $(document).ready(function() {
             // Keep non-editable selects disabled
             form.find('select').not('#memo_type_master_pk, #venue').prop('disabled', true);
             // Show save button in generate mode
-            saveButton.show();
+            saveButton.show().text('Save');
             modalTitle.text('Generate Memo');
         }
 
@@ -913,9 +1063,48 @@ $(document).ready(function() {
         syncMemoChoicesById('venue');
     }
 
+    // Submit routing: edit mode goes through AJAX to updateMemoStatus; generate mode
+    // uses the form's native action (store_memo_status).
+    $('#memo_generate form').on('submit', function (e) {
+        if (currentModalMode !== 'edit') { return; } // let the native POST proceed
+        e.preventDefault();
+        if (!currentEditMemoId) { return; }
+
+        var $btn = $(this).find('.modal-footer button[type="submit"]').prop('disabled', true);
+        $.ajax({
+            url: "{{ rtrim(route('memo.notice.management.update_memo_status', ''), '/') }}/" + currentEditMemoId,
+            type: 'POST',
+            data: {
+                _token: "{{ csrf_token() }}",
+                student_pk: $('#student_pk_select').val(),
+                memo_type_master_pk: $('#memo_type_master_pk').val(),
+                memo_notice_template_pk: $('#memoTemplate').val(),
+                venue: $('#venue').val(),
+                date_memo_notice: $('#memo_date').val(),
+                meeting_time: $('#meeting_time').val(),
+                Remark: $('#textarea').val()
+            },
+            success: function (res) {
+                if (res.success) {
+                    toastr.success(res.message || 'Memo updated successfully.');
+                    $('#memo_generate').modal('hide');
+                    setTimeout(function () { window.location.reload(); }, 600);
+                } else {
+                    toastr.error(res.message || 'Update failed.');
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function (xhr) {
+                toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Update failed.');
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
     // Reset modal when closed
     $('#memo_generate').on('hidden.bs.modal', function() {
         $(this).find('form')[0].reset();
+        currentEditMemoId = null;
         setModalMode('generate'); // Reset to default mode
     });
 

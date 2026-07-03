@@ -314,7 +314,8 @@ $noticeCount = $memos->groupBy(function($item) {
 })->map(function ($group) {
     return $group->where('type_notice_memo', 'Notice')->count();
 });
-    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'conclusions', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount'));
+    $canManageMemoNotice = $this->userCanManageMemoNotice();
+    return view('admin.courseAttendanceNoticeMap.index', compact('memos', 'venue', 'memo_master', 'conclusions', 'courses', 'programNameFilter', 'typeFilter', 'statusFilter', 'searchFilter', 'fromDateFilter', 'toDateFilter','noticeCount', 'canManageMemoNotice'));
 }
 
     public function exportPdf(Request $request)
@@ -1567,7 +1568,7 @@ protected function deleteConversationFiles(string $table, string $fk, int $id): 
 protected function userCanManageMemoNotice(): bool
 {
     return hasRole('Internal Faculty') || hasRole('Guest Faculty')
-        || hasRole('Super Admin') || hasRole('Training Induction Admin');
+        || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction');
 }
 public function memo_notice_conversation(Request $request)
 {
@@ -2719,6 +2720,7 @@ public function getGeneratedMemoData(Request $request)
     return response()->json([
         // Memo-specific fields
         'memo_type_master_pk' => $memo->memo_type_master_pk ?? null,
+        'memo_notice_template_pk' => $memo->memo_notice_template_pk ?? null,
         'venue_master_pk' => $memo->venue_master_pk ?? null,
         'date' => $memo->date ?? null,
         'start_time' => $memo->start_time ?? null,
