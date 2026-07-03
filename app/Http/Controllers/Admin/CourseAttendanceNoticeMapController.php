@@ -36,6 +36,10 @@ class CourseAttendanceNoticeMapController extends Controller
         $toDateFilter = Carbon::today()->toDateString();
     }
 
+    // An Officer Trainee must only ever see their own notices/memos.
+    $isOfficerTrainee = isOfficerTraineeUser();
+    $ownStudentPk = $isOfficerTrainee ? Auth::user()->user_id : null;
+
     // Get initial notice records with course name
     // Start from student_notice_status so direct notices (course_student_attendance_pk=0) are included
     $noticesQuery = DB::table('student_notice_status as sns')
@@ -66,6 +70,10 @@ class CourseAttendanceNoticeMapController extends Controller
         );
 
     // Apply filters on notices query
+    if ($isOfficerTrainee) {
+        $noticesQuery->where('sns.student_pk', $ownStudentPk);
+    }
+
     if ($programNameFilter) {
         $noticesQuery->where('sns.course_master_pk', $programNameFilter);
     }
@@ -143,6 +151,10 @@ class CourseAttendanceNoticeMapController extends Controller
                 'mcm.discussion_name',
                 'cm.course_name'
             );
+
+        if ($isOfficerTrainee) {
+            $memoQuery->where('student_memo_status.student_pk', $ownStudentPk);
+        }
 
         if ($programNameFilter) {
             $memoQuery->where('student_memo_status.course_master_pk', $programNameFilter);
@@ -411,6 +423,10 @@ $noticeCount = $memos->groupBy(function($item) {
             $toDateFilter = Carbon::today()->toDateString();
         }
 
+        // An Officer Trainee must only ever export their own notices/memos.
+        $isOfficerTrainee = isOfficerTraineeUser();
+        $ownStudentPk = $isOfficerTrainee ? Auth::user()->user_id : null;
+
         // Get initial notice records with course name
         $noticesQuery = DB::table('course_student_attendance as csa')
             ->join('student_notice_status as sns', 'sns.course_student_attendance_pk', '=', 'csa.pk')
@@ -440,6 +456,10 @@ $noticeCount = $memos->groupBy(function($item) {
             );
 
         // Apply filters on notices query
+        if ($isOfficerTrainee) {
+            $noticesQuery->where('sns.student_pk', $ownStudentPk);
+        }
+
         if ($programNameFilter) {
             $noticesQuery->where('sns.course_master_pk', $programNameFilter);
         }
@@ -504,6 +524,9 @@ $noticeCount = $memos->groupBy(function($item) {
                     'cm.course_name'
                 );
 
+            if ($isOfficerTrainee) {
+                $memoQuery->where('student_memo_status.student_pk', $ownStudentPk);
+            }
             if ($programNameFilter) {
                 $memoQuery->where('student_memo_status.course_master_pk', $programNameFilter);
             }
@@ -828,25 +851,29 @@ public function gettimetableDetailsBytopic(Request $request)
 }
 
 /**
- * All sessions that have a timetable entry for the given course (any date).
+ * Sessions that have a timetable entry for the given course on the given date.
  */
 public function getSessionsByCourse(Request $request)
 {
     $courseId = $request->course_id;
+    $date     = $request->date;
 
     // timetable.class_session stores the raw shift text (e.g. "10:35 to 11:30"),
     // matching class_session_master.shift_time — it is NOT a class_session_master.pk FK.
-    $sessions = DB::table('timetable as t')
+    $query = DB::table('timetable as t')
         ->select('t.class_session')
         ->where('t.course_master_pk', $courseId)
         ->whereNotNull('t.class_session')
-        ->where('t.class_session', '!=', '')
-        ->distinct()
-        ->orderBy('t.class_session')
-        ->get();
+        ->where('t.class_session', '!=', '');
+
+    if ($date) {
+        $query->whereDate('t.START_DATE', $date);
+    }
+
+    $sessions = $query->distinct()->orderBy('t.class_session')->get();
 
     if ($sessions->isEmpty()) {
-        return '<option value="">No sessions found for selected course</option>';
+        return '<option value="">No sessions found for selected date</option>';
     }
 
     $labelsByShiftTime = DB::table('class_session_master')->pluck('shift_name', 'shift_time');

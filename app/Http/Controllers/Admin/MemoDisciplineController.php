@@ -128,7 +128,7 @@ class MemoDisciplineController extends Controller
 public function destroy($id)
 {
     if (! (hasRole('Internal Faculty') || hasRole('Guest Faculty')
-        || hasRole('Super Admin') || hasRole('Training Induction Admin'))) {
+        || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction'))) {
         return response()->json(['success' => false, 'message' => 'You are not authorized to delete this record.'], 403);
     }
 
@@ -516,20 +516,10 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
             ->get();
             // print_r($conversations); exit;
              $conversations = $conversations->map(function ($item) {
-        if ($item->role_type == 'f') {
-            $user = DB::table('users')->find($item->created_by);
-            $item->display_name = $user->name ?? 'Admin';
-            $item->user_type = 'admin';
-
-        } elseif ($item->role_type == 's') {
-            $student = DB::table('student_master')->where('pk', $item->created_by)->first();
-            $item->display_name = $student->display_name ?? 'OT';
-            $item->user_type = 'OT';
-
-        } else {
-            $item->display_name = 'Unknown';
-            $item->user_type = 'unknown';
-        }
+        $identity = resolve_chat_sender_identity($item->created_by, $item->role_type);
+        $item->display_name = $identity['display_name'];
+        $item->role_name = $identity['role_name'];
+        $item->user_type = $item->role_type == 's' ? 'OT' : ($item->role_type == 'f' ? 'admin' : 'unknown');
         return $item;
     });
 
@@ -726,7 +716,7 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
         'course:pk,course_name',
         'discipline:pk,discipline_name',
         'student:pk,display_name',
-        'messages.student:pk,display_name',
+        'messages',
         'template',        // course-level fallback
         'chosenTemplate',  // template pinned at send time
     ])->find($decryptedId);
@@ -742,6 +732,14 @@ private function streamCsv(string $fileName, array $titleBlock, array $headers, 
     }
     if (!$memo) {
         return back()->with('error', 'Memo not found.');
+    }
+
+    // Resolve each message's real sender name + role — a conversation can involve
+    // multiple distinct admins/faculty, so a generic "Admin" label isn't enough.
+    foreach ($memo->messages as $message) {
+        $identity = resolve_chat_sender_identity($message->created_by, $message->role_type);
+        $message->display_name = $identity['display_name'];
+        $message->role_name = $identity['role_name'];
     }
 
     return view(
@@ -761,15 +759,9 @@ public function getNewMessages(Request $request, $id)
         ->get();
 
     $messages = $messages->map(function ($msg) {
-        if ($msg->role_type === 'f') {
-            $user = DB::table('users')->find($msg->created_by);
-            $msg->display_name = $user->name ?? 'Admin';
-        } elseif ($msg->role_type === 's') {
-            $student = DB::table('student_master')->where('pk', $msg->created_by)->first();
-            $msg->display_name = $student->display_name ?? 'Student';
-        } else {
-            $msg->display_name = 'Unknown';
-        }
+        $identity = resolve_chat_sender_identity($msg->created_by, $msg->role_type);
+        $msg->display_name = $identity['display_name'];
+        $msg->role_name = $identity['role_name'];
         $msg->formatted_date = $msg->created_date
             ? \Carbon\Carbon::parse($msg->created_date)->format('d-m-Y h:i A')
             : '';

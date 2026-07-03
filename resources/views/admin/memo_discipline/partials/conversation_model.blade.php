@@ -88,7 +88,9 @@
 
 @forelse ($conversations as $msg)
     @php
-        $msgTime = Carbon::parse($msg->created_date ?? 'now', 'UTC')->timezone($tz);
+        // created_date is stored in the app's local timezone (Asia/Kolkata) already —
+        // parsing it as UTC and converting again double-shifts it by +5:30.
+        $msgTime = Carbon::parse($msg->created_date ?? 'now', $tz);
         $dateKey = $msgTime->toDateString();
         $label = $msgTime->isSameDay(Carbon::now($tz))
             ? 'Today'
@@ -108,7 +110,11 @@
     <div class="chat-row {{ $isOwn ? 'chat-right' : 'chat-left' }}">
       <div class="chat-bubble" data-message-id="{{ data_get($msg, 'pk', '') }}">
         <div class="chat-head">
-          <span class="chat-user">{{ $isOwn ? 'You' : $msg->display_name }}</span>
+          {{-- Admin identity is always shown (name + role), never collapsed to "You" —
+               a memo's admin-side conversation can involve multiple distinct admins. --}}
+          <span class="chat-user">
+            {{ $isAdminMsg ? $msg->display_name . (!empty($msg->role_name) ? ' · ' . $msg->role_name : '') : ($isOwn ? 'You' : $msg->display_name) }}
+          </span>
           <span class="chat-time">{{ $msgTime->format('d M Y, h:i A') }}</span>
         </div>
 
@@ -388,9 +394,37 @@
             return str.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
         }
 
+        // Real-time refresh: this panel previously only updated after the viewer's own
+        // send, so messages from the other party (or another admin) never appeared
+        // until the offcanvas was closed and reopened.
+        let pollTimer = null;
+
+        function isComposerBusy() {
+            const wrapper = getCurrentWrapper();
+            const ta = wrapper && wrapper.querySelector('.chat-input');
+            return !!(ta && document.activeElement === ta && ta.value.trim().length > 0);
+        }
+
+        function startPolling() {
+            stopPolling();
+            pollTimer = setInterval(function () {
+                if (isSending || isComposerBusy()) return;
+                reloadConversation(false);
+            }, 4000);
+        }
+
+        function stopPolling() {
+            if (pollTimer) { clearInterval(pollTimer); pollTimer = null; }
+        }
+
         const offcanvasEl = document.getElementById('chatOffcanvas');
         if (offcanvasEl) {
-            offcanvasEl.addEventListener('hide.bs.offcanvas', () => { isSending = false; });
+            offcanvasEl.addEventListener('shown.bs.offcanvas', startPolling);
+            offcanvasEl.addEventListener('hide.bs.offcanvas', () => { isSending = false; stopPolling(); });
+            // The offcanvas is often already open by the time this script runs
+            // (opened right after the AJAX call that fetched this partial), so the
+            // 'shown.bs.offcanvas' event above may already have fired — catch that case.
+            if (offcanvasEl.classList.contains('show')) startPolling();
         }
     })();
 </script>

@@ -986,11 +986,21 @@
 /* ============================================================
    SEND MEMO / NOTICE — "Add Notice" modal (dual-listbox)
    ============================================================ */
-.add-notice-modal .modal-content { border: 0; border-radius: 14px; box-shadow: 0 20px 48px rgba(16, 24, 40, 0.18); }
-.add-notice-modal .modal-header { border-bottom: 1px solid #eaecf0; padding: 1rem 1.5rem; }
-.add-notice-modal .modal-title { font-weight: 700; color: #101828; }
-.add-notice-modal .modal-body { padding: 1.25rem 1.5rem; }
-.add-notice-modal .modal-footer { border-top: 1px solid #eaecf0; padding: 1rem 1.5rem; }
+#addNoticeModal .modal-dialog { max-height: 90vh; }
+#addNoticeModal .modal-content { max-height: 90vh; overflow: hidden; border: 0; border-radius: 14px; box-shadow: 0 20px 48px rgba(16, 24, 40, 0.18); }
+/* .modal-content is a flex column, but the <form> wrapping modal-body/modal-footer isn't —
+   without this, the flex height constraint never reaches modal-body and it can't scroll. */
+#addNoticeModal .modal-content > form {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: hidden;
+}
+#addNoticeModal .modal-header { border-bottom: 1px solid #eaecf0; padding: 1rem 1.5rem; flex-shrink: 0; }
+#addNoticeModal .modal-title { font-weight: 700; color: #101828; }
+#addNoticeModal .modal-body { padding: 1.25rem 1.5rem; overflow-y: auto; flex: 1 1 auto; min-height: 0; }
+#addNoticeModal .modal-footer { border-top: 1px solid #eaecf0; padding: 1rem 1.5rem; flex-shrink: 0; }
 .add-notice-modal .form-label { font-weight: 500; font-size: 0.85rem; color: #344054; }
 .an-section-title { font-weight: 600; color: #101828; font-size: 0.95rem; margin: 0.25rem 0 0.5rem; }
 

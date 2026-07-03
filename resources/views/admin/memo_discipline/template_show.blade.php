@@ -42,8 +42,30 @@
                 @endif
             </div>
 
-            <!-- Exemption Table -->
-           
+            <!-- Memo Template Content -->
+            <h6 class="fw-bold">Memo Content</h6>
+            @if($template)
+            <div class="border rounded p-3 mb-4 bg-light">
+                <h5 class="text-center fw-bold mb-2">{{ $memo->course->course_name ?? '' }}</h5>
+                <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                <hr>
+                <p class="mb-1">DISCIPLINE MEMO</p>
+                <p class="mb-1"><strong>Date:</strong> {{ \Carbon\Carbon::parse($memo->date)->format('d/m/Y') }}</p>
+                <div class="mb-3">{!! $template->content !!}</div>
+                @if($template->signature_image)
+                <div class="text-end">
+                    <img src="{{ asset('storage/' . $template->signature_image) }}" alt="Signature" style="max-height:60px;">
+                </div>
+                @endif
+                <p class="text-end mb-0">
+                    <strong>{{ $template->director_name }}</strong><br>
+                    <span>{{ $template->director_designation }}</span>
+                </p>
+            </div>
+            @else
+            <div class="alert alert-info mb-4">No active Discipline Memo template found for this course.</div>
+            @endif
+
             <!-- Conversation Section -->
             <h6 class="fw-bold">Conversation</h6>
             <div class="table-responsive mb-4">
@@ -60,7 +82,7 @@
                     <tbody id="disciplineConvBody">
                        @forelse ($memo->messages as $row)
                             <tr data-pk="{{ $row->pk }}">
-                                <td>{{ $row->student->display_name ?? 'Admin' }}</td>
+                                <td>{{ $row->display_name }}{{ $row->role_name ? ' (' . $row->role_name . ')' : '' }}</td>
                                 <td>{{ $row->student_decip_incharge_msg }}</td>
                                 <td>{{ \Carbon\Carbon::parse($row->created_date)->format('d-m-Y h:i A') }}</td>
                                 <td>
@@ -89,7 +111,7 @@
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-6">
-                            <input type="hidden" name="role_type" value="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin')) ? 'f' : 'OT' }}">
+                            <input type="hidden" name="role_type" value="{{ (hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction')) ? 'f' : 'OT' }}">
                             <input type="hidden" name="created_by" value="{{ auth()->user()->user_id }}">
                             <input type="hidden" name="memo_discipline_id" value="{{ $memo->pk }}">
                             <label class="form-label">Select Date</label>
@@ -117,7 +139,7 @@
 
                             </div>
                         </div>
-                        @if(hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
+                        @if(hasRole('Super Admin') || hasRole('Training Induction Admin') || hasRole('Training-Induction') || hasRole('Internal Faculty') || hasRole('Guest Faculty'))
                         <div class="col-6">
                             <div class="mb-3">
                                 <label class="form-label">Status</label>
@@ -283,8 +305,10 @@
                 ? '<a href="/storage/' + escHtml(msg.doc_upload) + '" target="_blank">View</a>'
                 : '---';
 
+            var nameCell = escHtml(msg.display_name || 'N/A') + (msg.role_name ? ' (' + escHtml(msg.role_name) + ')' : '');
+
             tr.innerHTML =
-                '<td>' + escHtml(msg.display_name || 'N/A') + '</td>' +
+                '<td>' + nameCell + '</td>' +
                 '<td>' + escHtml(msg.student_decip_incharge_msg || '') + '</td>' +
                 '<td>' + escHtml(msg.formatted_date || '') + '</td>' +
                 '<td>' + docCell + '</td>';

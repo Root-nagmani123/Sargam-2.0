@@ -9,11 +9,13 @@
 <link rel="stylesheet" href="{{ asset('css/notice-memo-discipline.css') }}?v={{ @filemtime(public_path('css/notice-memo-discipline.css')) ?: time() }}">
 <div class="container-fluid mnm-page py-2 py-md-3">
     <x-breadcrum title="Send Memo / Notice">
+        @unless(isOfficerTraineeUser())
         <button type="button" data-bs-toggle="modal" data-bs-target="#addNoticeModal"
             class="btn btn-primary d-inline-flex align-items-center gap-1 px-3 shadow-sm">
             <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
             Create Memo/ Notice
         </button>
+        @endunless
     </x-breadcrum>
     <x-session_message />
 
@@ -155,13 +157,19 @@
     {{-- Tabs + Download --}}
   <div class="py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <div class="mnm-tabs">
+                @unless(isOfficerTraineeUser())
                 <a href="{{ route('send.notice.management.index') }}" class="mnm-tab js-nav-tab">Send Direct Notice</a>
+                @endunless
                 <a href="{{ route('memo.notice.management.index') }}" class="mnm-tab js-nav-tab active">Send Memo / Notice</a>
+                @unless(isOfficerTraineeUser())
                 <a href="{{ route('memo.discipline.index') }}" class="mnm-tab js-nav-tab">Send Discipline Memo</a>
+                @endunless
             </div>
+            @unless(isOfficerTraineeUser())
             <a href="{{ route('memo.notice.management.export_csv', request()->query()) }}" class="mnm-download">
                 <i class="bi bi-download"></i> Download
             </a>
+            @endunless
         </div>
 
     <!-- start Zero Configuration -->
@@ -1057,29 +1065,22 @@ $(function () {
         $('#anSubjectId, #anTopicId, #anFacultyPk').val('');
     }
 
-    // Course → Sessions (all sessions ever used by this course, independent of Date)
+    // Course + Date → Sessions (only sessions that actually occur on the selected date)
     function loadSessions() {
         var course = $('#anCourse').val();
+        var date = $('#anDate').val();
         $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
         clearSubjectTopicDetails();
         resetStudents();
-        if (!course) {
+        if (!course || !date) {
             $('#anSession').html('<option value="">Select Session</option>').prop('disabled', true);
             return;
         }
-        $.get(routeSessions, { course_id: course }).done(function (html) {
+        $.get(routeSessions, { course_id: course, date: date }).done(function (html) {
             $('#anSession').html(html).prop('disabled', false);
         }).fail(function () {
             $('#anSession').html('<option value="">Error loading sessions</option>').prop('disabled', true);
         });
-    }
-
-    // Date changed → downstream (Venue/Subject/Topic/students) depends on the exact date, so reset and re-resolve.
-    function onDateChange() {
-        $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
-        clearSubjectTopicDetails();
-        resetStudents();
-        if ($('#anSession').val()) loadVenues();
     }
 
     // Session → Venues
@@ -1193,7 +1194,7 @@ $(function () {
     });
 
     $('#anCourse').on('change', function () { loadSessions(); loadTemplate($(this).val()); });
-    $('#anDate').on('change', onDateChange);
+    $('#anDate').on('change', loadSessions);
     $('#anSession').on('change', loadVenues);
     $('#anVenue').on('change', loadTimetableDetailsAndStudents);
 
