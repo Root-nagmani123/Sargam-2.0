@@ -1220,7 +1220,7 @@ class UserController extends Controller
      */
     public function studentListExport(Request $request, string $format)
     {
-        if (! in_array($format, ['csv', 'pdf'], true)) {
+        if (! in_array($format, ['csv', 'pdf', 'print'], true)) {
             abort(404);
         }
 
@@ -1234,6 +1234,17 @@ class UserController extends Controller
 
         $timestamp = now()->format('Ymd_His');
         $fileBase = "student_list_{$timestamp}";
+
+        // Browser-printable report: same clean layout as the PDF, rendered as
+        // HTML in a new tab that auto-opens the print dialog.
+        if ($format === 'print') {
+            return view('admin.dashboard.export.student_list_print', [
+                'headings' => $exportData['headings'],
+                'rows' => $exportData['rows'],
+                'generatedAt' => now()->format('d-m-Y H:i'),
+                'filterSummary' => $this->dashboardStudentListFilterSummary($request),
+            ]);
+        }
 
         if ($format === 'pdf') {
             $pdf = Pdf::loadView('admin.dashboard.export.student_list_pdf', [
