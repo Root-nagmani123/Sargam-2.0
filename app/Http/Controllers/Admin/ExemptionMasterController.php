@@ -41,7 +41,11 @@ class ExemptionMasterController extends Controller
         $effectiveFrom = $request->query('effective_from');
         $isEditing = $courseMasterPk && $effectiveFrom;
 
+        // Only courses with an *active* exemption should be blocked from being
+        // configured again. Inactive rows must not exclude a course from the
+        // dropdown (delete already frees it up; inactive should behave the same).
         $configuredCourseIds = ExemptionMaster::query()
+            ->where('active_inactive', 1)
             ->when($isEditing, fn ($q) => $q->where('course_master_pk', '!=', $courseMasterPk))
             ->distinct()
             ->pluck('course_master_pk')
@@ -134,13 +138,18 @@ class ExemptionMasterController extends Controller
 
     protected function courseHasConflictingExemption(int $courseMasterPk, string $effectiveFrom): bool
     {
-        $existingForCourse = ExemptionMaster::where('course_master_pk', $courseMasterPk)->exists();
+        // Inactive configurations do not block re-configuring a course, so only
+        // active rows are considered when detecting a conflict.
+        $existingForCourse = ExemptionMaster::where('course_master_pk', $courseMasterPk)
+            ->where('active_inactive', 1)
+            ->exists();
 
         if (! $existingForCourse) {
             return false;
         }
 
         return ! ExemptionMaster::where('course_master_pk', $courseMasterPk)
+            ->where('active_inactive', 1)
             ->whereDate('effective_from', $effectiveFrom)
             ->exists();
     }
