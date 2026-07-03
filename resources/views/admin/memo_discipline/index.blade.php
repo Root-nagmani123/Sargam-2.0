@@ -213,8 +213,8 @@
 
                     <select class="form-select" id="status" name="status" aria-label="Status">
                         <option value="">Status</option>
-                        <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Pending</option>
-                        <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Recorded</option>
+                        <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Recorded</option>
+                        <option value="2" {{ $statusFilter == '2' ? 'selected' : '' }}>Memo Sent</option>
                         <option value="3" {{ $statusFilter == '3' ? 'selected' : '' }}>Closed</option>
                     </select>
 
@@ -435,6 +435,12 @@
                                     <span class="badge bg-success-subtle text-success">
                                         <i class="bi bi-check-circle me-1"></i> Recorded
                                     </span>
+                                    <div class="mt-1 d-flex gap-2">
+                                        <a href="{{ route('memo.discipline.memo.show', encrypt($memo->pk)) }}"
+                                            class="link-primary small fw-medium">
+                                            View Memo
+                                        </a>
+                                    </div>
                                     @elseif ($memo->status == 2)
                                     <span class="badge bg-warning-subtle text-warning">
                                         <i class="bi bi-envelope me-1"></i> Memo Sent
