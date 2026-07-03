@@ -27,6 +27,8 @@
 <link rel="stylesheet" href="{{ asset('admin_assets/css/material-icons-local.css') }}" />
 <!-- Unified Spacing System -->
 <link rel="stylesheet" href="{{asset('css/spacing-system.css')}}?v={{ @filemtime(public_path('css/spacing-system.css')) ?: time() }}">
+<!-- Bootstrap Icons -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
 <!-- Breadcrumb Component CSS -->
 <link rel="stylesheet" href="{{asset('css/breadcrumb.css')}}">
 <!-- Sidebar Menu Enhanced CSS -->

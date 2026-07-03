@@ -10,6 +10,7 @@ use Illuminate\Support\Facades\Validator;
 use App\Models\User; // Assuming you have a User model for user relationships
 use Illuminate\Support\Facades\DB; // For database operations if needed
 use App\Exports\ExemptionDataExport;
+use App\Services\FC\FcRosterApplicationGuardService;
 use Maatwebsite\Excel\Facades\Excel;
 use Barryvdh\DomPDF\Facade\Pdf; // For PDF generation
 
@@ -134,6 +135,13 @@ class FcExemptionMasterController extends Controller
                 ->withInput();
         }
 
+        $guard = app(FcRosterApplicationGuardService::class);
+        if ($blocked = $guard->exemptionBlockedReason($registration)) {
+            return redirect()
+                ->route('fc.choose.path')
+                ->with('warning', $blocked);
+        }
+
         $username = $registration->user_id ?? null;
 
         $medicalDocPath = null;
@@ -151,10 +159,16 @@ class FcExemptionMasterController extends Controller
                 'user_id' => $username,
                 'fc_exemption_master_pk' => $request->exemption_category,
                 'medical_exemption_doc' => $medicalDocPath,
-                // 'updated_at' => now(),
-                // 'created_at' => now(), // This won't update if already exists
             ]
         );
+
+        DB::table('fc_registration_master')
+            ->where('contact_no', $request->ex_mobile)
+            ->where('web_auth', $request->reg_web_code)
+            ->update([
+                'application_type' => FcRosterApplicationGuardService::APPLICATION_EXEMPTION,
+                'exemption_count' => DB::raw('GREATEST(COALESCE(exemption_count, 0), 1)'),
+            ]);
 
         return redirect()->route('exemptions.datalist')->with('success', 'Exemption form submitted successfully.');
     }

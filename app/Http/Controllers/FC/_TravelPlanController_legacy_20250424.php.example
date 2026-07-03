@@ -1,0 +1,21 @@
+<?php
+/**
+ * Copy the methods below into TravelPlanController.php (and restore the
+ * previous travel.blade.php from version control) to revert to the leg-based
+ * travel form. This file is not loaded by Laravel.
+ */
+
+use App\Models\FC\MctpStudentTravelPlanDetail;
+use App\Models\FC\MctpTravelModeMaster;
+use App\Models\FC\StudentTravelPlanMaster;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
+
+// public function save(Request $request) { ... }  — full previous implementation:
+// - $legsFiltered from request legs
+// - validate travel_type_id, departure_city/state, legs.*, pickup/drop block
+// - updateOrCreate master; delete MctpStudentTravelPlanDetail by travel_plan_id; recreate legs
+
+// public function submit(Request $request) { ... }
+// - require at least one leg in plan->legs

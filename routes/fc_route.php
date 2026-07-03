@@ -159,6 +159,9 @@ Route::post('/fc/store-credentials', [FrontPageController::class, 'credential_st
 Route::get('/fc/login', [FrontPageController::class, 'showLoginForm'])->name('fc.login');
 Route::post('/fc/login-verify', [FrontPageController::class, 'verifyLogin'])->name('fc.login.verify');
 
+//logout (foundation-course staged user)
+Route::get('/fc/logout', [FrontPageController::class, 'logout'])->name('fc.logout');
+
 //path choose route
 Route::get('/fc/choose-path', [FrontPageController::class, 'choosePath'])->name('fc.choose.path');
 
@@ -198,10 +201,9 @@ Route::get('/fc/forget-password', function () {
     return view('fc.forget');
 })->name('fc.forget');
 
-//status page
-Route::get('/fc/status', function () {
-    return view('fc.status');
-})->name('fc.status');
+//status page (fc_registration_master dashboard)
+Route::get('/fc/status', [FrontPageController::class, 'student_status'])->name('fc.status');
+Route::get('/fc/status/data', [FrontPageController::class, 'student_statusFragment'])->name('fc.status.data');
 
 
 //reset passowrd index
@@ -227,10 +229,16 @@ Route::post('/admin/joining-documents/save-remark/{user_id}', [FcJoiningDocument
 
 //student page status
 
-Route::get('/foundation-course/status', [FrontPageController::class, 'student_status'])->name('foundation.course.status');
+Route::redirect('/foundation-course/status', '/fc/status', 301)->name('foundation.course.status');
 
 //admin migration route
 Route::get('/admin/migrate-students', [StudentImportController::class, 'index'])->name('students.index'); // index page
+Route::get('/admin/migrate-students/counts', [StudentImportController::class, 'tabCounts'])->name('students.tab.counts');
+Route::get('/admin/migrate-students/migrated', [StudentImportController::class, 'migratedIndex'])->name('students.migrated.index');
+Route::get('/admin/migrate-students/imported', [StudentImportController::class, 'migratedIndex'])->name('students.imported.index');
+Route::get('/admin/migrate-students/export/{list}/print', [StudentImportController::class, 'exportPrint'])->name('students.export.print');
+Route::get('/admin/migrate-students/export/{list}/pdf', [StudentImportController::class, 'exportPdf'])->name('students.export.pdf');
+Route::get('/admin/migrate-students/export/{list}/excel', [StudentImportController::class, 'exportExcel'])->name('students.export.excel');
 Route::post('/admin/migrate-fc-registration', [StudentImportController::class, 'migrate'])->name('admin.migrate.fc');
 
 // course enrollment route
