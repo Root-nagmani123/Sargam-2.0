@@ -58,7 +58,7 @@
             </div>
             @else
             <div class="table-responsive">
-                <table class="table text-nowrap">
+                <table id="memoTemplatesTable" class="table text-nowrap">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -170,6 +170,21 @@
 
 
 @section('scripts')
+<script>
+$(document).ready(function () {
+    if ($('#memoTemplatesTable tbody tr td[colspan]').length === 0) {
+        $('#memoTemplatesTable').DataTable({
+            paging: false,
+            searching: false,
+            ordering: true,
+            info: false,
+            columnDefs: [
+                { orderable: false, targets: [0, 5] }
+            ]
+        });
+    }
+});
+</script>
 <script>
     $(document).on('change', '.status-toggle-data', function() {
 

@@ -32,6 +32,11 @@ class MemoNoticeTemplate extends Model
         return $this->belongsTo(CourseMaster::class, 'course_master_pk', 'pk');
     }
 
+    public function discipline()
+    {
+        return $this->belongsTo(DisciplineMaster::class, 'discipline_master_pk', 'pk');
+    }
+
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');

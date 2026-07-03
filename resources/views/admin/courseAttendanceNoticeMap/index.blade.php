@@ -3,647 +3,345 @@
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
 
-@section('title', 'Memo Management - Sargam | Lal Bahadur Shastri National Academy of Administration')
+@section('title', 'Memo Management')
 
 @section('setup_content')
-<style>
-/* GIGW Color Palette */
-:root {
-    --gigw-primary: #004a93;
-    --gigw-primary-dark: #003366;
-    --gigw-secondary: #0066cc;
-    --gigw-light-bg: #f8f9fa;
-    --gigw-border: #dee2e6;
-    --gigw-text-muted: #6c757d;
-    --gigw-success: #198754;
-    --gigw-white: #ffffff;
-}
+<link rel="stylesheet" href="{{ asset('css/notice-memo-discipline.css') }}?v={{ @filemtime(public_path('css/notice-memo-discipline.css')) ?: time() }}">
+<div class="container-fluid mnm-page py-2 py-md-3">
+    <x-breadcrum title="Send Memo / Notice">
+        @unless(isOfficerTraineeUser())
+        <button type="button" data-bs-toggle="modal" data-bs-target="#addNoticeModal"
+            class="btn btn-primary d-inline-flex align-items-center gap-1 px-3 shadow-sm">
+            <i class="material-icons material-symbols-rounded" style="font-size:20px;">add</i>
+            Create Memo/ Notice
+        </button>
+        @endunless
+    </x-breadcrum>
+    <x-session_message />
 
-.blink {
-    animation: blinker 1s linear infinite;
-}
+    {{-- Add Notice modal (opens from "Create Memo/ Notice") --}}
+    <div class="modal fade add-notice-modal" id="addNoticeModal" tabindex="-1" aria-labelledby="addNoticeModalLabel"
+        aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="addNoticeModalLabel">Add Notice</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form action="{{ route('memo.notice.management.store_memo_notice') }}" method="POST" id="addNoticeForm">
+                    @csrf
+                    <input type="hidden" name="submission_type" value="1">
+                    <div class="modal-body">
+                        <div class="row g-3 mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label">Course Name <span class="text-danger">*</span></label>
+                                <select class="form-select" name="course_master_pk" id="anCourse" required>
+                                    <option value="">Select Course Name</option>
+                                    @foreach($courses as $course)
+                                        <option value="{{ $course->pk }}">{{ $course->course_name }}</option>
+                                    @endforeach
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Date</label>
+                                <input type="date" class="form-control" name="date_memo_notice" id="anDate" max="{{ date('Y-m-d') }}">
+                            </div>
 
-@keyframes blinker {
-    50% { opacity: 0; }
-}
+                            <div class="col-md-6">
+                                <label class="form-label">Session</label>
+                                <select class="form-select" id="anSession" name="class_session_master_pk" disabled>
+                                    <option value="">Select Session</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Venue <span class="text-danger">*</span></label>
+                                <select class="form-select" id="anVenue" name="venue_id" disabled>
+                                    <option value="">Select Venue</option>
+                                </select>
+                            </div>
 
-/* Enhanced Offcanvas */
-.offcanvas {
-    width: 480px !important;
-    max-width: 90vw;
-    box-shadow: -4px 0 20px rgba(0, 74, 147, 0.15);
-}
+                            <div class="col-md-6">
+                                <label class="form-label">Subject <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control an-select-look" id="anSubjectName" placeholder="Auto-filled from venue" readonly>
+                                <input type="hidden" name="subject_master_id" id="anSubjectId">
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label">Topic <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control an-select-look" id="anTopicName" placeholder="Auto-filled from venue" readonly>
+                                <input type="hidden" name="topic_id" id="anTopicId">
+                            </div>
 
-.offcanvas-header {
-    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
-    color: var(--gigw-white);
-    padding: 1.5rem;
-    border-bottom: 3px solid var(--gigw-primary-dark);
-    min-height: 80px;
-}
+                            <input type="hidden" name="faculty_master_pk" id="anFacultyPk">
+                        </div>
 
-.offcanvas-title {
-    font-weight: 600;
-    font-size: 1.25rem;
-    letter-spacing: 0.3px;
-    margin-bottom: 0.25rem;
-    color: var(--gigw-white);
-}
+                        <h6 class="an-section-title">Student List (Late &amp; Absentee)</h6>
 
-#type_side_menu {
-    font-size: 0.875rem;
-    font-weight: 500;
-    opacity: 0.95;
-    margin: 0;
-    color: var(--gigw-white);
-    background-color: rgba(255, 255, 255, 0.2);
-    padding: 0.25rem 0.75rem;
-    border-radius: 1rem;
-    display: inline-block;
-}
+                        <div class="an-dual">
+                            <div class="an-panel">
+                                <div class="an-panel-title">Defaulter Students</div>
+                                <div class="an-search"><i class="bi bi-search"></i><input type="text" class="an-filter" data-target="anAvailable" placeholder="Search"></div>
+                                <label class="an-selectall"><input type="checkbox" class="form-check-input an-select-all" data-panel="anAvailable"> Select All</label>
+                                <div class="an-list" id="anAvailable">
+                                    <div class="an-empty text-muted">Select a course and date.</div>
+                                </div>
+                            </div>
 
-.offcanvas .btn-close {
-    background-color: rgba(255, 255, 255, 0.3);
-    opacity: 1;
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    transition: all 0.2s ease;
-}
+                            <div class="an-moves">
+                                <button type="button" class="an-move-btn" data-move="all-right">Move all right</button>
+                                <button type="button" class="an-move-btn" data-move="right">Move right</button>
+                                <button type="button" class="an-move-btn" data-move="left">Move left</button>
+                                <button type="button" class="an-move-btn" data-move="all-left">Move all left</button>
+                            </div>
 
-.offcanvas .btn-close:hover {
-    background-color: rgba(255, 255, 255, 0.5);
-    transform: scale(1.1);
-}
+                            <div class="an-panel">
+                                <div class="an-panel-title">Selected Students</div>
+                                <div class="an-search"><i class="bi bi-search"></i><input type="text" class="an-filter" data-target="anSelected" placeholder="Search"></div>
+                                <label class="an-selectall"><input type="checkbox" class="form-check-input an-select-all" data-panel="anSelected"> Select All</label>
+                                <div class="an-list" id="anSelected">
+                                    <div class="an-empty text-muted">No students selected.</div>
+                                </div>
+                            </div>
+                        </div>
 
-.offcanvas .btn-close:focus {
-    outline: 3px solid var(--gigw-white);
-    outline-offset: 2px;
-    box-shadow: none;
-}
+                        <div class="mt-4">
+                            <label class="form-label">Select Template <span class="text-danger">*</span></label>
+                            <select class="form-select" name="memo_notice_template_pk" id="anTemplate">
+                                <option value="">Select Course first</option>
+                            </select>
+                        </div>
 
-.offcanvas-body {
-    padding: 1.5rem;
-    background-color: #fafbfc;
-}
+                        <h6 class="an-section-title mt-4">Notice Preview</h6>
+                        <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
+                        <div id="anPreviewWrap" class="an-preview" style="display:none;">
+                            <h5 class="text-center fw-bold mb-2" id="anTplCourse"></h5>
+                            <p class="text-center mb-0 small">Lal Bahadur Shastri National Academy of Administration, Mussoorie</p>
+                            <hr>
+                            <p class="mb-1" id="anTplType"></p>
+                            <p class="mb-1"><strong>Date:</strong> <span id="anTplDate"></span></p>
+                            <div id="anTplContent" class="mb-3"></div>
+                            <p class="text-end mb-0"><strong id="anTplDirector"></strong><br><span id="anTplDesig"></span></p>
+                        </div>
+                        <div id="anPreviewNone" class="an-preview-none text-muted" style="display:none;">No active Notice template for the selected course.</div>
 
-/* Enhanced Chat Body */
-.chat-body {
-    height: 480px;
-    overflow-y: auto;
-    background: linear-gradient(to bottom, #f8f9fa 0%, #ffffff 100%);
-    padding: 1.25rem;
-    border-radius: 0.75rem;
-    border: 1px solid var(--gigw-border);
-    box-shadow: inset 0 2px 8px rgba(0, 74, 147, 0.05);
-    scroll-behavior: smooth;
-}
+                        <div id="anHiddenInputs"></div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary px-4" id="anSendBtn">Send Notice</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
 
-.chat-body::-webkit-scrollbar {
-    width: 8px;
-}
+    {{-- Column Visibility modal --}}
+    <div class="modal fade sn-colvis-modal" id="mnmColumnModal" tabindex="-1" aria-labelledby="mnmColumnModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="mnmColumnModalLabel">Column Visibility</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="sn-colvis-grid" id="mnmColumnGrid"></div>
+                </div>
+                <div class="modal-footer border-0 pt-0">
+                    <button type="button" class="btn-close-colvis" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
-.chat-body::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
-}
-
-.chat-body::-webkit-scrollbar-thumb {
-    background: var(--gigw-primary);
-    border-radius: 10px;
-    transition: background 0.3s ease;
-}
-
-.chat-body::-webkit-scrollbar-thumb:hover {
-    background: var(--gigw-primary-dark);
-}
-
-/* Enhanced Chat Messages */
-.chat-message {
-    margin-bottom: 1rem;
-    animation: slideIn 0.3s ease;
-    clear: both;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: translateY(10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-.chat-message.user {
-    text-align: right;
-}
-
-.chat-message .message {
-    display: inline-block;
-    padding: 0.75rem 1rem;
-    border-radius: 1.25rem;
-    max-width: 80%;
-    word-wrap: break-word;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s ease;
-    font-size: 0.95rem;
-    line-height: 1.5;
-}
-
-.chat-message .message:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-}
-
-.chat-message.bot .message {
-    background: linear-gradient(135deg, #e9ecef 0%, #f8f9fa 100%);
-    color: #212529;
-    border: 1px solid #dee2e6;
-    border-left: 4px solid var(--gigw-primary);
-}
-
-.chat-message.user .message {
-    background: linear-gradient(135deg, var(--gigw-primary), var(--gigw-secondary));
-    color: var(--gigw-white);
-    border: none;
-}
-
-/* Loading State */
-.chat-body .text-muted {
-    color: var(--gigw-text-muted) !important;
-    font-style: italic;
-    padding: 2rem;
-    text-align: center;
-}
-
-/* Accessibility Enhancements */
-.offcanvas:focus-visible {
-    outline: 3px solid var(--gigw-primary);
-    outline-offset: 2px;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
-    .offcanvas {
-        width: 100% !important;
-    }
-    
-    .offcanvas-header {
-        padding: 1rem;
-        min-height: 70px;
-    }
-    
-    .offcanvas-title {
-        font-size: 1.1rem;
-    }
-    
-    .chat-body {
-        height: calc(100vh - 250px);
-        padding: 1rem;
-    }
-    
-    .chat-message .message {
-        max-width: 85%;
-        font-size: 0.9rem;
-    }
-}
-
-/* Sticky Table Status */
-.table .sticky-status {
-    position: sticky;
-    right: 0;
-    background: #fff;
-    z-index: 10;
-    box-shadow: -4px 0 6px rgba(0, 0, 0, 0.08);
-}
-
-/* WCAG 2.1 AA Compliance */
-.offcanvas * {
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
-}
-/* Chat Row Layout */
-.chat-row {
-    display: flex;
-    margin-bottom: 15px;
-}
-
-.chat-row.right {
-    justify-content: flex-end;
-}
-
-.chat-row.left {
-    justify-content: flex-start;
-}
-
-/* Message Bubble */
-.chat-bubble {
-    max-width: 80%;
-    background: #f4f5f7;
-    padding: 12px 15px;
-    border-radius: 12px;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e2e2e2;
-}
-
-.chat-row.right .chat-bubble {
-    background: #e7f1ff;
-    border-color: #c9ddff;
-}
-
-/* Header */
-.chat-header {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 4px;
-}
-
-.chat-sender {
-    color: #003e7e;
-    font-weight: 600;
-}
-
-.chat-time {
-    font-size: 11px;
-    color: #6c757d;
-}
-
-/* Message Text */
-.chat-text {
-    margin: 0;
-    font-size: 14px;
-    color: #222;
-    line-height: 1.4;
-}
-
-/* Attachments */
-.chat-attachment {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    margin-top: 8px;
-    font-size: 14px;
-    color: #004a93;
-    text-decoration: none;
-}
-
-.chat-attachment:hover {
-    text-decoration: underline;
-}
-
-/* Footer Input */
-.chat-footer {
-    background: #fff;
-}
-
-.chat-input-wrapper {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.attachment-btn {
-    cursor: pointer;
-    color: #004a93;
-    font-size: 22px;
-}
-
-.chat-textarea {
-    resize: none;
-    height: 40px;
-    font-size: 14px;
-}
-
-.chat-send-btn {
-    height: 40px;
-    padding: 0 20px;
-}
-
-/* Scrollable message area */
-#chatBody {
-    padding-bottom: 20px;
-    overflow-y: auto;
-    scrollbar-width: thin;
-    scrollbar-color: #b3b3b3 #efefef;
-}
-
-#chatBody::-webkit-scrollbar {
-    width: 8px;
-}
-
-#chatBody::-webkit-scrollbar-thumb {
-    background: #b3b3b3;
-    border-radius: 4px;
-}
-
-/* Accessibility: Focus outline */
-*:focus-visible {
-    outline: 3px solid #004a93 !important;
-    border-radius: 4px;
-}
-
-/* Choices.js + Bootstrap: avoid double dropdown arrow */
-.choices__inner.form-select {
-    background-image: none !important;
-    padding-right: 2.25rem !important;
-}
-</style>
-<div class="container-fluid py-2 py-md-3">
-       <x-breadcrum title="Notice /Memo Management" />
-            <x-session_message />
+    {{-- Tabs + Download --}}
+  <div class="py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
+            <div class="mnm-tabs">
+                @unless(isOfficerTraineeUser())
+                <a href="{{ route('send.notice.management.index') }}" class="mnm-tab js-nav-tab">Send Direct Notice</a>
+                @endunless
+                <a href="{{ route('memo.notice.management.index') }}" class="mnm-tab js-nav-tab active">Send Memo / Notice</a>
+                @unless(isOfficerTraineeUser())
+                <a href="{{ route('memo.discipline.index') }}" class="mnm-tab js-nav-tab">Send Discipline Memo</a>
+                @endunless
+            </div>
+            @unless(isOfficerTraineeUser())
+            <a href="{{ route('memo.notice.management.export_csv', request()->query()) }}" class="mnm-download">
+                <i class="bi bi-download"></i> Download
+            </a>
+            @endunless
+        </div>
 
     <!-- start Zero Configuration -->
     <div class="card shadow-sm border-0 overflow-hidden">
         <div class="card-body p-3 p-md-4">
-            <div class="row g-2 align-items-center">
-                <div class="col-12 col-lg-6">
-                    <h4 class="card-title mb-0 fw-semibold">Notice /Memo Management</h4>
-                </div>
-                <div class="col-12 col-lg-6">
-                    <div class="d-flex justify-content-lg-end align-items-center gap-2 flex-wrap">
+            @php
+                $today = \Carbon\Carbon::today()->toDateString();
+                $isToday = $fromDateFilter === $today && $toDateFilter === $today;
+                $hasRange = ($fromDateFilter || $toDateFilter) && !$isToday;
+            @endphp
+            <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm">
+                <div class="mnm-filter-bar mb-3">
+                    <span class="mnm-filter-label">Filters</span>
 
-                        <!-- Export PDF Button -->
-                        <a href="{{ route('memo.notice.management.export_pdf', request()->query()) }}"
-                            class="btn btn-outline-danger d-inline-flex align-items-center px-3" target="_blank">
-                            <i class="bi bi-file-earmark-pdf me-1" style="font-size: 18px;"></i>
-                            Export PDF
-                        </a>
-
-                        <!-- Add Group Mapping -->
-                        <a href="{{ route('memo.notice.management.create') }}"
-                            class="btn btn-primary d-inline-flex align-items-center px-3 shadow-sm">
-                            <i class="material-icons menu-icon material-symbols-rounded"
-                                style="font-size: 24px;">add</i>
-                            Add Notice
-                        </a>
-
-
-                    </div>
-                </div>
-            </div>
-            <form method="GET" action="{{ route('memo.notice.management.index') }}" id="filterForm" class="bg-light border rounded-3 p-3 mt-3">
-            <div class="row g-3">
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="program_name" class="form-label">Program Name</label>
-                        <select class="form-select" id="program_name" name="program_name">
-                            <option value="">Select Program</option>
-                            @foreach($courses as $course)
+                    <select class="form-select" id="program_name" name="program_name" aria-label="Program Name">
+                        <option value="">Program Name</option>
+                        @foreach($courses as $course)
                             <option value="{{ $course->pk }}" {{ (string)$programNameFilter == (string)$course->pk ? 'selected' : '' }}>{{ $course->course_name }}</option>
-                            @endforeach
-                        </select>
+                        @endforeach
+                    </select>
+
+                    <select class="form-select" id="type" name="type" aria-label="Type">
+                        <option value="">Type</option>
+                        <option value="1" {{ $typeFilter == '1' ? 'selected' : '' }}>Notice</option>
+                        <option value="0" {{ $typeFilter == '0' ? 'selected' : '' }}>Memo</option>
+                    </select>
+
+                    <select class="form-select" id="status" name="status" aria-label="Status">
+                        <option value="">Status</option>
+                        <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
+                        <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
+                    </select>
+
+                    <select class="form-select" id="mnmTimePeriod" aria-label="Time Period">
+                        <option value="today" {{ $isToday ? 'selected' : '' }}>Today</option>
+                        <option value="week">This Week</option>
+                        <option value="month">This Month</option>
+                        <option value="custom" {{ $hasRange ? 'selected' : '' }}>Custom Range</option>
+                    </select>
+                    <input type="date" class="form-control mnm-date {{ $hasRange ? '' : 'd-none' }}" id="from_date" name="from_date" value="{{ $fromDateFilter }}" style="max-width:160px;">
+                    <input type="date" class="form-control mnm-date {{ $hasRange ? '' : 'd-none' }}" id="to_date" name="to_date" value="{{ $toDateFilter }}" style="max-width:160px;">
+
+                    <a href="{{ route('memo.notice.management.index') }}" class="mnm-reset">Reset Filters</a>
+
+                    <div class="ms-auto d-flex align-items-center gap-2">
+                        <button type="button" class="mnm-icon-btn" data-bs-toggle="modal" data-bs-target="#mnmColumnModal">
+                            <i class="bi bi-layout-three-columns"></i> Columns
+                        </button>
+                        <button type="button" class="mnm-icon-btn" id="mnmSearchToggle" aria-label="Search"><i class="bi bi-search"></i></button>
+                        <div class="mnm-search-wrap {{ $searchFilter ? '' : 'd-none' }}" id="mnmSearchWrap" style="position:relative;">
+                            <input type="text" class="mnm-search-input" id="search" name="search" placeholder="Search..."
+                                value="{{ $searchFilter }}" autocomplete="off" style="padding-right:1.9rem;">
+                            <button type="button" id="mnmSearchClear" aria-label="Clear search" title="Clear"
+                                style="position:absolute;top:50%;right:.35rem;transform:translateY(-50%);border:0;background:transparent;color:#94a3b8;line-height:1;padding:.15rem;{{ $searchFilter ? '' : 'display:none;' }}">
+                                <i class="bi bi-x-lg"></i>
+                            </button>
+                        </div>
                     </div>
                 </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="type" class="form-label">Type (Notice / Memo)</label>
-                        <select class="form-select" id="type" name="type">
-                            <option value="">Select type</option>
-                            <option value="1" {{ $typeFilter == '1' ? 'selected' : '' }}>Notice</option>
-                            <option value="0" {{ $typeFilter == '0' ? 'selected' : '' }}>Memo</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="status" class="form-label">Status</label>
-                        <select class="form-select" id="status" name="status">
-                            <option value="">Select status</option>
-                            <option value="1" {{ $statusFilter == '1' ? 'selected' : '' }}>Open</option>
-                            <option value="0" {{ $statusFilter == '0' ? 'selected' : '' }}>Close</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="search" class="form-label">Search</label>
-                       <input type="text" class="form-control" id="search" name="search" placeholder="Search..." value="{{ $searchFilter }}">
-                    </div>
-                </div>
-            </div>
-            <div class="row g-3 align-items-end">
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="from_date" class="form-label">From Date</label>
-                        <input type="date" class="form-control" id="from_date" name="from_date" value="{{ $fromDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
-                    </div>
-                </div>
-                <div class="col-12 col-md-6 col-xl-3">
-                    <div class="mb-3">
-                        <label for="to_date" class="form-label">To Date</label>
-                        <input type="date" class="form-control" id="to_date" name="to_date" value="{{ $toDateFilter ?: \Carbon\Carbon::today()->toDateString() }}">
-                    </div>
-                </div>
-                <div class="col-12 col-xl-6">
-                    <div class="mb-3 d-flex align-items-center gap-2 flex-wrap justify-content-xl-end">
-                        <a href="{{ route('memo.notice.management.index') }}" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-circle me-1"></i> Clear Filters
-                        </a>
-                    </div>
-                </div>
-            </div>
             </form>
-            <hr class="my-4">
             <div class="table-responsive">
-                <table class="table align-middle mb-0 {{ $memos->isNotEmpty() ? 'datatable' : '' }}">
+                <table id="mnmTable" class="table align-middle mb-0">
                     <thead>
-                        <!-- start row -->
                         <tr class="align-middle">
-                            <th class="col">S.No.</th>
-                            <th class="col">Program Name</th>
-                            <th class="col">Participant Name</th>
-                            <th class="col">Type</th>
-                            <th class="col">Session Date</th>
-                            <th class="col">Topic</th>
-                            <th class="col">Conversation</th>
-                            <th class="col">Response</th>
-                            <th class="col">Conclusion Type</th>
-                            <th class="col">Discussion Name</th>
-                            <th class="col">Conclusion Remark</th>
-                            <th class="col">Status</th>
-                        </tr> <!-- end row -->
+                            <th>S. No.</th>
+                            <th>Program Name</th>
+                            <th>Participant Name</th>
+                            <th>Type</th>
+                            <th>Session Date</th>
+                            <th>Topic</th>
+                            <th>Conclusion Type</th>
+                            <th>Conclusion Remark</th>
+                            <th>Status</th>
+                            <th class="text-center">Action</th>
+                        </tr>
                     </thead>
                     <tbody>
-                        @if ($memos->isEmpty())
-                        <tr class="align-middle">
-                            <td colspan="12" class="text-center text-muted py-5">
-                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
-                                No records found
-                            </td>
-                        </tr>
-                        @else
-                        @foreach ($memos as $index => $memo)
+                        @forelse ($memos as $index => $memo)
+                        @php
+                            $role = session()->get('role_name');
+                            $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
+                            $isNotice = $memo->type_notice_memo == 'Notice';
+                            $st = $memo->status ?? null;
+                            $cs = $memo->communication_status ?? null;
+                            if ($isNotice) {
+                                $stLabel = $st == 1 ? 'Notice Sent' : 'Notice Chat Closed';
+                                $stClass = $st == 1 ? 'mnm-status--notice' : 'mnm-status--closed';
+                            } elseif ($cs == 1) {
+                                $stLabel = 'Memo Chat Open'; $stClass = 'mnm-status--memo-open';
+                            } elseif ($cs == 2) {
+                                $stLabel = 'Memo Chat Closed'; $stClass = 'mnm-status--closed';
+                            } else {
+                                $stLabel = 'Memo Sent'; $stClass = 'mnm-status--memo-sent';
+                            }
+                            $sessionDate = $memo->session_date ?? $memo->date_ ?? null;
+                            $hasBell = $isNotice && isset($noticeCount[$noticeKey]) && $noticeCount[$noticeKey] >= 2;
+                        @endphp
                         <tr>
-                            <!-- Serial -->
-                            <td class="sno">{{ $memos->firstItem() + $index }}</td>
-
-                            <!-- Program Name -->
+                            <td>{{ $memos->firstItem() + $index }}</td>
                             <td class="fw-medium">{{ $memo->course_name ?? 'N/A' }}</td>
-
-                            <!-- Student -->
-                            <td class="s_name fw-medium">{{ $memo->student_name }}</td>
-
-                            <!-- Type -->
-                            <td class="type">
-                                @if ($memo->notice_memo == '1')
-                                <span class="badge bg-primary-subtle text-primary">
-                                    <i class="bi bi-file-earmark-text me-1"></i> Notice
-                                </span>
-                                @elseif ($memo->notice_memo == '2')
-                                <span class="badge bg-secondary-subtle text-secondary">
-                                    <i class="bi bi-file-earmark me-1"></i> Memo
-                                </span>
+                            <td class="fw-medium">{{ $memo->student_name ?? 'N/A' }}</td>
+                            <td>
+                                @if($isNotice)
+                                    <span class="badge bg-primary-subtle text-primary"><i class="bi bi-file-earmark-text me-1"></i> Notice</span>
                                 @else
-                                <span class="badge bg-info-subtle text-info">
-                                    <i class="bi bi-question-circle me-1"></i> Other
-                                </span>
+                                    <span class="badge bg-secondary-subtle text-secondary"><i class="bi bi-file-earmark me-1"></i> Memo</span>
                                 @endif
                             </td>
-
-                            <!-- Session Date -->
-                            <td class="1">
-                                @if(isset($memo->session_date) && $memo->session_date)
-                                    {{ date('d-m-Y', strtotime($memo->session_date)) }}
-                                @else
-                                    {{ date('d-m-Y', strtotime($memo->date_)) }}
-                                @endif
-                            </td>
-
-                            <!-- Topic -->
-                            <td>{{ $memo->topic_name }}</td>
-@php
-$noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
-@endphp
-                            <!-- Conversations -->
-                            <td class="conversation">
-                                <div class="d-flex align-items-center gap-2 flex-wrap">
-                                    @if($memo->type_notice_memo == 'Notice' || $memo->type_notice_memo == 'Memo')
+                            <td>{{ $sessionDate ? date('d-m-Y', strtotime($sessionDate)) : 'N/A' }}</td>
+                            <td>{{ $memo->topic_name ?? 'N/A' }}</td>
+                            <td>{{ ($memo->discussion_name ?? '') !== '' ? $memo->discussion_name : 'N/A' }}</td>
+                            <td>{{ ($memo->conclusion_remark ?? '') !== '' ? $memo->conclusion_remark : 'N/A' }}</td>
+                            <td><span class="mnm-status {{ $stClass }}">{{ $stLabel }}</span></td>
+                            <td>
+                                <div class="mnm-actions justify-content-center">
+                                    {{-- Notice: view the notice conversation/document --}}
                                     @if($memo->notice_id)
-                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}"
-                                        class="btn btn-sm btn-outline-primary d-flex align-items-center">
-                                        <i class="bi bi-chat-dots me-1"></i> Notice
+                                    <a class="mnm-action" href="{{ route('memo.notice.management.conversation', ['id' => $memo->notice_id, 'type' => 'notice']) }}" title="View Notice">
+                                        <i class="bi bi-file-earmark-text"></i><span>Notice</span>
                                     </a>
                                     @else
-                                    <span class="text-muted small d-flex align-items-center">
-                                        <i class="bi bi-chat-slash me-1"></i> No Conversation
-                                    </span>
+                                    <span class="mnm-action disabled" title="No notice"><i class="bi bi-file-earmark-text"></i><span>Notice</span></span>
                                     @endif
-                                    @endif
-                                    @if(isset($noticeCount[$noticeKey]) && ($noticeCount[$noticeKey] >= 2) && $memo->type_notice_memo != 'Memo')
-                                            <span class="position-relative d-inline-block ms-2">
-                                                <!-- Bell Icon -->
-                                                <i class="bi bi-bell-fill text-warning blink" 
-                                                title="{{ $noticeCount[$noticeKey] }} notices sent, please send memo"></i>
 
-                                                <!-- Count Badge -->
-                                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
-                                                    {{ $noticeCount[$noticeKey] }}
-                                                </span>
-                                            </span>
-                                        @endif
-
-                                    @php 
-                                    $role = session()->get('role_name');
-                                    @endphp
-
-                                    <!-- Admin Offcanvas -->
-                                     @if($memo->type_notice_memo == 'Notice')
-                                    <a
-                                        class="text-primary d-inline-flex align-items-center gap-1 text-decoration-none view-conversation"
-                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="notice" 
-                                        data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}">
-                                        <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
-                                    </a>
-                                    @elseif($memo->type_notice_memo == 'Memo')
-                                    <a
-                                        class="text-primary d-inline-flex align-items-center gap-1 text-decoration-none view-conversation"
-                                        data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas" data-type="memo"
-                                        data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}">
-                                        <i class="material-icons material-symbols-rounded">chat</i> {{ $role }}
+                                    {{-- Chats: open the conversation offcanvas --}}
+                                    @if($isNotice)
+                                    <a class="mnm-action view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"
+                                        data-type="notice" data-id="{{ $memo->notice_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" title="Open chat">
+                                        <i class="bi bi-chat-dots"></i><span>Chats</span>
+                                        @if($hasBell)<span class="mnm-dot"></span>@endif
                                     </a>
                                     @else
-                                    <span class="text-muted small d-flex align-items-center">
-                                        <i class="bi bi-chat-slash me-1"></i> No Conversation
-                                    </span>
+                                    <a class="mnm-action view-conversation" data-bs-toggle="offcanvas" data-bs-target="#chatOffcanvas"
+                                        data-type="memo" data-id="{{ $memo->memo_id }}" data-topic="{{ $memo->topic_name }}" data-participant="{{ $memo->student_name }}" title="Open chat">
+                                        <i class="bi bi-chat-dots"></i><span>Chats</span>
+                                        @if($cs == 1)<span class="mnm-dot"></span>@endif
+                                    </a>
                                     @endif
 
-                                    @if($memo->type_notice_memo == 'Notice')
-                                    <button class="btn btn-sm btn-outline-secondary" disabled>
-                                        Memo
-                                    </button>
-                                    @elseif($memo->type_notice_memo == 'Memo' &&
-                                    in_array($memo->communication_status,[1,2]))
-                                    <a href="{{ route('memo.notice.management.conversation', ['id' => $memo->memo_id, 'type' => 'memo']) }}"
-                                        class="btn btn-sm btn-outline-primary d-flex align-items-center">
-                                        <i class="bi bi-chat-square-text me-1"></i> Memo
+                                    {{-- Memo: generate (notice→status 2) or preview (memo) --}}
+                                    @if($isNotice && $st == 2)
+                                    <a href="javascript:void(0)" class="mnm-action generate-memo-btn" data-id="{{ $memo->memo_notice_id }}"
+                                        data-bs-toggle="modal" data-bs-target="#memo_generate" title="Generate Memo">
+                                        <i class="bi bi-file-earmark-plus"></i><span>Memo</span>
+                                    </a>
+                                    @elseif(!$isNotice)
+                                    <a href="javascript:void(0)" class="mnm-action preview-memo-btn" data-notice-id="{{ $memo->notice_id }}" data-memo-id="{{ $memo->memo_id }}"
+                                        data-bs-toggle="modal" data-bs-target="#memo_generate" title="View Memo">
+                                        <i class="bi bi-file-earmark-check"></i><span>Memo</span>
+                                        @if($cs == 1)<span class="mnm-dot"></span>@endif
+                                    </a>
+                                    @else
+                                    <span class="mnm-action disabled" title="Memo not available yet"><i class="bi bi-file-earmark"></i><span>Memo</span></span>
+                                    @endif
+
+                                    {{-- Delete: admins/faculty only, hard-deletes the notice/memo + its chat --}}
+                                    @if(hasRole('Internal Faculty') || hasRole('Guest Faculty') || hasRole('Super Admin') || hasRole('Training Induction Admin'))
+                                    <a href="javascript:void(0)" class="mnm-action mnm-delete-record" style="color:#d92d20;"
+                                        data-id="{{ $isNotice ? $memo->notice_id : $memo->memo_id }}"
+                                        data-type="{{ $isNotice ? 'notice' : 'memo' }}" title="Delete">
+                                        <i class="bi bi-trash3"></i><span>Delete</span>
                                     </a>
                                     @endif
                                 </div>
                             </td>
-
-
-                            <!-- Response (Generate Memo) -->
-                            <td class="response">
-                                @if($memo->type_notice_memo == 'Notice')
-                                @if($memo->status == 1)
-                                <button type="button" class="btn btn-sm btn-secondary" disabled data-bs-toggle="tooltip"
-                                    data-bs-placement="top" title="Memo generation not available yet">
-                                    <i class="bi bi-file-earmark-lock me-1"></i> Generate Memo
-                                </button>
-                                @elseif($memo->status == 2)
-                                <a href="javascript:void(0)" class="btn btn-sm btn-success generate-memo-btn"
-                                    data-id="{{ $memo->memo_notice_id }}" data-bs-toggle="modal"
-                                    data-bs-target="#memo_generate">
-                                    <i class="bi bi-file-earmark-plus me-1"></i> Generate Memo
-                                </a>
-                                @endif
-                                @endif
-                            </td>
-
-                            <!-- Conclusion -->
-                            <td class="conclusion_type">
-                                @if($memo->type_notice_memo == 'Memo')
-                                <a href="javascript:void(0)" class="btn btn-sm btn-outline-secondary preview-memo-btn"
-                                    data-notice-id="{{ $memo->notice_id }}" data-memo-id="{{ $memo->memo_id }}" data-bs-toggle="modal"
-                                    data-bs-target="#memo_generate">
-                                    Memo Generated
-                                </a>
-                                @endif
-                            </td>
-
-                            <!-- Discussion Name -->
-                            <td class="discussion_name">
-                                @if($memo->type_notice_memo == 'Memo' && $memo->communication_status == 2)
-                                {{ $memo->discussion_name }}
-                                @endif
-                            </td>
-
-                            <!-- Conclusion Remark -->
-                            <td>
-                                @if($memo->type_notice_memo == 'Memo' && $memo->communication_status == 2)
-                                {{ $memo->conclusion_remark }}
-                                @endif
-                            </td>
-
-                            <!-- Status -->
-                            <td class="status sticky-status">
-                                @if ($memo->status == 1)
-                                <span class="badge bg-success-subtle text-success">
-                                    <i class="bi bi-check-circle me-1"></i> Open
-                                </span>
-                                @else
-                                <span class="badge bg-danger-subtle text-danger">
-                                    <i class="bi bi-x-circle me-1"></i> Close
-                                </span>
-                                @endif
-                            </td>
-
                         </tr>
-                        @endforeach
-                        @endif
+                        @empty
+                        <tr class="align-middle">
+                            <td colspan="10" class="text-center text-muted py-5">
+                                <i class="bi bi-inbox fs-3 d-block mb-2"></i>
+                                No records found
+                            </td>
+                        </tr>
+                        @endforelse
                     </tbody>
 
                 </table>
@@ -670,20 +368,25 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
    
     <!-- Enhanced Offcanvas with GIGW Guidelines -->
     <div class="offcanvas offcanvas-end shadow-lg" tabindex="-1" id="chatOffcanvas" aria-labelledby="conversationTopic" role="dialog">
-        <div class="offcanvas-header">
-            <div class="d-flex flex-column w-100">
-                <h4 class="offcanvas-title mb-2" id="conversationTopic">
-                    <i class="material-symbols-rounded me-2" style="vertical-align: middle; font-size: 24px;">forum</i>
-                    Conversation
-                </h4>
-                <h5 id="type_side_menu">Loading...</h5>
+        <div class="offcanvas-header conv-header">
+            <div class="w-100">
+                <div class="d-flex align-items-start justify-content-between gap-2">
+                    <h4 class="conv-title mb-0">Conversation</h4>
+                    <div class="d-flex align-items-center gap-2">
+                        <button type="button" class="btn conv-endchat" id="endChatBtn">End Chat</button>
+                        <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="Close conversation panel" title="Close"></button>
+                    </div>
+                </div>
+                <div class="conv-sub mt-2">
+                    <div id="conversationTopic">Topic: —</div>
+                    <div id="conversationParticipant">Participant: —</div>
+                </div>
+                <div class="conv-toggle mt-2" role="tablist">
+                    <button type="button" class="conv-toggle-btn" data-conv-type="notice">Notice</button>
+                    <button type="button" class="conv-toggle-btn" data-conv-type="memo">Memo</button>
+                </div>
+                <span id="type_side_menu" class="d-none"></span>
             </div>
-            <button type="button" 
-                    class="btn-close" 
-                    data-bs-dismiss="offcanvas" 
-                    aria-label="Close conversation panel"
-                    title="Close">
-            </button>
         </div>
         <input type="hidden" id="userType" value="" aria-hidden="true">
 
@@ -795,6 +498,11 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
                                 @enderror
                             </div>
                             <div class="col-12 col-md-6 mb-3">
+                                <label for="memoTemplate" class="form-label">Template</label>
+                                <select name="memo_notice_template_pk" id="memoTemplate" class="form-select">
+                                    <option value="">Select Template</option>
+                                </select>
+                                <small class="text-muted">Memo template to use. Depends on the course.</small>
                             </div>
                             <div class="col-12 col-md-6 mb-3">
                                 <label for="memo_type" class="form-label">Memo Type</label>
@@ -863,21 +571,68 @@ $noticeKey = $memo->student_pk . '_' . $memo->course_master_pk;
         </div>
 
     </div>
+    <!-- End Chat modal -->
+    <div class="modal fade" id="end_chat_modal" tabindex="-1" aria-labelledby="endChatModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content border-0 shadow">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-semibold" id="endChatModalLabel">End chat</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <form id="endChatForm">
+                    @csrf
+                    <input type="hidden" name="id" id="endChatId">
+                    <input type="hidden" name="type" id="endChatType">
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label for="endChatConclusion" class="form-label fw-semibold">Conclusion Type <span class="text-danger">*</span></label>
+                            <select class="form-select" id="endChatConclusion" name="memo_conclusion_master_pk" required>
+                                <option value="">Select Conclusion Type</option>
+                                @foreach(($conclusions ?? []) as $c)
+                                    <option value="{{ $c->pk }}">{{ $c->discussion_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                        <div class="mb-1">
+                            <label for="endChatRemark" class="form-label fw-semibold">Conclusion Remarks</label>
+                            <textarea class="form-control" id="endChatRemark" name="conclusion_remark" rows="4" placeholder="eg. Lorem ipsum dolor"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger px-4">End Chat</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    <!-- End Chat modal end -->
+
     <!-- Memo generation end -->
 </div>
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
 <script>
 $(document).ready(function() {
+    // Holds the conversation currently open in the offcanvas (used by End Chat).
+    window.currentConv = { id: null, type: null };
+
     $('.view-conversation').on('click', function() {
         let memoId = $(this).data('id');
         let topic = $(this).data('topic');
         let type = $(this).data('type');
+        let participant = $(this).data('participant') || '—';
         $('#userType').val(type);
         let user_type = 'admin';
 
-        $('#conversationTopic').text("Topic: " + topic);
+        window.currentConv = { id: memoId, type: type };
+
+        $('#conversationTopic').text("Topic: " + (topic || '—'));
+        $('#conversationParticipant').text("Participant: " + participant);
         $('#type_side_menu').text(type);
+        // Reflect the current conversation type in the Notice/Memo toggle.
+        $('.conv-toggle-btn').removeClass('active');
+        $('.conv-toggle-btn[data-conv-type="' + type + '"]').addClass('active');
         $('#chatBody').html('<p class="text-muted text-center">Loading conversation...</p>');
 
         $.ajax({
@@ -898,6 +653,41 @@ $(document).ready(function() {
         chatOffcanvas.show();
     });
 
+    // ── End Chat: open the conclusion modal for the current conversation ──
+    $('#endChatBtn').on('click', function() {
+        if (!window.currentConv || !window.currentConv.id) { return; }
+        $('#endChatId').val(window.currentConv.id);
+        $('#endChatType').val(window.currentConv.type);
+        $('#endChatForm')[0].reset();
+        $('#endChatId').val(window.currentConv.id);
+        $('#endChatType').val(window.currentConv.type);
+        new bootstrap.Modal(document.getElementById('end_chat_modal')).show();
+    });
+
+    $('#endChatForm').on('submit', function(e) {
+        e.preventDefault();
+        const $btn = $(this).find('button[type="submit"]');
+        $btn.prop('disabled', true);
+        $.ajax({
+            url: "{{ route('memo.notice.management.endChat') }}",
+            type: 'POST',
+            data: $(this).serialize(),
+            headers: { 'X-Requested-With': 'XMLHttpRequest' },
+            success: function(res) {
+                if (res && res.success) {
+                    location.reload();
+                } else {
+                    alert((res && res.message) || 'Failed to end conversation.');
+                    $btn.prop('disabled', false);
+                }
+            },
+            error: function() {
+                alert('Failed to end conversation.');
+                $btn.prop('disabled', false);
+            }
+        });
+    });
+
     // Reset listener guard when offcanvas fully hides, so next open re-registers cleanly if needed
     document.getElementById('chatOffcanvas').addEventListener('hidden.bs.offcanvas', function () {
         // Do NOT reset _memoNoticeListenersRegistered — document-level listeners persist across opens
@@ -907,7 +697,7 @@ $(document).ready(function() {
 @push('scripts')
 <script>
 $(document).ready(function() {
-    const memoChoicesIds = ['program_name', 'type', 'status', 'memo_type_master_pk', 'venue'];
+    const memoChoicesIds = ['program_name', 'type', 'status', 'mnmTimePeriod', 'memo_type_master_pk', 'venue'];
     const memoChoicesMap = new Map();
 
     function createChoicesInstance(el) {
@@ -962,11 +752,26 @@ $(document).ready(function() {
 
     initMemoChoices();
 
+    // Load Memo templates for a course into the Generate Memo picker (optionally preselect one).
+    function loadMemoTemplates(courseId, selectedPk) {
+        var $t = $('#memoTemplate');
+        $t.html('<option value="">Select Template</option>');
+        if (!courseId) { return; }
+        $.get("{{ route('memo.notice.management.getTemplatesByType') }}", { course_id: courseId, type: 'Memo' })
+            .done(function (res) {
+                (res || []).forEach(function (tpl) {
+                    $t.append($('<option>').val(tpl.pk).text(tpl.title));
+                });
+                if (selectedPk) { $t.val(String(selectedPk)); }
+                else if ((res || []).length === 1) { $t.val(String(res[0].pk)); }
+            });
+    }
+
     // Filter form submission on change
     $('#program_name, #type, #status, #from_date, #to_date').on('change', function() {
         $('#filterForm').submit();
     });
-    
+
     // Handle Generate Memo button (editable mode)
     $('.generate-memo-btn').on('click', function() {
         let memoId = $(this).data('id');
@@ -1001,6 +806,9 @@ $(document).ready(function() {
                 // Set memo_date to the notice date by default
                 const today = new Date().toISOString().split('T')[0];
                 $('#memo_date').val(today);
+
+                // Load Memo templates for this course so the sender can pick one.
+                loadMemoTemplates(res.course_master_pk, null);
             },
             error: function() {
                 alert('Something went wrong!');
@@ -1121,6 +929,400 @@ $(document).ready(function() {
     syncMemoChoicesById('memo_type_master_pk');
     syncMemoChoicesById('venue');
     @endif
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+$(function () {
+    // ── DataTable sorting for #mnmTable ──
+    if ($('#mnmTable tbody tr td[colspan]').length === 0) {
+        $('#mnmTable').DataTable({
+            paging: false,
+            searching: false,
+            ordering: true,
+            info: false,
+            columnDefs: [
+                { orderable: false, targets: [0, 9] }
+            ]
+        });
+    }
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+$(function () {
+    // ── Time Period presets → from/to dates, then submit ──
+    function mnmFmt(d) { return d.toISOString().split('T')[0]; }
+    $('#mnmTimePeriod').on('change', function () {
+        var v = $(this).val();
+        var today = new Date();
+        if (v === 'custom') {
+            $('#from_date, #to_date').removeClass('d-none');
+            return; // wait for the user to pick dates (their change submits the form)
+        }
+        var from = '', to = mnmFmt(today);
+        if (v === 'today') {
+            from = mnmFmt(today);
+        } else if (v === 'week') {
+            var ws = new Date(today); ws.setDate(today.getDate() - today.getDay()); from = mnmFmt(ws);
+        } else if (v === 'month') {
+            from = mnmFmt(new Date(today.getFullYear(), today.getMonth(), 1));
+        }
+        $('#from_date').val(from);
+        $('#to_date').val(to);
+        $('#filterForm').submit();
+    });
+
+    // ── Search: toggle, search-as-you-type (debounced), Enter, clear ──
+    $('#mnmSearchToggle').on('click', function () {
+        var $wrap = $('#mnmSearchWrap');
+        $wrap.toggleClass('d-none');
+        if (!$wrap.hasClass('d-none')) { $('#search').trigger('focus'); }
+    });
+
+    var mnmSearchTimer = null;
+    $('#search').on('input', function () {
+        $('#mnmSearchClear').toggle(this.value.length > 0);
+        clearTimeout(mnmSearchTimer);
+        // Filters here submit the whole form (full reload); debounce so we only
+        // search once the user pauses typing, not on every keystroke.
+        mnmSearchTimer = setTimeout(function () { $('#filterForm').submit(); }, 500);
+    });
+    $('#search').on('keydown', function (e) {
+        if (e.key === 'Enter') { e.preventDefault(); clearTimeout(mnmSearchTimer); $('#filterForm').submit(); }
+    });
+    $('#mnmSearchClear').on('click', function () {
+        var $s = $('#search');
+        $(this).hide();
+        clearTimeout(mnmSearchTimer);
+        if ($s.val() === '') { $s.trigger('focus'); return; }
+        $s.val('');
+        $('#filterForm').submit();
+    });
+
+    // After a search reload, put the cursor back in the search box (at the end)
+    // so typing continues uninterrupted despite the full-page submit.
+    (function restoreSearchFocus() {
+        var el = document.getElementById('search');
+        var wrap = document.getElementById('mnmSearchWrap');
+        if (el && wrap && !wrap.classList.contains('d-none') && el.value) {
+            el.focus();
+            var v = el.value; el.value = ''; el.value = v; // move caret to end
+        }
+    })();
+
+    // ── Column Visibility modal (static, server-paginated table) ──
+    var mnmLabels = ['S. No.', 'Program Name', 'Participant Name', 'Type', 'Session Date', 'Topic', 'Conclusion Type', 'Conclusion Remark', 'Status', 'Action'];
+    var $mnmGrid = $('#mnmColumnGrid');
+    mnmLabels.forEach(function (label, i) {
+        var id = 'mnmCol' + i;
+        $mnmGrid.append(
+            '<label class="sn-colvis-chip" for="' + id + '" title="' + label + '">' +
+            '<input type="checkbox" class="form-check-input mnm-col-toggle" id="' + id + '" data-col="' + i + '" checked> ' +
+            '<span>' + label + '</span></label>'
+        );
+    });
+    $mnmGrid.on('change', '.mnm-col-toggle', function () {
+        var nth = parseInt($(this).data('col'), 10) + 1;
+        var show = this.checked;
+        $('#mnmTable tr').each(function () {
+            $(this).children(':nth-child(' + nth + ')').toggle(show);
+        });
+    });
+
+    // Guarantee a full page reload when switching tabs
+    $(document).on('click', '.js-nav-tab', function (e) {
+        if ($(this).hasClass('active')) { return; }
+        var href = this.getAttribute('href');
+        if (href) { e.preventDefault(); window.location.assign(href); }
+    });
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+/* ── Add Notice modal (dual-listbox + template preview) ── */
+$(function () {
+    var routeSessions  = "{{ route('memo.notice.management.getSessionsByCourse') }}";
+    var routeVenues    = "{{ route('memo.notice.management.getVenuesBySession') }}";
+    var routeTtDetails = "{{ route('memo.notice.management.getTimetableDetailsBySessionVenue') }}";
+    var routeStudents  = "{{ route('memo.notice.management.getStudentAttendanceBytopic') }}";
+    var routeTpl       = "{{ route('memo.notice.management.getTemplateByCourse') }}";
+    var routeTpl2      = "{{ route('memo.notice.management.getTemplatesByType') }}";
+    var csrf           = "{{ csrf_token() }}";
+    var todayStr       = "{{ date('Y-m-d') }}";
+
+    function makeItem(s) {
+        var label = s.display_name
+            + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : '')
+            + (s.attendance_label ? ' — ' + s.attendance_label : '');
+        var $badge = s.attendance_label
+            ? $('<span class="ms-1 badge ' + (s.attendance_label === 'Late' ? 'bg-warning-subtle text-warning' : 'bg-danger-subtle text-danger') + '" style="font-size:0.7em;">').text(s.attendance_label)
+            : null;
+        var $text = $('<span>').text(s.display_name
+            + (s.generated_OT_code ? ' (' + s.generated_OT_code + ')' : ''));
+        var $item = $('<label class="an-item">')
+            .attr('data-pk', s.pk)
+            .attr('data-search', label.toLowerCase())
+            .append($('<input type="checkbox" class="form-check-input an-check">'))
+            .append($text);
+        if ($badge) $item.append($badge);
+        return $item;
+    }
+
+    function refreshPlaceholders() {
+        $('#anAvailable, #anSelected').each(function () {
+            var $l = $(this);
+            $l.children('.an-empty').remove();
+            if (!$l.children('.an-item').length) {
+                var msg = this.id === 'anSelected'
+                    ? 'No students selected.'
+                    : ($('#anTopicId').val() ? 'No Late/Absent OTs found.' : 'Select course, session and venue.');
+                $l.append($('<div class="an-empty text-muted">').text(msg));
+            }
+        });
+    }
+
+    function resetStudents() {
+        $('#anAvailable, #anSelected').children('.an-item').remove();
+        $('.an-select-all').prop('checked', false);
+        refreshPlaceholders();
+    }
+
+    function clearSubjectTopicDetails() {
+        $('#anSubjectName, #anTopicName').val('');
+        $('#anSubjectId, #anTopicId, #anFacultyPk').val('');
+    }
+
+    // Course + Date → Sessions (only sessions that actually occur on the selected date)
+    function loadSessions() {
+        var course = $('#anCourse').val();
+        var date = $('#anDate').val();
+        $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
+        clearSubjectTopicDetails();
+        resetStudents();
+        if (!course || !date) {
+            $('#anSession').html('<option value="">Select Session</option>').prop('disabled', true);
+            return;
+        }
+        $.get(routeSessions, { course_id: course, date: date }).done(function (html) {
+            $('#anSession').html(html).prop('disabled', false);
+        }).fail(function () {
+            $('#anSession').html('<option value="">Error loading sessions</option>').prop('disabled', true);
+        });
+    }
+
+    // Session → Venues
+    function loadVenues() {
+        var course = $('#anCourse').val();
+        var date = $('#anDate').val();
+        var session = $('#anSession').val();
+        clearSubjectTopicDetails();
+        resetStudents();
+        if (!session) {
+            $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
+            return;
+        }
+        $.get(routeVenues, { course_id: course, date: date, session_pk: session }).done(function (html) {
+            $('#anVenue').html(html).prop('disabled', false);
+        }).fail(function () {
+            $('#anVenue').html('<option value="">Error loading venues</option>').prop('disabled', true);
+        });
+    }
+
+    // Venue → auto-fill subject/topic/faculty + load that session's Late/Absent OTs
+    function loadTimetableDetailsAndStudents() {
+        var course = $('#anCourse').val();
+        var date = $('#anDate').val();
+        var session = $('#anSession').val();
+        var venue = $('#anVenue').val();
+        clearSubjectTopicDetails();
+        resetStudents();
+        if (!venue) return;
+
+        $.get(routeTtDetails, { course_id: course, date: date, session_pk: session, venue_id: venue }).done(function (res) {
+            if (!res) {
+                $('#anSubjectName, #anTopicName').val('No session found for this selection.');
+                return;
+            }
+            $('#anSubjectName').val(res.subject_name || '');
+            $('#anTopicName').val(res.subject_topic || '');
+            $('#anSubjectId').val(res.subject_master_pk || '');
+            $('#anTopicId').val(res.topic_id || '');
+            $('#anFacultyPk').val(res.faculty_master || '');
+
+            var topic = res.topic_id;
+            if (!topic) return;
+            $('#anAvailable').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>');
+            $.ajax({ url: routeStudents, type: 'POST', data: { topic_id: topic, _token: csrf } })
+                .done(function (res) {
+                    $('#anAvailable').empty();
+                    var list = (res && res.students) || [];
+                    list.forEach(function (s) { $('#anAvailable').append(makeItem(s)); });
+                    refreshPlaceholders();
+                }).fail(function () {
+                    $('#anAvailable').html('<div class="an-empty text-danger">Failed to load students.</div>');
+                });
+        }).fail(function () {
+            $('#anSubjectName, #anTopicName').val('Failed to load session details.');
+        });
+    }
+
+    var anTemplateCache = [];   // Notice templates for the selected course
+
+    function renderTemplatePreview(tpl) {
+        if (tpl && (tpl.content || tpl.director_name)) {
+            $('#anTplCourse').text($('#anCourse option:selected').text());
+            $('#anTplType').text('SHOW CAUSE NOTICE');
+            $('#anTplDate').text((new Date()).toLocaleDateString('en-GB'));
+            $('#anTplContent').html(tpl.content || '');
+            $('#anTplDirector').text(tpl.director_name || '');
+            $('#anTplDesig').text(tpl.director_designation || '');
+            $('#anPreviewNone').hide();
+            $('#anPreviewWrap').show();
+        } else {
+            $('#anPreviewWrap').hide();
+            $('#anPreviewNone').show();
+        }
+    }
+
+    // Populate the Notice template picker for a course; preview reflects the selected one.
+    function loadTemplate(courseId) {
+        var $sel = $('#anTemplate');
+        anTemplateCache = [];
+        $sel.html('<option value="">Select Course first</option>');
+        if (!courseId) { $('#anPreviewWrap, #anPreviewNone').hide(); return; }
+        $.get(routeTpl2, { course_id: courseId, type: 'Notice' }).done(function (list) {
+            anTemplateCache = list || [];
+            if (anTemplateCache.length) {
+                $sel.empty();
+                anTemplateCache.forEach(function (tpl) {
+                    $sel.append($('<option>').val(tpl.pk).text(tpl.title));
+                });
+                $sel.val(String(anTemplateCache[0].pk));
+                renderTemplatePreview(anTemplateCache[0]);
+            } else {
+                $sel.html('<option value="">No template configured</option>');
+                renderTemplatePreview(null);
+            }
+        }).fail(function () {
+            $sel.html('<option value="">Failed to load templates</option>');
+            renderTemplatePreview(null);
+        });
+    }
+
+    $('#anTemplate').on('change', function () {
+        var pk = String($(this).val() || '');
+        var tpl = anTemplateCache.find(function (t) { return String(t.pk) === pk; });
+        renderTemplatePreview(tpl || null);
+    });
+
+    // Default the date when the modal opens.
+    $('#addNoticeModal').on('show.bs.modal', function () {
+        if (!$('#anDate').val()) $('#anDate').val(todayStr);
+    });
+
+    $('#anCourse').on('change', function () { loadSessions(); loadTemplate($(this).val()); });
+    $('#anDate').on('change', loadSessions);
+    $('#anSession').on('change', loadVenues);
+    $('#anVenue').on('change', loadTimetableDetailsAndStudents);
+
+    // Move buttons
+    function moveItems(from, to, all) {
+        var $items = $(from).children('.an-item');
+        if (!all) $items = $items.filter(function () { return $(this).find('.an-check').prop('checked'); });
+        $items.each(function () {
+            $(this).find('.an-check').prop('checked', false);
+            $(this).show();
+            $(to).append(this);
+        });
+        $('.an-select-all').prop('checked', false);
+        refreshPlaceholders();
+    }
+    $(document).on('click', '.an-move-btn', function () {
+        var m = $(this).data('move');
+        if (m === 'all-right') moveItems('#anAvailable', '#anSelected', true);
+        else if (m === 'right') moveItems('#anAvailable', '#anSelected', false);
+        else if (m === 'left') moveItems('#anSelected', '#anAvailable', false);
+        else if (m === 'all-left') moveItems('#anSelected', '#anAvailable', true);
+    });
+
+    // Select-all (only affects currently visible items in that panel)
+    $(document).on('change', '.an-select-all', function () {
+        var panel = $(this).data('panel');
+        var checked = this.checked;
+        $('#' + panel).children('.an-item:visible').find('.an-check').prop('checked', checked);
+    });
+
+    // Per-panel search
+    $(document).on('input', '.an-filter', function () {
+        var q = this.value.toLowerCase();
+        $('#' + $(this).data('target')).children('.an-item').each(function () {
+            $(this).toggle(($(this).attr('data-search') || '').indexOf(q) > -1);
+        });
+    });
+
+    // Submit → collect Selected students into hidden inputs
+    $('#addNoticeForm').on('submit', function (e) {
+        var pks = $('#anSelected').children('.an-item').map(function () { return $(this).data('pk'); }).get();
+        if (!pks.length) {
+            e.preventDefault();
+            alert('Please move at least one student into "Selected Students".');
+            return;
+        }
+        var $h = $('#anHiddenInputs').empty();
+        pks.forEach(function (pk) {
+            $h.append($('<input type="hidden" name="selected_student_list[]">').val(pk));
+        });
+    });
+});
+</script>
+@endpush
+
+@push('scripts')
+<script>
+/* ── Delete a notice/memo row (admins only) ── */
+$(function () {
+    $(document).on('click', '.mnm-delete-record', function () {
+        var id = $(this).data('id');
+        var type = ($(this).data('type') || 'notice').toString();
+        if (!id) { return; }
+
+        var label = type === 'memo' ? 'memo' : 'notice';
+        Swal.fire({
+            title: 'Delete this ' + label + '?',
+            text: 'This will permanently remove the ' + label + ' and its conversation. This cannot be undone.',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Yes, delete it',
+            cancelButtonText: 'Cancel',
+        }).then(function (result) {
+            if (!result.isConfirmed) { return; }
+
+            var url = "{{ route('memo.notice.management.destroy', ['id' => '__ID__', 'type' => '__TYPE__']) }}"
+                .replace('__ID__', id).replace('__TYPE__', type);
+
+            $.ajax({
+                url: url,
+                type: 'DELETE',
+                data: { _token: "{{ csrf_token() }}" },
+                success: function (res) {
+                    toastr.success(res.message || 'Deleted successfully.');
+                    setTimeout(function () { window.location.reload(); }, 600);
+                },
+                error: function (xhr) {
+                    toastr.error((xhr.responseJSON && xhr.responseJSON.message) || 'Failed to delete.');
+                }
+            });
+        });
+    });
 });
 </script>
 @endpush

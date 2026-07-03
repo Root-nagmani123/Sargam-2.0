@@ -185,7 +185,15 @@ class AttendanceController extends Controller
                     'timetable.venue:venue_id,venue_name',
                 ]);
 
-            $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request) {
+            $isSendNotice = ($currentPath === 'send_notice');
+
+            $query->whereHas('timetable', function ($q) use ($fromDate, $toDate, $request, $isSendNotice) {
+                // Send Direct Notice lists course-groups independent of any session, so
+                // it is not narrowed by date / session / attendance-type (it still
+                // requires the mapping to have a timetable for the notice payload).
+                if ($isSendNotice) {
+                    return;
+                }
 
                 if ($fromDate) {
                     $q->whereDate('START_DATE', '>=', $fromDate);
@@ -236,6 +244,12 @@ class AttendanceController extends Controller
                 $query->where('Programme_pk', $request->programme);
             }
 
+            // Send Direct Notice: collapse the per-session rows to one row per
+            // course-group, keeping the latest mapping row as the representative.
+            if ($isSendNotice) {
+                $query->whereRaw('course_group_timetable_mapping.pk = (SELECT MAX(m2.pk) FROM course_group_timetable_mapping m2 WHERE m2.Programme_pk = course_group_timetable_mapping.Programme_pk AND m2.group_pk = course_group_timetable_mapping.group_pk)');
+            }
+
             return DataTables::of($query)
                 ->addIndexColumn()
                 ->addColumn('programme_name', function ($row) {
@@ -277,6 +291,17 @@ class AttendanceController extends Controller
                 })
                 ->addColumn('faculty_name', function ($row) {
                     return $this->resolveTimetableFacultyNames($row->timetable);
+                })
+                ->addColumn('eligible_ot', function ($row) use ($currentPath) {
+                    // Only the Send Direct Notice listing needs this count; skip the
+                    // extra per-row query for every other context.
+                    if ($currentPath !== 'send_notice') {
+                        return 0;
+                    }
+
+                    return StudentCourseGroupMap::where('group_type_master_course_master_map_pk', $row->group_pk)
+                        ->where('active_inactive', 1)
+                        ->count();
                 })
                 ->addColumn('actions', function ($row) use ($currentPath) {
                     // Mark Attendance button turns green only when all students are saved (status != 0)
@@ -322,11 +347,11 @@ class AttendanceController extends Controller
                 'timetable_pk' => $row->timetable_pk
             ]) . '" class="' . $markBtnClass . '">Show Attendance</a>';
         }else if($currentPath === 'send_notice'){
-            return '<a href="' . route('attendance.send_notice', [
+            return '<a href="' . route('send.notice.list.page', [
             'group_pk' => $row->group_pk,
             'course_pk' => $row->Programme_pk,
             'timetable_pk' => $row->timetable_pk
-        ]) . '" class="btn btn-primary btn-sm">Send Notice</a>';
+        ]) . '" class="btn btn-link btn-sm text-primary text-decoration-none d-inline-flex flex-column align-items-center lh-1 p-1" title="Send Notice"><i class="material-icons material-symbols-rounded" style="font-size: 2rem;">send</i><span class="small mt-1">Notice</span></a>';
         }else if(hasRole('Training-Induction') || hasRole('Staff') || hasRole('Admin')){
              return '<a href="' . route('attendance.mark', [
             'group_pk' => $row->group_pk,
