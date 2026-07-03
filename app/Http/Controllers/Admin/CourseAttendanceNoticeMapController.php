@@ -734,20 +734,32 @@ public function getTemplateByCourse(Request $request)
  */
 public function getTemplatesByType(Request $request)
 {
-    $courseId = $request->course_id;
-    $type     = $request->type === 'Memo' ? 'Memo' : 'Notice';
+    $courseId       = $request->course_id;
+    $type           = $request->type === 'Memo' ? 'Memo' : 'Notice';
+    $memoTypeMasterPk = $request->memo_type_master_pk;
 
     if (! $courseId) {
         return response()->json([]);
     }
 
-    $templates = DB::table('memo_notice_templates')
+    $query = DB::table('memo_notice_templates')
         ->where('course_master_pk', $courseId)
         ->where('memo_notice_type', $type)
         ->where('active_inactive', 1)
-        ->whereNull('deleted_at')
-        ->orderBy('title')
-        ->get(['pk', 'title', 'content', 'director_name', 'director_designation']);
+        ->whereNull('deleted_at');
+
+    // Memo templates may be tied to a specific Memo Type; prefer a matching one but
+    // fall back to memo-type-agnostic templates (same discipline-fallback pattern
+    // used in MemoDisciplineController::getTemplatesByDiscipline()).
+    if ($type === 'Memo' && $memoTypeMasterPk) {
+        $query->where(function ($q) use ($memoTypeMasterPk) {
+            $q->whereNull('memo_type_master_pk')
+              ->orWhere('memo_type_master_pk', $memoTypeMasterPk);
+        })->orderByRaw('memo_type_master_pk IS NULL'); // type-specific first, agnostic fallback last
+    }
+
+    $templates = $query->orderBy('title')
+        ->get(['pk', 'title', 'content', 'director_name', 'director_designation', 'signature_image', 'memo_type_master_pk']);
 
     return response()->json($templates);
 }
