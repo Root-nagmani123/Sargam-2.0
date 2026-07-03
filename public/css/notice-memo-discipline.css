@@ -987,9 +987,21 @@
    SEND MEMO / NOTICE — "Add Notice" modal (dual-listbox)
    ============================================================ */
 .add-notice-modal .modal-content { border: 0; border-radius: 14px; box-shadow: 0 20px 48px rgba(16, 24, 40, 0.18); }
-.add-notice-modal .modal-header { border-bottom: 1px solid #eaecf0; }
+.add-notice-modal .modal-header { border-bottom: 1px solid #eaecf0; padding: 1rem 1.5rem; }
 .add-notice-modal .modal-title { font-weight: 700; color: #101828; }
+.add-notice-modal .modal-body { padding: 1.25rem 1.5rem; }
+.add-notice-modal .modal-footer { border-top: 1px solid #eaecf0; padding: 1rem 1.5rem; }
+.add-notice-modal .form-label { font-weight: 500; font-size: 0.85rem; color: #344054; }
 .an-section-title { font-weight: 600; color: #101828; font-size: 0.95rem; margin: 0.25rem 0 0.5rem; }
+
+.an-select-look {
+    background-color: #f9fafb;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%23667085' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.85rem center;
+    background-size: 12px 8px;
+    cursor: default;
+}
 
 .an-dual {
     display: grid;

@@ -46,47 +46,37 @@
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Subject <span class="text-danger">*</span></label>
-                                <select class="form-select" name="subject_master_id" id="anSubject" required>
-                                    <option value="">Select Subject</option>
+                                <label class="form-label">Session</label>
+                                <select class="form-select" id="anSession" name="class_session_master_pk" disabled>
+                                    <option value="">Select Session</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Topic</label>
-                                <select class="form-select" name="topic_id" id="anTopic">
-                                    <option value="">Select Topic</option>
+                                <label class="form-label">Venue <span class="text-danger">*</span></label>
+                                <select class="form-select" id="anVenue" name="venue_id" disabled>
+                                    <option value="">Select Venue</option>
                                 </select>
                             </div>
 
                             <div class="col-md-6">
-                                <label class="form-label">Venue <span class="text-danger">*</span></label>
-                                <input type="text" class="form-control" id="anVenueName" placeholder="Auto-filled from topic" readonly>
-                                <input type="hidden" name="venue_id" id="anVenueId">
+                                <label class="form-label">Subject <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control an-select-look" id="anSubjectName" placeholder="Auto-filled from venue" readonly>
+                                <input type="hidden" name="subject_master_id" id="anSubjectId">
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Session</label>
-                                <input type="text" class="form-control" id="anSessionName" placeholder="Auto-filled from topic" readonly>
-                                <input type="hidden" name="class_session_master_pk" id="anSessionPk">
+                                <label class="form-label">Topic <span class="text-danger">*</span></label>
+                                <input type="text" class="form-control an-select-look" id="anTopicName" placeholder="Auto-filled from venue" readonly>
+                                <input type="hidden" name="topic_id" id="anTopicId">
                             </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Faculty Name</label>
-                                <input type="text" class="form-control" id="anFacultyName" placeholder="Auto-filled from topic" readonly>
-                                <input type="hidden" name="faculty_master_pk" id="anFacultyPk">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label">Template</label>
-                                <select class="form-select" name="memo_notice_template_pk" id="anTemplate">
-                                    <option value="">Select Course first</option>
-                                </select>
-                                <small class="text-muted">Notice template to use. Depends on the course.</small>
-                            </div>
+
+                            <input type="hidden" name="faculty_master_pk" id="anFacultyPk">
                         </div>
 
                         <h6 class="an-section-title">Student List (Late &amp; Absentee)</h6>
 
                         <div class="an-dual">
                             <div class="an-panel">
-                                <div class="an-panel-title">Available Students</div>
+                                <div class="an-panel-title">Defaulter Students</div>
                                 <div class="an-search"><i class="bi bi-search"></i><input type="text" class="an-filter" data-target="anAvailable" placeholder="Search"></div>
                                 <label class="an-selectall"><input type="checkbox" class="form-check-input an-select-all" data-panel="anAvailable"> Select All</label>
                                 <div class="an-list" id="anAvailable">
@@ -111,6 +101,13 @@
                             </div>
                         </div>
 
+                        <div class="mt-4">
+                            <label class="form-label">Select Template <span class="text-danger">*</span></label>
+                            <select class="form-select" name="memo_notice_template_pk" id="anTemplate">
+                                <option value="">Select Course first</option>
+                            </select>
+                        </div>
+
                         <h6 class="an-section-title mt-4">Notice Preview</h6>
                         <div class="an-note"><i class="bi bi-info-circle"></i> You may edit the Notice from Notice Template</div>
                         <div id="anPreviewWrap" class="an-preview" style="display:none;">
@@ -128,7 +125,7 @@
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-outline-secondary px-4" data-bs-dismiss="modal">Cancel</button>
-                        <button type="submit" class="btn btn-primary px-4" id="anSendBtn">Send</button>
+                        <button type="submit" class="btn btn-primary px-4" id="anSendBtn">Send Notice</button>
                     </div>
                 </form>
             </div>
@@ -1009,9 +1006,9 @@ $(function () {
 <script>
 /* ── Add Notice modal (dual-listbox + template preview) ── */
 $(function () {
-    var routeSubjects  = "{{ route('memo.notice.management.getSubjectByCourse') }}";
-    var routeTopics    = "{{ route('memo.notice.management.getTopicBysubject') }}";
-    var routeTtDetails = "{{ route('memo.notice.management.gettimetableDetailsBytopic') }}";
+    var routeSessions  = "{{ route('memo.notice.management.getSessionsByCourse') }}";
+    var routeVenues    = "{{ route('memo.notice.management.getVenuesBySession') }}";
+    var routeTtDetails = "{{ route('memo.notice.management.getTimetableDetailsBySessionVenue') }}";
     var routeStudents  = "{{ route('memo.notice.management.getStudentAttendanceBytopic') }}";
     var routeTpl       = "{{ route('memo.notice.management.getTemplateByCourse') }}";
     var routeTpl2      = "{{ route('memo.notice.management.getTemplatesByType') }}";
@@ -1043,7 +1040,7 @@ $(function () {
             if (!$l.children('.an-item').length) {
                 var msg = this.id === 'anSelected'
                     ? 'No students selected.'
-                    : ($('#anTopic').val() ? 'No Late/Absent OTs found.' : 'Select course, subject and topic.');
+                    : ($('#anTopicId').val() ? 'No Late/Absent OTs found.' : 'Select course, session and venue.');
                 $l.append($('<div class="an-empty text-muted">').text(msg));
             }
         });
@@ -1055,69 +1052,90 @@ $(function () {
         refreshPlaceholders();
     }
 
-    function clearTimetableDetails() {
-        $('#anVenueName, #anSessionName, #anFacultyName').val('');
-        $('#anVenueId, #anSessionPk, #anFacultyPk').val('');
+    function clearSubjectTopicDetails() {
+        $('#anSubjectName, #anTopicName').val('');
+        $('#anSubjectId, #anTopicId, #anFacultyPk').val('');
     }
 
-    // Course/Date → Subjects
-    function loadSubjects() {
+    // Course → Sessions (all sessions ever used by this course, independent of Date)
+    function loadSessions() {
         var course = $('#anCourse').val();
-        var date = $('#anDate').val();
-        $('#anTopic').html('<option value="">Select Topic</option>');
-        clearTimetableDetails();
+        $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
+        clearSubjectTopicDetails();
         resetStudents();
-        if (!course) { $('#anSubject').html('<option value="">Select Subject</option>'); return; }
-        $.get(routeSubjects, { course_id: course, date: date }).done(function (html) {
-            $('#anSubject').html(html);
+        if (!course) {
+            $('#anSession').html('<option value="">Select Session</option>').prop('disabled', true);
+            return;
+        }
+        $.get(routeSessions, { course_id: course }).done(function (html) {
+            $('#anSession').html(html).prop('disabled', false);
         }).fail(function () {
-            $('#anSubject').html('<option value="">Error loading subjects</option>');
+            $('#anSession').html('<option value="">Error loading sessions</option>').prop('disabled', true);
         });
     }
 
-    // Subject → Topics
-    function loadTopics() {
-        var subject = $('#anSubject').val();
+    // Date changed → downstream (Venue/Subject/Topic/students) depends on the exact date, so reset and re-resolve.
+    function onDateChange() {
+        $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
+        clearSubjectTopicDetails();
+        resetStudents();
+        if ($('#anSession').val()) loadVenues();
+    }
+
+    // Session → Venues
+    function loadVenues() {
         var course = $('#anCourse').val();
         var date = $('#anDate').val();
-        clearTimetableDetails();
+        var session = $('#anSession').val();
+        clearSubjectTopicDetails();
         resetStudents();
-        if (!subject || !course) { $('#anTopic').html('<option value="">Select Topic</option>'); return; }
-        $.get(routeTopics, { subject_master_id: subject, course_id: course, date: date }).done(function (html) {
-            $('#anTopic').html(html);
+        if (!session) {
+            $('#anVenue').html('<option value="">Select Venue</option>').prop('disabled', true);
+            return;
+        }
+        $.get(routeVenues, { course_id: course, date: date, session_pk: session }).done(function (html) {
+            $('#anVenue').html(html).prop('disabled', false);
         }).fail(function () {
-            $('#anTopic').html('<option value="">Error loading topics</option>');
+            $('#anVenue').html('<option value="">Error loading venues</option>').prop('disabled', true);
         });
     }
 
-    // Topic → auto-fill venue/session/faculty + load that session's Late/Absent OTs
-    function loadTopicDetailsAndStudents() {
-        var topic = $('#anTopic').val();
-        clearTimetableDetails();
+    // Venue → auto-fill subject/topic/faculty + load that session's Late/Absent OTs
+    function loadTimetableDetailsAndStudents() {
+        var course = $('#anCourse').val();
+        var date = $('#anDate').val();
+        var session = $('#anSession').val();
+        var venue = $('#anVenue').val();
+        clearSubjectTopicDetails();
         resetStudents();
-        if (!topic) return;
+        if (!venue) return;
 
-        $.get(routeTtDetails, { topic_id: topic }).done(function (res) {
-            if (res) {
-                $('#anVenueName').val(res.venue_name || '');
-                $('#anSessionName').val(res.shift_name || '');
-                $('#anFacultyName').val(res.faculty_name || '');
-                $('#anVenueId').val(res.venue_id || '');
-                $('#anSessionPk').val(res.shift_name || '');
-                $('#anFacultyPk').val(res.faculty_master || '');
+        $.get(routeTtDetails, { course_id: course, date: date, session_pk: session, venue_id: venue }).done(function (res) {
+            if (!res) {
+                $('#anSubjectName, #anTopicName').val('No session found for this selection.');
+                return;
             }
-        });
+            $('#anSubjectName').val(res.subject_name || '');
+            $('#anTopicName').val(res.subject_topic || '');
+            $('#anSubjectId').val(res.subject_master_pk || '');
+            $('#anTopicId').val(res.topic_id || '');
+            $('#anFacultyPk').val(res.faculty_master || '');
 
-        $('#anAvailable').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>');
-        $.ajax({ url: routeStudents, type: 'POST', data: { topic_id: topic, _token: csrf } })
-            .done(function (res) {
-                $('#anAvailable').empty();
-                var list = (res && res.students) || [];
-                list.forEach(function (s) { $('#anAvailable').append(makeItem(s)); });
-                refreshPlaceholders();
-            }).fail(function () {
-                $('#anAvailable').html('<div class="an-empty text-danger">Failed to load students.</div>');
-            });
+            var topic = res.topic_id;
+            if (!topic) return;
+            $('#anAvailable').html('<div class="text-center py-3"><div class="spinner-border spinner-border-sm text-primary" role="status"></div></div>');
+            $.ajax({ url: routeStudents, type: 'POST', data: { topic_id: topic, _token: csrf } })
+                .done(function (res) {
+                    $('#anAvailable').empty();
+                    var list = (res && res.students) || [];
+                    list.forEach(function (s) { $('#anAvailable').append(makeItem(s)); });
+                    refreshPlaceholders();
+                }).fail(function () {
+                    $('#anAvailable').html('<div class="an-empty text-danger">Failed to load students.</div>');
+                });
+        }).fail(function () {
+            $('#anSubjectName, #anTopicName').val('Failed to load session details.');
+        });
     }
 
     var anTemplateCache = [];   // Notice templates for the selected course
@@ -1174,10 +1192,10 @@ $(function () {
         if (!$('#anDate').val()) $('#anDate').val(todayStr);
     });
 
-    $('#anCourse').on('change', function () { loadSubjects(); loadTemplate($(this).val()); });
-    $('#anDate').on('change', loadSubjects);
-    $('#anSubject').on('change', loadTopics);
-    $('#anTopic').on('change', loadTopicDetailsAndStudents);
+    $('#anCourse').on('change', function () { loadSessions(); loadTemplate($(this).val()); });
+    $('#anDate').on('change', onDateChange);
+    $('#anSession').on('change', loadVenues);
+    $('#anVenue').on('change', loadTimetableDetailsAndStudents);
 
     // Move buttons
     function moveItems(from, to, all) {

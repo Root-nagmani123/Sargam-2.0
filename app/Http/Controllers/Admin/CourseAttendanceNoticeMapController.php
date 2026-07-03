@@ -826,6 +826,108 @@ public function gettimetableDetailsBytopic(Request $request)
 
     return response()->json($timetable);
 }
+
+/**
+ * All sessions that have a timetable entry for the given course (any date).
+ */
+public function getSessionsByCourse(Request $request)
+{
+    $courseId = $request->course_id;
+
+    // timetable.class_session stores the raw shift text (e.g. "10:35 to 11:30"),
+    // matching class_session_master.shift_time — it is NOT a class_session_master.pk FK.
+    $sessions = DB::table('timetable as t')
+        ->select('t.class_session')
+        ->where('t.course_master_pk', $courseId)
+        ->whereNotNull('t.class_session')
+        ->where('t.class_session', '!=', '')
+        ->distinct()
+        ->orderBy('t.class_session')
+        ->get();
+
+    if ($sessions->isEmpty()) {
+        return '<option value="">No sessions found for selected course</option>';
+    }
+
+    $labelsByShiftTime = DB::table('class_session_master')->pluck('shift_name', 'shift_time');
+
+    $html = '<option value="">Select Session</option>';
+    foreach ($sessions as $session) {
+        $value = $session->class_session;
+        $label = $labelsByShiftTime[$value] ?? $value;
+        $html .= '<option value="' . e($value) . '">' . e($label) . '</option>';
+    }
+    return $html;
+}
+
+/**
+ * Venues that have a timetable entry for the given course/date/session.
+ */
+public function getVenuesBySession(Request $request)
+{
+    $courseId  = $request->course_id;
+    $date      = $request->date;
+    $sessionPk = $request->session_pk;
+
+    $query = DB::table('timetable as t')
+        ->join('venue_master as v', 't.venue_id', '=', 'v.venue_id')
+        ->select('v.venue_id', 'v.venue_name')
+        ->where('t.course_master_pk', $courseId)
+        ->where('t.class_session', $sessionPk);
+
+    if ($date) {
+        $query->whereDate('t.START_DATE', $date);
+    }
+
+    $venues = $query->groupBy('v.venue_id', 'v.venue_name')->get();
+
+    if ($venues->isEmpty()) {
+        return '<option value="">No venues found for selected session</option>';
+    }
+
+    $html = '<option value="">Select Venue</option>';
+    foreach ($venues as $venue) {
+        $html .= '<option value="' . $venue->venue_id . '">' . e($venue->venue_name) . '</option>';
+    }
+    return $html;
+}
+
+/**
+ * Resolve the single timetable row for course/date/session/venue and return
+ * its subject/topic/faculty so the Add Notice form can auto-fill them.
+ */
+public function getTimetableDetailsBySessionVenue(Request $request)
+{
+    $courseId  = $request->course_id;
+    $date      = $request->date;
+    $sessionPk = $request->session_pk;
+    $venueId   = $request->venue_id;
+
+    $timetable = DB::table('timetable as t')
+        ->leftJoin('subject_master as s', 't.subject_master_pk', '=', 's.pk')
+        ->where('t.course_master_pk', $courseId)
+        ->where('t.class_session', $sessionPk)
+        ->where('t.venue_id', $venueId)
+        ->when($date, function ($q) use ($date) {
+            $q->whereDate('t.START_DATE', $date);
+        })
+        ->select('t.*', 's.subject_name')
+        ->first();
+
+    if (!$timetable) {
+        return response()->json(null);
+    }
+
+    $timetable->topic_id = $timetable->pk;
+    $timetable->faculty_name = get_timetable_faculty_names($timetable, 'N/A');
+    $facultyIds = get_timetable_faculty_ids($timetable);
+    if (empty($timetable->faculty_master) && !empty($facultyIds)) {
+        $timetable->faculty_master = json_encode($facultyIds);
+    }
+
+    return response()->json($timetable);
+}
+
 public function conversation($id, $type)
 {
     if (!$id || !is_numeric($id)) {
@@ -1167,7 +1269,7 @@ public function store_memo_notice(Request $request)
                 'class_session_master_pk'      => $validated['class_session_master_pk'] ?? null,
                 'faculty_master_pk'            => $validated['faculty_master_pk'] ?? null,
                 'course_student_attendance_pk' => $studentId->course_attendance_pk,
-                'message'                      => $validated['Remark'],
+                'message'                      => $validated['Remark'] ?? null,
                 'notice_memo'                  => $validated['submission_type'],
             ];
             if ($hasTplCol) {

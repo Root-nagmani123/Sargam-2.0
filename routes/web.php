@@ -913,6 +913,9 @@ Route::prefix('security/employee-idcard-approval')->name('admin.security.employe
             Route::get('/Subject-by-course', 'getSubjectByCourse')->name('getSubjectByCourse'); // <-- New AJAX route
             Route::get('/Topic-by-subject', 'getTopicBysubject')->name('getTopicBysubject'); // <-- New AJAX route
             Route::get('/get-timetable-Details-By-topic', 'gettimetableDetailsBytopic')->name('gettimetableDetailsBytopic'); // <-- New AJAX route
+            Route::get('/sessions-by-course', 'getSessionsByCourse')->name('getSessionsByCourse');
+            Route::get('/venues-by-session', 'getVenuesBySession')->name('getVenuesBySession');
+            Route::get('/timetable-by-session-venue', 'getTimetableDetailsBySessionVenue')->name('getTimetableDetailsBySessionVenue');
             Route::get('/get-template-by-course', 'getTemplateByCourse')->name('getTemplateByCourse'); // <-- Template AJAX route
             Route::get('/templates-by-type', 'getTemplatesByType')->name('getTemplatesByType'); // list templates for a course+type picker
             Route::post('/get-student-attendance-by-topic', 'getStudentAttendanceBytopic')->name('getStudentAttendanceBytopic'); // <-- New AJAX route
