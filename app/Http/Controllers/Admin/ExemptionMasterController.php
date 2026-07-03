@@ -202,10 +202,14 @@ class ExemptionMasterController extends Controller
             'active_inactive' => 'required|in:0,1',
         ]);
 
-        $record->update([
-            'active_inactive' => (int) $request->active_inactive,
-            'modified_date' => now(),
-        ]);
+        // A PT exemption is configured as a Male + Female pair for the same course
+        // and effective-from date. Toggling one gender must toggle its sibling too.
+        ExemptionMaster::where('course_master_pk', $record->course_master_pk)
+            ->whereDate('effective_from', $record->effective_from)
+            ->update([
+                'active_inactive' => (int) $request->active_inactive,
+                'modified_date' => now(),
+            ]);
 
         return response()->json([
             'success' => true,
@@ -226,7 +230,12 @@ class ExemptionMasterController extends Controller
             ], 422);
         }
 
-        $record->delete();
+        // Delete the full Male + Female pair for this course and effective-from date,
+        // so both genders are removed together.
+        ExemptionMaster::where('course_master_pk', $record->course_master_pk)
+            ->whereDate('effective_from', $record->effective_from)
+            ->where('active_inactive', 0)
+            ->delete();
 
         return response()->json([
             'success' => true,
@@ -240,10 +249,13 @@ class ExemptionMasterController extends Controller
             $record = ExemptionMaster::find($request->pk);
             if ($record) {
                 $this->assertCourseAllowed((int) $record->course_master_pk);
-                $record->update([
-                    'active_inactive' => (int) $request->active_inactive,
-                    'modified_date' => now(),
-                ]);
+                // Keep the Male + Female pair (same course + effective-from) in sync.
+                ExemptionMaster::where('course_master_pk', $record->course_master_pk)
+                    ->whereDate('effective_from', $record->effective_from)
+                    ->update([
+                        'active_inactive' => (int) $request->active_inactive,
+                        'modified_date' => now(),
+                    ]);
             }
         }
 
