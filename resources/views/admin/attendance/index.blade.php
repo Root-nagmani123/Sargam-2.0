@@ -203,6 +203,21 @@ hr {
 
 <div class="container-fluid attendance-page py-3">
     <x-breadcrum title="Attendance" />
+
+    {{-- Active / Archived courses (same split as Course Master) --}}
+    <div class="d-flex flex-wrap align-items-center gap-3 mb-3">
+        <ul class="nav nav-pills gap-2 p-1 rounded-1 programme-status-tabs attendance-status-tabs bg-white mb-0" role="group" aria-label="Filter courses by status">
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill active"
+                    id="attFilterActive" data-att-status="active" aria-pressed="true" aria-current="true">Active</button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button type="button" class="nav-link rounded-1 px-4 py-2 fw-semibold programme-status-pill"
+                    id="attFilterArchive" data-att-status="archive" aria-pressed="false">Archived</button>
+            </li>
+        </ul>
+    </div>
+
     <div class="card attendance-main-card border-start border-4 border-primary">
         <div class="attendance-topbar px-4 py-3 d-flex flex-wrap align-items-center justify-content-between gap-2">
             <h4 class="fw-bold page-title mb-0">Attendance</h4>
@@ -358,6 +373,62 @@ hr {
 
         @section('scripts')
         <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+        {{-- Active / Archived course tabs: swap the Course dropdown between the
+             running and the ended course sets. --}}
+        <script>
+        $(function () {
+            var activeCourses = @json($courseMasters ?? []);
+            var archivedCourses = @json($archivedCourseMasters ?? []);
+            var el = document.getElementById('programme');
+            var pills = document.querySelectorAll('.attendance-status-tabs [data-att-status]');
+            if (!el || !pills.length) return;
+
+            function courseLabel(c) {
+                var full = (c.course_name || '').toString().trim();
+                var short = (c.couse_short_name || c.course_short_name || '').toString().trim();
+                return short !== '' ? short : full;
+            }
+            function buildChoices(list) {
+                var out = [{ value: '', label: 'Select Course', selected: true }];
+                (list || []).forEach(function (c) {
+                    out.push({ value: String(c.pk), label: courseLabel(c) });
+                });
+                return out;
+            }
+            function applyList(list) {
+                var inst = el._choicesInstance;
+                if (inst && typeof inst.setChoices === 'function') {
+                    inst.clearStore();
+                    inst.setChoices(buildChoices(list), 'value', 'label', true);
+                    inst.setChoiceByValue('');
+                } else {
+                    // Native <select> fallback (Choices not initialised).
+                    el.innerHTML = buildChoices(list).map(function (c) {
+                        return '<option value="' + c.value + '">' + c.label + '</option>';
+                    }).join('');
+                    el.value = '';
+                }
+                // Reset to placeholder — no course selected, so no search runs yet.
+                $(el).trigger('change');
+            }
+
+            pills.forEach(function (pill) {
+                pill.addEventListener('click', function () {
+                    if (this.classList.contains('active')) return;
+                    pills.forEach(function (p) {
+                        p.classList.remove('active');
+                        p.setAttribute('aria-pressed', 'false');
+                        p.removeAttribute('aria-current');
+                    });
+                    this.classList.add('active');
+                    this.setAttribute('aria-pressed', 'true');
+                    this.setAttribute('aria-current', 'true');
+                    applyList(this.dataset.attStatus === 'archive' ? archivedCourses : activeCourses);
+                });
+            });
+        });
+        </script>
         <script>
         $(document).ready(function() {
             if (typeof Choices !== 'undefined') {
