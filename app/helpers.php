@@ -34,9 +34,226 @@ function getEmployeeIdsForUser($userId)
     return array_map('strval', $ids);
 }
 
+/**
+ * Resolve the user-identifier column for a given FC table.
+ *
+ * After the username→user_id migration all FC tables use `user_id`.
+ * Before the migration they still use `username` (or `userid` for
+ * fc_pre_history / fc_path_report). A static cache avoids repeated
+ * Schema::hasColumn() calls within the same request.
+ */
+function fc_user_col(string $table): string
+{
+    static $cache = [];
+    if (! array_key_exists($table, $cache)) {
+        if (\Illuminate\Support\Facades\Schema::hasColumn($table, 'user_id')) {
+            $cache[$table] = 'user_id';
+        } elseif (\Illuminate\Support\Facades\Schema::hasColumn($table, 'userid')) {
+            $cache[$table] = 'userid';
+        } else {
+            $cache[$table] = 'username';
+        }
+    }
+    return $cache[$table];
+}
+
+/**
+ * Resolve the correct user-identifier VALUE for a given FC table and userId.
+ *
+ * Post-migration: all FC tables use `user_id` (integer) → returns $userId.
+ * Pre-migration: tables use `username` or `userid` (string) → looks up the
+ * username string from user_credentials and returns that.
+ *
+ * This ensures WHERE clauses, insertions and updateOrCreate calls always use
+ * the right type and value regardless of whether the migration has run yet.
+ *
+ * A static per-request cache is used to avoid repeated DB lookups.
+ */
+function fc_user_val(string $table, int $userId): string|int
+{
+    static $usernameCache  = [];
+    static $credPkCache    = []; // staged roster pk → resolved user_credentials.pk (or roster pk if not yet migrated)
+    $col = fc_user_col($table);
+
+    // Staged /fc/login (Auth id = -fc_registration_master.pk).
+    if ($userId < 0) {
+        if ($col === 'user_id') {
+            // If the trainee has already been migrated to user_credentials, use that pk
+            // so that FC form data (fc_pre_history etc.) is stored under the correct id
+            // even when they log in via /fc/login after migration.
+            $rosterPk = abs($userId);
+            if (! array_key_exists($rosterPk, $credPkCache)) {
+                $rosterUserName = \Illuminate\Support\Facades\DB::table('fc_registration_master')
+                    ->where('pk', $rosterPk)
+                    ->value('user_id');
+                $credPk = ($rosterUserName !== null && trim((string) $rosterUserName) !== '')
+                    ? \Illuminate\Support\Facades\DB::table('user_credentials')
+                        ->where('user_name', trim((string) $rosterUserName))
+                        ->value('pk')
+                    : null;
+                $credPkCache[$rosterPk] = $credPk ? (int) $credPk : $rosterPk;
+            }
+            return $credPkCache[$rosterPk];
+        }
+        if (! array_key_exists($userId, $usernameCache)) {
+            $usernameCache[$userId] = trim((string) (\Illuminate\Support\Facades\DB::table('fc_registration_master')
+                ->where('pk', abs($userId))
+                ->value('user_id') ?? ''));
+        }
+
+        return $usernameCache[$userId];
+    }
+
+    if ($col === 'user_id') {
+        return $userId;
+    }
+
+    // Pre-migration: resolve the username string from user_credentials.
+    if (! array_key_exists($userId, $usernameCache)) {
+        $usernameCache[$userId] = \Illuminate\Support\Facades\DB::table('user_credentials')
+            ->where('pk', $userId)
+            ->value('user_name') ?? '';
+    }
+    return $usernameCache[$userId];
+}
+
+/**
+ * Folder segment for FC uploads (staged Auth id is negative; paths use roster pk).
+ */
+function fc_upload_path_segment(int $userId): string
+{
+    return (string) ($userId < 0 ? abs($userId) : $userId);
+}
+
+/**
+ * Resolve a stored upload path to an absolute filesystem path (public disk and legacy locations).
+ */
+function fc_resolve_storage_file_path(?string $path): ?string
+{
+    if ($path === null || $path === '') {
+        return null;
+    }
+    if (! is_string($path)) {
+        return null;
+    }
+    $path = trim(str_replace('\\', '/', $path));
+    if ($path === '') {
+        return null;
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return null;
+    }
+    $path = ltrim($path, '/');
+    if (str_starts_with($path, 'public/')) {
+        $path = substr($path, strlen('public/'));
+    }
+    if (str_starts_with($path, 'storage/')) {
+        $path = substr($path, strlen('storage/'));
+    }
+
+    if (\Illuminate\Support\Facades\Storage::disk('public')->exists($path)) {
+        return \Illuminate\Support\Facades\Storage::disk('public')->path($path);
+    }
+
+    $candidates = [
+        storage_path('app/public/'.$path),
+        public_path('storage/'.$path),
+        public_path($path),
+        storage_path('app/'.$path),
+    ];
+
+    foreach ($candidates as $full) {
+        if (is_file($full)) {
+            return $full;
+        }
+    }
+
+    return null;
+}
+
+/**
+ * Public URL for a file stored on the default public disk (storage/app/public) or an absolute URL.
+ * Handles DB values like "uploads/user/photo.jpg", "storage/uploads/...", or full http(s) URLs.
+ */
 function view_file_link($path)
 {
-    return $path ? asset('storage/' . $path) : null;
+    if ($path === null || $path === '') {
+        return null;
+    }
+    if (! is_string($path)) {
+        return null;
+    }
+    $path = trim(str_replace('\\', '/', $path));
+    if ($path === '') {
+        return null;
+    }
+    if (preg_match('#^https?://#i', $path)) {
+        return $path;
+    }
+    $path = ltrim($path, '/');
+    if (str_starts_with($path, 'public/')) {
+        $path = substr($path, strlen('public/'));
+    }
+    if (str_starts_with($path, 'storage/')) {
+        return asset($path);
+    }
+
+    if (fc_resolve_storage_file_path($path) !== null) {
+        return asset('storage/' . $path);
+    }
+
+    return asset('storage/' . $path);
+}
+
+/**
+ * Embed trainee photograph as a data URI for PDF output.
+ */
+function fc_photo_data_uri(?string $path): ?string
+{
+    $full = fc_resolve_storage_file_path($path);
+    if ($full === null) {
+        return null;
+    }
+    $mime = @mime_content_type($full) ?: 'image/jpeg';
+    if (! str_starts_with((string) $mime, 'image/')) {
+        return null;
+    }
+
+    $binary = (string) file_get_contents($full);
+    if (function_exists('imagecreatefromstring')) {
+        $src = @imagecreatefromstring($binary);
+        if ($src !== false) {
+            $w = imagesx($src);
+            $h = imagesy($src);
+            $maxW = 110;
+            $maxH = 140;
+            if ($w > 0 && $h > 0 && ($w > $maxW || $h > $maxH)) {
+                $scale = min($maxW / $w, $maxH / $h);
+                $nw = max(1, (int) round($w * $scale));
+                $nh = max(1, (int) round($h * $scale));
+                $dst = imagecreatetruecolor($nw, $nh);
+                if ($dst !== false) {
+                    if ($mime === 'image/png' || $mime === 'image/gif') {
+                        imagealphablending($dst, false);
+                        imagesavealpha($dst, true);
+                        $transparent = imagecolorallocatealpha($dst, 255, 255, 255, 127);
+                        imagefilledrectangle($dst, 0, 0, $nw, $nh, $transparent);
+                    } else {
+                        imagefill($dst, 0, 0, imagecolorallocate($dst, 255, 255, 255));
+                    }
+                    imagecopyresampled($dst, $src, 0, 0, 0, 0, $nw, $nh, $w, $h);
+                    ob_start();
+                    imagejpeg($dst, null, 88);
+                    $binary = (string) ob_get_clean();
+                    $mime = 'image/jpeg';
+                    imagedestroy($dst);
+                }
+            }
+            imagedestroy($src);
+        }
+    }
+
+    return 'data:'.$mime.';base64,'.base64_encode($binary);
 }
 
 function format_date($date, $format = 'd-m-Y')
@@ -994,3 +1211,359 @@ if (!function_exists('notification')) {
 
         return $courseval;
     }
+
+if (! function_exists('fc_registration_progress_view')) {
+    /**
+     * Normalize FC registration $progress for dashboard/status Blade (legacy code sometimes passed a bare int percentage).
+     *
+     * @param  array|string|int|float|null  $progress
+     * @return array{done:int,total:int,percentage:int,steps:array<string,bool>}
+     */
+    function fc_registration_progress_view($progress): array
+    {
+        $keys = ['step1', 'step2', 'step3', 'bank', 'travel', 'documents', 'confirmed'];
+        $defaults = array_fill_keys($keys, false);
+
+        if (is_array($progress)) {
+            $steps = $progress['steps'] ?? [];
+            if (! is_array($steps)) {
+                $steps = [];
+            }
+            $steps = array_merge($defaults, $steps);
+            $total = count($keys);
+            $done = collect($steps)->filter()->count();
+            $percentage = $progress['percentage'] ?? null;
+            if ($percentage === null || $percentage === '') {
+                $percentage = $total > 0 ? (int) round($done / $total * 100) : 0;
+            } else {
+                $percentage = (int) $percentage;
+            }
+
+            return [
+                'done'       => $done,
+                'total'      => (int) ($progress['total'] ?? $total),
+                'percentage' => max(0, min(100, $percentage)),
+                'steps'      => $steps,
+            ];
+        }
+
+        $pct = is_numeric($progress) ? (int) $progress : 0;
+
+        return [
+            'done'       => 0,
+            'total'      => count($keys),
+            'percentage' => max(0, min(100, $pct)),
+            'steps'      => $defaults,
+        ];
+    }
+}
+
+if (! function_exists('fc_registration_dynamic_form_step_accessible')) {
+    /**
+     * FC registration (dynamic form dashboard): allow opening a step only when prior steps are complete.
+     * Completed steps stay open for review/edit ($stepCompleted === true).
+     *
+     * @param  array<string,bool>  $progressSteps  fc_registration_progress_view()['steps']
+     */
+    function fc_registration_dynamic_form_step_accessible(string $stepSlug, array $progressSteps, bool $stepCompleted): bool
+    {
+        if ($stepCompleted) {
+            return true;
+        }
+
+        $required = match ($stepSlug) {
+            'step1' => [],
+            'step2' => ['step1'],
+            'step3' => ['step2'],
+            'bank' => ['step3'],
+            'documents' => ['travel'],
+            default => [],
+        };
+
+        foreach ($required as $key) {
+            if (empty($progressSteps[$key])) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+}
+
+if (! function_exists('fc_registration_dynamic_form_step_blocked_message')) {
+    function fc_registration_dynamic_form_step_blocked_message(string $stepSlug): string
+    {
+        return match ($stepSlug) {
+            'step2' => 'Complete Basic Information first',
+            'step3' => 'Complete Personal Details first',
+            'bank' => 'Complete Other Details first',
+            'documents' => 'Complete Travel Plan first',
+            default => 'Complete the previous step first',
+        };
+    }
+}
+
+if (! function_exists('fc_numeric_display_value')) {
+    /**
+     * Strip trailing zeros from numeric strings for FC form display (e.g. DECIMAL 8745265.0000 → 8745265).
+     */
+    function fc_numeric_display_value(mixed $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+        $s = is_string($value) ? trim($value) : (string) $value;
+        if ($s === '' || ! is_numeric($s)) {
+            return $s;
+        }
+        if (! str_contains($s, '.')) {
+            return $s;
+        }
+
+        return rtrim(rtrim($s, '0'), '.') ?: '0';
+    }
+}
+
+if (! function_exists('fc_checkbox_multi_selected')) {
+    /**
+     * Selected option values for a multi-option checkbox (stored as JSON array string in DB).
+     *
+     * @param  array<int, array{value?: mixed, label?: string}>  $options
+     * @return array<int, string>
+     */
+    function fc_checkbox_multi_selected(mixed $raw, array $options): array
+    {
+        if (count($options) === 0) {
+            return [];
+        }
+        if (is_array($raw)) {
+            return array_map('strval', $raw);
+        }
+        if ($raw === null || $raw === '') {
+            return [];
+        }
+        $decoded = json_decode((string) $raw, true);
+        if (is_array($decoded)) {
+            return array_map('strval', array_values($decoded));
+        }
+
+        return [];
+    }
+}
+
+if (! function_exists('fc_checkbox_single_checked')) {
+    /**
+     * Whether a single yes/no checkbox field is checked (legacy tinyint or string).
+     */
+    function fc_checkbox_single_checked(mixed $raw): bool
+    {
+        if ($raw === null || $raw === '' || $raw === false || $raw === 0 || $raw === '0') {
+            return false;
+        }
+        if ($raw === true) {
+            return true;
+        }
+        if (is_numeric($raw)) {
+            return (int) $raw === 1;
+        }
+
+        return in_array(strtolower((string) $raw), ['1', 'true', 'yes', 'on'], true);
+    }
+}
+
+if (! function_exists('fc_form_group_active_index')) {
+    /**
+     * Index of the active group tab within a step (for ?group= query param after save).
+     *
+     * @param  iterable<int, object{group_name?: string}|array{group_name?: string}>  $groups
+     */
+    function fc_form_group_active_index(iterable $groups, ?string $activeGroupName = null): int
+    {
+        if ($activeGroupName === null || $activeGroupName === '') {
+            return 0;
+        }
+
+        $index = 0;
+        foreach ($groups as $group) {
+            $name = is_object($group)
+                ? ($group->group_name ?? null)
+                : ($group['group_name'] ?? null);
+            if ($name === $activeGroupName) {
+                return $index;
+            }
+            $index++;
+        }
+
+        return 0;
+    }
+}
+
+if (! function_exists('fc_form_first_group_name')) {
+    /**
+     * @param  iterable<int, object{group_name?: string}|array{group_name?: string}>  $groups
+     */
+    function fc_form_first_group_name(iterable $groups): ?string
+    {
+        foreach ($groups as $group) {
+            $name = is_object($group)
+                ? ($group->group_name ?? null)
+                : ($group['group_name'] ?? null);
+            if ($name !== null && $name !== '') {
+                return (string) $name;
+            }
+        }
+
+        return null;
+    }
+}
+
+if (! function_exists('fc_ini_size_to_bytes')) {
+    function fc_ini_size_to_bytes(string $value): int
+    {
+        $value = trim($value);
+        if ($value === '' || $value === '-1') {
+            return PHP_INT_MAX;
+        }
+
+        $unit = strtolower(substr($value, -1));
+        $number = (float) $value;
+
+        return (int) match ($unit) {
+            'g' => $number * 1024 * 1024 * 1024,
+            'm' => $number * 1024 * 1024,
+            'k' => $number * 1024,
+            default => (float) $value,
+        };
+    }
+}
+
+if (! function_exists('fc_file_upload_hint')) {
+    /**
+     * Human-readable upload hint from Laravel validation_rules (e.g. "nullable|file|mimes:pdf,jpg|max:10240").
+     */
+    function fc_file_upload_hint(?string $validationRules, ?int $fileMaxKb = null): string
+    {
+        $maxKb = $fileMaxKb ?? 5120;
+        $mimes = ['pdf', 'jpg', 'jpeg', 'png'];
+
+        if ($validationRules) {
+            if ($fileMaxKb === null && preg_match('/max:(\d+)/', $validationRules, $m)) {
+                $maxKb = (int) $m[1];
+            }
+            if (preg_match('/mimes:([^|]+)/', $validationRules, $m)) {
+                $mimes = array_map('trim', explode(',', $m[1]));
+            }
+        }
+
+        $labels = [];
+        foreach ($mimes as $ext) {
+            $labels[] = match (strtolower($ext)) {
+                'pdf' => 'PDF',
+                'jpg', 'jpeg' => 'JPG',
+                'png' => 'PNG',
+                default => strtoupper($ext),
+            };
+        }
+        $types = implode(', ', array_values(array_unique($labels)));
+
+        $sizeLabel = $maxKb >= 1024 && $maxKb % 1024 === 0
+            ? ($maxKb / 1024).' MB'
+            : ($maxKb >= 1024 ? round($maxKb / 1024, 1).' MB' : $maxKb.' KB');
+
+        return $types.', max '.$sizeLabel;
+    }
+}
+
+if (! function_exists('fc_report_apply_tracker_user_resolution')) {
+    /**
+     * Join credentials (+ roster) so admin reports can show login name, not raw tracker user_id.
+     *
+     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    function fc_report_apply_tracker_user_resolution($query, string $trackerTable, ?string $alias = null): string
+    {
+        $t = $alias ?? $trackerTable;
+        $u = fc_user_col($trackerTable);
+
+        if ($u !== 'user_id') {
+            $query->leftJoin('user_credentials as uc', "{$t}.{$u}", '=', 'uc.user_name');
+
+            return 'username_legacy';
+        }
+
+        $query->leftJoin('user_credentials as uc', "{$t}.user_id", '=', 'uc.pk');
+
+        if (Schema::hasTable('fc_registration_master')) {
+            $query->leftJoin('fc_registration_master as frm', 'frm.pk', '=', "{$t}.user_id")
+                ->leftJoin('user_credentials as uc_frm', 'uc_frm.user_name', '=', 'frm.user_id');
+        }
+
+        return 'user_id';
+    }
+}
+
+if (! function_exists('fc_report_login_username_sql')) {
+    function fc_report_login_username_sql(string $trackerTable, ?string $alias = null): string
+    {
+        $t = $alias ?? $trackerTable;
+        $parts = ["NULLIF(TRIM(uc.user_name), '')"];
+
+        if (Schema::hasTable('fc_registration_master')) {
+            $parts[] = "NULLIF(TRIM(frm.user_id), '')";
+            $parts[] = "NULLIF(TRIM(uc_frm.user_name), '')";
+        }
+
+        $parts[] = "CAST(`{$t}`.`user_id` AS CHAR)";
+
+        return 'COALESCE('.implode(', ', $parts).')';
+    }
+}
+
+if (! function_exists('fc_report_route_user_id_sql')) {
+    function fc_report_route_user_id_sql(string $trackerTable, ?string $alias = null): string
+    {
+        $t = $alias ?? $trackerTable;
+
+        if (Schema::hasTable('fc_registration_master')) {
+            return "COALESCE(uc.pk, uc_frm.pk, `{$t}`.`user_id`)";
+        }
+
+        return "COALESCE(uc.pk, `{$t}`.`user_id`)";
+    }
+}
+
+if (! function_exists('fc_report_join_student_master_firsts')) {
+    /**
+     * @param  \Illuminate\Database\Query\Builder|\Illuminate\Database\Eloquent\Builder  $query
+     */
+    function fc_report_join_student_master_firsts($query, string $trackerTable, ?string $alias = null): void
+    {
+        $t = $alias ?? $trackerTable;
+        $u = fc_user_col($trackerTable);
+        $s1Col = fc_user_col('student_master_firsts');
+
+        $query->leftJoin('student_master_firsts as s1', function ($join) use ($t, $u, $s1Col) {
+            if ($u !== 'user_id') {
+                $join->on("s1.{$s1Col}", '=', "{$t}.{$u}");
+
+                return;
+            }
+
+            $join->on(function ($join) use ($t, $s1Col) {
+                $join->on("s1.{$s1Col}", '=', "{$t}.user_id");
+
+                if (Schema::hasColumn('student_master_firsts', 'user_id')) {
+                    $join->orOn('s1.user_id', '=', 'uc.pk');
+                    if (Schema::hasTable('fc_registration_master')) {
+                        $join->orOn('s1.user_id', '=', 'uc_frm.pk');
+                    }
+                }
+
+                if (Schema::hasTable('fc_registration_master')
+                    && Schema::hasColumn('student_master_firsts', 'username')) {
+                    $join->orOn('s1.username', '=', 'frm.user_id');
+                }
+            });
+        });
+    }
+}

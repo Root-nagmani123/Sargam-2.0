@@ -2,6 +2,40 @@
 
 @section('title', 'Front Page - Sargam | Lal Bahadur')
 
+@push('styles')
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+@endpush
+
+@push('scripts')
+    @if (session('success') || session('error'))
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                if (typeof Swal === 'undefined') {
+                    return;
+                }
+                @if (session('success'))
+                    Swal.fire({
+                        toast: true,
+                        position: 'top-end',
+                        icon: 'success',
+                        title: @json(session('success')),
+                        showConfirmButton: false,
+                        timer: 3500,
+                        timerProgressBar: true
+                    });
+                @elseif (session('error'))
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error',
+                        text: @json(session('error')),
+                        confirmButtonColor: '#004a93'
+                    });
+                @endif
+            });
+        </script>
+    @endif
+@endpush
+
 @section('setup_content')
     <link href="https://cdn.jsdelivr.net/npm/summernote@0.8.18/dist/summernote-lite.min.css" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
@@ -9,7 +43,6 @@
 
     <div class="container-fluid">
     <x-breadcrum title="Create Front Page" />
-    <x-session_message />
         <!--display errors if any -->
         @if ($errors->any())
             <div class="alert alert-danger mb-3">
@@ -66,24 +99,40 @@
                                 <label class="form-label fw-semibold">Course Title</label>
                                 <input type="text" name="course_title" class="form-control"
                                     value="{{ old('course_title', isset($data) ? $data->course_title : '') }}">
+                                <small class="text-muted d-block">
+                                    To raise an ordinal, wrap the suffix in <code>&lt;sup&gt;&lt;/sup&gt;</code>. Example:
+                                    <code>100&lt;sup&gt;th&lt;/sup&gt; Foundation Course for IAS/IPS/IFoS Officer</code>
+                                    &rarr; displays as 100<sup>th</sup> Foundation Course for IAS/IPS/IFoS Officer.
+                                </small>
                             </div>
                         </div>
 
                         <!-- Coordinator Name -->
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Coordinator Name</label>
-                                <input type="text" name="coordinator_name" class="form-control"
-                                    value="{{ old('coordinator_name', isset($data) ? $data->coordinator_name : '') }}">
+                                <x-select
+                                    name="coordinator_name"
+                                    label="Coordinator Name"
+                                    placeholder="Select Coordinator"
+                                    formLabelClass="form-label fw-semibold"
+                                    formSelectClass="searchable-dropdown"
+                                    value="{{ old('coordinator_name', isset($data) ? $data->coordinator_name : '') }}"
+                                    :options="$facultyList" />
                             </div>
                         </div>
 
                         <!-- Coordinator Designation -->
                         <div class="col-md-6">
                             <div class="mb-3">
-                                <label class="form-label fw-semibold">Coordinator Designation</label>
-                                <input type="text" name="coordinator_designation" class="form-control"
-                                    value="{{ old('coordinator_designation', isset($data) ? $data->coordinator_designation : '') }}">
+                                <x-select
+                                    name="coordinator_designation"
+                                    label="Coordinator Designation"
+                                    placeholder="Select Designation"
+                                    formLabelClass="form-label fw-semibold"
+                                    formSelectClass="searchable-dropdown"
+                                    value="{{ old('coordinator_designation', isset($data) ? $data->coordinator_designation : '') }}"
+                                    :options="$designationList" />
+                                <small class="text-muted">Auto-selected from the chosen coordinator. You can change it if needed.</small>
                             </div>
                         </div>
 
@@ -93,6 +142,11 @@
                                 <label class="form-label fw-semibold">Coordinator Info</label>
                                 <input type="text" name="coordinator_info" class="form-control"
                                     value="{{ old('coordinator_info', isset($data) ? $data->coordinator_info : '') }}">
+                                <small class="text-muted d-block">
+                                    To raise an ordinal, wrap the suffix in <code>&lt;sup&gt;&lt;/sup&gt;</code>. Example:
+                                    <code>Course Coordinator, 100&lt;sup&gt;th&lt;/sup&gt; FC</code>
+                                    &rarr; displays as Course Coordinator, 100<sup>th</sup> FC.
+                                </small>
                             </div>
                         </div>
 
@@ -214,3 +268,66 @@
         });
     </script>
 @endsection
+
+@push('scripts')
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script>
+        (function () {
+            var choicesRegistry = {};
+
+            function initCoordinatorChoices() {
+                if (typeof Choices === 'undefined') {
+                    return;
+                }
+                document.querySelectorAll('select.searchable-dropdown').forEach(function (el) {
+                    if (el.dataset.choicesInit) {
+                        return;
+                    }
+                    el.dataset.choicesInit = '1';
+                    var instance = new Choices(el, {
+                        searchEnabled: true,
+                        shouldSort: false,
+                        itemSelectText: '',
+                        allowHTML: false,
+                        searchPlaceholderValue: 'Search and select...'
+                    });
+                    if (el.name) {
+                        choicesRegistry[el.name] = instance;
+                    }
+                });
+            }
+
+            // Auto-select Coordinator Designation from the selected coordinator.
+            var coordinatorDesignations = @json($coordinatorDesignations ?? []);
+
+            function initDesignationAutofill() {
+                var coordinatorSelect = document.querySelector('select[name="coordinator_name"]');
+                var designationSelect = document.querySelector('select[name="coordinator_designation"]');
+                if (!coordinatorSelect || !designationSelect) {
+                    return;
+                }
+                coordinatorSelect.addEventListener('change', function () {
+                    var name = coordinatorSelect.value;
+                    var designation = (name && coordinatorDesignations[name]) ? coordinatorDesignations[name] : '';
+                    var instance = choicesRegistry['coordinator_designation'];
+                    if (instance) {
+                        instance.setChoiceByValue(designation);
+                    } else {
+                        designationSelect.value = designation;
+                    }
+                });
+            }
+
+            function boot() {
+                initCoordinatorChoices();
+                initDesignationAutofill();
+            }
+
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', boot);
+            } else {
+                boot();
+            }
+        })();
+    </script>
+@endpush

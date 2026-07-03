@@ -752,14 +752,14 @@
                 if (activeTab && indicator) {
                     updateIndicatorPosition(activeTab);
 
-                    // Listen for tab changes
-                    document.querySelectorAll('[data-bs-toggle="tab"]').forEach(tab => {
+                    // Listen for tab changes (main header nav only — not nested page tablists)
+                    document.querySelectorAll('.header-main-nav [data-bs-toggle="tab"], .mobile-tab-link[data-bs-toggle="tab"]').forEach(tab => {
                         tab.addEventListener('shown.bs.tab', function(e) {
                             updateIndicatorPosition(e.target);
 
                             // Keep active state in sync between desktop and mobile tabs
                             const targetId = e.target.getAttribute('href');
-                            document.querySelectorAll('[data-bs-toggle="tab"]').forEach(link => {
+                            document.querySelectorAll('.header-main-nav [data-bs-toggle="tab"], .mobile-tab-link[data-bs-toggle="tab"]').forEach(link => {
                                 if (link.getAttribute('href') === targetId) {
                                     link.classList.add('active');
                                     link.setAttribute('aria-selected', 'true');
@@ -1181,10 +1181,10 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const headerTabLinks = document.querySelectorAll(
-        '#mainNavbar .nav-link[data-bs-toggle="tab"], .mobile-tabbar .nav-link[data-bs-toggle="tab"]'
-    );
-    const panes = document.querySelectorAll('#mainNavbarContent .tab-pane');
+    // Main header navigation only (exclude nested page tablists e.g. FC migrate students)
+    const headerTabLinks = document.querySelectorAll('.header-main-nav [data-bs-toggle="tab"], .mobile-tab-link[data-bs-toggle="tab"]');
+    // Top-level layout panes only — do not touch nested tab-panes inside page content (e.g. FC registration step groups)
+    const panes = document.querySelectorAll('#mainNavbarContent > .tab-pane');
 
     const sidebarTabMap = {
         '#home': '#sidebar-home',
@@ -1432,6 +1432,18 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     showPane(initial);
+
+    // Sync desktop + mobile main nav tabs with initial state
+    headerTabLinks.forEach(tab => {
+        const href = tab.getAttribute('href');
+        if (href === initial) {
+            tab.classList.add('active');
+            tab.setAttribute('aria-selected', 'true');
+        } else {
+            tab.classList.remove('active');
+            tab.setAttribute('aria-selected', 'false');
+        }
+    });
 
     // Apply default submenu/content for initial tab (after sidebar init)
     setTimeout(function() { activateDefaultSubmenuForPane(initial); }, 0);
